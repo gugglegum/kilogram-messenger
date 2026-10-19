@@ -453,6 +453,228 @@ pub struct RolloutHealthSnapshot {
     pub counters: RolloutHealthCounters,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RolloutActivationTarget {
+    LegacyOnly,
+    AdvertiseCanonicalV2,
+    DualReaderPreferLegacy,
+    DualReaderPreferCanonical,
+}
+
+impl RolloutActivationTarget {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::LegacyOnly => "legacy-only",
+            Self::AdvertiseCanonicalV2 => "advertise-cbor-v2",
+            Self::DualReaderPreferLegacy => "dual-reader-prefer-legacy",
+            Self::DualReaderPreferCanonical => "dual-reader-prefer-canonical",
+        }
+    }
+
+    const fn ordinal(self) -> u8 {
+        match self {
+            Self::LegacyOnly => 0,
+            Self::AdvertiseCanonicalV2 => 1,
+            Self::DualReaderPreferLegacy => 2,
+            Self::DualReaderPreferCanonical => 3,
+        }
+    }
+
+    const fn next(self) -> Self {
+        match self {
+            Self::LegacyOnly => Self::AdvertiseCanonicalV2,
+            Self::AdvertiseCanonicalV2 => Self::DualReaderPreferLegacy,
+            Self::DualReaderPreferLegacy => Self::DualReaderPreferCanonical,
+            Self::DualReaderPreferCanonical => Self::DualReaderPreferCanonical,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RolloutActivationDisposition {
+    Normal,
+    EmergencyContainment,
+}
+
+impl RolloutActivationDisposition {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::Normal => "normal",
+            Self::EmergencyContainment => "emergency-containment",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct RolloutControllerCurrentState {
+    pub target: RolloutActivationTarget,
+    pub disposition: RolloutActivationDisposition,
+    pub has_authenticated_canonical_evidence: bool,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RolloutControllerHoldReason {
+    MissingSignedPolicy,
+    MissingHealthSnapshot,
+    HealthPolicyMismatch,
+    LegacyOnlyPolicy,
+    InstallationOutsideCohort,
+    AlreadyAtOrBeyondPolicyTarget,
+    ContainmentWithoutCanonicalEvidence,
+}
+
+impl RolloutControllerHoldReason {
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::MissingSignedPolicy => "missing-signed-policy",
+            Self::MissingHealthSnapshot => "missing-health-snapshot",
+            Self::HealthPolicyMismatch => "health-policy-mismatch",
+            Self::LegacyOnlyPolicy => "legacy-only-policy",
+            Self::InstallationOutsideCohort => "installation-outside-cohort",
+            Self::AlreadyAtOrBeyondPolicyTarget => "already-at-or-beyond-policy-target",
+            Self::ContainmentWithoutCanonicalEvidence => "containment-without-canonical-evidence",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum RolloutControllerDecision {
+    Hold {
+        reason: RolloutControllerHoldReason,
+        current: RolloutControllerCurrentState,
+    },
+    ProposeDeviceActivation {
+        policy_id: ReleasePolicyId,
+        policy_epoch: u64,
+        target: RolloutActivationTarget,
+        disposition: RolloutActivationDisposition,
+        requires_explicit_device_approval: bool,
+        release_policy_can_sign_activation: bool,
+    },
+}
+
+impl RolloutControllerDecision {
+    pub const fn runtime_activation_authorized(self) -> bool {
+        false
+    }
+}
+
+/// Evaluate a dormant rollout proposal without writing activation authority.
+///
+/// The output is advisory. Even a selected healthy cohort can advance by only
+/// one activation state and must pass through the separate Device-signed
+/// plan/apply ceremony. Health failure can request containment only for an
+/// already activated state with authenticated canonical evidence.
+pub fn evaluate_rollout_controller(
+    evaluation: Option<CohortEvaluation>,
+    health: Option<RolloutHealthSnapshot>,
+    current: RolloutControllerCurrentState,
+) -> Result<RolloutControllerDecision, RolloutError> {
+    let Some(evaluation) = evaluation else {
+        return Ok(controller_hold(
+            RolloutControllerHoldReason::MissingSignedPolicy,
+            current,
+        ));
+    };
+    let Some(health) = health else {
+        return Ok(controller_hold(
+            RolloutControllerHoldReason::MissingHealthSnapshot,
+            current,
+        ));
+    };
+    if health.policy_id != evaluation.policy_id
+        || health.phase != evaluation.phase
+        || health.cohort_upper_bound_basis_points != evaluation.cohort_upper_bound_basis_points
+    {
+        return Ok(controller_hold(
+            RolloutControllerHoldReason::HealthPolicyMismatch,
+            current,
+        ));
+    }
+
+    let containment_required = evaluation.disposition == RolloutDisposition::Containment
+        || health.counters.zero_tolerance_events()? > 0;
+    if containment_required {
+        if current.target == RolloutActivationTarget::LegacyOnly
+            || !current.has_authenticated_canonical_evidence
+        {
+            return Ok(controller_hold(
+                RolloutControllerHoldReason::ContainmentWithoutCanonicalEvidence,
+                current,
+            ));
+        }
+        if current.disposition == RolloutActivationDisposition::EmergencyContainment {
+            return Ok(controller_hold(
+                RolloutControllerHoldReason::AlreadyAtOrBeyondPolicyTarget,
+                current,
+            ));
+        }
+        return Ok(controller_proposal(
+            evaluation,
+            current.target,
+            RolloutActivationDisposition::EmergencyContainment,
+        ));
+    }
+
+    if evaluation.phase == RolloutPhase::LegacyOnlyHold {
+        return Ok(controller_hold(
+            RolloutControllerHoldReason::LegacyOnlyPolicy,
+            current,
+        ));
+    }
+    if !evaluation.selected {
+        return Ok(controller_hold(
+            RolloutControllerHoldReason::InstallationOutsideCohort,
+            current,
+        ));
+    }
+    let policy_target = rollout_phase_target(evaluation.phase);
+    if current.target.ordinal() >= policy_target.ordinal() {
+        return Ok(controller_hold(
+            RolloutControllerHoldReason::AlreadyAtOrBeyondPolicyTarget,
+            current,
+        ));
+    }
+    Ok(controller_proposal(
+        evaluation,
+        current.target.next(),
+        RolloutActivationDisposition::Normal,
+    ))
+}
+
+fn rollout_phase_target(phase: RolloutPhase) -> RolloutActivationTarget {
+    match phase {
+        RolloutPhase::LegacyOnlyHold => RolloutActivationTarget::LegacyOnly,
+        RolloutPhase::AdvertiseCanary => RolloutActivationTarget::AdvertiseCanonicalV2,
+        RolloutPhase::AcceptCanary => RolloutActivationTarget::DualReaderPreferLegacy,
+        RolloutPhase::InitiateCanary | RolloutPhase::ExpandedDualReader => {
+            RolloutActivationTarget::DualReaderPreferCanonical
+        }
+    }
+}
+
+fn controller_hold(
+    reason: RolloutControllerHoldReason,
+    current: RolloutControllerCurrentState,
+) -> RolloutControllerDecision {
+    RolloutControllerDecision::Hold { reason, current }
+}
+
+fn controller_proposal(
+    evaluation: CohortEvaluation,
+    target: RolloutActivationTarget,
+    disposition: RolloutActivationDisposition,
+) -> RolloutControllerDecision {
+    RolloutControllerDecision::ProposeDeviceActivation {
+        policy_id: evaluation.policy_id,
+        policy_epoch: evaluation.policy_epoch,
+        target,
+        disposition,
+        requires_explicit_device_approval: true,
+        release_policy_can_sign_activation: false,
+    }
+}
+
 /// A deliberate call-site marker. Constructing it does not grant network
 /// upload permission; it only prevents an ordinary snapshot read from
 /// accidentally turning into an export operation.
@@ -1444,6 +1666,184 @@ mod tests {
             store.install_policy(&overflow.encode()?),
             Err(RolloutError::HealthAggregateCapacity)
         ));
+        Ok(())
+    }
+
+    fn controller_evaluation(
+        phase: RolloutPhase,
+        disposition: RolloutDisposition,
+        selected: bool,
+    ) -> CohortEvaluation {
+        CohortEvaluation {
+            policy_id: ReleasePolicyId([31; 32]),
+            policy_epoch: 7,
+            phase,
+            disposition,
+            cohort_bucket: 1,
+            cohort_upper_bound_basis_points: if phase == RolloutPhase::LegacyOnlyHold {
+                0
+            } else {
+                phase.maximum_cohort_basis_points()
+            },
+            selected,
+            runtime_activation_authorized: false,
+        }
+    }
+
+    fn controller_health(
+        evaluation: CohortEvaluation,
+        counters: RolloutHealthCounters,
+    ) -> RolloutHealthSnapshot {
+        RolloutHealthSnapshot {
+            policy_id: evaluation.policy_id,
+            release_artifact_id: ReleaseArtifactId([41; 32]),
+            phase: evaluation.phase,
+            cohort_upper_bound_basis_points: evaluation.cohort_upper_bound_basis_points,
+            counters,
+        }
+    }
+
+    fn legacy_controller_state() -> RolloutControllerCurrentState {
+        RolloutControllerCurrentState {
+            target: RolloutActivationTarget::LegacyOnly,
+            disposition: RolloutActivationDisposition::Normal,
+            has_authenticated_canonical_evidence: false,
+        }
+    }
+
+    #[test]
+    fn controller_fails_closed_when_policy_or_health_is_missing() -> Result<(), RolloutError> {
+        let current = legacy_controller_state();
+        assert_eq!(
+            evaluate_rollout_controller(None, None, current)?,
+            RolloutControllerDecision::Hold {
+                reason: RolloutControllerHoldReason::MissingSignedPolicy,
+                current,
+            }
+        );
+        let evaluation = controller_evaluation(
+            RolloutPhase::AdvertiseCanary,
+            RolloutDisposition::Normal,
+            true,
+        );
+        assert_eq!(
+            evaluate_rollout_controller(Some(evaluation), None, current)?,
+            RolloutControllerDecision::Hold {
+                reason: RolloutControllerHoldReason::MissingHealthSnapshot,
+                current,
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn selected_healthy_controller_advances_exactly_one_state() -> Result<(), RolloutError> {
+        let evaluation = controller_evaluation(
+            RolloutPhase::InitiateCanary,
+            RolloutDisposition::Normal,
+            true,
+        );
+        let health = controller_health(evaluation, RolloutHealthCounters::default());
+        let decision =
+            evaluate_rollout_controller(Some(evaluation), Some(health), legacy_controller_state())?;
+        assert_eq!(
+            decision,
+            RolloutControllerDecision::ProposeDeviceActivation {
+                policy_id: evaluation.policy_id,
+                policy_epoch: 7,
+                target: RolloutActivationTarget::AdvertiseCanonicalV2,
+                disposition: RolloutActivationDisposition::Normal,
+                requires_explicit_device_approval: true,
+                release_policy_can_sign_activation: false,
+            }
+        );
+        assert!(!decision.runtime_activation_authorized());
+        Ok(())
+    }
+
+    #[test]
+    fn installation_outside_cohort_never_regresses_or_enrolls() -> Result<(), RolloutError> {
+        let evaluation = controller_evaluation(
+            RolloutPhase::ExpandedDualReader,
+            RolloutDisposition::Normal,
+            false,
+        );
+        let health = controller_health(evaluation, RolloutHealthCounters::default());
+        let current = RolloutControllerCurrentState {
+            target: RolloutActivationTarget::DualReaderPreferLegacy,
+            disposition: RolloutActivationDisposition::Normal,
+            has_authenticated_canonical_evidence: true,
+        };
+        assert_eq!(
+            evaluate_rollout_controller(Some(evaluation), Some(health), current)?,
+            RolloutControllerDecision::Hold {
+                reason: RolloutControllerHoldReason::InstallationOutsideCohort,
+                current,
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn zero_tolerance_health_requires_evidence_before_containment() -> Result<(), RolloutError> {
+        let evaluation = controller_evaluation(
+            RolloutPhase::InitiateCanary,
+            RolloutDisposition::Normal,
+            true,
+        );
+        let counters = RolloutHealthCounters {
+            authenticated_downgrade_acceptance: 1,
+            ..RolloutHealthCounters::default()
+        };
+        let health = controller_health(evaluation, counters);
+        let no_evidence = RolloutControllerCurrentState {
+            target: RolloutActivationTarget::DualReaderPreferLegacy,
+            disposition: RolloutActivationDisposition::Normal,
+            has_authenticated_canonical_evidence: false,
+        };
+        assert_eq!(
+            evaluate_rollout_controller(Some(evaluation), Some(health), no_evidence)?,
+            RolloutControllerDecision::Hold {
+                reason: RolloutControllerHoldReason::ContainmentWithoutCanonicalEvidence,
+                current: no_evidence,
+            }
+        );
+
+        let with_evidence = RolloutControllerCurrentState {
+            has_authenticated_canonical_evidence: true,
+            ..no_evidence
+        };
+        assert_eq!(
+            evaluate_rollout_controller(Some(evaluation), Some(health), with_evidence)?,
+            RolloutControllerDecision::ProposeDeviceActivation {
+                policy_id: evaluation.policy_id,
+                policy_epoch: 7,
+                target: RolloutActivationTarget::DualReaderPreferLegacy,
+                disposition: RolloutActivationDisposition::EmergencyContainment,
+                requires_explicit_device_approval: true,
+                release_policy_can_sign_activation: false,
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn mismatched_health_policy_is_not_treated_as_healthy() -> Result<(), RolloutError> {
+        let evaluation = controller_evaluation(
+            RolloutPhase::AdvertiseCanary,
+            RolloutDisposition::Normal,
+            true,
+        );
+        let mut health = controller_health(evaluation, RolloutHealthCounters::default());
+        health.policy_id = ReleasePolicyId([99; 32]);
+        let current = legacy_controller_state();
+        assert_eq!(
+            evaluate_rollout_controller(Some(evaluation), Some(health), current)?,
+            RolloutControllerDecision::Hold {
+                reason: RolloutControllerHoldReason::HealthPolicyMismatch,
+                current,
+            }
+        );
         Ok(())
     }
 }

@@ -1,0 +1,45 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.95",
+  "status": "canonical-sync-v2-dormant-rollout-controller-verified",
+  "implementation": "crates/kilogram-rollout",
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "controller": {
+    "reads_signed_policy_evaluation": true,
+    "reads_authenticated_local_health": true,
+    "writes_activation_authority": false,
+    "runtime_activation_authorized": false,
+    "release_policy_can_sign_activation": false,
+    "requires_explicit_device_approval": true,
+    "maximum_normal_advance_per_decision": 1,
+    "supports_canonical_required_target": false
+  },
+  "fail_closed": [
+    "missing-policy",
+    "missing-health",
+    "health-policy-mismatch",
+    "outside-cohort",
+    "legacy-only-policy",
+    "containment-without-authenticated-canonical-evidence"
+  ],
+  "containment": {
+    "triggered_by_signed_policy": true,
+    "triggered_by_any_zero_tolerance_health_event": true,
+    "preserves_current_activation_target": true,
+    "requires_existing_authenticated_canonical_evidence": true,
+    "can_enroll_legacy_only_installation": false,
+    "can_clear_itself": false
+  },
+  "activation_boundary": {
+    "runtime_consumer_exists": false,
+    "desktop_consumer_exists": false,
+    "cli_consumer_exists": false,
+    "production_release_key_exists": false,
+    "policy_delivery_exists": false,
+    "automatic_enrollment_enabled": false
+  }
+}

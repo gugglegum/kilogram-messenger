@@ -2457,6 +2457,14 @@ quarantine; network input cannot clear it. Runtime consumption and whole-store
 rollback resistance without an external witness remain explicit non-claims,
 and the public default remains `legacy-only`.
 
+[`RFC-0219`](docs/RFC-0219-m1195-dormant-rollout-controller.md) adds the
+dormant fail-closed rollout evaluator. It can only hold or propose one bounded
+Device-approved step after matching signed policy and authenticated local
+health; it cannot write activation state or sign approval. Emergency
+containment preserves already authenticated canonical evidence, cannot enroll
+a legacy-only installation and cannot clear itself. No runtime, desktop or CLI
+consumer is enabled, so the public default remains `legacy-only`.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

@@ -7283,3 +7283,18 @@ correlation visible, Windows-only field evidence, independent security audit
   печатает ticket, path, endpoint address либо message data;
 - store tests 6/6 и stable-path CLI restart test прошли; runtime/rollout store
   не читают, wire/IPC не менялись, public default остаётся `legacy-only`.
+
+### M1.1.95 — dormant fail-closed rollout controller: принят локально
+
+- pure evaluator объединяет только уже verified signed release policy,
+  matching authenticated local health и текущую Device activation state;
+- normal rollout предлагает не более одного следующего шага и никогда не
+  предлагает `canonical-required`;
+- missing/mismatched evidence, outside cohort и legacy-only policy дают hold;
+- containment сохраняет текущий target и exact resume evidence, требует уже
+  существующее authenticated canonical evidence и не может использоваться для
+  enrollment legacy-only installation;
+- proposal требует отдельного explicit Device approval; release authority,
+  runtime и controller не могут подписать либо применить activation;
+- runtime/desktop/CLI consumer, production key и policy delivery отсутствуют;
+  wire/IPC/default не менялись, public default остаётся `legacy-only`.
