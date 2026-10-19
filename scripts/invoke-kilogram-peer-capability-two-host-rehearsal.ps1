@@ -275,15 +275,40 @@ function Wait-TicketFile {
 
 function New-ExtensionFreeTicket {
     param([string] $InputPath, [string] $OutputPath)
-    $ticket = Get-Content -LiteralPath $InputPath -Raw | ConvertFrom-Json
+    $encoded = (Get-Content -LiteralPath $InputPath -Raw).Trim()
+    $padded = $encoded.Replace('-', '+').Replace('_', '/')
+    switch ($padded.Length % 4) {
+        0 { }
+        2 { $padded += '==' }
+        3 { $padded += '=' }
+        default { throw "source ticket has invalid base64url length: $InputPath" }
+    }
+    try {
+        $json = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($padded))
+        $ticket = $json | ConvertFrom-Json
+    }
+    catch {
+        throw "source ticket is not a valid base64url JSON ticket: $InputPath ($($_.Exception.Message))"
+    }
     $property = $ticket.content.PSObject.Properties['sync_transport_capability']
     if ($null -eq $property) { throw "source ticket has no sync_transport_capability property: $InputPath" }
     $ticket.content.PSObject.Properties.Remove('sync_transport_capability')
-    [IO.File]::WriteAllText(
-        $OutputPath,
-        ($ticket | ConvertTo-Json -Depth 100 -Compress),
-        [Text.UTF8Encoding]::new($false)
-    )
+    $strippedJson = $ticket | ConvertTo-Json -Depth 100 -Compress
+    $stripped = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes($strippedJson)).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+    $roundTripPadded = $stripped.Replace('-', '+').Replace('_', '/')
+    switch ($roundTripPadded.Length % 4) {
+        0 { }
+        2 { $roundTripPadded += '==' }
+        3 { $roundTripPadded += '=' }
+        default { throw 'stripped ticket has invalid base64url length' }
+    }
+    $roundTrip = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($roundTripPadded)) | ConvertFrom-Json
+    if ($null -ne $roundTrip.content.PSObject.Properties['sync_transport_capability'] -or
+        $null -eq $roundTrip.content.PSObject.Properties['endpoint'] -or
+        $null -eq $roundTrip.PSObject.Properties['signature']) {
+        throw 'extension-free ticket round-trip did not preserve the legacy ticket envelope'
+    }
+    [IO.File]::WriteAllText($OutputPath, $stripped, [Text.UTF8Encoding]::new($false))
 }
 
 function Get-RemoteStorePresence {
