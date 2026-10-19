@@ -90,7 +90,7 @@ foreach ($required in @(
     }
 }
 
-if (-not $ipc.Contains('const IPC_VERSION: u8 = 31;')) {
+if (-not $ipc.Contains('const IPC_VERSION: u8 = 32;')) {
     throw 'provider admission work unexpectedly changed authenticated IPC v30'
 }
 

@@ -2,7 +2,8 @@
 //!
 //! This codec deliberately is not a variant of [`super::RuntimeIpcCommand`].
 //! It defines the future adapter boundary without activating a mutation path in
-//! the production runtime or changing the v31 runtime IPC wire.
+//! the production runtime mutation surface. M1.2.15 carries this codec only
+//! through the v32 read-only adapter; plan/approve/accept remain rejected.
 
 use std::{fmt, str::FromStr};
 
@@ -385,6 +386,19 @@ pub struct RuntimeIpcPeerReenrollmentPlanSummary {
 }
 
 impl RuntimeIpcPeerReenrollmentPlanSummary {
+    pub fn new(
+        plan_id: RuntimeIpcPeerReenrollmentArtifactId,
+        expires_at_unix_seconds: u64,
+    ) -> Result<Self> {
+        let summary = Self {
+            confirmation_phrase: confirmation_phrase_for(&plan_id),
+            plan_id,
+            expires_at_unix_seconds,
+        };
+        summary.validate()?;
+        Ok(summary)
+    }
+
     fn validate(&self) -> Result<()> {
         self.plan_id.validate()?;
         ensure!(

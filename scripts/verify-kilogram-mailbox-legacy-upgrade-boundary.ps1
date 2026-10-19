@@ -49,7 +49,7 @@ if ($push -le $tick) {
     throw 'automatic legacy upgrade is not ordered before authenticated capability delivery'
 }
 
-if (-not $ipc.Contains('const IPC_VERSION: u8 = 31;')) {
+if (-not $ipc.Contains('const IPC_VERSION: u8 = 32;')) {
     throw 'service-free automatic legacy mailbox upgrade requires authenticated IPC version 26'
 }
 

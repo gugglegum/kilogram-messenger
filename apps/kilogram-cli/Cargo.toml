@@ -33,6 +33,7 @@ kilogram-peer-capability-store = { path = "../../crates/kilogram-peer-capability
 kilogram-peer-reenrollment = { path = "../../crates/kilogram-peer-reenrollment" }
 kilogram-peer-reenrollment-acceptance = { path = "../../crates/kilogram-peer-reenrollment-acceptance" }
 kilogram-peer-reenrollment-runtime = { path = "../../crates/kilogram-peer-reenrollment-runtime" }
+kilogram-peer-reenrollment-staging = { path = "../../crates/kilogram-peer-reenrollment-staging" }
 kilogram-protocol = { path = "../../crates/kilogram-protocol" }
 kilogram-publication-conflict = { path = "../../crates/kilogram-publication-conflict" }
 kilogram-ratchet = { path = "../../crates/kilogram-ratchet" }

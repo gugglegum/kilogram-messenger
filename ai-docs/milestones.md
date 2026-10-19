@@ -7692,3 +7692,36 @@ correlation visible, Windows-only field evidence, independent security audit
   rustfmt и workspace-wide locked/offline strict Clippy;
 - wire/default `legacy-only` не менялись; network, ноутбук, release/ZIP/tag и
   automatic GitHub build не использовались.
+
+### M1.2.15 — read-only runtime peer re-enrollment adapter: принят локально
+
+- active authenticated IPC сделал exact hard cut с v31/domain v12 на
+  v32/domain v13 и получил единственную bounded команду
+  `PeerReenrollmentRead`; nested `inspect`/`status` разрешены, а
+  `plan`/`approve`/`accept` отклоняются до обращения к store;
+- runtime под state lock открывает capability quarantine, invitation staging,
+  acceptance и transition stores только read-only: отсутствующий store не
+  создаётся, corruption/foreign owner/unexpected entry/oversize fail closed;
+- новый `kilogram-peer-reenrollment-staging` принимает приглашение только
+  отдельной explicit offline командой, проверяет exact authority/quarantine и
+  сохраняет current-Device-signed content-addressed record; staging не даёт
+  acceptance, clear, retry, transition либо network authority;
+- current Device подписывает response, exact-связанный с request и runtime
+  descriptor; CLI и desktop независимо проверяют canonical bytes, signature,
+  descriptor/device binding и state invariants;
+- privacy-safe projection различает durable quarantine, process-local
+  suppression, ready/unsafe/accepted/restart/consumed и отдельный history
+  recovery outcome, но не раскрывает raw identity, ticket/endpoint, путь,
+  queue/message, secret либо capability bytes;
+- Windows panel только показывает состояние и обновляет его вручную; plan,
+  approve, accept, clear, retry, hot apply и automatic recovery controls
+  отсутствуют;
+- dedicated boundary и self-test отклоняют 8/8 mutations; accepted-tag
+  readiness прошёл 141/141 с rustfmt и workspace-wide locked/offline strict
+  Clippy;
+- stable-path regression прошёл isolated runtime 1/1, CLI binary 101/101 и
+  library 1/1, staging 3/3, runtime IPC 26/26 и Windows library 30/30; один
+  sandboxed desktop IPC запуск ожидаемо получил WSAEACCES 10013, идентичный
+  stable EXE вне сетевой песочницы прошёл без изменения исходников;
+- connection-ticket/sync wire и public default `legacy-only` не менялись;
+  network, ноутбук, release/ZIP/tag и automatic GitHub build не использовались.

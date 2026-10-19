@@ -259,6 +259,14 @@ impl SignedPeerReenrollmentAcceptanceReceipt {
         self.content.accepted_at_unix_seconds
     }
 
+    pub fn tombstone_prepared_at_unix_seconds(&self) -> u64 {
+        self.content.tombstone_prepared_at_unix_seconds
+    }
+
+    pub fn tombstone_expires_at_unix_seconds(&self) -> u64 {
+        self.content.tombstone_expires_at_unix_seconds
+    }
+
     /// Revalidates the complete immutable acceptance context without applying
     /// a new wall-clock freshness rule. The short invitation lifetime gates
     /// the original approval; a later fresh-start replay must instead prove it

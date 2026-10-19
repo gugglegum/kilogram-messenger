@@ -6,6 +6,7 @@ $ErrorActionPreference = 'Stop'
 
 $workspace = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $manifestPath = Join-Path $workspace 'CANONICAL-RUNTIME-IPC-PEER-REENROLLMENT-CONTRACT.json'
+$adapterManifestPath = Join-Path $workspace 'CANONICAL-RUNTIME-IPC-PEER-REENROLLMENT-READ-ADAPTER.json'
 $crateManifestPath = Join-Path $workspace 'crates\kilogram-runtime-ipc\Cargo.toml'
 $libPath = Join-Path $workspace 'crates\kilogram-runtime-ipc\src\lib.rs'
 $contractPath = Join-Path $workspace 'crates\kilogram-runtime-ipc\src\peer_reenrollment_contract.rs'
@@ -28,6 +29,7 @@ function Assert-ContainsAll {
 function Assert-Contract {
     param(
         [object]$Manifest,
+        [object]$AdapterManifest,
         [string]$CrateManifest,
         [string]$Lib,
         [string]$Contract,
@@ -136,18 +138,22 @@ function Assert-Contract {
         throw 'runtime IPC peer re-enrollment verification claim changed'
     }
 
+    if ([string]$AdapterManifest.milestone -cne 'M1.2.15' -or
+        [string]$AdapterManifest.contract_source -cne 'M1.2.14' -or
+        (@($AdapterManifest.runtime_ipc.allowed_nested_commands) -join ',') -cne 'inspect,status' -or
+        (@($AdapterManifest.runtime_ipc.rejected_nested_commands) -join ',') -cne 'plan,approve,accept' -or
+        [bool]$AdapterManifest.runtime_ipc.mutation_or_recovery_authority) {
+        throw 'historical dormant contract lacks an exact read-only activation successor'
+    }
+
     Assert-ContainsAll $CrateManifest @('blake3.workspace = true') 'runtime IPC crate manifest'
     Assert-ContainsAll $Lib @(
-        'const IPC_VERSION: u8 = 31;',
-        'kilogram:runtime-ipc-descriptor:v12',
+        'const IPC_VERSION: u8 = 32;',
+        'kilogram:runtime-ipc-descriptor:v13',
         'mod peer_reenrollment_contract;',
-        'pub use peer_reenrollment_contract::*;'
+        'pub use peer_reenrollment_contract::*;',
+        'PeerReenrollmentRead {'
     ) 'active runtime IPC library'
-    $commandMatch = [regex]::Match($Lib, 'pub enum RuntimeIpcCommand \{(?<body>.*?)\r?\n\}', [Text.RegularExpressions.RegexOptions]::Singleline)
-    if (-not $commandMatch.Success -or
-        $commandMatch.Groups['body'].Value.IndexOf('PeerReenrollment', [StringComparison]::Ordinal) -ge 0) {
-        throw 'peer re-enrollment was connected to the active RuntimeIpcCommand'
-    }
 
     Assert-ContainsAll $Contract @(
         'RUNTIME_IPC_PEER_REENROLLMENT_CONTRACT_VERSION: u8 = 1',
@@ -206,51 +212,53 @@ function Assert-Contract {
     }
 }
 
-foreach ($path in @($manifestPath, $crateManifestPath, $libPath, $contractPath, $rfcPath)) {
+foreach ($path in @($manifestPath, $adapterManifestPath, $crateManifestPath, $libPath, $contractPath, $rfcPath)) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
         throw "missing file: $path"
     }
 }
 
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$adapterManifest = Get-Content -LiteralPath $adapterManifestPath -Raw | ConvertFrom-Json
 $crateManifest = Get-Content -LiteralPath $crateManifestPath -Raw
 $lib = Get-Content -LiteralPath $libPath -Raw
 $contract = Get-Content -LiteralPath $contractPath -Raw
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
-Assert-Contract $manifest $crateManifest $lib $contract $rfc
+Assert-Contract $manifest $adapterManifest $crateManifest $lib $contract $rfc
 
 if ($SelfTest) {
     $mutations = @()
 
     $changed = Copy-JsonObject $manifest
     $changed.contract.version = 2
-    $mutations += { Assert-Contract $changed $crateManifest $lib $contract $rfc }
+    $mutations += { Assert-Contract $changed $adapterManifest $crateManifest $lib $contract $rfc }
 
     $changed = Copy-JsonObject $manifest
     $changed.ceremony.implicit_consent_allowed = $true
-    $mutations += { Assert-Contract $changed $crateManifest $lib $contract $rfc }
+    $mutations += { Assert-Contract $changed $adapterManifest $crateManifest $lib $contract $rfc }
 
     $changed = Copy-JsonObject $manifest
     $changed.privacy_projection.raw_device_id_exposed = $true
-    $mutations += { Assert-Contract $changed $crateManifest $lib $contract $rfc }
+    $mutations += { Assert-Contract $changed $adapterManifest $crateManifest $lib $contract $rfc }
 
     $changed = Copy-JsonObject $manifest
     $changed.signed_response_binding.current_descriptor_device = $false
-    $mutations += { Assert-Contract $changed $crateManifest $lib $contract $rfc }
+    $mutations += { Assert-Contract $changed $adapterManifest $crateManifest $lib $contract $rfc }
 
     $changed = Copy-JsonObject $manifest
     $changed.history_boundary.separate_same_account_history_rewrap_approval_required = $false
-    $mutations += { Assert-Contract $changed $crateManifest $lib $contract $rfc }
+    $mutations += { Assert-Contract $changed $adapterManifest $crateManifest $lib $contract $rfc }
 
     $changed = Copy-JsonObject $manifest
     $changed.changes_active_runtime_ipc = $true
-    $mutations += { Assert-Contract $changed $crateManifest $lib $contract $rfc }
+    $mutations += { Assert-Contract $changed $adapterManifest $crateManifest $lib $contract $rfc }
 
-    $changedLib = $lib.Replace('    PeerCapabilityQuarantinePage {', "    PeerReenrollment {`r`n    },`r`n    PeerCapabilityQuarantinePage {")
-    $mutations += { Assert-Contract $manifest $crateManifest $changedLib $contract $rfc }
+    $changedAdapter = Copy-JsonObject $adapterManifest
+    $changedAdapter.runtime_ipc.allowed_nested_commands = @('inspect', 'plan', 'status')
+    $mutations += { Assert-Contract $manifest $changedAdapter $crateManifest $lib $contract $rfc }
 
     $changedRfc = $rfc.Replace('does not give the replacement Device old pairwise ratchet keys', 'recovers all old history automatically')
-    $mutations += { Assert-Contract $manifest $crateManifest $lib $contract $changedRfc }
+    $mutations += { Assert-Contract $manifest $adapterManifest $crateManifest $lib $contract $changedRfc }
 
     $rejected = 0
     foreach ($mutation in $mutations) {

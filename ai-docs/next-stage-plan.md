@@ -1,31 +1,45 @@
-# Текущая точка: M1.2.14 завершён, следующий M1.2.15
+# Текущая точка: M1.2.15 завершён, следующий M1.2.16
 
-Статус на 2026-10-19: отдельный bounded canonical IPC codec формализует
-inspect/plan/approve/accept/status, exact descriptor/request/current-Device
-binding, privacy-safe projection и отдельный history-rewrap outcome. Он
-намеренно не подключён к active `RuntimeIpcCommand`; v31/domain v12, peer wire
-и public default `legacy-only` неизменны. Stable tests 26/26, targeted 8/8,
-negative mutations 8/8, accepted-tag readiness 140/140.
+Статус на 2026-10-20: authenticated runtime IPC v32/domain v13 подключает
+только read-only `inspect` и `status` peer re-enrollment. Runtime собирает
+current-Device-signed snapshot из существующих capability, staging, acceptance
+и transition stores без create/repair; desktop и CLI независимо проверяют
+exact request/descriptor/response и не получают ticket, endpoint, путь или
+raw identity. Explicit offline staging не является acceptance authority.
+Readiness 141/141; stable regression: isolated runtime 1/1, CLI 101/101 + 1/1,
+staging 3/3, runtime IPC 26/26 и Windows 30/30. Peer wire и public default
+`legacy-only` неизменны.
 
-## Следующий этап: M1.2.15 read-only runtime peer re-enrollment adapter
+## Следующий этап: M1.2.16 fresh-start-only explicit peer re-enrollment mutation adapter
 
-- подключить к active runtime только authenticated `status` и `inspect`, без
-  plan/approve/accept mutation authority; hard-cut co-installed IPC version и
-  descriptor domain сделать явно, без backward permissive fallback;
-- построить snapshot из существующих read-only capability, acceptance и
-  runtime-transition stores с no-create/no-repair semantics; missing store —
-  честное empty/missing состояние, corruption/wrong owner — fail closed;
-- определить runtime-owned bounded staging reference для приглашения так,
-  чтобы desktop не читал ticket/endpoint bytes и не передавал filesystem path;
-  на этом этапе staging/import остаётся offline explicit и не даёт acceptance;
-- подписывать response уже работающим current Device и проверять exact request,
-  descriptor и state summary по M1.2.14 contract;
-- добавить privacy-safe CLI observer и read-only desktop panel state; кнопки
-  plan/approve/accept, clear/retry, hot apply и automatic recovery запрещены;
-- проверить absent/no-create, wrong Device/account, corrupt/oversized/stale
-  artifact, descriptor replacement, restart и process-local-vs-durable state;
-- сеть и второй хост не нужны, поскольку adapter read-only. Public default,
-  peer wire, release/ZIP/tag и automatic GitHub build не менять.
+- подключить canonical `plan`, `approve` и `accept` к authenticated runtime IPC
+  как три разные явные операции; `inspect`/`status` никогда не должны создавать
+  план, подпись, receipt или transition;
+- хранить runtime-owned bounded ceremony state по opaque contact ID и exact
+  staged invitation ID; GUI/CLI не передают filesystem path, ticket, endpoint,
+  raw Account/Device ID, private key или reusable capability;
+- план связывать с текущим durable quarantine, обеими authority snapshots,
+  invitation и fresh nonce; повторный plan не должен молча заменять уже
+  подтверждённую либо расходящуюся ceremony;
+- approve разрешать только после exact typed `REENROLL` phrase и explicit
+  `UserConfirmed`; stale request, descriptor replacement, wrong Device,
+  changed authority/quarantine/invitation или replay с другим содержимым
+  должны fail closed до durable mutation;
+- accept должен использовать существующие acceptance и runtime-transition
+  primitives с crash/restart-safe журналом: partial cross-store progress
+  обязан либо безопасно завершаться exact replay, либо оставаться явно
+  incomplete, но не выдавать successor за активный;
+- после accept работающий runtime продолжает использовать quarantined
+  predecessor, не делает hot apply, delivery, retry или network recovery и
+  возвращает `restart_required=true`; successor применяется только следующим
+  fresh start до создания Iroh endpoint;
+- на этом этапе дать mutation surface только privacy-safe CLI IPC client;
+  guided desktop buttons и UX оставить отдельному M1.2.17 после принятия
+  crash/restart semantics;
+- проверить no-create observation, explicit-consent gate, stale/replay/fork,
+  injected crash между stores, restart completion и отсутствие network side
+  effects. Второй хост не нужен; default, peer wire, release/ZIP/tag и
+  automatic GitHub build не менять.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

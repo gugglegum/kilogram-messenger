@@ -5269,3 +5269,32 @@ Hosted follow-up:
 - No network, laptop, release build, archive, tag or GitHub build was used.
   Test execution kept the stable executable path
   `target/verification/deps/kilogram-runtime-ipc-lib-kilogram_runtime_ipc-tests.exe`.
+
+## M1.2.15 read-only runtime peer re-enrollment adapter environment (2026-10-20)
+
+- Active local IPC is now exact version 32 with descriptor signature domain
+  v13. Co-installed version 31 clients fail before actor dispatch; peer and
+  sync network wire formats are unchanged.
+- The new staging crate has no Iroh, HTTP, Tokio or desktop dependency. It
+  writes only after explicit offline import and opens through a strict
+  read-only path for runtime observation. Missing stores remain absent.
+- Windows Rust harnesses were compiled without execution and run only through
+  `scripts/run-cargo-tests-stable.ps1` with fixed executable names, profile
+  `test`, two Cargo jobs and workspace-local `TEMP`/`TMP`.
+- Focused stable-path results were CLI 2/2, staging 3/3, peer re-enrollment IPC
+  8/8 and desktop authenticated IPC 1/1. The complete changed-package run
+  passed isolated runtime 1/1, CLI binary 101/101 plus library 1/1, staging
+  3/3, runtime IPC 26/26 and Windows library 30/30.
+- The first desktop IPC attempt inside the restricted network sandbox failed
+  with Windows `WSAEACCES` 10013. The identical stable executable passed
+  outside that loopback restriction; no source or fixture changed between
+  attempts.
+- The dedicated boundary rejects 8/8 mutations. Accepted-tag readiness passes
+  141/141 against immutable `M1.0.0`, including rustfmt and workspace-wide
+  locked/offline strict Clippy.
+- The existing Cargo target reached roughly 60.8 GiB after regression because
+  this filesystem cannot hard-link incremental artifacts. Disposable
+  verification and debug incremental generations are pruned after validation;
+  reusable debug deps/build outputs remain for faster subsequent builds.
+- No product network operation, laptop, release build, archive, tag or
+  automatic GitHub build was used. Public sync default remains `legacy-only`.

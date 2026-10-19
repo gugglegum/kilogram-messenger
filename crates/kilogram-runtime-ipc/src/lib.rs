@@ -26,7 +26,7 @@ mod peer_reenrollment_contract;
 
 pub use peer_reenrollment_contract::*;
 
-const IPC_VERSION: u8 = 31;
+const IPC_VERSION: u8 = 32;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -49,7 +49,7 @@ const MAX_FRAME_BYTES: usize = 256 * 1024;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const IO_TIMEOUT: Duration = Duration::from_secs(30);
 const REQUEST_CHANNEL_CAPACITY: usize = 64;
-const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v12\0";
+const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v13\0";
 pub const RUNTIME_LAUNCH_PROFILE_VERSION: u8 = 1;
 pub const MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE: u16 = 64;
 pub const MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE: u16 = 64;
@@ -687,6 +687,10 @@ pub enum RuntimeIpcCommand {
     PeerCapabilityQuarantinePage {
         cursor: Option<RuntimeIpcPeerCapabilityCursor>,
         limit: u16,
+    },
+    /// Nested descriptor-bound read-only peer re-enrollment request.
+    PeerReenrollmentRead {
+        request: Vec<u8>,
     },
 }
 
@@ -1900,6 +1904,10 @@ pub enum RuntimeIpcResponse {
     },
     CanonicalSyncV2RuntimeStatus(Box<RuntimeIpcCanonicalSyncV2RuntimeStatus>),
     PeerCapabilityQuarantinePage(Box<RuntimeIpcPeerCapabilityPage>),
+    /// Current-Device-signed response to a nested read-only request.
+    PeerReenrollmentRead {
+        signed_response: Vec<u8>,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -1959,6 +1967,10 @@ impl RuntimeIpcServer {
 
     pub fn address(&self) -> &str {
         &self.descriptor.content.address
+    }
+
+    pub fn descriptor(&self) -> &RuntimeIpcDescriptor {
+        &self.descriptor
     }
 
     pub fn publish_change(&self) -> u64 {
@@ -2421,7 +2433,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn version_30_request_is_rejected_before_actor_dispatch() -> Result<(), Box<dyn Error>> {
+    async fn version_31_request_is_rejected_before_actor_dispatch() -> Result<(), Box<dyn Error>> {
         let directory = tempfile::tempdir()?;
         let descriptor_path = directory.path().join("runtime.ipc.json");
         let root = AccountRootState::create(directory.path().join("root"))?;
@@ -2434,7 +2446,7 @@ mod tests {
         write_frame(
             &mut stream,
             &RuntimeIpcRequest {
-                version: 30,
+                version: 31,
                 token,
                 command: RuntimeIpcCommand::Ping,
             },

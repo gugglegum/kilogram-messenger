@@ -1,0 +1,23 @@
+[package]
+name = "kilogram-peer-reenrollment-staging"
+description = "Bounded Device-signed staging for peer re-enrollment invitations"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+blake3.workspace = true
+kilogram-identity = { path = "../kilogram-identity" }
+kilogram-sync-capability = { path = "../kilogram-sync-capability" }
+postcard.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
+
+[lints]
+workspace = true

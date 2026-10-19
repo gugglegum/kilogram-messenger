@@ -81,15 +81,15 @@ function Assert-Boundary {
     }
 
     Assert-ContainsExact $Runtime @(
-        'const IPC_VERSION: u8 = 31;',
-        'kilogram:runtime-ipc-descriptor:v12\0',
+        'const IPC_VERSION: u8 = 32;',
+        'kilogram:runtime-ipc-descriptor:v13\0',
         'pub const MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE: u16 = 64;',
         'ConversationListPage {',
         'pub struct RuntimeIpcConversationCursor',
         'pub struct RuntimeIpcConversationPage',
         'pub fn validate_for_request(',
         'runtime IPC conversation page did not advance beyond its request cursor',
-        'version_30_request_is_rejected_before_actor_dispatch',
+        'version_31_request_is_rejected_before_actor_dispatch',
         'conversation_page_requires_exact_monotonic_continuation'
     ) 'runtime IPC implementation'
     if ($Runtime.IndexOf('const IPC_VERSION: u8 = 30;', [StringComparison]::Ordinal) -ge 0 -or
@@ -123,9 +123,9 @@ function Assert-Boundary {
 
     if ([string]$Schema.milestone -cne 'M1.1.49' -or
         [string]$Schema.activation.current_runtime_encoding -cne
-            'postcard-v31-with-json-descriptor-v12' -or
+            'postcard-v32-with-json-descriptor-v13' -or
         -not [bool]$Schema.activation.current_runtime_changed -or
-        @($Schema.semantic_rules).Count -ne 181 -or
+        @($Schema.semantic_rules).Count -ne 185 -or
         @($Schema.remaining_runtime_ipc_surface).Count -ne 0) {
         throw 'canonical runtime IPC aggregate did not record the active adapter migration'
     }
@@ -140,11 +140,11 @@ function Assert-Boundary {
     if ($source.Count -ne 1 -or [string]$source[0].encoding -cne 'postcard' -or
         [string]$source[0].compatibility -cne 'exact-version' -or
         [string]$source[0].migration -cne 'new-version-explicit-migration' -or
-        [int](@($source[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 31 -or
+        [int](@($source[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 32 -or
         [string](@($source[0].bindings | Where-Object {
             $_.symbol -ceq 'DESCRIPTOR_SIGNATURE_DOMAIN'
-        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v12\0') {
-        throw 'protocol compatibility registry does not exactly describe active IPC v31'
+        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v13\0') {
+        throw 'protocol compatibility registry does not exactly describe active IPC v32'
     }
 
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')

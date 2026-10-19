@@ -21,9 +21,12 @@ use kilogram_runtime_ipc::{
     RuntimeIpcDeviceDirectoryUpdate, RuntimeIpcEndpointCandidateState, RuntimeIpcHistoryCursor,
     RuntimeIpcHistoryMessage, RuntimeIpcHistoryPage, RuntimeIpcMailboxCapabilityTransition,
     RuntimeIpcMailboxStatus, RuntimeIpcOutboxStatus, RuntimeIpcPeerCapabilityPage,
-    RuntimeIpcQueueState, RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy,
+    RuntimeIpcPeerReenrollmentCommand, RuntimeIpcPeerReenrollmentContactId,
+    RuntimeIpcPeerReenrollmentRequest, RuntimeIpcPeerReenrollmentResponse, RuntimeIpcQueueState,
+    RuntimeIpcRequestId, RuntimeIpcResponse, RuntimeIpcRoutePolicy,
     RuntimeIpcTicketAutomationStatus, RuntimeIpcTicketPublication, RuntimeLaunchProfile,
     RuntimeLaunchSettings, RuntimeVolunteerStorageSettings,
+    SignedRuntimeIpcPeerReenrollmentResponse,
 };
 #[cfg(test)]
 use kilogram_runtime_ipc::{
@@ -288,6 +291,7 @@ enum Operation {
     RolloutOperatorStatus,
     CanonicalRuntimeStatus,
     PeerCapabilityStatus,
+    PeerReenrollmentStatus,
     Connect,
     AddContact,
     Queue,
@@ -325,6 +329,7 @@ enum RuntimeUiAction {
     RefreshRolloutOperatorStatus,
     RefreshCanonicalRuntimeStatus,
     RefreshPeerCapabilityStatus,
+    RefreshPeerReenrollmentStatus,
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -1038,6 +1043,8 @@ struct ViewModel {
     mailbox_transition: Option<RuntimeIpcMailboxCapabilityTransition>,
     canonical_runtime_status: Option<RuntimeIpcCanonicalSyncV2RuntimeStatus>,
     peer_capability_status: Option<RuntimeIpcPeerCapabilityPage>,
+    peer_reenrollment_contact_id: String,
+    peer_reenrollment_status: Option<RuntimeIpcPeerReenrollmentResponse>,
     notice: Option<String>,
     error: Option<String>,
 }
@@ -1078,6 +1085,8 @@ impl ViewModel {
             mailbox_transition: None,
             canonical_runtime_status: None,
             peer_capability_status: None,
+            peer_reenrollment_contact_id: String::new(),
+            peer_reenrollment_status: None,
             notice: None,
             error: None,
         }
@@ -1361,6 +1370,11 @@ impl ViewModel {
                 self.peer_capability_status = Some(*status);
                 self.error = None;
             }
+            Ok(WorkerSuccess::PeerReenrollmentStatus(status)) => {
+                self.connection = ConnectionState::Connected;
+                self.peer_reenrollment_status = Some(*status);
+                self.error = None;
+            }
             Ok(WorkerSuccess::Conversations(conversations)) => {
                 self.connection = ConnectionState::Connected;
                 self.apply_conversations(conversations);
@@ -1387,6 +1401,7 @@ impl ViewModel {
                 self.mailbox_transition = None;
                 self.canonical_runtime_status = None;
                 self.peer_capability_status = None;
+                self.peer_reenrollment_status = None;
                 self.notice = Some("Runtime stopped cleanly".to_owned());
                 self.error = None;
             }
@@ -1634,6 +1649,10 @@ enum WorkerRequest {
     PeerCapabilityStatus {
         descriptor: PathBuf,
     },
+    PeerReenrollmentStatus {
+        descriptor: PathBuf,
+        contact_id: RuntimeIpcPeerReenrollmentContactId,
+    },
     AddContact {
         descriptor: PathBuf,
         draft: ValidatedContactDraft,
@@ -1749,6 +1768,7 @@ impl WorkerRequest {
             Self::Connect { .. } => Operation::Connect,
             Self::CanonicalRuntimeStatus { .. } => Operation::CanonicalRuntimeStatus,
             Self::PeerCapabilityStatus { .. } => Operation::PeerCapabilityStatus,
+            Self::PeerReenrollmentStatus { .. } => Operation::PeerReenrollmentStatus,
             Self::AddContact { .. } => Operation::AddContact,
             Self::Queue { .. } => Operation::Queue,
             Self::Refresh { .. } => Operation::Refresh,
@@ -1828,6 +1848,7 @@ enum WorkerSuccess {
     },
     CanonicalRuntimeStatus(Box<RuntimeIpcCanonicalSyncV2RuntimeStatus>),
     PeerCapabilityStatus(Box<RuntimeIpcPeerCapabilityPage>),
+    PeerReenrollmentStatus(Box<RuntimeIpcPeerReenrollmentResponse>),
     Queued {
         queue_id: String,
         contact_id: String,
@@ -2884,6 +2905,36 @@ async fn execute_request(request: WorkerRequest) -> Result<WorkerSuccess> {
                     bail!("Runtime rejected peer capability status: {message}")
                 }
                 _ => bail!("Runtime returned an unexpected peer capability status"),
+            }
+        }
+        WorkerRequest::PeerReenrollmentStatus {
+            descriptor,
+            contact_id,
+        } => {
+            let runtime_descriptor = kilogram_runtime_ipc::RuntimeIpcDescriptor::load(&descriptor)?;
+            let request = RuntimeIpcPeerReenrollmentRequest::new(
+                &runtime_descriptor,
+                RuntimeIpcRequestId::generate()?,
+                RuntimeIpcPeerReenrollmentCommand::Status { contact_id },
+            )?;
+            let command = RuntimeIpcCommand::PeerReenrollmentRead {
+                request: request.encode()?,
+            };
+            match kilogram_runtime_ipc::call(&descriptor, command).await? {
+                RuntimeIpcResponse::PeerReenrollmentRead { signed_response } => {
+                    let signed = SignedRuntimeIpcPeerReenrollmentResponse::decode_and_verify(
+                        &signed_response,
+                        &request,
+                        &runtime_descriptor,
+                    )?;
+                    Ok(WorkerSuccess::PeerReenrollmentStatus(Box::new(
+                        signed.response().clone(),
+                    )))
+                }
+                RuntimeIpcResponse::Error { message } => {
+                    bail!("Runtime rejected peer re-enrollment status: {message}")
+                }
+                _ => bail!("Runtime returned an unexpected peer re-enrollment status"),
             }
         }
         WorkerRequest::AddContact { descriptor, draft } => {
@@ -5460,6 +5511,33 @@ impl KilogramApp {
             Err(error) => self
                 .model
                 .fail(Operation::PeerCapabilityStatus, format!("{error:#}")),
+        }
+    }
+
+    fn start_peer_reenrollment_status(&mut self) {
+        let result: Result<WorkerRequest> = (|| {
+            ensure!(
+                self.model.connection == ConnectionState::Connected,
+                "Connect to the running runtime first"
+            );
+            let contact_id = self
+                .model
+                .peer_reenrollment_contact_id
+                .trim()
+                .parse()
+                .context(
+                    "Peer re-enrollment contact ID must be exactly 64 lowercase hex characters",
+                )?;
+            Ok(WorkerRequest::PeerReenrollmentStatus {
+                descriptor: self.model.descriptor()?,
+                contact_id,
+            })
+        })();
+        match result {
+            Ok(request) => self.submit(Operation::PeerReenrollmentStatus, request),
+            Err(error) => self
+                .model
+                .fail(Operation::PeerReenrollmentStatus, format!("{error:#}")),
         }
     }
 
@@ -8107,7 +8185,7 @@ impl KilogramApp {
                     }
                 }
             } else {
-                ui.small("Connect to a v31 runtime to inspect its loaded policy and observed sync path. This view cannot change activation authority.");
+                ui.small("Connect to a v32 runtime to inspect its loaded policy and observed sync path. This view cannot change activation authority.");
             }
             ui.separator();
             ui.strong("Peer capability safety (read only)");
@@ -8175,6 +8253,75 @@ impl KilogramApp {
                 ui.small("This panel grants no clear, retry, downgrade, or recovery authority.");
             } else {
                 ui.small("Refresh to distinguish durable quarantine, this-process scheduler suppression, and ordinary network retry.");
+            }
+            ui.separator();
+            ui.strong("Peer re-enrollment safety (read only)");
+            ui.small("Enter the opaque contact ID shown above. The desktop sends only an authenticated status request; invitation tickets, endpoint bytes, and filesystem paths never enter this UI.");
+            ui.horizontal(|ui| {
+                ui.label("Contact ID");
+                ui.add(
+                    egui::TextEdit::singleline(&mut self.model.peer_reenrollment_contact_id)
+                        .desired_width(430.0)
+                        .hint_text("64 lowercase hex characters"),
+                );
+                if ui
+                    .add_enabled(
+                        !activation_busy
+                            && self.model.connection == ConnectionState::Connected,
+                        egui::Button::new("Refresh re-enrollment status"),
+                    )
+                    .clicked()
+                {
+                    action = RuntimeUiAction::RefreshPeerReenrollmentStatus;
+                }
+            });
+            if let Some(status) = self.model.peer_reenrollment_status.as_ref() {
+                ui.horizontal_wrapped(|ui| {
+                    ui.label(format!("State: {:?}", status.status));
+                    if let Some(hazard) = status.hazard {
+                        ui.label(format!("Hazard: {hazard:?}"));
+                    }
+                    ui.label(format!("Restart required: {}", status.restart_required));
+                });
+                if let Some(invitation) = status.invitation.as_ref() {
+                    ui.small(format!(
+                        "Invitation {} · replacement {} · capability {} · authority {} · publication {} · expires {}",
+                        compact_id(invitation.invitation_id.as_str()),
+                        compact_id(invitation.replacement_device_fingerprint.as_str()),
+                        compact_id(invitation.required_capability_id.as_str()),
+                        invitation.authority_revision,
+                        invitation.publication_epoch,
+                        invitation.expires_at_unix_seconds
+                    ));
+                }
+                if let Some(quarantine) = status.quarantine.as_ref() {
+                    ui.small(format!(
+                        "Durable quarantine {} · sequence {} · reason {:?}",
+                        compact_id(quarantine.record_id.as_str()),
+                        quarantine.sequence,
+                        quarantine.reason
+                    ));
+                }
+                if let Some(plan) = status.plan.as_ref() {
+                    ui.small(format!(
+                        "Prepared plan {} · expires {}",
+                        compact_id(plan.plan_id.as_str()),
+                        plan.expires_at_unix_seconds
+                    ));
+                }
+                ui.small(format!(
+                    "Suppression: durable={} · this-process sync={} · this-process queues={}",
+                    status.suppression.durable_quarantine_present,
+                    status.suppression.process_local_sync_suppressed,
+                    status.suppression.process_local_queue_suppressed_count
+                ));
+                ui.small(format!(
+                    "Durable outcome: {:?} · history recovery: {:?}",
+                    status.durable_outcome, status.history_recovery
+                ));
+                ui.small("No plan, approve, accept, retry, clear, hot-apply, or automatic recovery action is available here.");
+            } else {
+                ui.small("Refresh a contact to distinguish missing invitation, unsafe divergence, ready staging, restart-required acceptance, and consumed state.");
             }
             ui.separator();
             ui.strong("Stopped runtime authority ceremony");
@@ -9489,6 +9636,8 @@ impl eframe::App for KilogramApp {
             self.start_canonical_runtime_status();
         } else if runtime_action == RuntimeUiAction::RefreshPeerCapabilityStatus {
             self.start_peer_capability_status();
+        } else if runtime_action == RuntimeUiAction::RefreshPeerReenrollmentStatus {
+            self.start_peer_reenrollment_status();
         } else if add_contact_clicked {
             self.start_add_contact();
         } else if let Some(contact_id) = selected_contact {
@@ -10208,6 +10357,8 @@ mod tests {
         };
         let (server, mut requests) =
             RuntimeIpcServer::start(descriptor.clone(), account_id, &identity).await?;
+        let peer_reenrollment_descriptor = server.descriptor().clone();
+        let peer_reenrollment_identity = identity;
         let actor = tokio::spawn(async move {
             let ping = requests.recv().await.context("receive GUI ping")?;
             let (command, response) = ping.into_parts();
@@ -10284,6 +10435,55 @@ mod tests {
                     },
                 )))
                 .map_err(|_| anyhow::anyhow!("send GUI peer capability status response"))?;
+
+            let peer_reenrollment_status = requests
+                .recv()
+                .await
+                .context("receive GUI peer re-enrollment status")?;
+            let (command, response) = peer_reenrollment_status.into_parts();
+            let RuntimeIpcCommand::PeerReenrollmentRead { request } = command else {
+                bail!("expected GUI peer re-enrollment read command");
+            };
+            let request = RuntimeIpcPeerReenrollmentRequest::decode_and_validate(
+                &request,
+                &peer_reenrollment_descriptor,
+            )?;
+            ensure!(matches!(
+                request.command(),
+                RuntimeIpcPeerReenrollmentCommand::Status { contact_id }
+                    if contact_id.as_str() == "21".repeat(32)
+            ));
+            let signed = SignedRuntimeIpcPeerReenrollmentResponse::issue(
+                &request,
+                &peer_reenrollment_descriptor,
+                &peer_reenrollment_identity,
+                RuntimeIpcPeerReenrollmentResponse {
+                    contact_id: "21".repeat(32).parse()?,
+                    status: kilogram_runtime_ipc::RuntimeIpcPeerReenrollmentStatus::UnsafeOrDivergent,
+                    hazard: Some(
+                        kilogram_runtime_ipc::RuntimeIpcPeerReenrollmentHazard::MissingDurableQuarantine,
+                    ),
+                    invitation: None,
+                    quarantine: None,
+                    plan: None,
+                    durable_outcome:
+                        kilogram_runtime_ipc::RuntimeIpcPeerReenrollmentDurableOutcome::Unchanged,
+                    suppression:
+                        kilogram_runtime_ipc::RuntimeIpcPeerReenrollmentSuppressionSummary {
+                            durable_quarantine_present: false,
+                            process_local_sync_suppressed: true,
+                            process_local_queue_suppressed_count: 1,
+                        },
+                    history_recovery:
+                        kilogram_runtime_ipc::RuntimeIpcPeerReenrollmentHistoryRecovery::NotEvaluated,
+                    restart_required: false,
+                },
+            )?;
+            response
+                .send(RuntimeIpcResponse::PeerReenrollmentRead {
+                    signed_response: signed.encode()?,
+                })
+                .map_err(|_| anyhow::anyhow!("send GUI peer re-enrollment status response"))?;
 
             let contact = requests.recv().await.context("receive GUI contact")?;
             let (command, response) = contact.into_parts();
@@ -10802,6 +11002,21 @@ mod tests {
                     && status.scheduler_suppressed_contact_count == 1
                     && status.items.len() == 1
                     && status.items[0].contact_id == "21".repeat(32)
+        ));
+
+        let peer_reenrollment_status = execute_request(WorkerRequest::PeerReenrollmentStatus {
+            descriptor: descriptor.clone(),
+            contact_id: "21".repeat(32).parse()?,
+        })
+        .await?;
+        assert!(matches!(
+            peer_reenrollment_status,
+            WorkerSuccess::PeerReenrollmentStatus(status)
+                if status.contact_id.as_str() == "21".repeat(32)
+                    && status.hazard
+                        == Some(kilogram_runtime_ipc::RuntimeIpcPeerReenrollmentHazard::MissingDurableQuarantine)
+                    && status.suppression.process_local_sync_suppressed
+                    && status.suppression.process_local_queue_suppressed_count == 1
         ));
 
         let contact = execute_request(WorkerRequest::AddContact {

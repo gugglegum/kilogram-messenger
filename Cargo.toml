@@ -15,6 +15,7 @@ members = [
     "crates/kilogram-peer-reenrollment",
     "crates/kilogram-peer-reenrollment-acceptance",
     "crates/kilogram-peer-reenrollment-runtime",
+    "crates/kilogram-peer-reenrollment-staging",
     "crates/kilogram-protocol",
     "crates/kilogram-publication-conflict",
     "crates/kilogram-ratchet",

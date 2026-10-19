@@ -10,7 +10,7 @@
     "root_rule": "kilogram-runtime-ipc-v1"
   },
   "activation": {
-    "current_runtime_encoding": "postcard-v31-with-json-descriptor-v12",
+    "current_runtime_encoding": "postcard-v32-with-json-descriptor-v13",
     "current_runtime_changed": true,
     "candidate_protocol_identifier": "unassigned",
     "required_before_activation": [
@@ -761,7 +761,8 @@
     "start-history-recovery-execution",
     "history-recovery-execution-status",
     "canonical-sync-v2-runtime-status",
-    "peer-capability-quarantine-page"
+    "peer-capability-quarantine-page",
+    "peer-reenrollment-read"
   ],
   "covered_results": [
     "pong",
@@ -798,7 +799,8 @@
     "history-recovery-execution-started",
     "history-recovery-execution-status",
     "canonical-sync-v2-runtime-status-result",
-    "peer-capability-quarantine-page-result"
+    "peer-capability-quarantine-page-result",
+    "peer-reenrollment-read-result"
   ],
   "semantic_rules": [
     "descriptor address is exactly IPv4 127.0.0.1 or IPv6 ::1 and port is nonzero",
@@ -955,9 +957,13 @@
     "Account Root secrets, Device private keys, private recovery capabilities, decrypted history, page payloads and local filesystem paths are forbidden from recovery execution IPC",
     "the request ID is the durable execution idempotency key: exact replay may return already committed while divergent reuse or a stale plan record fails before scheduling",
     "the execution contract makes no claim that a source is online, that a page was transferred, that history converged or that any remote copy was erased",
-    "the active Postcard adapter uses explicit IPC version 31 with descriptor signature domain v12 and rejects version 30 descriptors and requests before actor dispatch",
+    "the active Postcard adapter uses explicit IPC version 32 with descriptor signature domain v13 and rejects version 31 descriptors and requests before actor dispatch",
     "canonical sync v2 runtime status is read-only, compares the exact durable configured policy with the policy loaded at process start, reports restart-required on divergence and exposes at most 32 in-memory sync-path observations without plaintext, IP addresses, secrets or filesystem paths",
     "peer capability quarantine status is read-only and paginated to at most 64 opaque contact IDs, distinguishes durable quarantine, process-local scheduler suppression and normal network retry, creates no missing capability store and exposes no peer Account or Device ID, queue ID, ticket, endpoint, message body, secret or recovery authority",
+    "peer re-enrollment read accepts only nested descriptor-bound inspect or status requests of at most 4096 bytes and returns one current-Device-signed exact-request-bound response of at most 16384 bytes",
+    "peer re-enrollment plan, approve and accept commands are rejected by the active adapter before any state mutation while invitation staging remains an explicit offline Device-signed content-addressed operation",
+    "peer re-enrollment observation opens capability, acceptance, runtime-transition and invitation-staging stores read-only, treats absence as an honest missing state and fails closed on corruption, foreign ownership, replay, expiry or authority divergence",
+    "peer re-enrollment projection exposes only opaque contact and artifact identifiers, bounded state, hazard, durable-versus-process-local suppression, restart requirement and separate history-recovery state; raw Account or Device IDs, ticket or endpoint bytes, paths, secrets, queue IDs and message bodies are forbidden",
     "the active conversation-list adapter accepts only limits from 1 through 64 and returns strict UTF-8-label then peer-Account ordering after the exact request cursor",
     "an active conversation-list continuation exists only on a full page and equals the exact label and peer Account tuple of the final returned summary",
     "the desktop independently validates every active conversation page and bounds one automatic refresh to 1024 pages rather than accepting truncation as success",

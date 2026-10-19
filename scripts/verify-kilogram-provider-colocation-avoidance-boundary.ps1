@@ -120,7 +120,7 @@ foreach ($forbidden in @(
         throw "provider IPC exposes local path provenance '$forbidden'"
     }
 }
-if (-not $ipc.Contains('const IPC_VERSION: u8 = 31;')) {
+if (-not $ipc.Contains('const IPC_VERSION: u8 = 32;')) {
     throw 'provider co-location preference unexpectedly changed authenticated IPC v30'
 }
 

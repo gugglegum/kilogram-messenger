@@ -47,7 +47,8 @@
       "start-history-recovery-execution",
       "history-recovery-execution-status",
       "canonical-sync-v2-runtime-status",
-      "peer-capability-quarantine-page"
+      "peer-capability-quarantine-page",
+      "peer-reenrollment-read"
     ],
     "results": [
       "pong",
@@ -84,7 +85,8 @@
       "history-recovery-execution-started",
       "history-recovery-execution-status",
       "canonical-sync-v2-runtime-status-result",
-      "peer-capability-quarantine-page-result"
+      "peer-capability-quarantine-page-result",
+      "peer-reenrollment-read-result"
     ],
     "universal_results": [
       "error"
@@ -125,12 +127,13 @@
       { "command": "start-history-recovery-execution", "result": "history-recovery-execution-started", "module": "recovery-execution", "kind": "mutation" },
       { "command": "history-recovery-execution-status", "result": "history-recovery-execution-status", "module": "recovery-execution", "kind": "read" },
       { "command": "canonical-sync-v2-runtime-status", "result": "canonical-sync-v2-runtime-status-result", "module": "read", "kind": "read" },
-      { "command": "peer-capability-quarantine-page", "result": "peer-capability-quarantine-page-result", "module": "read", "kind": "read" }
+      { "command": "peer-capability-quarantine-page", "result": "peer-capability-quarantine-page-result", "module": "read", "kind": "read" },
+      { "command": "peer-reenrollment-read", "result": "peer-reenrollment-read-result", "module": "read", "kind": "read" }
     ]
   },
   "active_postcard": {
-    "version": 31,
-    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v12\\0",
+    "version": 32,
+    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v13\\0",
     "commands": [
       { "variant": "Ping", "disposition": "canonical-target", "canonical_commands": ["ping"] },
       { "variant": "AddContact", "disposition": "canonical-target", "canonical_commands": ["add-contact"] },
@@ -162,7 +165,8 @@
       { "variant": "CreateExactMailboxCapability", "disposition": "canonical-target", "canonical_commands": ["create-mailbox-capability"] },
       { "variant": "RotateExactMailboxCapability", "disposition": "canonical-target", "canonical_commands": ["rotate-mailbox-capability"] },
       { "variant": "CanonicalSyncV2RuntimeStatus", "disposition": "canonical-target", "canonical_commands": ["canonical-sync-v2-runtime-status"] },
-      { "variant": "PeerCapabilityQuarantinePage", "disposition": "canonical-target", "canonical_commands": ["peer-capability-quarantine-page"] }
+      { "variant": "PeerCapabilityQuarantinePage", "disposition": "canonical-target", "canonical_commands": ["peer-capability-quarantine-page"] },
+      { "variant": "PeerReenrollmentRead", "disposition": "canonical-target", "canonical_commands": ["peer-reenrollment-read"] }
     ],
     "responses": [
       { "variant": "Pong", "disposition": "canonical-target", "canonical_results": ["pong"] },
@@ -194,7 +198,8 @@
       { "variant": "ShutdownAccepted", "disposition": "canonical-target", "canonical_results": ["shutdown-accepted"] },
       { "variant": "Error", "disposition": "canonical-target", "canonical_results": ["error"] },
       { "variant": "CanonicalSyncV2RuntimeStatus", "disposition": "canonical-target", "canonical_results": ["canonical-sync-v2-runtime-status-result"] },
-      { "variant": "PeerCapabilityQuarantinePage", "disposition": "canonical-target", "canonical_results": ["peer-capability-quarantine-page-result"] }
+      { "variant": "PeerCapabilityQuarantinePage", "disposition": "canonical-target", "canonical_results": ["peer-capability-quarantine-page-result"] },
+      { "variant": "PeerReenrollmentRead", "disposition": "canonical-target", "canonical_results": ["peer-reenrollment-read-result"] }
     ]
   },
   "postcard_only_activation_blockers": [],

@@ -39,7 +39,7 @@ function Assert-Schema {
         [string]$Schema.profile -cne 'kilogram-deterministic-cbor-v1' -or
         [string]$Schema.cddl.path -cne 'CANONICAL-RUNTIME-IPC.cddl' -or
         [string]$Schema.cddl.root_rule -cne 'kilogram-runtime-ipc-v1' -or
-        [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v31-with-json-descriptor-v12' -or
+        [string]$Schema.activation.current_runtime_encoding -cne 'postcard-v32-with-json-descriptor-v13' -or
         -not [bool]$Schema.activation.current_runtime_changed) {
         throw 'canonical runtime IPC outbox schema header changed'
     }
@@ -55,8 +55,8 @@ function Assert-Schema {
         throw 'canonical runtime IPC outbox limits changed'
     }
     if (@($Schema.domains).Count -ne 78 -or @($Schema.objects).Count -ne 38 -or
-        @($Schema.covered_commands).Count -ne 36 -or @($Schema.covered_results).Count -ne 35 -or
-        @($Schema.semantic_rules).Count -ne 181 -or
+        @($Schema.covered_commands).Count -ne 37 -or @($Schema.covered_results).Count -ne 36 -or
+        @($Schema.semantic_rules).Count -ne 185 -or
         @($Schema.remaining_runtime_ipc_surface).Count -ne 0) {
         throw 'canonical runtime IPC outbox inventory changed'
     }
@@ -158,8 +158,8 @@ foreach ($required in @('runtime-ipc-outbox-command-v1', 'runtime-ipc-outbox-req
 if ($lib.IndexOf('pub mod canonical_runtime_ipc_outbox_v1;', [StringComparison]::Ordinal) -lt 0) {
     throw 'canonical runtime IPC outbox module is not exported'
 }
-foreach ($required in @('const IPC_VERSION: u8 = 31;',
-    'kilogram:runtime-ipc-descriptor:v12\0', 'postcard::to_allocvec', 'postcard::from_bytes')) {
+foreach ($required in @('const IPC_VERSION: u8 = 32;',
+    'kilogram:runtime-ipc-descriptor:v13\0', 'postcard::to_allocvec', 'postcard::from_bytes')) {
     if ($activeIpc.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
         throw "active runtime IPC boundary is missing '$required'"
     }
@@ -170,8 +170,8 @@ if ($activeIpc.IndexOf('canonical_runtime_ipc_outbox_v1', [StringComparison]::Or
 $source = @($compatibility.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
 if ($source.Count -ne 1 -or [string]$source[0].encoding -cne 'postcard' -or
     [string]$source[0].compatibility -cne 'exact-version' -or
-    [int](@($source[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 31) {
-    throw 'active compatibility registry no longer records Postcard runtime IPC v31'
+    [int](@($source[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 32) {
+    throw 'active compatibility registry no longer records Postcard runtime IPC v32'
 }
 $surface = @($coverage.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
 $expectedCovered = @('device-signed-loopback-descriptor',
