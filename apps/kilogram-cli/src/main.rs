@@ -352,6 +352,7 @@ const ROUTE_POLICY_WAIT: Duration = Duration::from_secs(15);
 const CONNECTION_TIMEOUT: Duration = Duration::from_secs(30);
 const CLIENT_RELAY_WAIT_SECONDS: u64 = 30;
 const STREAM_OPEN_TIMEOUT: Duration = Duration::from_secs(15);
+const SYNC_FOLLOW_UP_STREAM_TIMEOUT: Duration = Duration::from_secs(120);
 const HISTORY_RECOVERY_NEXT_PAGE_TIMEOUT: Duration = Duration::from_secs(60);
 const MAX_HISTORY_RECOVERY_PAGES_PER_SESSION: usize = 64;
 const CLI_COORDINATOR_STACK_BYTES: usize = 8 * 1024 * 1024;
@@ -23264,6 +23265,7 @@ async fn handle_authorized_application_connection(
     let (mut send, mut receive) =
         accept_bi(connection, "accept authorized application stream").await?;
     let request = read_client_request(&mut receive).await?;
+    drop(receive);
     let print_transport_after_request = match request {
         ClientRequest::DeliverEvent(event) => {
             handle_delivery_request(
@@ -23308,7 +23310,6 @@ async fn handle_authorized_application_connection(
         ClientRequest::SyncEvents(_) => bail!("sync event batch cannot be the first request"),
         ClientRequest::SyncPause(_) => bail!("sync pause cannot be the first request"),
         ClientRequest::HistoryRewrap(request) => {
-            drop(receive);
             serve_history_rewrap_session(
                 state_directory,
                 device_state,
@@ -24543,9 +24544,10 @@ async fn handle_sync_request(
         );
         println!("sync_round_{round_number}_diff_wire_bytes={diff_wire_bytes}");
         write_intermediate_server_response(&mut inventory_send, &diff_response).await?;
+        drop(inventory_send);
 
         let (mut batch_send, mut batch_receive) =
-            accept_bi(connection, "accept sync event batch stream").await?;
+            accept_sync_follow_up_bi(connection, "accept sync event batch stream").await?;
         let batch = match read_client_request(&mut batch_receive).await? {
             ClientRequest::SyncEvents(batch) => batch,
             _ => bail!("listener expected a sync event batch after a sync diff"),
@@ -24578,7 +24580,7 @@ async fn handle_sync_request(
             return Ok(());
         }
         let (mut next_send, mut next_receive) =
-            accept_bi(connection, "accept next sync inventory stream").await?;
+            accept_sync_follow_up_bi(connection, "accept next sync inventory stream").await?;
         inventory = match read_client_request(&mut next_receive).await? {
             ClientRequest::SyncInventory(inventory) => inventory,
             ClientRequest::SyncPause(pause) => {
@@ -25643,6 +25645,16 @@ async fn accept_bi(connection: &Connection, operation: &str) -> Result<(SendStre
     timeout(STREAM_OPEN_TIMEOUT, connection.accept_bi())
         .await
         .with_context(|| timeout_message(operation, STREAM_OPEN_TIMEOUT))?
+        .with_context(|| operation.to_owned())
+}
+
+async fn accept_sync_follow_up_bi(
+    connection: &Connection,
+    operation: &str,
+) -> Result<(SendStream, RecvStream)> {
+    timeout(SYNC_FOLLOW_UP_STREAM_TIMEOUT, connection.accept_bi())
+        .await
+        .with_context(|| timeout_message(operation, SYNC_FOLLOW_UP_STREAM_TIMEOUT))?
         .with_context(|| operation.to_owned())
 }
 
