@@ -2431,6 +2431,14 @@ new crate has no runtime or network consumer, returns no activation authority,
 and keeps the public default `legacy-only` while N/N-1 interoperability and a
 real containment rehearsal remain open.
 
+[`RFC-0216`](docs/RFC-0216-m1192-peer-capability-floor.md) makes the
+first-contact downgrade boundary explicit. An extension-free legacy ticket is
+`legacy-unasserted`, not proof that its peer is old. A current invitation or an
+authenticated canonical capability can raise a monotonic local floor; once
+pinned, extension removal or authority/publication regression is quarantined
+instead of silently falling back. The model is dormant and does not change the
+public `legacy-only` default.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.1.92",
+  "status": "canonical-sync-v2-peer-capability-floor-verified-dormant",
+  "implementation": "crates/kilogram-sync-capability",
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "states": [
+    "legacy-unasserted",
+    "current-invitation-required",
+    "canonical-candidate-pinned",
+    "quarantined"
+  ],
+  "first_contact_boundary": {
+    "legacy_ticket_without_extension_proves_old_client": false,
+    "legacy_ticket_without_prior_assertion": "legacy-compatible-unasserted",
+    "generic_network_detection_of_stripped_optional_extension": false,
+    "current_invitation_can_raise_floor_before_ticket_use": true,
+    "claim": "a genuine old ticket and a current ticket with its optional extension removed are indistinguishable without prior authenticated state or a stronger invitation envelope"
+  },
+  "monotonic_rules": {
+    "ordinary_network_input_can_lower_floor": false,
+    "exact_current_invitation_requires_exact_capability_id": true,
+    "pinned_capability_may_disappear": false,
+    "authority_revision_may_regress": false,
+    "ticket_publication_epoch_may_regress": false,
+    "quarantine_self_recovers_from_network_input": false
+  },
+  "quarantine_reasons": [
+    "required-invitation-capability-missing",
+    "required-invitation-capability-mismatch",
+    "pinned-canonical-capability-missing",
+    "authenticated-authority-revision-regression",
+    "authenticated-ticket-epoch-regression"
+  ],
+  "activation_boundary": {
+    "state_machine_performs_io": false,
+    "state_machine_grants_transport_permission": false,
+    "durable_store_implemented": false,
+    "runtime_integration_enabled": false,
+    "automatic_enrollment_enabled": false
+  },
+  "non_claims": [
+    "universal-first-contact-stripping-detection",
+    "durable-peer-capability-pin-store",
+    "current-invitation-wire-format",
+    "public-rollout-eligible",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "device-signed-current-invitation-bundle",
+    "durable-monotonic-peer-capability-pin-store",
+    "dormant-rollout-controller"
+  ]
+}

@@ -21,6 +21,180 @@ pub const SYNC_TRANSPORT_CANDIDATE_SELECTION_VERSION: u8 = 1;
 pub const MAX_SYNC_TRANSPORT_CAPABILITY_VALIDITY_SECONDS: u64 = 30 * 24 * 60 * 60;
 pub const SYNC_TRANSPORT_CAPABILITY_CLOCK_SKEW_SECONDS: u64 = 5 * 60;
 
+/// A local, monotonic interpretation of what a peer has already authenticated.
+///
+/// `LegacyUnasserted` is deliberately not evidence that the remote peer is an
+/// old client. It only means that no stronger assertion has reached this local
+/// installation yet. A current invitation or an authenticated canonical
+/// capability raises the floor; ordinary network input can never lower it.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PeerSyncCapabilityFloor {
+    LegacyUnasserted,
+    CurrentInvitationRequired {
+        invitation_id: [u8; 32],
+        required_capability_id: [u8; 32],
+        minimum_authority_revision: u64,
+        minimum_ticket_publication_epoch: u64,
+    },
+    CanonicalCandidatePinned {
+        minimum_authority_revision: u64,
+        minimum_ticket_publication_epoch: u64,
+    },
+    Quarantined {
+        reason: PeerSyncCapabilityQuarantineReason,
+    },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PeerSyncCapabilityEvidence {
+    LegacyTicketWithoutExtension,
+    AuthenticatedLegacyOnly {
+        capability_id: [u8; 32],
+        authority_revision: u64,
+        ticket_publication_epoch: u64,
+    },
+    AuthenticatedCanonicalCandidate {
+        capability_id: [u8; 32],
+        authority_revision: u64,
+        ticket_publication_epoch: u64,
+    },
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PeerSyncCapabilityQuarantineReason {
+    RequiredInvitationCapabilityMissing,
+    RequiredInvitationCapabilityMismatch,
+    PinnedCanonicalCapabilityMissing,
+    AuthenticatedAuthorityRevisionRegression,
+    AuthenticatedTicketEpochRegression,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PeerSyncCapabilityUse {
+    LegacyCompatibilityUnasserted,
+    AuthenticatedLegacyOnly,
+    AuthenticatedCanonicalCandidate,
+    Quarantined,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PeerSyncCapabilityTransition {
+    pub previous: PeerSyncCapabilityFloor,
+    pub next: PeerSyncCapabilityFloor,
+    pub permitted_use: PeerSyncCapabilityUse,
+}
+
+/// Evaluate one authenticated ticket observation against the local capability
+/// floor. This function performs no I/O and grants no transport permission.
+/// Its result must be durably committed before a caller relies on a raised
+/// floor.
+pub fn evaluate_peer_sync_capability_floor(
+    current: PeerSyncCapabilityFloor,
+    evidence: PeerSyncCapabilityEvidence,
+) -> PeerSyncCapabilityTransition {
+    let (next, permitted_use) = match current {
+        PeerSyncCapabilityFloor::LegacyUnasserted => match evidence {
+            PeerSyncCapabilityEvidence::LegacyTicketWithoutExtension => (
+                current,
+                PeerSyncCapabilityUse::LegacyCompatibilityUnasserted,
+            ),
+            PeerSyncCapabilityEvidence::AuthenticatedLegacyOnly { .. } => {
+                (current, PeerSyncCapabilityUse::AuthenticatedLegacyOnly)
+            }
+            PeerSyncCapabilityEvidence::AuthenticatedCanonicalCandidate {
+                authority_revision,
+                ticket_publication_epoch,
+                ..
+            } => (
+                PeerSyncCapabilityFloor::CanonicalCandidatePinned {
+                    minimum_authority_revision: authority_revision,
+                    minimum_ticket_publication_epoch: ticket_publication_epoch,
+                },
+                PeerSyncCapabilityUse::AuthenticatedCanonicalCandidate,
+            ),
+        },
+        PeerSyncCapabilityFloor::CurrentInvitationRequired {
+            required_capability_id,
+            minimum_authority_revision,
+            minimum_ticket_publication_epoch,
+            ..
+        } => match evidence {
+            PeerSyncCapabilityEvidence::AuthenticatedCanonicalCandidate {
+                capability_id,
+                authority_revision,
+                ticket_publication_epoch,
+            } if capability_id == required_capability_id
+                && authority_revision >= minimum_authority_revision
+                && ticket_publication_epoch >= minimum_ticket_publication_epoch =>
+            {
+                (
+                    PeerSyncCapabilityFloor::CanonicalCandidatePinned {
+                        minimum_authority_revision: authority_revision,
+                        minimum_ticket_publication_epoch: ticket_publication_epoch,
+                    },
+                    PeerSyncCapabilityUse::AuthenticatedCanonicalCandidate,
+                )
+            }
+            PeerSyncCapabilityEvidence::LegacyTicketWithoutExtension
+            | PeerSyncCapabilityEvidence::AuthenticatedLegacyOnly { .. } => {
+                quarantine(PeerSyncCapabilityQuarantineReason::RequiredInvitationCapabilityMissing)
+            }
+            PeerSyncCapabilityEvidence::AuthenticatedCanonicalCandidate { .. } => {
+                quarantine(PeerSyncCapabilityQuarantineReason::RequiredInvitationCapabilityMismatch)
+            }
+        },
+        PeerSyncCapabilityFloor::CanonicalCandidatePinned {
+            minimum_authority_revision,
+            minimum_ticket_publication_epoch,
+        } => match evidence {
+            PeerSyncCapabilityEvidence::LegacyTicketWithoutExtension
+            | PeerSyncCapabilityEvidence::AuthenticatedLegacyOnly { .. } => {
+                quarantine(PeerSyncCapabilityQuarantineReason::PinnedCanonicalCapabilityMissing)
+            }
+            PeerSyncCapabilityEvidence::AuthenticatedCanonicalCandidate {
+                authority_revision,
+                ..
+            } if authority_revision < minimum_authority_revision => quarantine(
+                PeerSyncCapabilityQuarantineReason::AuthenticatedAuthorityRevisionRegression,
+            ),
+            PeerSyncCapabilityEvidence::AuthenticatedCanonicalCandidate {
+                ticket_publication_epoch,
+                ..
+            } if ticket_publication_epoch < minimum_ticket_publication_epoch => {
+                quarantine(PeerSyncCapabilityQuarantineReason::AuthenticatedTicketEpochRegression)
+            }
+            PeerSyncCapabilityEvidence::AuthenticatedCanonicalCandidate {
+                authority_revision,
+                ticket_publication_epoch,
+                ..
+            } => (
+                PeerSyncCapabilityFloor::CanonicalCandidatePinned {
+                    minimum_authority_revision: authority_revision,
+                    minimum_ticket_publication_epoch: ticket_publication_epoch,
+                },
+                PeerSyncCapabilityUse::AuthenticatedCanonicalCandidate,
+            ),
+        },
+        PeerSyncCapabilityFloor::Quarantined { .. } => {
+            (current, PeerSyncCapabilityUse::Quarantined)
+        }
+    };
+    PeerSyncCapabilityTransition {
+        previous: current,
+        next,
+        permitted_use,
+    }
+}
+
+fn quarantine(
+    reason: PeerSyncCapabilityQuarantineReason,
+) -> (PeerSyncCapabilityFloor, PeerSyncCapabilityUse) {
+    (
+        PeerSyncCapabilityFloor::Quarantined { reason },
+        PeerSyncCapabilityUse::Quarantined,
+    )
+}
+
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(rename_all = "kebab-case")]
 pub enum SyncTransportProtocol {
@@ -920,5 +1094,108 @@ mod tests {
             Err(SyncTransportCapabilityError::UnsafeCandidateSelectionState)
         ));
         Ok(())
+    }
+
+    #[test]
+    fn first_legacy_contact_remains_explicitly_unasserted() {
+        let transition = evaluate_peer_sync_capability_floor(
+            PeerSyncCapabilityFloor::LegacyUnasserted,
+            PeerSyncCapabilityEvidence::LegacyTicketWithoutExtension,
+        );
+        assert_eq!(transition.next, PeerSyncCapabilityFloor::LegacyUnasserted);
+        assert_eq!(
+            transition.permitted_use,
+            PeerSyncCapabilityUse::LegacyCompatibilityUnasserted
+        );
+    }
+
+    #[test]
+    fn exact_current_invitation_raises_the_floor() {
+        let transition = evaluate_peer_sync_capability_floor(
+            PeerSyncCapabilityFloor::CurrentInvitationRequired {
+                invitation_id: [0x11; 32],
+                required_capability_id: [0x22; 32],
+                minimum_authority_revision: 7,
+                minimum_ticket_publication_epoch: 3,
+            },
+            PeerSyncCapabilityEvidence::AuthenticatedCanonicalCandidate {
+                capability_id: [0x22; 32],
+                authority_revision: 7,
+                ticket_publication_epoch: 3,
+            },
+        );
+        assert_eq!(
+            transition.next,
+            PeerSyncCapabilityFloor::CanonicalCandidatePinned {
+                minimum_authority_revision: 7,
+                minimum_ticket_publication_epoch: 3,
+            }
+        );
+        assert_eq!(
+            transition.permitted_use,
+            PeerSyncCapabilityUse::AuthenticatedCanonicalCandidate
+        );
+    }
+
+    #[test]
+    fn stripped_required_or_pinned_capability_is_quarantined() {
+        for floor in [
+            PeerSyncCapabilityFloor::CurrentInvitationRequired {
+                invitation_id: [0x31; 32],
+                required_capability_id: [0x32; 32],
+                minimum_authority_revision: 4,
+                minimum_ticket_publication_epoch: 2,
+            },
+            PeerSyncCapabilityFloor::CanonicalCandidatePinned {
+                minimum_authority_revision: 4,
+                minimum_ticket_publication_epoch: 2,
+            },
+        ] {
+            let transition = evaluate_peer_sync_capability_floor(
+                floor,
+                PeerSyncCapabilityEvidence::LegacyTicketWithoutExtension,
+            );
+            assert_eq!(transition.permitted_use, PeerSyncCapabilityUse::Quarantined);
+            assert!(matches!(
+                transition.next,
+                PeerSyncCapabilityFloor::Quarantined { .. }
+            ));
+        }
+    }
+
+    #[test]
+    fn pinned_capability_rejects_monotonic_regression_and_never_self_recovers() {
+        let floor = PeerSyncCapabilityFloor::CanonicalCandidatePinned {
+            minimum_authority_revision: 9,
+            minimum_ticket_publication_epoch: 5,
+        };
+        let regression = evaluate_peer_sync_capability_floor(
+            floor,
+            PeerSyncCapabilityEvidence::AuthenticatedCanonicalCandidate {
+                capability_id: [0x41; 32],
+                authority_revision: 8,
+                ticket_publication_epoch: 6,
+            },
+        );
+        assert_eq!(
+            regression.next,
+            PeerSyncCapabilityFloor::Quarantined {
+                reason:
+                    PeerSyncCapabilityQuarantineReason::AuthenticatedAuthorityRevisionRegression,
+            }
+        );
+        let later_valid = evaluate_peer_sync_capability_floor(
+            regression.next,
+            PeerSyncCapabilityEvidence::AuthenticatedCanonicalCandidate {
+                capability_id: [0x42; 32],
+                authority_revision: 10,
+                ticket_publication_epoch: 7,
+            },
+        );
+        assert_eq!(later_valid.next, regression.next);
+        assert_eq!(
+            later_valid.permitted_use,
+            PeerSyncCapabilityUse::Quarantined
+        );
     }
 }

@@ -7235,3 +7235,18 @@ correlation visible, Windows-only field evidence, independent security audit
   peer; durable selected sessions downgrade не принимают, public hold сохранён;
 - dedicated negative boundary и readiness расширены до 118 gates. Public
   default остаётся `legacy-only`; release/ZIP/tag не создавались.
+
+### M1.1.92 — monotonic peer capability floor: принят локально
+
+- extension-free first contact теперь явно называется `legacy-unasserted`, а
+  не доказательством старой версии peer;
+- pure state machine различает legacy-unasserted, exact current invitation,
+  canonical pin и quarantine, не выполняя I/O и не выдавая transport authority;
+- exact invitation требует committed capability ID; после pin semantic floor
+  хранит monotonic Account authority revision и ticket publication epoch;
+- исчезновение pinned canonical capability и regression обеих high-water
+  величин переводят peer в quarantine без network-driven self-recovery;
+- RFC честно фиксирует неразрешимость generic first-contact stripping без
+  prior authenticated state либо stronger invitation envelope;
+- 10/10 targeted tests, boundary и negative self-test прошли; ticket/sync wire,
+  runtime IPC и public `legacy-only` default не менялись.
