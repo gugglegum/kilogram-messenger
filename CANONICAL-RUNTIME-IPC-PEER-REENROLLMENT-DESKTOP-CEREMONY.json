@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.17",
+  "status": "canonical-runtime-ipc-peer-reenrollment-desktop-ceremony-verified",
+  "contract_source": "M1.2.16",
+  "implementation": [
+    "apps/kilogram-windows/src/lib.rs",
+    "apps/kilogram-windows/src/peer_reenrollment.rs",
+    "crates/kilogram-runtime-ipc"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_active_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "runtime_ipc": {
+    "version": 33,
+    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v14\\0",
+    "read_command": "PeerReenrollmentRead",
+    "mutation_command": "PeerReenrollmentMutation",
+    "signed_response_required": true,
+    "descriptor_binding_required": true,
+    "fresh_request_id_per_operation": true
+  },
+  "desktop_projection": {
+    "opaque_contact_id": true,
+    "opaque_artifact_ids": true,
+    "bounded_replacement_fingerprint": true,
+    "device_or_root_secret": false,
+    "filesystem_path": false,
+    "transport_ticket_or_endpoint": false,
+    "raw_account_or_device_id": false,
+    "reusable_capability": false,
+    "message_or_history_body": false
+  },
+  "ceremony": {
+    "starts_from_signed_status": true,
+    "exact_staged_invitation_selection": true,
+    "plan_is_separate": true,
+    "approval_requires_exact_typed_phrase": true,
+    "approval_requires_separate_checkbox": true,
+    "accept_is_separate": true,
+    "implicit_consent": false,
+    "automatic_click_or_retry": false,
+    "clear_quarantine_action": false,
+    "automatic_history_rewrap": false
+  },
+  "invalidation": {
+    "changed_contact": true,
+    "changed_signed_status": true,
+    "changed_plan": true,
+    "changed_descriptor_bytes": true,
+    "runtime_disconnect_or_restart": true,
+    "typed_phrase_and_checkbox_cleared": true,
+    "refresh_required_after_mutation_error": true
+  },
+  "fresh_start": {
+    "acceptance_incomplete_is_not_success": true,
+    "acceptance_incomplete_restart_forbidden": true,
+    "accepted_restart_required_is_not_consumed": true,
+    "hot_apply": false,
+    "desktop_owned_runtime_required": true,
+    "clean_shutdown_requested": true,
+    "fresh_process_required": true,
+    "exact_receipt_and_transition_verified": true,
+    "mismatch_stops_fresh_runtime": true,
+    "bounded_exact_retry_after_failed_verification": true
+  },
+  "verification": {
+    "pure_state_machine_tests": 5,
+    "authenticated_loopback_ceremony_test": true,
+    "stable_path_rust_harness_required_on_windows": true,
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "143/143",
+    "second_host_required": false,
+    "product_network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "non_claims": [
+    "automatic-peer-reenrollment",
+    "quarantine-clear-or-record-deletion",
+    "hot-runtime-transition-apply",
+    "implicit-old-history-recovery",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "explicit-old-history-recovery-plan",
+    "independent-protocol-and-security-review"
+  ]
+}

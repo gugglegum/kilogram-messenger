@@ -1,35 +1,35 @@
-# Текущая точка: M1.2.16 завершён, следующий M1.2.17
+# Текущая точка: M1.2.17 завершён, следующий M1.2.18
 
-Статус на 2026-10-20: authenticated runtime IPC v33/domain v14 строго
-разделяет read-only `inspect`/`status` и explicit `plan`/`approve`/`accept`.
-Current Device подписывает bounded ceremony journal; partial acceptance честно
-видна как incomplete, exact replay продолжает ту же операцию, а successor
-применяется только на fresh start после complete journal. Desktop пока
-read-only. Readiness 142/142; stable regression: CLI 102/102 + 1/1, planner
-5/5, acceptance 5/5, runtime/journal 7/7, IPC 27/27 и Windows 30/30. Peer wire
-и public default `legacy-only` неизменны.
+Статус на 2026-10-20: Windows-клиент проводит peer re-enrollment как явную
+authenticated церемонию `status -> plan -> approve -> accept -> fresh start ->
+consumed`. GUI видит только privacy-safe signed projection; exact phrase и
+отдельный checkbox обязательны, incomplete state не считается успехом, hot
+apply и clear quarantine отсутствуют. После acceptance desktop штатно
+останавливает только запущенный им runtime, запускает новый процесс и принимает
+успех лишь при exact совпадении receipt/transition. Readiness 143/143; stable
+Windows regression 36/36. IPC остаётся v33/domain v14, peer wire и public
+default `legacy-only` не изменены.
 
-## Следующий этап: M1.2.17 guided desktop peer re-enrollment ceremony
+## Следующий этап: M1.2.18 explicit old-history recovery plan
 
-- добавить в Windows-клиент пошаговый UX поверх уже принятого authenticated
-  IPC, не перенося Device/Root secret, filesystem path, ticket, endpoint, raw
-  Account/Device ID или reusable capability в GUI;
-- начинать только из read-only status: пользователь отдельно выбирает exact
-  staged invitation, получает понятное объяснение quarantine и создаёт plan;
-- показывать bounded summary replacement Device и exact confirmation phrase;
-  approve требует осознанного ввода phrase и отдельного подтверждения, без
-  одного общего toggle, implicit consent или auto-click;
-- accept остаётся отдельным действием после durable approval. UI обязан честно
-  различать `acceptance-incomplete`, `restart-required` и `consumed`, не
-  изображать частичную запись как успех и не предлагать clear quarantine;
-- после complete показывать guided restart, но не hot apply. Restart должен
-  использовать существующую fresh-start проверку и не запускать hidden retry,
-  delivery, recovery либо history rewrap;
-- любой descriptor replacement, runtime restart, changed plan/status или
-  competing ceremony инвалидирует UI confirmation и требует нового refresh;
-- добавить pure state machine/UI tests, authenticated loopback desktop test и
-  fail-closed boundary. Второй хост и product network не нужны; default, peer
-  wire, release/ZIP/tag и automatic GitHub build не менять.
+- отделить успешное peer/device re-enrollment от доступа replacement Device к
+  старой читаемой истории: новая identity не получает такой доступ неявно;
+- построить read-only bounded inventory доступных локальных history sources,
+  conversation/range coverage и уже существующих rewrap checkpoints без
+  чтения message bodies в GUI;
+- создать отдельный content-addressed recovery plan, exact-связанный с
+  replacement Device, authority revision, conversation/ranges, source claim и
+  текущим re-enrollment transition;
+- потребовать отдельное осознанное согласие владельца истории; re-enrollment
+  approval, peer acceptance и history recovery consent не объединять;
+- changed source inventory, authority, membership, recipient, range либо
+  checkpoint инвалидирует plan. Divergent source claims остаются видимыми и
+  fail closed;
+- на этом этапе не выполнять transfer/rewrap автоматически и не добавлять
+  network authority в desktop. Execution, resumable multi-source transfer и
+  окончательная reconciliation остаются последующими отдельными этапами;
+- добавить pure planner tests и fail-closed boundary. Active IPC, peer/sync
+  wire, public default, release/ZIP/tag и automatic GitHub build не менять.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

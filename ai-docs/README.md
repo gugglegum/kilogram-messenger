@@ -1,15 +1,16 @@
 # Память проекта Kilogram
 
-Актуально на: 2026-10-19.
+Актуально на: 2026-10-20.
 
 Эта папка — краткая проектная память и дорожная карта. Подробная техническая
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.1.87 добавил authenticated
-read-only runtime snapshot загруженной/configured canonical policy и bounded
-наблюдения реально выбранных sync paths. Публичный default остаётся
-legacy-only; live hot apply отсутствует, расхождение честно требует restart.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.17 добавил guided desktop peer
+re-enrollment поверх authenticated IPC с exact staged plan, раздельными
+approve/accept, честным incomplete state и обязательной fresh-process проверкой
+consumed transition. Публичный default остаётся legacy-only; hot apply и
+неявный доступ replacement Device к старой истории отсутствуют.
 
 ## Текущее состояние
 

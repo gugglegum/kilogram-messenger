@@ -14,6 +14,7 @@ $contractPath = Join-Path $workspace 'crates\kilogram-runtime-ipc\src\peer_reenr
 $stagingPath = Join-Path $workspace 'crates\kilogram-peer-reenrollment-staging\src\lib.rs'
 $cliPath = Join-Path $workspace 'apps\kilogram-cli\src\main.rs'
 $desktopPath = Join-Path $workspace 'apps\kilogram-windows\src\lib.rs'
+$desktopCeremonyManifestPath = Join-Path $workspace 'CANONICAL-RUNTIME-IPC-PEER-REENROLLMENT-DESKTOP-CEREMONY.json'
 $rfcPath = Join-Path $workspace 'docs\RFC-0239-m1215-read-only-runtime-peer-reenrollment-adapter.md'
 
 function Copy-JsonObject {
@@ -209,9 +210,13 @@ function Assert-Contract {
         'WorkerRequest::PeerReenrollmentStatus',
         'RuntimeIpcPeerReenrollmentCommand::Status',
         'SignedRuntimeIpcPeerReenrollmentResponse::decode_and_verify',
-        'Peer re-enrollment safety (read only)',
-        'No plan, approve, accept, retry, clear, hot-apply, or automatic recovery action is available here.'
+        'PeerReenrollmentView'
     ) 'desktop read-only adapter'
+    if ([string]$script:desktopCeremonyManifest.milestone -cne 'M1.2.17' -or
+        [string]$script:desktopCeremonyManifest.contract_source -cne 'M1.2.16' -or
+        [string]$script:desktopCeremonyManifest.status -cne 'canonical-runtime-ipc-peer-reenrollment-desktop-ceremony-verified') {
+        throw 'read adapter successor desktop ceremony changed'
+    }
 
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')
     foreach ($needle in @(
@@ -232,7 +237,8 @@ function Assert-Contract {
 
 foreach ($path in @(
     $manifestPath, $completionPath, $schemaPath, $compatibilityPath, $ipcPath,
-    $contractPath, $stagingPath, $cliPath, $desktopPath, $rfcPath
+    $contractPath, $stagingPath, $cliPath, $desktopPath,
+    $desktopCeremonyManifestPath, $rfcPath
 )) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "missing file: $path" }
 }
@@ -246,6 +252,7 @@ $contract = Get-Content -LiteralPath $contractPath -Raw
 $staging = Get-Content -LiteralPath $stagingPath -Raw
 $cli = Get-Content -LiteralPath $cliPath -Raw
 $desktop = Get-Content -LiteralPath $desktopPath -Raw
+$script:desktopCeremonyManifest = Get-Content -LiteralPath $desktopCeremonyManifestPath -Raw | ConvertFrom-Json
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
 Assert-Contract $manifest $completion $schema $compatibility $ipc $contract $staging $cli $desktop $rfc
 

@@ -17,6 +17,7 @@ $runtimePath = Join-Path $workspace 'crates\kilogram-peer-reenrollment-runtime\s
 $ceremonyPath = Join-Path $workspace 'crates\kilogram-peer-reenrollment-runtime\src\ceremony.rs'
 $cliPath = Join-Path $workspace 'apps\kilogram-cli\src\main.rs'
 $desktopPath = Join-Path $workspace 'apps\kilogram-windows\src\lib.rs'
+$desktopCeremonyManifestPath = Join-Path $workspace 'CANONICAL-RUNTIME-IPC-PEER-REENROLLMENT-DESKTOP-CEREMONY.json'
 $rfcPath = Join-Path $workspace 'docs\RFC-0240-m1216-fresh-start-peer-reenrollment-mutation-adapter.md'
 
 function Copy-JsonObject {
@@ -219,7 +220,17 @@ function Assert-Contract {
         'peer_reenrollment_consumes_only_at_fresh_start_and_retains_old_evidence'
     ) 'CLI runtime mutation adapter'
     if ($Desktop.Contains('RuntimeIpcCommand::PeerReenrollmentMutation')) {
-        throw 'desktop unexpectedly gained peer re-enrollment mutation authority'
+        if ([string]$script:desktopCeremonyManifest.milestone -cne 'M1.2.17' -or
+            [string]$script:desktopCeremonyManifest.contract_source -cne 'M1.2.16' -or
+            [string]$script:desktopCeremonyManifest.status -cne 'canonical-runtime-ipc-peer-reenrollment-desktop-ceremony-verified') {
+            throw 'desktop mutation authority lacks the exact M1.2.17 successor contract'
+        }
+        Assert-ContainsAll $Desktop @(
+            'WorkerRequest::PeerReenrollmentPlan',
+            'WorkerRequest::PeerReenrollmentApprove',
+            'WorkerRequest::PeerReenrollmentAccept',
+            'SignedRuntimeIpcPeerReenrollmentResponse::decode_and_verify'
+        ) 'successor desktop ceremony'
     }
 
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')
@@ -242,7 +253,7 @@ function Assert-Contract {
 foreach ($path in @(
     $manifestPath, $completionPath, $schemaPath, $compatibilityPath, $ipcPath,
     $contractPath, $planPath, $acceptancePath, $runtimePath, $ceremonyPath,
-    $cliPath, $desktopPath, $rfcPath
+    $cliPath, $desktopPath, $desktopCeremonyManifestPath, $rfcPath
 )) {
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "missing file: $path" }
 }
@@ -259,6 +270,7 @@ $runtime = Get-Content -LiteralPath $runtimePath -Raw
 $ceremony = Get-Content -LiteralPath $ceremonyPath -Raw
 $cli = Get-Content -LiteralPath $cliPath -Raw
 $desktop = Get-Content -LiteralPath $desktopPath -Raw
+$script:desktopCeremonyManifest = Get-Content -LiteralPath $desktopCeremonyManifestPath -Raw | ConvertFrom-Json
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
 
 $arguments = @(
@@ -296,7 +308,10 @@ if ($SelfTest) {
     $changedSchema = Copy-JsonObject $schema
     $changedSchema.covered_commands = @($changedSchema.covered_commands | Where-Object { $_ -cne 'peer-reenrollment-mutation' })
     $mutations += { Assert-Contract $manifest $completion $changedSchema $compatibility $ipc $contract $plan $acceptance $runtime $ceremony $cli $desktop $rfc }
-    $changedDesktop = $desktop + "`nRuntimeIpcCommand::PeerReenrollmentMutation"
+    $changedDesktop = $desktop.Replace(
+        'SignedRuntimeIpcPeerReenrollmentResponse::decode_and_verify',
+        'removed_signed_response_verification'
+    )
     $mutations += { Assert-Contract $manifest $completion $schema $compatibility $ipc $contract $plan $acceptance $runtime $ceremony $cli $changedDesktop $rfc }
 
     $rejected = 0

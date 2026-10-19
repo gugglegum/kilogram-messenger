@@ -5326,3 +5326,30 @@ Hosted follow-up:
   reusable debug dependencies and build outputs.
 - No product network operation, laptop, release build, archive, new tag or
   automatic GitHub build was used. Public sync default remains `legacy-only`.
+
+## M1.2.17 guided desktop peer re-enrollment environment (2026-10-20)
+
+- Windows GUI now uses the existing authenticated IPC v33/domain v14 for an
+  explicit status/plan/approve/accept ceremony. The verified descriptor is
+  canonically encoded and hashed as an internal UI binding; signed responses
+  are verified for every operation.
+- The desktop state machine holds only opaque IDs, bounded summaries and the
+  confirmation phrase. Any contact, signed response, plan or descriptor drift
+  clears typed consent. No secret, path, ticket, endpoint or reusable
+  capability is projected into that state machine.
+- Guided restart is limited to a connected runtime owned by the desktop. The
+  old child receives authenticated shutdown, a fresh process is created, and
+  exact receipt plus transition consumption is checked before success. A
+  mismatch or even failure to submit the verification request kills the fresh
+  child and retains only a bounded retry expectation.
+- Windows Rust harnesses were compiled without execution and launched only
+  through `scripts/run-cargo-tests-stable.ps1` at fixed EXE paths, debug
+  profile and two Cargo jobs. Full Windows library regression passed 36/36,
+  including five pure ceremony tests and one authenticated loopback sequence.
+- The new boundary rejected 10/10 negative mutations; predecessor read and
+  mutation boundaries still pass 8/8 and 10/10. Accepted-tag readiness passes
+  143/143 against immutable `M1.0.0`, including rustfmt and workspace-wide
+  locked/offline strict Clippy.
+- No second host, product network, release build, ZIP/archive, new tag or
+  automatic GitHub build was used. Existing debug dependencies were retained;
+  public sync default remains `legacy-only`.

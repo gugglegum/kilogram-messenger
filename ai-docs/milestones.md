@@ -7752,3 +7752,30 @@ correlation visible, Windows-only field evidence, independent security audit
   workspace-wide locked/offline strict Clippy;
 - wire и public default `legacy-only` не менялись; product network, ноутбук,
   release/ZIP/tag и automatic GitHub build не использовались.
+
+### M1.2.17 — guided desktop peer re-enrollment ceremony: принят локально
+
+- Windows GUI проводит уже существующую runtime ceremony по явным стадиям
+  `status -> plan -> approve -> accept`; каждая операция получает fresh request
+  ID и проверяет Device-signed response относительно exact descriptor bytes;
+- UI state содержит только opaque contact/artifact IDs, bounded replacement
+  fingerprint, summaries и confirmation phrase. Device/Root secrets, raw
+  identity, filesystem paths, transport ticket/endpoint, message/history body
+  и reusable capability в него не попадают;
+- exact staged invitation выбирается отдельно; approval требует точной phrase
+  и отдельного checkbox, accept остаётся отдельной кнопкой. Changed descriptor,
+  signed status, plan либо contact сбрасывает consent;
+- `AcceptanceIncomplete` честно остаётся незавершённым и не разрешает restart.
+  После complete acceptance desktop может штатно остановить только запущенный
+  им runtime, создать fresh process и проверить exact receipt/transition в
+  состоянии `Consumed`; hot apply отсутствует;
+- mismatch, ошибка signed response или невозможность поставить fresh
+  verification в очередь останавливает новый child process. Для точного
+  retained expectation доступен только явный retry, без hidden auto-retry;
+- пять pure state tests и authenticated loopback всей последовательности вошли
+  в полный stable-path Windows regression 36/36. Новый boundary отклонил 10/10
+  ослаблений, прежние read/mutation boundaries сохранились;
+- aggregate accepted-tag readiness прошёл 143/143 с rustfmt и workspace-wide
+  locked/offline strict Clippy. IPC остаётся v33/domain v14, wire и public
+  default `legacy-only` не менялись; second host, product network,
+  release/ZIP/tag и automatic GitHub build не использовались.
