@@ -1226,6 +1226,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.2.13 подтверждает весь flow на двух физических Windows-хостах: explicit
   history rewrap, fail-closed descriptor substitution, exactly-once delivery,
   idempotent restart и equal eight-event histories одним exact debug binary.
+- [`../docs/RFC-0238-m1214-canonical-runtime-ipc-peer-reenrollment-contract.md`](../docs/RFC-0238-m1214-canonical-runtime-ipc-peer-reenrollment-contract.md) —
+  M1.2.14 задаёт dormant bounded signed IPC contract для раздельных
+  inspect/plan/approve/accept/status стадий, privacy-safe UI projection и
+  отдельного old-history rewrap status, не меняя active runtime IPC v31.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

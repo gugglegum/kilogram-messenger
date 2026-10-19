@@ -5242,3 +5242,30 @@ Hosted follow-up:
   binary regression remains 101/101 CLI binary plus 1/1 library and runtime
   transition store 5/5. No release, ZIP/archive, tag or automatic GitHub build
   was created.
+
+## M1.2.14 dormant runtime IPC peer re-enrollment contract (2026-10-19)
+
+- Implementation is isolated in
+  `crates/kilogram-runtime-ipc/src/peer_reenrollment_contract.rs`; it is
+  re-exported as a library contract but is absent from the active
+  `RuntimeIpcCommand` and `RuntimeIpcResponse` enums. `IPC_VERSION=31` and
+  descriptor signature domain v12 remain unchanged.
+- The codec adds the already locked workspace `blake3` dependency to
+  `kilogram-runtime-ipc` for request, descriptor and privacy-safe Device
+  bindings. Request limit is 4 KiB, signed response limit 16 KiB, canonicality
+  is exact Postcard re-encoding.
+- Targeted stable runner command used package `kilogram-runtime-ipc` with
+  filter `peer_reenrollment_contract`; 8/8 tests passed. Full stable-name crate
+  regression passed 26/26 outside the restricted filesystem sandbox. The
+  first identical full run inside the sandbox produced `os error 5` only for
+  pre-existing tempfile/loopback tests under the sandbox-specific `%TEMP%`;
+  this was an environment ACL boundary, not a product failure.
+- Contract boundary normal/self-test passed and rejected 8/8 semantic
+  mutations. Accepted-tag readiness passed 140/140 with rustfmt and
+  workspace-wide locked/offline strict Clippy. A preceding readiness run
+  without `-AcceptedTag M1.0.0` correctly rejected post-M1 source drift against
+  the historical candidate manifest; post-M1 verification must use the
+  accepted-tag mode.
+- No network, laptop, release build, archive, tag or GitHub build was used.
+  Test execution kept the stable executable path
+  `target/verification/deps/kilogram-runtime-ipc-lib-kilogram_runtime_ipc-tests.exe`.

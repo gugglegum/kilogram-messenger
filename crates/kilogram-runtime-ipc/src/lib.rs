@@ -22,6 +22,10 @@ use tokio::{
     time::timeout,
 };
 
+mod peer_reenrollment_contract;
+
+pub use peer_reenrollment_contract::*;
+
 const IPC_VERSION: u8 = 31;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;

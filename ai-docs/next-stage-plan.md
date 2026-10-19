@@ -1,38 +1,31 @@
-# Текущая точка: M1.2.13 завершён, следующий M1.2.14
+# Текущая точка: M1.2.14 завершён, следующий M1.2.15
 
-Статус на 2026-10-19: полный peer re-enrollment flow подтверждён exact debug
-binary на основном ПК и физическом Windows-ноутбуке. Старый quarantine
-блокирует queue до сети; offline plan/approve/accept готовит successor;
-descriptor substitution fail closed до endpoint; fresh runtime потребляет
-transition и ordinary scheduler доставляет сообщение один раз. После restart
-нет повторной отправки, обе истории совпадают на 8 events.
+Статус на 2026-10-19: отдельный bounded canonical IPC codec формализует
+inspect/plan/approve/accept/status, exact descriptor/request/current-Device
+binding, privacy-safe projection и отдельный history-rewrap outcome. Он
+намеренно не подключён к active `RuntimeIpcCommand`; v31/domain v12, peer wire
+и public default `legacy-only` неизменны. Stable tests 26/26, targeted 8/8,
+negative mutations 8/8, accepted-tag readiness 140/140.
 
-Старые сообщения не стали магически читаемыми новым Device: шесть readable
-local projections были явно перенесены existing same-account history rewrap.
-Predecessor contact, quarantine и acceptance сохранены. Exact run
-`m1213-field-20261019T171026Z`, binary SHA-256 `31e3b6e...`; readiness 139/139.
-Wire/IPC/default `legacy-only` неизменны.
+## Следующий этап: M1.2.15 read-only runtime peer re-enrollment adapter
 
-## Следующий этап: M1.2.14 canonical runtime IPC peer re-enrollment contract
-
-- определить bounded canonical IPC request/response для read-only inspection,
-  plan, explicit approval и acceptance существующего re-enrollment flow;
-- GUI оперирует opaque contact ID, verified invitation summary, exact artifact
-  IDs и confirmation phrase, но не получает Root/device secret, raw Account/
-  Device IDs, ticket/endpoint, queue/message body либо capability bytes;
-- сохранить отдельные стадии inspect -> plan -> approve -> accept: один toggle,
-  implicit consent, automatic quarantine clear и hot apply запрещены;
-- signed responses должны exact-связывать request digest, runtime descriptor,
-  current Device, predecessor quarantine, successor summary и durable outcome;
-- status различает missing invitation, unsafe/divergent context, ready,
-  approved/prepared, consumed и restart-required, не выдавая process-local
-  suppression за durable authority;
-- явно предупредить, что peer re-enrollment восстанавливает связь, но старая
-  читаемая история нового same-account Device требует отдельный approved
-  history-rewrap source; не обещать полноту при отсутствии такого source;
-- M1.2.14 ограничивается строгим contract/codec/negative corpus без подключения
-  active adapter или desktop кнопок. Сеть и второй хост не нужны; public
-  default, active runtime IPC, release/ZIP/tag и GitHub build не меняются.
+- подключить к active runtime только authenticated `status` и `inspect`, без
+  plan/approve/accept mutation authority; hard-cut co-installed IPC version и
+  descriptor domain сделать явно, без backward permissive fallback;
+- построить snapshot из существующих read-only capability, acceptance и
+  runtime-transition stores с no-create/no-repair semantics; missing store —
+  честное empty/missing состояние, corruption/wrong owner — fail closed;
+- определить runtime-owned bounded staging reference для приглашения так,
+  чтобы desktop не читал ticket/endpoint bytes и не передавал filesystem path;
+  на этом этапе staging/import остаётся offline explicit и не даёт acceptance;
+- подписывать response уже работающим current Device и проверять exact request,
+  descriptor и state summary по M1.2.14 contract;
+- добавить privacy-safe CLI observer и read-only desktop panel state; кнопки
+  plan/approve/accept, clear/retry, hot apply и automatic recovery запрещены;
+- проверить absent/no-create, wrong Device/account, corrupt/oversized/stale
+  artifact, descriptor replacement, restart и process-local-vs-durable state;
+- сеть и второй хост не нужны, поскольку adapter read-only. Public default,
+  peer wire, release/ZIP/tag и automatic GitHub build не менять.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

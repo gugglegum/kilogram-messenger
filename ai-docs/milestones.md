@@ -7665,3 +7665,30 @@ correlation visible, Windows-only field evidence, independent security audit
 - dedicated boundary отклоняет 6/6 negative mutations, aggregate readiness
   расширен до 139/139; wire, runtime IPC и public default `legacy-only` не
   менялись, release/ZIP/tag и automatic GitHub build не создавались.
+
+### M1.2.14 — canonical runtime IPC peer re-enrollment contract: принят локально
+
+- в `kilogram-runtime-ipc` добавлен отдельный dormant signed codec, который не
+  является вариантом active `RuntimeIpcCommand/Response`; active IPC остаётся
+  v31/domain v12 и ни runtime actor, ни desktop к ceremony ещё не подключены;
+- request строго разделяет `inspect -> plan -> approve -> accept` и отдельный
+  `status`; approve требует typed `REENROLL` phrase и explicit `UserConfirmed`,
+  а response не может пропустить или перемотать стадию;
+- UI projection ограничена opaque contact ID, verified invitation summary,
+  exact artifact IDs и confirmation phrase; raw Account/Device IDs, secrets,
+  ticket/endpoint, queue/message body и capability bytes отсутствуют;
+- request exact-связан с authenticated runtime descriptor, а Device-signed
+  response — с request digest, exact descriptor, domain-separated current
+  Device binding, predecessor quarantine, successor summary и durable outcome;
+- closed states различают missing invitation, unsafe/divergent, ready,
+  approval-required, approved-prepared, accepted-restart-required и consumed;
+  durable quarantine не подменяется process-local scheduler suppression;
+- history recovery является отдельным состоянием: успешный re-enrollment не
+  обещает старую читаемую историю, без approved same-account rewrap source
+  возвращается `SeparateApprovalRequired`, пустой inventory не считается
+  complete;
+- targeted stable-name tests прошли 8/8, весь `kilogram-runtime-ipc` — 26/26;
+  boundary отклонил 8/8 mutations, accepted-tag readiness прошёл 140/140 с
+  rustfmt и workspace-wide locked/offline strict Clippy;
+- wire/default `legacy-only` не менялись; network, ноутбук, release/ZIP/tag и
+  automatic GitHub build не использовались.

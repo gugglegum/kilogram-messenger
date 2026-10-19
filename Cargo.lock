@@ -3423,6 +3423,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "base64",
+ "blake3",
  "getrandom 0.4.3",
  "kilogram-identity",
  "kilogram-protocol",
