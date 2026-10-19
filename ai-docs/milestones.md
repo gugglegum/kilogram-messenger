@@ -7501,3 +7501,21 @@ correlation visible, Windows-only field evidence, independent security audit
 - aggregate readiness расширен и прошёл 132/132 вместе с rustfmt и
   workspace-wide locked/offline strict Clippy; wire, runtime IPC и public
   default не изменены, release/ZIP/tag не создавались.
+
+### M1.2.7 — peer capability exact-binary two-host rehearsal: принят
+
+- run `m1207-capability-20261019T101809Z` на revision `120fa77` использовал
+  одинаковый debug `kilogram-cli.exe` SHA-256 `1b58772a...`, 61,414,912 bytes,
+  на основном ПК и физическом Windows-ноутбуке через stable paths;
+- extension-free first contact прошёл legacy sync 6 events с equal histories и
+  без создания capability store;
+- signed candidate был durable record sequence 1; stripped follow-up записал
+  quarantine sequence 2 с reason `pinned-canonical-capability-missing` и не
+  создал `transport_endpoint_id`;
+- persisted mutually signed selection перекрыл stripped current extension,
+  сохранил record sequence 1 и завершил `/cbor/2` sync без legacy fallback;
+- tracked evidence не содержит raw logs/state/tickets, endpoint addresses,
+  selection/Account/Device IDs или secrets; SSH был только control channel;
+- dedicated fail-closed boundary и self-test добавлены, aggregate readiness
+  расширен до 133/133; wire, runtime IPC и public default `legacy-only` не
+  изменены, release/ZIP/tag не создавались.

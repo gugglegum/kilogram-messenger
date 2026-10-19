@@ -1,26 +1,24 @@
-# Текущая точка: M1.2.6 peer capability transport enforcement
+# Текущая точка: M1.2.7 peer capability two-host rehearsal
 
-Статус на 2026-10-19: durable monotonic capability floor подключён к реальному
-outbound `sync` до создания Iroh endpoint. Unknown extension-free first contact
-остаётся `legacy-compatible-unasserted` без auto-create store; authenticated
-canonical candidate сначала durable pin-ится. Его последующее stripping пишет
-quarantine и останавливает команду до сети. Уже persisted mutually signed
-canonical selection является более сильным resume evidence и не допускает
-legacy fallback из-за stripped current ticket. Public default не менялся:
-`legacy-only`.
+Статус на 2026-10-19: exact debug binary прошёл три актуальные базовые пары и
+три enforcement-сценария на двух физических Windows-хостах. Unknown
+extension-free first contact сохранил legacy/no-create; authenticated candidate
+pin затем stripping дали durable sequence 1 -> quarantine sequence 2 до
+endpoint; persisted canonical selection resume-ился на `/cbor/2` без fallback.
+Tracked evidence bounded и privacy-safe. Public default остаётся `legacy-only`.
 
-## Следующий этап: M1.2.7 field enforcement rehearsal
+## Следующий этап: M1.2.8 automated runtime sync enforcement
 
-- собрать CLI через постоянный путь и проверить exact SHA-256 на двух
-  физических Windows-хостах;
-- доказать три pre-network исхода на disposable state: first legacy/no-create,
-  signed candidate/durable pin и stripped-after-pin/durable quarantine;
-- отдельно доказать selected canonical resume с persisted selection без legacy
-  fallback;
-- в tracked evidence сохранить только bounded revision/hash/outcome, без raw
-  ticket, endpoint address, Account/Device IDs, state и secrets;
-- не менять wire/IPC, не включать runtime automation и оставить public default
-  `legacy-only`.
+- применить тот же единый peer capability decision к runtime outbound queue и
+  scheduled sync до любого endpoint bind, не создавая второй semantic path;
+- quarantined peer не должен попадать в busy retry loop или silently fallback,
+  а bounded privacy-safe runtime observation должна объяснять остановку;
+- selected canonical resume обязан сохранять persisted-selection authority,
+  unknown extension-free runtime first contact — legacy/no-create;
+- проверить crash/restart, очередь нескольких peers и отсутствие network I/O
+  для quarantined item через stable-path Rust harnesses;
+- не добавлять automatic quarantine recovery, не менять wire и оставить
+  public rollout/default `legacy-only`.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

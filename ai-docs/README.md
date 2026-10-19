@@ -1198,6 +1198,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.1.91 подтверждает exact M1.0.0/current interop в обоих направлениях по
   direct/relay и forward upgrade одного durable state; public default остаётся
   legacy-only, а полевые EXE используют постоянные firewall paths.
+- [`../docs/RFC-0231-m1207-peer-capability-two-host-rehearsal.md`](../docs/RFC-0231-m1207-peer-capability-two-host-rehearsal.md) —
+  M1.2.7 подтверждает на двух физических Windows-хостах legacy/no-create,
+  durable quarantine до endpoint после stripping и persisted canonical resume
+  без fallback одним exact debug binary; public default остаётся legacy-only.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

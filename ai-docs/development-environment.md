@@ -5082,3 +5082,24 @@ Hosted follow-up:
   does not alter product behavior or test assertions.
 - Build profile remains verification/debug with Cargo jobs 2. No release build,
   archive, tag, second host or network was used for this local milestone.
+
+## M1.2.7 peer capability two-host rehearsal environment (2026-10-19)
+
+- Accepted run: `m1207-capability-20261019T101809Z`, source revision
+  `120fa77ff7e832fb9a285f72dfd377ee39825296`.
+- Stable local path: `.tmp/kilogram-field-runner/kilogram-cli.exe`; remote path:
+  `KilogramLab/field-kit-current/kilogram-cli.exe`. Exact SHA-256 on both hosts:
+  `1b58772af5ebbee4c46c929f78b2a822fc39c9dcfef47a3f50dbf0d3fb2c300b`,
+  size 61,414,912 bytes, debug `x86_64-pc-windows-msvc`.
+- Product traffic used direct Iroh LAN between two physical Windows hosts. SSH
+  was only the control/copy channel. Three base pairs and all three field
+  scenarios passed.
+- First attempt exposed an obsolete historical containment expectation after
+  the new durable floor; the helper now has explicit basic-pair-only mode.
+  Second attempt exposed plain-JSON handling in the new harness; actual tickets
+  are base64url JSON envelopes and now round-trip explicitly.
+- Raw directories remain ignored under `.tmp/m1207-field`; the tracked evidence
+  contains no raw log, state, ticket, address, selection/Account/Device ID or
+  secret. No release build, ZIP/archive or tag was created.
+- Aggregate readiness is 133/133. M1.2.8 should bring the same enforcement into
+  automated runtime outbound sync without automatic quarantine recovery.

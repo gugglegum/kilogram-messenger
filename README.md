@@ -2559,6 +2559,15 @@ without legacy fallback. Unknown extension-free first contact remains honest
 first-contact stripping detection is still an explicit non-claim. Wire/IPC are
 unchanged and the public default remains `legacy-only`.
 
+[`RFC-0231`](docs/RFC-0231-m1207-peer-capability-two-host-rehearsal.md)
+confirms that enforcement with one exact debug executable on two physical
+Windows hosts. Extension-free first contact retained legacy interoperability
+without creating a capability store; a previously signed candidate was then
+quarantined before endpoint creation when stripped; and a persisted mutually
+signed canonical selection resumed on `/cbor/2` without fallback even when the
+current optional extension was removed. Raw state, tickets, addresses and
+identifiers remain outside Git. The public default remains `legacy-only`.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected
