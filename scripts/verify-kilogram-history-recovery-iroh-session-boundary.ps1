@@ -183,7 +183,7 @@ function Assert-Contract {
         'kilogram:history-recovery-transfer-session-request-id:v1\0',
         'kilogram:history-recovery-transfer-session-response:v1\0',
         'content.session_nonce == [0_u8; 32]',
-        'connection.remote_id() != remote_recipient_endpoint_id',
+        'endpoint_bytes(connection.remote_id()) != prepared.recipient_endpoint_id()',
         'VerifiedTransferSessionRequest::decode_for_recipient',
         'inbox.stage_envelope_bytes(&request.wire.content.envelope)',
         'StageHistoryRecoveryTransferOutcome::AlreadyStaged',

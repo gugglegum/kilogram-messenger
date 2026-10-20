@@ -2669,6 +2669,12 @@ source-signed request binds both authenticated Endpoint IDs, Devices, nonce and
 transfer; durable recipient staging precedes its signed response, exact replay
 is idempotent, and the active runtime still does not register this authority.
 
+[`RFC-0248`](docs/RFC-0248-m1224-durable-history-transfer-outbox.md) persists
+the exact signed request before networking and the exact signed receipt after
+it in a bounded immediate-durability outbox. Restart preserves nonce and
+Endpoint bindings; competing intent/receipt and partial commit fail closed,
+while runtime, IPC and desktop remain outside the authority boundary.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

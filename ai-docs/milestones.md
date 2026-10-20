@@ -7923,3 +7923,25 @@ correlation visible, Windows-only field evidence, independent security audit
 - использовался только local `127.0.0.1` loopback. Product Internet/relay,
   second host, durable source outbox/resume, scheduler/multi-source, IPC/GUI,
   release/ZIP/tag и automatic GitHub build отсутствуют; default `legacy-only`.
+
+### M1.2.24 — durable history-transfer outbox: принят локально
+
+- `PreparedHistoryRecoveryTransferSession` отделяет preparation от send и даёт
+  сохранять exact canonical source-signed request bytes до сети. Request
+  повторно связывает Account/source/recipient, Endpoint IDs, nonce и transfer;
+- dedicated redb outbox атомарно записывает request и transfer head с
+  `Durability::Immediate`, ограничен 16,384 intents и при каждом open проверяет
+  owner metadata, signatures, heads, orphan requests/receipts и ID bindings;
+- один transfer ID допускает ровно один request. Exact prepare replay
+  идемпотентен, а новый nonce или Endpoint для того же transfer отклоняется;
+- exact recipient-signed response сохраняется отдельной immediate transaction.
+  Exact replay идемпотентен; отличный receipt после commit отклоняется;
+- injected failure до request/head commit оставляет `Absent`, до receipt commit
+  оставляет `Pending`. Read-only open-existing не создаёт store, status body-free
+  и использует opaque recipient token;
+- stable-path focused regression прошёл 4/4, полный transport/outbox crate —
+  8/8; boundary отклонил 10/10 mutations, accepted-tag readiness прошёл 150/150
+  с rustfmt и workspace-wide locked/offline strict Clippy;
+- executor/background retry/multi-source/runtime IPC/desktop, product network,
+  second host, release/ZIP/tag и automatic GitHub build отсутствуют; whole-DB
+  rollback без external witness не заявлен, default `legacy-only`.

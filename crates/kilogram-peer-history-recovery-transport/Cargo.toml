@@ -13,6 +13,7 @@ iroh.workspace = true
 kilogram-identity = { path = "../kilogram-identity" }
 kilogram-peer-history-recovery-execution = { path = "../kilogram-peer-history-recovery-execution" }
 postcard.workspace = true
+redb.workspace = true
 serde.workspace = true
 thiserror.workspace = true
 tokio.workspace = true

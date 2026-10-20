@@ -14,7 +14,7 @@ use iroh::{
     EndpointId,
     endpoint::{Connection, RecvStream, SendStream},
 };
-use kilogram_identity::{DeviceId, DeviceIdentity, IdentityError};
+use kilogram_identity::{AccountId, DeviceId, DeviceIdentity, IdentityError};
 use kilogram_peer_history_recovery_execution::{
     HistoryRecoveryTransferEnvelope, HistoryRecoveryTransferError,
     MAX_HISTORY_RECOVERY_TRANSFER_ENVELOPE_BYTES, RecipientHistoryTransferInbox,
@@ -23,6 +23,15 @@ use kilogram_peer_history_recovery_execution::{
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::time::timeout;
+
+mod outbox;
+
+pub use outbox::{
+    AcknowledgeHistoryRecoveryTransferOutcome, HistoryRecoveryTransferOutbox,
+    HistoryRecoveryTransferOutboxError, HistoryRecoveryTransferOutboxReadStore,
+    HistoryRecoveryTransferOutboxStatus, HistoryRecoveryTransferOutboxStatusView,
+    PrepareHistoryRecoveryTransferOutcome,
+};
 
 pub const HISTORY_RECOVERY_TRANSFER_ALPN: &[u8] = b"kilogram/m1/history-recovery/postcard/1";
 pub const HISTORY_RECOVERY_TRANSFER_IO_TIMEOUT: Duration = Duration::from_secs(180);
@@ -108,6 +117,7 @@ pub struct HistoryRecoveryTransferSessionReceipt {
     pub disposition: TransferStageDisposition,
 }
 
+#[derive(Clone)]
 struct VerifiedTransferSessionRequest {
     wire: SignedTransferSessionRequestWire,
     envelope: HistoryRecoveryTransferEnvelope,
@@ -153,6 +163,18 @@ impl VerifiedTransferSessionRequest {
         authenticated_source_endpoint_id: EndpointId,
         local_recipient_endpoint_id: EndpointId,
     ) -> Result<Self, HistoryRecoveryTransferTransportError> {
+        let request = Self::decode_and_verify(bytes)?;
+        if request.wire.content.source_endpoint_id
+            != endpoint_bytes(authenticated_source_endpoint_id)
+            || request.wire.content.recipient_endpoint_id
+                != endpoint_bytes(local_recipient_endpoint_id)
+        {
+            return Err(HistoryRecoveryTransferTransportError::EndpointBinding);
+        }
+        Ok(request)
+    }
+
+    fn decode_and_verify(bytes: &[u8]) -> Result<Self, HistoryRecoveryTransferTransportError> {
         validate_length(
             bytes,
             MAX_HISTORY_RECOVERY_TRANSFER_REQUEST_BYTES,
@@ -161,11 +183,6 @@ impl VerifiedTransferSessionRequest {
         let wire: SignedTransferSessionRequestWire = postcard::from_bytes(bytes)?;
         if encode_request_wire(&wire)? != bytes {
             return Err(HistoryRecoveryTransferTransportError::NonCanonicalRequest);
-        }
-        if wire.content.source_endpoint_id != endpoint_bytes(authenticated_source_endpoint_id)
-            || wire.content.recipient_endpoint_id != endpoint_bytes(local_recipient_endpoint_id)
-        {
-            return Err(HistoryRecoveryTransferTransportError::EndpointBinding);
         }
         let envelope = HistoryRecoveryTransferEnvelope::decode_and_verify(&wire.content.envelope)?;
         validate_request_content(&wire.content, &envelope)?;
@@ -185,6 +202,7 @@ impl VerifiedTransferSessionRequest {
     }
 }
 
+#[derive(Clone)]
 struct VerifiedTransferSessionResponse {
     wire: SignedTransferSessionResponseWire,
 }
@@ -220,8 +238,8 @@ impl VerifiedTransferSessionResponse {
         bytes: &[u8],
         request: &VerifiedTransferSessionRequest,
         expected_recipient_device_id: DeviceId,
-        authenticated_recipient_endpoint_id: EndpointId,
-        local_source_endpoint_id: EndpointId,
+        authenticated_recipient_endpoint_id: [u8; 32],
+        local_source_endpoint_id: [u8; 32],
     ) -> Result<Self, HistoryRecoveryTransferTransportError> {
         validate_length(
             bytes,
@@ -236,8 +254,8 @@ impl VerifiedTransferSessionResponse {
         if wire.content.recipient_device_id != expected_recipient_device_id {
             return Err(HistoryRecoveryTransferTransportError::WrongRecipientDevice);
         }
-        if wire.content.recipient_endpoint_id != endpoint_bytes(authenticated_recipient_endpoint_id)
-            || wire.content.source_endpoint_id != endpoint_bytes(local_source_endpoint_id)
+        if wire.content.recipient_endpoint_id != authenticated_recipient_endpoint_id
+            || wire.content.source_endpoint_id != local_source_endpoint_id
         {
             return Err(HistoryRecoveryTransferTransportError::EndpointBinding);
         }
@@ -262,6 +280,114 @@ impl VerifiedTransferSessionResponse {
     }
 }
 
+/// One exact source-Device-signed request prepared before any network attempt.
+/// Its canonical bytes can be persisted and retried without generating a new
+/// nonce, signature or transfer identity.
+#[derive(Clone)]
+pub struct PreparedHistoryRecoveryTransferSession {
+    request: VerifiedTransferSessionRequest,
+    encoded: Vec<u8>,
+}
+
+impl PreparedHistoryRecoveryTransferSession {
+    pub fn create(
+        envelope_bytes: &[u8],
+        source: &DeviceIdentity,
+        source_endpoint_id: EndpointId,
+        recipient_endpoint_id: EndpointId,
+        session_nonce: [u8; 32],
+    ) -> Result<Self, HistoryRecoveryTransferTransportError> {
+        let request = VerifiedTransferSessionRequest::create(
+            envelope_bytes,
+            source,
+            source_endpoint_id,
+            recipient_endpoint_id,
+            session_nonce,
+        )?;
+        let encoded = request.encode()?;
+        Ok(Self { request, encoded })
+    }
+
+    pub fn decode_and_verify(bytes: &[u8]) -> Result<Self, HistoryRecoveryTransferTransportError> {
+        let request = VerifiedTransferSessionRequest::decode_and_verify(bytes)?;
+        Ok(Self {
+            request,
+            encoded: bytes.to_vec(),
+        })
+    }
+
+    pub fn encoded_request(&self) -> &[u8] {
+        &self.encoded
+    }
+
+    pub fn request_id(&self) -> [u8; 32] {
+        self.request.request_id
+    }
+
+    pub fn transfer_id(&self) -> [u8; 32] {
+        self.request.wire.content.transfer_id
+    }
+
+    pub fn owner_account_id(&self) -> AccountId {
+        self.request.envelope.owner_account_id()
+    }
+
+    pub fn source_device_id(&self) -> DeviceId {
+        self.request.envelope.source_device_id()
+    }
+
+    pub fn recipient_device_id(&self) -> DeviceId {
+        self.request.envelope.recipient_device_id()
+    }
+
+    pub fn source_endpoint_id(&self) -> [u8; 32] {
+        self.request.wire.content.source_endpoint_id
+    }
+
+    pub fn recipient_endpoint_id(&self) -> [u8; 32] {
+        self.request.wire.content.recipient_endpoint_id
+    }
+
+    pub fn session_nonce(&self) -> [u8; 32] {
+        self.request.wire.content.session_nonce
+    }
+}
+
+/// The exact canonical recipient-Device-signed acknowledgement returned for a
+/// prepared request. Keeping its bytes allows durable post-restart validation.
+#[derive(Clone)]
+pub struct SignedHistoryRecoveryTransferSessionReceipt {
+    response: VerifiedTransferSessionResponse,
+    encoded: Vec<u8>,
+}
+
+impl SignedHistoryRecoveryTransferSessionReceipt {
+    pub fn decode_and_verify(
+        bytes: &[u8],
+        prepared: &PreparedHistoryRecoveryTransferSession,
+    ) -> Result<Self, HistoryRecoveryTransferTransportError> {
+        let response = VerifiedTransferSessionResponse::decode_for_source(
+            bytes,
+            &prepared.request,
+            prepared.recipient_device_id(),
+            prepared.recipient_endpoint_id(),
+            prepared.source_endpoint_id(),
+        )?;
+        Ok(Self {
+            response,
+            encoded: bytes.to_vec(),
+        })
+    }
+
+    pub fn encoded_receipt(&self) -> &[u8] {
+        &self.encoded
+    }
+
+    pub fn summary(&self) -> HistoryRecoveryTransferSessionReceipt {
+        self.response.receipt()
+    }
+}
+
 /// Sends and verifies one exact recovery transfer over an already authenticated
 /// Iroh connection.  No fallback protocol is attempted.
 pub async fn send_history_recovery_transfer(
@@ -273,37 +399,45 @@ pub async fn send_history_recovery_transfer(
     session_nonce: [u8; 32],
     envelope_bytes: &[u8],
 ) -> Result<HistoryRecoveryTransferSessionReceipt, HistoryRecoveryTransferTransportError> {
-    if connection.remote_id() != remote_recipient_endpoint_id {
-        return Err(HistoryRecoveryTransferTransportError::EndpointBinding);
-    }
-    let request = VerifiedTransferSessionRequest::create(
+    let prepared = PreparedHistoryRecoveryTransferSession::create(
         envelope_bytes,
         source,
         local_source_endpoint_id,
         remote_recipient_endpoint_id,
         session_nonce,
     )?;
-    if request.envelope.recipient_device_id() != expected_recipient_device_id {
+    if prepared.recipient_device_id() != expected_recipient_device_id {
         return Err(HistoryRecoveryTransferTransportError::WrongRecipientDevice);
     }
-    let request_bytes = request.encode()?;
+    Ok(
+        send_prepared_history_recovery_transfer(connection, &prepared)
+            .await?
+            .summary(),
+    )
+}
+
+/// Sends the exact bytes of a previously prepared request and returns the
+/// canonical signed receipt so a caller can persist it before declaring the
+/// transfer acknowledged.
+pub async fn send_prepared_history_recovery_transfer(
+    connection: &Connection,
+    prepared: &PreparedHistoryRecoveryTransferSession,
+) -> Result<SignedHistoryRecoveryTransferSessionReceipt, HistoryRecoveryTransferTransportError> {
+    if endpoint_bytes(connection.remote_id()) != prepared.recipient_endpoint_id() {
+        return Err(HistoryRecoveryTransferTransportError::EndpointBinding);
+    }
     let (mut send, mut receive) = io_timeout("open request stream", connection.open_bi()).await?;
-    write_finished(&mut send, &request_bytes, "write request").await?;
+    write_finished(&mut send, prepared.encoded_request(), "write request").await?;
     let response_bytes = read_bounded(
         &mut receive,
         MAX_HISTORY_RECOVERY_TRANSFER_RESPONSE_BYTES,
         "read response",
     )
     .await?;
-    let response = VerifiedTransferSessionResponse::decode_for_source(
-        &response_bytes,
-        &request,
-        expected_recipient_device_id,
-        remote_recipient_endpoint_id,
-        local_source_endpoint_id,
-    )?;
+    let response =
+        SignedHistoryRecoveryTransferSessionReceipt::decode_and_verify(&response_bytes, prepared)?;
     wait_stopped(&mut send, "confirm request delivery").await?;
-    Ok(response.receipt())
+    Ok(response)
 }
 
 /// Receives, validates and durably stages one exact recovery transfer before
@@ -593,8 +727,8 @@ mod tests {
             &response_bytes,
             &request,
             recipient.device_id(),
-            recipient_endpoint_id,
-            source_endpoint_id,
+            endpoint_bytes(recipient_endpoint_id),
+            endpoint_bytes(source_endpoint_id),
         )?;
         assert_eq!(
             verified.receipt().disposition,
@@ -605,8 +739,8 @@ mod tests {
                 &response_bytes,
                 &request,
                 recipient.device_id(),
-                foreign_endpoint_id,
-                source_endpoint_id,
+                endpoint_bytes(foreign_endpoint_id),
+                endpoint_bytes(source_endpoint_id),
             ),
             Err(HistoryRecoveryTransferTransportError::EndpointBinding)
         ));

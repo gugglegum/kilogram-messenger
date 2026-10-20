@@ -1257,6 +1257,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.2.22 envelope. Request связывает оба Endpoint ID, Device, nonce и transfer;
   durable stage предшествует signed response, exact retry идемпотентен, а
   active runtime/IPC/desktop по-прежнему не получают эту authority.
+- [`../docs/RFC-0248-m1224-durable-history-transfer-outbox.md`](../docs/RFC-0248-m1224-durable-history-transfer-outbox.md) —
+  M1.2.24 сохраняет exact signed request до сети и exact signed receipt после
+  неё в bounded immediate-durability outbox. Restart не меняет nonce/Endpoint
+  bindings; competing intent/receipt и partial commit fail closed, network
+  executor/runtime/IPC/desktop ещё не подключены.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

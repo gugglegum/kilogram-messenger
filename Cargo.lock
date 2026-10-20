@@ -3374,6 +3374,7 @@ dependencies = [
  "kilogram-identity",
  "kilogram-peer-history-recovery-execution",
  "postcard",
+ "redb",
  "serde",
  "tempfile",
  "thiserror 2.0.20",

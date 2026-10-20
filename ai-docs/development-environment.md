@@ -5501,3 +5501,21 @@ Hosted follow-up:
 - No second host, product Internet/relay, release build, ZIP/archive, tag or
   automatic GitHub build was used. Active IPC remains v33/domain v14 and public
   sync default remains `legacy-only`.
+
+## M1.2.24 durable history-transfer outbox environment (2026-10-20)
+
+- The existing history-recovery transport crate now also depends on the already
+  locked `redb`; no dependency was added to active CLI/Windows app manifests.
+- The outbox database is Account/source-Device-bound, capped at 16,384 intents,
+  and uses immediate transactions for request+head and receipt commits. Its
+  read-only API opens an existing database without creating one.
+- The stable Windows runner executed only the `outbox_` filter for focused local
+  persistence tests, then the full eight-test crate through the same permanent
+  executable path. No hash-named Cargo harness was launched directly.
+- Four focused tests cover restart/exact bytes, acknowledgement replay,
+  competing intent/receipt and injected rollback before both commit types.
+  Dedicated boundary rejects 10/10 mutations; accepted-tag readiness passes
+  150/150 with rustfmt and workspace-wide locked/offline strict Clippy.
+- No product network, second host, release build, ZIP/archive, tag or automatic
+  GitHub build was used. Active IPC remains v33/domain v14 and public default
+  remains `legacy-only`.

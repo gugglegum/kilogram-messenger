@@ -1,26 +1,25 @@
-# Текущая точка: M1.2.23 завершён, следующий M1.2.24
+# Текущая точка: M1.2.24 завершён, следующий M1.2.25
 
-Статус на 2026-10-20: отдельный crate передаёт exact M1.2.22 envelope по
-dedicated Iroh ALPN. Source-Device-signed canonical request связывает оба
-authenticated Endpoint ID, nonzero nonce, transfer ID и полный envelope;
-recipient durable stage предшествует recipient-Device-signed response. Exact
-retry идемпотентен (`staged` -> `already-staged`), endpoint substitution
-отклоняется до мутации. Stable-path regression прошёл 4/4 плюс существующий
-Iroh control 1/1; boundary отклонил 10/10 ослаблений, accepted-tag readiness —
-149/149. Новый ALPN не зарегистрирован active runtime; IPC остаётся v33/domain
-v14, public default — `legacy-only`.
+Статус на 2026-10-20: source до первой network attempt атомарно сохраняет exact
+canonical M1.2.23 request bytes в Account/source-Device-bound redb. Restart
+возвращает те же Endpoint bindings, nonce, transfer/request IDs и signature;
+competing intent отклоняется. Exact recipient-signed receipt отдельно и
+атомарно переводит `pending` в `acknowledged`; exact replay идемпотентен,
+другой receipt fail closed. Stable outbox regression прошёл 4/4, полный crate —
+8/8; boundary отклонил 10/10 ослаблений, accepted-tag readiness — 150/150.
+Active runtime/IPC/desktop не подключены, public default — `legacy-only`.
 
-## Следующий этап: M1.2.24 durable source transfer outbox
+## Следующий этап: M1.2.25 explicit restart-safe transfer executor
 
-- сохранять exact transfer intent до сетевой попытки: owner/source/recipient,
-  envelope/transfer ID, оба Endpoint ID и stable session nonce;
-- принимать signed M1.2.23 receipt только для exact durable intent, атомарно
-  фиксировать acknowledged head и не создавать новый transfer при restart;
-- exact retry после disconnect/crash должен использовать те же envelope и
-  nonce; competing receipt, endpoint drift, tamper, fork и ambiguous partial
-  state должны fail closed;
-- сначала оставить executor локальным и явно вызываемым. Background scheduler,
-  multi-source recovery, active runtime IPC и desktop UI — последующие этапы;
+- добавить явно вызываемый executor одной pending M1.2.24 записи: загрузить
+  exact request, открыть только M1.2.23 ALPN, отправить exact bytes и атомарно
+  сохранить проверенный receipt;
+- retry policy должен быть bounded, классифицировать pre-connect/ambiguous
+  post-send failure и никогда не готовить новый nonce либо competing request;
+- restart после timeout/disconnect должен оставлять pending и безопасно повторять
+  тот же request; acknowledged запись не должна снова открывать сеть;
+- background worker, multi-source recovery, active runtime IPC и desktop UI —
+  последующие отдельно gated этапы;
 - public default, sync/ticket wires, release/ZIP/tag и automatic GitHub build
   не менять.
 
