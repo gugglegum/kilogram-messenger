@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.26",
+  "status": "explicit-bounded-history-recovery-recipient-acceptor-verified",
+  "contract_source": "M1.2.25",
+  "implementation": [
+    "crates/kilogram-peer-history-recovery-transport/src/acceptor.rs"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_active_runtime_ipc": false,
+  "changes_desktop_runtime_authority": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "acceptor": {
+    "explicit_invocation_only": true,
+    "caller_owned_endpoint": true,
+    "dedicated_alpn_only": "kilogram/m1/history-recovery/postcard/1",
+    "default_sessions": 1,
+    "maximum_sessions": 8,
+    "maximum_in_flight": 1,
+    "default_idle_timeout_seconds": 30,
+    "default_request_timeout_seconds": 30,
+    "default_completion_timeout_seconds": 210,
+    "maximum_timeout_seconds": 300,
+    "malformed_session_consumes_slot": true,
+    "rejected_session_does_not_end_budget": true,
+    "durable_stage_precedes_success": true,
+    "imports_history": false
+  },
+  "report": {
+    "aggregate_counts_only": true,
+    "termination_reason_visible": true,
+    "last_failure_class_visible": true,
+    "identity_visible": false,
+    "network_coordinates_visible": false,
+    "message_bodies_visible": false,
+    "filesystem_paths_visible": false,
+    "import_authority_granted": false
+  },
+  "authority": {
+    "active_runtime_registered": false,
+    "cli_command_added": false,
+    "desktop_control_added": false,
+    "background_service_added": false,
+    "spawned_task_added": false,
+    "persistent_schedule_added": false,
+    "multi_source_scheduler_added": false,
+    "history_import_authority_added": false
+  },
+  "verification": {
+    "focused_acceptor_tests": 5,
+    "combined_transport_outbox_executor_acceptor_tests": 19,
+    "real_single_session_local_iroh_loopback_test": true,
+    "deterministic_multi_session_control_flow_tests": true,
+    "stable_path_rust_harness_required_on_windows": true,
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "152/152",
+    "second_host_required": false,
+    "product_network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "non_claims": [
+    "active-runtime-history-transfer",
+    "background-recipient-service",
+    "automatic-network-listener",
+    "persistent-accept-schedule",
+    "multi-source-recovery-scheduling",
+    "runtime-ipc-history-recovery-authority",
+    "desktop-history-recovery-authority",
+    "automatic-history-import",
+    "product-internet-or-relay-evidence",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "bounded-multi-source-recovery-scheduling",
+    "explicit-recovery-session-orchestration"
+  ]
+}

@@ -5539,3 +5539,26 @@ Hosted follow-up:
 - No product Internet/relay, second host, release build, ZIP/archive, tag or
   automatic GitHub build was used. Active IPC remains v33/domain v14 and
   public default remains `legacy-only`.
+
+## M1.2.26 explicit bounded recipient acceptor environment (2026-10-20)
+
+- The acceptor lives in the existing dormant history-recovery transport crate;
+  active CLI/Windows app manifests remain free of that dependency and active
+  IPC remains v33/domain v14.
+- Its public input is a borrowed caller-owned Iroh endpoint, recipient Device,
+  durable recipient inbox and bounded policy. It processes sequentially and
+  has no spawned/background lifetime.
+- Request work and durable completion use separate deadlines. This allows a
+  short unauthenticated request bound without truncating the bounded durable
+  inbox stage; every deadline is capped at 300 seconds.
+- One real authenticated loopback session exercises Iroh ALPN, request
+  validation, durable staging and signed response. Multi-session rejection and
+  timeout continuation are deterministic control-flow tests because replacing
+  a deliberately stalled Iroh loopback connection immediately is cache-sensitive.
+- Windows tests are compiled without execution and launched through
+  `scripts/run-cargo-tests-stable.ps1` at the permanent test EXE path. Focused
+  acceptor regression passes 5/5 and the full crate passes 19/19.
+- Dedicated boundary rejects 10/10 mutations; accepted-tag readiness passes
+  152/152 with rustfmt and workspace-wide locked/offline strict Clippy.
+- No product Internet/relay, second host, release build, ZIP/archive, tag or
+  automatic GitHub build was used. Public default remains `legacy-only`.

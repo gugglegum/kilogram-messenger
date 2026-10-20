@@ -2681,6 +2681,13 @@ bounded retries always send the exact stored bytes over the dedicated ALPN,
 conservatively classify post-connect ambiguity, persist a verified receipt
 before success and never reopen the network for an acknowledged transfer.
 
+[`RFC-0250`](docs/RFC-0250-m1226-explicit-bounded-recipient-acceptor.md)
+adds the matching explicitly invoked recipient acceptor. A caller-owned
+endpoint accepts at most eight sequential dedicated-ALPN sessions with bounded
+idle, request and completion deadlines; rejected sessions consume a slot but
+do not block the remaining finite budget, and no background listener or import
+authority is created.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

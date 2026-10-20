@@ -7966,3 +7966,25 @@ correlation visible, Windows-only field evidence, independent security audit
 - background worker/schedule, recipient accept service, multi-source,
   active runtime/IPC/desktop/import authority, product network, second host,
   release/ZIP/tag и automatic GitHub build отсутствуют; default `legacy-only`.
+
+### M1.2.26 — explicit bounded recipient acceptor: принят локально
+
+- явно awaited acceptor заимствует caller-owned endpoint и завершается после
+  session budget, idle deadline либо закрытия endpoint; default budget — 1,
+  hard max — 8, одновременно обрабатывается ровно одна session;
+- разрешён только dedicated history-recovery ALPN. Handshake/request ограничены
+  отдельным request deadline, durable stage/response — completion deadline;
+  все deadline ненулевые и не больше 300 секунд;
+- malformed, wrong-ALPN, rejected и timeout sessions расходуют slot, явно
+  закрываются и не лишают оставшийся budget возможности принять следующую;
+- результат содержит только bounded counts, closed failure/termination enums и
+  константные privacy/authority flags — без Device/Endpoint ID, network
+  coordinates, paths либо message bodies;
+- stable-path acceptor regression прошёл 5/5, полный transport/outbox/executor/
+  acceptor crate — 19/19. Реальный network control — одна authenticated
+  `127.0.0.1` session; multi-session state-machine проверен детерминированно;
+- boundary отклонил 10/10 mutations, accepted-tag readiness прошёл 152/152 с
+  rustfmt и strict offline Clippy;
+- spawned/background listener, persistent schedule, active runtime/IPC/desktop,
+  multi-source и import authority, product Internet/relay, second host,
+  release/ZIP/tag и automatic GitHub build отсутствуют; default `legacy-only`.

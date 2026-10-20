@@ -1268,6 +1268,12 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   success возвращается после durable signed receipt. Exhaustion сохраняет
   pending, acknowledged short-circuit не открывает сеть; background/runtime/
   IPC/desktop authority не добавлены.
+- [`../docs/RFC-0250-m1226-explicit-bounded-recipient-acceptor.md`](../docs/RFC-0250-m1226-explicit-bounded-recipient-acceptor.md) —
+  M1.2.26 добавляет явно вызываемый recipient acceptor над caller-owned
+  endpoint: до восьми последовательных dedicated-ALPN sessions, отдельные
+  idle/request/completion deadlines и privacy-safe aggregate report. Ошибка
+  расходует slot, но не блокирует оставшийся budget; background listener,
+  runtime/IPC/desktop и import authority не добавлены.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

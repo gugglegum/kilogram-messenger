@@ -1,26 +1,23 @@
-# Текущая точка: M1.2.25 завершён, следующий M1.2.26
+# Текущая точка: M1.2.26 завершён, следующий M1.2.27
 
-Статус на 2026-10-20: explicit source executor загружает одну durable pending
-M1.2.24 запись, до сети сверяет оба signed Endpoint binding и bounded retry
-отправляет только exact stored request по dedicated M1.2.23 ALPN. Default — 3,
-hard max — 8 попыток; pre-connect отделён от conservative post-connect
-ambiguity. Exhaustion оставляет exact pending, verified receipt durable до
-success, acknowledged short-circuit не открывает сеть. Stable executor
-regression прошёл 6/6, полный crate — 14/14; boundary отклонил 10/10
-ослаблений, accepted-tag readiness — 151/151. Active runtime/IPC/desktop не
-подключены, public default — `legacy-only`.
+Статус на 2026-10-20: explicit recipient acceptor обрабатывает caller-selected
+finite budget из 1..=8 последовательных dedicated-ALPN sessions над
+caller-owned endpoint. Idle/request/completion deadlines разделены, malformed,
+wrong-ALPN и timeout расходуют slot, но не блокируют оставшийся budget. Stable
+acceptor regression прошёл 5/5, полный crate — 19/19; boundary отклонил 10/10
+ослаблений, accepted-tag readiness — 152/152. Background service, active
+runtime/IPC/desktop/import не подключены, public default — `legacy-only`.
 
-## Следующий этап: M1.2.26 explicit bounded recipient acceptor
+## Следующий этап: M1.2.27 bounded multi-source recovery scheduler
 
-- обернуть существующий single-session recipient handler в явно вызываемый
-  bounded acceptor для caller-selected числа входящих sessions;
-- acceptor должен принимать только dedicated ALPN endpoint, ограничивать число
-  concurrent/in-flight sessions и завершаться по budget/deadline, не получая
-  background lifetime либо service authority;
-- malformed/foreign/timeout session не должна блокировать следующие slots;
-  durable inbox остаётся источником idempotency и import не запускается;
-- multi-source recovery, active runtime IPC и desktop UI — последующие отдельно
-  gated этапы;
+- принять только caller-supplied bounded набор уже durable transfer intents и
+  authenticated source candidates, не искать peers автоматически;
+- установить глобальные и per-source attempt/session budgets, deterministic
+  fairness и явное terminal/resumable состояние без background worker;
+- не смешивать source failures: stalled/failed source не должен блокировать
+  другой, а exact durable outbox/inbox identities остаются idempotency boundary;
+- scheduler не должен импортировать историю, создавать request/nonce, менять
+  signed Endpoint bindings либо получать active runtime IPC/desktop authority;
 - public default, sync/ticket wires, release/ZIP/tag и automatic GitHub build
   не менять.
 

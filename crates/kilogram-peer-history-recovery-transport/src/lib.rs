@@ -24,9 +24,16 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::time::timeout;
 
+mod acceptor;
 mod executor;
 mod outbox;
 
+pub use acceptor::{
+    HistoryRecoveryRecipientAcceptFailureClass, HistoryRecoveryRecipientAcceptPolicy,
+    HistoryRecoveryRecipientAcceptPolicyError, HistoryRecoveryRecipientAcceptReport,
+    HistoryRecoveryRecipientAcceptTermination, MAX_HISTORY_RECOVERY_RECIPIENT_ACCEPT_SESSIONS,
+    accept_history_recovery_transfers,
+};
 pub use executor::{
     HistoryRecoveryTransferAttemptFailureClass, HistoryRecoveryTransferExecutionError,
     HistoryRecoveryTransferExecutionOutcome, HistoryRecoveryTransferExecutionPolicy,
@@ -457,9 +464,24 @@ pub async fn receive_history_recovery_transfer(
     recipient: &DeviceIdentity,
     inbox: &RecipientHistoryTransferInbox,
 ) -> Result<HistoryRecoveryTransferSessionReceipt, HistoryRecoveryTransferTransportError> {
+    let pending =
+        read_history_recovery_transfer_request(connection, local_recipient_endpoint_id, recipient)
+            .await?;
+    complete_history_recovery_transfer(pending, recipient, inbox).await
+}
+
+pub(crate) struct PendingHistoryRecoveryTransfer {
+    send: SendStream,
+    request: VerifiedTransferSessionRequest,
+}
+
+pub(crate) async fn read_history_recovery_transfer_request(
+    connection: &Connection,
+    local_recipient_endpoint_id: EndpointId,
+    recipient: &DeviceIdentity,
+) -> Result<PendingHistoryRecoveryTransfer, HistoryRecoveryTransferTransportError> {
     let authenticated_source_endpoint_id = connection.remote_id();
-    let (mut send, mut receive) =
-        io_timeout("accept request stream", connection.accept_bi()).await?;
+    let (send, mut receive) = io_timeout("accept request stream", connection.accept_bi()).await?;
     let request_bytes = read_bounded(
         &mut receive,
         MAX_HISTORY_RECOVERY_TRANSFER_REQUEST_BYTES,
@@ -474,15 +496,24 @@ pub async fn receive_history_recovery_transfer(
     if request.envelope.recipient_device_id() != recipient.device_id() {
         return Err(HistoryRecoveryTransferTransportError::WrongRecipientDevice);
     }
-    let disposition = match inbox.stage_envelope_bytes(&request.wire.content.envelope)? {
+    Ok(PendingHistoryRecoveryTransfer { send, request })
+}
+
+pub(crate) async fn complete_history_recovery_transfer(
+    mut pending: PendingHistoryRecoveryTransfer,
+    recipient: &DeviceIdentity,
+    inbox: &RecipientHistoryTransferInbox,
+) -> Result<HistoryRecoveryTransferSessionReceipt, HistoryRecoveryTransferTransportError> {
+    let disposition = match inbox.stage_envelope_bytes(&pending.request.wire.content.envelope)? {
         StageHistoryRecoveryTransferOutcome::Staged(_) => TransferStageDisposition::Staged,
         StageHistoryRecoveryTransferOutcome::AlreadyStaged(_) => {
             TransferStageDisposition::AlreadyStaged
         }
     };
-    let response = VerifiedTransferSessionResponse::create(&request, recipient, disposition)?;
-    write_finished(&mut send, &response.encode()?, "write response").await?;
-    wait_stopped(&mut send, "confirm response delivery").await?;
+    let response =
+        VerifiedTransferSessionResponse::create(&pending.request, recipient, disposition)?;
+    write_finished(&mut pending.send, &response.encode()?, "write response").await?;
+    wait_stopped(&mut pending.send, "confirm response delivery").await?;
     Ok(response.receipt())
 }
 
