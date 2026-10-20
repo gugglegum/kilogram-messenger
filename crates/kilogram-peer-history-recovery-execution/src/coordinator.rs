@@ -184,6 +184,10 @@ impl RecipientRecoveryCoordinationPlan {
         &self.approved_sources
     }
 
+    pub(crate) fn previous_plan_id(&self) -> Option<[u8; 32]> {
+        self.record.previous_plan_id
+    }
+
     pub(crate) fn import_observation(
         &self,
         source_ordinal: usize,
@@ -307,7 +311,21 @@ impl RecipientHistoryRecoveryCoordinator {
         inbox: &RecipientHistoryTransferInbox,
         imports: &RecipientHistoryImportStore,
     ) -> Result<(), RecipientRecoveryCoordinatorError> {
-        Self::verify_durable_current(plan)?;
+        Self::verify_exact_observation(plan, inbox, imports)?;
+        if plan.requires_apply {
+            return Err(RecipientRecoveryCoordinatorError::PlanNotApplied);
+        }
+        Self::verify_durable_current(plan)
+    }
+
+    pub(crate) fn verify_exact_observation(
+        plan: &RecipientRecoveryCoordinationPlan,
+        inbox: &RecipientHistoryTransferInbox,
+        imports: &RecipientHistoryImportStore,
+    ) -> Result<(), RecipientRecoveryCoordinatorError> {
+        validate_plan_object(plan)?;
+        ensure_same_state_directory(&plan.state_directory, inbox.state_directory())?;
+        ensure_same_state_directory(&plan.state_directory, imports.state_directory())?;
         let current = build_plan(
             &plan.state_directory,
             plan.owner_account_id,
@@ -316,7 +334,36 @@ impl RecipientHistoryRecoveryCoordinator {
             inbox,
             imports,
         )?;
-        if current != *plan || current.requires_apply {
+        if current != *plan {
+            return Err(RecipientRecoveryCoordinatorError::StalePlan);
+        }
+        Ok(())
+    }
+
+    pub(crate) fn verify_chain_member(
+        plan: &RecipientRecoveryCoordinationPlan,
+        expected_sequence: u64,
+        expected_plan_id: [u8; 32],
+    ) -> Result<(), RecipientRecoveryCoordinatorError> {
+        validate_plan_object(plan)?;
+        if expected_sequence > plan.sequence() || expected_plan_id == [0_u8; 32] {
+            return Err(RecipientRecoveryCoordinatorError::StalePlan);
+        }
+        let path = database_path(&plan.state_directory);
+        if !path.is_file() {
+            return Err(RecipientRecoveryCoordinatorError::PlanNotApplied);
+        }
+        reject_coordinator_path_symlinks(&plan.state_directory)?;
+        let database = ReadOnlyDatabase::open(path).map_err(database_error)?;
+        verify_database(&database, plan.owner_account_id, plan.owner_device_id)?;
+        let read = database.begin_read().map_err(database_error)?;
+        let plans = read.open_table(PLAN_TABLE).map_err(database_error)?;
+        let encoded = plans
+            .get(expected_plan_id.as_slice())
+            .map_err(database_error)?
+            .ok_or(RecipientRecoveryCoordinatorError::StalePlan)?;
+        let record = decode_record(encoded.value())?;
+        if record.sequence != expected_sequence || record_id(&record)? != expected_plan_id {
             return Err(RecipientRecoveryCoordinatorError::StalePlan);
         }
         Ok(())

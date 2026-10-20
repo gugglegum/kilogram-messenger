@@ -2716,6 +2716,14 @@ each source receives at most one sequential import per round, and an exact
 durable prefix can be resumed or replayed without duplicate events. The round
 does not discover sources, open the network or gain runtime/desktop authority.
 
+[`RFC-0255`](docs/RFC-0255-m1231-durable-recipient-import-round-intent.md)
+persists one explicitly confirmed recipient import round as a signed,
+content-addressed local intent. Read-only inspection verifies exact ordered
+prefix progress across restarts, including the import-before-coordinator-refresh
+window; explicit consumption is blocked until the final coordinator is durable.
+The intent itself never imports history, opens the network, discovers sources
+or grants runtime/desktop authority.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

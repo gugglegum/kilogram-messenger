@@ -1,26 +1,28 @@
-# Текущая точка: M1.2.30 завершён, следующий M1.2.31
+# Текущая точка: M1.2.31 завершён, следующий M1.2.32
 
-Статус на 2026-10-20: bounded explicit recipient round принимает уникальные
-caller-ordered source ordinals и membership snapshots, preflight-ит весь набор
-до первой мутации и импортирует максимум один transfer на source, строго по
-одному in-flight. Exact durable caller-order prefix и import-before-refresh
-возобновляются с повторной проверкой receipts/artifacts. Default/hard budgets —
-4/8 sources и 128/256 events. Focused regression 5/5, полный execution crate
-27/27, boundary 10/10, readiness 156/156. Network/background/runtime/IPC/
-desktop authority отсутствуют, public default — `legacy-only`.
+Статус на 2026-10-20: explicit M1.2.30 round можно отдельно подтвердить и
+сохранить как recipient-signed content-addressed intent. Он exact-связан с
+durable coordinator baseline, caller order, per-source import candidates,
+budgets и membership digests, но не хранит membership snapshot/history bodies.
+Restart observer принимает только exact ordered prefix; complete до coordinator
+refresh виден, но consume fail closed. Focused regression 4/4, полный execution
+crate 31/31, boundary 10/10, readiness 157/157. Intent сам не исполняет import;
+network/background/runtime/IPC/desktop authority отсутствуют, public default —
+`legacy-only`.
 
-## Следующий этап: M1.2.31 durable explicit recipient import-round intent
+## Следующий этап: M1.2.32 explicit durable recipient import-round executor
 
-- сохранить только явно подтверждённый bounded round intent для безопасного
-  cross-process operator handoff, без сериализации membership или plaintext;
-- exact-связать intent с coordinator plan ID, ordered source ordinals,
-  per-source import plan IDs, budgets и recipient Device signature;
-- отделить read-only inspect/plan от explicit commit/consume и сделать
-  partial-prefix restart observable, а competing/fork/stale intent fail closed;
-- не исполнять import автоматически, не discover-ить sources и не добавлять
-  timer/background loop, network, active runtime IPC или desktop authority;
-- public default, sync/ticket/transfer wires, release/ZIP/tag и automatic
-  GitHub build не менять.
+- загрузить ровно один active durable intent и exact-сопоставить его с
+  caller-supplied live memberships, не реконструируя authority из одной DB;
+- сделать read-only execution plan/status отдельно от explicit foreground
+  `apply-next`/`apply-bounded`, используя существующий M1.2.30 round и максимум
+  один import in-flight;
+- после каждого шага durable re-open/revalidation, coordinator reconciliation
+  и privacy-safe progress; crash/restart/replay/fork должны fail closed;
+- отсутствие либо несоответствие live membership не должно менять intent или
+  импортировать историю; automatic source discovery запрещён;
+- не добавлять timer/background loop, network, active runtime IPC, CLI/desktop
+  authority и не менять public default или wire formats.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

@@ -148,6 +148,28 @@ impl RecipientRecoveryImportRoundPlan {
             max_events: usize::from(self.wire.max_events),
         }
     }
+
+    pub(crate) fn coordination_plan(&self) -> &RecipientRecoveryCoordinationPlan {
+        &self.coordination_plan
+    }
+
+    pub(crate) fn import_plans(&self) -> &[RecipientRecoveryImportPlan] {
+        &self.import_plans
+    }
+
+    pub(crate) fn verify_exact_unstarted(
+        &self,
+        inbox: &RecipientHistoryTransferInbox,
+        imports: &RecipientHistoryImportStore,
+    ) -> Result<(), RecipientRecoveryImportRoundError> {
+        validate_plan(self)?;
+        RecipientHistoryRecoveryCoordinator::verify_exact_current(
+            &self.coordination_plan,
+            inbox,
+            imports,
+        )?;
+        Ok(())
+    }
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

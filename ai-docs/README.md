@@ -1298,6 +1298,13 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   source разрешён максимум один transfer, а durable caller-order prefix можно
   exact-resume/replay. Default 4/128, hard 8/256; discovery/background/network/
   runtime/IPC/desktop authority отсутствуют.
+- [`../docs/RFC-0255-m1231-durable-recipient-import-round-intent.md`](../docs/RFC-0255-m1231-durable-recipient-import-round-intent.md) —
+  M1.2.31 сохраняет один явно подтверждённый round как recipient-signed
+  content-addressed intent в отдельной immediate-durability redb. Read-only
+  observer проверяет exact caller-order prefix после restart, включая окно
+  import-before-coordinator-refresh; consume разрешён только после complete и
+  durable refresh. Intent сам ничего не импортирует, не открывает сеть и не
+  создаёт background/runtime/IPC/desktop authority.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

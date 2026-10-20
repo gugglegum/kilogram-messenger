@@ -8083,3 +8083,29 @@ correlation visible, Windows-only field evidence, independent security audit
   может оставить проверенный prefix для resume. Discovery/background/network/
   runtime/IPC/desktop authority, product network, second host, release/ZIP/tag
   и automatic GitHub build отсутствуют; default `legacy-only`.
+
+### M1.2.31 — durable explicit recipient import-round intent: принят локально
+
+- read-only plan принимает только exact unstarted M1.2.30 round над durable
+  coordinator и не создаёт state. Recipient Device подписывает owner/round,
+  coordinator baseline, ordered ordinals, все import plan/candidate IDs,
+  budgets и membership digest/revision;
+- explicit commit пишет canonical Postcard record в отдельную immediate redb
+  под общим state lock. Store bounded до 4096 records / 64 KiB record и ровно
+  одного active unconsumed intent; consumed audit history сохраняется;
+- durable state не содержит membership snapshot, bodies, plaintext или
+  ciphertext artifacts. Timestamp не влияет на semantic exact-replay, но все
+  authority-bearing поля content-addressed и подписаны;
+- read-only progress допускает только exact caller-order prefix, проверяет
+  receipts/imported artifacts, coordinator chain baseline и неизменность всех
+  unplanned sources. Состояния закрыты: `not-started`, `partial`, `complete`;
+- import-before-coordinator-refresh виден как complete с обязательным refresh,
+  но consume до него fail closed. Финальный consumption отдельно подписан
+  recipient Device и exact-связан с final coordinator;
+- focused stable-path regression прошёл 4/4, включая два реальных sources,
+  restart partial prefix, crash-before-consume и pre-refresh block; полный
+  execution crate — 31/31. Boundary отклонил 10/10 mutations, readiness прошёл
+  157/157 с rustfmt и workspace-wide locked/offline strict Clippy;
+- intent не исполняет import и не добавляет discovery/background/network/
+  runtime/IPC/desktop authority. Product network, second host, release/ZIP/tag
+  и automatic GitHub build отсутствуют; default `legacy-only`.

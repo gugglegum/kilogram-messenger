@@ -5652,3 +5652,27 @@ Hosted follow-up:
 - Rust tests use repository `.tmp` because system TEMP is inaccessible in the
   managed sandbox. No network, second host, release build, ZIP/archive, tag or
   automatic GitHub build is used; public default remains `legacy-only`.
+
+## M1.2.31 durable recipient import-round intent environment (2026-10-20)
+
+- The execution crate now exposes a dormant signed intent store layered over
+  the M1.2.30 round. Active CLI/Windows manifests still do not depend on it;
+  IPC remains v33/domain v14 and no ticket/sync/history-transfer wire changed.
+- Read-only plan requires the exact unstarted round and creates no state.
+  Explicit commit uses the shared state lock and a separate immediate redb,
+  bounded to 4096 intents, 64 KiB each and one active unconsumed round.
+- Stored content is limited to owner/round/coordinator IDs, opaque source heads,
+  counts/ranges, ordered import-plan bindings, budgets and membership digests.
+  Membership snapshots, history artifacts, bodies and plaintext are absent.
+- Read-only progress verifies the baseline coordinator chain member, exact
+  caller-order prefix, every completed receipt/artifact and unchanged unplanned
+  sources. Complete-but-unrefreshed coordinator state is observable but cannot
+  be consumed; explicit signed consume is crash/replay idempotent.
+- Four focused stable-path tests pass in 1218.58 s, including real two-source
+  import and store reopen. Full execution regression passes 31/31; boundary
+  rejects 10/10 mutations and accepted-tag readiness passes 157/157 with
+  rustfmt and workspace-wide locked/offline strict Clippy.
+- The managed sandbox cannot write system TEMP, so Rust tests were executed by
+  the same permanent-path harness outside that filesystem boundary. No product
+  network, second host, release build, ZIP/archive, tag or automatic GitHub
+  build was used; public default remains `legacy-only`.
