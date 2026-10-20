@@ -1,0 +1,81 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.25",
+  "status": "explicit-restart-safe-history-transfer-executor-verified",
+  "contract_source": "M1.2.24",
+  "implementation": [
+    "crates/kilogram-peer-history-recovery-transport/src/executor.rs"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_active_runtime_ipc": false,
+  "changes_desktop_runtime_authority": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "execution": {
+    "explicit_invocation_only": true,
+    "loads_durable_pending_intent": true,
+    "creates_request": false,
+    "modifies_request": false,
+    "exact_request_bytes_each_attempt": true,
+    "dedicated_alpn_only": "kilogram/m1/history-recovery/postcard/1",
+    "source_endpoint_revalidated_before_network": true,
+    "recipient_endpoint_revalidated_before_network": true,
+    "verified_receipt_committed_atomically": true,
+    "acknowledged_short_circuit_without_network": true
+  },
+  "retry": {
+    "default_attempts": 3,
+    "maximum_attempts": 8,
+    "default_connect_timeout_seconds": 30,
+    "zero_attempts_rejected": true,
+    "zero_connect_timeout_rejected": true,
+    "new_nonce_on_retry": false,
+    "new_request_on_retry": false,
+    "pre_connect_classification": true,
+    "post_connect_failure_conservatively_ambiguous": true,
+    "exhaustion_leaves_intent_pending": true,
+    "restart_reuses_exact_intent": true,
+    "background_retry": false,
+    "persistent_retry_schedule": false
+  },
+  "authority": {
+    "active_runtime_registered": false,
+    "cli_command_added": false,
+    "desktop_control_added": false,
+    "background_worker_added": false,
+    "multi_source_scheduler_added": false,
+    "recipient_accept_service_added": false,
+    "history_import_authority_added": false
+  },
+  "verification": {
+    "focused_executor_tests": 6,
+    "combined_transport_outbox_executor_tests": 14,
+    "real_local_iroh_loopback_test": true,
+    "stable_path_rust_harness_required_on_windows": true,
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "151/151",
+    "second_host_required": false,
+    "product_network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "non_claims": [
+    "active-runtime-history-transfer",
+    "background-transfer-worker",
+    "automatic-network-resume",
+    "persistent-retry-schedule",
+    "recipient-accept-service",
+    "multi-source-recovery-scheduling",
+    "runtime-ipc-history-recovery-authority",
+    "desktop-history-recovery-authority",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "explicit-bounded-recipient-acceptor",
+    "multi-source-recovery-scheduling"
+  ]
+}

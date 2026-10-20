@@ -2675,6 +2675,12 @@ it in a bounded immediate-durability outbox. Restart preserves nonce and
 Endpoint bindings; competing intent/receipt and partial commit fail closed,
 while runtime, IPC and desktop remain outside the authority boundary.
 
+[`RFC-0249`](docs/RFC-0249-m1225-explicit-restart-safe-history-transfer-executor.md)
+adds an explicitly invoked executor for one durable pending request. Its
+bounded retries always send the exact stored bytes over the dedicated ALPN,
+conservatively classify post-connect ambiguity, persist a verified receipt
+before success and never reopen the network for an acknowledged transfer.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

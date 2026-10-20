@@ -1,25 +1,26 @@
-# Текущая точка: M1.2.24 завершён, следующий M1.2.25
+# Текущая точка: M1.2.25 завершён, следующий M1.2.26
 
-Статус на 2026-10-20: source до первой network attempt атомарно сохраняет exact
-canonical M1.2.23 request bytes в Account/source-Device-bound redb. Restart
-возвращает те же Endpoint bindings, nonce, transfer/request IDs и signature;
-competing intent отклоняется. Exact recipient-signed receipt отдельно и
-атомарно переводит `pending` в `acknowledged`; exact replay идемпотентен,
-другой receipt fail closed. Stable outbox regression прошёл 4/4, полный crate —
-8/8; boundary отклонил 10/10 ослаблений, accepted-tag readiness — 150/150.
-Active runtime/IPC/desktop не подключены, public default — `legacy-only`.
+Статус на 2026-10-20: explicit source executor загружает одну durable pending
+M1.2.24 запись, до сети сверяет оба signed Endpoint binding и bounded retry
+отправляет только exact stored request по dedicated M1.2.23 ALPN. Default — 3,
+hard max — 8 попыток; pre-connect отделён от conservative post-connect
+ambiguity. Exhaustion оставляет exact pending, verified receipt durable до
+success, acknowledged short-circuit не открывает сеть. Stable executor
+regression прошёл 6/6, полный crate — 14/14; boundary отклонил 10/10
+ослаблений, accepted-tag readiness — 151/151. Active runtime/IPC/desktop не
+подключены, public default — `legacy-only`.
 
-## Следующий этап: M1.2.25 explicit restart-safe transfer executor
+## Следующий этап: M1.2.26 explicit bounded recipient acceptor
 
-- добавить явно вызываемый executor одной pending M1.2.24 записи: загрузить
-  exact request, открыть только M1.2.23 ALPN, отправить exact bytes и атомарно
-  сохранить проверенный receipt;
-- retry policy должен быть bounded, классифицировать pre-connect/ambiguous
-  post-send failure и никогда не готовить новый nonce либо competing request;
-- restart после timeout/disconnect должен оставлять pending и безопасно повторять
-  тот же request; acknowledged запись не должна снова открывать сеть;
-- background worker, multi-source recovery, active runtime IPC и desktop UI —
-  последующие отдельно gated этапы;
+- обернуть существующий single-session recipient handler в явно вызываемый
+  bounded acceptor для caller-selected числа входящих sessions;
+- acceptor должен принимать только dedicated ALPN endpoint, ограничивать число
+  concurrent/in-flight sessions и завершаться по budget/deadline, не получая
+  background lifetime либо service authority;
+- malformed/foreign/timeout session не должна блокировать следующие slots;
+  durable inbox остаётся источником idempotency и import не запускается;
+- multi-source recovery, active runtime IPC и desktop UI — последующие отдельно
+  gated этапы;
 - public default, sync/ticket wires, release/ZIP/tag и automatic GitHub build
   не менять.
 

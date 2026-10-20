@@ -5519,3 +5519,23 @@ Hosted follow-up:
 - No product network, second host, release build, ZIP/archive, tag or automatic
   GitHub build was used. Active IPC remains v33/domain v14 and public default
   remains `legacy-only`.
+
+## M1.2.25 explicit restart-safe history-transfer executor environment (2026-10-20)
+
+- The executor lives in the existing dormant history-recovery transport crate;
+  no dependency or command was added to active CLI/Windows application crates.
+- Its public input is a caller-owned Iroh `Endpoint`, exact target
+  `EndpointAddr`, one durable transfer ID and a bounded policy. The policy
+  defaults to three attempts and is capped at eight; no timer or schedule is
+  persisted.
+- Deterministic tests inject pre-connect and post-connect-ambiguous failures
+  around the exact prepared bytes. One real network test uses only explicit
+  `127.0.0.1` addresses and the dedicated history-recovery ALPN.
+- Windows tests are compiled without execution and launched through
+  `scripts/run-cargo-tests-stable.ps1` at the permanent test EXE path. Focused
+  executor regression passes 6/6 and the full crate passes 14/14.
+- Dedicated boundary rejects 10/10 mutations; accepted-tag readiness passes
+  151/151 with rustfmt and workspace-wide locked/offline strict Clippy.
+- No product Internet/relay, second host, release build, ZIP/archive, tag or
+  automatic GitHub build was used. Active IPC remains v33/domain v14 and
+  public default remains `legacy-only`.

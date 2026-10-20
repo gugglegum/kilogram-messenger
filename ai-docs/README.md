@@ -1262,6 +1262,12 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   неё в bounded immediate-durability outbox. Restart не меняет nonce/Endpoint
   bindings; competing intent/receipt и partial commit fail closed, network
   executor/runtime/IPC/desktop ещё не подключены.
+- [`../docs/RFC-0249-m1225-explicit-restart-safe-history-transfer-executor.md`](../docs/RFC-0249-m1225-explicit-restart-safe-history-transfer-executor.md) —
+  M1.2.25 явно выполняет одну durable pending передачу: до сети сверяет оба
+  Endpoint binding, bounded retry отправляет только exact stored request, а
+  success возвращается после durable signed receipt. Exhaustion сохраняет
+  pending, acknowledged short-circuit не открывает сеть; background/runtime/
+  IPC/desktop authority не добавлены.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

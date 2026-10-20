@@ -24,7 +24,15 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::time::timeout;
 
+mod executor;
 mod outbox;
+
+pub use executor::{
+    HistoryRecoveryTransferAttemptFailureClass, HistoryRecoveryTransferExecutionError,
+    HistoryRecoveryTransferExecutionOutcome, HistoryRecoveryTransferExecutionPolicy,
+    HistoryRecoveryTransferExecutionPolicyError, MAX_HISTORY_RECOVERY_TRANSFER_EXECUTION_ATTEMPTS,
+    execute_pending_history_recovery_transfer,
+};
 
 pub use outbox::{
     AcknowledgeHistoryRecoveryTransferOutcome, HistoryRecoveryTransferOutbox,

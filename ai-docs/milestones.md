@@ -7945,3 +7945,24 @@ correlation visible, Windows-only field evidence, independent security audit
 - executor/background retry/multi-source/runtime IPC/desktop, product network,
   second host, release/ZIP/tag и automatic GitHub build отсутствуют; whole-DB
   rollback без external witness не заявлен, default `legacy-only`.
+
+### M1.2.25 — explicit restart-safe history-transfer executor: принят локально
+
+- явно вызываемый executor принимает только уже durable pending transfer ID,
+  загружает exact signed request и до сети сверяет source Endpoint с локальным
+  endpoint, а recipient Endpoint — с caller-supplied target;
+- каждая попытка предлагает только `kilogram/m1/history-recovery/postcard/1`
+  и отправляет clone тех же canonical bytes. Новый nonce/request подготовить
+  через executor невозможно;
+- policy ограничена 1..=8 попытками (default 3), connect timeout обязан быть
+  ненулевым. Отказ до authenticated connection — `pre-connect`, любой отказ
+  после него консервативно `post-connect-ambiguous`;
+- exhaustion не мутирует pending intent; отдельный последующий вызов/restart
+  повторяет exact request. Verified recipient receipt сохраняется durable до
+  success, acknowledged transfer возвращается без connect/stream;
+- stable-path executor regression прошёл 6/6, полный crate — 14/14; реальный
+  сетевой тест ограничен `127.0.0.1`. Boundary отклонил 10/10 mutations,
+  accepted-tag readiness прошёл 151/151 с rustfmt и strict offline Clippy;
+- background worker/schedule, recipient accept service, multi-source,
+  active runtime/IPC/desktop/import authority, product network, second host,
+  release/ZIP/tag и automatic GitHub build отсутствуют; default `legacy-only`.
