@@ -5427,3 +5427,27 @@ Hosted follow-up:
 - Cargo jobs remained 2 for compilation. No second host, product network,
   release build, archive, Git tag or automatic GitHub build was used. Public
   sync default remains `legacy-only`.
+
+## M1.2.21 atomic recipient history-store import environment (2026-10-20)
+
+- The existing `kilogram-peer-history-recovery-execution` crate now has a
+  local/offline import module using `kilogram-store`, `kilogram-state` and
+  `tempfile`; no Iroh, Tokio, HTTP, runtime IPC or GUI dependency was added.
+- Import writes the ordinary `events` and `local-messages` stores, both signed
+  checkpoints and the recipient Device-signed receipt under one
+  `StateTransaction` and state-directory lock. Existing encrypted vaults use
+  the established DB-primary shadow/dual-write lifecycle.
+- Deep stable-test state roots exposed Windows error 3 for descriptive
+  checkpoint filenames longer than MAX_PATH. Checkpoints now use their full
+  content-addressed ID as a short filename; signed content and verification are
+  unchanged.
+- Windows tests were compiled without execution and launched through
+  `scripts/run-cargo-tests-stable.ps1` at the stable executable path. The
+  combined execution/import harness passed 10/10 in 252.28 seconds.
+- Dedicated boundary verification rejects 10/10 mutations. Accepted-tag
+  readiness passes 147/147 with rustfmt and workspace-wide locked/offline
+  strict Clippy.
+- No product network operation, second host, release build, ZIP/archive, tag or
+  automatic GitHub build was used. Whole-database rollback detection without
+  an external witness is not claimed; active IPC remains v33/domain v14 and
+  public sync default remains `legacy-only`.

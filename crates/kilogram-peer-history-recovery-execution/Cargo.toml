@@ -13,9 +13,12 @@ kilogram-identity = { path = "../kilogram-identity" }
 kilogram-peer-history-recovery = { path = "../kilogram-peer-history-recovery" }
 kilogram-peer-history-recovery-consent = { path = "../kilogram-peer-history-recovery-consent" }
 kilogram-protocol = { path = "../kilogram-protocol" }
+kilogram-state = { path = "../kilogram-state" }
+kilogram-store = { path = "../kilogram-store" }
 postcard.workspace = true
 redb.workspace = true
 serde.workspace = true
+tempfile.workspace = true
 thiserror.workspace = true
 
 [dev-dependencies]
@@ -25,7 +28,6 @@ kilogram-peer-reenrollment-acceptance = { path = "../kilogram-peer-reenrollment-
 kilogram-peer-reenrollment-runtime = { path = "../kilogram-peer-reenrollment-runtime" }
 kilogram-ratchet = { path = "../kilogram-ratchet" }
 kilogram-sync-capability = { path = "../kilogram-sync-capability" }
-tempfile.workspace = true
 
 [lints]
 workspace = true

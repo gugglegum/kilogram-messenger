@@ -3354,6 +3354,8 @@ dependencies = [
  "kilogram-peer-reenrollment-runtime",
  "kilogram-protocol",
  "kilogram-ratchet",
+ "kilogram-state",
+ "kilogram-store",
  "kilogram-sync-capability",
  "postcard",
  "redb",

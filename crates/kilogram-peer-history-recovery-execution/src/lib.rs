@@ -37,6 +37,14 @@ use redb::{
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+mod import;
+
+pub use import::{
+    DurableRecipientHistoryImportReceipt, RecipientHistoryImportError,
+    RecipientHistoryImportOutcome, RecipientHistoryImportStatus, RecipientHistoryImportStatusView,
+    RecipientHistoryImportStore,
+};
+
 const DATABASE_FILE: &str = "old-history-recovery-execution-v1.redb";
 const META_TABLE: TableDefinition<&str, &[u8]> =
     TableDefinition::new("old-history-recovery-execution-meta-v1");
@@ -328,6 +336,42 @@ impl DurableHistoryRecoveryChunk {
         self.record.content.generation
     }
 
+    pub fn owner_account_id(&self) -> AccountId {
+        self.record.content.owner_account_id
+    }
+
+    pub fn source_device_id(&self) -> DeviceId {
+        self.record.content.source_device_id
+    }
+
+    pub fn recipient_device_id(&self) -> DeviceId {
+        self.record.content.recipient_device_id
+    }
+
+    pub fn consent_record_id(&self) -> [u8; 32] {
+        self.record.content.consent_record_id
+    }
+
+    pub fn selection_index(&self) -> usize {
+        usize::from(self.record.content.selection_index)
+    }
+
+    pub fn conversation_id(&self) -> kilogram_protocol::ConversationId {
+        self.record.content.conversation_id
+    }
+
+    pub fn range_start(&self) -> u64 {
+        self.record.content.chunk_range_start
+    }
+
+    pub fn range_end(&self) -> u64 {
+        self.record.content.chunk_range_end
+    }
+
+    pub fn approved_range_end(&self) -> u64 {
+        self.record.content.approved_range_end
+    }
+
     pub fn bundle(&self) -> &HistoryRewrapBundle {
         &self.bundle
     }
@@ -402,6 +446,34 @@ impl OldHistoryRecoveryExecutionReadStore {
             selection_index,
         )
     }
+
+    pub fn committed_chunk(
+        &self,
+        record_id: [u8; 32],
+    ) -> Result<DurableHistoryRecoveryChunk, HistoryRecoveryExecutionError> {
+        load_durable_record(
+            &self.database,
+            self.owner_account_id,
+            self.owner_device_id,
+            record_id,
+        )
+    }
+
+    pub fn committed_head_chunk(
+        &self,
+        consent_record_id: [u8; 32],
+        selection_index: usize,
+        expected_record_id: [u8; 32],
+    ) -> Result<DurableHistoryRecoveryChunk, HistoryRecoveryExecutionError> {
+        load_committed_head_chunk(
+            &self.database,
+            self.owner_account_id,
+            self.owner_device_id,
+            consent_record_id,
+            selection_index,
+            expected_record_id,
+        )
+    }
 }
 
 impl OldHistoryRecoveryExecutionStore {
@@ -448,6 +520,34 @@ impl OldHistoryRecoveryExecutionStore {
             self.owner_device_id,
             consent_record_id,
             selection_index,
+        )
+    }
+
+    pub fn committed_chunk(
+        &self,
+        record_id: [u8; 32],
+    ) -> Result<DurableHistoryRecoveryChunk, HistoryRecoveryExecutionError> {
+        load_durable_record(
+            &self.database,
+            self.owner_account_id,
+            self.owner_device_id,
+            record_id,
+        )
+    }
+
+    pub fn committed_head_chunk(
+        &self,
+        consent_record_id: [u8; 32],
+        selection_index: usize,
+        expected_record_id: [u8; 32],
+    ) -> Result<DurableHistoryRecoveryChunk, HistoryRecoveryExecutionError> {
+        load_committed_head_chunk(
+            &self.database,
+            self.owner_account_id,
+            self.owner_device_id,
+            consent_record_id,
+            selection_index,
+            expected_record_id,
         )
     }
 
@@ -1395,6 +1495,43 @@ fn load_durable_record<D: ReadableDatabase>(
     })
 }
 
+fn load_committed_head_chunk<D: ReadableDatabase>(
+    database: &D,
+    owner_account_id: AccountId,
+    owner_device_id: DeviceId,
+    consent_record_id: [u8; 32],
+    selection_index: usize,
+    expected_record_id: [u8; 32],
+) -> Result<DurableHistoryRecoveryChunk, HistoryRecoveryExecutionError> {
+    let selection_index = u16::try_from(selection_index)
+        .map_err(|_| HistoryRecoveryExecutionError::SelectionMissing(selection_index))?;
+    let key = selection_key(consent_record_id, selection_index);
+    let head =
+        load_head(database, key)?.ok_or(HistoryRecoveryExecutionError::CommittedHeadMismatch)?;
+    if head.consent_record_id != consent_record_id
+        || head.selection_index != selection_index
+        || head.record_id != expected_record_id
+    {
+        return Err(HistoryRecoveryExecutionError::CommittedHeadMismatch);
+    }
+    let chunk = load_durable_record(
+        database,
+        owner_account_id,
+        owner_device_id,
+        expected_record_id,
+    )?;
+    if chunk.consent_record_id() != consent_record_id
+        || chunk.selection_index() != usize::from(selection_index)
+        || chunk.generation() != head.generation
+        || chunk.checkpoint_after().checkpoint_id()? != head.checkpoint_after_id
+        || chunk.range_end() != head.next_range_start
+        || chunk.approved_range_end() != head.approved_range_end
+    {
+        return Err(HistoryRecoveryExecutionError::HeadRecordMismatch);
+    }
+    Ok(chunk)
+}
+
 fn find_record_for_checkpoint_input<D: ReadableDatabase>(
     database: &D,
     owner_account_id: AccountId,
@@ -1863,6 +2000,8 @@ pub enum HistoryRecoveryExecutionError {
     StoredIdLength(usize),
     #[error("committed old-history recovery record differs from the requested chunk")]
     CommittedRecordMismatch,
+    #[error("old-history recovery execution record is not the current committed head")]
+    CommittedHeadMismatch,
     #[error("test-only failure injected before the atomic execution commit")]
     InjectedBeforeCommit,
     #[error("old-history recovery execution encoding is invalid: {0}")]
@@ -2085,13 +2224,18 @@ mod tests {
         )?;
 
         let conversation_id = ConversationId::from_label("bounded-history-execution");
-        let membership = history_root.create_conversation_membership(
-            conversation_id.scope_id(),
-            &[local_root.account_id()],
-        )?;
         let mut source_inventory =
             make_source_inventory(root.path(), conversation_id, event_count)?;
         source_inventory.sort_by_key(|(event, _)| event.event().event_id().ok());
+        let history_author_account_id = source_inventory
+            .first()
+            .ok_or("history execution fixture requires at least one event")?
+            .0
+            .author_account_id();
+        let membership = history_root.create_conversation_membership(
+            conversation_id.scope_id(),
+            &[local_root.account_id(), history_author_account_id],
+        )?;
         let probe = HistoryRewrapBundle::seal(
             source.identity(),
             authority.clone(),
@@ -2760,6 +2904,430 @@ mod tests {
             ),
             Err(HistoryRecoveryExecutionError::OrphanArtifact)
         ));
+        Ok(())
+    }
+
+    fn commit_next_for_import(
+        fixture: &Fixture,
+        store: &OldHistoryRecoveryExecutionStore,
+        consent: &OldHistoryRecoveryConsentStore,
+        consent_record_id: [u8; 32],
+        checkpoint: Option<&SignedHistoryRecoveryCheckpoint>,
+        committed_at_unix_seconds: u64,
+    ) -> Result<DurableHistoryRecoveryChunk, HistoryRecoveryExecutionError> {
+        let applied = apply(
+            fixture,
+            prepare(store, consent, consent_record_id, fixture, checkpoint)?,
+        )?;
+        match store.commit_chunk(
+            consent,
+            consent_record_id,
+            fixture.source.identity(),
+            &fixture.context(),
+            &applied,
+            committed_at_unix_seconds,
+        )? {
+            CommitHistoryRecoveryChunkOutcome::Committed(chunk) => Ok(chunk),
+            CommitHistoryRecoveryChunkOutcome::AlreadyCommitted(_) => {
+                Err(HistoryRecoveryExecutionError::CommittedRecordMismatch)
+            }
+        }
+    }
+
+    #[test]
+    fn recipient_import_atomically_publishes_events_projections_checkpoint_and_vault()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture(5, None)?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let execution_directory = fixture.root.path().join("recipient-import-execution");
+        let execution = fixture.open_execution("recipient-import-execution")?;
+        let committed = commit_next_for_import(
+            &fixture,
+            &execution,
+            &consent,
+            consent_record_id,
+            None,
+            2_000,
+        )?;
+        drop(execution);
+        let execution = OldHistoryRecoveryExecutionReadStore::open_existing(
+            execution_directory,
+            fixture.owner_account_id,
+            fixture.source.identity().device_id(),
+        )?;
+
+        let state = fixture.root.path().join("recipient-state");
+        std::fs::create_dir_all(&state)?;
+        kilogram_state::EncryptedStateVault::open_or_create(&state)?.migrate_legacy_snapshot()?;
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        assert_eq!(
+            imports.status(consent_record_id, 0)?,
+            RecipientHistoryImportStatus::Absent
+        );
+        let imported = match imports.import_committed_chunk(
+            &execution,
+            consent_record_id,
+            0,
+            committed.record_id(),
+            fixture.replacement.identity(),
+            &fixture.membership,
+            3_000,
+        )? {
+            RecipientHistoryImportOutcome::Imported(receipt) => receipt,
+            RecipientHistoryImportOutcome::AlreadyImported(_) => {
+                return Err("fresh import unexpectedly replayed".into());
+            }
+        };
+        assert_eq!(imported.imported_event_count(), 5);
+        assert!(imported.is_complete());
+
+        let stored = kilogram_store::EventStore::open(state.join("events"))?
+            .load_authorized_conversation(committed.conversation_id(), &fixture.membership)?;
+        let expected = fixture
+            .source_inventory
+            .iter()
+            .map(|(event, _)| event.clone())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            stored
+                .into_iter()
+                .map(|event| event.event)
+                .collect::<Vec<_>>(),
+            expected
+        );
+        let projections = kilogram_store::LocalMessageStore::open(state.join("local-messages"))?;
+        for ((event, body), projection) in
+            fixture.source_inventory.iter().zip(committed.projections())
+        {
+            let stored = projections.get(projection.event_id())?;
+            assert_eq!(stored, *projection);
+            assert_eq!(
+                stored.open_for_account(
+                    event.event(),
+                    fixture.replacement.identity().device_id(),
+                    fixture.owner_account_id,
+                    fixture.replacement.encryption(),
+                )?,
+                *body
+            );
+        }
+        let RecipientHistoryImportStatus::Complete(status) =
+            imports.status(consent_record_id, 0)?
+        else {
+            return Err("completed recipient import did not report complete".into());
+        };
+        assert_eq!(status.imported_chunk_count, 1);
+        assert_eq!(status.imported_event_count, 5);
+        assert!(!status.contains_message_bodies);
+        assert!(!status.contains_plaintext);
+        assert!(!status.grants_network_authority);
+        assert!(!status.grants_execution_authority);
+        assert!(!status.whole_database_rollback_supported);
+        kilogram_state::EncryptedStateVault::open_existing(&state)?.verify()?;
+
+        let replay = match imports.import_committed_chunk(
+            &execution,
+            consent_record_id,
+            0,
+            committed.record_id(),
+            fixture.replacement.identity(),
+            &fixture.membership,
+            9_999,
+        )? {
+            RecipientHistoryImportOutcome::AlreadyImported(receipt) => receipt,
+            RecipientHistoryImportOutcome::Imported(_) => {
+                return Err("exact replay created another import".into());
+            }
+        };
+        assert_eq!(replay.receipt_id(), imported.receipt_id());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_rollback_and_crash_recovery_leave_no_partial_page()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture(4, None)?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let execution_directory = fixture.root.path().join("import-fault-execution");
+        let execution = fixture.open_execution("import-fault-execution")?;
+        let committed = commit_next_for_import(
+            &fixture,
+            &execution,
+            &consent,
+            consent_record_id,
+            None,
+            2_000,
+        )?;
+        drop(execution);
+        let execution = OldHistoryRecoveryExecutionReadStore::open_existing(
+            execution_directory,
+            fixture.owner_account_id,
+            fixture.source.identity().device_id(),
+        )?;
+
+        for (index, fault) in [
+            crate::import::ImportFault::AfterEvents,
+            crate::import::ImportFault::AfterProjections,
+            crate::import::ImportFault::AfterCheckpoints,
+            crate::import::ImportFault::AfterReceipt,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let state = fixture.root.path().join(format!("recipient-fault-{index}"));
+            let imports = RecipientHistoryImportStore::new(
+                &state,
+                fixture.owner_account_id,
+                fixture.replacement.identity().device_id(),
+            );
+            let result = imports.import_committed_chunk_with_fault(
+                &execution,
+                consent_record_id,
+                0,
+                committed.record_id(),
+                fixture.replacement.identity(),
+                &fixture.membership,
+                3_000,
+                fault,
+            );
+            assert!(
+                matches!(result, Err(RecipientHistoryImportError::InjectedFailure(_))),
+                "unexpected import fault result: {result:?}"
+            );
+            assert_eq!(
+                imports.status(consent_record_id, 0)?,
+                RecipientHistoryImportStatus::Absent
+            );
+            assert!(
+                kilogram_store::EventStore::open(state.join("events"))?
+                    .load_authorized_conversation(
+                        committed.conversation_id(),
+                        &fixture.membership,
+                    )?
+                    .is_empty()
+            );
+        }
+
+        let crash_state = fixture.root.path().join("recipient-crash");
+        let imports = RecipientHistoryImportStore::new(
+            &crash_state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        assert!(matches!(
+            imports.import_committed_chunk_with_fault(
+                &execution,
+                consent_record_id,
+                0,
+                committed.record_id(),
+                fixture.replacement.identity(),
+                &fixture.membership,
+                3_000,
+                crate::import::ImportFault::CrashAfterReceipt,
+            ),
+            Err(RecipientHistoryImportError::InjectedFailure(
+                "crash-after-receipt"
+            ))
+        ));
+        assert!(matches!(
+            imports.status(consent_record_id, 0),
+            Err(RecipientHistoryImportError::StateTransactionInProgress(_))
+        ));
+        assert!(matches!(
+            imports.import_committed_chunk(
+                &execution,
+                consent_record_id,
+                0,
+                committed.record_id(),
+                fixture.replacement.identity(),
+                &fixture.membership,
+                3_001,
+            )?,
+            RecipientHistoryImportOutcome::Imported(_)
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_requires_current_head_sequential_chain_and_current_device()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture(4, Some(2))?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let execution_directory = fixture.root.path().join("import-chain-execution");
+        let execution = fixture.open_execution("import-chain-execution")?;
+        let first = commit_next_for_import(
+            &fixture,
+            &execution,
+            &consent,
+            consent_record_id,
+            fixture.initial_checkpoint.as_ref(),
+            2_000,
+        )?;
+        let second = commit_next_for_import(
+            &fixture,
+            &execution,
+            &consent,
+            consent_record_id,
+            Some(first.checkpoint_after()),
+            2_001,
+        )?;
+        drop(execution);
+        let execution = OldHistoryRecoveryExecutionReadStore::open_existing(
+            execution_directory,
+            fixture.owner_account_id,
+            fixture.source.identity().device_id(),
+        )?;
+        let stale_state = fixture.root.path().join("stale-recipient-state");
+        let stale_imports = RecipientHistoryImportStore::new(
+            &stale_state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        assert!(matches!(
+            stale_imports.import_committed_chunk(
+                &execution,
+                consent_record_id,
+                0,
+                first.record_id(),
+                fixture.replacement.identity(),
+                &fixture.membership,
+                3_000,
+            ),
+            Err(RecipientHistoryImportError::Execution(
+                HistoryRecoveryExecutionError::CommittedHeadMismatch
+            ))
+        ));
+        assert!(matches!(
+            stale_imports.import_committed_chunk(
+                &execution,
+                consent_record_id,
+                0,
+                second.record_id(),
+                fixture.replacement.identity(),
+                &fixture.membership,
+                3_001,
+            ),
+            Err(RecipientHistoryImportError::MissingPreviousReceipt)
+        ));
+        let foreign = DeviceIdentity::generate()?;
+        assert!(matches!(
+            stale_imports.import_committed_chunk(
+                &execution,
+                consent_record_id,
+                0,
+                second.record_id(),
+                &foreign,
+                &fixture.membership,
+                3_002,
+            ),
+            Err(RecipientHistoryImportError::WrongRecipientDevice)
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_checkpoint_and_receipt_corruption_fail_closed()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture(3, None)?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let execution_directory = fixture.root.path().join("import-corrupt-execution");
+        let execution = fixture.open_execution("import-corrupt-execution")?;
+        let committed = commit_next_for_import(
+            &fixture,
+            &execution,
+            &consent,
+            consent_record_id,
+            None,
+            2_000,
+        )?;
+        drop(execution);
+        let execution = OldHistoryRecoveryExecutionReadStore::open_existing(
+            execution_directory,
+            fixture.owner_account_id,
+            fixture.source.identity().device_id(),
+        )?;
+
+        let conflict_state = fixture.root.path().join("checkpoint-conflict-state");
+        let checkpoint = committed.checkpoint_after();
+        let checkpoint_path = conflict_state
+            .join("history-recovery")
+            .join("import-checkpoints")
+            .join(format!(
+                "{}.checkpoint",
+                checkpoint
+                    .checkpoint_id()?
+                    .iter()
+                    .map(|byte| format!("{byte:02x}"))
+                    .collect::<String>()
+            ));
+        std::fs::create_dir_all(
+            checkpoint_path
+                .parent()
+                .ok_or("checkpoint path has no parent")?,
+        )?;
+        std::fs::write(&checkpoint_path, b"conflicting-checkpoint")?;
+        let conflict_imports = RecipientHistoryImportStore::new(
+            &conflict_state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let conflict_result = conflict_imports.import_committed_chunk(
+            &execution,
+            consent_record_id,
+            0,
+            committed.record_id(),
+            fixture.replacement.identity(),
+            &fixture.membership,
+            3_000,
+        );
+        assert!(
+            matches!(
+                conflict_result,
+                Err(RecipientHistoryImportError::AppendOnlyConflict(_))
+            ),
+            "unexpected checkpoint conflict result: {conflict_result:?}"
+        );
+        assert!(
+            kilogram_store::EventStore::open(conflict_state.join("events"))?
+                .load_authorized_conversation(committed.conversation_id(), &fixture.membership)?
+                .is_empty()
+        );
+
+        let corrupt_state = fixture.root.path().join("receipt-corrupt-state");
+        let corrupt_imports = RecipientHistoryImportStore::new(
+            &corrupt_state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        corrupt_imports.import_committed_chunk(
+            &execution,
+            consent_record_id,
+            0,
+            committed.record_id(),
+            fixture.replacement.identity(),
+            &fixture.membership,
+            3_001,
+        )?;
+        let receipt_directory = corrupt_state
+            .join("history-recovery")
+            .join("import-receipts");
+        let receipt_path = std::fs::read_dir(receipt_directory)?
+            .next()
+            .ok_or("import receipt is missing")??
+            .path();
+        let mut bytes = std::fs::read(&receipt_path)?;
+        let last = bytes.last_mut().ok_or("empty import receipt")?;
+        *last ^= 1;
+        std::fs::write(receipt_path, bytes)?;
+        assert!(corrupt_imports.status(consent_record_id, 0).is_err());
         Ok(())
     }
 }

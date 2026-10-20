@@ -7852,3 +7852,28 @@ correlation visible, Windows-only field evidence, independent security audit
 - production history stores пока не изменяются. Network transfer,
   multi-source scheduler, active IPC, desktop controls, wire/default change,
   release/ZIP/tag/automatic GitHub build и second host отсутствуют.
+
+### M1.2.21 — atomic recipient history-store import: принят локально
+
+- новый import слой принимает только exact committed M1.2.20 chunk, повторно
+  проверяет execution artifacts, membership, Account/Device и требует current
+  execution head до первого импорта; stale unimported record отклоняется;
+- authorized events, encrypted local projections, signed before/after
+  checkpoints и current-recipient-Device-signed receipt публикуются одной
+  `StateTransaction` под state-directory lock. При наличии encrypted vault
+  применяется существующий DB-primary dual-write protocol;
+- receipt exact-связывает execution record/generation, bundle, checkpoints,
+  ranges, ordered event IDs, projection digests и previous receipt. Цепь
+  линейна и ограничена 16,384 chunks, один chunk — 32 events;
+- exact imported replay не мутирует store и повторно проверяет все durable
+  artifacts. Injected failure после каждой стадии откатывает страницу; crash
+  оставляет active marker, status fail closed, а следующий mutating retry
+  выполняет recovery до повторного импорта;
+- короткие content-addressed checkpoint filenames устранили реальную Windows
+  path-length ошибку без ослабления signed checkpoint content;
+- stable-path combined execution/import regression прошёл 10/10; dedicated
+  boundary отклонил 10/10 mutations, accepted-tag readiness прошёл 147/147 с
+  rustfmt и workspace-wide locked/offline strict Clippy;
+- plaintext не сохраняется. Network transfer, multi-source scheduler, active
+  IPC, desktop controls, second host, release/ZIP/tag и automatic GitHub build
+  не использовались; public default остаётся `legacy-only`.

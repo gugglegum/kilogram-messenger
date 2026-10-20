@@ -1,0 +1,103 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.21",
+  "status": "atomic-recipient-history-store-import-verified",
+  "contract_source": "M1.2.20",
+  "implementation": [
+    "crates/kilogram-peer-history-recovery-execution/src/import.rs",
+    "crates/kilogram-store",
+    "crates/kilogram-state"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_active_runtime_ipc": false,
+  "changes_desktop_runtime_authority": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "input_gate": {
+    "requires_exact_committed_execution_record": true,
+    "reverifies_execution_artifacts": true,
+    "requires_current_execution_head_before_first_import": true,
+    "requires_current_recipient_device": true,
+    "requires_exact_conversation_membership": true,
+    "stale_unimported_execution_record_rejected": true,
+    "exact_already_imported_record_replay_allowed": true
+  },
+  "import": {
+    "mode": "local-offline-single-source",
+    "max_events_per_chunk": 32,
+    "ordinary_event_store_mutated": true,
+    "ordinary_encrypted_projection_store_mutated": true,
+    "plaintext_stored": false,
+    "state_transaction_used": true,
+    "state_directory_lock_used": true,
+    "vault_primary_dual_write_used_when_present": true,
+    "checkpoint_before_and_after_persisted": true,
+    "content_addressed_short_checkpoint_names": true,
+    "network_opened": false,
+    "multi_source_scheduler_added": false,
+    "active_ipc_command_added": false,
+    "desktop_control_added": false
+  },
+  "receipt": {
+    "directory": "history-recovery/import-receipts",
+    "checkpoint_directory": "history-recovery/import-checkpoints",
+    "max_receipt_bytes": 65536,
+    "max_receipts": 16384,
+    "recipient_device_signed": true,
+    "execution_record_bound": true,
+    "bundle_checkpoint_range_event_projection_bound": true,
+    "append_only_linear_chain": true,
+    "single_execution_record_consumption": true
+  },
+  "restart_and_replay": {
+    "exact_replay_is_no_op": true,
+    "exact_replay_reverifies_imported_artifacts": true,
+    "event_projection_checkpoint_conflict_rejected": true,
+    "partial_failure_rolls_back": true,
+    "active_transaction_marker_blocks_status": true,
+    "crashed_transaction_recovered_before_retry": true,
+    "receipt_corruption_rejected": true,
+    "symlink_store_roots_rejected": true,
+    "whole_database_rollback_detected_without_external_witness": false
+  },
+  "observation": {
+    "read_only_no_create": true,
+    "opaque_selection_token": true,
+    "bounded_chunk_event_progress_visible": true,
+    "message_bodies_visible": false,
+    "plaintext_visible": false,
+    "raw_identity_visible": false,
+    "filesystem_paths_visible": false,
+    "network_coordinates_visible": false,
+    "network_authority_granted": false,
+    "execution_authority_granted": false
+  },
+  "verification": {
+    "focused_import_tests": 4,
+    "combined_execution_tests": 10,
+    "stable_path_rust_harness_required_on_windows": true,
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "147/147",
+    "second_host_required": false,
+    "product_network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "non_claims": [
+    "whole-database-rollback-detection-without-external-witness",
+    "network-history-transfer",
+    "multi-source-recovery-scheduling",
+    "runtime-ipc-history-recovery-authority",
+    "desktop-history-recovery-authority",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "authenticated-network-history-transfer",
+    "multi-source-recovery-scheduling",
+    "runtime-ipc-history-recovery-ceremony"
+  ]
+}

@@ -2649,6 +2649,13 @@ and exact replay idempotent while divergent output fails closed. Product
 history import, network transfer, multi-source scheduling, IPC and desktop
 authority remain outside this stage.
 
+[`RFC-0245`](docs/RFC-0245-m1221-atomic-recipient-history-store-import.md)
+atomically publishes one exact committed recovery chunk into the recipient's
+ordinary event and encrypted projection stores. A recipient-Device-signed
+linear receipt chain, state transaction and vault-primary dual write make
+restart and exact replay fail closed without granting network, IPC or desktop
+authority; public default remains `legacy-only`.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

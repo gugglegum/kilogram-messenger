@@ -1242,6 +1242,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   source-signed append-only journal дают crash-safe resume/exact replay;
   plaintext не сохраняется, а production import/network/multi-source/IPC/GUI
   остаются за границей этапа.
+- [`../docs/RFC-0245-m1221-atomic-recipient-history-store-import.md`](../docs/RFC-0245-m1221-atomic-recipient-history-store-import.md) —
+  M1.2.21 атомарно публикует exact committed recovery chunk в обычные event и
+  encrypted projection stores получателя. Current recipient Device подписывает
+  линейную receipt chain; conflict, stale unimported head, partial crash,
+  symlink и corruption fail closed, network/IPC/GUI не добавлены.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
