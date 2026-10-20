@@ -1,0 +1,95 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.23",
+  "status": "authenticated-iroh-history-transfer-session-verified",
+  "contract_source": "M1.2.22",
+  "implementation": [
+    "crates/kilogram-peer-history-recovery-transport/src/lib.rs",
+    "crates/kilogram-peer-history-recovery-transport/tests/fixtures/m1222-transfer-envelope.b64"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_active_runtime_ipc": false,
+  "changes_desktop_runtime_authority": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "session": {
+    "alpn": "kilogram/m1/history-recovery/postcard/1",
+    "request_version": 1,
+    "response_version": 1,
+    "encoding": "canonical-postcard",
+    "io_timeout_seconds": 180,
+    "max_envelope_bytes": 9437184,
+    "max_request_bytes": 9441280,
+    "max_response_bytes": 4096,
+    "single_bidirectional_stream": true,
+    "fallback_protocol": false
+  },
+  "request": {
+    "source_device_signed": true,
+    "authenticated_source_endpoint_bound": true,
+    "exact_recipient_endpoint_bound": true,
+    "nonzero_session_nonce_bound": true,
+    "exact_transfer_id_bound": true,
+    "complete_m1222_envelope_bound": true,
+    "noncanonical_trailing_and_oversized_rejected": true
+  },
+  "response": {
+    "recipient_device_signed": true,
+    "exact_request_id_bound": true,
+    "both_endpoint_ids_bound": true,
+    "transfer_id_bound": true,
+    "recipient_device_id_bound": true,
+    "stage_disposition_bound": true,
+    "staging_precedes_response": true
+  },
+  "retry": {
+    "exact_request_replay_idempotent": true,
+    "first_result": "staged",
+    "exact_replay_result": "already-staged",
+    "restart_safe_source_outbox": false,
+    "automatic_scheduler": false,
+    "multi_source_scheduling": false
+  },
+  "authority": {
+    "transport_crate_registered_by_active_runtime": false,
+    "runtime_accepts_history_recovery_alpn": false,
+    "cli_command_added": false,
+    "desktop_control_added": false,
+    "recipient_inbox_grants_import_authority": false,
+    "message_bodies_in_plaintext": false,
+    "execution_crate_gains_network_dependency": false
+  },
+  "verification": {
+    "focused_tests": 4,
+    "preexisting_iroh_loopback_control_tests": 1,
+    "stable_path_rust_harness_required_on_windows": true,
+    "local_loopback_network_executed": true,
+    "external_network_executed": false,
+    "product_network_executed": false,
+    "second_host_required": false,
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "149/149",
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "non_claims": [
+    "active-runtime-history-transfer",
+    "restart-safe-source-network-outbox",
+    "automatic-network-resume",
+    "multi-source-recovery-scheduling",
+    "runtime-ipc-history-recovery-authority",
+    "desktop-history-recovery-authority",
+    "product-internet-or-relay-evidence",
+    "whole-database-rollback-detection-without-external-witness",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "durable-source-transfer-outbox",
+    "restart-safe-exact-session-retry",
+    "multi-source-recovery-scheduling"
+  ]
+}

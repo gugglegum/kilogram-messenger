@@ -3365,6 +3365,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "kilogram-peer-history-recovery-transport"
+version = "0.1.0"
+dependencies = [
+ "base64",
+ "blake3",
+ "iroh",
+ "kilogram-identity",
+ "kilogram-peer-history-recovery-execution",
+ "postcard",
+ "serde",
+ "tempfile",
+ "thiserror 2.0.20",
+ "tokio",
+]
+
+[[package]]
 name = "kilogram-peer-reenrollment"
 version = "0.1.0"
 dependencies = [

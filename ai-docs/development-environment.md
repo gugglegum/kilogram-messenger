@@ -5477,3 +5477,27 @@ Hosted follow-up:
   automatic GitHub build was used. Whole-database rollback detection without
   an external witness is not claimed; active IPC remains v33/domain v14 and
   public sync default remains `legacy-only`.
+
+## M1.2.23 authenticated Iroh history-transfer session environment (2026-10-20)
+
+- Added `kilogram-peer-history-recovery-transport` as a separate crate with
+  Iroh/Tokio. The offline `kilogram-peer-history-recovery-execution` crate and
+  active CLI/Windows app manifests remain free of this transport authority.
+- The fixed test fixture is the exact valid M1.2.22 canonical envelope. Tests
+  bind both Iroh Endpoint IDs, source/recipient Devices, a nonzero nonce and the
+  content-addressed transfer ID; the response is signed only after durable
+  recipient staging.
+- Sandboxed loopback execution timed out because local networking is restricted
+  there. The same stable-path executable was run outside that network sandbox
+  and passed over exact `127.0.0.1`; the pre-existing Iroh loopback control also
+  passed. This is host-local transport evidence, not product Internet evidence.
+- Windows network tests were compiled without execution and launched through
+  `scripts/run-cargo-tests-stable.ps1`; no hash-named harness was launched and
+  no new Windows Firewall executable identity was introduced.
+- Focused regression passed 4/4 and the pre-existing loopback control passed
+  1/1. Dedicated boundary verification rejects 10/10 mutations. Accepted-tag
+  readiness passes 149/149 with rustfmt and workspace-wide locked/offline strict
+  Clippy.
+- No second host, product Internet/relay, release build, ZIP/archive, tag or
+  automatic GitHub build was used. Active IPC remains v33/domain v14 and public
+  sync default remains `legacy-only`.

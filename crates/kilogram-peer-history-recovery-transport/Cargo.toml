@@ -1,0 +1,25 @@
+[package]
+name = "kilogram-peer-history-recovery-transport"
+description = "Authenticated bounded Iroh transfer session for Kilogram old-history recovery"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+blake3.workspace = true
+iroh.workspace = true
+kilogram-identity = { path = "../kilogram-identity" }
+kilogram-peer-history-recovery-execution = { path = "../kilogram-peer-history-recovery-execution" }
+postcard.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+base64.workspace = true
+tempfile.workspace = true
+
+[lints]
+workspace = true

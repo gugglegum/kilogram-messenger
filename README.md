@@ -2663,6 +2663,12 @@ exact encrypted artifacts and a linear backlog, while the recipient-signed
 import receipt chain still controls consumption order; no network, IPC or
 desktop authority is added.
 
+[`RFC-0247`](docs/RFC-0247-m1223-authenticated-iroh-history-transfer-session.md)
+adds a dedicated bounded Iroh session for one exact M1.2.22 envelope. The
+source-signed request binds both authenticated Endpoint IDs, Devices, nonce and
+transfer; durable recipient staging precedes its signed response, exact replay
+is idempotent, and the active runtime still does not register this authority.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

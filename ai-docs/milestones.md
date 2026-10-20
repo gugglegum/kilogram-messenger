@@ -7902,3 +7902,24 @@ correlation visible, Windows-only field evidence, independent security audit
   multi-source scheduler, active IPC, desktop controls, second host,
   release/ZIP/tag и automatic GitHub build не использовались; public default
   остаётся `legacy-only`.
+
+### M1.2.23 — authenticated Iroh history-transfer session: принят локально
+
+- отдельный `kilogram-peer-history-recovery-transport` crate владеет dedicated
+  ALPN `kilogram/m1/history-recovery/postcard/1`; active runtime, CLI и desktop
+  crate его не подключают и не рекламируют;
+- canonical source-Device-signed request exact-связывает authenticated source
+  и recipient Endpoint IDs, nonzero session nonce, transfer ID и полный
+  M1.2.22 envelope. Bounded framing и per-operation timeout fail closed;
+- recipient сверяет Iroh peer identity до мутации, повторно проверяет envelope,
+  durable-stage-ит exact bytes и только после этого подписывает response с
+  request/transfer/Endpoint/Device/disposition binding;
+- exact retry с тем же request идемпотентен: первая попытка возвращает `Staged`,
+  повторная — `AlreadyStaged`. Endpoint substitution отклоняется до появления
+  inbox state;
+- stable-path focused regression прошёл 4/4, pre-existing Iroh loopback control
+  1/1; dedicated boundary отклонил 10/10 mutations, accepted-tag readiness
+  прошёл 149/149 с rustfmt и workspace-wide locked/offline strict Clippy;
+- использовался только local `127.0.0.1` loopback. Product Internet/relay,
+  second host, durable source outbox/resume, scheduler/multi-source, IPC/GUI,
+  release/ZIP/tag и automatic GitHub build отсутствуют; default `legacy-only`.

@@ -665,7 +665,12 @@ mod tests {
             .bind()
             .await?;
         let expected = vec![0x5a_u8; 8_123];
-        let server_addr = server.addr();
+        let server_socket = server
+            .bound_sockets()
+            .into_iter()
+            .next()
+            .context("test server did not bind a loopback socket")?;
+        let server_addr = EndpointAddr::new(server.id()).with_ip_addr(server_socket);
         let server_response = expected.clone();
         let server_task = tokio::spawn({
             let server = server.clone();

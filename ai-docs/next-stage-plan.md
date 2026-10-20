@@ -1,30 +1,28 @@
-# Текущая точка: M1.2.22 завершён, следующий M1.2.23
+# Текущая точка: M1.2.23 завершён, следующий M1.2.24
 
-Статус на 2026-10-20: exact committed M1.2.21 input переносится отдельным
-bounded canonical source-Device-signed envelope. Recipient inbox полностью
-проверяет envelope и внутренние execution artifacts, атомарно append-ит exact
-bytes и допускает bounded linear backlog. Generation gap/fork/stale candidate,
-foreign recipient, tamper, corruption и partial crash fail closed. Импорт по-
-прежнему разрешает только recipient-signed receipt chain в порядке поколений.
-Stable regression прошёл 14/14, boundary отклонил 10/10 ослаблений,
-accepted-tag readiness — 148/148. Plaintext не сохраняется; IPC остаётся
-v33/domain v14, public default — `legacy-only`.
+Статус на 2026-10-20: отдельный crate передаёт exact M1.2.22 envelope по
+dedicated Iroh ALPN. Source-Device-signed canonical request связывает оба
+authenticated Endpoint ID, nonzero nonce, transfer ID и полный envelope;
+recipient durable stage предшествует recipient-Device-signed response. Exact
+retry идемпотентен (`staged` -> `already-staged`), endpoint substitution
+отклоняется до мутации. Stable-path regression прошёл 4/4 плюс существующий
+Iroh control 1/1; boundary отклонил 10/10 ослаблений, accepted-tag readiness —
+149/149. Новый ALPN не зарегистрирован active runtime; IPC остаётся v33/domain
+v14, public default — `legacy-only`.
 
-## Следующий этап: M1.2.23 authenticated Iroh history-transfer session
+## Следующий этап: M1.2.24 durable source transfer outbox
 
-- добавить отдельный bounded transport adapter и ALPN для передачи уже
-  проверенного M1.2.22 envelope между source и exact recipient endpoint;
-- wire должен переносить только length-delimited canonical envelope и
-  минимальный signed receipt/result, без чтения execution journal на стороне
-  responder и без обхода recipient inbox;
-- endpoint authentication, envelope source Device и exact recipient Device
-  должны независимо совпасть с явным session context; substitution, truncation,
-  extra frames, oversized payload и disconnect до durable stage fail closed;
-- сначала доказать deterministic loopback/direct session через стабильный EXE.
-  Background retry, multi-source scheduling, active runtime IPC и desktop UI
-  оставить последующим этапом;
-- public default, существующие sync/ticket wires, release/ZIP/tag и automatic
-  GitHub build не менять.
+- сохранять exact transfer intent до сетевой попытки: owner/source/recipient,
+  envelope/transfer ID, оба Endpoint ID и stable session nonce;
+- принимать signed M1.2.23 receipt только для exact durable intent, атомарно
+  фиксировать acknowledged head и не создавать новый transfer при restart;
+- exact retry после disconnect/crash должен использовать те же envelope и
+  nonce; competing receipt, endpoint drift, tamper, fork и ambiguous partial
+  state должны fail closed;
+- сначала оставить executor локальным и явно вызываемым. Background scheduler,
+  multi-source recovery, active runtime IPC и desktop UI — последующие этапы;
+- public default, sync/ticket wires, release/ZIP/tag и automatic GitHub build
+  не менять.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

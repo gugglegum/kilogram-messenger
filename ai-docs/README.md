@@ -1252,6 +1252,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   canonical source-Device-signed envelope. Recipient inbox атомарно сохраняет
   exact encrypted artifacts и линейный backlog, а импорт остаётся под властью
   recipient-signed receipt chain; network/IPC/GUI не добавлены.
+- [`../docs/RFC-0247-m1223-authenticated-iroh-history-transfer-session.md`](../docs/RFC-0247-m1223-authenticated-iroh-history-transfer-session.md) —
+  M1.2.23 добавляет отдельную bounded authenticated Iroh-сессию для exact
+  M1.2.22 envelope. Request связывает оба Endpoint ID, Device, nonce и transfer;
+  durable stage предшествует signed response, exact retry идемпотентен, а
+  active runtime/IPC/desktop по-прежнему не получают эту authority.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
