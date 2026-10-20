@@ -7823,3 +7823,32 @@ correlation visible, Windows-only field evidence, independent security audit
 - whole-DB rollback без external monotonic witness остаётся честным non-claim.
   Transfer/rewrap/checkpoint advance, network, IPC и desktop не добавлялись;
   wire/default `legacy-only` не менялись.
+
+### M1.2.20 — bounded single-source old-history execution: принят локально
+
+- execution начинается только из exact durable M1.2.19 consent; перед prepare
+  и commit повторно проверяются consent record/head, source signature и полный
+  committed live context без повторного превращения истёкшего confirmation
+  window в запрет crash/restart resume;
+- source использует существующий authenticated `HistoryRewrapBundle` и выдаёт
+  максимум 32 events за chunk. Replacement Device отдельно расшифровывает их,
+  создаёт encrypted history-rewrap projections и подписывает checkpoint
+  transition;
+- отдельная owner Account/source Device-bound
+  `old-history-recovery-execution-v1.redb` одной `Immediate` транзакцией
+  append-ит source-signed record, bundle, before/after checkpoints, encrypted
+  projections и единственный consent-selection head;
+- exact replay committed checkpoint возвращает те же durable artifacts без
+  повторного advance; differently randomized bundle либо другой checkpoint
+  для уже consumed input отклоняется. Pre-commit crash оставляет пустое
+  состояние, fork/orphan/corruption/context drift fail closed;
+- read-only status no-create показывает лишь opaque selection token и bounded
+  progress; bodies/plaintext/raw identity/path/network coordinates отсутствуют;
+- affected stable-path regression прошёл planner 6/6, consent 6/6, execution
+  6/6 и protocol 156 passed / 15 explicit generators ignored; decoder mutation
+  corpus прошёл 31851/31851 за 2575.21 s, sync-v2 mutation — 1/1 за 23.87 s.
+  Dedicated boundary отклонил 10/10 mutations, accepted-tag readiness прошёл
+  146/146 с rustfmt и workspace-wide locked/offline strict Clippy;
+- production history stores пока не изменяются. Network transfer,
+  multi-source scheduler, active IPC, desktop controls, wire/default change,
+  release/ZIP/tag/automatic GitHub build и second host отсутствуют.

@@ -5397,3 +5397,33 @@ Hosted follow-up:
   or automatic GitHub build was used. Whole-database rollback detection
   without an external witness is not claimed; active IPC remains v33/domain
   v14 and public sync default remains `legacy-only`.
+
+## M1.2.20 bounded single-source history execution environment (2026-10-20)
+
+- Added the local/offline crate `kilogram-peer-history-recovery-execution` and
+  reused existing protocol history-rewrap bundles, local encrypted projections
+  and recipient-signed checkpoints. No Iroh, Tokio, HTTP, runtime IPC or GUI
+  dependency was added.
+- The execution redb is separate from consent and product history state. It is
+  Account/source-Device-bound, immediate-durability and append-only, with exact
+  bundle/checkpoint/projection artifacts and one head per consent selection.
+- The short plan expiry is still enforced by the initial M1.2.19 consent
+  commit. M1.2.20 adds an explicit committed-context verifier so an exact
+  durable consent can resume after expiry only while authority, membership,
+  inventory, ranges, source and recipient remain unchanged.
+- Focused tests were compiled without execution and then launched only through
+  `scripts/run-cargo-tests-stable.ps1` under the stable EXE name. The first
+  sandboxed run hit Windows `Access Denied` while creating protected Account
+  Root key files; the identical stable harness passed 6/6 outside the file
+  sandbox. This was not a network or firewall failure.
+- The six tests cover atomic commit/reopen, three bounded resume chunks, exact
+  replay/divergence, injected crash rollback, foreign/context drift, and
+  corruption/orphan detection. The affected stable-path regression passed
+  planner 6/6, consent 6/6 and execution 6/6; protocol passed 156 tests with
+  15 explicit generators ignored, the 31,851-case decoder mutation corpus
+  passed in 2575.21 seconds, and sync-v2 decoder mutations passed 1/1 in 23.87
+  seconds. Dedicated boundary rejects 10/10 mutations; accepted-tag readiness
+  passes 146/146 with rustfmt and workspace-wide locked/offline strict Clippy.
+- Cargo jobs remained 2 for compilation. No second host, product network,
+  release build, archive, Git tag or automatic GitHub build was used. Public
+  sync default remains `legacy-only`.

@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.20",
+  "status": "bounded-single-source-history-recovery-execution-verified",
+  "contract_source": "M1.2.19",
+  "implementation": [
+    "crates/kilogram-peer-history-recovery-execution",
+    "crates/kilogram-peer-history-recovery-consent",
+    "crates/kilogram-peer-history-recovery",
+    "crates/kilogram-protocol"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_active_runtime_ipc": false,
+  "changes_desktop_runtime_authority": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "consent_gate": {
+    "requires_exact_durable_consent_record": true,
+    "reverifies_consent_record_and_head": true,
+    "reverifies_signed_plan": true,
+    "reverifies_committed_live_context_before_prepare": true,
+    "reverifies_committed_live_context_before_commit": true,
+    "reverifies_owner_and_recipient": true,
+    "committed_consent_remains_resumable_after_plan_expiry": true,
+    "reenrollment_acceptance_is_history_consent": false
+  },
+  "execution": {
+    "mode": "local-offline-single-source",
+    "existing_history_rewrap_format_reused": true,
+    "max_events_per_chunk": 32,
+    "source_signed_bundle": true,
+    "recipient_decrypts_bundle": true,
+    "recipient_signed_checkpoint_transition": true,
+    "encrypted_local_projections_produced": true,
+    "plaintext_stored_in_journal": false,
+    "ordinary_event_store_mutated": false,
+    "ordinary_projection_store_mutated": false,
+    "network_opened": false,
+    "multi_source_scheduler_added": false,
+    "active_ipc_command_added": false,
+    "desktop_control_added": false
+  },
+  "journal": {
+    "database_file": "old-history-recovery-execution-v1.redb",
+    "owner_account_bound": true,
+    "owner_source_device_bound": true,
+    "immediate_durability": true,
+    "append_only_source_signed_records": true,
+    "single_head_per_consent_selection": true,
+    "bundle_checkpoint_projection_artifacts_exact_bound": true,
+    "max_chunks": 16384,
+    "max_record_bytes": 16384,
+    "max_head_bytes": 2048,
+    "max_bundle_bytes": 4194304,
+    "max_checkpoint_bytes": 65536,
+    "max_projection_bytes": 4194304
+  },
+  "restart_and_replay": {
+    "bounded_checkpoint_resume": true,
+    "exact_committed_replay_idempotent": true,
+    "divergent_output_for_consumed_checkpoint_rejected": true,
+    "pre_commit_failure_leaves_no_partial_state": true,
+    "fork_and_orphan_rejected": true,
+    "artifact_corruption_rejected": true,
+    "new_existing_database_never_repaired": true
+  },
+  "observation": {
+    "read_only_open_existing": true,
+    "missing_store_created": false,
+    "opaque_selection_token": true,
+    "bounded_progress_visible": true,
+    "message_bodies_visible": false,
+    "plaintext_visible": false,
+    "raw_identity_visible": false,
+    "filesystem_paths_visible": false,
+    "network_coordinates_visible": false,
+    "network_authority_granted": false,
+    "store_import_authority_granted": false
+  },
+  "verification": {
+    "focused_execution_tests": 6,
+    "stable_path_rust_harness_required_on_windows": true,
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "146/146",
+    "second_host_required": false,
+    "product_network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "non_claims": [
+    "whole-database-rollback-detection-without-external-witness",
+    "atomic-import-into-production-history-store",
+    "network-history-transfer",
+    "multi-source-recovery-scheduling",
+    "runtime-ipc-history-recovery-authority",
+    "desktop-history-recovery-authority",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "atomic-recipient-history-store-import",
+    "network-history-transfer",
+    "multi-source-recovery-scheduling"
+  ]
+}

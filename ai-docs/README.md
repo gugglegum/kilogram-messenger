@@ -1236,6 +1236,12 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   immediate-durability redb. First commit повторно проверяет весь live context,
   exact replay после expiry идемпотентен, а competing/fork/orphan/corruption
   fail closed; status body-free и не даёт execution authority.
+- [`../docs/RFC-0244-m1220-bounded-single-source-history-recovery-execution.md`](../docs/RFC-0244-m1220-bounded-single-source-history-recovery-execution.md) —
+  M1.2.20 выполняет durable consent локальными chunks до 32 events через
+  существующий authenticated history-rewrap. Recipient-signed checkpoint и
+  source-signed append-only journal дают crash-safe resume/exact replay;
+  plaintext не сохраняется, а production import/network/multi-source/IPC/GUI
+  остаются за границей этапа.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

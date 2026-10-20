@@ -1,0 +1,31 @@
+[package]
+name = "kilogram-peer-history-recovery-execution"
+description = "Bounded crash-safe single-source old-history recovery execution for Kilogram"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+blake3.workspace = true
+kilogram-identity = { path = "../kilogram-identity" }
+kilogram-peer-history-recovery = { path = "../kilogram-peer-history-recovery" }
+kilogram-peer-history-recovery-consent = { path = "../kilogram-peer-history-recovery-consent" }
+kilogram-protocol = { path = "../kilogram-protocol" }
+postcard.workspace = true
+redb.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+
+[dev-dependencies]
+kilogram-peer-capability-store = { path = "../kilogram-peer-capability-store" }
+kilogram-peer-reenrollment = { path = "../kilogram-peer-reenrollment" }
+kilogram-peer-reenrollment-acceptance = { path = "../kilogram-peer-reenrollment-acceptance" }
+kilogram-peer-reenrollment-runtime = { path = "../kilogram-peer-reenrollment-runtime" }
+kilogram-ratchet = { path = "../kilogram-ratchet" }
+kilogram-sync-capability = { path = "../kilogram-sync-capability" }
+tempfile.workspace = true
+
+[lints]
+workspace = true

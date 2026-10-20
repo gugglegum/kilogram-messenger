@@ -2641,6 +2641,14 @@ exact replay remains idempotent after expiry, while competing plans, foreign
 owners, orphaned records and corruption fail closed. The read-only projection
 contains no message bodies or execution authority.
 
+[`RFC-0244`](docs/RFC-0244-m1220-bounded-single-source-history-recovery-execution.md)
+executes that durable consent locally in bounded source-signed history-rewrap
+chunks. The replacement Device produces encrypted local projections and
+recipient-signed checkpoints; one immediate append-only journal makes restart
+and exact replay idempotent while divergent output fails closed. Product
+history import, network transfer, multi-source scheduling, IPC and desktop
+authority remain outside this stage.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

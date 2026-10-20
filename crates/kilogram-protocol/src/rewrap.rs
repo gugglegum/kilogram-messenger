@@ -267,6 +267,12 @@ impl SignedHistoryRewrapTransfer {
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub struct HistoryRewrapId([u8; 32]);
 
+impl HistoryRewrapId {
+    pub fn as_bytes(&self) -> &[u8; 32] {
+        &self.0
+    }
+}
+
 impl fmt::Display for HistoryRewrapId {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         for byte in self.0 {

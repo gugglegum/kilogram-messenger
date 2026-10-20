@@ -602,6 +602,84 @@ pub struct HistoryRecoveryRangeSelection {
     pub range_end: u64,
 }
 
+/// Immutable, body-free execution binding captured by a signed recovery plan.
+///
+/// This view intentionally exposes only the exact facts an execution engine
+/// must re-check. It does not expose a source claim, membership artifact,
+/// message body, plaintext projection or any mutation authority.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct BoundHistoryRecoverySelection {
+    conversation_id: ConversationId,
+    membership_revision: u64,
+    membership_owner_account_id: AccountId,
+    membership_digest: [u8; 32],
+    inventory_event_count: u64,
+    inventory_digest: [u8; 32],
+    range_start: u64,
+    range_end: u64,
+    checkpoint_id: Option<[u8; 32]>,
+    checkpoint_next_range_start: Option<u64>,
+}
+
+impl BoundHistoryRecoverySelection {
+    pub fn conversation_id(self) -> ConversationId {
+        self.conversation_id
+    }
+
+    pub fn membership_revision(self) -> u64 {
+        self.membership_revision
+    }
+
+    pub fn membership_owner_account_id(self) -> AccountId {
+        self.membership_owner_account_id
+    }
+
+    pub fn membership_digest(self) -> [u8; 32] {
+        self.membership_digest
+    }
+
+    pub fn inventory_event_count(self) -> u64 {
+        self.inventory_event_count
+    }
+
+    pub fn inventory_digest(self) -> [u8; 32] {
+        self.inventory_digest
+    }
+
+    pub fn range_start(self) -> u64 {
+        self.range_start
+    }
+
+    pub fn range_end(self) -> u64 {
+        self.range_end
+    }
+
+    pub fn checkpoint_id(self) -> Option<[u8; 32]> {
+        self.checkpoint_id
+    }
+
+    pub fn checkpoint_next_range_start(self) -> Option<u64> {
+        self.checkpoint_next_range_start
+    }
+}
+
+impl From<&BoundRecoveryRange> for BoundHistoryRecoverySelection {
+    fn from(value: &BoundRecoveryRange) -> Self {
+        Self {
+            conversation_id: value.conversation_id,
+            membership_revision: value.membership_revision,
+            membership_owner_account_id: value.membership_owner_account_id,
+            membership_digest: value.membership_digest,
+            inventory_event_count: value.inventory_event_count,
+            inventory_digest: value.inventory_digest,
+            range_start: value.range_start,
+            range_end: value.range_end,
+            checkpoint_id: value.checkpoint_id,
+            checkpoint_next_range_start: value.checkpoint_next_range_start,
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 struct BoundRecoveryRange {
     conversation_id: ConversationId,
@@ -861,6 +939,13 @@ impl SignedOldHistoryRecoveryPlan {
         self.content.selections.len()
     }
 
+    pub fn selection(&self, index: usize) -> Option<BoundHistoryRecoverySelection> {
+        self.content
+            .selections
+            .get(index)
+            .map(BoundHistoryRecoverySelection::from)
+    }
+
     pub fn prepared_at_unix_seconds(&self) -> u64 {
         self.content.prepared_at_unix_seconds
     }
@@ -890,6 +975,35 @@ impl SignedOldHistoryRecoveryPlan {
             source_device_id,
             selections,
             now_unix_seconds,
+        )
+    }
+
+    /// Re-verifies the complete immutable context of an already durable
+    /// consent without re-applying the short pre-commit validity window.
+    ///
+    /// Expiry limits when consent may first be committed. Once that exact
+    /// consent is durable, crash/restart execution is allowed to continue only
+    /// while every authority, membership, inventory and selection binding is
+    /// still byte-consistent with the signed plan.
+    #[allow(clippy::too_many_arguments)]
+    pub fn verify_committed_context(
+        &self,
+        binding: &PeerReenrollmentHistoryBinding,
+        authority: &AccountDeviceListSnapshot,
+        memberships: &[ConversationMembershipSnapshot],
+        inventory: &OldHistoryRecoveryInventory,
+        source_device_id: DeviceId,
+        selections: &[HistoryRecoveryRangeSelection],
+    ) -> Result<(), PeerHistoryRecoveryError> {
+        self.verify_signature()?;
+        verify_plan_committed_context(
+            &self.content,
+            binding,
+            authority,
+            memberships,
+            inventory,
+            source_device_id,
+            selections,
         )
     }
 
@@ -1014,6 +1128,28 @@ fn verify_plan_context(
     selections: &[HistoryRecoveryRangeSelection],
     now_unix_seconds: u64,
 ) -> Result<(), PeerHistoryRecoveryError> {
+    verify_plan_committed_context(
+        content,
+        binding,
+        authority,
+        memberships,
+        inventory,
+        source_device_id,
+        selections,
+    )?;
+    validate_plan_time(content, now_unix_seconds)
+}
+
+#[allow(clippy::too_many_arguments)]
+fn verify_plan_committed_context(
+    content: &OldHistoryRecoveryPlanContent,
+    binding: &PeerReenrollmentHistoryBinding,
+    authority: &AccountDeviceListSnapshot,
+    memberships: &[ConversationMembershipSnapshot],
+    inventory: &OldHistoryRecoveryInventory,
+    source_device_id: DeviceId,
+    selections: &[HistoryRecoveryRangeSelection],
+) -> Result<(), PeerHistoryRecoveryError> {
     let expected = build_plan_content(
         binding,
         authority,
@@ -1027,7 +1163,7 @@ fn verify_plan_context(
     if expected != *content {
         return Err(PeerHistoryRecoveryError::PlanContextMismatch);
     }
-    validate_plan_time(content, now_unix_seconds)
+    Ok(())
 }
 
 fn validate_coverage(
