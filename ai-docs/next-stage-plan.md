@@ -1,26 +1,25 @@
-# Текущая точка: M1.2.27 завершён, следующий M1.2.28
+# Текущая точка: M1.2.28 завершён, следующий M1.2.29
 
-Статус на 2026-10-20: explicit scheduler делает deterministic fair rounds по
-1..=8 caller-supplied durable source intents после полного preflight до сети.
-Default 3/24, hard max 8 rounds/64 attempts, максимум 1 in-flight; retryable
-source уступает следующему, acknowledged пропускается, exhaustion оставляет
-exact pending intents. Stable scheduler regression прошёл 7/7, полный crate —
-26/26; boundary отклонил 10/10 ослаблений, accepted-tag readiness — 153/153.
-Discovery/background/runtime/IPC/desktop/import отсутствуют, public default —
-`legacy-only`.
+Статус на 2026-10-20: recipient coordinator связывает 1..=8 owner-approved
+selections с exact staged-transfer/import-receipt heads в отдельной durable DB.
+Plan read-only/no-create; apply под state lock повторно сверяет observation и
+атомарно продвигает append-only plan chain/monotonic source heads. Focused
+regression 4/4, полный execution crate 18/18, boundary 10/10, readiness
+154/154. Network/import/background/runtime/IPC/desktop authority отсутствуют,
+public default — `legacy-only`.
 
-## Следующий этап: M1.2.28 durable recipient recovery coordinator
+## Следующий этап: M1.2.29 explicit recipient import plan/apply
 
-- связать approved source selections, staged recipient inbox backlog и existing
-  recipient-signed import receipt heads в отдельной durable coordinator DB;
-- хранить только opaque content-addressed IDs и monotonic per-source state;
-  ciphertext/artifacts остаются в существующих inbox/import stores;
-- plan должен быть read-only, apply — явным и exact-head-bound; coordinator не
-  должен сам открывать сеть либо автоматически импортировать историю;
-- restart/replay/crash/fork/corruption должны fail closed, а completed source не
-  должен снова становиться pending без нового owner-approved plan;
-- public default, sync/ticket wires, release/ZIP/tag и automatic GitHub build
-  не менять.
+- построить read-only import plan только для exact staged head, который M1.2.28
+  наблюдает как `StagedForImport` либо `ImportInProgress`;
+- связать plan с current coordinator plan/source head, current membership и
+  expected recipient import receipt head; stale head обязан fail closed;
+- отдельный explicit apply может вызвать существующий verified import ровно для
+  одного exact transfer и после success обновить coordinator новым plan/apply;
+- bounded batch/background loop, network, runtime IPC и desktop command не
+  добавлять; operator/caller выбирает source явно;
+- public default, sync/ticket/transfer wires, release/ZIP/tag и automatic
+  GitHub build не менять.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

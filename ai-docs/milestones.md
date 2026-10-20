@@ -8014,3 +8014,27 @@ correlation visible, Windows-only field evidence, independent security audit
   background/runtime/IPC/desktop/import authority, новый network wire, product
   Internet/relay, second host, release/ZIP/tag и automatic GitHub build
   отсутствуют; default `legacy-only`.
+
+### M1.2.28 — durable recipient recovery coordinator: принят локально
+
+- 1..=8 inputs выводятся только из durable owner-approved consent selection;
+  все принадлежат одному Account/recipient, source Devices distinct;
+- read-only `plan` проверяет existing linear transfer inbox и recipient-signed
+  import receipt chains, но не создаёт coordinator DB, не открывает сеть и не
+  импортирует историю;
+- explicit `apply` берёт общий state-directory lock, повторно наблюдает exact
+  heads и одной immediate redb transaction пишет canonical append-only plan,
+  все selected source heads и единый monotonic chain head;
+- durable DB хранит только opaque content-addressed IDs и monotonic counts/
+  ranges. Device IDs, ciphertext artifacts, message bodies и plaintext туда не
+  копируются; whole-DB rollback без external witness не заявлен;
+- stale observation, equal-generation head fork, skipped/forked plan sequence,
+  noncanonical/corrupt record, progress regression и возврат complete source в
+  pending fail closed. Exact replay идемпотентен, precommit failure не меняет
+  plan progress;
+- focused stable-path regression прошёл 4/4, полный execution crate — 18/18;
+  boundary отклонил 10/10 mutations, accepted-tag readiness прошёл 154/154 с
+  rustfmt и workspace-wide locked/offline strict Clippy;
+- coordinator не вызывает transfer/import operations и не подключён к active
+  runtime/CLI/desktop. Product network/relay, second host, release/ZIP/tag и
+  automatic GitHub build отсутствуют; default `legacy-only`.

@@ -181,6 +181,16 @@ pub struct RecipientHistoryImportStatusView {
     pub whole_database_rollback_supported: bool,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct RecipientHistoryImportCoordinatorHead {
+    pub receipt_id: [u8; 32],
+    pub imported_chunk_count: u64,
+    pub imported_event_count: u64,
+    pub next_range_start: u64,
+    pub approved_range_end: u64,
+    pub complete: bool,
+}
+
 pub struct RecipientHistoryImportStore {
     state_directory: PathBuf,
     owner_account_id: AccountId,
@@ -205,6 +215,39 @@ impl RecipientHistoryImportStore {
         consent_record_id: [u8; 32],
         selection_index: usize,
     ) -> Result<RecipientHistoryImportStatus, RecipientHistoryImportError> {
+        let Some(head) = self.coordinator_head(consent_record_id, selection_index)? else {
+            return Ok(RecipientHistoryImportStatus::Absent);
+        };
+        let selection_index = u16::try_from(selection_index)
+            .map_err(|_| RecipientHistoryImportError::SelectionMissing(selection_index))?;
+        let view = RecipientHistoryImportStatusView {
+            selection_token: selection_token(consent_record_id, selection_index),
+            imported_chunk_count: head.imported_chunk_count,
+            imported_event_count: head.imported_event_count,
+            next_range_start: head.next_range_start,
+            approved_range_end: head.approved_range_end,
+            contains_message_bodies: false,
+            contains_plaintext: false,
+            grants_network_authority: false,
+            grants_execution_authority: false,
+            whole_database_rollback_supported: false,
+        };
+        if head.complete {
+            Ok(RecipientHistoryImportStatus::Complete(view))
+        } else {
+            Ok(RecipientHistoryImportStatus::InProgress(view))
+        }
+    }
+
+    pub(crate) fn state_directory(&self) -> &Path {
+        &self.state_directory
+    }
+
+    pub(crate) fn coordinator_head(
+        &self,
+        consent_record_id: [u8; 32],
+        selection_index: usize,
+    ) -> Result<Option<RecipientHistoryImportCoordinatorHead>, RecipientHistoryImportError> {
         let selection_index = u16::try_from(selection_index)
             .map_err(|_| RecipientHistoryImportError::SelectionMissing(selection_index))?;
         ensure_no_active_state_transaction(&self.state_directory)?;
@@ -222,7 +265,7 @@ impl RecipientHistoryImportStore {
             .collect::<Vec<_>>();
         ensure_no_active_state_transaction(&self.state_directory)?;
         if matching.is_empty() {
-            return Ok(RecipientHistoryImportStatus::Absent);
+            return Ok(None);
         }
         matching.sort_by_key(DurableRecipientHistoryImportReceipt::generation);
         let last = matching
@@ -236,24 +279,15 @@ impl RecipientHistoryImportStore {
                 )
                 .ok_or(RecipientHistoryImportError::ImportCapacity)
         })?;
-        let view = RecipientHistoryImportStatusView {
-            selection_token: selection_token(consent_record_id, selection_index),
+        Ok(Some(RecipientHistoryImportCoordinatorHead {
+            receipt_id: last.receipt_id,
             imported_chunk_count: u64::try_from(matching.len())
                 .map_err(|_| RecipientHistoryImportError::ImportCapacity)?,
             imported_event_count,
             next_range_start: last.receipt.content.range_end,
             approved_range_end: last.receipt.content.approved_range_end,
-            contains_message_bodies: false,
-            contains_plaintext: false,
-            grants_network_authority: false,
-            grants_execution_authority: false,
-            whole_database_rollback_supported: false,
-        };
-        if last.is_complete() {
-            Ok(RecipientHistoryImportStatus::Complete(view))
-        } else {
-            Ok(RecipientHistoryImportStatus::InProgress(view))
-        }
+            complete: last.is_complete(),
+        }))
     }
 
     #[allow(clippy::too_many_arguments)]

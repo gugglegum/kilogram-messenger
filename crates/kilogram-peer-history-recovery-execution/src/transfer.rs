@@ -242,6 +242,15 @@ pub struct RecipientHistoryTransferInboxStatusView {
     pub grants_import_authority: bool,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct RecipientHistoryTransferCoordinatorHead {
+    pub transfer_id: [u8; 32],
+    pub staged_chunk_count: u64,
+    pub next_range_start: u64,
+    pub approved_range_end: u64,
+    pub complete: bool,
+}
+
 pub struct RecipientHistoryTransferInbox {
     state_directory: PathBuf,
     owner_account_id: AccountId,
@@ -266,6 +275,33 @@ impl RecipientHistoryTransferInbox {
         consent_record_id: [u8; 32],
         selection_index: usize,
     ) -> Result<RecipientHistoryTransferInboxStatus, HistoryRecoveryTransferError> {
+        let Some(head) = self.coordinator_head(consent_record_id, selection_index)? else {
+            return Ok(RecipientHistoryTransferInboxStatus::Absent);
+        };
+        let selection_index = u16::try_from(selection_index)
+            .map_err(|_| HistoryRecoveryTransferError::SelectionMissing(selection_index))?;
+        let view = RecipientHistoryTransferInboxStatusView {
+            selection_token: selection_token(consent_record_id, selection_index),
+            staged_chunk_count: head.staged_chunk_count,
+            next_range_start: head.next_range_start,
+            approved_range_end: head.approved_range_end,
+            contains_message_bodies: false,
+            contains_plaintext: false,
+            grants_network_authority: false,
+            grants_import_authority: false,
+        };
+        if head.complete {
+            Ok(RecipientHistoryTransferInboxStatus::Complete(view))
+        } else {
+            Ok(RecipientHistoryTransferInboxStatus::InProgress(view))
+        }
+    }
+
+    pub(crate) fn coordinator_head(
+        &self,
+        consent_record_id: [u8; 32],
+        selection_index: usize,
+    ) -> Result<Option<RecipientHistoryTransferCoordinatorHead>, HistoryRecoveryTransferError> {
         let selection_index = u16::try_from(selection_index)
             .map_err(|_| HistoryRecoveryTransferError::SelectionMissing(selection_index))?;
         ensure_no_active_state_transaction(&self.state_directory)?;
@@ -279,28 +315,20 @@ impl RecipientHistoryTransferInbox {
             })
             .collect::<Vec<_>>();
         if matching.is_empty() {
-            return Ok(RecipientHistoryTransferInboxStatus::Absent);
+            return Ok(None);
         }
         matching.sort_by_key(DurableHistoryRecoveryTransfer::execution_generation);
         let last = matching
             .last()
             .ok_or(HistoryRecoveryTransferError::InvalidEnvelope)?;
-        let view = RecipientHistoryTransferInboxStatusView {
-            selection_token: selection_token(consent_record_id, selection_index),
+        Ok(Some(RecipientHistoryTransferCoordinatorHead {
+            transfer_id: last.transfer_id,
             staged_chunk_count: u64::try_from(matching.len())
                 .map_err(|_| HistoryRecoveryTransferError::InboxCapacity)?,
             next_range_start: last.envelope.content.range_end,
             approved_range_end: last.envelope.content.approved_range_end,
-            contains_message_bodies: false,
-            contains_plaintext: false,
-            grants_network_authority: false,
-            grants_import_authority: false,
-        };
-        if last.is_complete() {
-            Ok(RecipientHistoryTransferInboxStatus::Complete(view))
-        } else {
-            Ok(RecipientHistoryTransferInboxStatus::InProgress(view))
-        }
+            complete: last.is_complete(),
+        }))
     }
 
     pub fn stage_envelope(

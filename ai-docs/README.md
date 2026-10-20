@@ -1280,6 +1280,12 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   не более одной exact попытки за round, а общий budget ограничен 64. Failed
   source уступает следующему; unfinished intents остаются resumable, без
   discovery/background/runtime/IPC/desktop/import authority.
+- [`../docs/RFC-0252-m1228-durable-recipient-recovery-coordinator.md`](../docs/RFC-0252-m1228-durable-recipient-recovery-coordinator.md) —
+  M1.2.28 связывает owner-approved selections, exact transfer inbox heads и
+  recipient-signed import receipt heads в отдельной immediate-durability DB.
+  Plan read-only и не создаёт state; explicit apply повторно наблюдает exact
+  heads под state lock и атомарно сохраняет только opaque IDs/monotonic state.
+  Network/import/background/runtime/IPC/desktop authority не добавлены.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

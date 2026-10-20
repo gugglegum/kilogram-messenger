@@ -2694,6 +2694,13 @@ intents. Every candidate is preflighted before network; one exact attempt per
 pending source per round prevents an unavailable source from starving the
 others, while round and total budgets leave unfinished requests resumable.
 
+[`RFC-0252`](docs/RFC-0252-m1228-durable-recipient-recovery-coordinator.md)
+adds a separate durable recipient coordinator over approved selections, exact
+staged-transfer heads and recipient-signed import receipt heads. Planning is
+read-only; explicit apply revalidates the exact observation under the state
+lock and atomically advances only opaque IDs and monotonic progress. It neither
+opens the network nor imports history.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

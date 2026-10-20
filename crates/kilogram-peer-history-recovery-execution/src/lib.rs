@@ -37,8 +37,18 @@ use redb::{
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
+mod coordinator;
 mod import;
 mod transfer;
+
+pub use coordinator::{
+    ApplyRecipientRecoveryCoordinationOutcome, ApprovedRecipientHistoryRecoverySource,
+    MAX_DURABLE_RECIPIENT_RECOVERY_COORDINATOR_PLANS,
+    MAX_DURABLE_RECIPIENT_RECOVERY_COORDINATOR_SOURCES, MAX_RECIPIENT_RECOVERY_COORDINATOR_SOURCES,
+    RecipientHistoryRecoveryCoordinator, RecipientRecoveryCoordinationPlan,
+    RecipientRecoveryCoordinatorError, RecipientRecoveryCoordinatorPlannedSource,
+    RecipientRecoveryCoordinatorSourceState,
+};
 
 pub use import::{
     DurableRecipientHistoryImportReceipt, RecipientHistoryImportError,
@@ -3785,6 +3795,329 @@ mod tests {
             crash_inbox.status(consent_record_id, 0)?,
             RecipientHistoryTransferInboxStatus::Complete(_)
         ));
+        Ok(())
+    }
+
+    fn approved_recipient_source(
+        fixture: &Fixture,
+        consent: &OldHistoryRecoveryConsentStore,
+    ) -> Result<ApprovedRecipientHistoryRecoverySource, Box<dyn std::error::Error>> {
+        let durable = consent
+            .load_for_transition(fixture.signed_plan.transition_id())?
+            .ok_or("durable recovery consent is missing")?;
+        Ok(ApprovedRecipientHistoryRecoverySource::from_durable_consent(&durable, 0)?)
+    }
+
+    #[test]
+    fn recipient_coordinator_plan_is_read_only_and_apply_replays_exactly()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture(3, None)?;
+        let consent = fixture.open_consent()?;
+        fixture.commit_consent(&consent)?;
+        let approved = approved_recipient_source(&fixture, &consent)?;
+        let state = fixture.root.path().join("recipient-coordinator-read-only");
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+
+        let plan = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            std::slice::from_ref(&approved),
+            &inbox,
+            &imports,
+        )?;
+        assert!(!RecipientHistoryRecoveryCoordinator::is_initialized(&state));
+        assert_eq!(plan.sequence(), 0);
+        assert!(plan.requires_apply());
+        assert_eq!(plan.sources().len(), 1);
+        assert_eq!(
+            plan.sources()[0].state,
+            RecipientRecoveryCoordinatorSourceState::AwaitingTransfer
+        );
+        assert!(!plan.contains_message_bodies);
+        assert!(!plan.contains_plaintext);
+        assert!(!plan.grants_network_authority);
+        assert!(!plan.grants_import_authority);
+        assert!(!plan.background_work_authorized);
+        assert!(!plan.whole_database_rollback_detection_supported);
+
+        assert!(matches!(
+            RecipientHistoryRecoveryCoordinator::apply(&plan, &inbox, &imports)?,
+            ApplyRecipientRecoveryCoordinationOutcome::Applied(_)
+        ));
+        assert!(RecipientHistoryRecoveryCoordinator::is_initialized(&state));
+        let replay = match RecipientHistoryRecoveryCoordinator::apply(&plan, &inbox, &imports)? {
+            ApplyRecipientRecoveryCoordinationOutcome::AlreadyApplied(plan) => plan,
+            ApplyRecipientRecoveryCoordinationOutcome::Applied(_) => {
+                return Err("exact coordinator replay unexpectedly appended a plan".into());
+            }
+        };
+        assert_eq!(replay.plan_id(), plan.plan_id());
+        assert!(!replay.requires_apply());
+        let restarted = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            std::slice::from_ref(&approved),
+            &inbox,
+            &imports,
+        )?;
+        assert_eq!(restarted.plan_id(), plan.plan_id());
+        assert!(!restarted.requires_apply());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_coordinator_tracks_staged_and_imported_heads_without_acting()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture(5, None)?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let approved = approved_recipient_source(&fixture, &consent)?;
+        let execution_directory = fixture
+            .root
+            .path()
+            .join("coordinator-progression-execution");
+        let execution = fixture.open_execution("coordinator-progression-execution")?;
+        let committed = commit_next_for_import(
+            &fixture,
+            &execution,
+            &consent,
+            consent_record_id,
+            None,
+            2_000,
+        )?;
+        drop(execution);
+        let execution = OldHistoryRecoveryExecutionReadStore::open_existing(
+            execution_directory,
+            fixture.owner_account_id,
+            fixture.source.identity().device_id(),
+        )?;
+        let envelope = HistoryRecoveryTransferEnvelope::export_current(
+            &execution,
+            consent_record_id,
+            0,
+            committed.record_id(),
+            fixture.source.identity(),
+            2_100,
+        )?;
+        let state = fixture
+            .root
+            .path()
+            .join("recipient-coordinator-progression");
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let initial = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            std::slice::from_ref(&approved),
+            &inbox,
+            &imports,
+        )?;
+        RecipientHistoryRecoveryCoordinator::apply(&initial, &inbox, &imports)?;
+
+        let staged = match inbox.stage_envelope(&envelope)? {
+            StageHistoryRecoveryTransferOutcome::Staged(staged) => staged,
+            StageHistoryRecoveryTransferOutcome::AlreadyStaged(_) => {
+                return Err("fresh coordinator transfer unexpectedly replayed".into());
+            }
+        };
+        let staged_plan = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            std::slice::from_ref(&approved),
+            &inbox,
+            &imports,
+        )?;
+        assert_eq!(staged_plan.sequence(), 1);
+        assert_eq!(
+            staged_plan.sources()[0].state,
+            RecipientRecoveryCoordinatorSourceState::StagedForImport
+        );
+        assert_eq!(staged_plan.sources()[0].staged_chunk_count, 1);
+        RecipientHistoryRecoveryCoordinator::apply(&staged_plan, &inbox, &imports)?;
+
+        assert!(matches!(
+            imports.import_staged_transfer(
+                &inbox,
+                staged.transfer_id(),
+                fixture.replacement.identity(),
+                &fixture.membership,
+                3_000,
+            )?,
+            RecipientHistoryImportOutcome::Imported(_)
+        ));
+        let complete = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            std::slice::from_ref(&approved),
+            &inbox,
+            &imports,
+        )?;
+        assert_eq!(complete.sequence(), 2);
+        assert_eq!(
+            complete.sources()[0].state,
+            RecipientRecoveryCoordinatorSourceState::Complete
+        );
+        assert_eq!(complete.sources()[0].imported_chunk_count, 1);
+        assert_eq!(complete.sources()[0].imported_event_count, 5);
+        RecipientHistoryRecoveryCoordinator::apply(&complete, &inbox, &imports)?;
+
+        std::fs::remove_dir_all(state.join("history-recovery").join("transfer-inbox"))?;
+        std::fs::remove_dir_all(state.join("history-recovery").join("import-receipts"))?;
+        assert!(matches!(
+            RecipientHistoryRecoveryCoordinator::plan(
+                &state,
+                fixture.owner_account_id,
+                fixture.replacement.identity().device_id(),
+                std::slice::from_ref(&approved),
+                &inbox,
+                &imports,
+            ),
+            Err(RecipientRecoveryCoordinatorError::CompletedSourceRegression)
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_coordinator_rejects_stale_plan_and_rolls_back_failed_apply()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture(2, None)?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let approved = approved_recipient_source(&fixture, &consent)?;
+        let execution_directory = fixture.root.path().join("coordinator-stale-execution");
+        let execution = fixture.open_execution("coordinator-stale-execution")?;
+        let committed = commit_next_for_import(
+            &fixture,
+            &execution,
+            &consent,
+            consent_record_id,
+            None,
+            2_000,
+        )?;
+        drop(execution);
+        let execution = OldHistoryRecoveryExecutionReadStore::open_existing(
+            execution_directory,
+            fixture.owner_account_id,
+            fixture.source.identity().device_id(),
+        )?;
+        let envelope = HistoryRecoveryTransferEnvelope::export_current(
+            &execution,
+            consent_record_id,
+            0,
+            committed.record_id(),
+            fixture.source.identity(),
+            2_100,
+        )?;
+        let state = fixture.root.path().join("recipient-coordinator-stale");
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let stale = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            std::slice::from_ref(&approved),
+            &inbox,
+            &imports,
+        )?;
+        inbox.stage_envelope(&envelope)?;
+        assert!(matches!(
+            RecipientHistoryRecoveryCoordinator::apply(&stale, &inbox, &imports),
+            Err(RecipientRecoveryCoordinatorError::StalePlan)
+        ));
+        assert!(!RecipientHistoryRecoveryCoordinator::is_initialized(&state));
+
+        let exact = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            std::slice::from_ref(&approved),
+            &inbox,
+            &imports,
+        )?;
+        assert!(matches!(
+            RecipientHistoryRecoveryCoordinator::apply_with_fault_before_commit(
+                &exact, &inbox, &imports,
+            ),
+            Err(RecipientRecoveryCoordinatorError::InjectedBeforeCommit)
+        ));
+        let after_fault = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            std::slice::from_ref(&approved),
+            &inbox,
+            &imports,
+        )?;
+        assert_eq!(after_fault.sequence(), 0);
+        assert!(after_fault.requires_apply());
+        assert_eq!(after_fault.plan_id(), exact.plan_id());
+        assert!(matches!(
+            RecipientHistoryRecoveryCoordinator::apply(&after_fault, &inbox, &imports)?,
+            ApplyRecipientRecoveryCoordinationOutcome::Applied(_)
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_coordinator_rejects_duplicate_sources_before_state_creation()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture(2, None)?;
+        let consent = fixture.open_consent()?;
+        fixture.commit_consent(&consent)?;
+        let approved = approved_recipient_source(&fixture, &consent)?;
+        let state = fixture.root.path().join("recipient-coordinator-duplicate");
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        assert!(matches!(
+            RecipientHistoryRecoveryCoordinator::plan(
+                &state,
+                fixture.owner_account_id,
+                fixture.replacement.identity().device_id(),
+                &[approved.clone(), approved],
+                &inbox,
+                &imports,
+            ),
+            Err(RecipientRecoveryCoordinatorError::DuplicateSourceDevice)
+        ));
+        assert!(!state.exists());
         Ok(())
     }
 }

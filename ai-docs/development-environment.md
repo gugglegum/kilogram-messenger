@@ -5583,3 +5583,27 @@ Hosted follow-up:
 - No product Internet/relay, second host, release build, ZIP/archive, tag or
   automatic GitHub build was used. Active IPC remains v33/domain v14 and
   public default remains `legacy-only`.
+
+## M1.2.28 durable recipient recovery coordinator environment (2026-10-20)
+
+- The execution crate now has a separate recipient coordinator redb under the
+  recipient state root. Active CLI/Windows manifests still do not depend on the
+  crate; IPC remains v33/domain v14 and no wire format changed.
+- Approved inputs are derived from durable signed consent and are limited to
+  1..=8 distinct source Devices for one Account/recipient. The database stores
+  only domain-separated/source/content IDs and monotonic counts/ranges; transfer
+  and import artifacts stay in their existing stores.
+- `plan` verifies both full append-only stores and is no-create/read-only.
+  `apply` acquires `StateDirectoryLock`, repeats the exact observation and uses
+  one immediate-durability transaction for the plan record, source heads and
+  chain head. It never calls transfer or import operations.
+- Four focused stable-path tests pass: no-create/idempotent replay, real staged
+  transfer through signed import completion, stale-head/precommit rollback and
+  duplicate-source rejection. The system TEMP was inaccessible in the managed
+  sandbox, so tests used the repository `.tmp` directory without changing the
+  executable path or product behavior.
+- Dedicated boundary rejects 10/10 mutations. Full execution regression and
+  accepted-tag readiness are required at the final gate and recorded as 18/18
+  and 154/154 respectively.
+- No product network, relay, second host, release build, ZIP/archive, tag or
+  automatic GitHub build was used. Public default remains `legacy-only`.
