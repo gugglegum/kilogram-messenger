@@ -98,6 +98,11 @@ impl ApprovedRecipientHistoryRecoverySource {
             source_key,
         })
     }
+
+    #[cfg(test)]
+    pub(crate) fn consent_record_id(&self) -> [u8; 32] {
+        self.consent_record_id
+    }
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -202,6 +207,7 @@ impl RecipientRecoveryCoordinationPlan {
             import_head_id: observation.import_head_id,
             staged_chunk_count: observation.staged_chunk_count,
             imported_chunk_count: observation.imported_chunk_count,
+            imported_event_count: observation.imported_event_count,
             approved_range_start: observation.approved_range_start,
             approved_range_end: observation.approved_range_end,
             state: observation.state,
@@ -219,6 +225,7 @@ pub(crate) struct RecipientRecoveryCoordinatorImportObservation {
     pub import_head_id: Option<[u8; 32]>,
     pub staged_chunk_count: u64,
     pub imported_chunk_count: u64,
+    pub imported_event_count: u64,
     pub approved_range_start: u64,
     pub approved_range_end: u64,
     pub state: RecipientRecoveryCoordinatorSourceState,

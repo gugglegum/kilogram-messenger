@@ -1292,6 +1292,12 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   coordinator/inbox/membership перепроверяются под одним state lock; окно
   import-before-coordinator-refresh возобновляется тем же plan без дубликатов.
   Batch/background/network/runtime/IPC/desktop authority не добавлены.
+- [`../docs/RFC-0254-m1230-bounded-multi-source-recipient-import-round.md`](../docs/RFC-0254-m1230-bounded-multi-source-recipient-import-round.md) —
+  M1.2.30 объединяет caller-ordered sources в конечный explicit round. Все
+  ordinals/memberships/candidates preflight-ятся до первого import, каждому
+  source разрешён максимум один transfer, а durable caller-order prefix можно
+  exact-resume/replay. Default 4/128, hard 8/256; discovery/background/network/
+  runtime/IPC/desktop authority отсутствуют.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

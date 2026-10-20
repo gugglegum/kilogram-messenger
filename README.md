@@ -2709,6 +2709,13 @@ restart after durable import but before coordinator refresh resumes without
 duplicating events. No automatic loop, runtime/desktop command or network
 authority is added.
 
+[`RFC-0254`](docs/RFC-0254-m1230-bounded-multi-source-recipient-import-round.md)
+adds an explicit bounded recipient-side round across caller-ordered recovery
+sources. Every source and membership is preflighted before the first import;
+each source receives at most one sequential import per round, and an exact
+durable prefix can be resumed or replayed without duplicate events. The round
+does not discover sources, open the network or gain runtime/desktop authority.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

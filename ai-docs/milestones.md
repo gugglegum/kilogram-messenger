@@ -8060,3 +8060,26 @@ correlation visible, Windows-only field evidence, independent security audit
 - batch/background/network/runtime/IPC/desktop authority, product network,
   second host, release/ZIP/tag и automatic GitHub build отсутствуют; default
   `legacy-only`.
+
+### M1.2.30 — bounded explicit multi-source recipient import round: принят локально
+
+- round принимает 1..=4 sources по умолчанию и максимум 8; event budget —
+  128 по умолчанию и 256 hard max. Порядок задаёт caller, duplicates forbidden;
+- до первого import проверяются exact applied coordinator, каждый ordinal,
+  membership digest/revision и весь M1.2.29 candidate. Invalid late input не
+  оставляет импорт раннего source;
+- каждый source получает максимум один transfer за round, даже если backlog
+  длиннее. Импорты идут последовательно, после каждого используется fresh
+  coordinator и exact candidate revalidation;
+- replay принимает только exact caller-order durable prefix, повторно проверяет
+  recipient-signed receipts и все imported artifacts. Import-before-refresh
+  сначала reconciles coordinator; non-prefix, unplanned или >1 generation
+  progress fail closed;
+- focused stable-path regression прошёл 5/5, включая два реальных source
+  Devices в reverse order `[1, 0]`; полный execution crate — 27/27. Boundary
+  отклонил 10/10 mutations, readiness прошёл 156/156 с rustfmt и workspace-wide
+  locked/offline strict Clippy;
+- whole-round atomicity не заявлена: concurrent mutation после первого import
+  может оставить проверенный prefix для resume. Discovery/background/network/
+  runtime/IPC/desktop authority, product network, second host, release/ZIP/tag
+  и automatic GitHub build отсутствуют; default `legacy-only`.

@@ -35,6 +35,24 @@ struct RecipientRecoveryImportPlanWire {
     membership_revision: u64,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct RecipientRecoveryImportCandidateBinding {
+    pub source_key: [u8; 32],
+    pub source_ordinal: usize,
+    pub transfer_id: [u8; 32],
+    pub execution_record_id: [u8; 32],
+    pub expected_inbox_head_id: [u8; 32],
+    pub expected_import_head_id: Option<[u8; 32]>,
+    pub staged_chunk_count: u64,
+    pub imported_chunk_count: u64,
+    pub range_start: u64,
+    pub range_end: u64,
+    pub approved_range_end: u64,
+    pub event_count: usize,
+    pub membership_digest: [u8; 32],
+    pub membership_revision: u64,
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RecipientRecoveryImportPlan {
     coordination_plan: RecipientRecoveryCoordinationPlan,
@@ -66,6 +84,14 @@ impl RecipientRecoveryImportPlan {
 
     pub fn planned_event_count(&self) -> usize {
         usize::from(self.wire.event_count)
+    }
+
+    pub(crate) fn coordination_plan_id(&self) -> [u8; 32] {
+        self.wire.coordinator_plan_id
+    }
+
+    pub(crate) fn candidate_binding(&self) -> RecipientRecoveryImportCandidateBinding {
+        candidate_binding(&self.wire)
     }
 }
 
@@ -108,59 +134,13 @@ impl RecipientHistoryRecoveryImporter {
             inbox,
             imports,
         )?;
-        let observation = coordination_plan.import_observation(source_ordinal)?;
-        if !matches!(
-            observation.state,
-            RecipientRecoveryCoordinatorSourceState::StagedForImport
-                | RecipientRecoveryCoordinatorSourceState::ImportInProgress
-        ) || observation.staged_chunk_count <= observation.imported_chunk_count
-        {
-            return Err(RecipientRecoveryImportPlanError::NoPendingTransfer(
-                source_ordinal,
-            ));
-        }
-        let expected_inbox_head_id = observation.inbox_head_id.ok_or(
-            RecipientRecoveryImportPlanError::NoPendingTransfer(source_ordinal),
+        let wire = candidate_wire(
+            coordination_plan,
+            source_ordinal,
+            inbox,
+            imports,
+            membership,
         )?;
-        let transfer = inbox.coordinator_transfer_at(
-            observation.consent_record_id,
-            observation.selection_index,
-            observation.imported_chunk_count,
-        )?;
-        let candidate = imports.plan_staged_transfer(inbox, transfer.transfer_id(), membership)?;
-        if candidate.source_device_id != observation.source_device_id
-            || candidate.recipient_device_id != coordination_plan.owner_device_id()
-            || candidate.consent_record_id != observation.consent_record_id
-            || candidate.selection_index != observation.selection_index
-            || candidate.approved_range_end != observation.approved_range_end
-            || candidate.range_start < observation.approved_range_start
-            || candidate.range_end > observation.approved_range_end
-        {
-            return Err(RecipientRecoveryImportPlanError::SourceBindingMismatch);
-        }
-        let source_ordinal_u16 = u16::try_from(source_ordinal)
-            .map_err(|_| RecipientRecoveryImportPlanError::SourceOrdinal(source_ordinal))?;
-        let event_count = u16::try_from(candidate.event_count)
-            .map_err(|_| RecipientRecoveryImportPlanError::InvalidPlan)?;
-        let wire = RecipientRecoveryImportPlanWire {
-            version: PLAN_VERSION,
-            coordinator_plan_id: coordination_plan.plan_id(),
-            source_key: observation.source_key,
-            source_ordinal: source_ordinal_u16,
-            transfer_id: transfer.transfer_id(),
-            execution_record_id: candidate.execution_record_id,
-            expected_inbox_head_id,
-            expected_import_head_id: observation.import_head_id,
-            staged_chunk_count: observation.staged_chunk_count,
-            imported_chunk_count: observation.imported_chunk_count,
-            range_start: candidate.range_start,
-            range_end: candidate.range_end,
-            approved_range_end: candidate.approved_range_end,
-            event_count,
-            membership_digest: membership_digest(membership)?,
-            membership_revision: membership.revision(),
-        };
-        validate_wire(&wire)?;
         let plan_id = wire_id(&wire)?;
         let plan = RecipientRecoveryImportPlan {
             coordination_plan: coordination_plan.clone(),
@@ -176,6 +156,117 @@ impl RecipientHistoryRecoveryImporter {
         Ok(plan)
     }
 
+    pub(crate) fn preflight_candidate_binding(
+        coordination_plan: &RecipientRecoveryCoordinationPlan,
+        source_ordinal: usize,
+        inbox: &RecipientHistoryTransferInbox,
+        imports: &RecipientHistoryImportStore,
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<RecipientRecoveryImportCandidateBinding, RecipientRecoveryImportPlanError> {
+        Ok(candidate_binding(&candidate_wire(
+            coordination_plan,
+            source_ordinal,
+            inbox,
+            imports,
+            membership,
+        )?))
+    }
+
+    pub(crate) fn verify_plan_object(
+        plan: &RecipientRecoveryImportPlan,
+    ) -> Result<(), RecipientRecoveryImportPlanError> {
+        validate_plan(plan)
+    }
+}
+
+fn candidate_wire(
+    coordination_plan: &RecipientRecoveryCoordinationPlan,
+    source_ordinal: usize,
+    inbox: &RecipientHistoryTransferInbox,
+    imports: &RecipientHistoryImportStore,
+    membership: &ConversationMembershipSnapshot,
+) -> Result<RecipientRecoveryImportPlanWire, RecipientRecoveryImportPlanError> {
+    let observation = coordination_plan.import_observation(source_ordinal)?;
+    if !matches!(
+        observation.state,
+        RecipientRecoveryCoordinatorSourceState::StagedForImport
+            | RecipientRecoveryCoordinatorSourceState::ImportInProgress
+    ) || observation.staged_chunk_count <= observation.imported_chunk_count
+    {
+        return Err(RecipientRecoveryImportPlanError::NoPendingTransfer(
+            source_ordinal,
+        ));
+    }
+    let expected_inbox_head_id =
+        observation
+            .inbox_head_id
+            .ok_or(RecipientRecoveryImportPlanError::NoPendingTransfer(
+                source_ordinal,
+            ))?;
+    let transfer = inbox.coordinator_transfer_at(
+        observation.consent_record_id,
+        observation.selection_index,
+        observation.imported_chunk_count,
+    )?;
+    let candidate = imports.plan_staged_transfer(inbox, transfer.transfer_id(), membership)?;
+    if candidate.source_device_id != observation.source_device_id
+        || candidate.recipient_device_id != coordination_plan.owner_device_id()
+        || candidate.consent_record_id != observation.consent_record_id
+        || candidate.selection_index != observation.selection_index
+        || candidate.approved_range_end != observation.approved_range_end
+        || candidate.range_start < observation.approved_range_start
+        || candidate.range_end > observation.approved_range_end
+    {
+        return Err(RecipientRecoveryImportPlanError::SourceBindingMismatch);
+    }
+    let source_ordinal_u16 = u16::try_from(source_ordinal)
+        .map_err(|_| RecipientRecoveryImportPlanError::SourceOrdinal(source_ordinal))?;
+    let event_count = u16::try_from(candidate.event_count)
+        .map_err(|_| RecipientRecoveryImportPlanError::InvalidPlan)?;
+    let wire = RecipientRecoveryImportPlanWire {
+        version: PLAN_VERSION,
+        coordinator_plan_id: coordination_plan.plan_id(),
+        source_key: observation.source_key,
+        source_ordinal: source_ordinal_u16,
+        transfer_id: transfer.transfer_id(),
+        execution_record_id: candidate.execution_record_id,
+        expected_inbox_head_id,
+        expected_import_head_id: observation.import_head_id,
+        staged_chunk_count: observation.staged_chunk_count,
+        imported_chunk_count: observation.imported_chunk_count,
+        range_start: candidate.range_start,
+        range_end: candidate.range_end,
+        approved_range_end: candidate.approved_range_end,
+        event_count,
+        membership_digest: membership_digest(membership)?,
+        membership_revision: membership.revision(),
+    };
+    validate_wire(&wire)?;
+    Ok(wire)
+}
+
+fn candidate_binding(
+    wire: &RecipientRecoveryImportPlanWire,
+) -> RecipientRecoveryImportCandidateBinding {
+    RecipientRecoveryImportCandidateBinding {
+        source_key: wire.source_key,
+        source_ordinal: usize::from(wire.source_ordinal),
+        transfer_id: wire.transfer_id,
+        execution_record_id: wire.execution_record_id,
+        expected_inbox_head_id: wire.expected_inbox_head_id,
+        expected_import_head_id: wire.expected_import_head_id,
+        staged_chunk_count: wire.staged_chunk_count,
+        imported_chunk_count: wire.imported_chunk_count,
+        range_start: wire.range_start,
+        range_end: wire.range_end,
+        approved_range_end: wire.approved_range_end,
+        event_count: usize::from(wire.event_count),
+        membership_digest: wire.membership_digest,
+        membership_revision: wire.membership_revision,
+    }
+}
+
+impl RecipientHistoryRecoveryImporter {
     pub fn apply(
         plan: &RecipientRecoveryImportPlan,
         inbox: &RecipientHistoryTransferInbox,
@@ -378,7 +469,7 @@ fn validate_wire(
     Ok(())
 }
 
-fn membership_digest(
+pub(crate) fn membership_digest(
     membership: &ConversationMembershipSnapshot,
 ) -> Result<[u8; 32], RecipientRecoveryImportPlanError> {
     membership.verify()?;

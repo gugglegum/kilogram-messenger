@@ -1,0 +1,123 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.30",
+  "status": "bounded-explicit-multi-source-recipient-import-round-verified",
+  "contract_source": "M1.2.29",
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_history_transfer_wire": false,
+  "changes_active_runtime_ipc": false,
+  "changes_desktop_runtime_authority": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "planning": {
+    "caller_supplied_source_order_required": true,
+    "duplicate_source_ordinals_rejected": true,
+    "exact_durably_applied_coordinator_required": true,
+    "every_source_preflighted_before_first_import": true,
+    "every_membership_verified_and_bound": true,
+    "late_invalid_source_leaves_earlier_sources_unimported": true,
+    "one_transfer_per_source_per_round": true,
+    "read_only": true,
+    "creates_state": false,
+    "opens_network": false,
+    "imports_history": false
+  },
+  "limits": {
+    "default_max_sources": 4,
+    "hard_max_sources": 8,
+    "default_max_events": 128,
+    "hard_max_events": 256,
+    "maximum_concurrent_imports": 1,
+    "automatic_next_round": false
+  },
+  "apply": {
+    "explicit_only": true,
+    "caller_order_preserved": true,
+    "one_import_in_flight": true,
+    "fresh_coordinator_after_each_import": true,
+    "exact_candidate_revalidated_before_each_import": true,
+    "existing_m1229_import_plan_reused": true,
+    "existing_atomic_import_pipeline_reused": true,
+    "performs_network_io": false,
+    "schedules_background_work": false
+  },
+  "failure_and_restart": {
+    "initial_preflight_failure_imports_nothing": true,
+    "completed_progress_must_be_caller_order_prefix": true,
+    "same_round_plan_resumes_durable_prefix": true,
+    "post_import_pre_refresh_state_reconciled": true,
+    "already_imported_artifacts_reverified": true,
+    "progress_beyond_one_transfer_per_source_rejected": true,
+    "unplanned_source_change_rejected": true,
+    "concurrent_change_after_first_import_may_leave_verified_prefix": true,
+    "whole_round_atomicity_claimed": false,
+    "exact_replay_idempotent": true
+  },
+  "storage": {
+    "new_database_added": false,
+    "round_plan_is_ephemeral": true,
+    "existing_import_receipts_reused": true,
+    "existing_coordinator_chain_reused": true,
+    "stores_plaintext": false,
+    "stores_message_bodies_in_plan": false,
+    "whole_database_rollback_detection_supported": false
+  },
+  "report": {
+    "source_ordinals_only": true,
+    "bounded_counts": true,
+    "closed_step_dispositions": true,
+    "identity_visible": false,
+    "network_coordinates_visible": false,
+    "message_bodies_visible": false,
+    "plaintext_visible": false,
+    "network_authority_granted": false,
+    "background_authority_granted": false
+  },
+  "authority": {
+    "active_runtime_registered": false,
+    "cli_command_added": false,
+    "desktop_control_added": false,
+    "background_worker_added": false,
+    "spawned_task_added": false,
+    "source_discovery_added": false,
+    "automatic_round_loop_added": false,
+    "network_authority_added": false
+  },
+  "verification": {
+    "focused_import_round_tests": 5,
+    "combined_execution_crate_tests": 27,
+    "two_source_reverse_order_test": true,
+    "single_source_backlog_fairness_test": true,
+    "late_invalid_preflight_test": true,
+    "changed_membership_test": true,
+    "durable_prefix_and_unreconciled_resume_test": true,
+    "stable_path_rust_harness_required_on_windows": true,
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "156/156",
+    "second_host_required": false,
+    "product_network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "non_claims": [
+    "automatic-history-import",
+    "background-recovery-worker",
+    "source-discovery",
+    "cross-process-round-orchestration",
+    "active-runtime-history-recovery",
+    "runtime-ipc-history-recovery-authority",
+    "desktop-history-recovery-authority",
+    "whole-round-atomicity",
+    "whole-database-rollback-detection-without-external-witness",
+    "product-internet-or-relay-evidence",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "durable-explicit-recipient-import-round-intent",
+    "cross-process-recovery-orchestration"
+  ]
+}

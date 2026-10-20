@@ -5631,3 +5631,24 @@ Hosted follow-up:
   use repository `.tmp` while retaining the permanent verification EXE path.
   No network, second host, release build, ZIP/archive, tag or automatic GitHub
   build is used; public default remains `legacy-only`.
+
+## M1.2.30 bounded multi-source recipient import round environment (2026-10-20)
+
+- The execution crate adds one dormant in-process round planner/applicator over
+  M1.2.29. Active CLI/Windows manifests still do not depend on it; IPC remains
+  v33/domain v14 and no wire format changes.
+- Default/hard budgets are 4/8 sources and 128/256 events. All caller-ordered
+  ordinals and signed memberships are preflighted before the first mutation;
+  imports remain synchronous with exactly one in flight.
+- Five focused stable-path tests include a real two-source Account fixture in
+  reverse order `[1, 0]`, late membership rejection before mutation, per-source
+  backlog fairness and exact restart/replay of reconciled and unreconciled
+  progress. Full crate regression passes 27/27.
+- The first two-source run exposed and fixed an ordering bug where prefix state
+  was initially inspected in coordinator ordinal order instead of caller round
+  order. The permanent-path rerun passed.
+- Dedicated boundary rejects 10/10 mutations; accepted-tag readiness passes
+  156/156 with rustfmt and workspace-wide locked/offline strict Clippy.
+- Rust tests use repository `.tmp` because system TEMP is inaccessible in the
+  managed sandbox. No network, second host, release build, ZIP/archive, tag or
+  automatic GitHub build is used; public default remains `legacy-only`.

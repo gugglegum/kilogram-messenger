@@ -1,27 +1,24 @@
-# Текущая точка: M1.2.29 завершён, следующий M1.2.30
+# Текущая точка: M1.2.30 завершён, следующий M1.2.31
 
-Статус на 2026-10-20: explicit recipient import plan выбирает следующий
-неимпортированный staged chunk из exact durably-applied coordinator snapshot.
-Apply под одним state lock повторно проверяет coordinator/inbox/membership,
-вызывает существующий atomic import ровно для одного transfer и refresh-ит
-coordinator. Import-before-refresh crash возобновляется тем же plan без
-дубликатов. Focused regression 4/4, полный execution crate 22/22, boundary
-10/10, readiness 155/155. Network/background/runtime/IPC/desktop authority
-отсутствуют, public default — `legacy-only`.
+Статус на 2026-10-20: bounded explicit recipient round принимает уникальные
+caller-ordered source ordinals и membership snapshots, preflight-ит весь набор
+до первой мутации и импортирует максимум один transfer на source, строго по
+одному in-flight. Exact durable caller-order prefix и import-before-refresh
+возобновляются с повторной проверкой receipts/artifacts. Default/hard budgets —
+4/8 sources и 128/256 events. Focused regression 5/5, полный execution crate
+27/27, boundary 10/10, readiness 156/156. Network/background/runtime/IPC/
+desktop authority отсутствуют, public default — `legacy-only`.
 
-## Следующий этап: M1.2.30 bounded explicit multi-source recipient import round
+## Следующий этап: M1.2.31 durable explicit recipient import-round intent
 
-- поверх M1.2.29 планировать конечный round только по caller-supplied source
-  ordinals из одного exact coordinator snapshot;
-- каждому source с pending backlog дать не более одного import за round,
-  одновременно выполнять ровно один import и не позволять раннему source
-  монополизировать работу;
-- до первой мутации preflight-ить все ordinals/plans/memberships; один invalid
-  late input должен остановить round без импорта ранних inputs;
-- после каждого durable import использовать fresh coordinator snapshot, а
-  crash/restart оставлять безопасным за счёт M1.2.29 exact replay;
-- задать малые default и hard budgets; не добавлять loop между rounds,
-  background worker, network, runtime IPC либо desktop command;
+- сохранить только явно подтверждённый bounded round intent для безопасного
+  cross-process operator handoff, без сериализации membership или plaintext;
+- exact-связать intent с coordinator plan ID, ordered source ordinals,
+  per-source import plan IDs, budgets и recipient Device signature;
+- отделить read-only inspect/plan от explicit commit/consume и сделать
+  partial-prefix restart observable, а competing/fork/stale intent fail closed;
+- не исполнять import автоматически, не discover-ить sources и не добавлять
+  timer/background loop, network, active runtime IPC или desktop authority;
 - public default, sync/ticket/transfer wires, release/ZIP/tag и automatic
   GitHub build не менять.
 

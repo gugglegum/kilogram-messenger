@@ -58,6 +58,7 @@ foreach ($required in @(
     "'verify-kilogram-history-recovery-multi-source-scheduler-boundary.ps1' = 'history_recovery_multi_source_scheduler_boundary=verified'",
     "'verify-kilogram-history-recovery-recipient-coordinator-boundary.ps1' = 'history_recovery_recipient_coordinator_boundary=verified'",
     "'verify-kilogram-history-recovery-recipient-import-plan-boundary.ps1' = 'history_recovery_recipient_import_plan_boundary=verified'",
+    "'verify-kilogram-history-recovery-recipient-import-round-boundary.ps1' = 'history_recovery_recipient_import_round_boundary=verified'",
     "'verify-kilogram-peer-reenrollment-old-history-recovery-plan-boundary.ps1' = 'peer_reenrollment_old_history_recovery_plan_boundary=verified'",
     "'verify-kilogram-old-history-recovery-consent-store-boundary.ps1' = 'old_history_recovery_consent_store_boundary=verified'",
     "'verify-kilogram-old-history-recovery-execution-boundary.ps1' = 'old_history_recovery_execution_boundary=verified'",
@@ -143,7 +144,7 @@ foreach ($required in @(
     "'verify-kilogram-canonical-wire-boundary.ps1' = 'canonical_wire_boundary=verified'",
     "'verify-kilogram-protocol-compatibility-boundary.ps1' = 'protocol_compatibility_boundary=verified'",
     "Get-ChildItem -LiteralPath `$scriptsDirectory -Filter 'verify-*-boundary.ps1'",
-    'M1 readiness boundary inventory must contain exactly 155 gates',
+    'M1 readiness boundary inventory must contain exactly 156 gates',
     'function Invoke-CapturedPowerShell',
     "`$ErrorActionPreference = 'Continue'",
     "`$gateCapture.ExitCode -ne 0",
@@ -258,7 +259,7 @@ if ($LASTEXITCODE -ne 0 -or
 }
 
 Write-Output 'm1_readiness_boundary=verified'
-Write-Output 'boundary_inventory=closed-155'
+Write-Output 'boundary_inventory=closed-156'
 Write-Output 'candidate_or_accepted_tag_verifier=required'
 Write-Output 'accepted_m1_tag=M1.0.0'
 Write-Output 'format_and_offline_strict_clippy=required'

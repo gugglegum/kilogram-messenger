@@ -40,6 +40,7 @@ use thiserror::Error;
 mod coordinator;
 mod import;
 mod recipient_import;
+mod recipient_import_round;
 mod transfer;
 
 pub use coordinator::{
@@ -61,6 +62,15 @@ pub use recipient_import::{
     ApplyRecipientRecoveryImportOutcome, RecipientHistoryRecoveryImporter,
     RecipientRecoveryCoordinatorRefreshDisposition, RecipientRecoveryImportApplyReceipt,
     RecipientRecoveryImportPlan, RecipientRecoveryImportPlanError,
+};
+pub use recipient_import_round::{
+    DEFAULT_RECIPIENT_RECOVERY_IMPORT_ROUND_MAX_EVENTS,
+    DEFAULT_RECIPIENT_RECOVERY_IMPORT_ROUND_MAX_SOURCES,
+    MAX_RECIPIENT_RECOVERY_IMPORT_ROUND_EVENTS, MAX_RECIPIENT_RECOVERY_IMPORT_ROUND_SOURCES,
+    RecipientHistoryRecoveryImportRound, RecipientRecoveryImportRoundApplyReceipt,
+    RecipientRecoveryImportRoundBudget, RecipientRecoveryImportRoundError,
+    RecipientRecoveryImportRoundPlan, RecipientRecoveryImportRoundSource,
+    RecipientRecoveryImportRoundStepDisposition, RecipientRecoveryImportRoundStepReceipt,
 };
 pub use transfer::{
     DurableHistoryRecoveryTransfer, HistoryRecoveryTransferEnvelope, HistoryRecoveryTransferError,
@@ -2342,6 +2352,339 @@ mod tests {
         })
     }
 
+    struct MultiSourceFixture {
+        root: TempDir,
+        owner_account_id: AccountId,
+        sources: Vec<DeviceState>,
+        replacement: DeviceState,
+        authority: AccountDeviceListSnapshot,
+        memberships: Vec<ConversationMembershipSnapshot>,
+        binding: PeerReenrollmentHistoryBinding,
+        inventory: OldHistoryRecoveryInventory,
+        selections: Vec<Vec<HistoryRecoveryRangeSelection>>,
+        signed_plans: Vec<SignedOldHistoryRecoveryPlan>,
+        source_inventories: Vec<Vec<(AuthorizedEvent, String)>>,
+    }
+
+    impl MultiSourceFixture {
+        fn commit_and_export(
+            &self,
+            source_index: usize,
+        ) -> Result<
+            (
+                ApprovedRecipientHistoryRecoverySource,
+                HistoryRecoveryTransferEnvelope,
+            ),
+            Box<dyn std::error::Error>,
+        > {
+            let source = self
+                .sources
+                .get(source_index)
+                .ok_or("multi-source fixture source is missing")?;
+            let signed_plan = self
+                .signed_plans
+                .get(source_index)
+                .ok_or("multi-source fixture plan is missing")?;
+            let selections = self
+                .selections
+                .get(source_index)
+                .ok_or("multi-source fixture selections are missing")?;
+            let source_inventory = self
+                .source_inventories
+                .get(source_index)
+                .ok_or("multi-source fixture inventory is missing")?;
+            let consent = OldHistoryRecoveryConsentStore::open(
+                self.root
+                    .path()
+                    .join(format!("multi-consent-{source_index}")),
+                self.owner_account_id,
+                source.identity().device_id(),
+            )?;
+            let consent_record_id = match consent.commit(
+                source.identity(),
+                signed_plan,
+                &self.binding,
+                &self.authority,
+                &self.memberships,
+                &self.inventory,
+                selections,
+                1_500 + u64::try_from(source_index)?,
+            )? {
+                OldHistoryRecoveryConsentOutcome::Committed(value)
+                | OldHistoryRecoveryConsentOutcome::AlreadyCommitted(value) => value.record_id(),
+            };
+            let durable = consent
+                .load_for_transition(signed_plan.transition_id())?
+                .ok_or("multi-source durable consent is missing")?;
+            let approved =
+                ApprovedRecipientHistoryRecoverySource::from_durable_consent(&durable, 0)?;
+            let execution_name = format!("multi-source-execution-{source_index}");
+            let execution = OldHistoryRecoveryExecutionStore::open(
+                self.root.path().join(&execution_name),
+                self.owner_account_id,
+                source.identity().device_id(),
+            )?;
+            let context = OldHistoryRecoveryLiveContext {
+                binding: &self.binding,
+                authority: &self.authority,
+                memberships: &self.memberships,
+                inventory: &self.inventory,
+                selections,
+            };
+            let prepared = match execution.prepare_next_chunk(
+                &consent,
+                signed_plan.transition_id(),
+                consent_record_id,
+                source.identity(),
+                &context,
+                0,
+                None,
+                source_inventory,
+            )? {
+                PrepareHistoryRecoveryChunkOutcome::Prepared(value) => *value,
+                _ => return Err("multi-source chunk was not prepared".into()),
+            };
+            let applied = OldHistoryRecoveryExecutionStore::apply_prepared_chunk(
+                prepared,
+                self.replacement.identity(),
+                self.replacement.encryption(),
+            )?;
+            let committed = match execution.commit_chunk(
+                &consent,
+                consent_record_id,
+                source.identity(),
+                &context,
+                &applied,
+                2_000 + u64::try_from(source_index)?,
+            )? {
+                CommitHistoryRecoveryChunkOutcome::Committed(value)
+                | CommitHistoryRecoveryChunkOutcome::AlreadyCommitted(value) => value,
+            };
+            drop(execution);
+            let read = OldHistoryRecoveryExecutionReadStore::open_existing(
+                self.root.path().join(execution_name),
+                self.owner_account_id,
+                source.identity().device_id(),
+            )?;
+            let envelope = HistoryRecoveryTransferEnvelope::export_current(
+                &read,
+                consent_record_id,
+                0,
+                committed.record_id(),
+                source.identity(),
+                2_100 + u64::try_from(source_index)?,
+            )?;
+            Ok((approved, envelope))
+        }
+    }
+
+    fn multi_source_fixture(
+        source_count: usize,
+        events_per_source: usize,
+    ) -> Result<MultiSourceFixture, Box<dyn std::error::Error>> {
+        let root = tempfile::tempdir()?;
+        let local_root = AccountRootState::create(root.path().join("multi-local-root"))?;
+        let local_device = DeviceState::load_or_create(root.path().join("multi-local-device"))?;
+        let local_certificate = local_root.issue_device_certificate(
+            local_device.identity().device_id(),
+            local_device.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let local_authority = local_root.publish_device_list(&[local_certificate])?;
+
+        let history_root = AccountRootState::create(root.path().join("multi-history-root"))?;
+        let mut sources = Vec::with_capacity(source_count);
+        let mut source_certificates = Vec::with_capacity(source_count);
+        for index in 0..source_count {
+            let source = DeviceState::load_or_create(
+                root.path().join(format!("multi-history-source-{index}")),
+            )?;
+            source_certificates.push(history_root.issue_device_certificate(
+                source.identity().device_id(),
+                source.encryption().public_key(),
+                &DeviceCapability::MESSAGING,
+            )?);
+            sources.push(source);
+        }
+        let old_authority = history_root.publish_device_list(&source_certificates)?;
+        let invitation_source = sources.first().ok_or("multi-source fixture is empty")?;
+        let old_invitation = invitation(
+            invitation_source.identity(),
+            history_root.account_id(),
+            local_root.account_id(),
+            old_authority.revision(),
+            7,
+            [7_u8; 32],
+        )?;
+        let capability = PeerCapabilityStore::open(
+            root.path().join("multi-peer-capability"),
+            local_device.identity().device_id(),
+        )?;
+        capability.apply_current_invitation(
+            local_device.identity(),
+            local_root.account_id(),
+            &old_invitation,
+            1_100,
+        )?;
+        let old_key = PeerCapabilityKey::new(
+            history_root.account_id(),
+            invitation_source.identity().device_id(),
+        );
+        capability.apply_authenticated_observation(
+            local_device.identity(),
+            old_key,
+            PeerSyncCapabilityEvidence::LegacyTicketWithoutExtension,
+        )?;
+        let quarantine = capability.load_quarantined_head(old_key)?;
+
+        let replacement = DeviceState::load_or_create(root.path().join("multi-replacement"))?;
+        let replacement_certificate = history_root.issue_device_certificate(
+            replacement.identity().device_id(),
+            replacement.encryption().public_key(),
+            &DeviceCapability::MESSAGING,
+        )?;
+        let mut current_certificates = source_certificates;
+        current_certificates.push(replacement_certificate);
+        let authority = history_root.publish_device_list(&current_certificates)?;
+        let current_invitation = invitation(
+            replacement.identity(),
+            history_root.account_id(),
+            local_root.account_id(),
+            authority.revision(),
+            1,
+            [9_u8; 32],
+        )?;
+        let acceptance = accept_reenrollment(
+            root.path(),
+            local_device.identity(),
+            &local_authority,
+            &quarantine,
+            &authority,
+            &current_invitation,
+        )?;
+        let runtime_store = PeerReenrollmentRuntimeStore::open(
+            root.path().join("multi-runtime-transition"),
+            local_root.account_id(),
+            local_device.identity().device_id(),
+        )?;
+        let prepared = match runtime_store.prepare(
+            local_device.identity(),
+            &acceptance,
+            &current_invitation,
+            PeerReenrollmentRuntimeBinding {
+                contact_id: [21_u8; 32],
+                conversation_id: [22_u8; 32],
+                predecessor_contact: vec![1, 2, 3],
+                successor_contact: vec![4, 5, 6],
+                successor_endpoint_candidate: vec![7, 8, 9],
+            },
+            1_350,
+        )? {
+            PeerReenrollmentRuntimePrepareOutcome::Prepared(value)
+            | PeerReenrollmentRuntimePrepareOutcome::AlreadyPrepared(value) => value,
+        };
+        let consumed = match runtime_store
+            .consume(prepared.transition().contact_id(), prepared.transition_id())?
+        {
+            PeerReenrollmentRuntimeConsumeOutcome::Consumed(value)
+            | PeerReenrollmentRuntimeConsumeOutcome::AlreadyConsumed(value) => value,
+        };
+        let binding = PeerReenrollmentHistoryBinding::from_consumed_transition(
+            acceptance.receipt(),
+            &consumed,
+            &authority,
+        )?;
+
+        let mut memberships = Vec::with_capacity(source_count);
+        let mut source_inventories = Vec::with_capacity(source_count);
+        let mut selections = Vec::with_capacity(source_count);
+        let mut claims = Vec::with_capacity(source_count);
+        for (index, source) in sources.iter().enumerate() {
+            let conversation_id =
+                ConversationId::from_label(&format!("bounded-history-multi-source-{index}"));
+            let source_root = root.path().join(format!("multi-source-data-{index}"));
+            let mut source_inventory =
+                make_source_inventory(&source_root, conversation_id, events_per_source)?;
+            source_inventory.sort_by_key(|(event, _)| event.event().event_id().ok());
+            let author_account_id = source_inventory
+                .first()
+                .ok_or("multi-source inventory requires an event")?
+                .0
+                .author_account_id();
+            let membership = history_root.create_conversation_membership(
+                conversation_id.scope_id(),
+                &[local_root.account_id(), author_account_id],
+            )?;
+            let probe = HistoryRewrapBundle::seal(
+                source.identity(),
+                authority.clone(),
+                replacement.identity().device_id(),
+                conversation_id,
+                &source_inventory,
+                0,
+                events_per_source,
+            )?;
+            let coverage = ConversationHistoryCoverage::new(
+                conversation_id,
+                u64::try_from(events_per_source)?,
+                *probe.manifest().inventory_digest(),
+                vec![ReadableHistoryRange::new(
+                    0,
+                    u64::try_from(events_per_source)?,
+                )?],
+            )?;
+            claims.push(SignedHistorySourceClaim::issue(
+                source.identity(),
+                &authority,
+                vec![coverage],
+            )?);
+            selections.push(vec![HistoryRecoveryRangeSelection {
+                conversation_id,
+                range_start: 0,
+                range_end: u64::try_from(events_per_source)?,
+            }]);
+            memberships.push(membership);
+            source_inventories.push(source_inventory);
+        }
+        let inventory = OldHistoryRecoveryInventory::assemble(
+            &authority,
+            replacement.identity().device_id(),
+            claims,
+            &[],
+        )?;
+        let mut signed_plans = Vec::with_capacity(source_count);
+        for (index, source) in sources.iter().enumerate() {
+            let plan = OldHistoryRecoveryPlan::prepare(
+                &binding,
+                &authority,
+                &memberships,
+                &inventory,
+                source.identity().device_id(),
+                &selections[index],
+                1_400 + u64::try_from(index)?,
+            )?;
+            let phrase = plan.confirmation_phrase()?;
+            signed_plans.push(plan.confirm_and_sign(
+                source.identity(),
+                &phrase,
+                ExplicitOldHistoryRecoveryConsent::HistoryOwnerApproved,
+            )?);
+        }
+        Ok(MultiSourceFixture {
+            root,
+            owner_account_id: history_root.account_id(),
+            sources,
+            replacement,
+            authority,
+            memberships,
+            binding,
+            inventory,
+            selections,
+            signed_plans,
+            source_inventories,
+        })
+    }
+
     fn make_source_inventory(
         root: &Path,
         conversation_id: ConversationId,
@@ -4526,6 +4869,452 @@ mod tests {
             complete.sources()[0].state,
             RecipientRecoveryCoordinatorSourceState::Complete
         );
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_round_imports_only_one_backlog_generation_per_source()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture(4, Some(2))?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let approved = approved_recipient_source(&fixture, &consent)?;
+        let envelopes = build_transfer_backlog(
+            &fixture,
+            &consent,
+            consent_record_id,
+            "recipient-import-round-fairness-execution",
+            2,
+        )?;
+        let state = fixture.root.path().join("recipient-import-round-fairness");
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        for envelope in &envelopes {
+            inbox.stage_envelope(envelope)?;
+        }
+        let coordination =
+            initialize_recipient_coordinator(&fixture, &state, &approved, &inbox, &imports)?;
+        let sources = [RecipientRecoveryImportRoundSource::new(
+            0,
+            &fixture.membership,
+        )];
+        let plan =
+            RecipientHistoryRecoveryImportRound::plan(&coordination, &sources, &inbox, &imports)?;
+        assert_eq!(plan.source_count(), 1);
+        assert_eq!(plan.source_ordinals().collect::<Vec<_>>(), vec![0]);
+        assert_eq!(plan.planned_event_count(), 2);
+        assert_eq!(plan.budget(), RecipientRecoveryImportRoundBudget::default());
+        assert!(!plan.contains_message_bodies);
+        assert!(!plan.contains_plaintext);
+        assert!(!plan.grants_network_authority);
+        assert!(!plan.grants_background_authority);
+        assert!(plan.preflights_all_sources_before_import);
+        assert!(plan.imports_at_most_one_transfer_per_source);
+        assert!(plan.executes_one_import_at_a_time);
+
+        let receipt = RecipientHistoryRecoveryImportRound::apply(
+            &plan,
+            &sources,
+            &inbox,
+            &imports,
+            fixture.replacement.identity(),
+            4_000,
+        )?;
+        assert_eq!(receipt.imported_now_count, 1);
+        assert_eq!(receipt.already_imported_count, 0);
+        assert_eq!(receipt.imported_event_count, 2);
+        assert_eq!(receipt.concurrent_imports, 1);
+        assert_eq!(receipt.steps.len(), 1);
+        assert_eq!(
+            receipt.steps[0].disposition,
+            RecipientRecoveryImportRoundStepDisposition::Imported
+        );
+        assert!(matches!(
+            imports.status(consent_record_id, 0)?,
+            RecipientHistoryImportStatus::InProgress(ref status)
+                if status.imported_chunk_count == 1 && status.imported_event_count == 2
+        ));
+
+        let next_coordination = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            std::slice::from_ref(&approved),
+            &inbox,
+            &imports,
+        )?;
+        let next_plan = RecipientHistoryRecoveryImportRound::plan(
+            &next_coordination,
+            &sources,
+            &inbox,
+            &imports,
+        )?;
+        let next_receipt = RecipientHistoryRecoveryImportRound::apply(
+            &next_plan,
+            &sources,
+            &inbox,
+            &imports,
+            fixture.replacement.identity(),
+            4_100,
+        )?;
+        assert_eq!(next_receipt.imported_now_count, 1);
+        assert!(matches!(
+            imports.status(consent_record_id, 0)?,
+            RecipientHistoryImportStatus::Complete(ref status)
+                if status.imported_chunk_count == 2 && status.imported_event_count == 4
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_round_preserves_caller_order_across_two_sources()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = multi_source_fixture(2, 1)?;
+        let mut approved = Vec::new();
+        let mut envelopes = Vec::new();
+        for source_index in 0..2 {
+            let (source, envelope) = fixture.commit_and_export(source_index)?;
+            approved.push(source);
+            envelopes.push(envelope);
+        }
+        let state = fixture
+            .root
+            .path()
+            .join("recipient-import-round-multi-source");
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        for envelope in &envelopes {
+            inbox.stage_envelope(envelope)?;
+        }
+        let initial = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            &approved,
+            &inbox,
+            &imports,
+        )?;
+        RecipientHistoryRecoveryCoordinator::apply(&initial, &inbox, &imports)?;
+        let coordination = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            &approved,
+            &inbox,
+            &imports,
+        )?;
+        let sources = [
+            RecipientRecoveryImportRoundSource::new(1, &fixture.memberships[1]),
+            RecipientRecoveryImportRoundSource::new(0, &fixture.memberships[0]),
+        ];
+        let plan =
+            RecipientHistoryRecoveryImportRound::plan(&coordination, &sources, &inbox, &imports)?;
+        assert_eq!(plan.source_ordinals().collect::<Vec<_>>(), vec![1, 0]);
+        assert_eq!(plan.planned_event_count(), 2);
+
+        let wrong_second_membership = [
+            RecipientRecoveryImportRoundSource::new(1, &fixture.memberships[1]),
+            RecipientRecoveryImportRoundSource::new(0, &fixture.memberships[1]),
+        ];
+        assert!(matches!(
+            RecipientHistoryRecoveryImportRound::apply(
+                &plan,
+                &wrong_second_membership,
+                &inbox,
+                &imports,
+                fixture.replacement.identity(),
+                4_000,
+            ),
+            Err(RecipientRecoveryImportRoundError::ApplySourceMismatch)
+        ));
+        for transfer in approved.iter().take(2) {
+            assert_eq!(
+                imports.status(transfer.consent_record_id(), 0)?,
+                RecipientHistoryImportStatus::Absent
+            );
+        }
+
+        let receipt = RecipientHistoryRecoveryImportRound::apply(
+            &plan,
+            &sources,
+            &inbox,
+            &imports,
+            fixture.replacement.identity(),
+            4_100,
+        )?;
+        assert_eq!(receipt.imported_now_count, 2);
+        assert_eq!(receipt.already_imported_count, 0);
+        assert_eq!(receipt.steps.len(), 2);
+        assert_eq!(receipt.steps[0].source_ordinal, 1);
+        assert_eq!(receipt.steps[1].source_ordinal, 0);
+        assert!(
+            receipt
+                .steps
+                .iter()
+                .all(|step| step.disposition
+                    == RecipientRecoveryImportRoundStepDisposition::Imported)
+        );
+        assert_eq!(
+            receipt.final_coordinator_sequence,
+            coordination.sequence() + 2
+        );
+        for transfer in approved.iter().take(2) {
+            assert!(matches!(
+                imports.status(transfer.consent_record_id(), 0)?,
+                RecipientHistoryImportStatus::Complete(ref status)
+                    if status.imported_chunk_count == 1 && status.imported_event_count == 1
+            ));
+        }
+
+        let replay = RecipientHistoryRecoveryImportRound::apply(
+            &plan,
+            &sources,
+            &inbox,
+            &imports,
+            fixture.replacement.identity(),
+            4_200,
+        )?;
+        assert_eq!(replay.imported_now_count, 0);
+        assert_eq!(replay.already_imported_count, 2);
+        assert_eq!(replay.steps[0].source_ordinal, 1);
+        assert_eq!(replay.steps[1].source_ordinal, 0);
+        assert!(replay.steps.iter().all(|step| {
+            step.disposition == RecipientRecoveryImportRoundStepDisposition::AlreadyImported
+        }));
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_round_preflights_all_inputs_before_mutation()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture(2, None)?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let approved = approved_recipient_source(&fixture, &consent)?;
+        let envelope = build_transfer_backlog(
+            &fixture,
+            &consent,
+            consent_record_id,
+            "recipient-import-round-preflight-execution",
+            1,
+        )?
+        .remove(0);
+        let state = fixture.root.path().join("recipient-import-round-preflight");
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        inbox.stage_envelope(&envelope)?;
+        let coordination =
+            initialize_recipient_coordinator(&fixture, &state, &approved, &inbox, &imports)?;
+        let invalid_late = [
+            RecipientRecoveryImportRoundSource::new(0, &fixture.membership),
+            RecipientRecoveryImportRoundSource::new(1, &fixture.membership),
+        ];
+        assert!(matches!(
+            RecipientHistoryRecoveryImportRound::plan(
+                &coordination,
+                &invalid_late,
+                &inbox,
+                &imports,
+            ),
+            Err(RecipientRecoveryImportRoundError::SourceOrdinal(1))
+        ));
+        let duplicate = [
+            RecipientRecoveryImportRoundSource::new(0, &fixture.membership),
+            RecipientRecoveryImportRoundSource::new(0, &fixture.membership),
+        ];
+        assert!(matches!(
+            RecipientHistoryRecoveryImportRound::plan(&coordination, &duplicate, &inbox, &imports,),
+            Err(RecipientRecoveryImportRoundError::DuplicateSourceOrdinal(0))
+        ));
+        let tight = RecipientRecoveryImportRoundBudget::new(1, 1)?;
+        assert!(matches!(
+            RecipientHistoryRecoveryImportRound::plan_with_budget(
+                &coordination,
+                &[RecipientRecoveryImportRoundSource::new(
+                    0,
+                    &fixture.membership,
+                )],
+                tight,
+                &inbox,
+                &imports,
+            ),
+            Err(RecipientRecoveryImportRoundError::EventBudgetExceeded {
+                planned: 2,
+                maximum: 1
+            })
+        ));
+        assert_eq!(
+            imports.status(consent_record_id, 0)?,
+            RecipientHistoryImportStatus::Absent
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_round_rejects_changed_apply_membership_without_import()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let other = fixture(1, None)?;
+        let fixture = fixture(2, None)?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let approved = approved_recipient_source(&fixture, &consent)?;
+        let envelope = build_transfer_backlog(
+            &fixture,
+            &consent,
+            consent_record_id,
+            "recipient-import-round-membership-execution",
+            1,
+        )?
+        .remove(0);
+        let state = fixture
+            .root
+            .path()
+            .join("recipient-import-round-membership");
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        inbox.stage_envelope(&envelope)?;
+        let coordination =
+            initialize_recipient_coordinator(&fixture, &state, &approved, &inbox, &imports)?;
+        let planned_sources = [RecipientRecoveryImportRoundSource::new(
+            0,
+            &fixture.membership,
+        )];
+        let plan = RecipientHistoryRecoveryImportRound::plan(
+            &coordination,
+            &planned_sources,
+            &inbox,
+            &imports,
+        )?;
+        let changed_sources = [RecipientRecoveryImportRoundSource::new(
+            0,
+            &other.membership,
+        )];
+        assert!(matches!(
+            RecipientHistoryRecoveryImportRound::apply(
+                &plan,
+                &changed_sources,
+                &inbox,
+                &imports,
+                fixture.replacement.identity(),
+                4_000,
+            ),
+            Err(RecipientRecoveryImportRoundError::ApplySourceMismatch)
+        ));
+        assert_eq!(
+            imports.status(consent_record_id, 0)?,
+            RecipientHistoryImportStatus::Absent
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_round_resumes_durable_prefix_and_unreconciled_import()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture(2, None)?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let approved = approved_recipient_source(&fixture, &consent)?;
+        let envelope = build_transfer_backlog(
+            &fixture,
+            &consent,
+            consent_record_id,
+            "recipient-import-round-resume-execution",
+            1,
+        )?
+        .remove(0);
+        let state = fixture.root.path().join("recipient-import-round-resume");
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        inbox.stage_envelope(&envelope)?;
+        let coordination =
+            initialize_recipient_coordinator(&fixture, &state, &approved, &inbox, &imports)?;
+        let sources = [RecipientRecoveryImportRoundSource::new(
+            0,
+            &fixture.membership,
+        )];
+        let plan =
+            RecipientHistoryRecoveryImportRound::plan(&coordination, &sources, &inbox, &imports)?;
+        let import_plan = RecipientHistoryRecoveryImportRound::import_plan(&plan, 0)
+            .ok_or("round import plan is missing")?;
+        assert!(matches!(
+            RecipientHistoryRecoveryImporter::apply_with_fault_after_import(
+                import_plan,
+                &inbox,
+                &imports,
+                fixture.replacement.identity(),
+                &fixture.membership,
+                4_000,
+            ),
+            Err(RecipientRecoveryImportPlanError::InjectedAfterImport)
+        ));
+        let receipt = RecipientHistoryRecoveryImportRound::apply(
+            &plan,
+            &sources,
+            &inbox,
+            &imports,
+            fixture.replacement.identity(),
+            4_001,
+        )?;
+        assert_eq!(receipt.imported_now_count, 0);
+        assert_eq!(receipt.already_imported_count, 1);
+        assert_eq!(
+            receipt.steps[0].disposition,
+            RecipientRecoveryImportRoundStepDisposition::AlreadyImported
+        );
+        let replay = RecipientHistoryRecoveryImportRound::apply(
+            &plan,
+            &sources,
+            &inbox,
+            &imports,
+            fixture.replacement.identity(),
+            4_002,
+        )?;
+        assert_eq!(replay.imported_now_count, 0);
+        assert_eq!(replay.already_imported_count, 1);
+        assert!(matches!(
+            imports.status(consent_record_id, 0)?,
+            RecipientHistoryImportStatus::Complete(_)
+        ));
         Ok(())
     }
 }

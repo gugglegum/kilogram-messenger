@@ -356,6 +356,47 @@ impl RecipientHistoryImportStore {
         })
     }
 
+    pub(crate) fn verify_staged_transfer_imported(
+        &self,
+        inbox: &RecipientHistoryTransferInbox,
+        transfer_id: [u8; 32],
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<DurableRecipientHistoryImportReceipt, RecipientHistoryImportError> {
+        if !same_state_directory(&self.state_directory, inbox.state_directory())? {
+            return Err(RecipientHistoryImportError::TransferInboxMismatch);
+        }
+        ensure_no_active_state_transaction(&self.state_directory)?;
+        let receipts = load_and_verify_receipts(
+            &self.state_directory,
+            self.owner_account_id,
+            self.owner_device_id,
+        )?;
+        let transfer = inbox.load_staged(transfer_id)?;
+        let chunk = transfer.chunk();
+        let artifacts = validate_chunk_context(
+            chunk,
+            self.owner_account_id,
+            self.owner_device_id,
+            chunk.consent_record_id(),
+            chunk.selection_index(),
+            membership,
+        )?;
+        let receipt = receipts
+            .iter()
+            .find(|receipt| receipt.execution_record_id() == chunk.record_id())
+            .ok_or(RecipientHistoryImportError::ImportHeadMismatch)?;
+        verify_receipt_matches_chunk(receipt, chunk, &artifacts)?;
+        verify_imported_artifacts(
+            &self.state_directory,
+            membership,
+            chunk,
+            &artifacts,
+            receipt,
+        )?;
+        ensure_no_active_state_transaction(&self.state_directory)?;
+        Ok(receipt.clone())
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn import_committed_chunk(
         &self,
