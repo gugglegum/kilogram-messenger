@@ -2688,6 +2688,12 @@ idle, request and completion deadlines; rejected sessions consume a slot but
 do not block the remaining finite budget, and no background listener or import
 authority is created.
 
+[`RFC-0251`](docs/RFC-0251-m1227-bounded-multi-source-recovery-scheduler.md)
+adds finite fair scheduling across at most eight caller-supplied durable source
+intents. Every candidate is preflighted before network; one exact attempt per
+pending source per round prevents an unavailable source from starving the
+others, while round and total budgets leave unfinished requests resumable.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

@@ -53,6 +53,7 @@ $expectedGates = [ordered]@{
     'verify-kilogram-history-recovery-transfer-outbox-boundary.ps1' = 'history_recovery_transfer_outbox_boundary=verified'
     'verify-kilogram-history-recovery-transfer-executor-boundary.ps1' = 'history_recovery_transfer_executor_boundary=verified'
     'verify-kilogram-history-recovery-recipient-acceptor-boundary.ps1' = 'history_recovery_recipient_acceptor_boundary=verified'
+    'verify-kilogram-history-recovery-multi-source-scheduler-boundary.ps1' = 'history_recovery_multi_source_scheduler_boundary=verified'
     'verify-kilogram-canonical-runtime-ipc-ticket-automation-boundary.ps1' = 'canonical_runtime_ipc_ticket_automation_boundary=verified'
     'verify-kilogram-runtime-ipc-conversation-pagination-migration-boundary.ps1' = 'runtime_ipc_conversation_pagination_migration_boundary=verified'
     'verify-kilogram-runtime-ipc-completion-inventory-boundary.ps1' = 'runtime_ipc_completion_inventory_boundary=verified'
@@ -245,8 +246,8 @@ function Invoke-CapturedPowerShell {
     }
 }
 
-if ($expectedGates.Count -ne 152) {
-    throw "M1 readiness boundary inventory must contain exactly 152 gates, got $($expectedGates.Count)"
+if ($expectedGates.Count -ne 153) {
+    throw "M1 readiness boundary inventory must contain exactly 153 gates, got $($expectedGates.Count)"
 }
 
 if ($SelfTest) {

@@ -27,6 +27,7 @@ use tokio::time::timeout;
 mod acceptor;
 mod executor;
 mod outbox;
+mod scheduler;
 
 pub use acceptor::{
     HistoryRecoveryRecipientAcceptFailureClass, HistoryRecoveryRecipientAcceptPolicy,
@@ -46,6 +47,14 @@ pub use outbox::{
     HistoryRecoveryTransferOutboxError, HistoryRecoveryTransferOutboxReadStore,
     HistoryRecoveryTransferOutboxStatus, HistoryRecoveryTransferOutboxStatusView,
     PrepareHistoryRecoveryTransferOutcome,
+};
+pub use scheduler::{
+    HistoryRecoveryMultiSourceScheduleError, HistoryRecoveryMultiSourceSchedulePolicy,
+    HistoryRecoveryMultiSourceSchedulePolicyError, HistoryRecoveryMultiSourceScheduleReport,
+    HistoryRecoveryMultiSourceScheduleSourceOutcome, HistoryRecoveryMultiSourceScheduleSourceView,
+    HistoryRecoveryMultiSourceScheduleTermination, HistoryRecoveryScheduledSourceTransfer,
+    MAX_HISTORY_RECOVERY_SCHEDULE_ROUNDS, MAX_HISTORY_RECOVERY_SCHEDULE_SOURCES,
+    MAX_HISTORY_RECOVERY_SCHEDULE_TOTAL_ATTEMPTS, schedule_pending_history_recovery_transfers,
 };
 
 pub const HISTORY_RECOVERY_TRANSFER_ALPN: &[u8] = b"kilogram/m1/history-recovery/postcard/1";

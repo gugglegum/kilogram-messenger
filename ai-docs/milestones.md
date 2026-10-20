@@ -7988,3 +7988,29 @@ correlation visible, Windows-only field evidence, independent security audit
 - spawned/background listener, persistent schedule, active runtime/IPC/desktop,
   multi-source и import authority, product Internet/relay, second host,
   release/ZIP/tag и automatic GitHub build отсутствуют; default `legacy-only`.
+
+### M1.2.27 — bounded multi-source recovery scheduler: принят локально
+
+- scheduler принимает 1..=8 caller-supplied уже durable intents; до первой
+  сети загружает и проверяет каждый exact request, source/recipient Endpoint,
+  единые Account/recipient и уникальные source Device/transfer ID;
+- default policy — 3 rounds и 24 total invocations, hard max — 8 и 64.
+  В каждом round каждый pending source получает не более одной попытки в
+  caller input order, одновременно выполняется ровно одна;
+- новый round начинается только при достаточном budget для каждого pending
+  source на его старте, поэтому partial round не благоприятствует ранним input;
+- каждая попытка делегируется M1.2.25 executor с max_attempts=1. Retryable
+  pre-connect/post-connect-ambiguous failure уступает следующему source и не
+  меняет exact durable request;
+- already acknowledged source не открывает сеть. Round/total exhaustion
+  оставляет unfinished intents pending; неожиданная local/outbox ошибка
+  fail-closed завершает вызов, а предыдущие receipts остаются durable;
+- privacy-safe report содержит только source ordinal, bounded counts, closed
+  outcomes/failure classes и не содержит identity/transfer/network/body/path;
+- stable-path focused regression прошёл 7/7, полный transport/outbox/executor/
+  acceptor/scheduler crate — 26/26. Boundary отклонил 10/10 mutations,
+  accepted-tag readiness прошёл 153/153 с rustfmt и strict offline Clippy;
+- scheduler не discover-ит источники и не координирует удалённые процессы;
+  background/runtime/IPC/desktop/import authority, новый network wire, product
+  Internet/relay, second host, release/ZIP/tag и automatic GitHub build
+  отсутствуют; default `legacy-only`.

@@ -1274,6 +1274,12 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   idle/request/completion deadlines и privacy-safe aggregate report. Ошибка
   расходует slot, но не блокирует оставшийся budget; background listener,
   runtime/IPC/desktop и import authority не добавлены.
+- [`../docs/RFC-0251-m1227-bounded-multi-source-recovery-scheduler.md`](../docs/RFC-0251-m1227-bounded-multi-source-recovery-scheduler.md) —
+  M1.2.27 делает конечные fair rounds по 1..=8 caller-supplied durable source
+  intents: все кандидаты preflight-ятся до сети, каждый pending source получает
+  не более одной exact попытки за round, а общий budget ограничен 64. Failed
+  source уступает следующему; unfinished intents остаются resumable, без
+  discovery/background/runtime/IPC/desktop/import authority.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

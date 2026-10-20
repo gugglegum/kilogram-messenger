@@ -5562,3 +5562,24 @@ Hosted follow-up:
   152/152 with rustfmt and workspace-wide locked/offline strict Clippy.
 - No product Internet/relay, second host, release build, ZIP/archive, tag or
   automatic GitHub build was used. Public default remains `legacy-only`.
+
+## M1.2.27 bounded multi-source recovery scheduler environment (2026-10-20)
+
+- The scheduler is another dormant module in the existing transport crate. It
+  adds no dependency or command to active CLI/Windows applications and changes
+  no wire format.
+- Inputs are borrowed caller-owned Endpoints/outboxes plus exact target
+  `EndpointAddr` and transfer ID. Preflight verifies every durable request
+  before the first executor call; no source discovery or file import exists.
+- The core fairness machine is deterministic and uses one in-flight invocation.
+  Seven focused tests cover policy, order, budgets, acknowledged skip, restart-
+  safe pending state, fatal errors and durable candidate preflight.
+- The scheduler adds no network primitive; it delegates to the already real-
+  loopback-tested M1.2.25 executor. Windows tests still compile without running
+  hash-named binaries and execute through `run-cargo-tests-stable.ps1`.
+- Focused scheduler regression passes 7/7 and full crate regression passes
+  26/26. Dedicated boundary rejects 10/10 mutations; accepted-tag readiness
+  passes 153/153 with rustfmt and workspace-wide locked/offline strict Clippy.
+- No product Internet/relay, second host, release build, ZIP/archive, tag or
+  automatic GitHub build was used. Active IPC remains v33/domain v14 and
+  public default remains `legacy-only`.

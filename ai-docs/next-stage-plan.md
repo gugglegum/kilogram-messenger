@@ -1,23 +1,24 @@
-# Текущая точка: M1.2.26 завершён, следующий M1.2.27
+# Текущая точка: M1.2.27 завершён, следующий M1.2.28
 
-Статус на 2026-10-20: explicit recipient acceptor обрабатывает caller-selected
-finite budget из 1..=8 последовательных dedicated-ALPN sessions над
-caller-owned endpoint. Idle/request/completion deadlines разделены, malformed,
-wrong-ALPN и timeout расходуют slot, но не блокируют оставшийся budget. Stable
-acceptor regression прошёл 5/5, полный crate — 19/19; boundary отклонил 10/10
-ослаблений, accepted-tag readiness — 152/152. Background service, active
-runtime/IPC/desktop/import не подключены, public default — `legacy-only`.
+Статус на 2026-10-20: explicit scheduler делает deterministic fair rounds по
+1..=8 caller-supplied durable source intents после полного preflight до сети.
+Default 3/24, hard max 8 rounds/64 attempts, максимум 1 in-flight; retryable
+source уступает следующему, acknowledged пропускается, exhaustion оставляет
+exact pending intents. Stable scheduler regression прошёл 7/7, полный crate —
+26/26; boundary отклонил 10/10 ослаблений, accepted-tag readiness — 153/153.
+Discovery/background/runtime/IPC/desktop/import отсутствуют, public default —
+`legacy-only`.
 
-## Следующий этап: M1.2.27 bounded multi-source recovery scheduler
+## Следующий этап: M1.2.28 durable recipient recovery coordinator
 
-- принять только caller-supplied bounded набор уже durable transfer intents и
-  authenticated source candidates, не искать peers автоматически;
-- установить глобальные и per-source attempt/session budgets, deterministic
-  fairness и явное terminal/resumable состояние без background worker;
-- не смешивать source failures: stalled/failed source не должен блокировать
-  другой, а exact durable outbox/inbox identities остаются idempotency boundary;
-- scheduler не должен импортировать историю, создавать request/nonce, менять
-  signed Endpoint bindings либо получать active runtime IPC/desktop authority;
+- связать approved source selections, staged recipient inbox backlog и existing
+  recipient-signed import receipt heads в отдельной durable coordinator DB;
+- хранить только opaque content-addressed IDs и monotonic per-source state;
+  ciphertext/artifacts остаются в существующих inbox/import stores;
+- plan должен быть read-only, apply — явным и exact-head-bound; coordinator не
+  должен сам открывать сеть либо автоматически импортировать историю;
+- restart/replay/crash/fork/corruption должны fail closed, а completed source не
+  должен снова становиться pending без нового owner-approved plan;
 - public default, sync/ticket wires, release/ZIP/tag и automatic GitHub build
   не менять.
 
