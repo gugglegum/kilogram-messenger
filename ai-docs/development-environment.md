@@ -5451,3 +5451,29 @@ Hosted follow-up:
   automatic GitHub build was used. Whole-database rollback detection without
   an external witness is not claimed; active IPC remains v33/domain v14 and
   public sync default remains `legacy-only`.
+
+## M1.2.22 authenticated history-recovery transfer inbox environment (2026-10-20)
+
+- The existing `kilogram-peer-history-recovery-execution` crate now includes a
+  local/offline transfer module. It uses canonical postcard envelopes, existing
+  Device signatures, `StateDirectoryLock`, `StateTransaction`, the encrypted
+  vault dual-write lifecycle and `tempfile`; no Iroh, Tokio, HTTP, runtime IPC
+  or GUI dependency was added.
+- The portable envelope is capped at 9 MiB and carries the exact source-signed
+  execution record plus bundle, signed checkpoints and encrypted projections.
+  The recipient inbox stores exact content-addressed bytes under
+  `history-recovery/transfer-inbox` and caps the complete inventory at 16,384.
+- A linear three-generation backlog is allowed before import, but the existing
+  recipient-signed receipt chain still rejects out-of-order consumption. Path
+  aliases are canonicalized before allowing the inbox/import bridge to share a
+  state directory.
+- Windows tests were compiled without execution and launched through
+  `scripts/run-cargo-tests-stable.ps1` at the stable executable path. The four
+  transfer tests and all 14 combined execution/import/transfer tests passed.
+- Dedicated boundary verification rejects 10/10 mutations. Accepted-tag
+  readiness passes 148/148 with rustfmt and workspace-wide locked/offline
+  strict Clippy.
+- No product network operation, second host, release build, ZIP/archive, tag or
+  automatic GitHub build was used. Whole-database rollback detection without
+  an external witness is not claimed; active IPC remains v33/domain v14 and
+  public sync default remains `legacy-only`.

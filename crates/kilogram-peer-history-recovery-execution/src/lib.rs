@@ -38,11 +38,18 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 mod import;
+mod transfer;
 
 pub use import::{
     DurableRecipientHistoryImportReceipt, RecipientHistoryImportError,
     RecipientHistoryImportOutcome, RecipientHistoryImportStatus, RecipientHistoryImportStatusView,
     RecipientHistoryImportStore,
+};
+pub use transfer::{
+    DurableHistoryRecoveryTransfer, HistoryRecoveryTransferEnvelope, HistoryRecoveryTransferError,
+    MAX_HISTORY_RECOVERY_TRANSFER_ENVELOPE_BYTES, RecipientHistoryTransferInbox,
+    RecipientHistoryTransferInboxStatus, RecipientHistoryTransferInboxStatusView,
+    StageHistoryRecoveryTransferOutcome,
 };
 
 const DATABASE_FILE: &str = "old-history-recovery-execution-v1.redb";
@@ -334,6 +341,10 @@ impl DurableHistoryRecoveryChunk {
 
     pub fn generation(&self) -> u64 {
         self.record.content.generation
+    }
+
+    pub fn previous_record_id(&self) -> Option<[u8; 32]> {
+        self.record.content.previous_record_id
     }
 
     pub fn owner_account_id(&self) -> AccountId {
@@ -3328,6 +3339,452 @@ mod tests {
         *last ^= 1;
         std::fs::write(receipt_path, bytes)?;
         assert!(corrupt_imports.status(consent_record_id, 0).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn transfer_envelope_stages_replays_and_drives_atomic_import()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture(5, None)?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let execution_directory = fixture.root.path().join("transfer-import-execution");
+        let execution = fixture.open_execution("transfer-import-execution")?;
+        let committed = commit_next_for_import(
+            &fixture,
+            &execution,
+            &consent,
+            consent_record_id,
+            None,
+            2_000,
+        )?;
+        drop(execution);
+        let execution = OldHistoryRecoveryExecutionReadStore::open_existing(
+            execution_directory,
+            fixture.owner_account_id,
+            fixture.source.identity().device_id(),
+        )?;
+        let envelope = HistoryRecoveryTransferEnvelope::export_current(
+            &execution,
+            consent_record_id,
+            0,
+            committed.record_id(),
+            fixture.source.identity(),
+            2_100,
+        )?;
+        let encoded = envelope.encode()?;
+        assert!(encoded.len() <= MAX_HISTORY_RECOVERY_TRANSFER_ENVELOPE_BYTES);
+        assert_eq!(
+            HistoryRecoveryTransferEnvelope::decode_and_verify(&encoded)?,
+            envelope
+        );
+
+        let state = fixture.root.path().join("transferred-recipient-state");
+        std::fs::create_dir_all(&state)?;
+        kilogram_state::EncryptedStateVault::open_or_create(&state)?.migrate_legacy_snapshot()?;
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        assert_eq!(
+            inbox.status(consent_record_id, 0)?,
+            RecipientHistoryTransferInboxStatus::Absent
+        );
+        let staged = match inbox.stage_envelope_bytes(&encoded)? {
+            StageHistoryRecoveryTransferOutcome::Staged(value) => value,
+            StageHistoryRecoveryTransferOutcome::AlreadyStaged(_) => {
+                return Err("fresh transfer unexpectedly replayed".into());
+            }
+        };
+        assert_eq!(staged.execution_record_id(), committed.record_id());
+        assert_eq!(inbox.load_staged(staged.transfer_id())?, staged);
+        assert!(matches!(
+            inbox.stage_envelope(&envelope)?,
+            StageHistoryRecoveryTransferOutcome::AlreadyStaged(_)
+        ));
+        let RecipientHistoryTransferInboxStatus::Complete(status) =
+            inbox.status(consent_record_id, 0)?
+        else {
+            return Err("complete transfer inbox did not report complete".into());
+        };
+        assert_eq!(status.staged_chunk_count, 1);
+        assert_eq!(status.next_range_start, 5);
+        assert!(!status.contains_message_bodies);
+        assert!(!status.contains_plaintext);
+        assert!(!status.grants_network_authority);
+        assert!(!status.grants_import_authority);
+
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        assert!(matches!(
+            imports.import_staged_transfer(
+                &inbox,
+                staged.transfer_id(),
+                fixture.replacement.identity(),
+                &fixture.membership,
+                3_000,
+            )?,
+            RecipientHistoryImportOutcome::Imported(_)
+        ));
+        assert!(matches!(
+            imports.import_staged_transfer(
+                &inbox,
+                staged.transfer_id(),
+                fixture.replacement.identity(),
+                &fixture.membership,
+                9_999,
+            )?,
+            RecipientHistoryImportOutcome::AlreadyImported(_)
+        ));
+        kilogram_state::EncryptedStateVault::open_existing(&state)?.verify()?;
+        Ok(())
+    }
+
+    #[test]
+    fn transfer_inbox_requires_a_linear_generation_chain() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let fixture = fixture(5, Some(2))?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let execution_name = "transfer-chain-execution";
+
+        let execution = fixture.open_execution(execution_name)?;
+        let first = commit_next_for_import(
+            &fixture,
+            &execution,
+            &consent,
+            consent_record_id,
+            fixture.initial_checkpoint.as_ref(),
+            2_000,
+        )?;
+        drop(execution);
+        let read = OldHistoryRecoveryExecutionReadStore::open_existing(
+            fixture.root.path().join(execution_name),
+            fixture.owner_account_id,
+            fixture.source.identity().device_id(),
+        )?;
+        let first_envelope = HistoryRecoveryTransferEnvelope::export_current(
+            &read,
+            consent_record_id,
+            0,
+            first.record_id(),
+            fixture.source.identity(),
+            2_100,
+        )?;
+        drop(read);
+
+        let execution = fixture.open_execution(execution_name)?;
+        let second = commit_next_for_import(
+            &fixture,
+            &execution,
+            &consent,
+            consent_record_id,
+            Some(first.checkpoint_after()),
+            2_001,
+        )?;
+        drop(execution);
+        let read = OldHistoryRecoveryExecutionReadStore::open_existing(
+            fixture.root.path().join(execution_name),
+            fixture.owner_account_id,
+            fixture.source.identity().device_id(),
+        )?;
+        let second_envelope = HistoryRecoveryTransferEnvelope::export_current(
+            &read,
+            consent_record_id,
+            0,
+            second.record_id(),
+            fixture.source.identity(),
+            2_101,
+        )?;
+        drop(read);
+
+        let execution = fixture.open_execution(execution_name)?;
+        let third = commit_next_for_import(
+            &fixture,
+            &execution,
+            &consent,
+            consent_record_id,
+            Some(second.checkpoint_after()),
+            2_002,
+        )?;
+        drop(execution);
+        let read = OldHistoryRecoveryExecutionReadStore::open_existing(
+            fixture.root.path().join(execution_name),
+            fixture.owner_account_id,
+            fixture.source.identity().device_id(),
+        )?;
+        let third_envelope = HistoryRecoveryTransferEnvelope::export_current(
+            &read,
+            consent_record_id,
+            0,
+            third.record_id(),
+            fixture.source.identity(),
+            2_102,
+        )?;
+
+        let state = fixture.root.path().join("transfer-chain-state");
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        assert!(matches!(
+            inbox.stage_envelope(&second_envelope),
+            Err(HistoryRecoveryTransferError::MissingPreviousTransfer)
+        ));
+        let first_staged = match inbox.stage_envelope(&first_envelope)? {
+            StageHistoryRecoveryTransferOutcome::Staged(value) => value,
+            StageHistoryRecoveryTransferOutcome::AlreadyStaged(_) => {
+                return Err("fresh first transfer unexpectedly replayed".into());
+            }
+        };
+        let second_staged = match inbox.stage_envelope(&second_envelope)? {
+            StageHistoryRecoveryTransferOutcome::Staged(value) => value,
+            StageHistoryRecoveryTransferOutcome::AlreadyStaged(_) => {
+                return Err("fresh second transfer unexpectedly replayed".into());
+            }
+        };
+        assert!(matches!(
+            inbox.current_head_transfer_locked(first_staged.transfer_id()),
+            Err(HistoryRecoveryTransferError::StaleTransfer)
+        ));
+        assert_eq!(
+            inbox
+                .current_head_transfer_locked(second_staged.transfer_id())?
+                .execution_record_id(),
+            second.record_id()
+        );
+        assert!(matches!(
+            inbox.stage_envelope(&first_envelope)?,
+            StageHistoryRecoveryTransferOutcome::AlreadyStaged(_)
+        ));
+        let third_staged = match inbox.stage_envelope(&third_envelope)? {
+            StageHistoryRecoveryTransferOutcome::Staged(value) => value,
+            StageHistoryRecoveryTransferOutcome::AlreadyStaged(_) => {
+                return Err("fresh third transfer unexpectedly replayed".into());
+            }
+        };
+        let RecipientHistoryTransferInboxStatus::Complete(status) =
+            inbox.status(consent_record_id, 0)?
+        else {
+            return Err("three-page transfer chain did not report complete".into());
+        };
+        assert_eq!(status.staged_chunk_count, 3);
+        assert_eq!(status.next_range_start, 5);
+
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        assert!(matches!(
+            imports.import_staged_transfer(
+                &inbox,
+                second_staged.transfer_id(),
+                fixture.replacement.identity(),
+                &fixture.membership,
+                3_000,
+            ),
+            Err(RecipientHistoryImportError::MissingPreviousReceipt)
+        ));
+        for (index, transfer_id) in [
+            first_staged.transfer_id(),
+            second_staged.transfer_id(),
+            third_staged.transfer_id(),
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            assert!(matches!(
+                imports.import_staged_transfer(
+                    &inbox,
+                    transfer_id,
+                    fixture.replacement.identity(),
+                    &fixture.membership,
+                    3_100 + u64::try_from(index)?,
+                )?,
+                RecipientHistoryImportOutcome::Imported(_)
+            ));
+        }
+        let RecipientHistoryImportStatus::Complete(import_status) =
+            imports.status(consent_record_id, 0)?
+        else {
+            return Err("staged backlog import did not report complete".into());
+        };
+        assert_eq!(import_status.imported_chunk_count, 3);
+        assert_eq!(import_status.imported_event_count, 5);
+        Ok(())
+    }
+
+    #[test]
+    fn transfer_inbox_rejects_tamper_foreign_recipient_and_corruption()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture(3, None)?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let execution_directory = fixture.root.path().join("transfer-tamper-execution");
+        let execution = fixture.open_execution("transfer-tamper-execution")?;
+        let committed = commit_next_for_import(
+            &fixture,
+            &execution,
+            &consent,
+            consent_record_id,
+            None,
+            2_000,
+        )?;
+        drop(execution);
+        let read = OldHistoryRecoveryExecutionReadStore::open_existing(
+            execution_directory,
+            fixture.owner_account_id,
+            fixture.source.identity().device_id(),
+        )?;
+        let envelope = HistoryRecoveryTransferEnvelope::export_current(
+            &read,
+            consent_record_id,
+            0,
+            committed.record_id(),
+            fixture.source.identity(),
+            2_100,
+        )?;
+        let encoded = envelope.encode()?;
+        let mut tampered = encoded.clone();
+        let last = tampered.last_mut().ok_or("empty transfer envelope")?;
+        *last ^= 1;
+        assert!(HistoryRecoveryTransferEnvelope::decode_and_verify(&tampered).is_err());
+        assert!(matches!(
+            HistoryRecoveryTransferEnvelope::decode_and_verify(&vec![
+                0_u8;
+                MAX_HISTORY_RECOVERY_TRANSFER_ENVELOPE_BYTES
+                    + 1
+            ]),
+            Err(HistoryRecoveryTransferError::EnvelopeLength(_))
+        ));
+
+        let foreign = DeviceIdentity::generate()?;
+        let foreign_inbox = RecipientHistoryTransferInbox::new(
+            fixture.root.path().join("foreign-transfer-state"),
+            fixture.owner_account_id,
+            foreign.device_id(),
+        );
+        assert!(matches!(
+            foreign_inbox.stage_envelope_bytes(&encoded),
+            Err(HistoryRecoveryTransferError::WrongRecipientDevice)
+        ));
+
+        let state = fixture.root.path().join("corrupt-transfer-state");
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let staged = match inbox.stage_envelope_bytes(&encoded)? {
+            StageHistoryRecoveryTransferOutcome::Staged(value) => value,
+            StageHistoryRecoveryTransferOutcome::AlreadyStaged(_) => {
+                return Err("fresh transfer unexpectedly replayed".into());
+            }
+        };
+        let path = state
+            .join("history-recovery")
+            .join("transfer-inbox")
+            .join(format!(
+                "{}.history-transfer",
+                staged
+                    .transfer_id()
+                    .iter()
+                    .map(|byte| format!("{byte:02x}"))
+                    .collect::<String>()
+            ));
+        let mut stored = std::fs::read(&path)?;
+        let first = stored.first_mut().ok_or("empty staged transfer")?;
+        *first ^= 1;
+        std::fs::write(path, stored)?;
+        assert!(inbox.status(consent_record_id, 0).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn transfer_inbox_rollback_and_crash_recovery_are_fail_closed()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture(2, None)?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let execution_directory = fixture.root.path().join("transfer-fault-execution");
+        let execution = fixture.open_execution("transfer-fault-execution")?;
+        let committed = commit_next_for_import(
+            &fixture,
+            &execution,
+            &consent,
+            consent_record_id,
+            None,
+            2_000,
+        )?;
+        drop(execution);
+        let read = OldHistoryRecoveryExecutionReadStore::open_existing(
+            execution_directory,
+            fixture.owner_account_id,
+            fixture.source.identity().device_id(),
+        )?;
+        let encoded = HistoryRecoveryTransferEnvelope::export_current(
+            &read,
+            consent_record_id,
+            0,
+            committed.record_id(),
+            fixture.source.identity(),
+            2_100,
+        )?
+        .encode()?;
+
+        let rollback_state = fixture.root.path().join("transfer-rollback-state");
+        let rollback_inbox = RecipientHistoryTransferInbox::new(
+            &rollback_state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        assert!(matches!(
+            rollback_inbox.stage_envelope_bytes_with_fault(
+                &encoded,
+                crate::transfer::TransferInboxFault::AfterEnvelope,
+            ),
+            Err(HistoryRecoveryTransferError::InjectedFailure(
+                "after-envelope"
+            ))
+        ));
+        assert_eq!(
+            rollback_inbox.status(consent_record_id, 0)?,
+            RecipientHistoryTransferInboxStatus::Absent
+        );
+
+        let crash_state = fixture.root.path().join("transfer-crash-state");
+        let crash_inbox = RecipientHistoryTransferInbox::new(
+            &crash_state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        assert!(matches!(
+            crash_inbox.stage_envelope_bytes_with_fault(
+                &encoded,
+                crate::transfer::TransferInboxFault::CrashAfterEnvelope,
+            ),
+            Err(HistoryRecoveryTransferError::InjectedFailure(
+                "crash-after-envelope"
+            ))
+        ));
+        assert!(matches!(
+            crash_inbox.status(consent_record_id, 0),
+            Err(HistoryRecoveryTransferError::StateTransactionInProgress(_))
+        ));
+        assert!(matches!(
+            crash_inbox.stage_envelope_bytes(&encoded)?,
+            StageHistoryRecoveryTransferOutcome::Staged(_)
+        ));
+        assert!(matches!(
+            crash_inbox.status(consent_record_id, 0)?,
+            RecipientHistoryTransferInboxStatus::Complete(_)
+        ));
         Ok(())
     }
 }

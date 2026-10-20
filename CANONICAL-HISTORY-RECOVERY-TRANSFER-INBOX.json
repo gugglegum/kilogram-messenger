@@ -1,0 +1,109 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.22",
+  "status": "authenticated-history-recovery-transfer-inbox-verified",
+  "contract_source": "M1.2.21",
+  "implementation": [
+    "crates/kilogram-peer-history-recovery-execution/src/transfer.rs",
+    "crates/kilogram-peer-history-recovery-execution/src/import.rs"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_active_runtime_ipc": false,
+  "changes_desktop_runtime_authority": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "envelope": {
+    "version": 1,
+    "encoding": "canonical-postcard",
+    "max_bytes": 9437184,
+    "source_device_signed": true,
+    "content_addressed_transfer_id": true,
+    "exact_committed_execution_record_bound": true,
+    "owner_account_bound": true,
+    "source_device_bound": true,
+    "recipient_device_bound": true,
+    "consent_selection_bound": true,
+    "generation_and_predecessor_bound": true,
+    "conversation_and_range_bound": true,
+    "bundle_and_checkpoints_bound": true,
+    "encrypted_projections_bound": true,
+    "message_bodies_in_plaintext": false,
+    "network_transport_added": false
+  },
+  "export_gate": {
+    "requires_exact_current_committed_head": true,
+    "requires_matching_source_device_secret": true,
+    "reverifies_inner_execution_artifacts": true,
+    "stale_execution_record_rejected": true
+  },
+  "recipient_inbox": {
+    "directory": "history-recovery/transfer-inbox",
+    "max_envelopes": 16384,
+    "append_only": true,
+    "state_directory_lock_used": true,
+    "state_transaction_used": true,
+    "vault_primary_dual_write_used_when_present": true,
+    "generation_zero_required_first": true,
+    "linear_generation_chain_required": true,
+    "gaps_forks_and_stale_candidates_rejected": true,
+    "exact_byte_replay_idempotent": true,
+    "bounded_backlog_before_import_supported": true,
+    "foreign_account_or_recipient_rejected": true,
+    "symlink_unexpected_entry_and_corruption_rejected": true
+  },
+  "import_bridge": {
+    "requires_exact_staged_transfer": true,
+    "requires_same_canonical_state_directory": true,
+    "requires_current_recipient_device": true,
+    "requires_exact_conversation_membership": true,
+    "requires_recipient_signed_receipt_predecessor": true,
+    "out_of_order_import_rejected": true,
+    "exact_already_imported_replay_allowed": true,
+    "inbox_itself_grants_import_authority": false
+  },
+  "restart_and_observation": {
+    "partial_failure_rolls_back": true,
+    "active_transaction_marker_blocks_status": true,
+    "crashed_transaction_recovered_before_retry": true,
+    "read_only_status_no_create": true,
+    "opaque_selection_token": true,
+    "bounded_progress_visible": true,
+    "message_bodies_visible": false,
+    "plaintext_visible": false,
+    "raw_identity_visible": false,
+    "filesystem_paths_visible": false,
+    "network_coordinates_visible": false,
+    "network_authority_granted": false,
+    "import_authority_granted": false,
+    "whole_database_rollback_detected_without_external_witness": false
+  },
+  "verification": {
+    "focused_transfer_tests": 4,
+    "combined_execution_import_transfer_tests": 14,
+    "stable_path_rust_harness_required_on_windows": true,
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "148/148",
+    "second_host_required": false,
+    "product_network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "non_claims": [
+    "whole-database-rollback-detection-without-external-witness",
+    "network-history-transfer-session",
+    "network-resume-and-retry",
+    "multi-source-recovery-scheduling",
+    "runtime-ipc-history-recovery-authority",
+    "desktop-history-recovery-authority",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "authenticated-iroh-history-transfer-session",
+    "restart-safe-network-resume",
+    "multi-source-recovery-scheduling"
+  ]
+}

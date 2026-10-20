@@ -1,30 +1,30 @@
-# Текущая точка: M1.2.21 завершён, следующий M1.2.22
+# Текущая точка: M1.2.22 завершён, следующий M1.2.23
 
-Статус на 2026-10-20: exact committed M1.2.20 chunk теперь атомарно
-публикуется в настоящие recipient event/encrypted-projection stores вместе с
-обоими checkpoints и current-recipient-Device-signed receipt. Первый import
-требует current execution head; exact already-imported replay только проверяет
-durable bytes. Conflict, stale unimported record, partial crash, symlink и
-corruption fail closed. Stable regression прошёл 10/10, boundary отклонил
-10/10 ослаблений, accepted-tag readiness — 147/147. Plaintext не сохраняется;
-IPC остаётся v33/domain v14, public default — `legacy-only`.
+Статус на 2026-10-20: exact committed M1.2.21 input переносится отдельным
+bounded canonical source-Device-signed envelope. Recipient inbox полностью
+проверяет envelope и внутренние execution artifacts, атомарно append-ит exact
+bytes и допускает bounded linear backlog. Generation gap/fork/stale candidate,
+foreign recipient, tamper, corruption и partial crash fail closed. Импорт по-
+прежнему разрешает только recipient-signed receipt chain в порядке поколений.
+Stable regression прошёл 14/14, boundary отклонил 10/10 ослаблений,
+accepted-tag readiness — 148/148. Plaintext не сохраняется; IPC остаётся
+v33/domain v14, public default — `legacy-only`.
 
-## Следующий этап: M1.2.22 authenticated recovery-chunk transfer envelope
+## Следующий этап: M1.2.23 authenticated Iroh history-transfer session
 
-- отделить source execution journal от recipient state directory: создать
-  bounded canonical transfer envelope для exact committed M1.2.21 input;
-- envelope должен быть source Device-signed и exact-связан с consent selection,
-  execution record, bundle, checkpoints, ranges и recipient Device;
-- recipient inbox сначала полностью проверяет и атомарно сохраняет opaque
-  envelope, а затем передаёт его существующему M1.2.21 importer без права
-  самостоятельно менять consent, execution head или membership;
-- exact replay сделать idempotent, substitution/truncation/foreign recipient,
-  stale/forked generation и conflicting inbox file отклонять fail closed;
-- сначала доказать portable offline/file transfer boundary. Реальный Iroh
-  session, retry/scheduling, active IPC и desktop controls оставить следующим
-  этапом, чтобы не смешивать wire parsing с network authority;
-- public default, active wire/IPC, release/ZIP/tag и automatic GitHub build не
-  менять.
+- добавить отдельный bounded transport adapter и ALPN для передачи уже
+  проверенного M1.2.22 envelope между source и exact recipient endpoint;
+- wire должен переносить только length-delimited canonical envelope и
+  минимальный signed receipt/result, без чтения execution journal на стороне
+  responder и без обхода recipient inbox;
+- endpoint authentication, envelope source Device и exact recipient Device
+  должны независимо совпасть с явным session context; substitution, truncation,
+  extra frames, oversized payload и disconnect до durable stage fail closed;
+- сначала доказать deterministic loopback/direct session через стабильный EXE.
+  Background retry, multi-source scheduling, active runtime IPC и desktop UI
+  оставить последующим этапом;
+- public default, существующие sync/ticket wires, release/ZIP/tag и automatic
+  GitHub build не менять.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

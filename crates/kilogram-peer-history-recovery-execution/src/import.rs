@@ -22,9 +22,9 @@ use tempfile::NamedTempFile;
 use thiserror::Error;
 
 use crate::{
-    DurableHistoryRecoveryChunk, HistoryRecoveryExecutionError,
+    DurableHistoryRecoveryChunk, HistoryRecoveryExecutionError, HistoryRecoveryTransferError,
     MAX_DURABLE_HISTORY_RECOVERY_EXECUTION_CHUNKS, MAX_HISTORY_RECOVERY_EXECUTION_CHUNK_EVENTS,
-    OldHistoryRecoveryExecutionReadStore,
+    OldHistoryRecoveryExecutionReadStore, RecipientHistoryTransferInbox,
 };
 
 const IMPORT_RECEIPT_VERSION: u8 = 1;
@@ -267,11 +267,13 @@ impl RecipientHistoryImportStore {
         membership: &ConversationMembershipSnapshot,
         committed_at_unix_seconds: u64,
     ) -> Result<RecipientHistoryImportOutcome, RecipientHistoryImportError> {
-        self.import_committed_chunk_inner(
-            execution,
-            consent_record_id,
-            selection_index,
-            execution_record_id,
+        self.import_chunk_inner(
+            ImportChunkSource::Execution {
+                execution,
+                consent_record_id,
+                selection_index,
+                execution_record_id,
+            },
             recipient,
             membership,
             committed_at_unix_seconds,
@@ -279,13 +281,29 @@ impl RecipientHistoryImportStore {
         )
     }
 
-    #[allow(clippy::too_many_arguments)]
-    fn import_committed_chunk_inner(
+    pub fn import_staged_transfer(
         &self,
-        execution: &OldHistoryRecoveryExecutionReadStore,
-        consent_record_id: [u8; 32],
-        selection_index: usize,
-        execution_record_id: [u8; 32],
+        inbox: &RecipientHistoryTransferInbox,
+        transfer_id: [u8; 32],
+        recipient: &DeviceIdentity,
+        membership: &ConversationMembershipSnapshot,
+        committed_at_unix_seconds: u64,
+    ) -> Result<RecipientHistoryImportOutcome, RecipientHistoryImportError> {
+        if !same_state_directory(&self.state_directory, inbox.state_directory())? {
+            return Err(RecipientHistoryImportError::TransferInboxMismatch);
+        }
+        self.import_chunk_inner(
+            ImportChunkSource::Transfer { inbox, transfer_id },
+            recipient,
+            membership,
+            committed_at_unix_seconds,
+            ImportFault::None,
+        )
+    }
+
+    fn import_chunk_inner(
+        &self,
+        source: ImportChunkSource<'_>,
         recipient: &DeviceIdentity,
         membership: &ConversationMembershipSnapshot,
         committed_at_unix_seconds: u64,
@@ -294,8 +312,6 @@ impl RecipientHistoryImportStore {
         if recipient.device_id() != self.owner_device_id {
             return Err(RecipientHistoryImportError::WrongRecipientDevice);
         }
-        let selection_index_u16 = u16::try_from(selection_index)
-            .map_err(|_| RecipientHistoryImportError::SelectionMissing(selection_index))?;
         let _lock = StateDirectoryLock::acquire(&self.state_directory)?;
         let vault = recover_vault_before_import(&self.state_directory)?;
         let receipts = load_and_verify_receipts(
@@ -303,7 +319,12 @@ impl RecipientHistoryImportStore {
             self.owner_account_id,
             self.owner_device_id,
         )?;
-        let chunk = execution.committed_chunk(execution_record_id)?;
+        let chunk = source.load_candidate()?;
+        let consent_record_id = source.consent_record_id(&chunk);
+        let selection_index = source.selection_index(&chunk);
+        let execution_record_id = chunk.record_id();
+        let selection_index_u16 = u16::try_from(selection_index)
+            .map_err(|_| RecipientHistoryImportError::SelectionMissing(selection_index))?;
         let artifacts = validate_chunk_context(
             &chunk,
             self.owner_account_id,
@@ -330,11 +351,11 @@ impl RecipientHistoryImportStore {
             ));
         }
 
-        let chunk = execution.committed_head_chunk(
-            consent_record_id,
-            selection_index,
-            execution_record_id,
-        )?;
+        let validated_chunk = source.load_import_candidate(&chunk)?;
+        if validated_chunk != chunk {
+            return Err(RecipientHistoryImportError::StagedTransferMismatch);
+        }
+        let chunk = validated_chunk;
         let previous =
             expected_previous_receipt(&receipts, consent_record_id, selection_index_u16, &chunk)?;
         let receipt = build_receipt(
@@ -442,16 +463,106 @@ impl RecipientHistoryImportStore {
         committed_at_unix_seconds: u64,
         fault: ImportFault,
     ) -> Result<RecipientHistoryImportOutcome, RecipientHistoryImportError> {
-        self.import_committed_chunk_inner(
-            execution,
-            consent_record_id,
-            selection_index,
-            execution_record_id,
+        self.import_chunk_inner(
+            ImportChunkSource::Execution {
+                execution,
+                consent_record_id,
+                selection_index,
+                execution_record_id,
+            },
             recipient,
             membership,
             committed_at_unix_seconds,
             fault,
         )
+    }
+}
+
+fn same_state_directory(left: &Path, right: &Path) -> Result<bool, RecipientHistoryImportError> {
+    if left == right {
+        return Ok(true);
+    }
+    let canonical_left =
+        fs::canonicalize(left).map_err(|source| RecipientHistoryImportError::Io {
+            path: left.to_path_buf(),
+            source,
+        })?;
+    let canonical_right =
+        fs::canonicalize(right).map_err(|source| RecipientHistoryImportError::Io {
+            path: right.to_path_buf(),
+            source,
+        })?;
+    Ok(canonical_left == canonical_right)
+}
+
+enum ImportChunkSource<'a> {
+    Execution {
+        execution: &'a OldHistoryRecoveryExecutionReadStore,
+        consent_record_id: [u8; 32],
+        selection_index: usize,
+        execution_record_id: [u8; 32],
+    },
+    Transfer {
+        inbox: &'a RecipientHistoryTransferInbox,
+        transfer_id: [u8; 32],
+    },
+}
+
+impl ImportChunkSource<'_> {
+    fn load_candidate(&self) -> Result<DurableHistoryRecoveryChunk, RecipientHistoryImportError> {
+        match self {
+            Self::Execution {
+                execution,
+                execution_record_id,
+                ..
+            } => Ok(execution.committed_chunk(*execution_record_id)?),
+            Self::Transfer { inbox, transfer_id } => {
+                Ok(inbox.load_staged_locked(*transfer_id)?.chunk().clone())
+            }
+        }
+    }
+
+    fn load_import_candidate(
+        &self,
+        candidate: &DurableHistoryRecoveryChunk,
+    ) -> Result<DurableHistoryRecoveryChunk, RecipientHistoryImportError> {
+        match self {
+            Self::Execution {
+                execution,
+                consent_record_id,
+                selection_index,
+                execution_record_id,
+            } => Ok(execution.committed_head_chunk(
+                *consent_record_id,
+                *selection_index,
+                *execution_record_id,
+            )?),
+            Self::Transfer { inbox, transfer_id } => {
+                let current = inbox.load_staged_locked(*transfer_id)?;
+                if current.execution_record_id() != candidate.record_id() {
+                    return Err(RecipientHistoryImportError::StagedTransferMismatch);
+                }
+                Ok(current.chunk().clone())
+            }
+        }
+    }
+
+    fn consent_record_id(&self, chunk: &DurableHistoryRecoveryChunk) -> [u8; 32] {
+        match self {
+            Self::Execution {
+                consent_record_id, ..
+            } => *consent_record_id,
+            Self::Transfer { .. } => chunk.consent_record_id(),
+        }
+    }
+
+    fn selection_index(&self, chunk: &DurableHistoryRecoveryChunk) -> usize {
+        match self {
+            Self::Execution {
+                selection_index, ..
+            } => *selection_index,
+            Self::Transfer { .. } => chunk.selection_index(),
+        }
     }
 }
 
@@ -575,8 +686,9 @@ fn expected_previous_receipt(
                 .into_iter()
                 .find(|receipt| receipt.generation() == generation - 1)
                 .ok_or(RecipientHistoryImportError::MissingPreviousReceipt)?;
-            if previous.receipt.content.checkpoint_after_id
-                != chunk.checkpoint_before().checkpoint_id()?
+            if chunk.previous_record_id() != Some(previous.execution_record_id())
+                || previous.receipt.content.checkpoint_after_id
+                    != chunk.checkpoint_before().checkpoint_id()?
                 || previous.receipt.content.range_end != chunk.range_start()
             {
                 return Err(RecipientHistoryImportError::BrokenReceiptChain);
@@ -1155,12 +1267,18 @@ pub enum RecipientHistoryImportError {
     Symlink(PathBuf),
     #[error("recipient history import status refuses an active or crashed state transaction: {0}")]
     StateTransactionInProgress(PathBuf),
+    #[error("recipient history import and transfer inbox do not share one state directory")]
+    TransferInboxMismatch,
+    #[error("recipient history transfer changed while its staged candidate was validated")]
+    StagedTransferMismatch,
     #[error("recipient history import rollback failed after '{operation}': {rollback}")]
     RollbackFailure { operation: String, rollback: String },
     #[error("test-only recipient history import failure injected at {0}")]
     InjectedFailure(&'static str),
     #[error(transparent)]
     Execution(#[from] HistoryRecoveryExecutionError),
+    #[error(transparent)]
+    Transfer(#[from] HistoryRecoveryTransferError),
     #[error(transparent)]
     State(#[from] StateError),
     #[error(transparent)]

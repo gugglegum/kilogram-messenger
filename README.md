@@ -2656,6 +2656,13 @@ linear receipt chain, state transaction and vault-primary dual write make
 restart and exact replay fail closed without granting network, IPC or desktop
 authority; public default remains `legacy-only`.
 
+[`RFC-0246`](docs/RFC-0246-m1222-authenticated-history-recovery-transfer-inbox.md)
+separates the source execution journal from recipient state with a bounded
+canonical source-Device-signed envelope. The recipient inbox atomically stages
+exact encrypted artifacts and a linear backlog, while the recipient-signed
+import receipt chain still controls consumption order; no network, IPC or
+desktop authority is added.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

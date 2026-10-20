@@ -7877,3 +7877,28 @@ correlation visible, Windows-only field evidence, independent security audit
 - plaintext не сохраняется. Network transfer, multi-source scheduler, active
   IPC, desktop controls, second host, release/ZIP/tag и automatic GitHub build
   не использовались; public default остаётся `legacy-only`.
+
+### M1.2.22 — authenticated history-recovery transfer inbox: принят локально
+
+- source экспортирует только exact current committed execution head в
+  canonical postcard envelope до 9 MiB; отдельная source Device signature
+  связывает все внутренние artifacts и полный Account/source/recipient,
+  consent-selection, generation/predecessor, conversation/range context;
+- recipient сначала повторно проверяет source-signed execution record,
+  authenticated rewrap bundle, оба signed checkpoints и encrypted projections,
+  затем append-ит exact bytes под state-directory lock и `StateTransaction`;
+- inbox требует generation zero и линейное продолжение без gaps/forks/stale
+  alternatives, но может заранее принять bounded backlog. Exact byte replay
+  идемпотентен; foreign recipient, tamper, corruption, symlink и unexpected
+  entries отклоняются;
+- import bridge требует тот же canonical state directory и exact staged
+  transfer. Backlog импортируется строго по recipient-Device-signed receipt
+  chain; попытка начать со второго чанка получает `MissingPreviousReceipt`;
+- stable-path transfer regression прошёл 4/4, полный execution/import/transfer
+  harness — 14/14; dedicated boundary отклонил 10/10 mutations, accepted-tag
+  readiness прошёл 148/148 с rustfmt и workspace-wide locked/offline strict
+  Clippy;
+- envelope содержит ciphertext, а не plaintext. Network session, retry,
+  multi-source scheduler, active IPC, desktop controls, second host,
+  release/ZIP/tag и automatic GitHub build не использовались; public default
+  остаётся `legacy-only`.
