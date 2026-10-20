@@ -331,6 +331,33 @@ impl RecipientHistoryTransferInbox {
         }))
     }
 
+    pub(crate) fn coordinator_transfer_at(
+        &self,
+        consent_record_id: [u8; 32],
+        selection_index: usize,
+        ordinal: u64,
+    ) -> Result<DurableHistoryRecoveryTransfer, HistoryRecoveryTransferError> {
+        let selection_index = u16::try_from(selection_index)
+            .map_err(|_| HistoryRecoveryTransferError::SelectionMissing(selection_index))?;
+        ensure_no_active_state_transaction(&self.state_directory)?;
+        let mut matching = self
+            .load_and_verify_all()?
+            .into_iter()
+            .filter(|transfer| {
+                transfer.envelope.content.consent_record_id == consent_record_id
+                    && transfer.envelope.content.selection_index == selection_index
+            })
+            .collect::<Vec<_>>();
+        ensure_no_active_state_transaction(&self.state_directory)?;
+        matching.sort_by_key(DurableHistoryRecoveryTransfer::execution_generation);
+        let ordinal =
+            usize::try_from(ordinal).map_err(|_| HistoryRecoveryTransferError::InboxCapacity)?;
+        matching
+            .get(ordinal)
+            .cloned()
+            .ok_or(HistoryRecoveryTransferError::TransferMissing)
+    }
+
     pub fn stage_envelope(
         &self,
         envelope: &HistoryRecoveryTransferEnvelope,

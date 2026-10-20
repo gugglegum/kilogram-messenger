@@ -191,6 +191,19 @@ pub(crate) struct RecipientHistoryImportCoordinatorHead {
     pub complete: bool,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct RecipientHistoryImportPlanningCandidate {
+    pub execution_record_id: [u8; 32],
+    pub source_device_id: DeviceId,
+    pub recipient_device_id: DeviceId,
+    pub consent_record_id: [u8; 32],
+    pub selection_index: usize,
+    pub range_start: u64,
+    pub range_end: u64,
+    pub approved_range_end: u64,
+    pub event_count: usize,
+}
+
 pub struct RecipientHistoryImportStore {
     state_directory: PathBuf,
     owner_account_id: AccountId,
@@ -290,6 +303,59 @@ impl RecipientHistoryImportStore {
         }))
     }
 
+    pub(crate) fn plan_staged_transfer(
+        &self,
+        inbox: &RecipientHistoryTransferInbox,
+        transfer_id: [u8; 32],
+        membership: &ConversationMembershipSnapshot,
+    ) -> Result<RecipientHistoryImportPlanningCandidate, RecipientHistoryImportError> {
+        if !same_state_directory(&self.state_directory, inbox.state_directory())? {
+            return Err(RecipientHistoryImportError::TransferInboxMismatch);
+        }
+        ensure_no_active_state_transaction(&self.state_directory)?;
+        let receipts = load_and_verify_receipts(
+            &self.state_directory,
+            self.owner_account_id,
+            self.owner_device_id,
+        )?;
+        let transfer = inbox.load_staged(transfer_id)?;
+        let chunk = transfer.chunk();
+        let artifacts = validate_chunk_context(
+            chunk,
+            self.owner_account_id,
+            self.owner_device_id,
+            chunk.consent_record_id(),
+            chunk.selection_index(),
+            membership,
+        )?;
+        if receipts
+            .iter()
+            .any(|receipt| receipt.execution_record_id() == chunk.record_id())
+        {
+            return Err(RecipientHistoryImportError::ImportHeadMismatch);
+        }
+        let selection_index = u16::try_from(chunk.selection_index())
+            .map_err(|_| RecipientHistoryImportError::SelectionMissing(chunk.selection_index()))?;
+        let _ = expected_previous_receipt(
+            &receipts,
+            chunk.consent_record_id(),
+            selection_index,
+            chunk,
+        )?;
+        ensure_no_active_state_transaction(&self.state_directory)?;
+        Ok(RecipientHistoryImportPlanningCandidate {
+            execution_record_id: chunk.record_id(),
+            source_device_id: chunk.source_device_id(),
+            recipient_device_id: chunk.recipient_device_id(),
+            consent_record_id: chunk.consent_record_id(),
+            selection_index: chunk.selection_index(),
+            range_start: chunk.range_start(),
+            range_end: chunk.range_end(),
+            approved_range_end: chunk.approved_range_end(),
+            event_count: artifacts.events.len(),
+        })
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub fn import_committed_chunk(
         &self,
@@ -335,6 +401,26 @@ impl RecipientHistoryImportStore {
         )
     }
 
+    pub(crate) fn import_staged_transfer_with_state_lock(
+        &self,
+        inbox: &RecipientHistoryTransferInbox,
+        transfer_id: [u8; 32],
+        recipient: &DeviceIdentity,
+        membership: &ConversationMembershipSnapshot,
+        committed_at_unix_seconds: u64,
+    ) -> Result<RecipientHistoryImportOutcome, RecipientHistoryImportError> {
+        if !same_state_directory(&self.state_directory, inbox.state_directory())? {
+            return Err(RecipientHistoryImportError::TransferInboxMismatch);
+        }
+        self.import_chunk_locked(
+            ImportChunkSource::Transfer { inbox, transfer_id },
+            recipient,
+            membership,
+            committed_at_unix_seconds,
+            ImportFault::None,
+        )
+    }
+
     fn import_chunk_inner(
         &self,
         source: ImportChunkSource<'_>,
@@ -347,6 +433,26 @@ impl RecipientHistoryImportStore {
             return Err(RecipientHistoryImportError::WrongRecipientDevice);
         }
         let _lock = StateDirectoryLock::acquire(&self.state_directory)?;
+        self.import_chunk_locked(
+            source,
+            recipient,
+            membership,
+            committed_at_unix_seconds,
+            fault,
+        )
+    }
+
+    fn import_chunk_locked(
+        &self,
+        source: ImportChunkSource<'_>,
+        recipient: &DeviceIdentity,
+        membership: &ConversationMembershipSnapshot,
+        committed_at_unix_seconds: u64,
+        fault: ImportFault,
+    ) -> Result<RecipientHistoryImportOutcome, RecipientHistoryImportError> {
+        if recipient.device_id() != self.owner_device_id {
+            return Err(RecipientHistoryImportError::WrongRecipientDevice);
+        }
         let vault = recover_vault_before_import(&self.state_directory)?;
         let receipts = load_and_verify_receipts(
             &self.state_directory,

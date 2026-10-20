@@ -8038,3 +8038,25 @@ correlation visible, Windows-only field evidence, independent security audit
 - coordinator не вызывает transfer/import operations и не подключён к active
   runtime/CLI/desktop. Product network/relay, second host, release/ZIP/tag и
   automatic GitHub build отсутствуют; default `legacy-only`.
+
+### M1.2.29 — explicit recipient recovery import plan/apply: принят локально
+
+- read-only planner принимает explicit source ordinal только из exact
+  durably-applied M1.2.28 coordinator plan и не создаёт state;
+- для backlog выбирается `transfer ordinal == imported chunk count`, а не
+  newest staged transfer. Так generation нельзя пропустить;
+- plan связывает coordinator/source, selected transfer/execution record,
+  current inbox head, expected import receipt head и digest/revision verified
+  membership; changed coordinator/head/membership fail closed;
+- explicit apply импортирует ровно один transfer существующим M1.2.21 atomic
+  pipeline. Coordinator и inbox повторно проверяются под тем же state lock,
+  затем после durable receipt строится и применяется fresh coordinator plan;
+- окно после import commit и до coordinator refresh честно возобновляется:
+  тот же plan проверяет exact imported artifacts, получает `AlreadyImported`
+  и завершает refresh без дубликата;
+- focused stable-path regression прошёл 4/4, полный execution crate — 22/22;
+  boundary отклонил 10/10 mutations, accepted-tag readiness прошёл 155/155 с
+  rustfmt и workspace-wide locked/offline strict Clippy;
+- batch/background/network/runtime/IPC/desktop authority, product network,
+  second host, release/ZIP/tag и automatic GitHub build отсутствуют; default
+  `legacy-only`.

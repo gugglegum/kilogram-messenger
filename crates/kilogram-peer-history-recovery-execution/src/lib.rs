@@ -39,6 +39,7 @@ use thiserror::Error;
 
 mod coordinator;
 mod import;
+mod recipient_import;
 mod transfer;
 
 pub use coordinator::{
@@ -54,6 +55,12 @@ pub use import::{
     DurableRecipientHistoryImportReceipt, RecipientHistoryImportError,
     RecipientHistoryImportOutcome, RecipientHistoryImportStatus, RecipientHistoryImportStatusView,
     RecipientHistoryImportStore,
+};
+
+pub use recipient_import::{
+    ApplyRecipientRecoveryImportOutcome, RecipientHistoryRecoveryImporter,
+    RecipientRecoveryCoordinatorRefreshDisposition, RecipientRecoveryImportApplyReceipt,
+    RecipientRecoveryImportPlan, RecipientRecoveryImportPlanError,
 };
 pub use transfer::{
     DurableHistoryRecoveryTransfer, HistoryRecoveryTransferEnvelope, HistoryRecoveryTransferError,
@@ -2955,6 +2962,44 @@ mod tests {
         }
     }
 
+    fn build_transfer_backlog(
+        fixture: &Fixture,
+        consent: &OldHistoryRecoveryConsentStore,
+        consent_record_id: [u8; 32],
+        execution_name: &str,
+        count: usize,
+    ) -> Result<Vec<HistoryRecoveryTransferEnvelope>, Box<dyn std::error::Error>> {
+        let mut checkpoint = fixture.initial_checkpoint.clone();
+        let mut envelopes = Vec::with_capacity(count);
+        for index in 0..count {
+            let execution = fixture.open_execution(execution_name)?;
+            let committed = commit_next_for_import(
+                fixture,
+                &execution,
+                consent,
+                consent_record_id,
+                checkpoint.as_ref(),
+                2_000 + u64::try_from(index)?,
+            )?;
+            checkpoint = Some(committed.checkpoint_after().clone());
+            drop(execution);
+            let read = OldHistoryRecoveryExecutionReadStore::open_existing(
+                fixture.root.path().join(execution_name),
+                fixture.owner_account_id,
+                fixture.source.identity().device_id(),
+            )?;
+            envelopes.push(HistoryRecoveryTransferEnvelope::export_current(
+                &read,
+                consent_record_id,
+                0,
+                committed.record_id(),
+                fixture.source.identity(),
+                2_100 + u64::try_from(index)?,
+            )?);
+        }
+        Ok(envelopes)
+    }
+
     #[test]
     fn recipient_import_atomically_publishes_events_projections_checkpoint_and_vault()
     -> Result<(), Box<dyn std::error::Error>> {
@@ -3808,6 +3853,32 @@ mod tests {
         Ok(ApprovedRecipientHistoryRecoverySource::from_durable_consent(&durable, 0)?)
     }
 
+    fn initialize_recipient_coordinator(
+        fixture: &Fixture,
+        state: &Path,
+        approved: &ApprovedRecipientHistoryRecoverySource,
+        inbox: &RecipientHistoryTransferInbox,
+        imports: &RecipientHistoryImportStore,
+    ) -> Result<RecipientRecoveryCoordinationPlan, Box<dyn std::error::Error>> {
+        let initial = RecipientHistoryRecoveryCoordinator::plan(
+            state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            std::slice::from_ref(approved),
+            inbox,
+            imports,
+        )?;
+        RecipientHistoryRecoveryCoordinator::apply(&initial, inbox, imports)?;
+        Ok(RecipientHistoryRecoveryCoordinator::plan(
+            state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            std::slice::from_ref(approved),
+            inbox,
+            imports,
+        )?)
+    }
+
     #[test]
     fn recipient_coordinator_plan_is_read_only_and_apply_replays_exactly()
     -> Result<(), Box<dyn std::error::Error>> {
@@ -4118,6 +4189,343 @@ mod tests {
             Err(RecipientRecoveryCoordinatorError::DuplicateSourceDevice)
         ));
         assert!(!state.exists());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_plan_consumes_backlog_in_exact_generation_order()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture(5, Some(2))?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let approved = approved_recipient_source(&fixture, &consent)?;
+        let envelopes = build_transfer_backlog(
+            &fixture,
+            &consent,
+            consent_record_id,
+            "recipient-import-plan-backlog-execution",
+            3,
+        )?;
+        let state = fixture.root.path().join("recipient-import-plan-backlog");
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        for envelope in &envelopes {
+            inbox.stage_envelope(envelope)?;
+        }
+        let mut coordination =
+            initialize_recipient_coordinator(&fixture, &state, &approved, &inbox, &imports)?;
+        assert_eq!(coordination.sequence(), 0);
+        assert!(!coordination.requires_apply());
+        assert_eq!(
+            imports.status(consent_record_id, 0)?,
+            RecipientHistoryImportStatus::Absent
+        );
+
+        for (index, expected_event_count) in [2_usize, 2, 1].into_iter().enumerate() {
+            let status_before_plan = imports.status(consent_record_id, 0)?;
+            let plan = RecipientHistoryRecoveryImporter::plan(
+                &coordination,
+                0,
+                &inbox,
+                &imports,
+                &fixture.membership,
+            )?;
+            assert_eq!(plan.source_ordinal(), 0);
+            assert_eq!(plan.staged_chunk_count(), 3);
+            assert_eq!(plan.imported_chunk_count(), u64::try_from(index)?);
+            assert_eq!(plan.planned_event_count(), expected_event_count);
+            assert!(!plan.contains_message_bodies);
+            assert!(!plan.contains_plaintext);
+            assert!(!plan.grants_network_authority);
+            assert!(!plan.grants_background_authority);
+            assert!(plan.imports_exactly_one_transfer);
+            assert_eq!(imports.status(consent_record_id, 0)?, status_before_plan);
+            let receipt = match RecipientHistoryRecoveryImporter::apply(
+                &plan,
+                &inbox,
+                &imports,
+                fixture.replacement.identity(),
+                &fixture.membership,
+                3_000 + u64::try_from(index)?,
+            )? {
+                ApplyRecipientRecoveryImportOutcome::Imported(receipt) => receipt,
+                ApplyRecipientRecoveryImportOutcome::AlreadyImported(_) => {
+                    return Err("fresh explicit import unexpectedly replayed".into());
+                }
+            };
+            assert_eq!(receipt.source_ordinal, 0);
+            assert_eq!(receipt.imported_event_count, expected_event_count);
+            assert_eq!(receipt.coordinator_sequence, 1 + u64::try_from(index)?);
+            assert_eq!(
+                receipt.coordinator_refresh,
+                RecipientRecoveryCoordinatorRefreshDisposition::Applied
+            );
+            assert!(!receipt.contains_message_bodies);
+            assert!(!receipt.contains_plaintext);
+            assert!(!receipt.opened_network);
+            assert!(!receipt.scheduled_background_work);
+            coordination = RecipientHistoryRecoveryCoordinator::plan(
+                &state,
+                fixture.owner_account_id,
+                fixture.replacement.identity().device_id(),
+                std::slice::from_ref(&approved),
+                &inbox,
+                &imports,
+            )?;
+            assert!(!coordination.requires_apply());
+        }
+        assert_eq!(
+            coordination.sources()[0].state,
+            RecipientRecoveryCoordinatorSourceState::Complete
+        );
+        assert!(matches!(
+            RecipientHistoryRecoveryImporter::plan(
+                &coordination,
+                0,
+                &inbox,
+                &imports,
+                &fixture.membership,
+            ),
+            Err(RecipientRecoveryImportPlanError::NoPendingTransfer(0))
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_plan_requires_applied_coordinator_and_exact_membership()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let other = fixture(1, None)?;
+        let fixture = fixture(3, None)?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let approved = approved_recipient_source(&fixture, &consent)?;
+        let envelopes = build_transfer_backlog(
+            &fixture,
+            &consent,
+            consent_record_id,
+            "recipient-import-plan-membership-execution",
+            1,
+        )?;
+        let state = fixture.root.path().join("recipient-import-plan-membership");
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        inbox.stage_envelope(&envelopes[0])?;
+        let unapplied = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            std::slice::from_ref(&approved),
+            &inbox,
+            &imports,
+        )?;
+        assert!(matches!(
+            RecipientHistoryRecoveryImporter::plan(
+                &unapplied,
+                0,
+                &inbox,
+                &imports,
+                &fixture.membership,
+            ),
+            Err(RecipientRecoveryImportPlanError::Coordinator(
+                RecipientRecoveryCoordinatorError::PlanNotApplied
+            ))
+        ));
+        RecipientHistoryRecoveryCoordinator::apply(&unapplied, &inbox, &imports)?;
+        let coordination = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            std::slice::from_ref(&approved),
+            &inbox,
+            &imports,
+        )?;
+        let plan = RecipientHistoryRecoveryImporter::plan(
+            &coordination,
+            0,
+            &inbox,
+            &imports,
+            &fixture.membership,
+        )?;
+        assert!(matches!(
+            RecipientHistoryRecoveryImporter::apply(
+                &plan,
+                &inbox,
+                &imports,
+                fixture.replacement.identity(),
+                &other.membership,
+                3_000,
+            ),
+            Err(RecipientRecoveryImportPlanError::MembershipChanged)
+        ));
+        assert_eq!(
+            imports.status(consent_record_id, 0)?,
+            RecipientHistoryImportStatus::Absent
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_plan_rejects_a_newer_staged_head() -> Result<(), Box<dyn std::error::Error>>
+    {
+        let fixture = fixture(4, Some(2))?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let approved = approved_recipient_source(&fixture, &consent)?;
+        let envelopes = build_transfer_backlog(
+            &fixture,
+            &consent,
+            consent_record_id,
+            "recipient-import-plan-stale-execution",
+            2,
+        )?;
+        let state = fixture.root.path().join("recipient-import-plan-stale");
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        inbox.stage_envelope(&envelopes[0])?;
+        let coordination =
+            initialize_recipient_coordinator(&fixture, &state, &approved, &inbox, &imports)?;
+        let plan = RecipientHistoryRecoveryImporter::plan(
+            &coordination,
+            0,
+            &inbox,
+            &imports,
+            &fixture.membership,
+        )?;
+        inbox.stage_envelope(&envelopes[1])?;
+        assert!(matches!(
+            RecipientHistoryRecoveryImporter::apply(
+                &plan,
+                &inbox,
+                &imports,
+                fixture.replacement.identity(),
+                &fixture.membership,
+                3_000,
+            ),
+            Err(RecipientRecoveryImportPlanError::StalePlan)
+        ));
+        assert_eq!(
+            imports.status(consent_record_id, 0)?,
+            RecipientHistoryImportStatus::Absent
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_plan_resumes_after_import_before_coordinator_refresh()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = fixture(3, None)?;
+        let consent = fixture.open_consent()?;
+        let consent_record_id = fixture.commit_consent(&consent)?;
+        let approved = approved_recipient_source(&fixture, &consent)?;
+        let envelopes = build_transfer_backlog(
+            &fixture,
+            &consent,
+            consent_record_id,
+            "recipient-import-plan-resume-execution",
+            1,
+        )?;
+        let state = fixture.root.path().join("recipient-import-plan-resume");
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        inbox.stage_envelope(&envelopes[0])?;
+        let coordination =
+            initialize_recipient_coordinator(&fixture, &state, &approved, &inbox, &imports)?;
+        let plan = RecipientHistoryRecoveryImporter::plan(
+            &coordination,
+            0,
+            &inbox,
+            &imports,
+            &fixture.membership,
+        )?;
+        assert!(matches!(
+            RecipientHistoryRecoveryImporter::apply_with_fault_after_import(
+                &plan,
+                &inbox,
+                &imports,
+                fixture.replacement.identity(),
+                &fixture.membership,
+                3_000,
+            ),
+            Err(RecipientRecoveryImportPlanError::InjectedAfterImport)
+        ));
+        assert!(matches!(
+            imports.status(consent_record_id, 0)?,
+            RecipientHistoryImportStatus::Complete(_)
+        ));
+        let unreconciled = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            std::slice::from_ref(&approved),
+            &inbox,
+            &imports,
+        )?;
+        assert!(unreconciled.requires_apply());
+        assert_eq!(unreconciled.sequence(), 1);
+
+        let receipt = match RecipientHistoryRecoveryImporter::apply(
+            &plan,
+            &inbox,
+            &imports,
+            fixture.replacement.identity(),
+            &fixture.membership,
+            3_001,
+        )? {
+            ApplyRecipientRecoveryImportOutcome::AlreadyImported(receipt) => receipt,
+            ApplyRecipientRecoveryImportOutcome::Imported(_) => {
+                return Err("resumed explicit import duplicated durable work".into());
+            }
+        };
+        assert_eq!(receipt.coordinator_sequence, 1);
+        assert_eq!(
+            receipt.coordinator_refresh,
+            RecipientRecoveryCoordinatorRefreshDisposition::Applied
+        );
+        let complete = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            std::slice::from_ref(&approved),
+            &inbox,
+            &imports,
+        )?;
+        assert!(!complete.requires_apply());
+        assert_eq!(
+            complete.sources()[0].state,
+            RecipientRecoveryCoordinatorSourceState::Complete
+        );
         Ok(())
     }
 }

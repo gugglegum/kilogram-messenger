@@ -5607,3 +5607,27 @@ Hosted follow-up:
   and 154/154 respectively.
 - No product network, relay, second host, release build, ZIP/archive, tag or
   automatic GitHub build was used. Public default remains `legacy-only`.
+
+## M1.2.29 explicit recipient recovery import plan environment (2026-10-20)
+
+- The execution crate now exposes a dormant read-only import planner and an
+  explicit one-transfer apply. Active CLI/Windows manifests remain free of the
+  crate; IPC stays v33/domain v14 and no wire format changes.
+- Planning requires a durably applied M1.2.28 coordinator snapshot. It selects
+  `transfer ordinal == imported chunk count`, verifies the signed membership
+  and existing receipt predecessor, and creates no durable state.
+- Apply acquires the common `StateDirectoryLock`; coordinator revalidation,
+  exact inbox-head/backlog selection and the existing atomic import run under
+  that lock. Coordinator refresh follows after the import transaction.
+- The unavoidable import-before-refresh window is resumable. Fault injection
+  commits the signed import receipt, skips refresh, then the same plan returns
+  exact `AlreadyImported` and advances the coordinator without duplicate data.
+- Four focused stable-path tests cover three-page backlog order, unapplied
+  coordinator/membership rejection, newer-head staleness and crash-window
+  resume. Full execution regression passes 22/22.
+- Dedicated boundary rejects 10/10 mutations; accepted-tag readiness passes
+  155/155 with rustfmt and workspace-wide locked/offline strict Clippy.
+- The managed sandbox's system TEMP remains inaccessible, so Rust harnesses
+  use repository `.tmp` while retaining the permanent verification EXE path.
+  No network, second host, release build, ZIP/archive, tag or automatic GitHub
+  build is used; public default remains `legacy-only`.

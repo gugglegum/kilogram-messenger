@@ -1286,6 +1286,12 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   Plan read-only и не создаёт state; explicit apply повторно наблюдает exact
   heads под state lock и атомарно сохраняет только opaque IDs/monotonic state.
   Network/import/background/runtime/IPC/desktop authority не добавлены.
+- [`../docs/RFC-0253-m1229-explicit-recipient-recovery-import-plan.md`](../docs/RFC-0253-m1229-explicit-recipient-recovery-import-plan.md) —
+  M1.2.29 строит read-only plan для следующего неимпортированного staged chunk
+  по durable coordinator counts и явно импортирует ровно один transfer. Exact
+  coordinator/inbox/membership перепроверяются под одним state lock; окно
+  import-before-coordinator-refresh возобновляется тем же plan без дубликатов.
+  Batch/background/network/runtime/IPC/desktop authority не добавлены.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

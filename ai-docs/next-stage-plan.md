@@ -1,23 +1,27 @@
-# Текущая точка: M1.2.28 завершён, следующий M1.2.29
+# Текущая точка: M1.2.29 завершён, следующий M1.2.30
 
-Статус на 2026-10-20: recipient coordinator связывает 1..=8 owner-approved
-selections с exact staged-transfer/import-receipt heads в отдельной durable DB.
-Plan read-only/no-create; apply под state lock повторно сверяет observation и
-атомарно продвигает append-only plan chain/monotonic source heads. Focused
-regression 4/4, полный execution crate 18/18, boundary 10/10, readiness
-154/154. Network/import/background/runtime/IPC/desktop authority отсутствуют,
-public default — `legacy-only`.
+Статус на 2026-10-20: explicit recipient import plan выбирает следующий
+неимпортированный staged chunk из exact durably-applied coordinator snapshot.
+Apply под одним state lock повторно проверяет coordinator/inbox/membership,
+вызывает существующий atomic import ровно для одного transfer и refresh-ит
+coordinator. Import-before-refresh crash возобновляется тем же plan без
+дубликатов. Focused regression 4/4, полный execution crate 22/22, boundary
+10/10, readiness 155/155. Network/background/runtime/IPC/desktop authority
+отсутствуют, public default — `legacy-only`.
 
-## Следующий этап: M1.2.29 explicit recipient import plan/apply
+## Следующий этап: M1.2.30 bounded explicit multi-source recipient import round
 
-- построить read-only import plan только для exact staged head, который M1.2.28
-  наблюдает как `StagedForImport` либо `ImportInProgress`;
-- связать plan с current coordinator plan/source head, current membership и
-  expected recipient import receipt head; stale head обязан fail closed;
-- отдельный explicit apply может вызвать существующий verified import ровно для
-  одного exact transfer и после success обновить coordinator новым plan/apply;
-- bounded batch/background loop, network, runtime IPC и desktop command не
-  добавлять; operator/caller выбирает source явно;
+- поверх M1.2.29 планировать конечный round только по caller-supplied source
+  ordinals из одного exact coordinator snapshot;
+- каждому source с pending backlog дать не более одного import за round,
+  одновременно выполнять ровно один import и не позволять раннему source
+  монополизировать работу;
+- до первой мутации preflight-ить все ordinals/plans/memberships; один invalid
+  late input должен остановить round без импорта ранних inputs;
+- после каждого durable import использовать fresh coordinator snapshot, а
+  crash/restart оставлять безопасным за счёт M1.2.29 exact replay;
+- задать малые default и hard budgets; не добавлять loop между rounds,
+  background worker, network, runtime IPC либо desktop command;
 - public default, sync/ticket/transfer wires, release/ZIP/tag и automatic
   GitHub build не менять.
 

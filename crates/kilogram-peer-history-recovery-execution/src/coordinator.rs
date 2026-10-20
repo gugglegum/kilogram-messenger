@@ -162,6 +162,66 @@ impl RecipientRecoveryCoordinationPlan {
     pub fn sources(&self) -> &[RecipientRecoveryCoordinatorPlannedSource] {
         &self.sources
     }
+
+    pub(crate) fn state_directory(&self) -> &Path {
+        &self.state_directory
+    }
+
+    pub(crate) fn owner_account_id(&self) -> AccountId {
+        self.owner_account_id
+    }
+
+    pub(crate) fn owner_device_id(&self) -> DeviceId {
+        self.owner_device_id
+    }
+
+    pub(crate) fn approved_sources(&self) -> &[ApprovedRecipientHistoryRecoverySource] {
+        &self.approved_sources
+    }
+
+    pub(crate) fn import_observation(
+        &self,
+        source_ordinal: usize,
+    ) -> Result<RecipientRecoveryCoordinatorImportObservation, RecipientRecoveryCoordinatorError>
+    {
+        let approved = self.approved_sources.get(source_ordinal).ok_or(
+            RecipientRecoveryCoordinatorError::SourceOrdinalMissing(source_ordinal),
+        )?;
+        let observation = self.record.sources.get(source_ordinal).ok_or(
+            RecipientRecoveryCoordinatorError::SourceOrdinalMissing(source_ordinal),
+        )?;
+        if observation.source_key != approved.source_key {
+            return Err(RecipientRecoveryCoordinatorError::SourceBindingChanged);
+        }
+        Ok(RecipientRecoveryCoordinatorImportObservation {
+            source_key: observation.source_key,
+            source_device_id: approved.source_device_id,
+            consent_record_id: observation.consent_record_id,
+            selection_index: usize::from(approved.selection_index),
+            inbox_head_id: observation.inbox_head_id,
+            import_head_id: observation.import_head_id,
+            staged_chunk_count: observation.staged_chunk_count,
+            imported_chunk_count: observation.imported_chunk_count,
+            approved_range_start: observation.approved_range_start,
+            approved_range_end: observation.approved_range_end,
+            state: observation.state,
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub(crate) struct RecipientRecoveryCoordinatorImportObservation {
+    pub source_key: [u8; 32],
+    pub source_device_id: DeviceId,
+    pub consent_record_id: [u8; 32],
+    pub selection_index: usize,
+    pub inbox_head_id: Option<[u8; 32]>,
+    pub import_head_id: Option<[u8; 32]>,
+    pub staged_chunk_count: u64,
+    pub imported_chunk_count: u64,
+    pub approved_range_start: u64,
+    pub approved_range_end: u64,
+    pub state: RecipientRecoveryCoordinatorSourceState,
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -201,6 +261,58 @@ impl RecipientHistoryRecoveryCoordinator {
         imports: &RecipientHistoryImportStore,
     ) -> Result<ApplyRecipientRecoveryCoordinationOutcome, RecipientRecoveryCoordinatorError> {
         Self::apply_inner(plan, inbox, imports, false)
+    }
+
+    pub(crate) fn verify_durable_current(
+        plan: &RecipientRecoveryCoordinationPlan,
+    ) -> Result<(), RecipientRecoveryCoordinatorError> {
+        validate_plan_object(plan)?;
+        if plan.requires_apply {
+            return Err(RecipientRecoveryCoordinatorError::PlanNotApplied);
+        }
+        let snapshot = load_snapshot(
+            &plan.state_directory,
+            plan.owner_account_id,
+            plan.owner_device_id,
+        )?
+        .ok_or(RecipientRecoveryCoordinatorError::PlanNotApplied)?;
+        if snapshot.current_plan_id() != Some(plan.plan_id)
+            || snapshot.current_record.as_ref() != Some(&plan.record)
+        {
+            return Err(RecipientRecoveryCoordinatorError::StalePlan);
+        }
+        Ok(())
+    }
+
+    pub(crate) fn verify_durable_current_for_stores(
+        plan: &RecipientRecoveryCoordinationPlan,
+        inbox: &RecipientHistoryTransferInbox,
+        imports: &RecipientHistoryImportStore,
+    ) -> Result<(), RecipientRecoveryCoordinatorError> {
+        Self::verify_durable_current(plan)?;
+        ensure_same_state_directory(&plan.state_directory, inbox.state_directory())?;
+        ensure_same_state_directory(&plan.state_directory, imports.state_directory())?;
+        Ok(())
+    }
+
+    pub(crate) fn verify_exact_current(
+        plan: &RecipientRecoveryCoordinationPlan,
+        inbox: &RecipientHistoryTransferInbox,
+        imports: &RecipientHistoryImportStore,
+    ) -> Result<(), RecipientRecoveryCoordinatorError> {
+        Self::verify_durable_current(plan)?;
+        let current = build_plan(
+            &plan.state_directory,
+            plan.owner_account_id,
+            plan.owner_device_id,
+            &plan.approved_sources,
+            inbox,
+            imports,
+        )?;
+        if current != *plan || current.requires_apply {
+            return Err(RecipientRecoveryCoordinatorError::StalePlan);
+        }
+        Ok(())
     }
 
     fn apply_inner(
@@ -1127,6 +1239,10 @@ pub enum RecipientRecoveryCoordinatorError {
     PlanFork,
     #[error("recipient recovery coordination plan is stale")]
     StalePlan,
+    #[error("recipient recovery coordination plan has not been durably applied")]
+    PlanNotApplied,
+    #[error("recipient recovery coordinator source ordinal {0} is missing")]
+    SourceOrdinalMissing(usize),
     #[error("recipient recovery coordination replay does not match its durable plan")]
     PlanReplayMismatch,
     #[error("recipient recovery coordinator sequence is exhausted")]

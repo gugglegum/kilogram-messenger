@@ -2701,6 +2701,14 @@ read-only; explicit apply revalidates the exact observation under the state
 lock and atomically advances only opaque IDs and monotonic progress. It neither
 opens the network nor imports history.
 
+[`RFC-0253`](docs/RFC-0253-m1229-explicit-recipient-recovery-import-plan.md)
+adds a read-only, coordinator-bound plan for the next unimported staged page
+and an explicit one-transfer apply. The coordinator and import are revalidated
+under one state lock, linear backlog generations cannot be skipped, and a
+restart after durable import but before coordinator refresh resumes without
+duplicating events. No automatic loop, runtime/desktop command or network
+authority is added.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

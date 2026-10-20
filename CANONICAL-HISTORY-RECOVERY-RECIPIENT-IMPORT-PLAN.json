@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.29",
+  "status": "explicit-recipient-history-recovery-import-plan-verified",
+  "contract_source": "M1.2.28",
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_history_transfer_wire": false,
+  "changes_active_runtime_ipc": false,
+  "changes_desktop_runtime_authority": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "planning": {
+    "explicit_source_ordinal_required": true,
+    "durably_applied_coordinator_required": true,
+    "exact_current_coordinator_required": true,
+    "next_unimported_generation_selected": true,
+    "linear_backlog_supported": true,
+    "membership_signature_verified": true,
+    "membership_digest_bound": true,
+    "expected_inbox_head_bound": true,
+    "expected_import_head_bound": true,
+    "read_only": true,
+    "creates_state": false,
+    "opens_network": false,
+    "imports_history": false
+  },
+  "apply": {
+    "explicit_only": true,
+    "imports_exactly_one_transfer": true,
+    "same_state_directory_required": true,
+    "coordinator_and_import_revalidated_under_one_state_lock": true,
+    "stale_inbox_head_rejected": true,
+    "changed_membership_rejected": true,
+    "existing_verified_import_pipeline_reused": true,
+    "recipient_signed_receipt_required": true,
+    "coordinator_refreshed_after_import": true,
+    "post_import_pre_refresh_restart_resumable": true,
+    "exact_replay_idempotent": true,
+    "performs_network_io": false,
+    "schedules_background_work": false
+  },
+  "storage": {
+    "new_database_added": false,
+    "plan_is_ephemeral": true,
+    "existing_atomic_import_transaction_reused": true,
+    "existing_append_only_import_receipts_reused": true,
+    "existing_append_only_coordinator_chain_reused": true,
+    "stores_plaintext": false,
+    "stores_message_bodies_in_plan": false,
+    "whole_database_rollback_detection_supported": false
+  },
+  "backlog": {
+    "selection_rule": "transfer_ordinal_equals_imported_chunk_count",
+    "skipped_generations_allowed": false,
+    "latest_head_used_as_next_when_earlier_pending": false,
+    "one_transfer_per_apply": true,
+    "automatic_loop_added": false
+  },
+  "failure_and_restart": {
+    "failure_before_import_leaves_no_new_import": true,
+    "import_commit_precedes_coordinator_refresh": true,
+    "same_plan_can_resume_after_import_commit": true,
+    "resume_verifies_exact_already_imported_artifacts": true,
+    "coordinator_refresh_failure_is_explicit": true,
+    "stale_plan_fails_closed": true
+  },
+  "report": {
+    "source_ordinal_only": true,
+    "bounded_counts": true,
+    "identity_visible": false,
+    "network_coordinates_visible": false,
+    "message_bodies_visible": false,
+    "plaintext_visible": false,
+    "network_authority_granted": false,
+    "background_authority_granted": false
+  },
+  "authority": {
+    "active_runtime_registered": false,
+    "cli_command_added": false,
+    "desktop_control_added": false,
+    "background_worker_added": false,
+    "spawned_task_added": false,
+    "automatic_source_selection_added": false,
+    "automatic_import_loop_added": false,
+    "network_authority_added": false
+  },
+  "verification": {
+    "focused_import_plan_tests": 4,
+    "combined_execution_crate_tests": 22,
+    "three_generation_backlog_test": true,
+    "unapplied_coordinator_and_membership_test": true,
+    "stale_newer_inbox_head_test": true,
+    "post_import_pre_refresh_resume_test": true,
+    "stable_path_rust_harness_required_on_windows": true,
+    "boundary_self_test_and_negative_mutations": "verified",
+    "m1_readiness": "155/155",
+    "second_host_required": false,
+    "product_network_executed": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "non_claims": [
+    "automatic-history-import",
+    "multi-source-import-batch",
+    "active-runtime-history-recovery",
+    "background-recovery-worker",
+    "runtime-ipc-history-recovery-authority",
+    "desktop-history-recovery-authority",
+    "whole-database-rollback-detection-without-external-witness",
+    "product-internet-or-relay-evidence",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "bounded-explicit-multi-source-recipient-import-round",
+    "cross-process-recovery-orchestration"
+  ]
+}
