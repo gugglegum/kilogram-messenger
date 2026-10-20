@@ -288,6 +288,17 @@ impl SignedRecipientRecoveryImportRoundIntent {
         self.content.committed_at_unix_seconds
     }
 
+    pub(crate) fn candidate_binding(
+        &self,
+        index: usize,
+    ) -> Option<RecipientRecoveryImportCandidateBinding> {
+        self.content
+            .entries
+            .get(index)
+            .copied()
+            .map(IntentImportEntry::candidate_binding)
+    }
+
     fn same_intent_as(&self, other: &Self) -> bool {
         let mut left = self.content.clone();
         let mut right = other.content.clone();
@@ -744,6 +755,7 @@ impl RecipientRecoveryImportRoundIntentStore {
     ) -> Result<RecipientRecoveryImportRoundIntentProgress, RecipientRecoveryImportRoundIntentError>
     {
         self.verify_durable_owner(durable)?;
+        ensure_same_state_directory(&self.state_directory, current.state_directory())?;
         inspect_progress(durable, current, sources, inbox, imports)
     }
 

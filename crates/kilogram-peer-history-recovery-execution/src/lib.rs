@@ -41,6 +41,7 @@ mod coordinator;
 mod import;
 mod recipient_import;
 mod recipient_import_round;
+mod recipient_import_round_executor;
 mod recipient_import_round_intent;
 mod transfer;
 
@@ -72,6 +73,13 @@ pub use recipient_import_round::{
     RecipientRecoveryImportRoundBudget, RecipientRecoveryImportRoundError,
     RecipientRecoveryImportRoundPlan, RecipientRecoveryImportRoundSource,
     RecipientRecoveryImportRoundStepDisposition, RecipientRecoveryImportRoundStepReceipt,
+};
+pub use recipient_import_round_executor::{
+    DEFAULT_RECIPIENT_RECOVERY_IMPORT_ROUND_EXECUTION_MAX_STEPS,
+    MAX_RECIPIENT_RECOVERY_IMPORT_ROUND_EXECUTION_STEPS,
+    RecipientHistoryRecoveryImportRoundExecutor, RecipientRecoveryImportRoundExecutionBudget,
+    RecipientRecoveryImportRoundExecutionError, RecipientRecoveryImportRoundExecutionPlan,
+    RecipientRecoveryImportRoundExecutionReceipt, RecipientRecoveryImportRoundExecutionStepReceipt,
 };
 pub use recipient_import_round_intent::{
     DurableRecipientRecoveryImportRoundIntent, MAX_DURABLE_RECIPIENT_RECOVERY_IMPORT_ROUND_INTENTS,
@@ -5858,6 +5866,333 @@ mod tests {
             )?,
             RecipientRecoveryImportRoundIntentConsumeOutcome::Consumed(_)
         ));
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_round_executor_plan_is_read_only_and_requires_exact_live_membership()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-round-executor-plan")?;
+        let store = RecipientRecoveryImportRoundIntentStore::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+        );
+        let sources = [RecipientRecoveryImportRoundSource::new(
+            0,
+            &setup.fixture.membership,
+        )];
+        assert!(matches!(
+            RecipientHistoryRecoveryImportRoundExecutor::plan(
+                &store,
+                &setup.coordination,
+                &sources,
+                RecipientRecoveryImportRoundExecutionBudget::default(),
+                &setup.inbox,
+                &setup.imports,
+            ),
+            Err(RecipientRecoveryImportRoundExecutionError::NoActiveIntent)
+        ));
+
+        let intent_plan = store.plan(
+            &setup.round,
+            setup.fixture.replacement.identity(),
+            &setup.inbox,
+            &setup.imports,
+            5_000,
+        )?;
+        let durable = match store.commit(&intent_plan, &setup.inbox, &setup.imports)? {
+            RecipientRecoveryImportRoundIntentCommitOutcome::Committed(value) => value,
+            _ => return Err("intent was not committed".into()),
+        };
+        let before = store.inspect_active()?.ok_or("active intent is missing")?;
+        let plan = RecipientHistoryRecoveryImportRoundExecutor::plan(
+            &store,
+            &setup.coordination,
+            &sources,
+            RecipientRecoveryImportRoundExecutionBudget::default(),
+            &setup.inbox,
+            &setup.imports,
+        )?;
+        assert_eq!(plan.intent_id(), durable.intent_id());
+        assert_eq!(plan.round_id(), setup.round.round_id());
+        assert_eq!(plan.progress().completed_source_count, 0);
+        assert_eq!(plan.planned_step_count(), 1);
+        assert_eq!(plan.next_source_ordinal(), Some(0));
+        assert!(!plan.contains_membership_snapshot);
+        assert!(!plan.contains_message_bodies);
+        assert!(!plan.contains_plaintext);
+        assert!(!plan.grants_network_authority);
+        assert!(!plan.grants_background_authority);
+        assert!(plan.executes_one_import_at_a_time);
+        assert_eq!(store.inspect_active()?.as_ref(), Some(&before));
+        assert_eq!(
+            setup
+                .imports
+                .status(setup.approved.consent_record_id(), 0)?,
+            RecipientHistoryImportStatus::Absent
+        );
+
+        let other = fixture(1, None)?;
+        let wrong_sources = [RecipientRecoveryImportRoundSource::new(
+            0,
+            &other.membership,
+        )];
+        assert!(matches!(
+            RecipientHistoryRecoveryImportRoundExecutor::plan(
+                &store,
+                &setup.coordination,
+                &wrong_sources,
+                RecipientRecoveryImportRoundExecutionBudget::default(),
+                &setup.inbox,
+                &setup.imports,
+            ),
+            Err(RecipientRecoveryImportRoundExecutionError::Intent(_))
+        ));
+        assert_eq!(
+            setup
+                .imports
+                .status(setup.approved.consent_record_id(), 0)?,
+            RecipientHistoryImportStatus::Absent
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_round_executor_applies_next_then_bounded_in_signed_order()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let fixture = multi_source_fixture(2, 1)?;
+        let mut approved = Vec::new();
+        let mut envelopes = Vec::new();
+        for source_index in 0..2 {
+            let (source, envelope) = fixture.commit_and_export(source_index)?;
+            approved.push(source);
+            envelopes.push(envelope);
+        }
+        let state = fixture
+            .root
+            .path()
+            .join("recipient-import-round-executor-bounded");
+        let inbox = RecipientHistoryTransferInbox::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let imports = RecipientHistoryImportStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        for envelope in &envelopes {
+            inbox.stage_envelope(envelope)?;
+        }
+        let initial = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            &approved,
+            &inbox,
+            &imports,
+        )?;
+        RecipientHistoryRecoveryCoordinator::apply(&initial, &inbox, &imports)?;
+        let mut current = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            &approved,
+            &inbox,
+            &imports,
+        )?;
+        let sources = [
+            RecipientRecoveryImportRoundSource::new(1, &fixture.memberships[1]),
+            RecipientRecoveryImportRoundSource::new(0, &fixture.memberships[0]),
+        ];
+        let round =
+            RecipientHistoryRecoveryImportRound::plan(&current, &sources, &inbox, &imports)?;
+        let store = RecipientRecoveryImportRoundIntentStore::new(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+        );
+        let intent_plan = store.plan(
+            &round,
+            fixture.replacement.identity(),
+            &inbox,
+            &imports,
+            5_100,
+        )?;
+        store.commit(&intent_plan, &inbox, &imports)?;
+
+        let first_plan = RecipientHistoryRecoveryImportRoundExecutor::plan(
+            &store,
+            &current,
+            &sources,
+            RecipientRecoveryImportRoundExecutionBudget::default(),
+            &inbox,
+            &imports,
+        )?;
+        assert_eq!(first_plan.next_source_ordinal(), Some(1));
+        let first = RecipientHistoryRecoveryImportRoundExecutor::apply_next(
+            &first_plan,
+            &store,
+            &sources,
+            &inbox,
+            &imports,
+            fixture.replacement.identity(),
+            5_200,
+        )?;
+        assert_eq!(first.steps.len(), 1);
+        assert_eq!(first.steps[0].source_ordinal, 1);
+        assert_eq!(first.imported_now_count, 1);
+        assert_eq!(first.final_completed_source_count, 1);
+        assert!(!first.complete);
+        assert_eq!(first.concurrent_imports, 1);
+
+        current = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            &approved,
+            &inbox,
+            &imports,
+        )?;
+        let second_plan = RecipientHistoryRecoveryImportRoundExecutor::plan(
+            &store,
+            &current,
+            &sources,
+            RecipientRecoveryImportRoundExecutionBudget::new(2)?,
+            &inbox,
+            &imports,
+        )?;
+        assert_eq!(second_plan.next_source_ordinal(), Some(0));
+        assert_eq!(second_plan.planned_step_count(), 1);
+        let second = RecipientHistoryRecoveryImportRoundExecutor::apply_bounded(
+            &second_plan,
+            &store,
+            &sources,
+            &inbox,
+            &imports,
+            fixture.replacement.identity(),
+            5_300,
+        )?;
+        assert_eq!(second.steps.len(), 1);
+        assert_eq!(second.steps[0].source_ordinal, 0);
+        assert_eq!(second.imported_now_count, 1);
+        assert_eq!(second.final_completed_source_count, 2);
+        assert!(second.complete);
+        assert!(store.inspect_active()?.is_some());
+
+        current = RecipientHistoryRecoveryCoordinator::plan(
+            &state,
+            fixture.owner_account_id,
+            fixture.replacement.identity().device_id(),
+            &approved,
+            &inbox,
+            &imports,
+        )?;
+        let replay_plan = RecipientHistoryRecoveryImportRoundExecutor::plan(
+            &store,
+            &current,
+            &sources,
+            RecipientRecoveryImportRoundExecutionBudget::new(2)?,
+            &inbox,
+            &imports,
+        )?;
+        assert_eq!(replay_plan.planned_step_count(), 0);
+        assert_eq!(replay_plan.next_source_ordinal(), None);
+        let replay = RecipientHistoryRecoveryImportRoundExecutor::apply_bounded(
+            &replay_plan,
+            &store,
+            &sources,
+            &inbox,
+            &imports,
+            fixture.replacement.identity(),
+            5_400,
+        )?;
+        assert!(replay.steps.is_empty());
+        assert_eq!(replay.imported_now_count, 0);
+        assert_eq!(replay.already_imported_count, 0);
+        assert!(replay.complete);
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_round_executor_reconciles_crash_after_import_without_duplicate()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-round-executor-reconcile")?;
+        let sources = [RecipientRecoveryImportRoundSource::new(
+            0,
+            &setup.fixture.membership,
+        )];
+        let store = RecipientRecoveryImportRoundIntentStore::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+        );
+        let intent_plan = store.plan(
+            &setup.round,
+            setup.fixture.replacement.identity(),
+            &setup.inbox,
+            &setup.imports,
+            5_500,
+        )?;
+        store.commit(&intent_plan, &setup.inbox, &setup.imports)?;
+        let import_plan = RecipientHistoryRecoveryImportRound::import_plan(&setup.round, 0)
+            .ok_or("import plan is missing")?;
+        assert!(matches!(
+            RecipientHistoryRecoveryImporter::apply_with_fault_after_import(
+                import_plan,
+                &setup.inbox,
+                &setup.imports,
+                setup.fixture.replacement.identity(),
+                &setup.fixture.membership,
+                5_600,
+            ),
+            Err(RecipientRecoveryImportPlanError::InjectedAfterImport)
+        ));
+        let unreconciled = RecipientHistoryRecoveryCoordinator::plan(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+            std::slice::from_ref(&setup.approved),
+            &setup.inbox,
+            &setup.imports,
+        )?;
+        assert!(unreconciled.requires_apply());
+        let plan = RecipientHistoryRecoveryImportRoundExecutor::plan(
+            &store,
+            &unreconciled,
+            &sources,
+            RecipientRecoveryImportRoundExecutionBudget::default(),
+            &setup.inbox,
+            &setup.imports,
+        )?;
+        assert_eq!(plan.progress().completed_source_count, 1);
+        assert!(plan.progress().coordinator_refresh_required);
+        assert_eq!(plan.planned_step_count(), 0);
+        let receipt = RecipientHistoryRecoveryImportRoundExecutor::apply_next(
+            &plan,
+            &store,
+            &sources,
+            &setup.inbox,
+            &setup.imports,
+            setup.fixture.replacement.identity(),
+            5_700,
+        )?;
+        assert!(receipt.reconciled_coordinator);
+        assert!(receipt.steps.is_empty());
+        assert_eq!(receipt.imported_now_count, 0);
+        assert_eq!(receipt.already_imported_count, 0);
+        assert!(receipt.complete);
+        let reconciled = RecipientHistoryRecoveryCoordinator::plan(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+            std::slice::from_ref(&setup.approved),
+            &setup.inbox,
+            &setup.imports,
+        )?;
+        assert!(!reconciled.requires_apply());
         Ok(())
     }
 }

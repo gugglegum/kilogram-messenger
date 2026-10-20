@@ -2724,6 +2724,14 @@ window; explicit consumption is blocked until the final coordinator is durable.
 The intent itself never imports history, opens the network, discovers sources
 or grants runtime/desktop authority.
 
+[`RFC-0256`](docs/RFC-0256-m1232-explicit-durable-recipient-import-round-executor.md)
+adds an explicit foreground executor for exactly one active signed intent.
+A read-only content-addressed plan matches caller-supplied live memberships;
+`apply_next` and bounded sequential apply revalidate the signed candidate and
+durable ordered prefix after every source. Crash-window coordinator refresh is
+reconciled without duplicate import, while automatic consume, discovery,
+background work, network and runtime/desktop authority remain absent.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

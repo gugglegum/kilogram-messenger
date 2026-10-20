@@ -5676,3 +5676,26 @@ Hosted follow-up:
   the same permanent-path harness outside that filesystem boundary. No product
   network, second host, release build, ZIP/archive, tag or automatic GitHub
   build was used; public default remains `legacy-only`.
+
+## M1.2.32 explicit durable recipient import-round executor environment (2026-10-21)
+
+- The execution crate adds a dormant in-process foreground executor over the
+  M1.2.31 intent. Active CLI/Windows manifests still do not depend on the crate;
+  IPC remains v33/domain v14 and no ticket/sync/history-transfer wire changes.
+- Read-only planning requires one active unconsumed intent, an exact current
+  coordinator observation and caller-supplied live memberships in signed order.
+  It creates no state and produces a content-addressed bounded execution plan.
+- `apply_next`/`apply_bounded` use the existing M1.2.29 importer with default/
+  hard limits 1/8 and one import in flight. Fresh candidates must equal signed
+  bindings; active intent and durable prefix are reopened after every source.
+- A committed import with missing coordinator refresh is reconciled before any
+  next source. Complete replay is a zero-import no-op and explicit M1.2.31
+  signed consumption remains separate.
+- Three focused stable-path tests pass, including real reverse-order two-source
+  execution and crash-window reconciliation. Full execution regression passes
+  34/34; boundary rejects 10/10 mutations and readiness passes 158/158 with
+  rustfmt and workspace-wide locked/offline strict Clippy.
+- The managed sandbox cannot write system TEMP, so the stable test harness was
+  executed outside that filesystem boundary without changing its permanent EXE
+  path. No network, second host, release build, ZIP/archive, tag or automatic
+  GitHub build was used; public default remains `legacy-only`.

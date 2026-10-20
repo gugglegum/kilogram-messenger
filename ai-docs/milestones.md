@@ -8109,3 +8109,25 @@ correlation visible, Windows-only field evidence, independent security audit
 - intent не исполняет import и не добавляет discovery/background/network/
   runtime/IPC/desktop authority. Product network, second host, release/ZIP/tag
   и automatic GitHub build отсутствуют; default `legacy-only`.
+
+### M1.2.32 — explicit durable recipient import-round executor: принят локально
+
+- read-only execution plan открывает ровно один active unconsumed M1.2.31
+  intent, exact-сопоставляет caller-supplied live memberships с signed digest,
+  revision/order и не создаёт state;
+- `apply_next` выполняет максимум один source, `apply_bounded` — default 1 и
+  hard max 8. Каждый импорт делегируется существующему M1.2.29 pipeline,
+  выполняется последовательно и требует полного совпадения fresh candidate со
+  signed intent binding;
+- после каждого source active intent заново открывается, current coordinator и
+  exact ordered prefix перепроверяются. Progress обязан увеличиться ровно на
+  один; stale/fork/changed membership/candidate/unplanned source fail closed;
+- crash после import до refresh сначала exact-reconciles coordinator. Complete
+  replay возвращает zero-step receipt, а intent не consume-ится автоматически;
+- focused stable-path regression прошёл 3/3, включая два реальных source
+  Devices в reverse order и crash-window resume; полный execution crate —
+  34/34. Boundary отклонил 10/10 mutations, readiness прошёл 158/158 с
+  rustfmt и workspace-wide locked/offline strict Clippy;
+- новый durable store, discovery/background/network/runtime/IPC/CLI/desktop
+  authority, product network, second host, release/ZIP/tag и automatic GitHub
+  build отсутствуют; default `legacy-only`.

@@ -1305,6 +1305,13 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   import-before-coordinator-refresh; consume разрешён только после complete и
   durable refresh. Intent сам ничего не импортирует, не открывает сеть и не
   создаёт background/runtime/IPC/desktop authority.
+- [`../docs/RFC-0256-m1232-explicit-durable-recipient-import-round-executor.md`](../docs/RFC-0256-m1232-explicit-durable-recipient-import-round-executor.md) —
+  M1.2.32 добавляет read-only execution plan и явные foreground `apply_next`/
+  `apply_bounded` для одного active signed intent. Caller заново предоставляет
+  exact live memberships; каждый свежий candidate и post-step durable prefix
+  перепроверяются, crash-window coordinator reconciles без duplicate import.
+  Default/hard budget 1/8, один import in-flight; automatic consume, discovery,
+  background/network/runtime/IPC/desktop authority отсутствуют.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
