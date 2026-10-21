@@ -6,13 +6,13 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.37 отделил consume завершённого
-recipient-import intent в dormant `Plan`/`Commit` contract. Plan exact-связан с
-completed M1.2.36 record/receipt, ordered membership-set digest, final
-coordinator, fresh nonce и TTL максимум 300 секунд. Оба stage переносят opaque
-membership references для будущего live reload; commit требует точную фразу
-`CONSUME` и explicit approval. Adapter и active runtime/CLI/desktop/network ещё
-отсутствуют. Публичный default остаётся legacy-only.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.38 подключил только read-only
+`Plan` consumption ceremony к durable completed mutation, active unconsumed
+intent, current coordinator и caller-owned live membership. Missing storage не
+создаётся, `Commit` отвергается до state reload, plan остаётся ephemeral и
+ничего не consume-ит. Следующий M1.2.39 — отдельный explicit mutation adapter с
+durable plan/commit replay. Active runtime/CLI/desktop/network ещё отсутствуют;
+публичный default остаётся legacy-only.
 
 ## Текущее состояние
 
@@ -1342,6 +1342,12 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   ordered membership-set digest с final coordinator; stages повторяют opaque
   membership refs. Fresh nonce, TTL 300 секунд, `CONSUME` phrase и current-
   Device signed response обязательны. Active adapter/dispatch отсутствует.
+- [`../docs/RFC-0262-m1238-recipient-import-consumption-read-adapter.md`](../docs/RFC-0262-m1238-recipient-import-consumption-read-adapter.md) —
+  M1.2.38 реализует dormant read-only `Plan` adapter: exact completed mutation
+  перечитывается без создания missing DB, canonical evidence реконструируется,
+  active unconsumed intent и current coordinator сверяются, а caller-owned live
+  memberships заново загружаются до выдачи ephemeral plan. `Commit` отвергается
+  до state access; persistence, consume и active runtime отсутствуют.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

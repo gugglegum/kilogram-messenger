@@ -8242,3 +8242,23 @@ correlation visible, Windows-only field evidence, independent security audit
 - adapter, durable consumption-plan ledger, active runtime/CLI/desktop/
   background/network, product network, second host, release/ZIP/tag и automatic
   GitHub build отсутствуют; default `legacy-only`.
+
+### M1.2.38 — recipient import-consumption read adapter: принят локально
+
+- dormant integration adapter обрабатывает только `Plan`; `Commit` отвергается
+  до чтения mutation ledger, intent store либо вызова membership loader;
+- exact mutation nonce read-only перечитывает durable record без создания
+  missing DB и различает `Absent`, `Prepared`, `Completed`; только completed
+  проецирует signed record ID, membership-set digest и receipt;
+- canonical completed evidence целиком реконструируется и exact-сравнивается с
+  request до проверки current coordinator и active unconsumed intent;
+- caller-owned loader заново загружает ordered live memberships, после чего
+  progress обязан быть `Complete`, без coordinator refresh, с exact counts,
+  imported event count и final coordinator;
+- success возвращает только ephemeral content-addressed plan; state не пишется,
+  intent не consume-ится, network/background не открываются;
+- stable-path real signed fixtures прошли 4/4, mutation-ledger projection 1/1,
+  boundary отклонил 10/10 mutations, readiness прошёл 164/164 с rustfmt и
+  workspace locked/offline strict Clippy;
+- active runtime/server/CLI/desktop, product network, second host,
+  release/ZIP/tag и automatic GitHub build отсутствуют; default `legacy-only`.

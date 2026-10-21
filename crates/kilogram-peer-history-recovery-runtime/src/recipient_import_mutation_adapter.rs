@@ -215,6 +215,37 @@ enum MutationLookup {
     Completed(Box<RuntimeIpcRecipientImportExecutionReceiptSummary>),
 }
 
+/// Read-only projection of one exact completed mutation. It contains only the
+/// signed ledger record identity, the membership-set digest already bound by
+/// the mutation, and the canonical execution receipt.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct DurableRecipientImportCompletedMutation {
+    completed_record_id: RuntimeIpcRecipientImportArtifactId,
+    membership_set_digest: RuntimeIpcRecipientImportArtifactId,
+    receipt: RuntimeIpcRecipientImportExecutionReceiptSummary,
+}
+
+impl DurableRecipientImportCompletedMutation {
+    pub fn completed_record_id(&self) -> &RuntimeIpcRecipientImportArtifactId {
+        &self.completed_record_id
+    }
+
+    pub fn membership_set_digest(&self) -> &RuntimeIpcRecipientImportArtifactId {
+        &self.membership_set_digest
+    }
+
+    pub fn receipt(&self) -> &RuntimeIpcRecipientImportExecutionReceiptSummary {
+        &self.receipt
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum RecipientImportMutationReadStatus {
+    Absent,
+    Prepared,
+    Completed(Box<DurableRecipientImportCompletedMutation>),
+}
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct MutationLedgerSnapshot {
     records: BTreeMap<[u8; 32], DurableRecipientImportMutationRecord>,
@@ -489,6 +520,47 @@ impl RecipientHistoryRecoveryImportMutationAdapter {
             state_directory: state_directory.as_ref().to_path_buf(),
             owner_account_id,
             owner_device_id,
+        }
+    }
+
+    /// Reads and verifies the exact mutation-ledger entry named by `nonce`.
+    /// Missing storage remains missing: this path never creates a directory,
+    /// database, table, lock, or replacement record.
+    pub fn inspect_by_nonce(
+        &self,
+        nonce: &RuntimeIpcRecipientImportArtifactId,
+    ) -> Result<RecipientImportMutationReadStatus, RecipientImportMutationAdapterError> {
+        let nonce = nonce.to_bytes()?;
+        let snapshot = load_snapshot(
+            &self.state_directory,
+            self.owner_account_id,
+            self.owner_device_id,
+        )?;
+        let Some(record_id) = snapshot.nonce_index.get(&nonce) else {
+            return Ok(RecipientImportMutationReadStatus::Absent);
+        };
+        let durable = snapshot
+            .records
+            .get(record_id)
+            .ok_or(RecipientImportMutationAdapterError::MissingRecord)?;
+        if durable.record.content.binding.mutation_nonce != nonce {
+            return Err(RecipientImportMutationAdapterError::NonceIndexMismatch);
+        }
+        match &durable.record.content.phase {
+            RecipientImportMutationPhase::Prepared { .. } => {
+                Ok(RecipientImportMutationReadStatus::Prepared)
+            }
+            RecipientImportMutationPhase::Completed { receipt, .. } => {
+                Ok(RecipientImportMutationReadStatus::Completed(Box::new(
+                    DurableRecipientImportCompletedMutation {
+                        completed_record_id: artifact(durable.record_id)?,
+                        membership_set_digest: artifact(
+                            durable.record.content.binding.membership_set_digest,
+                        )?,
+                        receipt: receipt.clone(),
+                    },
+                )))
+            }
         }
     }
 
@@ -1754,15 +1826,29 @@ mod tests {
     -> Result<(), Box<dyn std::error::Error>> {
         let fixture = fixture()?;
         let ledger = ledger(&fixture);
+        let adapter = RecipientHistoryRecoveryImportMutationAdapter::new(
+            fixture.root.path(),
+            fixture.account_id,
+            fixture.owner.device_id(),
+        );
         assert!(matches!(
             ledger.lookup(fixture.binding.mutation_nonce, &fixture.binding)?,
             MutationLookup::Absent
         ));
+        assert!(matches!(
+            adapter.inspect_by_nonce(&artifact(fixture.binding.mutation_nonce)?)?,
+            RecipientImportMutationReadStatus::Absent
+        ));
+        assert!(!database_path(fixture.root.path()).exists());
         let prepared = ledger.prepare(&fixture.binding, 0, 0, 2, &fixture.owner, 100)?;
         assert_eq!(prepared.durable.record.content.sequence, 1);
         assert!(matches!(
             ledger.lookup(fixture.binding.mutation_nonce, &fixture.binding)?,
             MutationLookup::Prepared(_)
+        ));
+        assert!(matches!(
+            adapter.inspect_by_nonce(&artifact(fixture.binding.mutation_nonce)?)?,
+            RecipientImportMutationReadStatus::Prepared
         ));
         let expected = receipt(&fixture.binding)?;
         assert_eq!(
@@ -1773,6 +1859,16 @@ mod tests {
             ledger.lookup(fixture.binding.mutation_nonce, &fixture.binding)?,
             MutationLookup::Completed(value) if *value == expected
         ));
+        let RecipientImportMutationReadStatus::Completed(completed) =
+            adapter.inspect_by_nonce(&artifact(fixture.binding.mutation_nonce)?)?
+        else {
+            return Err("completed mutation projection missing".into());
+        };
+        assert_eq!(completed.receipt(), &expected);
+        assert_eq!(
+            completed.membership_set_digest().to_bytes()?,
+            fixture.binding.membership_set_digest
+        );
         Ok(())
     }
 

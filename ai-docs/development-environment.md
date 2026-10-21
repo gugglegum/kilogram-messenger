@@ -5818,3 +5818,25 @@ Hosted follow-up:
   release build, archive, tag or automatic GitHub build was used. Active CLI,
   desktop, background and network authority remain absent; default is
   `legacy-only`.
+
+## M1.2.38 recipient import-consumption read adapter environment (2026-10-21)
+
+- `kilogram-peer-history-recovery-runtime` owns the dormant adapter because it
+  bridges runtime-IPC vocabulary and offline recovery stores; the execution
+  engine still has no production runtime-IPC dependency.
+- The mutation ledger exposes read-only exact-nonce inspection. A missing root
+  remains absent and creates no directory/database/table/lock; prepared and
+  completed records are projected separately.
+- Only `Plan` reaches durable reads. `Commit` returns `CommitRejected` before
+  mutation, intent or membership access. Completed evidence is reconstructed
+  from durable record ID, membership-set digest and receipt and exact-compared.
+- Current coordinator is checked before membership reload. The exact intent
+  must remain active and unconsumed; caller-owned memberships are reloaded and
+  read-only progress must be complete with no pending refresh and exact counts,
+  event count and final coordinator.
+- Four real signed-fixture tests pass through the stable Windows runner; the
+  mutation-ledger projection test passes separately. Package strict Clippy,
+  rustfmt, 10/10 boundary mutations and accepted-tag readiness 164/164 pass.
+- No state mutation, plan persistence, intent consumption, active runtime,
+  CLI/desktop, product network, second host, release build, archive, tag or
+  automatic GitHub build is used. Default remains `legacy-only`.

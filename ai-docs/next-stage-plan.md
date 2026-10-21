@@ -1,30 +1,45 @@
-# Текущая точка: M1.2.37 завершён, следующий M1.2.38
+# Текущая точка: M1.2.38 завершён, следующий M1.2.39
 
-Статус на 2026-10-21: dormant consumption contract разделяет read-only `Plan`
-и explicit `Commit`. Evidence допустим только из complete M1.2.36 receipt и
-exact-связывает mutation record/digest, intent/execution/confirmation/mutation,
-ordered membership-set digest, final coordinator и event count. Оба stage
-переносят exact ordered opaque membership refs для будущего caller-owned live
-reload. Content-addressed plan требует fresh nonce, TTL максимум 300 секунд и
-фразу `CONSUME`; current Device подписывает exact response. Adapter/active
-dispatch отсутствуют. Focused regression 8/8, полный runtime IPC 43/43,
-boundary 10/10, readiness 163/163.
+Дата: 2026-10-21.
 
-## Следующий этап: M1.2.38 dormant consumption read adapter
+M1.2.38 добавил dormant read-only adapter для `Plan` отдельной ceremony consume
+полностью импортированного intent. Adapter без создания missing state exact-
+перечитывает completed mutation, реконструирует canonical evidence, проверяет
+current coordinator, active unconsumed intent и complete progress по заново
+загруженным caller-owned memberships. `Commit` отвергается до state access,
+plan остаётся ephemeral. Проверки: signed fixtures 4/4, ledger projection 1/1,
+boundary 10/10, readiness 164/164.
 
-- в runtime-integration crate обработать только M1.2.37 `Plan`, оставив
-  `Commit` fail-closed до отдельного mutation adapter;
-- по mutation nonce загрузить exact completed M1.2.36 ledger record и receipt,
-  проверить record ID и canonical receipt digest без создания state;
-- заново открыть active unconsumed intent, inspect progress с caller-owned live
-  membership reload и требовать `CompleteAwaitingSeparateConsume` без pending
-  coordinator refresh;
-- exact-сопоставить final coordinator ID/sequence, source/event counts и все
-  IDs completed evidence, затем выдать short-lived ephemeral plan;
-- missing/prepared/rebound/stale/foreign/consumed evidence отклонять fail
-  closed; planning не должен создавать ledger, consume или import state;
-- не регистрировать active runtime command и сохранить IPC v33/domain v14,
-  отсутствие CLI/desktop/background/network и default `legacy-only`.
+## Следующий этап: M1.2.39 — explicit consumption mutation adapter
+
+1. В runtime-integration crate обработать только M1.2.37 `Commit`; `Plan`
+   оставить read-only adapter-у и не смешивать две authority.
+2. До mutation заново выполнить exact completed-record, current coordinator,
+   active intent и caller-owned membership revalidation M1.2.38.
+3. Добавить отдельный bounded immediate-durability ledger consumption plans и
+   commits: Device-signed, content-addressed, owner-bound, single monotonic
+   chain, exact nonce index и no-clobber replay.
+4. Commit должен exact-match durable plan, быть внутри TTL, содержать точную
+   `CONSUME` phrase и `UserConfirmed`; prepared record записывается до consume,
+   completed receipt — до success response.
+5. Crash/retry после consume до completed record должен reconcile exact already
+   consumed intent без повторного/чужого consume. Rebound nonce, parallel
+   commit, stale plan/evidence и corruption fail closed.
+6. Active `RuntimeIpcCommand`, CLI/desktop/background/network и public default
+   не менять. Signed runtime response dispatch — отдельный последующий этап.
+7. Добавить stable-path fixtures, formal manifest/RFC, 10/10 negative boundary,
+   увеличить aggregate readiness до 165 gates, затем rustfmt, locked/offline
+   strict Clippy, commit и push.
+
+## Stop conditions
+
+- commit может пройти без durable exact plan либо explicit approval/phrase;
+- adapter принимает не-complete, не-active или уже чужим binding consumed intent;
+- membership/coordinator/evidence меняются после plan без fail-closed rejection;
+- crash window позволяет повторно consume другой intent или вернуть success без
+  durable completed receipt;
+- read-only planning начинает создавать state или mutation path открывает сеть;
+- active runtime/default меняются ради прохождения теста.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

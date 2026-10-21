@@ -2777,6 +2777,15 @@ requires an exact `CONSUME` phrase and explicit approval. Responses are
 current-Device signed, but no adapter, durable plan store or active
 runtime/CLI/desktop authority is added yet.
 
+[`RFC-0262`](docs/RFC-0262-m1238-recipient-import-consumption-read-adapter.md)
+adds the dormant read-only side of that ceremony. It reloads the exact completed
+mutation record without creating missing state, reconstructs its signed
+evidence, reopens the active unconsumed intent, reloads caller-owned live
+memberships and requires exact complete progress before issuing an ephemeral
+plan. `Commit` is rejected before state access; no plan is persisted and no
+intent is consumed, so active runtime/CLI/desktop/network authority is still
+unchanged.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

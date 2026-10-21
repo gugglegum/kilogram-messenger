@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.38",
+  "status": "canonical-recipient-import-consumption-read-adapter-verified",
+  "implementation": [
+    "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_read_adapter.rs",
+    "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_mutation_adapter.rs",
+    "crates/kilogram-peer-history-recovery-runtime/src/lib.rs",
+    "crates/kilogram-peer-history-recovery-execution/src/recipient_import_round_intent.rs",
+    "crates/kilogram-runtime-ipc/src/recipient_import_consumption_contract.rs"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_history_transfer_wire": false,
+  "changes_active_runtime_ipc": false,
+  "changes_runtime_ipc_contract": false,
+  "runtime_ipc_version": 33,
+  "runtime_ipc_domain": 14,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "adapter_boundary": {
+    "dormant_library_api": true,
+    "handled_commands": [
+      "plan"
+    ],
+    "rejected_commands": [
+      "commit"
+    ],
+    "commit_rejected_before_state_reload": true,
+    "returns_ephemeral_in_process_plan": true,
+    "persists_consumption_plan": false,
+    "consumes_intent": false,
+    "opens_network": false,
+    "schedules_background_work": false,
+    "active_runtime_registration": false
+  },
+  "completed_mutation_boundary": {
+    "read_by_exact_mutation_nonce": true,
+    "missing_storage_is_not_created": true,
+    "absent_rejected": true,
+    "prepared_rejected": true,
+    "completed_record_id_reloaded": true,
+    "completed_receipt_reloaded": true,
+    "membership_set_digest_reloaded": true,
+    "canonical_evidence_reconstructed": true,
+    "changed_evidence_rejected": true
+  },
+  "live_revalidation_boundary": {
+    "current_coordinator_checked_before_membership_loader": true,
+    "active_unconsumed_intent_required": true,
+    "caller_owned_membership_loader": true,
+    "exact_ordered_membership_references_required": true,
+    "complete_progress_required": true,
+    "coordinator_refresh_pending_rejected": true,
+    "source_counts_and_event_count_exact": true,
+    "final_coordinator_exact": true,
+    "consumed_intent_rejected": true,
+    "changed_membership_rejected": true
+  },
+  "privacy_boundary": {
+    "opaque_content_addressed_ids": true,
+    "bounded_counts_and_timestamps": true,
+    "membership_snapshot_returned": false,
+    "membership_snapshot_persisted": false,
+    "message_body_or_plaintext": false,
+    "ciphertext_history_artifact": false,
+    "filesystem_path": false,
+    "transport_authority": false,
+    "raw_runtime_token": false
+  },
+  "verification": {
+    "stable_path_rust_harness_required_on_windows": true,
+    "real_signed_fixture_tests": "4/4",
+    "mutation_ledger_read_projection_tests": "1/1",
+    "boundary_negative_mutations": "10/10",
+    "m1_readiness": "164/164",
+    "strict_clippy": true,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "second_host_required": false,
+    "network_executed": false
+  },
+  "non_claims": [
+    "active-runtime-recipient-import-consumption-command",
+    "recipient-import-consumption-mutation-adapter",
+    "durable-consumption-plan-ledger",
+    "signed-runtime-response-dispatch",
+    "automatic-intent-consumption",
+    "cli-or-desktop-ceremony",
+    "network-or-background-worker",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "explicit-recipient-import-consumption-mutation-adapter",
+    "durable-consumption-plan-ledger",
+    "signed-runtime-response-dispatch",
+    "guided-desktop-recipient-import-ceremony"
+  ]
+}

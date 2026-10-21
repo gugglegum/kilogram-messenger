@@ -19,6 +19,7 @@ mod execution_api {
 }
 
 mod recipient_import_confirmation;
+mod recipient_import_consumption_read_adapter;
 mod recipient_import_mutation_adapter;
 mod recipient_import_read_adapter;
 
@@ -28,10 +29,15 @@ pub use recipient_import_confirmation::{
     RecipientImportConfirmationLedger, RecipientImportConfirmationLedgerError,
     RecipientImportConfirmationPlan, RecipientImportConfirmationStatus,
 };
+pub use recipient_import_consumption_read_adapter::{
+    RecipientHistoryRecoveryImportConsumptionReadAdapter,
+    RecipientImportConsumptionReadAdapterDispatch, RecipientImportConsumptionReadAdapterError,
+};
 pub use recipient_import_mutation_adapter::{
-    MAX_DURABLE_RECIPIENT_IMPORT_MUTATION_RECORDS, MAX_DURABLE_RECIPIENT_IMPORT_MUTATIONS,
-    RecipientHistoryRecoveryImportMutationAdapter, RecipientImportMutationAdapterDispatch,
-    RecipientImportMutationAdapterError,
+    DurableRecipientImportCompletedMutation, MAX_DURABLE_RECIPIENT_IMPORT_MUTATION_RECORDS,
+    MAX_DURABLE_RECIPIENT_IMPORT_MUTATIONS, RecipientHistoryRecoveryImportMutationAdapter,
+    RecipientImportMutationAdapterDispatch, RecipientImportMutationAdapterError,
+    RecipientImportMutationReadStatus,
 };
 pub use recipient_import_read_adapter::{
     LoadedRecipientImportMembership, RecipientHistoryRecoveryImportReadAdapter,
@@ -44,7 +50,10 @@ pub use recipient_import_read_adapter::{
 // signed-fixture integration tests in the lower execution crate.
 pub use kilogram_runtime_ipc::{
     RuntimeIpcDescriptor, RuntimeIpcRecipientImportArtifactId,
-    RuntimeIpcRecipientImportExecutionCommand,
+    RuntimeIpcRecipientImportCompletedMutationEvidence,
+    RuntimeIpcRecipientImportConsumptionCommand, RuntimeIpcRecipientImportConsumptionHazard,
+    RuntimeIpcRecipientImportConsumptionOutcome, RuntimeIpcRecipientImportConsumptionPlanSummary,
+    RuntimeIpcRecipientImportConsumptionRequest, RuntimeIpcRecipientImportExecutionCommand,
     RuntimeIpcRecipientImportExecutionConfirmationSummary,
     RuntimeIpcRecipientImportExecutionHazard, RuntimeIpcRecipientImportExecutionOutcome,
     RuntimeIpcRecipientImportExecutionPlanSummary,
