@@ -6,14 +6,14 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.54 добавил short-lived one-shot
-`RecipientImportGuidedRecoveryLaunchAuthorization`, который удерживает exact
-M1.2.53 issuer, показывает только safe membership-count/expiry/domain-bound
-phrase preview и после typed exact approval выдаёт максимум один M1.2.52
-installation owner. Cancel, expiry, mismatch и downstream failure поглощают
-authorization. CLI/desktop/runtime IPC/network не подключены. Следующий
-M1.2.55 должен добавить один process-owned pending-authorization slot и
-запретить replacement до install/cancel/expiry.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.55 добавил non-cloneable
+process-owned `RecipientImportGuidedRecoveryLaunchSlot`, который удерживает не
+более одной complete M1.2.54 authorization и одного установленного host.
+Install/approve принимают custody по значению, replacement и eviction
+запрещены, а mismatch/expiry/clock/downstream failure очищают pending grant.
+Наружу выходят только safe state/preview; owner/raw host/session/handoff не
+выдаются. CLI/desktop/runtime IPC/network не подключены. Следующий M1.2.56
+должен маршрутизировать typed host controls через этот же opaque slot.
 
 ## Текущее состояние
 

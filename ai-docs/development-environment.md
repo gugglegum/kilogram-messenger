@@ -1,5 +1,26 @@
 # Среда разработки
 
+## M1.2.55 verification (2026-10-22)
+
+- Два новых process-owned launch-slot fixtures прошли 2/2 за 130.65s, затем
+  combined M1.2.47–M1.2.55 guided-recovery regression прошёл 16/16 за 1648.14s
+  через `scripts/run-cargo-tests-stable.ps1` с постоянным EXE,
+  workspace-local TEMP/TMP, двумя cargo jobs и below-normal priority; direct
+  `cargo test` не использовался.
+- Первый sandboxed запуск fixture использовал системный TEMP и получил ожидаемый
+  Windows access denied; повтор с workspace-local TEMP/TMP прошёл без code
+  error. Dedicated slot boundary отклонил 16/16 weakening mutations, а
+  predecessor launch-authorization boundary сохранил 14/14.
+- Accepted-tag M1 readiness прошёл 181/181 gates с rustfmt и workspace-wide
+  locked/offline strict Clippy. Cross-volume incremental hard-link fallback
+  остался только обычным Cargo warning.
+- Product network, second host, release build, archive, tag и automatic GitHub
+  build не использовались. Ordinary startup не создаёт slot/authorization/host;
+  CLI/desktop/runtime IPC/timer/background остаются unregistered, default —
+  `legacy-only`.
+- Cargo target после regression занимает 54.59 GiB. Кэш сохранён ради скорости;
+  verification profile и incremental generations не очищались.
+
 ## M1.2.53 verification (2026-10-22)
 
 - Workspace locked/offline check passed. Initial sandboxed focused-test launch

@@ -111,6 +111,24 @@ impl<'identity> RecipientImportGuidedRecoveryLaunchAuthorization<'identity> {
         &self.preview
     }
 
+    /// Checks whether this complete authorization may enter the process-owned
+    /// pending slot without exposing or consuming its retained issuer.
+    ///
+    /// The slot still accepts the authorization by value, so every rejected
+    /// install drops the complete grant rather than returning it to a caller.
+    pub(crate) fn validate_pending_at(
+        &self,
+        now_unix_seconds: u64,
+    ) -> Result<(), RecipientImportGuidedRecoveryLaunchAuthorizationError> {
+        if now_unix_seconds < self.issued_at_unix_seconds {
+            return Err(RecipientImportGuidedRecoveryLaunchAuthorizationError::ClockRegressed);
+        }
+        if now_unix_seconds >= self.preview.expires_at_unix_seconds {
+            return Err(RecipientImportGuidedRecoveryLaunchAuthorizationError::Expired);
+        }
+        Ok(())
+    }
+
     /// Consumes the authorization before checking the fallible approval path.
     pub fn approve(
         self,

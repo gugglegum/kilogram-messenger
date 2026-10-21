@@ -12,6 +12,24 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.55 — process-owned pending guided-recovery launch slot: выполнено
+
+- Non-cloneable process-local slot владеет максимум одной complete M1.2.54
+  authorization и максимум одним установленным M1.2.51 host; restart не
+  восстанавливает ни pending, ни installed custody.
+- Crate-private install принимает authorization по значению, проверяет
+  clock/expiry и отвергает pending/installed replacement без silent eviction
+  или возврата incoming grant.
+- Public surface выдаёт только safe state, M1.2.54 preview и typed
+  approve/cancel. Approve извлекает pending authorization до fallible work,
+  затем one-shot получает owner и сохраняет host внутри slot. Mismatch, expiry,
+  clock regression, issuer/host failure и cancel не оставляют reusable grant.
+- Stable-name slot fixtures прошли 2/2 за 130.65s; combined guided-recovery
+  regression M1.2.47–M1.2.55 прошёл 16/16 за 1648.14s. Dedicated boundary
+  отклонил 16/16 mutations; accepted-tag readiness прошёл 181/181 gates.
+  CLI/desktop/runtime IPC/timer/network не зарегистрированы, public
+  `legacy-only` неизменён.
+
 ### M1.2.54 — explicit local guided-recovery launch authorization: выполнено
 
 - Non-cloneable process-local authorization удерживает ровно один M1.2.53
