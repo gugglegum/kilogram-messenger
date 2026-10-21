@@ -12,6 +12,22 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.43 — runtime IPC recipient-import-consumption migration preflight: выполнено
+
+- Postcard command/response extension классифицировано как несовместимое:
+  target закреплён как IPC v34 и signed descriptor domain v15;
+- exact target variants — nested canonical request bytes и current-Device-signed
+  response bytes; outer IPC не интерпретирует внутренний canonical payload;
+- migration — hard cut co-installed binaries без dual reader, sniffing или
+  silent downgrade; legacy descriptor/request отклоняются до connect/dispatch;
+- атомарный activation-set включает enum/version/domain, completion/schema,
+  compatibility registry и все 58 найденных live-binding gates; historical
+  manifests не переписываются задним числом;
+- boundary отклонил 10/10 mutations, readiness расширен до 169 gates;
+- executable runtime остаётся v33/domain v14: handler, CLI/desktop, network,
+  release/ZIP/tag, automatic GitHub build и second host отсутствуют; default
+  `legacy-only`.
+
 ### M1.2.42 — bounded process-local consumption Plan session cache: выполнено
 
 - В памяти процесса хранится только opaque M1.2.41 dispatcher Plan stage,

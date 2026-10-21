@@ -1,35 +1,37 @@
-# Текущая точка: M1.2.42 завершён, следующий M1.2.43
+# Текущая точка: M1.2.43 завершён, следующий M1.2.44
 
 Дата: 2026-10-21.
 
-M1.2.42 добавил обязательную process-local границу между двумя authenticated
-request будущей consumption ceremony. Cache хранит opaque M1.2.41 Plan stage,
-exact summary/request digest, ограничен 32 живыми sessions, не переживает
-restart/TTL и не даёт authority самостоятельно. Stable durable fixture 1/1.
+M1.2.43 зафиксировал исполняемый, но неактивный migration preflight для
+Postcard runtime IPC. Добавление consumption enum variants требует hard cut
+`33/v14 -> 34/v15`; version и descriptor domain меняются только вместе.
+Инвентаризация нашла 58 live-binding boundary files. Текущие executable bytes
+остались на 33/v14, readiness содержит 169 gates.
 
-## Следующий этап: M1.2.43 — explicit runtime IPC v34/domain v15 migration
+## Следующий этап: M1.2.44 — atomic IPC v34/domain v15 envelope activation
 
-1. Зафиксировать добавление recipient-import-consumption command/response как
-   несовместимое расширение Postcard enum: IPC 33/domain v14 -> 34/domain v15.
-2. Обновить canonical completion/schema/compatibility ledgers и predecessor
-   gates через явный successor contract, не переписывая историю как будто wire
-   не менялся.
-3. Runtime handler владеет M1.2.42 cache только в памяти процесса. Plan и Commit
-   принимают nested canonical bytes; response — только current-Device-signed.
-4. Commit без exact stage текущего runtime, после restart/TTL или с другим
-   descriptor/Device fail closed. Cache capacity не вызывает eviction.
-5. На этом этапе не добавлять пользовательскую CLI/desktop ceremony и не
-   выполнять product network; нужны authenticated loopback fixtures, boundary,
-   rustfmt, locked/offline strict Clippy и следующий readiness gate.
+1. Одним change-set добавить exact command/response variants, поднять IPC до 34
+   и descriptor domain до v15.
+2. В том же change-set обновить completion/schema/compatibility ledgers и все
+   live-binding gates через явный successor contract, сохранив исторические
+   manifest claims.
+3. Runtime dispatch обязан распознать command, но до wiring M1.2.42 cache
+   вернуть отдельный fail-closed service-unavailable result; нельзя давать
+   ложную mutation authority.
+4. Добавить downgrade regressions: v33 descriptor rejected before connect,
+   v33 request rejected before actor dispatch, hybrid 33/v15 и 34/v14 invalid.
+5. Не добавлять пользовательскую CLI/desktop ceremony и product network;
+   нужны stable-path loopback fixtures, boundary, rustfmt, locked/offline strict
+   Clippy и readiness.
 
 ## Stop conditions
 
-- enum меняется без version/domain migration;
-- старый descriptor принимается новым runtime либо наоборот;
-- Plan stage сериализуется или переживает restart;
-- handler реконструирует authority из signed projection;
-- Commit минует M1.2.41 или cache capacity приводит к silent eviction;
-- unsigned outcome/identity secret выходит в IPC;
+- enum меняется без одновременного version/domain migration;
+- completion/schema/compatibility или хотя бы один live-binding gate остаётся
+  в гибридном состоянии;
+- старый descriptor/request принимается новым runtime;
+- envelope registration выдаёт mutation success до wiring cache/dispatcher;
+- historical manifest переписывается как будто раньше использовал v34;
 - transport wire либо public `legacy-only` default меняется.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5

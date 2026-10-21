@@ -6,12 +6,12 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.42 добавил bounded process-local
-custody для непрозрачного M1.2.41 Plan stage. Cache не durable, не переживает
-restart/TTL, не вытесняет живую authority при переполнении и сам не разрешает
-Commit. Следующий M1.2.43 — explicit IPC v34/domain v15 migration contract перед
-active registration; CLI/desktop/network пока не подключены, публичный default
-остаётся legacy-only.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.43 зафиксировал исполняемый
+preflight несовместимой local-control миграции `33/v14 -> 34/v15`, точные новые
+Postcard variants и атомарный набор из реестров и 58 live-binding gates.
+Исполняемые bytes пока не изменены. Следующий M1.2.44 — атомарная активация
+нового envelope с явным fail-closed handler boundary; CLI/desktop/network пока
+не подключаются, публичный default остаётся legacy-only.
 
 ## Текущее состояние
 

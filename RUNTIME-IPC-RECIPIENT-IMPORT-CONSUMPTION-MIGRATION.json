@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.43",
+  "status": "preflight-locked-inactive",
+  "surface": "runtime-ipc",
+  "encoding": "postcard",
+  "predecessor": "M1.2.42",
+  "previous": {
+    "ipc_version": 33,
+    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v14\\0",
+    "recipient_import_consumption_command_present": false,
+    "recipient_import_consumption_response_present": false
+  },
+  "target": {
+    "ipc_version": 34,
+    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v15\\0",
+    "command_variant": "RecipientImportConsumption { request: Vec<u8> }",
+    "response_variant": "RecipientImportConsumption { signed_response: Vec<u8> }",
+    "append_only_enum_extension": true
+  },
+  "migration": {
+    "strategy": "exact-version-hard-cut-for-co-installed-binaries",
+    "legacy_descriptor": "rejected-before-connect",
+    "legacy_request": "rejected-before-actor-dispatch",
+    "mixed_version_operation": "unsupported-update-both-binaries-and-restart-runtime",
+    "dual_reader": false,
+    "format_sniffing": false,
+    "silent_downgrade": false,
+    "hybrid_version_domain_state_allowed": false
+  },
+  "required_atomic_update": {
+    "runtime_command_enum": true,
+    "runtime_response_enum": true,
+    "ipc_version": true,
+    "descriptor_signature_domain": true,
+    "canonical_runtime_ipc_schema": true,
+    "canonical_runtime_ipc_completion_inventory": true,
+    "protocol_compatibility_registry": true,
+    "all_live_binding_gates": true,
+    "observed_live_binding_gate_files": 58,
+    "preserve_historical_manifest_claims": true
+  },
+  "activation_boundary": {
+    "active_runtime_changed": false,
+    "command_registered": false,
+    "runtime_handler": false,
+    "plan_session_cache_owned_by_runtime": false,
+    "cli_or_desktop_control": false,
+    "network": false,
+    "public_default_changed": false,
+    "public_default": "legacy-only"
+  },
+  "verification": {
+    "negative_mutations": "10/10",
+    "m1_readiness": "169/169",
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "second_host_required": false,
+    "network_executed": false
+  },
+  "non_claims": [
+    "runtime-ipc-v34-activated",
+    "recipient-import-consumption-command-registered",
+    "recipient-import-consumption-handler-active",
+    "cli-or-desktop-consumption-ceremony",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "atomically-activate-runtime-ipc-v34-domain-v15-and-register-envelope",
+    "wire-process-local-plan-session-cache-into-runtime-handler",
+    "guided-desktop-recipient-import-consumption-ceremony"
+  ]
+}

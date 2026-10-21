@@ -5928,3 +5928,19 @@ Hosted follow-up:
 - Active IPC remains version 33/domain v14. Adding the command is explicitly a
   later v34/domain v15 compatibility migration; no CLI, desktop, network,
   release, ZIP, tag, automatic GitHub build or second host is used.
+
+## M1.2.43 runtime IPC migration preflight environment (2026-10-21)
+
+- The machine-readable preflight allocates runtime IPC 34 and signed descriptor
+  domain v15 for the exact recipient-import-consumption command/result pair.
+- The implementation remains at version 33/domain v14. The preflight boundary
+  rejects any early enum/version/domain activation and every hybrid generation.
+- A repository scan found 58 PowerShell boundary files that pin at least one
+  live version/domain constant. The activation stage must update their live
+  binding expectations while preserving historical manifest claims.
+- The migration is an exact-version hard cut for co-installed binaries: no
+  dual reader, format sniffing, fallback or silent downgrade is permitted.
+- Dedicated boundary self-test rejects 10/10 mutations. Readiness now has 169
+  closed gates. No Rust build is required because executable source is
+  unchanged; no network, second host, release build, archive, tag or automatic
+  GitHub build is used.
