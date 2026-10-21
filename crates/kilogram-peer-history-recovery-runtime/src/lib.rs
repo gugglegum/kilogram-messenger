@@ -9,8 +9,9 @@
 mod execution_api {
     pub use kilogram_peer_history_recovery_execution::{
         DurableRecipientRecoveryImportRoundIntent, RecipientHistoryImportStore,
-        RecipientHistoryRecoveryImportRoundExecutor, RecipientHistoryTransferInbox,
-        RecipientRecoveryCoordinationPlan, RecipientRecoveryImportRoundExecutionBudget,
+        RecipientHistoryRecoveryCoordinator, RecipientHistoryRecoveryImportRoundExecutor,
+        RecipientHistoryTransferInbox, RecipientRecoveryCoordinationPlan,
+        RecipientRecoveryCoordinatorError, RecipientRecoveryImportRoundExecutionBudget,
         RecipientRecoveryImportRoundExecutionError, RecipientRecoveryImportRoundExecutionPlan,
         RecipientRecoveryImportRoundExecutionReceipt,
         RecipientRecoveryImportRoundIntentConsumeOutcome, RecipientRecoveryImportRoundIntentError,
@@ -62,7 +63,8 @@ pub use recipient_import_consumption_response_dispatcher::{
     RecipientImportConsumptionResponseDispatch, RecipientImportConsumptionResponseDispatcherError,
 };
 pub use recipient_import_consumption_runtime_attachment::{
-    GuidedRecipientImportConsumptionContext, GuidedRecipientImportMembership,
+    AuthenticatedGuidedRecipientImportCompletion, GuidedRecipientImportConsumptionContext,
+    GuidedRecipientImportConsumptionContextProducer,
     MAX_RECIPIENT_IMPORT_CONSUMPTION_CONTEXT_LIFETIME_SECONDS,
     RecipientImportConsumptionRuntimeActor, RecipientImportConsumptionRuntimeActorError,
     RecipientImportConsumptionRuntimeAttachmentError,

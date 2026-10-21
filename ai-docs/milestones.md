@@ -12,6 +12,23 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.47 — authenticated guided-context producer: выполнено
+
+- Fresh successful complete recipient-import mutation теперь выдаёт единственный
+  non-serializable process-local hand-off с private fields и без public
+  constructor; rejected/partial и loader-free completed replay его не выдают.
+- Producer использует canonical coordinator refresh и уже загруженные live
+  memberships, связывая final plan/sequence, ordered set digest и каждый
+  membership digest без повторной сборки authority caller-ом.
+- Raw context constructor стал crate-private; actor до install повторно сверяет
+  state directory, Account и Device. IPC/CLI/env/filesystem/desktop не могут
+  собрать либо установить context.
+- Stable-name fixture доказал ceremony -> Plan, byte-exact replay, Commit,
+  lost-response `AlreadyConsumed`, detach и отсутствие второго consume;
+  foreign state/Account/Device отклоняются.
+- Production startup остаётся unattached; peer/runtime wire, product network и
+  public `legacy-only` default не изменены. Readiness расширен до 173 gates.
+
 ### M1.2.46 — guided recipient-import-consumption runtime attachment: выполнено
 
 - Runtime process создаёт один actor, владеющий ровно одним M1.2.45 service и

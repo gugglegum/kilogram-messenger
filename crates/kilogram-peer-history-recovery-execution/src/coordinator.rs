@@ -271,6 +271,32 @@ impl RecipientHistoryRecoveryCoordinator {
         )
     }
 
+    /// Rebuilds the current coordinator projection from the exact authenticated
+    /// source set already held by `previous`.
+    ///
+    /// This is intentionally narrower than accepting a new caller-provided
+    /// source list. It is used after an authenticated import mutation so a
+    /// same-process successor can retain the canonical coordinator authority
+    /// without exporting the private approved-source set or duplicating its
+    /// validation in an integration crate.
+    pub fn refresh_after_authenticated_import(
+        previous: &RecipientRecoveryCoordinationPlan,
+        inbox: &RecipientHistoryTransferInbox,
+        imports: &RecipientHistoryImportStore,
+    ) -> Result<RecipientRecoveryCoordinationPlan, RecipientRecoveryCoordinatorError> {
+        validate_plan_object(previous)?;
+        ensure_same_state_directory(&previous.state_directory, inbox.state_directory())?;
+        ensure_same_state_directory(&previous.state_directory, imports.state_directory())?;
+        build_plan(
+            &previous.state_directory,
+            previous.owner_account_id,
+            previous.owner_device_id,
+            &previous.approved_sources,
+            inbox,
+            imports,
+        )
+    }
+
     pub fn apply(
         plan: &RecipientRecoveryCoordinationPlan,
         inbox: &RecipientHistoryTransferInbox,

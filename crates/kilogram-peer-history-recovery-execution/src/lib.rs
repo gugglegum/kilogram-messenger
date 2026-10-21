@@ -49,8 +49,9 @@ mod transfer;
 mod execution_api {
     pub use crate::{
         DurableRecipientRecoveryImportRoundIntent, RecipientHistoryImportStore,
-        RecipientHistoryRecoveryImportRoundExecutor, RecipientHistoryTransferInbox,
-        RecipientRecoveryCoordinationPlan, RecipientRecoveryImportRoundExecutionBudget,
+        RecipientHistoryRecoveryCoordinator, RecipientHistoryRecoveryImportRoundExecutor,
+        RecipientHistoryTransferInbox, RecipientRecoveryCoordinationPlan,
+        RecipientRecoveryCoordinatorError, RecipientRecoveryImportRoundExecutionBudget,
         RecipientRecoveryImportRoundExecutionError, RecipientRecoveryImportRoundExecutionPlan,
         RecipientRecoveryImportRoundExecutionReceipt,
         RecipientRecoveryImportRoundIntentConsumeOutcome, RecipientRecoveryImportRoundIntentError,
@@ -149,10 +150,12 @@ pub use recipient_import_consumption_response_dispatcher::{
     RecipientImportConsumptionResponseDispatch, RecipientImportConsumptionResponseDispatcherError,
 };
 #[cfg(test)]
+pub(crate) use recipient_import_consumption_runtime_attachment::GuidedRecipientImportMembership;
+#[cfg(test)]
 pub use recipient_import_consumption_runtime_attachment::{
-    GuidedRecipientImportConsumptionContext, GuidedRecipientImportMembership,
-    RecipientImportConsumptionRuntimeActor, RecipientImportConsumptionRuntimeActorError,
-    RecipientImportConsumptionRuntimeAttachmentError,
+    AuthenticatedGuidedRecipientImportCompletion, GuidedRecipientImportConsumptionContext,
+    GuidedRecipientImportConsumptionContextProducer, RecipientImportConsumptionRuntimeActor,
+    RecipientImportConsumptionRuntimeActorError, RecipientImportConsumptionRuntimeAttachmentError,
     RecipientImportConsumptionRuntimeContextInstallOutcome,
 };
 #[cfg(test)]
@@ -6446,6 +6449,7 @@ mod tests {
         reference: RuntimeIpcRecipientImportMembershipReference,
         adapter: RecipientHistoryRecoveryImportMutationAdapter,
         receipt: RuntimeIpcRecipientImportExecutionReceiptSummary,
+        authenticated_guided_completion: Option<AuthenticatedGuidedRecipientImportCompletion>,
     }
 
     fn completed_adapter_mutation(
@@ -6551,13 +6555,16 @@ mod tests {
         if !receipt.complete {
             return Err("adapter mutation did not complete the intent".into());
         }
+        let receipt = receipt.clone();
+        let authenticated_guided_completion = applied.into_authenticated_guided_completion();
         Ok(CompletedAdapterMutation {
             store,
             durable,
             descriptor,
             reference,
             adapter,
-            receipt: receipt.clone(),
+            receipt,
+            authenticated_guided_completion,
         })
     }
 
@@ -7413,6 +7420,7 @@ mod tests {
         assert_eq!(receipt.imported_now_count, 1);
         assert!(receipt.complete);
         assert!(applied.persisted_receipt_before_response());
+        assert!(applied.has_authenticated_guided_completion());
         assert!(!applied.replayed_completed_receipt());
         assert!(!applied.consumed_intent());
         assert!(!applied.opened_network());
@@ -7435,6 +7443,7 @@ mod tests {
             7_500,
         )?;
         assert!(replay.replayed_completed_receipt());
+        assert!(!replay.has_authenticated_guided_completion());
         assert_eq!(load_count.get(), 0);
         assert!(matches!(
             replay.outcome(),
@@ -7476,6 +7485,7 @@ mod tests {
                 ..
             }
         ));
+        assert!(!conflict_outcome.has_authenticated_guided_completion());
         Ok(())
     }
 
@@ -8621,6 +8631,164 @@ mod tests {
                 RecipientImportConsumptionRuntimeAttachmentError::ContextUnavailable
             ))
         ));
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_consumption_authenticated_producer_drives_loopback_exactly_once()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-consumption-guided-producer")?;
+        let mut completed = completed_adapter_mutation(&setup, 121, 91)?;
+        let completion = completed
+            .authenticated_guided_completion
+            .take()
+            .ok_or("successful guided mutation did not emit its in-process hand-off")?;
+        assert!(matches!(
+            completion.verify_runtime_binding(
+                &setup.state.join("foreign-runtime-state"),
+                setup.fixture.owner_account_id,
+                setup.fixture.replacement.identity().device_id(),
+            ),
+            Err(RecipientImportConsumptionRuntimeAttachmentError::StateDirectoryMismatch)
+        ));
+        let foreign_account = AccountRootState::create(setup.state.join("foreign-guided-account"))?;
+        assert!(matches!(
+            completion.verify_runtime_binding(
+                &setup.state,
+                foreign_account.account_id(),
+                setup.fixture.replacement.identity().device_id(),
+            ),
+            Err(RecipientImportConsumptionRuntimeAttachmentError::OwnerAccountMismatch)
+        ));
+        let foreign_device = DeviceIdentity::generate()?;
+        assert!(matches!(
+            completion.verify_runtime_binding(
+                &setup.state,
+                setup.fixture.owner_account_id,
+                foreign_device.device_id(),
+            ),
+            Err(RecipientImportConsumptionRuntimeAttachmentError::OwnerDeviceMismatch)
+        ));
+        completion.verify_runtime_binding(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+        )?;
+        let plan_request = consumption_request(&completed, 94)?;
+        let encoded_plan_request = plan_request.encode()?;
+        let mut actor = RecipientImportConsumptionRuntimeActor::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+            1,
+        )?;
+        assert_eq!(
+            actor.install_authenticated_guided_recovery(completion, 8_800, 300)?,
+            RecipientImportConsumptionRuntimeContextInstallOutcome::Installed
+        );
+        let context_id = actor
+            .context_id()
+            .ok_or("guided context ID missing")?
+            .clone();
+
+        let first_plan = actor.dispatch(
+            &encoded_plan_request,
+            &completed.descriptor,
+            setup.fixture.replacement.identity(),
+            8_801,
+        )?;
+        let encoded_plan_response = first_plan.signed_response().to_vec();
+        let planned = SignedRuntimeIpcRecipientImportConsumptionResponse::decode_and_verify(
+            &encoded_plan_response,
+            &plan_request,
+            &completed.descriptor,
+        )?;
+        let RuntimeIpcRecipientImportConsumptionOutcome::Planned(plan) = planned.outcome() else {
+            return Err("authenticated producer did not expose a signed Plan".into());
+        };
+        let plan = plan.clone();
+        assert_eq!(
+            actor
+                .dispatch(
+                    &encoded_plan_request,
+                    &completed.descriptor,
+                    setup.fixture.replacement.identity(),
+                    8_802,
+                )?
+                .signed_response(),
+            encoded_plan_response
+        );
+
+        let RuntimeIpcRecipientImportConsumptionCommand::Plan {
+            evidence,
+            memberships,
+            ..
+        } = plan_request.command().clone()
+        else {
+            return Err("expected a consumption Plan request".into());
+        };
+        let commit_request = RuntimeIpcRecipientImportConsumptionRequest::new(
+            &completed.descriptor,
+            adapter_request_id(95),
+            RuntimeIpcRecipientImportConsumptionCommand::Commit {
+                evidence,
+                memberships,
+                confirmation_phrase: plan.confirmation_phrase.clone(),
+                plan: Box::new(plan),
+                explicit_approval:
+                    RuntimeIpcRecipientImportConsumptionExplicitApproval::UserConfirmed,
+            },
+        )?;
+        let encoded_commit_request = commit_request.encode()?;
+        let committed = actor.dispatch(
+            &encoded_commit_request,
+            &completed.descriptor,
+            setup.fixture.replacement.identity(),
+            8_803,
+        )?;
+        assert!(committed.state_changed());
+        let committed = SignedRuntimeIpcRecipientImportConsumptionResponse::decode_and_verify(
+            committed.signed_response(),
+            &commit_request,
+            &completed.descriptor,
+        )?;
+        assert!(matches!(
+            committed.outcome(),
+            RuntimeIpcRecipientImportConsumptionOutcome::Consumed(_)
+        ));
+
+        let lost_response_replay = actor.dispatch(
+            &encoded_commit_request,
+            &completed.descriptor,
+            setup.fixture.replacement.identity(),
+            8_804,
+        )?;
+        assert!(!lost_response_replay.state_changed());
+        let lost_response_replay =
+            SignedRuntimeIpcRecipientImportConsumptionResponse::decode_and_verify(
+                lost_response_replay.signed_response(),
+                &commit_request,
+                &completed.descriptor,
+            )?;
+        assert!(matches!(
+            lost_response_replay.outcome(),
+            RuntimeIpcRecipientImportConsumptionOutcome::AlreadyConsumed(_)
+        ));
+
+        assert_eq!(actor.clear_guided_context(&context_id)?, 1);
+        assert!(!actor.context_attached());
+        assert!(matches!(
+            actor.dispatch(
+                &encoded_commit_request,
+                &completed.descriptor,
+                setup.fixture.replacement.identity(),
+                8_805,
+            ),
+            Err(RecipientImportConsumptionRuntimeActorError::Attachment(
+                RecipientImportConsumptionRuntimeAttachmentError::ContextUnavailable
+            ))
+        ));
+        assert!(completed.store.inspect_active()?.is_none());
         Ok(())
     }
 }

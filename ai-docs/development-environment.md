@@ -1,5 +1,26 @@
 # Среда разработки
 
+## M1.2.47 verification (2026-10-21)
+
+- `cargo check` и targeted locked/offline strict Clippy для recovery
+  runtime/execution passed; accepted-tag full workspace readiness затем passed
+  rustfmt и locked/offline strict Clippy.
+- Новый real recovery fixture
+  `recipient_import_consumption_authenticated_producer_drives_loopback_exactly_once`
+  passed 1/1 за 197.97s, а mutation-adapter regression
+  `recipient_import_mutation_adapter_executes_persists_and_replays_exact_receipt`
+  passed 1/1 за 157.61s. Оба запускались через
+  `scripts/run-cargo-tests-stable.ps1` с постоянным EXE; direct `cargo test` не
+  использовался.
+- Dedicated authenticated-producer boundary rejected 12/12 mutations;
+  historical attachment successor boundary rejected 11/11. Accepted-tag M1
+  readiness passed 173/173 gates после согласованного обновления собственного
+  inventory invariant с 172 до 173.
+- Product network, second host, release build, archive, tag и automatic GitHub
+  build не использовались. Ordinary CLI/runtime startup остаётся unattached;
+  authenticated guided context появляется только из свежего успешного complete
+  recipient-import mutation dispatch.
+
 ## M1.2.46 verification (2026-10-21)
 
 - `cargo check` для recovery runtime и CLI passed locked/offline; existing

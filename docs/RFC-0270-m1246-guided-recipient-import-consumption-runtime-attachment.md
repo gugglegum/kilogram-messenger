@@ -33,6 +33,10 @@ process restart destroy both the context and every opaque Plan stage. This
 prevents a Plan prepared under one recovery authority from being committed
 under another.
 
+M1.2.47 tightened this boundary further: the raw constructor is crate-private,
+and only the non-serializable completion emitted by a fresh successful guided
+mutation can reach the public producer.
+
 ## 3. Dispatch and mutation boundary
 
 Every dispatch rechecks the descriptor Account and Device and the live signer

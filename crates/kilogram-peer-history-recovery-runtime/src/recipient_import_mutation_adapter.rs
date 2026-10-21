@@ -28,13 +28,15 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
-    DurableRecipientImportConfirmation, RecipientImportConfirmationLedger,
-    RecipientImportConfirmationLedgerError, RecipientImportMembershipLoader,
+    AuthenticatedGuidedRecipientImportCompletion, DurableRecipientImportConfirmation,
+    RecipientImportConfirmationLedger, RecipientImportConfirmationLedgerError,
+    RecipientImportMembershipLoader,
     execution_api::{
-        RecipientHistoryImportStore, RecipientHistoryRecoveryImportRoundExecutor,
-        RecipientHistoryTransferInbox, RecipientRecoveryCoordinationPlan,
-        RecipientRecoveryImportRoundExecutionBudget, RecipientRecoveryImportRoundExecutionReceipt,
-        RecipientRecoveryImportRoundIntentStore, RecipientRecoveryImportRoundStepDisposition,
+        RecipientHistoryImportStore, RecipientHistoryRecoveryCoordinator,
+        RecipientHistoryRecoveryImportRoundExecutor, RecipientHistoryTransferInbox,
+        RecipientRecoveryCoordinationPlan, RecipientRecoveryImportRoundExecutionBudget,
+        RecipientRecoveryImportRoundExecutionReceipt, RecipientRecoveryImportRoundIntentStore,
+        RecipientRecoveryImportRoundStepDisposition,
     },
     recipient_import_read_adapter::{execution_hazard, load_exact_memberships, transient_sources},
 };
@@ -470,12 +472,12 @@ impl RecipientImportMutationLedger {
     }
 }
 
-#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct RecipientImportMutationAdapterDispatch {
     outcome: RuntimeIpcRecipientImportExecutionOutcome,
     replayed_completed_receipt: bool,
     recovered_step_count: usize,
     persisted_receipt_before_response: bool,
+    authenticated_guided_completion: Option<AuthenticatedGuidedRecipientImportCompletion>,
 }
 
 impl RecipientImportMutationAdapterDispatch {
@@ -501,6 +503,16 @@ impl RecipientImportMutationAdapterDispatch {
 
     pub fn opened_network(&self) -> bool {
         false
+    }
+
+    pub fn has_authenticated_guided_completion(&self) -> bool {
+        self.authenticated_guided_completion.is_some()
+    }
+
+    pub fn into_authenticated_guided_completion(
+        self,
+    ) -> Option<AuthenticatedGuidedRecipientImportCompletion> {
+        self.authenticated_guided_completion
     }
 }
 
@@ -610,6 +622,7 @@ impl RecipientHistoryRecoveryImportMutationAdapter {
                 replayed_completed_receipt: true,
                 recovered_step_count: 0,
                 persisted_receipt_before_response: true,
+                authenticated_guided_completion: None,
             });
         }
 
@@ -836,6 +849,27 @@ impl RecipientHistoryRecoveryImportMutationAdapter {
             observed_final_plan_id,
             observed_final_sequence,
         )?;
+        let authenticated_guided_completion = if receipt.complete {
+            let final_coordination =
+                RecipientHistoryRecoveryCoordinator::refresh_after_authenticated_import(
+                    current, inbox, imports,
+                )?;
+            Some(
+                AuthenticatedGuidedRecipientImportCompletion::from_completed_mutation(
+                    &self.state_directory,
+                    self.owner_account_id,
+                    self.owner_device_id,
+                    final_coordination,
+                    memberships,
+                    loaded,
+                    binding.membership_set_digest,
+                    receipt.final_coordinator_plan_id.to_bytes()?,
+                    receipt.final_coordinator_sequence,
+                )?,
+            )
+        } else {
+            None
+        };
         let persisted =
             mutation_ledger.complete(&prepared, &receipt, recipient, now_unix_seconds)?;
         // Keep the prepared object alive through the durable commit. This also
@@ -846,6 +880,7 @@ impl RecipientHistoryRecoveryImportMutationAdapter {
             replayed_completed_receipt: false,
             recovered_step_count: recovered_count,
             persisted_receipt_before_response: true,
+            authenticated_guided_completion,
         })
     }
 }
@@ -1139,6 +1174,7 @@ fn reject(
         replayed_completed_receipt: false,
         recovered_step_count: 0,
         persisted_receipt_before_response: false,
+        authenticated_guided_completion: None,
     }
 }
 
@@ -1727,6 +1763,10 @@ pub enum RecipientImportMutationAdapterError {
     #[error(transparent)]
     Execution(#[from] crate::execution_api::RecipientRecoveryImportRoundExecutionError),
     #[error(transparent)]
+    Coordinator(Box<crate::execution_api::RecipientRecoveryCoordinatorError>),
+    #[error(transparent)]
+    RuntimeAttachment(Box<crate::RecipientImportConsumptionRuntimeAttachmentError>),
+    #[error(transparent)]
     Intent(Box<crate::execution_api::RecipientRecoveryImportRoundIntentError>),
     #[error(transparent)]
     Contract(#[from] ContractError),
@@ -1745,6 +1785,22 @@ impl From<crate::execution_api::RecipientRecoveryImportRoundIntentError>
 {
     fn from(error: crate::execution_api::RecipientRecoveryImportRoundIntentError) -> Self {
         Self::Intent(Box::new(error))
+    }
+}
+
+impl From<crate::execution_api::RecipientRecoveryCoordinatorError>
+    for RecipientImportMutationAdapterError
+{
+    fn from(error: crate::execution_api::RecipientRecoveryCoordinatorError) -> Self {
+        Self::Coordinator(Box::new(error))
+    }
+}
+
+impl From<crate::RecipientImportConsumptionRuntimeAttachmentError>
+    for RecipientImportMutationAdapterError
+{
+    fn from(error: crate::RecipientImportConsumptionRuntimeAttachmentError) -> Self {
+        Self::RuntimeAttachment(Box::new(error))
     }
 }
 

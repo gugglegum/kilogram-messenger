@@ -35,13 +35,13 @@ pub const MAX_RECIPIENT_IMPORT_CONSUMPTION_CONTEXT_LIFETIME_SECONDS: u64 =
     MAX_RUNTIME_IPC_RECIPIENT_IMPORT_CONSUMPTION_PLAN_LIFETIME_SECONDS;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct GuidedRecipientImportMembership {
+pub(crate) struct GuidedRecipientImportMembership {
     reference: RuntimeIpcRecipientImportMembershipReference,
     membership: ConversationMembershipSnapshot,
 }
 
 impl GuidedRecipientImportMembership {
-    pub fn new(
+    pub(crate) fn new(
         reference: RuntimeIpcRecipientImportMembershipReference,
         membership: ConversationMembershipSnapshot,
     ) -> Result<Self, RecipientImportConsumptionRuntimeAttachmentError> {
@@ -56,9 +56,117 @@ impl GuidedRecipientImportMembership {
             membership,
         })
     }
+}
 
-    pub fn reference(&self) -> &RuntimeIpcRecipientImportMembershipReference {
-        &self.reference
+/// Non-serializable authority hand-off emitted only by a successful guided
+/// import mutation in this process. Its fields are private and there is no
+/// public constructor, so IPC, CLI, environment, or caller-assembled recovery
+/// fragments cannot manufacture it.
+pub struct AuthenticatedGuidedRecipientImportCompletion {
+    state_directory: PathBuf,
+    owner_account_id: AccountId,
+    owner_device_id: DeviceId,
+    coordination: RecipientRecoveryCoordinationPlan,
+    memberships: Vec<GuidedRecipientImportMembership>,
+}
+
+impl AuthenticatedGuidedRecipientImportCompletion {
+    pub(crate) fn verify_runtime_binding(
+        &self,
+        state_directory: &Path,
+        owner_account_id: AccountId,
+        owner_device_id: DeviceId,
+    ) -> Result<(), RecipientImportConsumptionRuntimeAttachmentError> {
+        if self.state_directory != state_directory {
+            return Err(RecipientImportConsumptionRuntimeAttachmentError::StateDirectoryMismatch);
+        }
+        if self.owner_account_id != owner_account_id {
+            return Err(RecipientImportConsumptionRuntimeAttachmentError::OwnerAccountMismatch);
+        }
+        if self.owner_device_id != owner_device_id {
+            return Err(RecipientImportConsumptionRuntimeAttachmentError::OwnerDeviceMismatch);
+        }
+        Ok(())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn from_completed_mutation(
+        state_directory: impl AsRef<Path>,
+        owner_account_id: AccountId,
+        owner_device_id: DeviceId,
+        coordination: RecipientRecoveryCoordinationPlan,
+        references: &[RuntimeIpcRecipientImportMembershipReference],
+        memberships: Vec<ConversationMembershipSnapshot>,
+        expected_membership_set_digest: [u8; 32],
+        final_coordinator_plan_id: [u8; 32],
+        final_coordinator_sequence: u64,
+    ) -> Result<Self, RecipientImportConsumptionRuntimeAttachmentError> {
+        let state_directory = state_directory.as_ref().to_path_buf();
+        if coordination.state_directory() != state_directory {
+            return Err(RecipientImportConsumptionRuntimeAttachmentError::StateDirectoryMismatch);
+        }
+        if coordination.owner_account_id() != owner_account_id {
+            return Err(RecipientImportConsumptionRuntimeAttachmentError::OwnerAccountMismatch);
+        }
+        if coordination.owner_device_id() != owner_device_id {
+            return Err(RecipientImportConsumptionRuntimeAttachmentError::OwnerDeviceMismatch);
+        }
+        if coordination.plan_id() != final_coordinator_plan_id
+            || coordination.sequence() != final_coordinator_sequence
+            || coordination.requires_apply()
+        {
+            return Err(RecipientImportConsumptionRuntimeAttachmentError::CoordinatorChanged);
+        }
+        if references.len() != memberships.len() {
+            return Err(RecipientImportConsumptionRuntimeAttachmentError::MembershipCountMismatch);
+        }
+        let actual_set_digest = recipient_import_membership_set_digest(references)?.to_bytes()?;
+        if actual_set_digest != expected_membership_set_digest {
+            return Err(
+                RecipientImportConsumptionRuntimeAttachmentError::MembershipSetDigestMismatch,
+            );
+        }
+        let memberships = references
+            .iter()
+            .cloned()
+            .zip(memberships)
+            .map(|(reference, membership)| {
+                GuidedRecipientImportMembership::new(reference, membership)
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(Self {
+            state_directory,
+            owner_account_id,
+            owner_device_id,
+            coordination,
+            memberships,
+        })
+    }
+}
+
+/// Converts the unforgeable, same-process completion hand-off into the
+/// short-lived M1.2.46 context. Producing a context performs no I/O and opens
+/// no network path.
+pub struct GuidedRecipientImportConsumptionContextProducer;
+
+impl GuidedRecipientImportConsumptionContextProducer {
+    pub fn produce(
+        completion: AuthenticatedGuidedRecipientImportCompletion,
+        installed_at_unix_seconds: u64,
+        lifetime_seconds: u64,
+    ) -> Result<
+        GuidedRecipientImportConsumptionContext,
+        RecipientImportConsumptionRuntimeAttachmentError,
+    > {
+        GuidedRecipientImportConsumptionContext::from_authenticated_recovery(
+            completion.state_directory,
+            completion.owner_account_id,
+            completion.owner_device_id,
+            completion.coordination,
+            completion.memberships,
+            installed_at_unix_seconds,
+            lifetime_seconds,
+        )
     }
 }
 
@@ -91,7 +199,7 @@ pub struct GuidedRecipientImportConsumptionContext {
 
 impl GuidedRecipientImportConsumptionContext {
     #[allow(clippy::too_many_arguments)]
-    pub fn from_authenticated_recovery(
+    pub(crate) fn from_authenticated_recovery(
         state_directory: impl AsRef<Path>,
         owner_account_id: AccountId,
         owner_device_id: DeviceId,
@@ -261,14 +369,20 @@ pub enum RecipientImportConsumptionRuntimeContextInstallOutcome {
 }
 
 pub struct RecipientImportConsumptionRuntimeContextSlot {
+    state_directory: PathBuf,
     owner_account_id: AccountId,
     owner_device_id: DeviceId,
     attached: Option<GuidedRecipientImportConsumptionContext>,
 }
 
 impl RecipientImportConsumptionRuntimeContextSlot {
-    pub fn new(owner_account_id: AccountId, owner_device_id: DeviceId) -> Self {
+    pub fn new(
+        state_directory: impl AsRef<Path>,
+        owner_account_id: AccountId,
+        owner_device_id: DeviceId,
+    ) -> Self {
         Self {
+            state_directory: state_directory.as_ref().to_path_buf(),
             owner_account_id,
             owner_device_id,
             attached: None,
@@ -288,6 +402,9 @@ impl RecipientImportConsumptionRuntimeContextSlot {
         }
         if context.owner_device_id != self.owner_device_id {
             return Err(RecipientImportConsumptionRuntimeAttachmentError::OwnerDeviceMismatch);
+        }
+        if context.state_directory != self.state_directory {
+            return Err(RecipientImportConsumptionRuntimeAttachmentError::StateDirectoryMismatch);
         }
         if context.is_not_yet_valid(now_unix_seconds) {
             return Err(RecipientImportConsumptionRuntimeAttachmentError::ClockRollback);
@@ -384,20 +501,44 @@ impl RecipientImportConsumptionRuntimeActor {
         owner_device_id: DeviceId,
         maximum_sessions: usize,
     ) -> Result<Self, RecipientImportConsumptionRuntimeActorError> {
+        let state_directory = state_directory.as_ref().to_path_buf();
         Ok(Self {
             owner_account_id,
             owner_device_id,
             service: RecipientImportConsumptionRuntimeService::new(
-                state_directory,
+                &state_directory,
                 owner_account_id,
                 owner_device_id,
                 maximum_sessions,
             )?,
             context_slot: RecipientImportConsumptionRuntimeContextSlot::new(
+                &state_directory,
                 owner_account_id,
                 owner_device_id,
             ),
         })
+    }
+
+    pub fn install_authenticated_guided_recovery(
+        &mut self,
+        completion: AuthenticatedGuidedRecipientImportCompletion,
+        now_unix_seconds: u64,
+        lifetime_seconds: u64,
+    ) -> Result<
+        RecipientImportConsumptionRuntimeContextInstallOutcome,
+        RecipientImportConsumptionRuntimeActorError,
+    > {
+        completion.verify_runtime_binding(
+            &self.context_slot.state_directory,
+            self.owner_account_id,
+            self.owner_device_id,
+        )?;
+        let context = GuidedRecipientImportConsumptionContextProducer::produce(
+            completion,
+            now_unix_seconds,
+            lifetime_seconds,
+        )?;
+        self.install_guided_context(context, now_unix_seconds)
     }
 
     pub fn install_guided_context(
@@ -504,6 +645,12 @@ pub enum RecipientImportConsumptionRuntimeAttachmentError {
     SignerMismatch,
     #[error("recipient import-consumption guided membership digest changed")]
     MembershipDigestMismatch,
+    #[error("recipient import-consumption guided membership-set digest changed")]
+    MembershipSetDigestMismatch,
+    #[error("recipient import-consumption guided membership count changed")]
+    MembershipCountMismatch,
+    #[error("recipient import-consumption guided coordinator changed")]
+    CoordinatorChanged,
     #[error(transparent)]
     Contract(#[from] ContractError),
 }

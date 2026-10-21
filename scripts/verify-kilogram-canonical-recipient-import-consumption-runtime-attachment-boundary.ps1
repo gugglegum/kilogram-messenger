@@ -100,7 +100,7 @@ function Assert-Boundary {
 
     Require-Text $Attachment @(
         'pub struct GuidedRecipientImportConsumptionContext',
-        'pub fn from_authenticated_recovery(',
+        'fn from_authenticated_recovery(',
         'coordination.state_directory() != state_directory',
         'coordination.owner_account_id() != owner_account_id',
         'coordination.owner_device_id() != owner_device_id',
@@ -121,6 +121,9 @@ function Assert-Boundary {
         'pub fn opened_network(&self) -> bool {',
         'false'
     ) 'runtime attachment source'
+    if ($Attachment.IndexOf('pub fn from_authenticated_recovery(', [StringComparison]::Ordinal) -ge 0) {
+        throw 'raw guided-context constructor became publicly caller-assemblable'
+    }
     Require-Text $Service @(
         'pub fn dispatch_with_metadata<',
         'pub fn clear_plan_sessions(&mut self) -> usize',

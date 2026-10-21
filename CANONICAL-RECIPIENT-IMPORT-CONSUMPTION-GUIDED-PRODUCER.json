@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.47",
+  "status": "authenticated-guided-context-producer-verified",
+  "predecessor": "M1.2.46",
+  "producer": {
+    "source": "successful-complete-recipient-import-mutation-dispatch",
+    "process_local": true,
+    "serializable": false,
+    "public_constructor": false,
+    "caller_assembled_context_allowed": false,
+    "raw_context_constructor_public": false,
+    "requires_complete_receipt": true,
+    "requires_durable_completed_mutation": true,
+    "requires_canonical_coordinator_refresh": true,
+    "requires_exact_membership_reload": true,
+    "rejected_dispatch_produces_handoff": false,
+    "partial_dispatch_produces_handoff": false,
+    "completed_replay_without_live_reload_produces_handoff": false
+  },
+  "binding": {
+    "exact_state_directory": true,
+    "exact_account": true,
+    "exact_device": true,
+    "exact_final_coordinator_plan_and_sequence": true,
+    "exact_ordered_membership_set_digest": true,
+    "exact_per_membership_digest": true,
+    "actor_rechecks_state_account_and_device_before_install": true,
+    "maximum_context_lifetime_seconds": 300
+  },
+  "loopback": {
+    "canonical_nested_request_bytes": true,
+    "signed_response_verified": true,
+    "byte_exact_plan_replay": true,
+    "explicit_commit": true,
+    "lost_response_replay_outcome": "already-consumed",
+    "explicit_detach_clears_plan_stage": true,
+    "post_detach_second_consume": false
+  },
+  "production": {
+    "startup_attached": false,
+    "ambient_installer": false,
+    "adds_cli_control": false,
+    "adds_desktop_control": false,
+    "adds_environment_control": false,
+    "adds_filesystem_scan": false,
+    "opens_product_network": false,
+    "changes_peer_wire": false,
+    "changes_runtime_ipc_wire": false,
+    "changes_public_default": false,
+    "public_default": "legacy-only"
+  },
+  "verification": {
+    "successful_ceremony_emits_handoff": true,
+    "rejected_or_replayed_dispatch_emits_no_handoff": true,
+    "foreign_state_rejected": true,
+    "foreign_account_rejected": true,
+    "foreign_device_rejected": true,
+    "stable_path_test_count": 2,
+    "network_executed": false,
+    "second_host_required": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "next": [
+    "add-a-runtime-owned-guided-recovery-session-controller",
+    "attach-only-during-an-explicit-local-ceremony",
+    "retain-unattached-ordinary-startup-and-no-ambient-authority"
+  ]
+}

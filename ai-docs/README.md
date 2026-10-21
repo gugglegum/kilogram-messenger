@@ -6,16 +6,14 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.46 добавил один process-owned
-recipient-import-consumption actor и process-local slot для уже
-аутентифицированного guided recovery context. Context exact-привязан к
-state/Account/Device/coordinator/membership, очищает Plan stages при
-clear/expiry/restart и не может появиться из IPC/env/directory scan. Runtime
-handler теперь делегирует actor, но production startup остаётся unattached и
-возвращает прежний service-unavailable Error. Следующий M1.2.47 должен
-подключить producer из существующей guided ceremony и доказать loopback
-Plan/Commit/replay. CLI/desktop/network не расширены, публичный default остаётся
-legacy-only.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.47 связал fresh successful
+guided import mutation с M1.2.46 actor через единственный non-serializable
+process-local completion hand-off. Raw context constructor больше не public;
+final coordinator, membership set, state/Account/Device проверяются до install.
+Loopback fixture доказал byte-exact Plan replay, Commit, durable
+`AlreadyConsumed` и detach. Production startup остаётся unattached. Следующий
+M1.2.48 должен собрать эти стадии в один runtime-owned explicit guided-session
+controller без CLI/desktop/network authority и без изменения `legacy-only`.
 
 ## Текущее состояние
 
@@ -1363,6 +1361,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   bounded TTL и очистка Plan stages при clear/expiry/restart не позволяют
   превратить opaque IPC envelope в ambient authority; production startup пока
   остаётся unattached.
+- [`../docs/RFC-0271-m1247-authenticated-guided-context-producer.md`](../docs/RFC-0271-m1247-authenticated-guided-context-producer.md) —
+  M1.2.47 разрешает context только из private, non-serializable completion
+  успешной complete guided mutation. Canonical final coordinator и live
+  memberships сохраняются in-process, actor повторно связывает state/Account/
+  Device, а loopback Plan/Commit/replay/detach не открывает ambient authority.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
