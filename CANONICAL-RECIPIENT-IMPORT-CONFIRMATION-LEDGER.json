@@ -1,0 +1,96 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.35",
+  "status": "canonical-recipient-import-confirmation-ledger-verified",
+  "implementation": [
+    "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_confirmation.rs",
+    "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_read_adapter.rs",
+    "crates/kilogram-peer-history-recovery-runtime/src/lib.rs"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_history_transfer_wire": false,
+  "changes_active_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "confirmation_boundary": {
+    "exact_ephemeral_plan_required": true,
+    "exact_membership_references_required": true,
+    "exact_membership_set_digest_required": true,
+    "exact_intent_and_execution_plan_required": true,
+    "exact_coordinator_id_and_sequence_required": true,
+    "explicit_confirm_command_required": true,
+    "current_owner_device_signature_required": true,
+    "maximum_lifetime_seconds": 900,
+    "planning_read_only": true,
+    "planning_creates_database": false,
+    "confirmation_grants_import_authority": false,
+    "confirmation_consumes_intent": false
+  },
+  "durability": {
+    "separate_database": "history-recovery/recipient-import-confirmations-v1.redb",
+    "state_directory_lock_required": true,
+    "immediate_durability": true,
+    "maximum_records": 4096,
+    "content_addressed_signed_records": true,
+    "single_monotonic_chain": true,
+    "nonce_index_exact": true,
+    "exact_replay_idempotent": true,
+    "precommit_failure_retryable": true,
+    "stale_concurrent_plan_rejected": true,
+    "reused_nonce_for_other_binding_rejected": true,
+    "internal_fork_rollback_corruption_rejected": true,
+    "whole_database_rollback_witnessed": false
+  },
+  "stored_content": {
+    "owner_account_and_device": true,
+    "intent_execution_coordinator_ids": true,
+    "membership_set_digest": true,
+    "nonce_sequence_previous_id_and_expiry": true,
+    "membership_snapshot": false,
+    "message_body_or_plaintext": false,
+    "ciphertext_history_artifact": false,
+    "filesystem_path": false,
+    "transport_authority": false
+  },
+  "activation_boundary": {
+    "active_runtime_registration": false,
+    "runtime_server_dispatch": false,
+    "cli_or_desktop_control": false,
+    "background_worker_or_timer": false,
+    "network": false,
+    "mutation_command_dispatch": false,
+    "history_import": false,
+    "intent_consumption": false
+  },
+  "verification": {
+    "stable_path_rust_harness_required_on_windows": true,
+    "targeted_ledger_tests": "8/8",
+    "boundary_negative_mutations": "10/10",
+    "m1_readiness": "161/161",
+    "strict_clippy": true,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "second_host_required": false,
+    "network_executed": false
+  },
+  "non_claims": [
+    "active-runtime-confirm-command",
+    "signed-runtime-response-dispatch",
+    "mutation-adapter",
+    "automatic-recipient-import",
+    "automatic-intent-consumption",
+    "whole-database-rollback-detection-without-external-witness",
+    "cli-or-desktop-ceremony",
+    "network-or-background-worker",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "explicit-mutation-adapter-with-confirmation-and-nonce-deduplication",
+    "separate-intent-consumption-ceremony",
+    "guided-desktop-recipient-import-ceremony"
+  ]
+}

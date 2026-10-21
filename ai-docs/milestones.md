@@ -8177,3 +8177,27 @@ correlation visible, Windows-only field evidence, independent security audit
   workspace-wide locked/offline strict Clippy;
 - product network, second host, release/ZIP/tag и automatic GitHub build не
   использовались; default `legacy-only`.
+
+### M1.2.35 — durable recipient import confirmation ledger: принят локально
+
+- отдельный ledger в dormant runtime-integration crate принимает только exact
+  M1.2.34 `Planned` dispatch и validated M1.2.33 `Confirm` request;
+- intent/execution/coordinator IDs, exact ordered membership references и
+  membership-set digest должны совпасть. Current owner Device подписывает
+  candidate с caller nonce, sequence, previous ID и expiry максимум 900 секунд;
+- planning читает ledger без создания каталога/БД. Explicit commit под общим
+  state lock повторно открывает exact head и атомарно пишет record, nonce index
+  и single head с immediate durability;
+- ledger ограничен 4096 records. Exact replay возвращает прежний record;
+  reused nonce, stale concurrent plan, expiry, foreign Device, orphan/fork/
+  corrupt chain fail closed. Whole-database rollback без external witness не
+  заявлен;
+- записи не содержат membership snapshot, bodies/plaintext, ciphertext history
+  artifacts, filesystem paths или transport authority. Confirmation не
+  вызывает import и не consume-ит intent;
+- focused stable-path regression прошёл 8/8, boundary отклонил 10/10
+  mutations, readiness прошёл 161/161 с rustfmt и workspace-wide
+  locked/offline strict Clippy;
+- active runtime/server/CLI/desktop/background/network, product network,
+  second host, release/ZIP/tag и automatic GitHub build отсутствуют; default
+  `legacy-only`.

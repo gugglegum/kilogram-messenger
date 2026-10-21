@@ -2750,6 +2750,14 @@ The dependency bridge is isolated in
 `kilogram-peer-history-recovery-runtime`; the offline execution library has no
 production dependency on runtime IPC.
 
+[`RFC-0259`](docs/RFC-0259-m1235-durable-recipient-import-confirmation-ledger.md)
+adds a dormant Device-signed ledger for explicit confirmation of one exact
+ephemeral recipient import plan. Planning creates no state; atomic commit
+binds the plan, membership-set digest, nonce and short expiry into a bounded
+monotonic chain. Exact replay is idempotent, while nonce substitution, stale
+concurrent plans and internal corruption fail closed. Confirmation alone does
+not import history, consume the intent or activate runtime/desktop control.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

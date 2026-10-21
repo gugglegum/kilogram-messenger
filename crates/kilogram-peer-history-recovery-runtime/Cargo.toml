@@ -9,10 +9,18 @@ publish = false
 
 [dependencies]
 anyhow.workspace = true
+blake3.workspace = true
 kilogram-identity = { path = "../kilogram-identity" }
 kilogram-peer-history-recovery-execution = { path = "../kilogram-peer-history-recovery-execution" }
 kilogram-runtime-ipc = { path = "../kilogram-runtime-ipc" }
+kilogram-state = { path = "../kilogram-state" }
+postcard.workspace = true
+redb.workspace = true
+serde.workspace = true
 thiserror.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
 
 [lints]
 workspace = true

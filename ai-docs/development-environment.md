@@ -5745,3 +5745,25 @@ Hosted follow-up:
 - Cargo target was retained for warm builds (49.11 GiB after the focused run).
   No product network, second host, release build, archive, tag or automatic
   GitHub build was used; public default remains `legacy-only`.
+
+## M1.2.35 durable recipient import confirmation ledger environment (2026-10-21)
+
+- The dormant `kilogram-peer-history-recovery-runtime` crate now owns a
+  separate confirmation ledger; active applications still do not depend on it
+  and active IPC remains v33/domain v14.
+- Confirmation planning requires the exact M1.2.34 planned dispatch and exact
+  M1.2.33 Confirm command. It is read-only/no-create and produces a current
+  recipient-Device-signed candidate with a hard 900-second lifetime.
+- Explicit commit uses the shared state-directory lock and immediate redb
+  durability. Records, one-to-one nonce index and a single monotonic chain head
+  are bounded to 4096 and fully verified on every read.
+- Exact replay is idempotent. Nonce reuse for another binding, stale concurrent
+  candidates, expiry, foreign Device, internal fork/rollback/corruption and
+  symlinked ledger paths fail closed. Whole-file rollback without an external
+  witness is intentionally not claimed.
+- Eight focused tests pass through the permanent stable Windows harness;
+  package strict Clippy passes. Boundary rejects 10/10 mutations and accepted-
+  tag readiness passes 161/161 with rustfmt and workspace-wide locked/offline
+  strict Clippy.
+- No import/consume, product network, second host, release build, archive, tag
+  or automatic GitHub build was used; public default remains `legacy-only`.

@@ -6,14 +6,12 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.34 добавил dormant read-only
-recipient import adapter поверх M1.2.33 contract и M1.2.32 planner. Он
-reload-ит exact caller-owned membership references для `Plan` и exact known
-`Status`, но не зарегистрирован в active runtime и всегда отвергает
-`Confirm`/`Apply*`. Публичный default остаётся legacy-only; import/consume,
-CLI/desktop, network и background authority отсутствуют.
-Dependency bridge изолирован в `kilogram-peer-history-recovery-runtime`, не в
-offline execution engine.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.35 добавил dormant durable
+recipient import confirmation ledger поверх exact M1.2.34 ephemeral plan.
+Planning остаётся no-create/read-only, commit записывает bounded Device-signed
+evidence с monotonic chain и nonce replay protection. Confirmation не даёт
+import/consume authority и не подключена к active runtime/CLI/desktop/network.
+Публичный default остаётся legacy-only.
 
 ## Текущее состояние
 

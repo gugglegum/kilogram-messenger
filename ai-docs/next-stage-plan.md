@@ -1,33 +1,28 @@
-# Текущая точка: M1.2.34 завершён, следующий M1.2.35
+# Текущая точка: M1.2.35 завершён, следующий M1.2.36
 
-Статус на 2026-10-21: dormant transport-independent read adapter подключает
-только M1.2.33 `Plan`/`Status` к существующему M1.2.32 planner. Каждый exact
-membership reference reload-ится caller-owned callback и сверяется по
-authority/context echo и digest. Successful plan остаётся ephemeral; exact
-known-plan status заново reload-ит и replans. `Confirm`/`Apply*` всегда
-отвергаются, active runtime/CLI/desktop/network/background, import/consume и
-public-default change отсутствуют. Focused regression 8/8, execution crate
-42/42, boundary 10/10, readiness 160/160.
+Статус на 2026-10-21: dormant confirmation ledger сохраняет только явное
+Device-signed подтверждение exact M1.2.34 ephemeral plan. Confirm request
+повторяет exact ordered membership references, digest, intent,
+execution/coordinator plan и caller nonce; lifetime ограничен 900 секундами.
+Planning no-create/read-only, commit atomic под state lock, exact replay
+идемпотентен, nonce conflict/stale candidate/expiry/corruption fail closed.
+Ledger не импортирует историю и не consume-ит intent. Focused regression 8/8,
+boundary 10/10, readiness 161/161.
 
-Dependency bridge живёт в отдельном
-`kilogram-peer-history-recovery-runtime`; offline execution production crate
-не зависит от runtime IPC. Его signed-fixture tests включают тот же adapter
-source только под `cfg(test)`.
+## Следующий этап: M1.2.36 explicit bounded mutation adapter
 
-## Следующий этап: M1.2.35 durable explicit recipient import confirmation
-
-- добавить отдельный bounded recipient-Device-signed confirmation ledger для
-  exact M1.2.34 ephemeral plan projection, не активируя mutation dispatch;
-- confirmation exact-связать с intent, execution/coordinator plan,
-  membership-set digest, caller nonce, expiry и current Device;
-- `plan confirmation` оставить read-only, а explicit commit сделать
-  crash-safe/idempotent под state lock с monotonic replay protection;
-- reused nonce for another binding, stale/expired/foreign Device, plan or
-  coordinator substitution, rollback/fork/corruption fail closed;
-- ledger не хранит membership snapshots, bodies/plaintext или transport
-  authority и сам не выполняет import/consume;
-- сохранить IPC v33/domain v14, не добавлять server dispatch, CLI/desktop,
-  worker/timer/network и не менять public default либо wire formats.
+- подключить только `ApplyNext`/`ApplyBounded` к существующему M1.2.32
+  foreground executor через exact M1.2.35 durable confirmation;
+- перед первой мутацией заново reload/replan exact memberships и проверить
+  active intent, coordinator, execution plan, confirmation expiry и Device;
+- добавить отдельный durable mutation-nonce ledger: exact replay возвращает
+  прежний receipt, reused nonce for another binding fail closed;
+- сохранять receipt до ответа и корректно восстанавливаться в
+  import-before-coordinator-refresh crash window существующего executor;
+- не consume-ить intent автоматически: финальный consume остаётся отдельной
+  signed ceremony;
+- сохранить sequential/default 1/hard max 8, one import in-flight, IPC
+  v33/domain v14 и отсутствие active server/CLI/desktop/background/network.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

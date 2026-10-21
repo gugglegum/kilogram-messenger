@@ -96,6 +96,22 @@ impl RecipientImportReadAdapterDispatch {
         self.execution_plan.as_ref()
     }
 
+    pub fn planned_summary(&self) -> Option<&RuntimeIpcRecipientImportExecutionPlanSummary> {
+        match &self.outcome {
+            RuntimeIpcRecipientImportExecutionOutcome::Planned(summary) => Some(summary),
+            _ => None,
+        }
+    }
+
+    // The same source is included by the lower execution crate's signed-fixture
+    // tests, where the confirmation integration module is deliberately absent.
+    #[allow(dead_code)]
+    pub(crate) fn exact_membership_references(
+        &self,
+    ) -> &[RuntimeIpcRecipientImportMembershipReference] {
+        &self.membership_references
+    }
+
     pub fn known_plan(&self) -> Option<RecipientImportReadKnownPlan<'_>> {
         Some(RecipientImportReadKnownPlan {
             plan: self.execution_plan.as_ref()?,
@@ -114,6 +130,21 @@ impl RecipientImportReadAdapterDispatch {
 
     pub fn granted_import_authority(&self) -> bool {
         false
+    }
+
+    #[cfg(test)]
+    #[allow(dead_code)]
+    pub(crate) fn planned_for_test(
+        summary: RuntimeIpcRecipientImportExecutionPlanSummary,
+        membership_references: Vec<RuntimeIpcRecipientImportMembershipReference>,
+    ) -> Self {
+        let membership_set_digest = summary.membership_set_digest.clone();
+        Self {
+            outcome: RuntimeIpcRecipientImportExecutionOutcome::Planned(summary),
+            execution_plan: None,
+            membership_references,
+            membership_set_digest: Some(membership_set_digest),
+        }
     }
 }
 

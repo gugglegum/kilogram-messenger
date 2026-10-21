@@ -3371,9 +3371,15 @@ name = "kilogram-peer-history-recovery-runtime"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "blake3",
  "kilogram-identity",
  "kilogram-peer-history-recovery-execution",
  "kilogram-runtime-ipc",
+ "kilogram-state",
+ "postcard",
+ "redb",
+ "serde",
+ "tempfile",
  "thiserror 2.0.20",
 ]
 

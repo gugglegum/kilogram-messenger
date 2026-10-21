@@ -17,8 +17,15 @@ mod execution_api {
     };
 }
 
+mod recipient_import_confirmation;
 mod recipient_import_read_adapter;
 
+pub use recipient_import_confirmation::{
+    DurableRecipientImportConfirmation, MAX_DURABLE_RECIPIENT_IMPORT_CONFIRMATIONS,
+    MAX_RECIPIENT_IMPORT_CONFIRMATION_LIFETIME_SECONDS, RecipientImportConfirmationCommitOutcome,
+    RecipientImportConfirmationLedger, RecipientImportConfirmationLedgerError,
+    RecipientImportConfirmationPlan, RecipientImportConfirmationStatus,
+};
 pub use recipient_import_read_adapter::{
     LoadedRecipientImportMembership, RecipientHistoryRecoveryImportReadAdapter,
     RecipientImportMembershipLoad, RecipientImportMembershipLoader,
@@ -30,8 +37,10 @@ pub use recipient_import_read_adapter::{
 // signed-fixture integration tests in the lower execution crate.
 pub use kilogram_runtime_ipc::{
     RuntimeIpcDescriptor, RuntimeIpcRecipientImportArtifactId,
-    RuntimeIpcRecipientImportExecutionCommand, RuntimeIpcRecipientImportExecutionHazard,
-    RuntimeIpcRecipientImportExecutionOutcome, RuntimeIpcRecipientImportExecutionRequest,
-    RuntimeIpcRecipientImportIntentState, RuntimeIpcRecipientImportMembershipReference,
-    RuntimeIpcRequestId,
+    RuntimeIpcRecipientImportExecutionCommand,
+    RuntimeIpcRecipientImportExecutionConfirmationSummary,
+    RuntimeIpcRecipientImportExecutionHazard, RuntimeIpcRecipientImportExecutionOutcome,
+    RuntimeIpcRecipientImportExecutionPlanSummary, RuntimeIpcRecipientImportExecutionRequest,
+    RuntimeIpcRecipientImportExplicitApproval, RuntimeIpcRecipientImportIntentState,
+    RuntimeIpcRecipientImportMembershipReference, RuntimeIpcRequestId,
 };
