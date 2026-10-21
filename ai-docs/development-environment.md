@@ -1,5 +1,21 @@
 # Среда разработки
 
+## M1.2.45 verification (2026-10-21)
+
+- `cargo fmt --all -- --check` passed.
+- `cargo check -p kilogram-peer-history-recovery-runtime --locked --offline`
+  passed with the existing cross-volume incremental hard-link fallback warning.
+- The real recovery fixture
+  `recipient_import_consumption_runtime_service_replays_exact_plan_and_consumes_once`
+  passed 1/1 through `scripts/run-cargo-tests-stable.ps1`; direct `cargo test`
+  was not used and the stable executable path was preserved.
+- The dedicated service boundary rejected 8/8 negative mutations. Accepted-tag
+  M1 readiness passed 171/171 gates, including rustfmt and locked/offline strict
+  workspace Clippy; the ordinary moving-HEAD mode stopped only at its expected
+  accepted-candidate revision boundary.
+- No network, second host, release build, archive, tag or automatic GitHub build
+  was used. The ordinary runtime handler intentionally remains unconfigured.
+
 Проверено: 2026-08-31 во время внешней проверки M0.3.
 
 ## Текущий Windows-хост

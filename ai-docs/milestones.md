@@ -12,6 +12,21 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.45 — process-owned recipient-import-consumption service core: выполнено
+
+- Один service object владеет ровно одним M1.2.41 dispatcher и одним bounded
+  M1.2.42 cache; nested request канонически декодируется до dispatch.
+- Exact повтор Plan request возвращает исходный signed response byte-for-byte,
+  не выбирает новый timestamp и не вызывает membership loader повторно.
+- Commit требует exact same-process Plan. Stage сохраняется до TTL для
+  безопасного `AlreadyConsumed` replay; новый service после restart Commit
+  отвергает.
+- Service принимает только явный live authenticated recovery context и не
+  реконструирует consent/source authority из неполного IPC payload.
+- Ordinary runtime handler пока остаётся service-unavailable. Stable-path real
+  recovery fixture прошёл 1/1; boundary — 8/8 mutations; network/second host,
+  release/ZIP/tag и automatic GitHub build не использовались.
+
 ### M1.2.44 — active runtime IPC recipient-import-consumption envelope: выполнено
 
 - Postcard runtime IPC и signed descriptor атомарно мигрировали с 33/v14 на

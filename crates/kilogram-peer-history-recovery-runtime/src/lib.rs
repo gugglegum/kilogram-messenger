@@ -25,6 +25,7 @@ mod recipient_import_consumption_authorization;
 mod recipient_import_consumption_mutation_adapter;
 mod recipient_import_consumption_read_adapter;
 mod recipient_import_consumption_response_dispatcher;
+mod recipient_import_consumption_runtime_service;
 mod recipient_import_consumption_session_cache;
 mod recipient_import_mutation_adapter;
 mod recipient_import_read_adapter;
@@ -58,6 +59,10 @@ pub use recipient_import_consumption_read_adapter::{
 pub use recipient_import_consumption_response_dispatcher::{
     RecipientHistoryRecoveryImportConsumptionResponseDispatcher,
     RecipientImportConsumptionResponseDispatch, RecipientImportConsumptionResponseDispatcherError,
+};
+pub use recipient_import_consumption_runtime_service::{
+    RecipientImportConsumptionRuntimeContext, RecipientImportConsumptionRuntimeService,
+    RecipientImportConsumptionRuntimeServiceError,
 };
 pub use recipient_import_consumption_session_cache::{
     MAX_RECIPIENT_IMPORT_CONSUMPTION_PLAN_SESSIONS, RecipientImportConsumptionPlanSessionCache,

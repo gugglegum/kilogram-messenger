@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.45",
+  "status": "process-owned-service-core-verified",
+  "predecessor": "M1.2.44",
+  "service": {
+    "owner": "one-runtime-process",
+    "dispatcher_count": 1,
+    "plan_session_cache_count": 1,
+    "maximum_live_plan_sessions": 32,
+    "plan_session_persistence": "process-local-only",
+    "exact_plan_request_replay": "returns-original-signed-response",
+    "commit_requires_same_process_plan": true,
+    "successful_commit_retains_stage_until_expiry": true,
+    "restart_discards_stage": true,
+    "silent_capacity_eviction": false
+  },
+  "context": {
+    "live_authenticated_recovery_context_required": true,
+    "authority_reconstructed_from_request": false,
+    "descriptor_and_current_device_revalidated": true,
+    "membership_reloaded_by_caller_owned_loader": true
+  },
+  "active_runtime_handler": {
+    "service_context_attached": false,
+    "signed_success_reachable": false,
+    "unconfigured_result": "recipient import-consumption runtime service is not configured"
+  },
+  "scope": {
+    "opens_network": false,
+    "adds_cli_control": false,
+    "adds_desktop_control": false,
+    "changes_peer_wire": false,
+    "changes_runtime_ipc_wire": false,
+    "changes_public_default": false,
+    "public_default": "legacy-only"
+  },
+  "verification": {
+    "signed_plan": true,
+    "byte_exact_plan_replay_without_second_reload": true,
+    "signed_commit": true,
+    "durable_already_consumed_replay_without_second_reload": true,
+    "restart_commit_without_live_plan_rejected": true,
+    "stable_path_test_count": 1,
+    "network_executed": false,
+    "second_host_required": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "next": [
+    "define-guided-live-recovery-context-attachment",
+    "bind-one-service-instance-to-runtime-actor-lifetime",
+    "add-loopback-ipc-success-and-restart-regressions"
+  ]
+}

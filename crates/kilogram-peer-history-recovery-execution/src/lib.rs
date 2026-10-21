@@ -89,6 +89,10 @@ mod recipient_import_consumption_response_dispatcher;
 mod recipient_import_consumption_session_cache;
 
 #[cfg(test)]
+#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_runtime_service.rs"]
+mod recipient_import_consumption_runtime_service;
+
+#[cfg(test)]
 #[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_mutation_adapter.rs"]
 mod recipient_import_mutation_adapter;
 
@@ -139,6 +143,11 @@ pub use recipient_import_consumption_read_adapter::{
 pub use recipient_import_consumption_response_dispatcher::{
     RecipientHistoryRecoveryImportConsumptionResponseDispatcher,
     RecipientImportConsumptionResponseDispatch, RecipientImportConsumptionResponseDispatcherError,
+};
+#[cfg(test)]
+pub use recipient_import_consumption_runtime_service::{
+    RecipientImportConsumptionRuntimeContext, RecipientImportConsumptionRuntimeService,
+    RecipientImportConsumptionRuntimeServiceError,
 };
 #[cfg(test)]
 pub use recipient_import_consumption_session_cache::{
@@ -8180,6 +8189,169 @@ mod tests {
             ),
             Err(RecipientImportConsumptionPlanSessionCacheError::ExpiredPlan)
         ));
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_consumption_runtime_service_replays_exact_plan_and_consumes_once()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-consumption-runtime-service")?;
+        let completed = completed_adapter_mutation(&setup, 103, 77)?;
+        let current = current_after_adapter_import(&setup)?;
+        let plan_request = consumption_request(&completed, 80)?;
+        let encoded_plan_request = plan_request.encode()?;
+        let mut service = RecipientImportConsumptionRuntimeService::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+            1,
+        )?;
+        assert_eq!(service.maximum_sessions(), 1);
+        assert!(service.is_process_local());
+        assert!(!service.opened_network());
+
+        let plan_load_count = Cell::new(0_usize);
+        let loader = |requested: &RuntimeIpcRecipientImportMembershipReference| {
+            plan_load_count.set(plan_load_count.get() + 1);
+            RecipientImportMembershipLoad::Exact(LoadedRecipientImportMembership::new(
+                requested.authority_reference_id.clone(),
+                requested.authenticated_context_id.clone(),
+                setup.fixture.membership.clone(),
+            ))
+        };
+        let context = || RecipientImportConsumptionRuntimeContext {
+            mutations: &completed.adapter,
+            intent_store: &completed.store,
+            coordination: &current,
+            inbox: &setup.inbox,
+            imports: &setup.imports,
+            membership_loader: &loader,
+            signer: setup.fixture.replacement.identity(),
+        };
+        let encoded_plan_response = service.dispatch(
+            &encoded_plan_request,
+            &completed.descriptor,
+            context(),
+            8_700,
+        )?;
+        let planned = SignedRuntimeIpcRecipientImportConsumptionResponse::decode_and_verify(
+            &encoded_plan_response,
+            &plan_request,
+            &completed.descriptor,
+        )?;
+        let RuntimeIpcRecipientImportConsumptionOutcome::Planned(plan) = planned.outcome() else {
+            return Err("runtime service did not return a signed Plan".into());
+        };
+        let plan = plan.clone();
+        let confirmation_phrase = plan.confirmation_phrase.clone();
+        assert_eq!(service.session_count(), 1);
+        assert_eq!(plan_load_count.get(), 1);
+
+        let replayed_plan = service.dispatch(
+            &encoded_plan_request,
+            &completed.descriptor,
+            context(),
+            8_701,
+        )?;
+        assert_eq!(replayed_plan, encoded_plan_response);
+        assert_eq!(plan_load_count.get(), 1);
+        assert_eq!(service.session_count(), 1);
+
+        let RuntimeIpcRecipientImportConsumptionCommand::Plan {
+            evidence,
+            memberships,
+            ..
+        } = plan_request.command().clone()
+        else {
+            return Err("expected a consumption Plan request".into());
+        };
+        let commit_request = RuntimeIpcRecipientImportConsumptionRequest::new(
+            &completed.descriptor,
+            adapter_request_id(81),
+            RuntimeIpcRecipientImportConsumptionCommand::Commit {
+                evidence,
+                memberships,
+                plan: Box::new(plan),
+                confirmation_phrase,
+                explicit_approval:
+                    RuntimeIpcRecipientImportConsumptionExplicitApproval::UserConfirmed,
+            },
+        )?;
+        let encoded_commit_request = commit_request.encode()?;
+        let committed = service.dispatch(
+            &encoded_commit_request,
+            &completed.descriptor,
+            context(),
+            8_702,
+        )?;
+        let verified = SignedRuntimeIpcRecipientImportConsumptionResponse::decode_and_verify(
+            &committed,
+            &commit_request,
+            &completed.descriptor,
+        )?;
+        assert!(matches!(
+            verified.outcome(),
+            RuntimeIpcRecipientImportConsumptionOutcome::Consumed(_)
+        ));
+        assert!(completed.store.inspect_active()?.is_none());
+        assert_eq!(service.session_count(), 1);
+
+        let replay_load_count = Cell::new(0_usize);
+        let rejecting_loader = |_requested: &RuntimeIpcRecipientImportMembershipReference| {
+            replay_load_count.set(replay_load_count.get() + 1);
+            RecipientImportMembershipLoad::Ambiguous
+        };
+        let replayed_commit = service.dispatch(
+            &encoded_commit_request,
+            &completed.descriptor,
+            RecipientImportConsumptionRuntimeContext {
+                mutations: &completed.adapter,
+                intent_store: &completed.store,
+                coordination: &current,
+                inbox: &setup.inbox,
+                imports: &setup.imports,
+                membership_loader: &rejecting_loader,
+                signer: setup.fixture.replacement.identity(),
+            },
+            8_703,
+        )?;
+        let replayed = SignedRuntimeIpcRecipientImportConsumptionResponse::decode_and_verify(
+            &replayed_commit,
+            &commit_request,
+            &completed.descriptor,
+        )?;
+        assert!(matches!(
+            replayed.outcome(),
+            RuntimeIpcRecipientImportConsumptionOutcome::AlreadyConsumed(_)
+        ));
+        assert_eq!(replay_load_count.get(), 0);
+
+        let mut restarted = RecipientImportConsumptionRuntimeService::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+            1,
+        )?;
+        assert!(matches!(
+            restarted.dispatch(
+                &encoded_commit_request,
+                &completed.descriptor,
+                RecipientImportConsumptionRuntimeContext {
+                    mutations: &completed.adapter,
+                    intent_store: &completed.store,
+                    coordination: &current,
+                    inbox: &setup.inbox,
+                    imports: &setup.imports,
+                    membership_loader: &rejecting_loader,
+                    signer: setup.fixture.replacement.identity(),
+                },
+                8_704,
+            ),
+            Err(RecipientImportConsumptionRuntimeServiceError::Session(
+                RecipientImportConsumptionPlanSessionCacheError::MissingPlanStage
+            ))
+        ));
+        assert_eq!(replay_load_count.get(), 0);
         Ok(())
     }
 }

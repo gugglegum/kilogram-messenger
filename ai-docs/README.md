@@ -6,14 +6,14 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.44 атомарно активировал
-local-control IPC v34/domain v15 и зарегистрировал opaque
-recipient-import-consumption envelope. Runtime распознаёт команду, но до
-подключения process-local cache явно отвечает service-unavailable; успешный
-signed response пока недостижим. Следующий M1.2.45 — подключение уже
-проверенных cache и dispatcher внутри runtime с loopback regressions;
-CLI/desktop/network пока не подключаются, публичный default остаётся
-legacy-only.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.45 добавил единый
+process-owned recipient-import-consumption service core поверх существующих
+dispatcher и bounded cache. Он сохраняет byte-exact Plan replay и принимает
+Commit только с live same-process stage, но намеренно требует уже
+аутентифицированный recovery context. Обычный runtime handler пока остаётся
+service-unavailable: следующий M1.2.46 должен определить guided context
+attachment и только затем открыть loopback success path. CLI/desktop/network
+не подключены, публичный default остаётся legacy-only.
 
 ## Текущее состояние
 

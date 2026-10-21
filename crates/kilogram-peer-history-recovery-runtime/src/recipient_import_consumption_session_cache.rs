@@ -14,6 +14,7 @@ use kilogram_runtime_ipc::{
     RuntimeIpcDescriptor, RuntimeIpcRecipientImportArtifactId,
     RuntimeIpcRecipientImportConsumptionCommand, RuntimeIpcRecipientImportConsumptionOutcome,
     RuntimeIpcRecipientImportConsumptionPlanSummary, RuntimeIpcRecipientImportConsumptionRequest,
+    SignedRuntimeIpcRecipientImportConsumptionResponse,
 };
 use thiserror::Error;
 
@@ -138,6 +139,34 @@ impl RecipientImportConsumptionPlanSessionCache {
             .any(|entry| &entry.plan.consumption_plan_id == consumption_plan_id)
     }
 
+    /// Returns the exact signed response for a repeated canonical Plan request.
+    ///
+    /// The runtime must consult this before planning again: `planned_at` is
+    /// runtime-owned, so redispatching the same request at a later instant
+    /// would otherwise mint a second plan instead of replaying the first one.
+    pub fn exact_plan_replay(
+        &mut self,
+        request: &RuntimeIpcRecipientImportConsumptionRequest,
+        now_unix_seconds: u64,
+    ) -> Result<
+        Option<SignedRuntimeIpcRecipientImportConsumptionResponse>,
+        RecipientImportConsumptionPlanSessionCacheError,
+    > {
+        self.purge_expired(now_unix_seconds);
+        if !matches!(
+            request.command(),
+            RuntimeIpcRecipientImportConsumptionCommand::Plan { .. }
+        ) {
+            return Err(RecipientImportConsumptionPlanSessionCacheError::StageMismatch);
+        }
+        let request_digest = request.request_digest()?;
+        Ok(self
+            .sessions
+            .iter()
+            .find(|entry| entry.plan_request_digest == request_digest)
+            .map(|entry| entry.dispatch.response().clone()))
+    }
+
     pub fn purge_expired(&mut self, now_unix_seconds: u64) -> usize {
         let before = self.sessions.len();
         self.sessions
@@ -217,6 +246,8 @@ pub enum RecipientImportConsumptionPlanSessionCacheError {
     PlanMismatch,
     #[error("recipient import consumption Plan cache stage does not match request")]
     StageMismatch,
+    #[error(transparent)]
+    Contract(#[from] anyhow::Error),
     #[error(transparent)]
     Dispatch(Box<RecipientImportConsumptionResponseDispatcherError>),
 }

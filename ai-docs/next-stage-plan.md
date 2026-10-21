@@ -1,33 +1,37 @@
-# Текущая точка: M1.2.44 завершён, следующий M1.2.45
+# Текущая точка: M1.2.45 завершён, следующий M1.2.46
 
 Дата: 2026-10-21.
 
-M1.2.44 выполнил preflight M1.2.43: Postcard runtime IPC и подписанный
-descriptor атомарно перешли `33/v14 -> 34/v15`, exact consumption variants
-добавлены в enum/CDDL/schema/completion/compatibility и все live-binding gates.
-Runtime распознаёт envelope, но честно возвращает service-unavailable; cache и
-dispatcher ещё не принадлежат runtime process. Readiness содержит 170 gates.
+M1.2.45 создал единый process-owned service core: один dispatcher, один bounded
+process-local cache, canonical nested decode, byte-exact повтор Plan без нового
+timestamp/reload и Commit только с live same-process stage. Stage сохраняется
+до TTL для безопасного durable `AlreadyConsumed` replay; restart его теряет.
+Service не реконструирует недостающую source/consent authority из IPC request и
+требует уже аутентифицированный live recovery context. Ordinary runtime handler
+пока честно возвращает service-unavailable. Readiness содержит 171 gate.
 
-## Следующий этап: M1.2.45 — runtime-owned consumption service
+## Следующий этап: M1.2.46 — guided live-context attachment
 
-1. Runtime process создаёт ровно один bounded M1.2.42 plan-session cache и
-   передаёт envelope только существующему M1.2.41 dispatcher.
-2. Plan сохраняет opaque stage по exact descriptor/Device/request digest;
-   Commit требует тот же live same-process stage, после успеха удаляет его.
-3. Restart, expiry, capacity, missing Plan, changed summary/descriptor/Device и
-   malformed nested request fail closed без unsigned либо partial success.
-4. Loopback IPC regressions доказывают signed Plan, signed Commit и exact replay,
-   а также отсутствие второго consume после durable completed receipt.
-5. CLI parser, desktop control, timers и product network остаются вне этапа;
-   нужны stable-path tests, dedicated boundary, rustfmt, locked/offline strict
-   Clippy и полная readiness.
+1. Определить один явный runtime-owned slot для already-authenticated recovery
+   context, его install/clear lifetime и exact binding к current Account/Device.
+2. Context может появиться только из существующей guided recovery ceremony;
+   IPC request, environment variable и произвольный filesystem scan не могут
+   создать authority.
+3. Runtime actor создаёт один M1.2.45 service на весь lifetime и передаёт ему
+   envelope только при exact attached context; иначе сохраняет прежний Error.
+4. Loopback regression доказывает signed Plan/Commit/replay, restart с пустым
+   cache, context clear и отсутствие второго consume после durable receipt.
+5. CLI parser, desktop controls, timers и product network остаются вне этапа;
+   нужны stable-path tests, boundary, rustfmt, locked/offline strict Clippy и
+   полная readiness.
 
 ## Stop conditions
 
-- runtime создаёт более одного cache либо сохраняет cache/stage на диск;
+- runtime создаёт более одного service/cache либо сохраняет cache/stage на диск;
 - Commit проходит без exact live Plan из того же процесса;
 - error/restart/expiry оставляет частично применённую authority или unsigned
   success;
+- context создаётся из одного IPC payload, hidden flag или directory scan;
 - handler повторно реализует canonical codec/crypto вместо делегирования;
 - CLI/desktop получает control раньше отдельной guided ceremony;
 - transport wire либо public `legacy-only` default меняется.
