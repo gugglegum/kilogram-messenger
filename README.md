@@ -2767,6 +2767,16 @@ reconciles the import-before-coordinator-refresh crash window without duplicate
 events; the intent is still never consumed automatically and no active
 runtime, CLI, desktop, background or network authority is introduced.
 
+[`RFC-0261`](docs/RFC-0261-m1237-explicit-recipient-import-consumption-ceremony-contract.md)
+defines a separate dormant `Plan`/`Commit` ceremony for consuming only a fully
+imported intent. The content-addressed plan binds the completed mutation record
+and receipt digest, the exact ordered membership-set digest, final coordinator,
+fresh nonce and a lifetime of at most five minutes. Both stages carry only
+opaque membership references for a future caller-owned live reload; commit
+requires an exact `CONSUME` phrase and explicit approval. Responses are
+current-Device signed, but no adapter, durable plan store or active
+runtime/CLI/desktop authority is added yet.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

@@ -27,6 +27,8 @@ const DEVICE_BINDING_DOMAIN: &[u8] = b"kilogram:runtime-ipc-recipient-import-exe
 const MEMBERSHIP_SET_DOMAIN: &[u8] = b"kilogram:runtime-ipc-recipient-import-membership-set:v1\0";
 const RESPONSE_SIGNATURE_DOMAIN: &[u8] =
     b"kilogram:runtime-ipc-recipient-import-execution-response:v1\0";
+const EXECUTION_RECEIPT_DIGEST_DOMAIN: &[u8] =
+    b"kilogram:runtime-ipc-recipient-import-execution-receipt:v1\0";
 
 #[derive(Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 #[serde(transparent)]
@@ -538,7 +540,7 @@ pub struct RuntimeIpcRecipientImportExecutionReceiptSummary {
 }
 
 impl RuntimeIpcRecipientImportExecutionReceiptSummary {
-    fn validate(&self) -> Result<()> {
+    pub(crate) fn validate(&self) -> Result<()> {
         self.intent_id.validate()?;
         self.execution_plan_id.validate()?;
         self.confirmation_id.validate()?;
@@ -578,6 +580,16 @@ impl RuntimeIpcRecipientImportExecutionReceiptSummary {
             "runtime IPC recipient import execution receipt event count is inconsistent"
         );
         Ok(())
+    }
+
+    pub fn receipt_digest(&self) -> Result<RuntimeIpcRecipientImportArtifactId> {
+        self.validate()?;
+        let encoded = postcard::to_allocvec(self)
+            .context("encode runtime IPC recipient import execution receipt digest")?;
+        RuntimeIpcRecipientImportArtifactId::from_bytes(domain_digest(
+            EXECUTION_RECEIPT_DIGEST_DOMAIN,
+            &encoded,
+        ))
     }
 }
 
@@ -955,6 +967,16 @@ fn membership_set_digest(
     let encoded = postcard::to_allocvec(memberships)
         .context("encode runtime IPC recipient import membership references")?;
     RuntimeIpcRecipientImportArtifactId::from_bytes(domain_digest(MEMBERSHIP_SET_DOMAIN, &encoded))
+}
+
+/// Computes the canonical digest for an ordered set of authenticated
+/// membership references. Later dormant ceremony contracts use this helper so
+/// that every stage binds the same caller-owned live-membership context rather
+/// than relying on an out-of-band agreement.
+pub fn recipient_import_membership_set_digest(
+    memberships: &[RuntimeIpcRecipientImportMembershipReference],
+) -> Result<RuntimeIpcRecipientImportArtifactId> {
+    membership_set_digest(memberships)
 }
 
 fn validate_confirmation_phrase(value: &str) -> Result<()> {

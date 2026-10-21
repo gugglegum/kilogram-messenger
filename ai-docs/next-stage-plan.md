@@ -1,28 +1,30 @@
-# Текущая точка: M1.2.36 завершён, следующий M1.2.37
+# Текущая точка: M1.2.37 завершён, следующий M1.2.38
 
-Статус на 2026-10-21: dormant mutation adapter принимает только explicit
-`ApplyNext`/`ApplyBounded` с exact M1.2.35 confirmation, заново reload-ит live
-memberships и перепроверяет active intent/coordinator/execution plan. Отдельный
-Device-signed ledger пишет `Prepared` до первого import и `Completed` receipt
-до ответа. Exact replay идемпотентен; crash-window coordinator reconciliation
-не импортирует повторно, а остаток не выходит за первоначальный budget.
-Automatic consume отсутствует. Focused ledger 3/3, real mutation 1/1,
-crash-reconcile 1/1, boundary 10/10, readiness 162/162.
+Статус на 2026-10-21: dormant consumption contract разделяет read-only `Plan`
+и explicit `Commit`. Evidence допустим только из complete M1.2.36 receipt и
+exact-связывает mutation record/digest, intent/execution/confirmation/mutation,
+ordered membership-set digest, final coordinator и event count. Оба stage
+переносят exact ordered opaque membership refs для будущего caller-owned live
+reload. Content-addressed plan требует fresh nonce, TTL максимум 300 секунд и
+фразу `CONSUME`; current Device подписывает exact response. Adapter/active
+dispatch отсутствуют. Focused regression 8/8, полный runtime IPC 43/43,
+boundary 10/10, readiness 163/163.
 
-## Следующий этап: M1.2.37 explicit intent-consumption ceremony contract
+## Следующий этап: M1.2.38 dormant consumption read adapter
 
-- определить отдельный dormant signed contract для consume уже полностью
-  исполненного M1.2.31 intent; import command не получает implicit consume;
-- привязать request к exact active intent, final coordinator, completed
-  M1.2.36 mutation receipt/head, fresh caller nonce и explicit phrase;
-- требовать статус `CompleteAwaitingSeparateConsume`, current owner Device и
-  live revalidation того же durable результата;
-- разделить read-only plan и explicit commit; exact replay сделать
-  идемпотентным, stale/rebound/foreign/partial input отклонять fail closed;
-- на этом этапе не регистрировать active runtime command и не добавлять CLI,
-  desktop, background или network authority;
-- сохранить IPC v33/domain v14, public default `legacy-only` и отдельный
-  будущий adapter/apply как последующий этап.
+- в runtime-integration crate обработать только M1.2.37 `Plan`, оставив
+  `Commit` fail-closed до отдельного mutation adapter;
+- по mutation nonce загрузить exact completed M1.2.36 ledger record и receipt,
+  проверить record ID и canonical receipt digest без создания state;
+- заново открыть active unconsumed intent, inspect progress с caller-owned live
+  membership reload и требовать `CompleteAwaitingSeparateConsume` без pending
+  coordinator refresh;
+- exact-сопоставить final coordinator ID/sequence, source/event counts и все
+  IDs completed evidence, затем выдать short-lived ephemeral plan;
+- missing/prepared/rebound/stale/foreign/consumed evidence отклонять fail
+  closed; planning не должен создавать ledger, consume или import state;
+- не регистрировать active runtime command и сохранить IPC v33/domain v14,
+  отсутствие CLI/desktop/background/network и default `legacy-only`.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

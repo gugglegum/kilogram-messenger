@@ -23,9 +23,11 @@ use tokio::{
 };
 
 mod peer_reenrollment_contract;
+mod recipient_import_consumption_contract;
 mod recipient_import_execution_contract;
 
 pub use peer_reenrollment_contract::*;
+pub use recipient_import_consumption_contract::*;
 pub use recipient_import_execution_contract::*;
 
 const IPC_VERSION: u8 = 33;

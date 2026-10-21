@@ -6,12 +6,13 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.36 добавил dormant explicit
-bounded mutation adapter поверх exact M1.2.35 confirmation. До первого import
-сохраняется Device-signed `Prepared`, после выполнения и crash reconciliation
-— durable `Completed` receipt; exact nonce replay не импортирует повторно.
-Intent автоматически не consume-ится, active runtime/CLI/desktop/network не
-подключены. Публичный default остаётся legacy-only.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.37 отделил consume завершённого
+recipient-import intent в dormant `Plan`/`Commit` contract. Plan exact-связан с
+completed M1.2.36 record/receipt, ordered membership-set digest, final
+coordinator, fresh nonce и TTL максимум 300 секунд. Оба stage переносят opaque
+membership references для будущего live reload; commit требует точную фразу
+`CONSUME` и explicit approval. Adapter и active runtime/CLI/desktop/network ещё
+отсутствуют. Публичный default остаётся legacy-only.
 
 ## Текущее состояние
 
@@ -1335,6 +1336,12 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   confirmation и live membership reload. `Prepared` предшествует import,
   `Completed` receipt — ответу; crash retry reconciles durable progress без
   duplicate import. Automatic consume и active runtime authority отсутствуют.
+- [`../docs/RFC-0261-m1237-explicit-recipient-import-consumption-ceremony-contract.md`](../docs/RFC-0261-m1237-explicit-recipient-import-consumption-ceremony-contract.md) —
+  M1.2.37 задаёт отдельные read-only `Plan` и explicit `Commit` для consume
+  только complete intent. Evidence exact-связывает mutation record/receipt и
+  ordered membership-set digest с final coordinator; stages повторяют opaque
+  membership refs. Fresh nonce, TTL 300 секунд, `CONSUME` phrase и current-
+  Device signed response обязательны. Active adapter/dispatch отсутствует.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

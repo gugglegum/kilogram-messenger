@@ -8221,3 +8221,24 @@ correlation visible, Windows-only field evidence, independent security audit
 - automatic intent consume, active runtime/server/CLI/desktop/background/
   network, product network, second host, release/ZIP/tag и automatic GitHub
   build отсутствуют; default `legacy-only`.
+
+### M1.2.37 — explicit recipient import-consumption ceremony contract: принят локально
+
+- отдельный dormant contract содержит только read-only `Plan` и explicit
+  `Commit`; active `RuntimeIpcCommand` и IPC v33/domain v14 не изменены;
+- evidence допустим лишь из complete M1.2.36 receipt и связывает exact
+  completed record ID/receipt digest, все upstream IDs, ordered membership-set
+  digest, final coordinator, closed source counts и imported event count;
+- оба stage повторяют ordered opaque membership refs и fail closed при digest
+  substitution; membership snapshot через contract не переносится;
+- content-addressed plan требует fresh nonce, TTL максимум 300 секунд и
+  derived `CONSUME` phrase; commit требует explicit `UserConfirmed`;
+- current Device подписывает exact request/descriptor-bound response. Plan не
+  может claim consume, commit receipt обязан очистить active intent внутри TTL,
+  `AlreadyConsumed` допускается только для exact binding;
+- focused stable-path regression прошёл 8/8, полный runtime IPC — 43/43,
+  boundary отклонил 10/10 mutations, readiness прошёл 163/163 с rustfmt и
+  workspace locked/offline strict Clippy;
+- adapter, durable consumption-plan ledger, active runtime/CLI/desktop/
+  background/network, product network, second host, release/ZIP/tag и automatic
+  GitHub build отсутствуют; default `legacy-only`.

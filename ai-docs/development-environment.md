@@ -5792,3 +5792,29 @@ Hosted follow-up:
   consumption, active runtime/server/CLI/desktop/background/network, product
   network, second host, release build, archive, tag and automatic GitHub build
   remain absent; public default is `legacy-only`.
+
+## M1.2.37 explicit recipient import-consumption contract environment (2026-10-21)
+
+- `kilogram-runtime-ipc` exports a dormant consumption ceremony module while
+  the active `RuntimeIpcCommand`, IPC v33/domain v14 and application manifests
+  remain unchanged.
+- Only read-only `Plan` and explicit `Commit` exist. Completed evidence binds
+  the exact M1.2.36 record ID and canonical receipt digest plus all upstream
+  IDs, ordered membership-set digest, final coordinator, closed source counts
+  and imported event count. Both stages carry the same ordered opaque
+  membership references and reject any digest substitution; no membership
+  snapshot crosses the contract.
+- Plans are content-addressed, use a nonce distinct from mutation evidence and
+  expire within at most 300 seconds. Commit requires the exact derived
+  `CONSUME` phrase and the non-default `UserConfirmed` approval enum.
+- Signed responses exact-bind request digest, descriptor and current Device.
+  Plan cannot claim consumption; commit receipts must clear the active intent
+  inside the plan lifetime, and `AlreadyConsumed` remains exact-binding only.
+- Focused stable-path tests pass 8/8 and the full runtime IPC regression passes
+  43/43. Package strict Clippy passes; boundary rejects 10/10 mutations and
+  accepted-tag readiness passes 163/163 with rustfmt and locked/offline
+  workspace-wide strict Clippy.
+- No adapter, durable consumption-plan ledger, product network, second host,
+  release build, archive, tag or automatic GitHub build was used. Active CLI,
+  desktop, background and network authority remain absent; default is
+  `legacy-only`.
