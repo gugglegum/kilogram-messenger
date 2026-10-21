@@ -157,6 +157,61 @@ impl AuthenticatedGuidedRecipientImportSession {
         }
         Ok(())
     }
+
+    /// Consumes the complete authenticated recovery assembly and binds it to
+    /// the exact local signer that may create the process-owned host.
+    ///
+    /// The resulting value is intentionally crate-private and opaque. It is
+    /// the only input accepted by the M1.2.52 installation owner, so paths,
+    /// descriptors, coordinators, and memberships never become loose public
+    /// installation arguments.
+    #[allow(dead_code)]
+    pub(crate) fn into_host_installation(
+        self,
+        signer: &DeviceIdentity,
+    ) -> Result<
+        AuthenticatedGuidedRecipientImportHostInstallation<'_>,
+        RecipientImportGuidedSessionControllerError,
+    > {
+        self.verify_controller_binding(
+            &self.state_directory,
+            self.owner_account_id,
+            signer.device_id(),
+        )?;
+        Ok(AuthenticatedGuidedRecipientImportHostInstallation {
+            authority: self,
+            signer,
+        })
+    }
+}
+
+/// Complete, one-shot input for the process-owned recovery-host installer.
+///
+/// This value has no public constructor and deliberately implements neither
+/// Clone, Debug, Serialize, nor Deserialize.
+pub(crate) struct AuthenticatedGuidedRecipientImportHostInstallation<'identity> {
+    authority: AuthenticatedGuidedRecipientImportSession,
+    signer: &'identity DeviceIdentity,
+}
+
+impl<'identity> AuthenticatedGuidedRecipientImportHostInstallation<'identity> {
+    pub(crate) fn into_parts(
+        self,
+    ) -> (
+        PathBuf,
+        AccountId,
+        &'identity DeviceIdentity,
+        AuthenticatedGuidedRecipientImportSession,
+    ) {
+        let state_directory = self.authority.state_directory.clone();
+        let owner_account_id = self.authority.owner_account_id;
+        (
+            state_directory,
+            owner_account_id,
+            self.signer,
+            self.authority,
+        )
+    }
 }
 
 impl RecipientImportMembershipLoader for AuthenticatedGuidedRecipientImportSession {

@@ -64,3 +64,7 @@ The two host fixtures passed 2/2, and the stable-name combined guided-recovery
 regression passed 8/8. The dedicated boundary rejected all 18 weakening
 mutations, while the accepted-tag readiness inventory passed all 177 gates
 without starting additional test executables or product networking.
+
+M1.2.52 strengthened this boundary in RFC-0276. Host construction and
+authenticated installation are private, and a consuming full-assembly owner is
+now the only installation path.

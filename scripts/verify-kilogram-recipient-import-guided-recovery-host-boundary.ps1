@@ -137,7 +137,7 @@ function Assert-Boundary {
         'pub struct RecipientImportGuidedRecoveryHost',
         "controller: RecipientImportGuidedSessionController<'identity>",
         'pending_handoff: Option<AuthenticatedGuidedRecipientImportSessionStartHandoff>',
-        'pub(crate) fn install_authenticated_handoff(',
+        'fn install_authenticated_handoff(',
         'self.controller.preflight_local_ux_start(',
         'AuthenticatedGuidedRecipientImportSessionStartHandoff::from_authenticated_recovery(',
         'pub fn prepare(', '.pending_handoff', '.take()',
@@ -150,7 +150,8 @@ function Assert-Boundary {
         'pub fn opened_network(&self) -> bool', 'false'
     ) 'guided-recovery host source'
     foreach ($forbidden in @(
-        'pub fn install_authenticated_handoff(', 'use serde::', 'TcpListener',
+        'pub fn install_authenticated_handoff(',
+        'pub(crate) fn install_authenticated_handoff(', 'use serde::', 'TcpListener',
         'UdpSocket', 'iroh::Endpoint', 'std::fs::read_dir'
     )) {
         if ($HostSource.IndexOf($forbidden, [StringComparison]::Ordinal) -ge 0) {
@@ -210,8 +211,9 @@ function Assert-Boundary {
     Require-Text $Execution @(
         'recipient_import_guided_recovery_host_owns_one_full_local_ux_ceremony',
         'recipient_import_guided_recovery_host_fails_closed_and_drops_ephemeral_custody',
-        'PendingHandoffAlreadyInstalled', 'CeremonyAlreadyActive',
-        'SessionOutlivesHandoff', 'foreign-guided-recovery-host-state',
+        'recipient_import_guided_recovery_host_installation_owner_accepts_only_full_assembly',
+        'recipient_import_guided_recovery_host_installation_owner_is_one_shot_and_fail_closed',
+        'SessionOutlivesHandoff', 'OwnerDeviceMismatch',
         'RecipientImportGuidedRecoveryHostCancel::pending_handoff()',
         'drop(host)'
     ) 'guided-recovery host fixtures'
@@ -287,7 +289,7 @@ if ($SelfTest) {
     $mutations += { Assert-Boundary $changed $hostSource $producer $ux $runtimeLibrary $execution $cli $desktop $rfc }
     $changed = Copy-JsonObject $manifest; $changed.verification.network_executed = $true
     $mutations += { Assert-Boundary $changed $hostSource $producer $ux $runtimeLibrary $execution $cli $desktop $rfc }
-    $changedHost = $hostSource.Replace('pub(crate) fn install_authenticated_handoff(', 'pub fn install_authenticated_handoff(')
+    $changedHost = $hostSource.Replace('fn install_authenticated_handoff(', 'pub fn install_authenticated_handoff(')
     $mutations += { Assert-Boundary $manifest $changedHost $producer $ux $runtimeLibrary $execution $cli $desktop $rfc }
     $changedHost = $hostSource.Replace('pub struct RecipientImportGuidedRecoveryHost', "#[derive(Clone)]`r`npub struct RecipientImportGuidedRecoveryHost")
     $mutations += { Assert-Boundary $manifest $changedHost $producer $ux $runtimeLibrary $execution $cli $desktop $rfc }

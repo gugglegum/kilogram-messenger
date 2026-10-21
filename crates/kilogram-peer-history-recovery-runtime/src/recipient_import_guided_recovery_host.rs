@@ -12,13 +12,13 @@ use kilogram_runtime_ipc::RuntimeIpcRecipientImportArtifactId;
 use thiserror::Error;
 
 use crate::{
-    AuthenticatedGuidedRecipientImportSession,
     AuthenticatedGuidedRecipientImportSessionStartHandoff, RecipientImportGuidedSessionController,
     RecipientImportGuidedSessionControllerError, RecipientImportGuidedSessionLocalUxAdapter,
     RecipientImportGuidedSessionLocalUxApply, RecipientImportGuidedSessionLocalUxConfirm,
     RecipientImportGuidedSessionLocalUxError, RecipientImportGuidedSessionLocalUxRefresh,
     RecipientImportGuidedSessionLocalUxView, RecipientImportGuidedSessionPhase,
     RecipientImportGuidedSessionStartProducer, RecipientImportGuidedSessionStartProducerError,
+    recipient_import_guided_session_controller::AuthenticatedGuidedRecipientImportHostInstallation,
 };
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -69,8 +69,40 @@ pub struct RecipientImportGuidedRecoveryHost<'identity> {
     pending_handoff: Option<AuthenticatedGuidedRecipientImportSessionStartHandoff>,
 }
 
+/// The sole process-local transition from a complete authenticated recovery
+/// assembly into an installed guided-recovery host.
+///
+/// The owner has no public constructor and accepts no loose authority
+/// fragments. Installing consumes the owner itself, so success and every
+/// failure make the grant unavailable for replay.
+pub struct RecipientImportGuidedRecoveryHostInstallationOwner<'identity> {
+    installation: AuthenticatedGuidedRecipientImportHostInstallation<'identity>,
+}
+
+impl<'identity> RecipientImportGuidedRecoveryHostInstallationOwner<'identity> {
+    #[allow(dead_code)]
+    pub(crate) fn from_authenticated_recovery(
+        installation: AuthenticatedGuidedRecipientImportHostInstallation<'identity>,
+    ) -> Self {
+        Self { installation }
+    }
+
+    pub fn install(
+        self,
+        issued_at_unix_seconds: u64,
+        lifetime_seconds: u64,
+    ) -> Result<RecipientImportGuidedRecoveryHost<'identity>, RecipientImportGuidedRecoveryHostError>
+    {
+        let (state_directory, owner_account_id, signer, authority) = self.installation.into_parts();
+        let mut host =
+            RecipientImportGuidedRecoveryHost::new(state_directory, owner_account_id, signer)?;
+        host.install_authenticated_handoff(authority, issued_at_unix_seconds, lifetime_seconds)?;
+        Ok(host)
+    }
+}
+
 impl<'identity> RecipientImportGuidedRecoveryHost<'identity> {
-    pub fn new(
+    fn new(
         state_directory: impl AsRef<Path>,
         owner_account_id: AccountId,
         signer: &'identity DeviceIdentity,
@@ -87,14 +119,14 @@ impl<'identity> RecipientImportGuidedRecoveryHost<'identity> {
 
     /// Installs authority from the already authenticated in-process owner.
     ///
-    /// This is crate-private so a UI, IPC request, CLI argument, environment
-    /// variable, or filesystem scan cannot construct pending authority. The
-    /// incoming value is consumed on every result. Existing pending or active
-    /// custody is never displaced by a replacement attempt.
-    #[allow(dead_code)]
-    pub(crate) fn install_authenticated_handoff(
+    /// This is private to the owner/host module so a UI, IPC request, CLI
+    /// argument, environment variable, or filesystem scan cannot construct
+    /// pending authority. The incoming value is consumed on every result.
+    /// Existing pending or active custody is never displaced by a replacement
+    /// attempt.
+    fn install_authenticated_handoff(
         &mut self,
-        authority: AuthenticatedGuidedRecipientImportSession,
+        authority: crate::AuthenticatedGuidedRecipientImportSession,
         issued_at_unix_seconds: u64,
         lifetime_seconds: u64,
     ) -> Result<(), RecipientImportGuidedRecoveryHostError> {

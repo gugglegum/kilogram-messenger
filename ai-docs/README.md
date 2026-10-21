@@ -1,19 +1,19 @@
 # Память проекта Kilogram
 
-Актуально на: 2026-10-21.
+Актуально на: 2026-10-22.
 
 Эта папка — краткая проектная память и дорожная карта. Подробная техническая
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.51 поместил controller, максимум
-один pending handoff, one-shot producer и local-UX facade под одного dormant
-process-owned host. Public surface содержит только typed prepare/confirm/apply/
-cancel/refresh и safe M1.2.49 view; authority, handoff и start command наружу
-не выдаются. Replacement, foreign binding, failed prepare, cancel, expiry и
-restart fail closed. CLI/desktop/runtime IPC/network не подключены. Следующий
-M1.2.52 должен связать crate-private installation с одним authenticated process
-owner, не разрешая реконструкцию authority из loose fragments.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.52 связал полный authenticated
+recovery assembly с exact local signer и сделал потребляемый process-local
+installation owner единственным путём создания установленного M1.2.51 host.
+Host constructor/install теперь private; success и failure не возвращают grant,
+а public surface остаётся только typed prepare/confirm/apply/cancel/refresh и
+safe M1.2.49 view. CLI/desktop/runtime IPC/network не подключены. Следующий
+M1.2.53 должен запечатать единственного upstream producer полного assembly,
+убрав loose crate-private assembly constructor из общего runtime surface.
 
 ## Текущее состояние
 

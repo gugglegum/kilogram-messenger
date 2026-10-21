@@ -1,6 +1,6 @@
 # Технические этапы
 
-Актуально на: 2026-09-08.
+Актуально на: 2026-10-22.
 
 ## Правило нумерации и отчётов
 
@@ -11,6 +11,24 @@
   итоговом сообщении перечисляются все номера и коммиты, а не только последний.
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
+
+### M1.2.52 — authenticated one-shot host-installation owner: выполнено
+
+- Полный `AuthenticatedGuidedRecipientImportSession` перед owner связывается с
+  exact local signer и превращается в opaque crate-private installation value;
+  loose public path/signer/descriptor/coordinator/membership отсутствуют.
+- Non-cloneable process-local owner хранит ровно один full assembly и
+  `install(self, ...)` извлекает его до fallible host work. Success/failure не
+  возвращают reusable grant; replay и restart невозможны.
+- Host constructor и authenticated install стали private, поэтому owner —
+  единственная installation point. Public UX остаётся только на host:
+  prepare/confirm/apply/cancel/refresh и safe M1.2.49 view.
+- Новые stable-name owner fixtures прошли 2/2 за 117.98s; combined
+  guided-recovery regression M1.2.47–M1.2.52 прошёл 10/10 за 1259.16s.
+  Dedicated boundary отклонил 21/21 mutations; accepted-tag readiness прошёл
+  178/178 gates.
+  CLI/desktop/runtime IPC/timer/network не зарегистрированы, public
+  `legacy-only` неизменён.
 
 ### M1.2.51 — dormant process-owned guided-recovery host: выполнено
 

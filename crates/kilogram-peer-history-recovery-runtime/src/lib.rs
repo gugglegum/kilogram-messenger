@@ -86,7 +86,8 @@ pub use recipient_import_consumption_session_cache::{
 };
 pub use recipient_import_guided_recovery_host::{
     RecipientImportGuidedRecoveryHost, RecipientImportGuidedRecoveryHostCancel,
-    RecipientImportGuidedRecoveryHostError, RecipientImportGuidedRecoveryHostPrepare,
+    RecipientImportGuidedRecoveryHostError, RecipientImportGuidedRecoveryHostInstallationOwner,
+    RecipientImportGuidedRecoveryHostPrepare,
 };
 pub use recipient_import_guided_session_controller::{
     AuthenticatedGuidedRecipientImportSession,
