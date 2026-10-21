@@ -6,15 +6,14 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.48 собрал read-only Plan,
-Device-signed confirmation, bounded mutation, authenticated completion и
-consumption actor в один process-owned controller с фазами
-`Idle -> Planned -> Confirmed -> Attached`. Private token нельзя сериализовать
-или сконструировать публично; ошибки, cancel, expiry и restart не оставляют
-ambient authority. Stable fixtures прошли полный lifecycle и fail-closed
-матрицу, а ordinary startup остаётся idle/unattached. Следующий M1.2.49 должен
-добавить dormant local-UX adapter, не раскрывая authority fragments и не
-регистрируя новый CLI/IPC/network путь.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.49 добавил dormant local-UX
+facade поверх M1.2.48 controller. UI видит только safe phase/count/deadline/
+confirmation view; request IDs и domain-separated nonces создаются внутри.
+Stale/double submit отсекаются до durable работы, а потерянный ответ
+восстанавливается read-only `refresh`. Adapter не зарегистрирован в
+CLI/desktop/runtime IPC и ordinary startup остаётся idle/unattached. Следующий
+M1.2.50 должен дать ему one-shot start command только из существующего
+authenticated recovery owner без serialized authority fragments.
 
 ## Текущее состояние
 

@@ -66,3 +66,8 @@ runtime IPC remain unchanged. Ordinary startup has no token producer and stays
 idle/unattached; the public sync default remains `legacy-only`. A later stage
 may add a local UX-facing producer, but must not expose the token's authority
 fragments or create ambient/background recovery.
+
+M1.2.49 implemented the dormant local-UX facade in RFC-0273. The facade borrows
+this controller, projects only privacy-safe counts/phase/deadline/confirmation
+data, and preflights exact session and phase before mutation. It adds no
+production registration or serialized authority path.

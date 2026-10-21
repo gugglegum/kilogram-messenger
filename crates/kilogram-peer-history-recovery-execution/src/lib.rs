@@ -102,6 +102,10 @@ mod recipient_import_consumption_runtime_attachment;
 mod recipient_import_guided_session_controller;
 
 #[cfg(test)]
+#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_guided_session_local_ux.rs"]
+mod recipient_import_guided_session_local_ux;
+
+#[cfg(test)]
 #[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_mutation_adapter.rs"]
 mod recipient_import_mutation_adapter;
 
@@ -178,6 +182,13 @@ pub use recipient_import_guided_session_controller::{
     AuthenticatedGuidedRecipientImportSession, RecipientImportGuidedSessionConfirmation,
     RecipientImportGuidedSessionController, RecipientImportGuidedSessionControllerError,
     RecipientImportGuidedSessionMutation, RecipientImportGuidedSessionPhase,
+};
+#[cfg(test)]
+pub use recipient_import_guided_session_local_ux::{
+    RecipientImportGuidedSessionLocalUxAdapter, RecipientImportGuidedSessionLocalUxApply,
+    RecipientImportGuidedSessionLocalUxCancel, RecipientImportGuidedSessionLocalUxConfirm,
+    RecipientImportGuidedSessionLocalUxError, RecipientImportGuidedSessionLocalUxPhase,
+    RecipientImportGuidedSessionLocalUxRefresh, RecipientImportGuidedSessionLocalUxStart,
 };
 #[cfg(test)]
 pub use recipient_import_mutation_adapter::{
@@ -9153,6 +9164,284 @@ mod tests {
                 .status(setup.approved.consent_record_id(), 0)?,
             RecipientHistoryImportStatus::Absent
         ));
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_session_local_ux_projects_and_recovers_each_phase()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-session-local-ux")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 161)?;
+        let authority = guided_session_authority(&setup, &descriptor, &durable, reference, 162)?;
+        let mut controller = RecipientImportGuidedSessionController::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity(),
+        )?;
+
+        let idle = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).refresh(
+            RecipientImportGuidedSessionLocalUxRefresh::current(),
+            11_000,
+        )?;
+        assert_eq!(idle.phase(), RecipientImportGuidedSessionLocalUxPhase::Idle);
+        assert!(idle.session_id().is_none());
+        assert!(!idle.can_confirm());
+        assert!(!idle.can_apply());
+        assert!(!idle.can_cancel());
+
+        let planned = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).start(
+            RecipientImportGuidedSessionLocalUxStart::from_authenticated_recovery(authority, 300),
+            11_001,
+        )?;
+        assert_eq!(
+            planned.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Planned
+        );
+        assert_eq!(planned.completed_source_count(), 0);
+        assert_eq!(planned.total_source_count(), 1);
+        assert_eq!(planned.planned_step_count(), 1);
+        assert_eq!(planned.imported_event_count(), 0);
+        assert_eq!(planned.expires_at_unix_seconds(), Some(11_301));
+        assert!(planned.can_confirm());
+        assert!(!planned.can_apply());
+        assert!(planned.can_cancel());
+        assert!(!planned.complete());
+        let session_id = planned
+            .session_id()
+            .cloned()
+            .ok_or("planned local UX view has no session ID")?;
+        let phrase = planned
+            .confirmation_phrase()
+            .ok_or("planned local UX view has no confirmation phrase")?
+            .to_owned();
+
+        let recovered_plan = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller)
+            .refresh(
+                RecipientImportGuidedSessionLocalUxRefresh::exact(session_id.clone()),
+                11_002,
+            )?;
+        assert_eq!(recovered_plan, planned);
+
+        let confirmed = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).confirm(
+            RecipientImportGuidedSessionLocalUxConfirm::new(session_id.clone(), phrase),
+            11_003,
+        )?;
+        assert_eq!(
+            confirmed.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Confirmed
+        );
+        assert!(confirmed.confirmation_phrase().is_none());
+        assert!(!confirmed.can_confirm());
+        assert!(confirmed.can_apply());
+        let recovered_confirmation =
+            RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).refresh(
+                RecipientImportGuidedSessionLocalUxRefresh::exact(session_id.clone()),
+                11_004,
+            )?;
+        assert_eq!(recovered_confirmation, confirmed);
+
+        let attached = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).apply(
+            RecipientImportGuidedSessionLocalUxApply::new(session_id.clone()),
+            11_005,
+        )?;
+        assert_eq!(
+            attached.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Attached
+        );
+        assert_eq!(attached.completed_source_count(), 1);
+        assert_eq!(attached.total_source_count(), 1);
+        assert_eq!(attached.planned_step_count(), 0);
+        assert!(attached.imported_event_count() > 0);
+        assert!(attached.complete());
+        assert!(!attached.can_confirm());
+        assert!(!attached.can_apply());
+        assert!(attached.can_cancel());
+        let recovered_attachment = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller)
+            .refresh(
+                RecipientImportGuidedSessionLocalUxRefresh::exact(session_id.clone()),
+                11_006,
+            )?;
+        assert_eq!(recovered_attachment, attached);
+
+        let cancelled = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller)
+            .cancel(RecipientImportGuidedSessionLocalUxCancel::new(session_id))?;
+        assert_eq!(
+            cancelled.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Idle
+        );
+        assert!(!controller.context_attached());
+        assert_eq!(controller.consumption_plan_session_count(), 0);
+        assert!(!RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).opened_network());
+
+        drop(controller);
+        let mut restarted = RecipientImportGuidedSessionController::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity(),
+        )?;
+        let restarted_view = RecipientImportGuidedSessionLocalUxAdapter::new(&mut restarted)
+            .refresh(
+                RecipientImportGuidedSessionLocalUxRefresh::current(),
+                11_007,
+            )?;
+        assert_eq!(
+            restarted_view.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Idle
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_session_local_ux_fails_closed_on_stale_and_double_submit()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-session-local-ux-fail-closed")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 171)?;
+        let mut controller = RecipientImportGuidedSessionController::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity(),
+        )?;
+
+        let planned = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).start(
+            RecipientImportGuidedSessionLocalUxStart::from_authenticated_recovery(
+                guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 172)?,
+                300,
+            ),
+            12_000,
+        )?;
+        let first_session = planned
+            .session_id()
+            .cloned()
+            .ok_or("first local UX view has no session ID")?;
+        assert!(matches!(
+            RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).refresh(
+                RecipientImportGuidedSessionLocalUxRefresh::exact(adapter_artifact(250)),
+                12_001,
+            ),
+            Err(RecipientImportGuidedSessionLocalUxError::StaleView)
+        ));
+        assert_eq!(
+            RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller)
+                .refresh(
+                    RecipientImportGuidedSessionLocalUxRefresh::exact(first_session.clone()),
+                    12_002,
+                )?
+                .phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Planned
+        );
+        assert!(
+            RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller)
+                .confirm(
+                    RecipientImportGuidedSessionLocalUxConfirm::new(
+                        first_session.clone(),
+                        "wrong confirmation phrase",
+                    ),
+                    12_003,
+                )
+                .is_err()
+        );
+        assert_eq!(
+            RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller)
+                .refresh(
+                    RecipientImportGuidedSessionLocalUxRefresh::exact(first_session),
+                    12_004,
+                )?
+                .phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Idle
+        );
+
+        let planned = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).start(
+            RecipientImportGuidedSessionLocalUxStart::from_authenticated_recovery(
+                guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 173)?,
+                300,
+            ),
+            12_100,
+        )?;
+        let second_session = planned
+            .session_id()
+            .cloned()
+            .ok_or("second local UX view has no session ID")?;
+        let phrase = planned
+            .confirmation_phrase()
+            .ok_or("second local UX view has no confirmation phrase")?
+            .to_owned();
+        RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).confirm(
+            RecipientImportGuidedSessionLocalUxConfirm::new(second_session.clone(), phrase.clone()),
+            12_101,
+        )?;
+        assert!(
+            RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller)
+                .confirm(
+                    RecipientImportGuidedSessionLocalUxConfirm::new(second_session.clone(), phrase),
+                    12_102,
+                )
+                .is_err()
+        );
+        assert_eq!(
+            RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller)
+                .refresh(
+                    RecipientImportGuidedSessionLocalUxRefresh::exact(second_session.clone()),
+                    12_103,
+                )?
+                .phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Confirmed
+        );
+        RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).cancel(
+            RecipientImportGuidedSessionLocalUxCancel::new(second_session),
+        )?;
+
+        let planned = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).start(
+            RecipientImportGuidedSessionLocalUxStart::from_authenticated_recovery(
+                guided_session_authority(&setup, &descriptor, &durable, reference, 174)?,
+                300,
+            ),
+            12_200,
+        )?;
+        let third_session = planned
+            .session_id()
+            .cloned()
+            .ok_or("third local UX view has no session ID")?;
+        RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).confirm(
+            RecipientImportGuidedSessionLocalUxConfirm::new(
+                third_session.clone(),
+                planned
+                    .confirmation_phrase()
+                    .ok_or("third local UX view has no confirmation phrase")?,
+            ),
+            12_201,
+        )?;
+        let attached = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).apply(
+            RecipientImportGuidedSessionLocalUxApply::new(third_session.clone()),
+            12_202,
+        )?;
+        assert!(controller.context_attached());
+        assert!(
+            RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller)
+                .apply(
+                    RecipientImportGuidedSessionLocalUxApply::new(third_session.clone()),
+                    12_203,
+                )
+                .is_err()
+        );
+        let recovered = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).refresh(
+            RecipientImportGuidedSessionLocalUxRefresh::exact(third_session.clone()),
+            12_204,
+        )?;
+        assert_eq!(recovered, attached);
+        assert_eq!(
+            recovered.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Attached
+        );
+        assert!(controller.context_attached());
+        RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).cancel(
+            RecipientImportGuidedSessionLocalUxCancel::new(third_session),
+        )?;
+        assert!(!controller.context_attached());
+        assert_eq!(controller.consumption_plan_session_count(), 0);
         Ok(())
     }
 }

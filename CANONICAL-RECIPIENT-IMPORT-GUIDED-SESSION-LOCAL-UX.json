@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.49",
+  "status": "dormant-local-ux-guided-session-adapter-verified",
+  "predecessor": "M1.2.48",
+  "adapter": {
+    "process_local": true,
+    "borrows_runtime_owned_controller": true,
+    "accepts_state_path": false,
+    "accepts_signer": false,
+    "accepts_coordinator": false,
+    "accepts_membership_snapshot": false,
+    "generates_request_ids_internally": true,
+    "derives_domain_separated_transition_nonces": true,
+    "opens_network": false
+  },
+  "start_command": {
+    "contains_authenticated_process_local_authority": true,
+    "public_constructor": false,
+    "serializable": false,
+    "cloneable": false,
+    "debuggable": false,
+    "accepts_serialized_authority_fragments": false
+  },
+  "view": {
+    "serializable": false,
+    "fields": [
+      "phase",
+      "session-id",
+      "completed-source-count",
+      "total-source-count",
+      "planned-step-count",
+      "imported-event-count",
+      "confirmation-phrase",
+      "deadline",
+      "complete"
+    ],
+    "exposes_state_path": false,
+    "exposes_account_id": false,
+    "exposes_device_id": false,
+    "exposes_descriptor": false,
+    "exposes_coordinator": false,
+    "exposes_membership_reference": false,
+    "exposes_membership_snapshot": false,
+    "exposes_signing_material": false,
+    "exposes_request_id": false,
+    "exposes_nonce": false,
+    "exposes_authenticated_start_token": false
+  },
+  "commands": {
+    "typed_start": true,
+    "typed_confirm": true,
+    "typed_apply": true,
+    "typed_cancel": true,
+    "typed_refresh": true,
+    "exact_session_id_preflight": true,
+    "exact_phase_preflight": true,
+    "stale_command_preserves_current_session": true,
+    "double_submit_repeats_mutation": false,
+    "lost_response_recovery_uses_refresh_only": true,
+    "refresh_performs_import": false,
+    "refresh_performs_consumption": false
+  },
+  "production": {
+    "registered_runtime_ipc_command": false,
+    "registered_cli_command": false,
+    "registered_desktop_control": false,
+    "registered_timer": false,
+    "registered_background_start": false,
+    "adds_filesystem_scan": false,
+    "changes_peer_wire": false,
+    "changes_runtime_ipc_wire": false,
+    "changes_public_default": false,
+    "public_default": "legacy-only"
+  },
+  "verification": {
+    "new_stable_path_test_count": 2,
+    "combined_stable_path_test_count": 4,
+    "safe_view_recovery_tested": true,
+    "stale_session_tested": true,
+    "wrong_confirmation_cleanup_tested": true,
+    "double_confirm_no_reexecution_tested": true,
+    "double_apply_no_reexecution_tested": true,
+    "restart_is_idle_tested": true,
+    "network_executed": false,
+    "second_host_required": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "next": [
+    "produce-the-start-command-only-from-the-existing-authenticated-recovery-owner",
+    "keep-authority-fragments-inside-the-runtime-process",
+    "keep-runtime-ipc-and-product-startup-dormant-until-a-separate-migration-decision"
+  ]
+}

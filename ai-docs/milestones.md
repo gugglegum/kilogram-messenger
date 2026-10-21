@@ -12,6 +12,23 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.49 — dormant local-UX guided-session adapter: выполнено
+
+- Process-local facade заимствует единственный M1.2.48 controller и выдаёт UI
+  только phase, short-lived session ID, counts, deadline, confirmation phrase и
+  final imported-event count; view не сериализуется и не содержит authority.
+- Typed `start/confirm/apply/cancel/refresh` не принимают path, signer,
+  coordinator, memberships, request ID или nonce. Request IDs генерируются
+  внутри, confirm/apply nonces разделены доменами.
+- Stale session и wrong phase отсекаются до controller mutation. Double submit
+  не повторяет durable работу и сохраняет текущую phase; потерянный ответ
+  восстанавливается только read-only `refresh` в том же процессе.
+- Stable-name combined regression M1.2.48–M1.2.49 прошёл 4/4 за 635.68s;
+  dedicated boundary отклонил 15/15 ослабляющих mutations.
+- CLI/desktop/runtime IPC/timer/network не зарегистрированы; ordinary startup
+  idle/unattached, public `legacy-only` неизменён. Readiness прошёл 175/175
+  gates; Cargo stderr warning больше не маскируется под nonzero exit.
+
 ### M1.2.48 — runtime-owned explicit guided session controller: выполнено
 
 - Один process-owned controller собрал read-only Plan, Device-signed durable

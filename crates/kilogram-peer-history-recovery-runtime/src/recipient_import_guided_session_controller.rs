@@ -307,6 +307,34 @@ enum ActiveGuidedRecipientImportSession {
         session_id: RuntimeIpcRecipientImportArtifactId,
         attachment_id: RuntimeIpcRecipientImportArtifactId,
         descriptor: RuntimeIpcDescriptor,
+        receipt: Box<RuntimeIpcRecipientImportExecutionReceiptSummary>,
+        expires_at_unix_seconds: u64,
+    },
+}
+
+pub(crate) enum RecipientImportGuidedSessionLocalSnapshot {
+    Idle,
+    Planned {
+        session_id: RuntimeIpcRecipientImportArtifactId,
+        completed_source_count: u8,
+        total_source_count: u8,
+        planned_step_count: u8,
+        confirmation_phrase: String,
+        expires_at_unix_seconds: u64,
+    },
+    Confirmed {
+        session_id: RuntimeIpcRecipientImportArtifactId,
+        completed_source_count: u8,
+        total_source_count: u8,
+        planned_step_count: u8,
+        expires_at_unix_seconds: u64,
+    },
+    Attached {
+        session_id: RuntimeIpcRecipientImportArtifactId,
+        final_completed_source_count: u8,
+        total_source_count: u8,
+        imported_event_count: u64,
+        complete: bool,
         expires_at_unix_seconds: u64,
     },
 }
@@ -426,6 +454,53 @@ impl<'identity> RecipientImportGuidedSessionController<'identity> {
 
     pub fn opened_network(&self) -> bool {
         false
+    }
+
+    pub(crate) fn local_ux_snapshot(
+        &self,
+    ) -> Result<
+        RecipientImportGuidedSessionLocalSnapshot,
+        RecipientImportGuidedSessionControllerError,
+    > {
+        Ok(match self.active.as_ref() {
+            None => RecipientImportGuidedSessionLocalSnapshot::Idle,
+            Some(ActiveGuidedRecipientImportSession::Planned(session)) => {
+                let summary = session
+                    .dispatch
+                    .planned_summary()
+                    .ok_or(RecipientImportGuidedSessionControllerError::PlanRejected)?;
+                RecipientImportGuidedSessionLocalSnapshot::Planned {
+                    session_id: session.session_id.clone(),
+                    completed_source_count: summary.completed_source_count,
+                    total_source_count: summary.total_source_count,
+                    planned_step_count: summary.planned_step_count,
+                    confirmation_phrase: summary.confirmation_phrase.clone(),
+                    expires_at_unix_seconds: session.expires_at_unix_seconds,
+                }
+            }
+            Some(ActiveGuidedRecipientImportSession::Confirmed(session)) => {
+                RecipientImportGuidedSessionLocalSnapshot::Confirmed {
+                    session_id: session.session_id.clone(),
+                    completed_source_count: session.summary.completed_source_count,
+                    total_source_count: session.summary.total_source_count,
+                    planned_step_count: session.summary.planned_step_count,
+                    expires_at_unix_seconds: session.expires_at_unix_seconds,
+                }
+            }
+            Some(ActiveGuidedRecipientImportSession::Attached {
+                session_id,
+                receipt,
+                expires_at_unix_seconds,
+                ..
+            }) => RecipientImportGuidedSessionLocalSnapshot::Attached {
+                session_id: session_id.clone(),
+                final_completed_source_count: receipt.final_completed_source_count,
+                total_source_count: receipt.total_source_count,
+                imported_event_count: receipt.imported_event_count,
+                complete: receipt.complete,
+                expires_at_unix_seconds: *expires_at_unix_seconds,
+            },
+        })
     }
 
     pub fn begin(
@@ -635,13 +710,14 @@ impl<'identity> RecipientImportGuidedSessionController<'identity> {
         let result = RecipientImportGuidedSessionAttachment {
             session_id: confirmed.session_id.clone(),
             attachment_id: attachment_id.clone(),
-            receipt,
+            receipt: receipt.clone(),
             expires_at_unix_seconds: confirmed.expires_at_unix_seconds,
         };
         self.active = Some(ActiveGuidedRecipientImportSession::Attached {
             session_id: confirmed.session_id,
             attachment_id,
             descriptor: confirmed.authority.descriptor,
+            receipt: Box::new(receipt),
             expires_at_unix_seconds: confirmed.expires_at_unix_seconds,
         });
         Ok(result)

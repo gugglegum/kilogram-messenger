@@ -1,5 +1,25 @@
 # Среда разработки
 
+## M1.2.49 verification (2026-10-21)
+
+- Targeted locked/offline `cargo check` и strict Clippy для recovery
+  runtime/execution passed; existing cross-volume incremental hard-link
+  fallback warnings не изменились.
+- Два новых local-UX fixtures сначала прошли 2/2 за 333.68s. После усиления
+  preflight весь combined M1.2.48–M1.2.49 regression прошёл 4/4 за 635.68s
+  через `scripts/run-cargo-tests-stable.ps1` с постоянным EXE; direct
+  `cargo test` не использовался.
+- Dedicated local-UX boundary rejected 15/15 mutations. Accepted-tag M1
+  readiness прошёл 175/175 gates с rustfmt и workspace-wide locked/offline
+  strict Clippy.
+- Общий `invoke-cargo-friendly.ps1` теперь отличает обычный native stderr
+  Cargo от failure по реальному exit code. Это устраняет ложное падение
+  readiness на Windows PowerShell 5.1 при incremental hard-link fallback,
+  не ослабляя проверку ненулевого завершения Cargo.
+- Product network, second host, release build, archive, tag и automatic GitHub
+  build не использовались. CLI/desktop/runtime IPC/timer остаются без нового
+  entry point; ordinary startup idle/unattached, default — `legacy-only`.
+
 ## M1.2.48 verification (2026-10-21)
 
 - `cargo check` и targeted locked/offline strict Clippy для recovery
