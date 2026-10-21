@@ -5911,3 +5911,20 @@ Hosted follow-up:
 - Dedicated boundary rejects 10/10 mutations; accepted-tag readiness passes
   167/167 with rustfmt and locked/offline strict Clippy. No release build,
   archive, tag or automatic GitHub build is used.
+
+## M1.2.42 process-local consumption Plan session environment (2026-10-21)
+
+- The dormant integration crate owns a bounded `VecDeque` cache with at most
+  32 opaque M1.2.41 Plan dispatches. It has no serde codec, redb store, Tokio,
+  Iroh, HTTP, file or background surface.
+- Insert accepts only live signed `Planned` output. Exact plan/request-digest
+  replay is idempotent; collision and capacity fail closed without evicting a
+  live ceremony. Expired entries are purged before use.
+- A freshly constructed cache models process restart and cannot Commit. An
+  exact same-process Commit delegates to M1.2.41, and a repeated Commit returns
+  durable `AlreadyConsumed`; expiry removes the stage.
+- The real durable fixture passed 1/1 in 191.69 seconds through the fixed-name
+  stable Windows harness with workspace-local `TEMP`/`TMP`.
+- Active IPC remains version 33/domain v14. Adding the command is explicitly a
+  later v34/domain v15 compatibility migration; no CLI, desktop, network,
+  release, ZIP, tag, automatic GitHub build or second host is used.

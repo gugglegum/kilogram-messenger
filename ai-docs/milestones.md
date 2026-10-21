@@ -12,6 +12,19 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.42 — bounded process-local consumption Plan session cache: выполнено
+
+- В памяти процесса хранится только opaque M1.2.41 dispatcher Plan stage,
+  exact plan summary и digest исходного Plan request; codec/database отсутствуют.
+- Не более 32 живых stages; expiry purge, invalid capacity, collision и
+  переполнение fail closed без вытеснения unexpired церемонии.
+- Restart начинает с пустого cache. Commit без exact same-process Plan, с
+  изменённым summary или после TTL отвергается; cache сам не grant-ит authority.
+- Same-process Commit и replay проходят через M1.2.41: durable authorization и
+  consume receipt остаются обязательными, replay даёт `AlreadyConsumed`.
+- Active IPC/CLI/desktop/network не подключены. Stable fixture 1/1; следующий
+  отдельный этап обязан явно мигрировать IPC 33/v14 -> 34/v15.
+
 ### M1.2.41 — signed dormant import-consumption response dispatcher: выполнено
 
 - Plan канонически перепроверяется против exact runtime descriptor, остаётся

@@ -6,12 +6,12 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.41 собрал M1.2.38–M1.2.40 в
-dormant signed response dispatcher. Plan остаётся read-only/no-create, Commit
-требует непрозрачный exact Plan stage, durable authorization и durable consume
-receipt до Device-signed ответа; replay не загружает membership и не consume-ит
-повторно. Следующий M1.2.42 — отдельная authenticated runtime registration;
-CLI/desktop/network пока не подключены, публичный default остаётся legacy-only.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.42 добавил bounded process-local
+custody для непрозрачного M1.2.41 Plan stage. Cache не durable, не переживает
+restart/TTL, не вытесняет живую authority при переполнении и сам не разрешает
+Commit. Следующий M1.2.43 — explicit IPC v34/domain v15 migration contract перед
+active registration; CLI/desktop/network пока не подключены, публичный default
+остаётся legacy-only.
 
 ## Текущее состояние
 

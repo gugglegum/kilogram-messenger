@@ -1,34 +1,36 @@
-# Текущая точка: M1.2.41 завершён, следующий M1.2.42
+# Текущая точка: M1.2.42 завершён, следующий M1.2.43
 
 Дата: 2026-10-21.
 
-M1.2.41 собрал M1.2.38 read, M1.2.39 authorization и M1.2.40 mutation в один
-dormant dispatcher. Plan остаётся no-create, Commit требует opaque exact Plan
-stage и тот же descriptor, authorization durable до mutation, completed receipt
-durable до Device-signed response. Exact replay не вызывает loader/consume.
-Проверки: stable-path 2/2, boundary 10/10, readiness 167/167.
+M1.2.42 добавил обязательную process-local границу между двумя authenticated
+request будущей consumption ceremony. Cache хранит opaque M1.2.41 Plan stage,
+exact summary/request digest, ограничен 32 живыми sessions, не переживает
+restart/TTL и не даёт authority самостоятельно. Stable durable fixture 1/1.
 
-## Следующий этап: M1.2.42 — authenticated runtime registration
+## Следующий этап: M1.2.43 — explicit runtime IPC v34/domain v15 migration
 
-1. Добавить отдельный authenticated active runtime command для consumption
-   ceremony, не меняя transport wire и public `legacy-only` default.
-2. Runtime должен владеть bounded ephemeral Plan-stage cache: exact descriptor,
-   request digest, Device и TTL; restart/expiry очищают authority, Commit без
-   exact live stage fail closed.
-3. Plan остаётся read-only. Commit требует explicit phrase/approval и вызывает
-   только M1.2.41; response остаётся current-Device-signed.
-4. Не добавлять CLI/desktop control в этом этапе и не выполнять product network.
-5. Добавить authenticated loopback fixtures, boundary/RFC/manifest, следующий
-   readiness gate, rustfmt и locked/offline strict Clippy, затем commit/push.
+1. Зафиксировать добавление recipient-import-consumption command/response как
+   несовместимое расширение Postcard enum: IPC 33/domain v14 -> 34/domain v15.
+2. Обновить canonical completion/schema/compatibility ledgers и predecessor
+   gates через явный successor contract, не переписывая историю как будто wire
+   не менялся.
+3. Runtime handler владеет M1.2.42 cache только в памяти процесса. Plan и Commit
+   принимают nested canonical bytes; response — только current-Device-signed.
+4. Commit без exact stage текущего runtime, после restart/TTL или с другим
+   descriptor/Device fail closed. Cache capacity не вызывает eviction.
+5. На этом этапе не добавлять пользовательскую CLI/desktop ceremony и не
+   выполнять product network; нужны authenticated loopback fixtures, boundary,
+   rustfmt, locked/offline strict Clippy и следующий readiness gate.
 
 ## Stop conditions
 
-- runtime cache переживает restart или TTL;
-- Commit принимается без exact same-runtime Plan stage;
-- Plan создаёт durable authorization/mutation state;
-- unsigned outcome либо identity secret выходит в IPC;
-- CLI/desktop получает mutation authority преждевременно;
-- transport wire/public default меняются ради прохождения теста.
+- enum меняется без version/domain migration;
+- старый descriptor принимается новым runtime либо наоборот;
+- Plan stage сериализуется или переживает restart;
+- handler реконструирует authority из signed projection;
+- Commit минует M1.2.41 или cache capacity приводит к silent eviction;
+- unsigned outcome/identity secret выходит в IPC;
+- transport wire либо public `legacy-only` default меняется.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

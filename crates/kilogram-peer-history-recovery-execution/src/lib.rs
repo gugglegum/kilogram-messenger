@@ -85,6 +85,10 @@ mod recipient_import_consumption_mutation_adapter;
 mod recipient_import_consumption_response_dispatcher;
 
 #[cfg(test)]
+#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_session_cache.rs"]
+mod recipient_import_consumption_session_cache;
+
+#[cfg(test)]
 #[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_mutation_adapter.rs"]
 mod recipient_import_mutation_adapter;
 
@@ -135,6 +139,12 @@ pub use recipient_import_consumption_read_adapter::{
 pub use recipient_import_consumption_response_dispatcher::{
     RecipientHistoryRecoveryImportConsumptionResponseDispatcher,
     RecipientImportConsumptionResponseDispatch, RecipientImportConsumptionResponseDispatcherError,
+};
+#[cfg(test)]
+pub use recipient_import_consumption_session_cache::{
+    MAX_RECIPIENT_IMPORT_CONSUMPTION_PLAN_SESSIONS, RecipientImportConsumptionPlanSessionCache,
+    RecipientImportConsumptionPlanSessionCacheError,
+    RecipientImportConsumptionPlanSessionInsertOutcome,
 };
 #[cfg(test)]
 pub use recipient_import_mutation_adapter::{
@@ -7989,6 +7999,187 @@ mod tests {
         assert!(replayed.mutation_replayed());
         assert!(replayed.mutation_receipt_persisted_before_response());
         assert_eq!(replay_load_count.get(), 0);
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_consumption_plan_session_cache_requires_same_process_plan_and_expires()
+    -> Result<(), Box<dyn std::error::Error>> {
+        assert!(matches!(
+            RecipientImportConsumptionPlanSessionCache::new(0),
+            Err(RecipientImportConsumptionPlanSessionCacheError::InvalidCapacity)
+        ));
+        assert!(matches!(
+            RecipientImportConsumptionPlanSessionCache::new(
+                MAX_RECIPIENT_IMPORT_CONSUMPTION_PLAN_SESSIONS + 1
+            ),
+            Err(RecipientImportConsumptionPlanSessionCacheError::InvalidCapacity)
+        ));
+
+        let setup = intent_round_fixture("recipient-import-consumption-session-cache")?;
+        let completed = completed_adapter_mutation(&setup, 101, 72)?;
+        let current = current_after_adapter_import(&setup)?;
+        let plan_request = consumption_request(&completed, 75)?;
+        let dispatcher = RecipientHistoryRecoveryImportConsumptionResponseDispatcher::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+        );
+        let load_count = Cell::new(0_usize);
+        let loader = |requested: &RuntimeIpcRecipientImportMembershipReference| {
+            load_count.set(load_count.get() + 1);
+            RecipientImportMembershipLoad::Exact(LoadedRecipientImportMembership::new(
+                requested.authority_reference_id.clone(),
+                requested.authenticated_context_id.clone(),
+                setup.fixture.membership.clone(),
+            ))
+        };
+        let planned = dispatcher.dispatch_plan(
+            &plan_request,
+            &completed.descriptor,
+            &completed.adapter,
+            &completed.store,
+            &current,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            setup.fixture.replacement.identity(),
+            8_500,
+        )?;
+        let RuntimeIpcRecipientImportConsumptionOutcome::Planned(plan) =
+            planned.response().outcome()
+        else {
+            return Err("dispatcher did not return a cacheable plan".into());
+        };
+        let plan = plan.clone();
+        let mut cache = RecipientImportConsumptionPlanSessionCache::new(1)?;
+        assert_eq!(cache.maximum_sessions(), 1);
+        assert!(!cache.is_durable());
+        assert!(!cache.grants_commit_authority());
+        assert!(!cache.opened_network());
+        assert_eq!(
+            cache.insert(planned, 8_500)?,
+            RecipientImportConsumptionPlanSessionInsertOutcome::Inserted
+        );
+        assert_eq!(cache.len(), 1);
+        assert!(cache.contains(&plan.consumption_plan_id, 8_500));
+
+        let exact_replay_plan = dispatcher.dispatch_plan(
+            &plan_request,
+            &completed.descriptor,
+            &completed.adapter,
+            &completed.store,
+            &current,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            setup.fixture.replacement.identity(),
+            8_500,
+        )?;
+        assert_eq!(
+            cache.insert(exact_replay_plan, 8_500)?,
+            RecipientImportConsumptionPlanSessionInsertOutcome::ExactReplay
+        );
+        assert_eq!(cache.len(), 1);
+
+        let RuntimeIpcRecipientImportConsumptionCommand::Plan {
+            evidence,
+            memberships,
+            ..
+        } = plan_request.command().clone()
+        else {
+            return Err("expected a consumption plan request".into());
+        };
+        let commit_request = RuntimeIpcRecipientImportConsumptionRequest::new(
+            &completed.descriptor,
+            adapter_request_id(76),
+            RuntimeIpcRecipientImportConsumptionCommand::Commit {
+                evidence,
+                memberships,
+                plan: Box::new(plan.clone()),
+                confirmation_phrase: plan.confirmation_phrase.clone(),
+                explicit_approval:
+                    RuntimeIpcRecipientImportConsumptionExplicitApproval::UserConfirmed,
+            },
+        )?;
+
+        let mut restarted_cache = RecipientImportConsumptionPlanSessionCache::new(1)?;
+        assert!(matches!(
+            restarted_cache.dispatch_commit(
+                &dispatcher,
+                &commit_request,
+                &completed.descriptor,
+                &completed.adapter,
+                &completed.store,
+                &current,
+                &setup.inbox,
+                &setup.imports,
+                &loader,
+                setup.fixture.replacement.identity(),
+                8_501,
+            ),
+            Err(RecipientImportConsumptionPlanSessionCacheError::MissingPlanStage)
+        ));
+        assert!(completed.store.inspect_active()?.is_some());
+
+        let committed = cache.dispatch_commit(
+            &dispatcher,
+            &commit_request,
+            &completed.descriptor,
+            &completed.adapter,
+            &completed.store,
+            &current,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            setup.fixture.replacement.identity(),
+            8_502,
+        )?;
+        assert!(matches!(
+            committed.response().outcome(),
+            RuntimeIpcRecipientImportConsumptionOutcome::Consumed(_)
+        ));
+        assert_eq!(cache.len(), 1);
+
+        let rejecting_loader = |_requested: &RuntimeIpcRecipientImportMembershipReference| {
+            RecipientImportMembershipLoad::Ambiguous
+        };
+        let replayed = cache.dispatch_commit(
+            &dispatcher,
+            &commit_request,
+            &completed.descriptor,
+            &completed.adapter,
+            &completed.store,
+            &current,
+            &setup.inbox,
+            &setup.imports,
+            &rejecting_loader,
+            setup.fixture.replacement.identity(),
+            8_503,
+        )?;
+        assert!(matches!(
+            replayed.response().outcome(),
+            RuntimeIpcRecipientImportConsumptionOutcome::AlreadyConsumed(_)
+        ));
+
+        assert_eq!(cache.purge_expired(8_621), 1);
+        assert!(cache.is_empty());
+        assert!(matches!(
+            cache.dispatch_commit(
+                &dispatcher,
+                &commit_request,
+                &completed.descriptor,
+                &completed.adapter,
+                &completed.store,
+                &current,
+                &setup.inbox,
+                &setup.imports,
+                &rejecting_loader,
+                setup.fixture.replacement.identity(),
+                8_621,
+            ),
+            Err(RecipientImportConsumptionPlanSessionCacheError::ExpiredPlan)
+        ));
         Ok(())
     }
 }
