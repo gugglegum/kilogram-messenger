@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.48",
+  "status": "runtime-owned-explicit-guided-session-controller-verified",
+  "predecessor": "M1.2.47",
+  "controller": {
+    "process_owned": true,
+    "maximum_active_sessions": 1,
+    "phases": [
+      "idle",
+      "planned",
+      "confirmed",
+      "attached"
+    ],
+    "ordinary_startup_phase": "idle",
+    "maximum_lifetime_seconds": 300,
+    "owns_consumption_actor": true,
+    "owns_signer_reference": true,
+    "opens_network": false
+  },
+  "start_authority": {
+    "type": "authenticated-process-local-token",
+    "public_constructor": false,
+    "serializable": false,
+    "cloneable": false,
+    "debuggable": false,
+    "accepts_path_during_begin": false,
+    "accepts_coordinator_during_begin": false,
+    "accepts_membership_snapshot_during_begin": false,
+    "accepts_secret_during_session_operations": false,
+    "exact_state_account_device_binding": true,
+    "exact_descriptor_binding": true,
+    "exact_plan_and_membership_binding": true
+  },
+  "lifecycle": {
+    "plan_is_read_only": true,
+    "confirmation_is_device_signed_and_durable": true,
+    "mutation_is_bounded_and_durable": true,
+    "authenticated_completion_is_required": true,
+    "attachment_occurs_once": true,
+    "consumption_delegates_to_existing_v34_actor": true,
+    "exact_plan_replay_is_byte_stable": true,
+    "lost_commit_response_replays_as": "already-consumed"
+  },
+  "cleanup": {
+    "cancel_drops_ephemeral_session": true,
+    "expiry_drops_ephemeral_session": true,
+    "failed_confirmation_drops_ephemeral_session": true,
+    "failed_mutation_drops_ephemeral_session": true,
+    "attached_expiry_detaches_actor": true,
+    "detach_clears_consumption_plan_cache": true,
+    "process_restart_restores_session": false,
+    "durable_ledgers_create_ambient_authority": false
+  },
+  "production": {
+    "registered_runtime_ipc_command": false,
+    "registered_cli_command": false,
+    "registered_desktop_control": false,
+    "registered_timer": false,
+    "adds_filesystem_scan": false,
+    "changes_peer_wire": false,
+    "changes_runtime_ipc_wire": false,
+    "changes_public_default": false,
+    "public_default": "legacy-only"
+  },
+  "verification": {
+    "stable_path_test_count": 2,
+    "full_lifecycle_tested": true,
+    "single_session_exclusivity_tested": true,
+    "cancel_tested": true,
+    "expiry_tested": true,
+    "failed_confirmation_cleanup_tested": true,
+    "failed_mutation_cleanup_tested": true,
+    "foreign_state_rejected": true,
+    "foreign_account_rejected": true,
+    "foreign_device_rejected": true,
+    "restart_is_idle_tested": true,
+    "network_executed": false,
+    "second_host_required": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "next": [
+    "add-a-local-ux-facing-session-producer-without-exposing-authority-fragments",
+    "render-plan-confirmation-and-progress-without-ambient-startup",
+    "keep-runtime-ipc-and-public-default-unchanged-until-a-separate-activation-decision"
+  ]
+}

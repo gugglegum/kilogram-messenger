@@ -6,14 +6,15 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.47 связал fresh successful
-guided import mutation с M1.2.46 actor через единственный non-serializable
-process-local completion hand-off. Raw context constructor больше не public;
-final coordinator, membership set, state/Account/Device проверяются до install.
-Loopback fixture доказал byte-exact Plan replay, Commit, durable
-`AlreadyConsumed` и detach. Production startup остаётся unattached. Следующий
-M1.2.48 должен собрать эти стадии в один runtime-owned explicit guided-session
-controller без CLI/desktop/network authority и без изменения `legacy-only`.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.48 собрал read-only Plan,
+Device-signed confirmation, bounded mutation, authenticated completion и
+consumption actor в один process-owned controller с фазами
+`Idle -> Planned -> Confirmed -> Attached`. Private token нельзя сериализовать
+или сконструировать публично; ошибки, cancel, expiry и restart не оставляют
+ambient authority. Stable fixtures прошли полный lifecycle и fail-closed
+матрицу, а ordinary startup остаётся idle/unattached. Следующий M1.2.49 должен
+добавить dormant local-UX adapter, не раскрывая authority fragments и не
+регистрируя новый CLI/IPC/network путь.
 
 ## Текущее состояние
 

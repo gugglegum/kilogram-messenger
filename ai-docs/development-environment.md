@@ -1,5 +1,21 @@
 # Среда разработки
 
+## M1.2.48 verification (2026-10-21)
+
+- `cargo check` и targeted locked/offline strict Clippy для recovery
+  runtime/execution passed; existing cross-volume incremental hard-link
+  fallback warnings не изменились.
+- Два real recovery fixtures полного guided-session lifecycle и fail-closed
+  phase matrix прошли 2/2 через `scripts/run-cargo-tests-stable.ps1` с
+  постоянным именем EXE за 302.30s; direct `cargo test` не использовался.
+- Dedicated controller boundary rejected 14/14 mutations. Accepted-tag M1
+  readiness passed 174/174 gates, включая rustfmt и workspace-wide
+  locked/offline strict Clippy.
+- Product network, second host, release build, archive, tag и automatic GitHub
+  build не использовались. Controller не зарегистрирован в runtime IPC,
+  CLI/desktop или timer; ordinary startup остаётся idle/unattached, public
+  default — `legacy-only`.
+
 ## M1.2.47 verification (2026-10-21)
 
 - `cargo check` и targeted locked/offline strict Clippy для recovery

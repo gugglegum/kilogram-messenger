@@ -29,6 +29,7 @@ mod recipient_import_consumption_response_dispatcher;
 mod recipient_import_consumption_runtime_attachment;
 mod recipient_import_consumption_runtime_service;
 mod recipient_import_consumption_session_cache;
+mod recipient_import_guided_session_controller;
 mod recipient_import_mutation_adapter;
 mod recipient_import_read_adapter;
 
@@ -79,6 +80,14 @@ pub use recipient_import_consumption_session_cache::{
     MAX_RECIPIENT_IMPORT_CONSUMPTION_PLAN_SESSIONS, RecipientImportConsumptionPlanSessionCache,
     RecipientImportConsumptionPlanSessionCacheError,
     RecipientImportConsumptionPlanSessionInsertOutcome,
+};
+pub use recipient_import_guided_session_controller::{
+    AuthenticatedGuidedRecipientImportSession,
+    MAX_GUIDED_RECIPIENT_IMPORT_SESSION_LIFETIME_SECONDS, RecipientImportGuidedSessionAttachment,
+    RecipientImportGuidedSessionConfirmation, RecipientImportGuidedSessionConfirmationReceipt,
+    RecipientImportGuidedSessionController, RecipientImportGuidedSessionControllerError,
+    RecipientImportGuidedSessionMutation, RecipientImportGuidedSessionPhase,
+    RecipientImportGuidedSessionPlan,
 };
 pub use recipient_import_mutation_adapter::{
     DurableRecipientImportCompletedMutation, MAX_DURABLE_RECIPIENT_IMPORT_MUTATION_RECORDS,

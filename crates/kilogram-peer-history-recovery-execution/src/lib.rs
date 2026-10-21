@@ -98,6 +98,10 @@ mod recipient_import_consumption_runtime_service;
 mod recipient_import_consumption_runtime_attachment;
 
 #[cfg(test)]
+#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_guided_session_controller.rs"]
+mod recipient_import_guided_session_controller;
+
+#[cfg(test)]
 #[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_mutation_adapter.rs"]
 mod recipient_import_mutation_adapter;
 
@@ -168,6 +172,12 @@ pub use recipient_import_consumption_session_cache::{
     MAX_RECIPIENT_IMPORT_CONSUMPTION_PLAN_SESSIONS, RecipientImportConsumptionPlanSessionCache,
     RecipientImportConsumptionPlanSessionCacheError,
     RecipientImportConsumptionPlanSessionInsertOutcome,
+};
+#[cfg(test)]
+pub use recipient_import_guided_session_controller::{
+    AuthenticatedGuidedRecipientImportSession, RecipientImportGuidedSessionConfirmation,
+    RecipientImportGuidedSessionController, RecipientImportGuidedSessionControllerError,
+    RecipientImportGuidedSessionMutation, RecipientImportGuidedSessionPhase,
 };
 #[cfg(test)]
 pub use recipient_import_mutation_adapter::{
@@ -6442,6 +6452,31 @@ mod tests {
         )
     }
 
+    fn guided_session_authority(
+        setup: &IntentRoundFixture,
+        descriptor: &RuntimeIpcDescriptor,
+        durable: &DurableRecipientRecoveryImportRoundIntent,
+        reference: RuntimeIpcRecipientImportMembershipReference,
+        request_byte: u8,
+    ) -> Result<AuthenticatedGuidedRecipientImportSession, Box<dyn std::error::Error>> {
+        let plan_request =
+            adapter_plan_request(setup, descriptor, durable, reference.clone(), request_byte)?;
+        Ok(
+            AuthenticatedGuidedRecipientImportSession::from_authenticated_recovery(
+                &setup.state,
+                setup.fixture.owner_account_id,
+                setup.fixture.replacement.identity().device_id(),
+                descriptor.clone(),
+                plan_request,
+                setup.coordination.clone(),
+                vec![GuidedRecipientImportMembership::new(
+                    reference,
+                    setup.fixture.membership.clone(),
+                )?],
+            )?,
+        )
+    }
+
     struct CompletedAdapterMutation {
         store: RecipientRecoveryImportRoundIntentStore,
         durable: DurableRecipientRecoveryImportRoundIntent,
@@ -8789,6 +8824,335 @@ mod tests {
             ))
         ));
         assert!(completed.store.inspect_active()?.is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_session_controller_owns_full_explicit_lifecycle()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-session-controller")?;
+        let (store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 131)?;
+        let authority =
+            guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 132)?;
+        let mut controller = RecipientImportGuidedSessionController::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity(),
+        )?;
+        assert_eq!(controller.phase(), RecipientImportGuidedSessionPhase::Idle);
+        assert!(!controller.context_attached());
+        assert!(!controller.opened_network());
+
+        let plan = controller.begin(authority, 9_000, 300)?;
+        assert_eq!(
+            controller.phase(),
+            RecipientImportGuidedSessionPhase::Planned
+        );
+        assert_eq!(controller.active_session_id(), Some(plan.session_id()));
+        let confirmation = controller.confirm(
+            RecipientImportGuidedSessionConfirmation::new(
+                plan.session_id().clone(),
+                adapter_request_id(133),
+                adapter_artifact(134),
+                plan.summary().confirmation_phrase.clone(),
+            ),
+            9_001,
+        )?;
+        assert_eq!(confirmation.session_id(), plan.session_id());
+        assert_eq!(
+            controller.phase(),
+            RecipientImportGuidedSessionPhase::Confirmed
+        );
+        assert!(!controller.context_attached());
+
+        let attachment = controller.apply(
+            RecipientImportGuidedSessionMutation::new(
+                plan.session_id().clone(),
+                adapter_request_id(135),
+                adapter_artifact(136),
+            ),
+            9_002,
+        )?;
+        assert_eq!(attachment.session_id(), plan.session_id());
+        assert!(attachment.receipt().complete);
+        assert_eq!(
+            controller.phase(),
+            RecipientImportGuidedSessionPhase::Attached
+        );
+        assert!(controller.context_attached());
+
+        let mutation_adapter = RecipientHistoryRecoveryImportMutationAdapter::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+        );
+        let exact = match mutation_adapter.inspect_by_nonce(&attachment.receipt().mutation_nonce)? {
+            RecipientImportMutationReadStatus::Completed(exact) => exact,
+            other => return Err(format!("unexpected mutation status: {other:?}").into()),
+        };
+        let evidence = RuntimeIpcRecipientImportCompletedMutationEvidence::from_completed_receipt(
+            exact.completed_record_id().clone(),
+            exact.membership_set_digest().clone(),
+            exact.receipt(),
+        )?;
+        let consumption_plan_request = RuntimeIpcRecipientImportConsumptionRequest::new(
+            &descriptor,
+            adapter_request_id(137),
+            RuntimeIpcRecipientImportConsumptionCommand::Plan {
+                evidence,
+                memberships: vec![reference],
+                consumption_nonce: adapter_artifact(138),
+                requested_lifetime_seconds: 120,
+            },
+        )?;
+        let encoded_plan_request = consumption_plan_request.encode()?;
+        let first_plan =
+            controller.dispatch_consumption(plan.session_id(), &encoded_plan_request, 9_003)?;
+        let encoded_plan_response = first_plan.signed_response().to_vec();
+        let planned = SignedRuntimeIpcRecipientImportConsumptionResponse::decode_and_verify(
+            &encoded_plan_response,
+            &consumption_plan_request,
+            &descriptor,
+        )?;
+        let RuntimeIpcRecipientImportConsumptionOutcome::Planned(consumption_plan) =
+            planned.outcome()
+        else {
+            return Err("guided controller did not expose a consumption Plan".into());
+        };
+        let consumption_plan = consumption_plan.clone();
+        assert_eq!(
+            controller
+                .dispatch_consumption(plan.session_id(), &encoded_plan_request, 9_004)?
+                .signed_response(),
+            encoded_plan_response
+        );
+
+        let RuntimeIpcRecipientImportConsumptionCommand::Plan {
+            evidence,
+            memberships,
+            ..
+        } = consumption_plan_request.command().clone()
+        else {
+            return Err("expected a consumption Plan request".into());
+        };
+        let commit_request = RuntimeIpcRecipientImportConsumptionRequest::new(
+            &descriptor,
+            adapter_request_id(139),
+            RuntimeIpcRecipientImportConsumptionCommand::Commit {
+                evidence,
+                memberships,
+                confirmation_phrase: consumption_plan.confirmation_phrase.clone(),
+                plan: Box::new(consumption_plan),
+                explicit_approval:
+                    RuntimeIpcRecipientImportConsumptionExplicitApproval::UserConfirmed,
+            },
+        )?;
+        let encoded_commit_request = commit_request.encode()?;
+        let committed =
+            controller.dispatch_consumption(plan.session_id(), &encoded_commit_request, 9_005)?;
+        assert!(committed.state_changed());
+        let committed = SignedRuntimeIpcRecipientImportConsumptionResponse::decode_and_verify(
+            committed.signed_response(),
+            &commit_request,
+            &descriptor,
+        )?;
+        assert!(matches!(
+            committed.outcome(),
+            RuntimeIpcRecipientImportConsumptionOutcome::Consumed(_)
+        ));
+        let replay =
+            controller.dispatch_consumption(plan.session_id(), &encoded_commit_request, 9_006)?;
+        assert!(!replay.state_changed());
+        let replay = SignedRuntimeIpcRecipientImportConsumptionResponse::decode_and_verify(
+            replay.signed_response(),
+            &commit_request,
+            &descriptor,
+        )?;
+        assert!(matches!(
+            replay.outcome(),
+            RuntimeIpcRecipientImportConsumptionOutcome::AlreadyConsumed(_)
+        ));
+
+        assert!(controller.purge_expired(plan.expires_at_unix_seconds())?);
+        assert_eq!(controller.phase(), RecipientImportGuidedSessionPhase::Idle);
+        assert!(!controller.context_attached());
+        assert_eq!(controller.consumption_plan_session_count(), 0);
+        assert!(store.inspect_active()?.is_none());
+
+        drop(controller);
+        let restarted = RecipientImportGuidedSessionController::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity(),
+        )?;
+        assert_eq!(restarted.phase(), RecipientImportGuidedSessionPhase::Idle);
+        assert!(!restarted.context_attached());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_session_controller_fails_closed_across_phases()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-session-fail-closed")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 141)?;
+        let signer = setup.fixture.replacement.identity();
+        let mut controller = RecipientImportGuidedSessionController::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            signer,
+        )?;
+
+        let first = controller.begin(
+            guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 142)?,
+            10_000,
+            100,
+        )?;
+        assert!(matches!(
+            controller.begin(
+                guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 143,)?,
+                10_001,
+                100,
+            ),
+            Err(RecipientImportGuidedSessionControllerError::SessionAlreadyActive)
+        ));
+        assert_eq!(controller.active_session_id(), Some(first.session_id()));
+        assert_eq!(controller.cancel(first.session_id())?, 0);
+        assert_eq!(controller.phase(), RecipientImportGuidedSessionPhase::Idle);
+
+        let expiring = controller.begin(
+            guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 144)?,
+            10_100,
+            2,
+        )?;
+        assert!(controller.purge_expired(expiring.expires_at_unix_seconds())?);
+        assert_eq!(controller.phase(), RecipientImportGuidedSessionPhase::Idle);
+
+        let rejected = controller.begin(
+            guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 145)?,
+            10_200,
+            100,
+        )?;
+        assert!(
+            controller
+                .confirm(
+                    RecipientImportGuidedSessionConfirmation::new(
+                        rejected.session_id().clone(),
+                        adapter_request_id(146),
+                        adapter_artifact(147),
+                        "wrong confirmation phrase",
+                    ),
+                    10_201,
+                )
+                .is_err()
+        );
+        assert_eq!(controller.phase(), RecipientImportGuidedSessionPhase::Idle);
+        assert!(!controller.context_attached());
+
+        let mutation_failure = controller.begin(
+            guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 148)?,
+            10_300,
+            100,
+        )?;
+        controller.confirm(
+            RecipientImportGuidedSessionConfirmation::new(
+                mutation_failure.session_id().clone(),
+                adapter_request_id(149),
+                adapter_artifact(150),
+                mutation_failure.summary().confirmation_phrase.clone(),
+            ),
+            10_301,
+        )?;
+        assert_eq!(
+            controller.phase(),
+            RecipientImportGuidedSessionPhase::Confirmed
+        );
+        assert!(matches!(
+            controller.apply(
+                RecipientImportGuidedSessionMutation::new(
+                    adapter_artifact(199),
+                    adapter_request_id(151),
+                    adapter_artifact(152),
+                ),
+                10_302,
+            ),
+            Err(RecipientImportGuidedSessionControllerError::SessionIdMismatch)
+        ));
+        assert_eq!(controller.phase(), RecipientImportGuidedSessionPhase::Idle);
+        assert!(!controller.context_attached());
+
+        let cancellable = controller.begin(
+            guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 153)?,
+            10_400,
+            100,
+        )?;
+        controller.confirm(
+            RecipientImportGuidedSessionConfirmation::new(
+                cancellable.session_id().clone(),
+                adapter_request_id(154),
+                adapter_artifact(155),
+                cancellable.summary().confirmation_phrase.clone(),
+            ),
+            10_401,
+        )?;
+        assert_eq!(controller.cancel(cancellable.session_id())?, 0);
+        assert_eq!(controller.phase(), RecipientImportGuidedSessionPhase::Idle);
+        assert!(!controller.context_attached());
+
+        let foreign_state = setup.state.join("foreign-guided-controller-state");
+        let mut foreign_state_controller = RecipientImportGuidedSessionController::new(
+            &foreign_state,
+            setup.fixture.owner_account_id,
+            signer,
+        )?;
+        assert!(matches!(
+            foreign_state_controller.begin(
+                guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 156,)?,
+                10_500,
+                100,
+            ),
+            Err(RecipientImportGuidedSessionControllerError::StateDirectoryMismatch)
+        ));
+
+        let foreign_account =
+            AccountRootState::create(setup.state.join("foreign-guided-controller-account"))?;
+        let mut foreign_account_controller = RecipientImportGuidedSessionController::new(
+            &setup.state,
+            foreign_account.account_id(),
+            signer,
+        )?;
+        assert!(matches!(
+            foreign_account_controller.begin(
+                guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 157,)?,
+                10_600,
+                100,
+            ),
+            Err(RecipientImportGuidedSessionControllerError::OwnerAccountMismatch)
+        ));
+
+        let foreign_device = DeviceIdentity::generate()?;
+        let mut foreign_device_controller = RecipientImportGuidedSessionController::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            &foreign_device,
+        )?;
+        assert!(matches!(
+            foreign_device_controller.begin(
+                guided_session_authority(&setup, &descriptor, &durable, reference, 158,)?,
+                10_700,
+                100,
+            ),
+            Err(RecipientImportGuidedSessionControllerError::OwnerDeviceMismatch)
+        ));
+        assert!(matches!(
+            setup
+                .imports
+                .status(setup.approved.consent_record_id(), 0)?,
+            RecipientHistoryImportStatus::Absent
+        ));
         Ok(())
     }
 }

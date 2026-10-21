@@ -1,36 +1,36 @@
-# Текущая точка: M1.2.47 завершён, следующий M1.2.48
+# Текущая точка: M1.2.48 завершён, следующий M1.2.49
 
 Дата: 2026-10-21.
 
-M1.2.47 связал existing guided import mutation с M1.2.46 actor через private,
-non-serializable process-local completion hand-off. Только fresh successful
-complete dispatch получает hand-off; final coordinator и exact live membership
-set проверяются canonical реализациями. Raw context constructor crate-private,
-actor повторно проверяет state/Account/Device. Loopback Plan/Commit/replay/
-detach проходит, но ordinary runtime startup по-прежнему unattached.
+M1.2.48 собрал полный explicit guided import/consumption lifecycle в один
+process-owned controller. Единственная short-lived session проходит
+`Idle -> Planned -> Confirmed -> Attached`; cancel, expiry, failed confirm/apply
+и restart не оставляют ephemeral authority. Контроллер пока dormant: ordinary
+runtime не создаёт token и не регистрирует CLI/desktop/IPC/network entry point.
 
-## Следующий этап: M1.2.48 — runtime-owned explicit guided session controller
+## Следующий этап: M1.2.49 — dormant local-UX guided-session adapter
 
-1. Собрать существующие read-only Plan, Device confirmation, bounded mutation,
-   M1.2.47 hand-off и M1.2.46 attachment в один process-owned controller с
-   явными фазами и максимум одной активной guided session.
-2. Controller принимает только уже загруженный authenticated recovery context
-   от будущего local UX owner; он не принимает user paths, serialized
-   membership snapshots, secrets или произвольные coordinator objects.
-3. Cancel, expiry, failed confirmation/mutation, Account/Device/state change и
-   process restart обязаны оставить actor unattached и очистить ephemeral stage.
-4. Успешный happy path должен прикреплять context один раз и передавать
-   дальнейший explicit consumption существующему v34 Plan/Commit handler без
-   повторного import/consume.
-5. Не регистрировать новый IPC command, CLI/desktop control, timer или network;
-   ordinary startup остаётся idle/unattached, public default — `legacy-only`.
+1. Добавить process-local adapter, который получает M1.2.48 token только от
+   существующего authenticated recovery ceremony owner и не умеет собирать его
+   из path, IPC payload, environment или serialized fragments.
+2. Выдать local UX безопасную view-модель Plan/confirmation/progress: только
+   понятные пользователю counts, deadline, confirmation phrase и phase; без
+   signer secret, memberships, coordinator object, state path или opaque
+   authority token.
+3. Команды UX должны быть типизированы как explicit start/confirm/apply/cancel
+   с exact session ID; stale view, double-submit и смена Account/Device/state
+   обязаны fail closed.
+4. Потерянный UI response должен восстанавливаться только чтением controller
+   phase/result в том же процессе, без повторной mutation или consumption.
+5. Оставить adapter dormant: не добавлять runtime IPC/CLI/desktop registration,
+   timer, background start или network. Public default остаётся `legacy-only`.
 
 ## Stop conditions
 
-- controller сам discover-ит recovery sources либо читает caller path;
-- partial/failed/cancelled session оставляет hand-off/context/Plan stage;
-- restart восстанавливает ephemeral authority из durable ledgers автоматически;
-- controller принимает membership/coordinator по IPC, env или directory scan;
-- import или consume повторяется после ambiguous response;
-- ordinary runtime startup автоматически начинает ceremony;
+- view-модель или command раскрывает token, path, signer, membership snapshot
+  либо coordinator authority;
+- UI может миновать explicit confirmation или вызвать apply до Confirmed;
+- retry повторяет durable mutation/consumption вместо чтения exact phase;
+- restart восстанавливает ephemeral session из durable ledgers;
+- ordinary startup автоматически создаёт ceremony или attachment;
 - peer/runtime wire, product network или public default меняется.

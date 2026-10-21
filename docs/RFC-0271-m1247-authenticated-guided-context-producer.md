@@ -61,3 +61,8 @@ default remains `legacy-only`.
 The next stage may add one runtime-owned guided recovery session controller,
 but it must keep startup unattached and require an explicit local ceremony. It
 must not turn the new producer into ambient background authority.
+
+M1.2.48 implemented that successor as the dormant controller specified by
+RFC-0272. It preserves every boundary above: the completion hand-off remains
+process-local, ordinary startup remains idle/unattached, and no CLI, desktop,
+runtime-IPC or network entry point was added.

@@ -159,7 +159,7 @@ foreach ($required in @(
     "'verify-kilogram-canonical-wire-boundary.ps1' = 'canonical_wire_boundary=verified'",
     "'verify-kilogram-protocol-compatibility-boundary.ps1' = 'protocol_compatibility_boundary=verified'",
     "Get-ChildItem -LiteralPath `$scriptsDirectory -Filter 'verify-*-boundary.ps1'",
-    'M1 readiness boundary inventory must contain exactly 173 gates',
+    'M1 readiness boundary inventory must contain exactly 174 gates',
     'function Invoke-CapturedPowerShell',
     "`$ErrorActionPreference = 'Continue'",
     "`$gateCapture.ExitCode -ne 0",

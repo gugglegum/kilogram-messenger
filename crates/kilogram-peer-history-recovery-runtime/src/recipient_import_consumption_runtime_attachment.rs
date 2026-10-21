@@ -56,6 +56,16 @@ impl GuidedRecipientImportMembership {
             membership,
         })
     }
+
+    #[allow(dead_code)]
+    pub(crate) fn into_parts(
+        self,
+    ) -> (
+        RuntimeIpcRecipientImportMembershipReference,
+        ConversationMembershipSnapshot,
+    ) {
+        (self.reference, self.membership)
+    }
 }
 
 /// Non-serializable authority hand-off emitted only by a successful guided

@@ -12,6 +12,24 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.48 — runtime-owned explicit guided session controller: выполнено
+
+- Один process-owned controller собрал read-only Plan, Device-signed durable
+  confirmation, bounded mutation, authenticated completion hand-off и
+  consumption actor в явные фазы `Idle -> Planned -> Confirmed -> Attached`.
+- В один момент разрешена только одна ceremony сроком не более 300 секунд.
+  Начать её можно лишь private non-serializable token, exact-связанным со
+  state/Account/Device, descriptor, plan, coordinator и live memberships.
+- Session calls не принимают paths, secrets, coordinator или membership
+  snapshots. Failed confirm/apply, cancel и expiry уничтожают ephemeral
+  authority; restart всегда начинается idle. Detach очищает Plan cache.
+- Real stable-path fixtures доказали полный lifecycle, byte-exact Plan replay,
+  Commit, durable `AlreadyConsumed`, single-session exclusivity и fail-closed
+  foreign state/Account/Device: 2/2 tests.
+- Controller не зарегистрирован в CLI/desktop/runtime IPC и не открывает сеть;
+  ordinary startup остаётся idle/unattached, public `legacy-only` неизменён.
+  Readiness расширен до 174 gates.
+
 ### M1.2.47 — authenticated guided-context producer: выполнено
 
 - Fresh successful complete recipient-import mutation теперь выдаёт единственный
