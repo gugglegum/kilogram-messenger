@@ -469,7 +469,7 @@ fn validate_wire(
     Ok(())
 }
 
-pub(crate) fn membership_digest(
+pub fn membership_digest(
     membership: &ConversationMembershipSnapshot,
 ) -> Result<[u8; 32], RecipientRecoveryImportPlanError> {
     membership.verify()?;

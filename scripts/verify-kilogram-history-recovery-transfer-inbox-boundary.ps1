@@ -183,8 +183,9 @@ function Assert-Contract {
         'kilogram-state', 'kilogram-store', 'postcard.workspace = true',
         'tempfile.workspace = true'
     ) 'history recovery transfer Cargo manifest'
+    $productionCargo = ($Cargo -split '(?m)^\[dev-dependencies\]\s*$', 2)[0]
     foreach ($forbidden in @('iroh', 'reqwest', 'tokio', 'eframe', 'kilogram-runtime-ipc')) {
-        if ($Cargo.IndexOf($forbidden, [StringComparison]::Ordinal) -ge 0) {
+        if ($productionCargo.IndexOf($forbidden, [StringComparison]::Ordinal) -ge 0) {
             throw "history recovery transfer gained forbidden dependency '$forbidden'"
         }
     }

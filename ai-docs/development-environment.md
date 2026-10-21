@@ -5721,3 +5721,27 @@ Hosted follow-up:
 - Stable Windows test EXE paths were retained. No product network, second host,
   release build, archive, tag or automatic GitHub build was used; public default
   remains `legacy-only`.
+
+## M1.2.34 dormant recipient import read adapter environment (2026-10-21)
+
+- `kilogram-peer-history-recovery-runtime` is the separate one-way integration
+  crate over recovery execution and `kilogram-runtime-ipc`. The offline
+  execution production library retains no runtime-IPC dependency; its signed
+  fixtures include the same adapter source only under `cfg(test)`. Active
+  runtime IPC remains v33/domain v14.
+- The transport-independent adapter handles only `Plan` and `Status`. It is not
+  registered in the runtime server, CLI or desktop and returns an outcome plus
+  an optional ephemeral in-process M1.2.32 plan.
+- Planning synchronously reloads every exact caller-owned membership reference,
+  verifies authority/context echo and membership digest, then calls the existing
+  read-only executor planner. No membership snapshot or plan is persisted.
+- Unplanned status requires the original coordinator; exact known-plan status
+  reloads and replans. Missing, ambiguous, substituted, foreign or stale input
+  fails closed. All confirm/apply commands are rejected before loader use.
+- Eight focused tests pass through the permanent stable Windows harness in
+  451.67 s. Full execution regression passes 42/42; boundary rejects 10/10
+  mutations and accepted-tag readiness passes 160/160 with rustfmt and
+  workspace-wide locked/offline strict Clippy.
+- Cargo target was retained for warm builds (49.11 GiB after the focused run).
+  No product network, second host, release build, archive, tag or automatic
+  GitHub build was used; public default remains `legacy-only`.

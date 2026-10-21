@@ -1,27 +1,31 @@
-# Текущая точка: M1.2.33 завершён, следующий M1.2.34
+# Текущая точка: M1.2.34 завершён, следующий M1.2.35
 
-Статус на 2026-10-21: для M1.2.32 определён dormant descriptor-bound
-cross-process contract. Read-only `plan`/`status`, explicit `confirm` и
-`apply-next`/`apply-bounded` являются разными стадиями; active intent сам не
-даёт import authority. Через IPC идут только максимум 8 caller-ordered opaque
-authenticated membership references, которые будущий adapter обязан reload-ить
-из live caller-authorized context. Exact request/response, confirmation и
-mutation nonce bindings fail closed. Focused regression 8/8, runtime IPC crate
-35/35, boundary 10/10, readiness 159/159. Active runtime command/adapter,
-CLI/desktop/network/background и automatic consume отсутствуют, public default
-— `legacy-only`.
+Статус на 2026-10-21: dormant transport-independent read adapter подключает
+только M1.2.33 `Plan`/`Status` к существующему M1.2.32 planner. Каждый exact
+membership reference reload-ится caller-owned callback и сверяется по
+authority/context echo и digest. Successful plan остаётся ephemeral; exact
+known-plan status заново reload-ит и replans. `Confirm`/`Apply*` всегда
+отвергаются, active runtime/CLI/desktop/network/background, import/consume и
+public-default change отсутствуют. Focused regression 8/8, execution crate
+42/42, boundary 10/10, readiness 160/160.
 
-## Следующий этап: M1.2.34 dormant read-only recipient import adapter
+Dependency bridge живёт в отдельном
+`kilogram-peer-history-recovery-runtime`; offline execution production crate
+не зависит от runtime IPC. Его signed-fixture tests включают тот же adapter
+source только под `cfg(test)`.
 
-- добавить transport-independent adapter только для `Plan` и `Status`, не
-  регистрируя его в active runtime server;
-- принимать caller-owned membership loader callback, reload-ить каждый exact
-  authenticated reference и строить transient M1.2.32 source list без
-  persistence либо authority inference из recovery DB;
-- `Plan` должен вызвать только read-only M1.2.32 planning и вернуть privacy-safe
-  projection; `Status` не должен создавать intent, plan, confirmation или DB;
-- changed/reordered/missing reference, coordinator/intent/plan mismatch и
-  loader ambiguity fail closed до import; mutation commands adapter отвергает;
+## Следующий этап: M1.2.35 durable explicit recipient import confirmation
+
+- добавить отдельный bounded recipient-Device-signed confirmation ledger для
+  exact M1.2.34 ephemeral plan projection, не активируя mutation dispatch;
+- confirmation exact-связать с intent, execution/coordinator plan,
+  membership-set digest, caller nonce, expiry и current Device;
+- `plan confirmation` оставить read-only, а explicit commit сделать
+  crash-safe/idempotent под state lock с monotonic replay protection;
+- reused nonce for another binding, stale/expired/foreign Device, plan or
+  coordinator substitution, rollback/fork/corruption fail closed;
+- ledger не хранит membership snapshots, bodies/plaintext или transport
+  authority и сам не выполняет import/consume;
 - сохранить IPC v33/domain v14, не добавлять server dispatch, CLI/desktop,
   worker/timer/network и не менять public default либо wire formats.
 

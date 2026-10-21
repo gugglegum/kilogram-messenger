@@ -1,0 +1,18 @@
+[package]
+name = "kilogram-peer-history-recovery-runtime"
+description = "Dormant local runtime adapters for explicit Kilogram old-history recovery"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+kilogram-identity = { path = "../kilogram-identity" }
+kilogram-peer-history-recovery-execution = { path = "../kilogram-peer-history-recovery-execution" }
+kilogram-runtime-ipc = { path = "../kilogram-runtime-ipc" }
+thiserror.workspace = true
+
+[lints]
+workspace = true

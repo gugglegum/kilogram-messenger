@@ -45,6 +45,22 @@ mod recipient_import_round_executor;
 mod recipient_import_round_intent;
 mod transfer;
 
+#[cfg(test)]
+mod execution_api {
+    pub use crate::{
+        RecipientHistoryImportStore, RecipientHistoryRecoveryImportRoundExecutor,
+        RecipientHistoryTransferInbox, RecipientRecoveryCoordinationPlan,
+        RecipientRecoveryImportRoundExecutionBudget, RecipientRecoveryImportRoundExecutionError,
+        RecipientRecoveryImportRoundExecutionPlan, RecipientRecoveryImportRoundIntentProgressState,
+        RecipientRecoveryImportRoundIntentStore, RecipientRecoveryImportRoundSource,
+        recipient_import_membership_digest,
+    };
+}
+
+#[cfg(test)]
+#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_read_adapter.rs"]
+mod recipient_import_read_adapter;
+
 pub use coordinator::{
     ApplyRecipientRecoveryCoordinationOutcome, ApprovedRecipientHistoryRecoverySource,
     MAX_DURABLE_RECIPIENT_RECOVERY_COORDINATOR_PLANS,
@@ -64,6 +80,14 @@ pub use recipient_import::{
     ApplyRecipientRecoveryImportOutcome, RecipientHistoryRecoveryImporter,
     RecipientRecoveryCoordinatorRefreshDisposition, RecipientRecoveryImportApplyReceipt,
     RecipientRecoveryImportPlan, RecipientRecoveryImportPlanError,
+    membership_digest as recipient_import_membership_digest,
+};
+#[cfg(test)]
+pub use recipient_import_read_adapter::{
+    LoadedRecipientImportMembership, RecipientHistoryRecoveryImportReadAdapter,
+    RecipientImportMembershipLoad, RecipientImportMembershipLoader,
+    RecipientImportReadAdapterDispatch, RecipientImportReadAdapterError,
+    RecipientImportReadKnownPlan,
 };
 pub use recipient_import_round::{
     DEFAULT_RECIPIENT_RECOVERY_IMPORT_ROUND_MAX_EVENTS,
@@ -2074,7 +2098,11 @@ pub enum HistoryRecoveryExecutionError {
 
 #[cfg(test)]
 mod tests {
-    use std::path::Path;
+    use std::{
+        cell::Cell,
+        net::{IpAddr, SocketAddr},
+        path::Path,
+    };
 
     use super::*;
     use kilogram_identity::{AccountRootState, DeviceCapability, DeviceState};
@@ -2097,6 +2125,13 @@ mod tests {
     };
     use kilogram_protocol::{ConversationId, EventId, RatchetRecipient, SignedEvent};
     use kilogram_ratchet::RatchetState;
+    use kilogram_runtime_ipc::{
+        RuntimeIpcDescriptor, RuntimeIpcRecipientImportArtifactId,
+        RuntimeIpcRecipientImportExecutionCommand, RuntimeIpcRecipientImportExecutionHazard,
+        RuntimeIpcRecipientImportExecutionOutcome, RuntimeIpcRecipientImportExecutionRequest,
+        RuntimeIpcRecipientImportIntentState, RuntimeIpcRecipientImportMembershipReference,
+        RuntimeIpcRequestId,
+    };
     use kilogram_sync_capability::{
         CurrentPeerInvitationBinding, PeerSyncCapabilityEvidence, SignedCurrentPeerInvitation,
         SyncTransportCapabilityError,
@@ -6193,6 +6228,486 @@ mod tests {
             &setup.imports,
         )?;
         assert!(!reconciled.requires_apply());
+        Ok(())
+    }
+
+    fn adapter_artifact(byte: u8) -> RuntimeIpcRecipientImportArtifactId {
+        RuntimeIpcRecipientImportArtifactId::from_bytes([byte; 32])
+            .unwrap_or_else(|error| unreachable!("nonzero adapter artifact is valid: {error}"))
+    }
+
+    fn adapter_request_id(byte: u8) -> RuntimeIpcRequestId {
+        format!("{byte:064x}")
+            .parse()
+            .unwrap_or_else(|error| unreachable!("adapter request ID is valid: {error}"))
+    }
+
+    fn adapter_descriptor(setup: &IntentRoundFixture) -> anyhow::Result<RuntimeIpcDescriptor> {
+        RuntimeIpcDescriptor::issue_local(
+            SocketAddr::new(IpAddr::from([127, 0, 0, 1]), 31_337),
+            [91_u8; 32],
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity(),
+        )
+    }
+
+    fn adapter_membership_reference(
+        source_ordinal: u16,
+        membership: &ConversationMembershipSnapshot,
+        salt: u8,
+    ) -> Result<RuntimeIpcRecipientImportMembershipReference, Box<dyn std::error::Error>> {
+        Ok(RuntimeIpcRecipientImportMembershipReference {
+            source_ordinal,
+            authority_reference_id: adapter_artifact(salt),
+            membership_digest: RuntimeIpcRecipientImportArtifactId::from_bytes(
+                crate::recipient_import::membership_digest(membership)?,
+            )?,
+            authenticated_context_id: adapter_artifact(salt.saturating_add(1)),
+        })
+    }
+
+    fn committed_adapter_intent(
+        setup: &IntentRoundFixture,
+    ) -> Result<
+        (
+            RecipientRecoveryImportRoundIntentStore,
+            DurableRecipientRecoveryImportRoundIntent,
+        ),
+        Box<dyn std::error::Error>,
+    > {
+        let store = RecipientRecoveryImportRoundIntentStore::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+        );
+        let plan = store.plan(
+            &setup.round,
+            setup.fixture.replacement.identity(),
+            &setup.inbox,
+            &setup.imports,
+            6_000,
+        )?;
+        let durable = match store.commit(&plan, &setup.inbox, &setup.imports)? {
+            RecipientRecoveryImportRoundIntentCommitOutcome::Committed(durable) => durable,
+            _ => return Err("fresh adapter intent was not committed".into()),
+        };
+        Ok((store, durable))
+    }
+
+    fn adapter_plan_request(
+        setup: &IntentRoundFixture,
+        descriptor: &RuntimeIpcDescriptor,
+        durable: &DurableRecipientRecoveryImportRoundIntent,
+        reference: RuntimeIpcRecipientImportMembershipReference,
+        request_byte: u8,
+    ) -> anyhow::Result<RuntimeIpcRecipientImportExecutionRequest> {
+        RuntimeIpcRecipientImportExecutionRequest::new(
+            descriptor,
+            adapter_request_id(request_byte),
+            RuntimeIpcRecipientImportExecutionCommand::Plan {
+                intent_id: RuntimeIpcRecipientImportArtifactId::from_bytes(durable.intent_id())?,
+                coordinator_plan_id: RuntimeIpcRecipientImportArtifactId::from_bytes(
+                    setup.coordination.plan_id(),
+                )?,
+                coordinator_sequence: setup.coordination.sequence(),
+                max_steps: 1,
+                memberships: vec![reference],
+            },
+        )
+    }
+
+    #[test]
+    fn recipient_import_read_adapter_plans_without_mutation_or_persistence()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-read-adapter-plan")?;
+        let (store, durable) = committed_adapter_intent(&setup)?;
+        let before = store.inspect_active()?.ok_or("active intent missing")?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 41)?;
+        let request = adapter_plan_request(&setup, &descriptor, &durable, reference.clone(), 1)?;
+        let load_count = Cell::new(0_usize);
+        let loader = |requested: &RuntimeIpcRecipientImportMembershipReference| {
+            load_count.set(load_count.get() + 1);
+            RecipientImportMembershipLoad::Exact(LoadedRecipientImportMembership::new(
+                requested.authority_reference_id.clone(),
+                requested.authenticated_context_id.clone(),
+                setup.fixture.membership.clone(),
+            ))
+        };
+        let dispatch = RecipientHistoryRecoveryImportReadAdapter::dispatch(
+            &request,
+            &store,
+            &setup.coordination,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            None,
+        )?;
+        let RuntimeIpcRecipientImportExecutionOutcome::Planned(summary) = dispatch.outcome() else {
+            return Err("read adapter did not return a plan".into());
+        };
+        assert_eq!(summary.intent_id.to_bytes()?, durable.intent_id());
+        assert_eq!(
+            summary.coordinator_plan_id.to_bytes()?,
+            setup.coordination.plan_id()
+        );
+        assert_eq!(summary.completed_source_count, 0);
+        assert_eq!(summary.total_source_count, 1);
+        assert_eq!(summary.planned_step_count, 1);
+        assert_eq!(summary.next_source_ordinal, Some(0));
+        assert_eq!(load_count.get(), 1);
+        assert!(dispatch.execution_plan().is_some());
+        assert!(dispatch.known_plan().is_some());
+        assert!(!dispatch.contains_membership_snapshot());
+        assert!(!dispatch.persisted_execution_plan());
+        assert!(!dispatch.granted_import_authority());
+        assert_eq!(store.inspect_active()?.as_ref(), Some(&before));
+        assert!(matches!(
+            setup
+                .imports
+                .status(setup.approved.consent_record_id(), 0)?,
+            RecipientHistoryImportStatus::Absent
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_read_adapter_observes_unplanned_status_without_loading_membership()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-read-adapter-status-unplanned")?;
+        let (store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let request = RuntimeIpcRecipientImportExecutionRequest::new(
+            &descriptor,
+            adapter_request_id(2),
+            RuntimeIpcRecipientImportExecutionCommand::Status {
+                intent_id: RuntimeIpcRecipientImportArtifactId::from_bytes(durable.intent_id())?,
+                execution_plan_id: None,
+            },
+        )?;
+        let load_count = Cell::new(0_usize);
+        let loader = |_requested: &RuntimeIpcRecipientImportMembershipReference| {
+            load_count.set(load_count.get() + 1);
+            RecipientImportMembershipLoad::Missing
+        };
+        let dispatch = RecipientHistoryRecoveryImportReadAdapter::dispatch(
+            &request,
+            &store,
+            &setup.coordination,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            None,
+        )?;
+        let RuntimeIpcRecipientImportExecutionOutcome::Status(summary) = dispatch.outcome() else {
+            return Err("read adapter did not return status".into());
+        };
+        assert_eq!(
+            summary.state,
+            RuntimeIpcRecipientImportIntentState::ActiveUnplanned
+        );
+        assert_eq!(summary.completed_source_count, 0);
+        assert_eq!(summary.total_source_count, 1);
+        assert_eq!(load_count.get(), 0);
+        assert!(dispatch.execution_plan().is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_read_adapter_reloads_known_plan_for_exact_status()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-read-adapter-status-planned")?;
+        let (store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 43)?;
+        let plan_request =
+            adapter_plan_request(&setup, &descriptor, &durable, reference.clone(), 3)?;
+        let load_count = Cell::new(0_usize);
+        let loader = |requested: &RuntimeIpcRecipientImportMembershipReference| {
+            load_count.set(load_count.get() + 1);
+            RecipientImportMembershipLoad::Exact(LoadedRecipientImportMembership::new(
+                requested.authority_reference_id.clone(),
+                requested.authenticated_context_id.clone(),
+                setup.fixture.membership.clone(),
+            ))
+        };
+        let planned = RecipientHistoryRecoveryImportReadAdapter::dispatch(
+            &plan_request,
+            &store,
+            &setup.coordination,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            None,
+        )?;
+        let plan_id = planned
+            .execution_plan()
+            .ok_or("execution plan missing")?
+            .plan_id();
+        let status_request = RuntimeIpcRecipientImportExecutionRequest::new(
+            &descriptor,
+            adapter_request_id(4),
+            RuntimeIpcRecipientImportExecutionCommand::Status {
+                intent_id: RuntimeIpcRecipientImportArtifactId::from_bytes(durable.intent_id())?,
+                execution_plan_id: Some(RuntimeIpcRecipientImportArtifactId::from_bytes(plan_id)?),
+            },
+        )?;
+        let status = RecipientHistoryRecoveryImportReadAdapter::dispatch(
+            &status_request,
+            &store,
+            &setup.coordination,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            planned.known_plan(),
+        )?;
+        let RuntimeIpcRecipientImportExecutionOutcome::Status(summary) = status.outcome() else {
+            return Err("known plan did not return status".into());
+        };
+        assert_eq!(
+            summary.state,
+            RuntimeIpcRecipientImportIntentState::AwaitingConfirmation
+        );
+        assert_eq!(
+            summary
+                .execution_plan_id
+                .as_ref()
+                .ok_or("status execution plan ID missing")?
+                .to_bytes()?,
+            plan_id
+        );
+        assert_eq!(load_count.get(), 2);
+        assert!(status.known_plan().is_some());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_read_adapter_rejects_changed_membership_binding()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-read-adapter-changed-membership")?;
+        let (store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 45)?;
+        let request = adapter_plan_request(&setup, &descriptor, &durable, reference, 5)?;
+        let loader = |requested: &RuntimeIpcRecipientImportMembershipReference| {
+            RecipientImportMembershipLoad::Exact(LoadedRecipientImportMembership::new(
+                adapter_artifact(99),
+                requested.authenticated_context_id.clone(),
+                setup.fixture.membership.clone(),
+            ))
+        };
+        let dispatch = RecipientHistoryRecoveryImportReadAdapter::dispatch(
+            &request,
+            &store,
+            &setup.coordination,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            None,
+        )?;
+        assert!(matches!(
+            dispatch.outcome(),
+            RuntimeIpcRecipientImportExecutionOutcome::Rejected {
+                hazard: RuntimeIpcRecipientImportExecutionHazard::MembershipReferenceChanged,
+                ..
+            }
+        ));
+        assert!(dispatch.execution_plan().is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_read_adapter_rejects_missing_and_ambiguous_memberships()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-read-adapter-loader-failures")?;
+        let (store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 47)?;
+        for (index, load) in [
+            RecipientImportMembershipLoad::Missing,
+            RecipientImportMembershipLoad::Ambiguous,
+        ]
+        .into_iter()
+        .enumerate()
+        {
+            let request = adapter_plan_request(
+                &setup,
+                &descriptor,
+                &durable,
+                reference.clone(),
+                6 + u8::try_from(index)?,
+            )?;
+            let loader = |_requested: &RuntimeIpcRecipientImportMembershipReference| load.clone();
+            let dispatch = RecipientHistoryRecoveryImportReadAdapter::dispatch(
+                &request,
+                &store,
+                &setup.coordination,
+                &setup.inbox,
+                &setup.imports,
+                &loader,
+                None,
+            )?;
+            assert!(matches!(
+                dispatch.outcome(),
+                RuntimeIpcRecipientImportExecutionOutcome::Rejected {
+                    hazard: RuntimeIpcRecipientImportExecutionHazard::MembershipReloadFailed,
+                    ..
+                }
+            ));
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_read_adapter_rejects_stale_coordinator_before_loader()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-read-adapter-stale-coordinator")?;
+        let (store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 49)?;
+        let request = RuntimeIpcRecipientImportExecutionRequest::new(
+            &descriptor,
+            adapter_request_id(8),
+            RuntimeIpcRecipientImportExecutionCommand::Plan {
+                intent_id: RuntimeIpcRecipientImportArtifactId::from_bytes(durable.intent_id())?,
+                coordinator_plan_id: adapter_artifact(88),
+                coordinator_sequence: setup.coordination.sequence(),
+                max_steps: 1,
+                memberships: vec![reference],
+            },
+        )?;
+        let load_count = Cell::new(0_usize);
+        let loader = |_requested: &RuntimeIpcRecipientImportMembershipReference| {
+            load_count.set(load_count.get() + 1);
+            RecipientImportMembershipLoad::Ambiguous
+        };
+        let dispatch = RecipientHistoryRecoveryImportReadAdapter::dispatch(
+            &request,
+            &store,
+            &setup.coordination,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            None,
+        )?;
+        assert!(matches!(
+            dispatch.outcome(),
+            RuntimeIpcRecipientImportExecutionOutcome::Rejected {
+                hazard: RuntimeIpcRecipientImportExecutionHazard::CoordinatorChanged,
+                ..
+            }
+        ));
+        assert_eq!(load_count.get(), 0);
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_read_adapter_rejects_foreign_known_plan_before_reload()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-read-adapter-stale-plan")?;
+        let (store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 51)?;
+        let plan_request = adapter_plan_request(&setup, &descriptor, &durable, reference, 9)?;
+        let loader = |requested: &RuntimeIpcRecipientImportMembershipReference| {
+            RecipientImportMembershipLoad::Exact(LoadedRecipientImportMembership::new(
+                requested.authority_reference_id.clone(),
+                requested.authenticated_context_id.clone(),
+                setup.fixture.membership.clone(),
+            ))
+        };
+        let planned = RecipientHistoryRecoveryImportReadAdapter::dispatch(
+            &plan_request,
+            &store,
+            &setup.coordination,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            None,
+        )?;
+        let status_request = RuntimeIpcRecipientImportExecutionRequest::new(
+            &descriptor,
+            adapter_request_id(10),
+            RuntimeIpcRecipientImportExecutionCommand::Status {
+                intent_id: RuntimeIpcRecipientImportArtifactId::from_bytes(durable.intent_id())?,
+                execution_plan_id: Some(adapter_artifact(87)),
+            },
+        )?;
+        let load_count = Cell::new(0_usize);
+        let rejecting_loader = |_requested: &RuntimeIpcRecipientImportMembershipReference| {
+            load_count.set(load_count.get() + 1);
+            RecipientImportMembershipLoad::Ambiguous
+        };
+        let status = RecipientHistoryRecoveryImportReadAdapter::dispatch(
+            &status_request,
+            &store,
+            &setup.coordination,
+            &setup.inbox,
+            &setup.imports,
+            &rejecting_loader,
+            planned.known_plan(),
+        )?;
+        assert!(matches!(
+            status.outcome(),
+            RuntimeIpcRecipientImportExecutionOutcome::Rejected {
+                hazard: RuntimeIpcRecipientImportExecutionHazard::PlanChanged,
+                ..
+            }
+        ));
+        assert_eq!(load_count.get(), 0);
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_read_adapter_never_dispatches_mutation_commands()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-read-adapter-mutation-rejection")?;
+        let (store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 53)?;
+        let request = RuntimeIpcRecipientImportExecutionRequest::new(
+            &descriptor,
+            adapter_request_id(11),
+            RuntimeIpcRecipientImportExecutionCommand::ApplyNext {
+                intent_id: RuntimeIpcRecipientImportArtifactId::from_bytes(durable.intent_id())?,
+                execution_plan_id: adapter_artifact(60),
+                coordinator_plan_id: RuntimeIpcRecipientImportArtifactId::from_bytes(
+                    setup.coordination.plan_id(),
+                )?,
+                coordinator_sequence: setup.coordination.sequence(),
+                memberships: vec![reference],
+                confirmation_id: adapter_artifact(61),
+                mutation_nonce: adapter_artifact(62),
+            },
+        )?;
+        let load_count = Cell::new(0_usize);
+        let loader = |_requested: &RuntimeIpcRecipientImportMembershipReference| {
+            load_count.set(load_count.get() + 1);
+            RecipientImportMembershipLoad::Ambiguous
+        };
+        let dispatch = RecipientHistoryRecoveryImportReadAdapter::dispatch(
+            &request,
+            &store,
+            &setup.coordination,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            None,
+        )?;
+        assert!(matches!(
+            dispatch.outcome(),
+            RuntimeIpcRecipientImportExecutionOutcome::Rejected {
+                hazard: RuntimeIpcRecipientImportExecutionHazard::ImportRejected,
+                ..
+            }
+        ));
+        assert_eq!(load_count.get(), 0);
+        assert!(matches!(
+            setup
+                .imports
+                .status(setup.approved.consent_record_id(), 0)?,
+            RecipientHistoryImportStatus::Absent
+        ));
         Ok(())
     }
 }

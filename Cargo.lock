@@ -3344,6 +3344,7 @@ dependencies = [
 name = "kilogram-peer-history-recovery-execution"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "blake3",
  "kilogram-identity",
  "kilogram-peer-capability-store",
@@ -3354,6 +3355,7 @@ dependencies = [
  "kilogram-peer-reenrollment-runtime",
  "kilogram-protocol",
  "kilogram-ratchet",
+ "kilogram-runtime-ipc",
  "kilogram-state",
  "kilogram-store",
  "kilogram-sync-capability",
@@ -3361,6 +3363,17 @@ dependencies = [
  "redb",
  "serde",
  "tempfile",
+ "thiserror 2.0.20",
+]
+
+[[package]]
+name = "kilogram-peer-history-recovery-runtime"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "kilogram-identity",
+ "kilogram-peer-history-recovery-execution",
+ "kilogram-runtime-ipc",
  "thiserror 2.0.20",
 ]
 

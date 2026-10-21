@@ -171,7 +171,8 @@ function Assert-Contract {
         'kilogram-peer-history-recovery-execution'
     ) 'history recovery transport manifest'
     Assert-OmitsAll $TransportCargo @('reqwest', 'eframe', 'kilogram-runtime-ipc') 'history recovery transport manifest'
-    Assert-OmitsAll $ExecutionCargo @('iroh', 'tokio', 'reqwest', 'eframe', 'kilogram-runtime-ipc') 'offline execution manifest'
+    $productionExecutionCargo = ($ExecutionCargo -split '(?m)^\[dev-dependencies\]\s*$', 2)[0]
+    Assert-OmitsAll $productionExecutionCargo @('iroh', 'tokio', 'reqwest', 'eframe', 'kilogram-runtime-ipc') 'offline execution production manifest'
     Assert-OmitsAll ($CliCargo + "`n" + $DesktopCargo) @('kilogram-peer-history-recovery-transport') 'active app manifests'
 
     Assert-ContainsAll $Transport @(

@@ -642,6 +642,31 @@ impl RecipientRecoveryImportRoundIntentStore {
         }
     }
 
+    pub fn load_by_intent_id(
+        &self,
+        intent_id: [u8; 32],
+    ) -> Result<
+        Option<DurableRecipientRecoveryImportRoundIntent>,
+        RecipientRecoveryImportRoundIntentError,
+    > {
+        let snapshot = load_snapshot(
+            &self.state_directory,
+            self.owner_account_id,
+            self.owner_device_id,
+        )?;
+        let mut matching_round_id = None;
+        for intent in &snapshot.intents {
+            if intent.intent_id()? == intent_id
+                && matching_round_id.replace(intent.round_id()).is_some()
+            {
+                return Err(RecipientRecoveryImportRoundIntentError::IntentFork);
+            }
+        }
+        matching_round_id
+            .map(|round_id| durable_from_snapshot(&snapshot, round_id))
+            .transpose()
+    }
+
     pub fn commit(
         &self,
         plan: &RecipientRecoveryImportRoundIntentPlan,

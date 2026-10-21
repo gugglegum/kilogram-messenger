@@ -177,8 +177,9 @@ function Assert-Contract {
         'kilogram-peer-history-recovery-consent', 'kilogram-protocol',
         'redb.workspace = true', 'postcard.workspace = true'
     ) 'old-history execution Cargo manifest'
+    $productionCargo = ($Cargo -split '(?m)^\[dev-dependencies\]\s*$', 2)[0]
     foreach ($forbidden in @('iroh', 'reqwest', 'tokio', 'eframe', 'kilogram-runtime-ipc')) {
-        if ($Cargo.IndexOf($forbidden, [StringComparison]::Ordinal) -ge 0) {
+        if ($productionCargo.IndexOf($forbidden, [StringComparison]::Ordinal) -ge 0) {
             throw "old-history execution gained forbidden dependency '$forbidden'"
         }
     }

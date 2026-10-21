@@ -482,6 +482,19 @@ impl RuntimeIpcDescriptor {
         load_descriptor(path)
     }
 
+    pub fn issue_local(
+        address: SocketAddr,
+        token: [u8; 32],
+        account_id: AccountId,
+        identity: &DeviceIdentity,
+    ) -> Result<Self> {
+        ensure!(
+            address.ip().is_loopback(),
+            "runtime IPC descriptor must name a loopback address"
+        );
+        Self::new(address, token, account_id, identity)
+    }
+
     pub fn account_id(&self) -> AccountId {
         self.content.account_id
     }

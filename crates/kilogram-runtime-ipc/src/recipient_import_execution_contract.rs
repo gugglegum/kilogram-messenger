@@ -66,6 +66,18 @@ impl RuntimeIpcRecipientImportArtifactId {
         &self.0
     }
 
+    pub fn to_bytes(&self) -> Result<[u8; 32]> {
+        self.validate()?;
+        let mut bytes = [0_u8; 32];
+        for (index, pair) in self.0.as_bytes().as_chunks::<2>().0.iter().enumerate() {
+            let encoded = std::str::from_utf8(pair)
+                .context("decode runtime IPC recipient import artifact ID")?;
+            bytes[index] = u8::from_str_radix(encoded, 16)
+                .context("decode runtime IPC recipient import artifact ID")?;
+        }
+        Ok(bytes)
+    }
+
     fn validate(&self) -> Result<()> {
         Self::new(self.0.clone()).map(|_| ())
     }

@@ -8152,3 +8152,28 @@ correlation visible, Windows-only field evidence, independent security audit
 - active adapter/server dispatch, CLI/desktop, import/consume authority,
   product network, second host, release/ZIP/tag и automatic GitHub build
   отсутствуют; default `legacy-only`.
+
+### M1.2.34 — dormant recipient import read adapter: принят локально
+
+- dependency bridge вынесен в отдельный
+  `kilogram-peer-history-recovery-runtime`; offline execution crate не получил
+  production dependency на runtime IPC, а exact adapter source проверяется его
+  real signed fixtures только под `cfg(test)`;
+- transport-independent adapter принимает только M1.2.33 `Plan` и `Status` и
+  не зарегистрирован в active `RuntimeIpcCommand`/server/CLI/desktop;
+- `Plan` exact-сверяет active unconsumed intent и coordinator, затем через
+  caller-owned callback reload-ит каждый authority/context reference,
+  проверяет membership digest и строит transient M1.2.32 source list;
+- успешный M1.2.32 plan возвращается только как ephemeral in-process context.
+  Membership snapshots не сохраняются и не попадают в privacy-safe outcome;
+- unplanned status разрешён только при original coordinator. Known-plan status
+  reload-ит те же references, replans с тем же budget и требует exact plan ID;
+  foreign/stale plan блокируется до loader;
+- missing/ambiguous/substituted membership и stale coordinator fail closed.
+  `Confirm`, `ApplyNext`, `ApplyBounded` всегда отвергаются; intent/import/
+  confirmation/consume state не создаётся;
+- focused stable-path regression прошёл 8/8, полный execution crate — 42/42,
+  boundary отклонил 10/10 mutations, readiness прошёл 160/160 с rustfmt и
+  workspace-wide locked/offline strict Clippy;
+- product network, second host, release/ZIP/tag и automatic GitHub build не
+  использовались; default `legacy-only`.

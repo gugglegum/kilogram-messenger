@@ -1,0 +1,112 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.34",
+  "status": "canonical-recipient-import-read-adapter-verified",
+  "implementation": [
+    "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_read_adapter.rs",
+    "crates/kilogram-peer-history-recovery-runtime/src/lib.rs",
+    "crates/kilogram-peer-history-recovery-execution/src/recipient_import_round_intent.rs",
+    "crates/kilogram-runtime-ipc/src/recipient_import_execution_contract.rs"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_history_transfer_wire": false,
+  "changes_active_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "adapter": {
+    "separate_integration_crate": true,
+    "execution_engine_has_no_production_runtime_ipc_dependency": true,
+    "transport_independent": true,
+    "active_runtime_registration": false,
+    "handled_commands": [
+      "plan",
+      "status"
+    ],
+    "rejected_commands": [
+      "confirm",
+      "apply-next",
+      "apply-bounded"
+    ],
+    "returns_privacy_safe_outcome": true,
+    "returns_ephemeral_in_process_plan": true,
+    "persists_execution_plan": false,
+    "creates_intent": false,
+    "creates_confirmation": false,
+    "imports_history": false,
+    "consumes_intent": false
+  },
+  "membership_authority": {
+    "caller_owned_loader": true,
+    "reloads_each_exact_reference": true,
+    "authority_reference_echo_checked": true,
+    "authenticated_context_echo_checked": true,
+    "membership_digest_checked": true,
+    "ordered_source_ordinal_preserved": true,
+    "missing_reference_rejected": true,
+    "ambiguous_reference_rejected": true,
+    "substituted_reference_rejected": true,
+    "membership_snapshot_persisted": false,
+    "membership_snapshot_returned": false,
+    "authority_inferred_from_recovery_database": false
+  },
+  "plan_boundary": {
+    "exact_intent_id_required": true,
+    "active_unconsumed_intent_required": true,
+    "exact_coordinator_id_and_sequence_required": true,
+    "bounded_m1232_planner_reused": true,
+    "read_only": true,
+    "confirmation_required_before_future_mutation": true
+  },
+  "status_boundary": {
+    "durable_intent_lookup_read_only": true,
+    "unplanned_status_requires_original_coordinator": true,
+    "known_plan_is_ephemeral_caller_context": true,
+    "known_plan_memberships_reloaded": true,
+    "known_plan_replanned_and_exact_matched": true,
+    "foreign_or_stale_plan_rejected_before_loader": true,
+    "status_creates_database": false
+  },
+  "privacy_projection": {
+    "opaque_content_addressed_ids": true,
+    "closed_counts_and_states": true,
+    "raw_account_id_exposed": false,
+    "raw_device_id_exposed": false,
+    "root_or_device_secret_exposed": false,
+    "filesystem_path_exposed": false,
+    "membership_snapshot_exposed": false,
+    "message_body_or_plaintext_exposed": false,
+    "ciphertext_history_artifact_exposed": false
+  },
+  "verification": {
+    "stable_path_rust_harness_required_on_windows": true,
+    "targeted_adapter_tests": "8/8",
+    "full_execution_crate_tests": "42/42",
+    "boundary_negative_mutations": "10/10",
+    "m1_readiness": "160/160",
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "second_host_required": false,
+    "network_executed": false
+  },
+  "non_claims": [
+    "active-runtime-ipc-command",
+    "signed-response-runtime-dispatch",
+    "confirmation-adapter",
+    "mutation-adapter",
+    "durable-confirmation-or-replay-ledger",
+    "cli-or-desktop-control",
+    "automatic-recipient-import",
+    "automatic-intent-consumption",
+    "network-or-background-worker",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "durable-explicit-confirmation-ledger",
+    "mutation-adapter-with-replay-deduplication",
+    "guided-desktop-recipient-import-ceremony"
+  ]
+}

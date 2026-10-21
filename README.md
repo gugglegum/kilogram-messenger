@@ -2740,6 +2740,16 @@ repeats their exact digest; a future adapter must reload the caller-authorized
 live context. No active runtime command, adapter, CLI/desktop control, implicit
 intent execution or automatic consume is introduced.
 
+[`RFC-0258`](docs/RFC-0258-m1234-dormant-recipient-import-read-adapter.md)
+adds a dormant transport-independent adapter for only `Plan` and `Status`.
+Planning reloads every exact caller-owned membership reference and invokes the
+existing bounded planner; exact known-plan status reloads and replans before it
+reports. Confirmation and apply commands are rejected, plans remain ephemeral,
+and no active runtime registration, persistence, import or consume is added.
+The dependency bridge is isolated in
+`kilogram-peer-history-recovery-runtime`; the offline execution library has no
+production dependency on runtime IPC.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

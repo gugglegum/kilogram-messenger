@@ -1,16 +1,19 @@
 # Память проекта Kilogram
 
-Актуально на: 2026-10-20.
+Актуально на: 2026-10-21.
 
 Эта папка — краткая проектная память и дорожная карта. Подробная техническая
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.17 добавил guided desktop peer
-re-enrollment поверх authenticated IPC с exact staged plan, раздельными
-approve/accept, честным incomplete state и обязательной fresh-process проверкой
-consumed transition. Публичный default остаётся legacy-only; hot apply и
-неявный доступ replacement Device к старой истории отсутствуют.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.34 добавил dormant read-only
+recipient import adapter поверх M1.2.33 contract и M1.2.32 planner. Он
+reload-ит exact caller-owned membership references для `Plan` и exact known
+`Status`, но не зарегистрирован в active runtime и всегда отвергает
+`Confirm`/`Apply*`. Публичный default остаётся legacy-only; import/consume,
+CLI/desktop, network и background authority отсутствуют.
+Dependency bridge изолирован в `kilogram-peer-history-recovery-runtime`, не в
+offline execution engine.
 
 ## Текущее состояние
 
@@ -1319,6 +1322,12 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   будущий adapter обязан reload-ить live context. Request/response exact-bound,
   mutation nonce и confirmation раздельны; active runtime/adapter/CLI/desktop,
   implicit apply и automatic consume не добавлены.
+- [`../docs/RFC-0258-m1234-dormant-recipient-import-read-adapter.md`](../docs/RFC-0258-m1234-dormant-recipient-import-read-adapter.md) —
+  M1.2.34 подключает только `Plan`/`Status` к существующему M1.2.32 planner.
+  Caller-owned loader exact-проверяет authority/context echo и membership
+  digest; known-plan status reload-ит и replans. Plan остаётся ephemeral,
+  `Confirm`/`Apply*` всегда отвергаются, active runtime/CLI/desktop/network,
+  import/consume и persistence authority не добавлены.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

@@ -170,8 +170,9 @@ function Assert-Contract {
     Assert-ContainsAll $Cargo @(
         'kilogram-state', 'kilogram-store', 'tempfile.workspace = true'
     ) 'recipient history import Cargo manifest'
+    $productionCargo = ($Cargo -split '(?m)^\[dev-dependencies\]\s*$', 2)[0]
     foreach ($forbidden in @('iroh', 'reqwest', 'tokio', 'eframe', 'kilogram-runtime-ipc')) {
-        if ($Cargo.IndexOf($forbidden, [StringComparison]::Ordinal) -ge 0) {
+        if ($productionCargo.IndexOf($forbidden, [StringComparison]::Ordinal) -ge 0) {
             throw "recipient history import gained forbidden dependency '$forbidden'"
         }
     }
