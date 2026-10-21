@@ -102,6 +102,10 @@ mod recipient_import_consumption_runtime_attachment;
 mod recipient_import_guided_session_controller;
 
 #[cfg(test)]
+#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_guided_recovery_host.rs"]
+mod recipient_import_guided_recovery_host;
+
+#[cfg(test)]
 #[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_guided_session_local_ux.rs"]
 mod recipient_import_guided_session_local_ux;
 
@@ -182,6 +186,11 @@ pub use recipient_import_consumption_session_cache::{
     RecipientImportConsumptionPlanSessionInsertOutcome,
 };
 #[cfg(test)]
+pub use recipient_import_guided_recovery_host::{
+    RecipientImportGuidedRecoveryHost, RecipientImportGuidedRecoveryHostCancel,
+    RecipientImportGuidedRecoveryHostError, RecipientImportGuidedRecoveryHostPrepare,
+};
+#[cfg(test)]
 pub use recipient_import_guided_session_controller::{
     AuthenticatedGuidedRecipientImportSession, RecipientImportGuidedSessionConfirmation,
     RecipientImportGuidedSessionController, RecipientImportGuidedSessionControllerError,
@@ -193,6 +202,7 @@ pub use recipient_import_guided_session_local_ux::{
     RecipientImportGuidedSessionLocalUxCancel, RecipientImportGuidedSessionLocalUxConfirm,
     RecipientImportGuidedSessionLocalUxError, RecipientImportGuidedSessionLocalUxPhase,
     RecipientImportGuidedSessionLocalUxRefresh, RecipientImportGuidedSessionLocalUxStart,
+    RecipientImportGuidedSessionLocalUxView,
 };
 #[cfg(test)]
 pub use recipient_import_guided_session_start_producer::{
@@ -9714,6 +9724,310 @@ mod tests {
         )?;
         assert_eq!(restarted.phase(), RecipientImportGuidedSessionPhase::Idle);
         assert!(!restarted.context_attached());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_recovery_host_owns_one_full_local_ux_ceremony()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-recovery-host-lifecycle")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 201)?;
+        let signer = setup.fixture.replacement.identity();
+        let mut host = RecipientImportGuidedRecoveryHost::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            signer,
+        )?;
+
+        let idle = host.refresh(
+            RecipientImportGuidedSessionLocalUxRefresh::current(),
+            15_000,
+        )?;
+        assert_eq!(idle.phase(), RecipientImportGuidedSessionLocalUxPhase::Idle);
+        assert!(!host.has_pending_handoff());
+        assert!(!host.opened_network());
+
+        host.install_authenticated_handoff(
+            guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 202)?,
+            15_001,
+            300,
+        )?;
+        assert!(host.has_pending_handoff());
+
+        assert!(matches!(
+            host.install_authenticated_handoff(
+                guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 203,)?,
+                15_002,
+                299,
+            ),
+            Err(RecipientImportGuidedRecoveryHostError::PendingHandoffAlreadyInstalled)
+        ));
+        assert!(host.has_pending_handoff());
+
+        let planned = host.prepare(RecipientImportGuidedRecoveryHostPrepare::new(299), 15_002)?;
+        assert_eq!(
+            planned.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Planned
+        );
+        assert_eq!(planned.expires_at_unix_seconds(), Some(15_301));
+        assert!(!host.has_pending_handoff());
+        let session_id = planned
+            .session_id()
+            .cloned()
+            .ok_or("host planned view has no session ID")?;
+        let phrase = planned
+            .confirmation_phrase()
+            .ok_or("host planned view has no confirmation phrase")?
+            .to_owned();
+
+        assert!(matches!(
+            host.install_authenticated_handoff(
+                guided_session_authority(&setup, &descriptor, &durable, reference, 204,)?,
+                15_003,
+                298,
+            ),
+            Err(RecipientImportGuidedRecoveryHostError::CeremonyAlreadyActive)
+        ));
+        assert_eq!(
+            host.refresh(
+                RecipientImportGuidedSessionLocalUxRefresh::exact(session_id.clone()),
+                15_004,
+            )?,
+            planned
+        );
+
+        let confirmed = host.confirm(
+            RecipientImportGuidedSessionLocalUxConfirm::new(session_id.clone(), phrase),
+            15_005,
+        )?;
+        assert_eq!(
+            confirmed.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Confirmed
+        );
+        assert_eq!(
+            host.refresh(
+                RecipientImportGuidedSessionLocalUxRefresh::exact(session_id.clone()),
+                15_006,
+            )?,
+            confirmed
+        );
+
+        let attached = host.apply(
+            RecipientImportGuidedSessionLocalUxApply::new(session_id.clone()),
+            15_007,
+        )?;
+        assert_eq!(
+            attached.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Attached
+        );
+        assert!(attached.complete());
+        assert!(attached.imported_event_count() > 0);
+        assert_eq!(
+            host.refresh(
+                RecipientImportGuidedSessionLocalUxRefresh::exact(session_id.clone()),
+                15_008,
+            )?,
+            attached
+        );
+
+        let cancelled = host.cancel(
+            RecipientImportGuidedRecoveryHostCancel::active_session(session_id),
+            15_009,
+        )?;
+        assert_eq!(
+            cancelled.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Idle
+        );
+        assert!(!host.has_pending_handoff());
+
+        drop(host);
+        let mut restarted = RecipientImportGuidedRecoveryHost::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            signer,
+        )?;
+        assert!(!restarted.has_pending_handoff());
+        assert_eq!(
+            restarted
+                .refresh(
+                    RecipientImportGuidedSessionLocalUxRefresh::current(),
+                    15_010,
+                )?
+                .phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Idle
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_recovery_host_fails_closed_and_drops_ephemeral_custody()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-recovery-host-fail-closed")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 211)?;
+        let signer = setup.fixture.replacement.identity();
+
+        let mut foreign_state_host = RecipientImportGuidedRecoveryHost::new(
+            setup.state.join("foreign-guided-recovery-host-state"),
+            setup.fixture.owner_account_id,
+            signer,
+        )?;
+        assert!(matches!(
+            foreign_state_host.install_authenticated_handoff(
+                guided_session_authority(
+                    &setup,
+                    &descriptor,
+                    &durable,
+                    reference.clone(),
+                    212,
+                )?,
+                16_000,
+                100,
+            ),
+            Err(RecipientImportGuidedRecoveryHostError::Controller(error))
+                if matches!(*error, RecipientImportGuidedSessionControllerError::StateDirectoryMismatch)
+        ));
+        assert!(!foreign_state_host.has_pending_handoff());
+
+        let foreign_account =
+            AccountRootState::create(setup.state.join("foreign-guided-recovery-host-account"))?;
+        let mut foreign_account_host = RecipientImportGuidedRecoveryHost::new(
+            &setup.state,
+            foreign_account.account_id(),
+            signer,
+        )?;
+        assert!(matches!(
+            foreign_account_host.install_authenticated_handoff(
+                guided_session_authority(
+                    &setup,
+                    &descriptor,
+                    &durable,
+                    reference.clone(),
+                    213,
+                )?,
+                16_100,
+                100,
+            ),
+            Err(RecipientImportGuidedRecoveryHostError::Controller(error))
+                if matches!(*error, RecipientImportGuidedSessionControllerError::OwnerAccountMismatch)
+        ));
+        assert!(!foreign_account_host.has_pending_handoff());
+
+        let foreign_device = DeviceIdentity::generate()?;
+        let mut foreign_device_host = RecipientImportGuidedRecoveryHost::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            &foreign_device,
+        )?;
+        assert!(matches!(
+            foreign_device_host.install_authenticated_handoff(
+                guided_session_authority(
+                    &setup,
+                    &descriptor,
+                    &durable,
+                    reference.clone(),
+                    214,
+                )?,
+                16_200,
+                100,
+            ),
+            Err(RecipientImportGuidedRecoveryHostError::Controller(error))
+                if matches!(*error, RecipientImportGuidedSessionControllerError::OwnerDeviceMismatch)
+        ));
+        assert!(!foreign_device_host.has_pending_handoff());
+
+        let mut host = RecipientImportGuidedRecoveryHost::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            signer,
+        )?;
+        host.install_authenticated_handoff(
+            guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 215)?,
+            16_300,
+            10,
+        )?;
+        assert!(matches!(
+            host.prepare(
+                RecipientImportGuidedRecoveryHostPrepare::new(6),
+                16_305,
+            ),
+            Err(RecipientImportGuidedRecoveryHostError::StartProducer(error))
+                if matches!(*error, RecipientImportGuidedSessionStartProducerError::SessionOutlivesHandoff)
+        ));
+        assert!(!host.has_pending_handoff());
+        assert_eq!(
+            host.refresh(
+                RecipientImportGuidedSessionLocalUxRefresh::current(),
+                16_306,
+            )?
+            .phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Idle
+        );
+
+        host.install_authenticated_handoff(
+            guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 216)?,
+            16_400,
+            100,
+        )?;
+        let cancelled = host.cancel(
+            RecipientImportGuidedRecoveryHostCancel::pending_handoff(),
+            16_401,
+        )?;
+        assert_eq!(
+            cancelled.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Idle
+        );
+        assert!(!host.has_pending_handoff());
+        assert!(matches!(
+            host.cancel(
+                RecipientImportGuidedRecoveryHostCancel::pending_handoff(),
+                16_402,
+            ),
+            Err(RecipientImportGuidedRecoveryHostError::PendingHandoffUnavailable)
+        ));
+
+        host.install_authenticated_handoff(
+            guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 217)?,
+            16_500,
+            2,
+        )?;
+        assert!(host.has_pending_handoff());
+        assert_eq!(
+            host.refresh(
+                RecipientImportGuidedSessionLocalUxRefresh::current(),
+                16_502,
+            )?
+            .phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Idle
+        );
+        assert!(!host.has_pending_handoff());
+
+        host.install_authenticated_handoff(
+            guided_session_authority(&setup, &descriptor, &durable, reference, 218)?,
+            16_600,
+            100,
+        )?;
+        assert!(host.has_pending_handoff());
+        drop(host);
+
+        let mut restarted = RecipientImportGuidedRecoveryHost::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            signer,
+        )?;
+        assert!(!restarted.has_pending_handoff());
+        assert_eq!(
+            restarted
+                .refresh(
+                    RecipientImportGuidedSessionLocalUxRefresh::current(),
+                    16_601,
+                )?
+                .phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Idle
+        );
         Ok(())
     }
 }

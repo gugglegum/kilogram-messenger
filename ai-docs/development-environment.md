@@ -1,5 +1,22 @@
 # Среда разработки
 
+## M1.2.51 verification (2026-10-22)
+
+- Targeted locked/offline `cargo check` и strict Clippy для recovery
+  runtime/execution passed; обычные cross-volume incremental hard-link fallback
+  warnings не изменились.
+- Два новых process-owned host fixtures прошли 2/2 за 292.55s, затем полный
+  combined guided-recovery regression M1.2.47–M1.2.51 прошёл 8/8 за 1156.88s
+  через `scripts/run-cargo-tests-stable.ps1` с постоянным EXE и
+  workspace-local TEMP/TMP; direct `cargo test` не использовался.
+- Dedicated host boundary rejected 18/18 weakening mutations; соседние
+  start-producer/local-UX/controller boundaries сохранили 17/17, 15/15 и
+  14/14. Accepted-tag M1 readiness прошёл 177/177 gates с rustfmt и
+  workspace-wide locked/offline strict Clippy.
+- Product network, second host, release build, archive, tag и automatic GitHub
+  build не использовались. CLI/desktop/runtime IPC/timer/background entry point
+  отсутствует; ordinary startup не создаёт host, default — `legacy-only`.
+
 ## M1.2.50 verification (2026-10-21)
 
 - Targeted locked/offline `cargo check` и strict Clippy для recovery

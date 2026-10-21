@@ -61,3 +61,7 @@ The two producer fixtures passed 2/2, and the stable-name combined guided
 session regression passed 6/6. The dedicated boundary rejected all 17
 weakening mutations, while the accepted-tag readiness inventory passed all
 176 gates without starting test executables or product networking.
+
+M1.2.51 implemented the process owner in RFC-0275. The new host retains at most
+one sealed hand-off, consumes the resulting start command internally, and
+exposes only typed local-UX commands plus the privacy-safe view.

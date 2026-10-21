@@ -6,14 +6,14 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.50 добавил sealed process-local
-handoff и one-shot producer для M1.2.49 `LocalUxStart`. Authority поглощается
-до fallible preflight; replay, expiry, cancel, foreign binding и already-active
-controller не оставляют повторно используемый start. Producer повторно
-проверяет state/Account/Device, signed Plan, coordinator, active intent,
-approved sources и membership digests, но не зарегистрирован в
-CLI/desktop/runtime IPC. Следующий M1.2.51 должен поместить controller,
-pending handoff, producer и UX facade под одного dormant process owner.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.51 поместил controller, максимум
+один pending handoff, one-shot producer и local-UX facade под одного dormant
+process-owned host. Public surface содержит только typed prepare/confirm/apply/
+cancel/refresh и safe M1.2.49 view; authority, handoff и start command наружу
+не выдаются. Replacement, foreign binding, failed prepare, cancel, expiry и
+restart fail closed. CLI/desktop/runtime IPC/network не подключены. Следующий
+M1.2.52 должен связать crate-private installation с одним authenticated process
+owner, не разрешая реконструкцию authority из loose fragments.
 
 ## Текущее состояние
 

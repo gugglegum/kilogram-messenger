@@ -29,6 +29,7 @@ mod recipient_import_consumption_response_dispatcher;
 mod recipient_import_consumption_runtime_attachment;
 mod recipient_import_consumption_runtime_service;
 mod recipient_import_consumption_session_cache;
+mod recipient_import_guided_recovery_host;
 mod recipient_import_guided_session_controller;
 mod recipient_import_guided_session_local_ux;
 mod recipient_import_guided_session_start_producer;
@@ -82,6 +83,10 @@ pub use recipient_import_consumption_session_cache::{
     MAX_RECIPIENT_IMPORT_CONSUMPTION_PLAN_SESSIONS, RecipientImportConsumptionPlanSessionCache,
     RecipientImportConsumptionPlanSessionCacheError,
     RecipientImportConsumptionPlanSessionInsertOutcome,
+};
+pub use recipient_import_guided_recovery_host::{
+    RecipientImportGuidedRecoveryHost, RecipientImportGuidedRecoveryHostCancel,
+    RecipientImportGuidedRecoveryHostError, RecipientImportGuidedRecoveryHostPrepare,
 };
 pub use recipient_import_guided_session_controller::{
     AuthenticatedGuidedRecipientImportSession,

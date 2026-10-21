@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.51",
+  "status": "dormant-process-owned-guided-recovery-host-verified",
+  "predecessor": "M1.2.50",
+  "host": {
+    "process_local": true,
+    "owns_controller": true,
+    "owns_pending_handoff": true,
+    "maximum_pending_handoffs": 1,
+    "maximum_active_sessions": 1,
+    "cloneable": false,
+    "serializable": false,
+    "debuggable": false,
+    "restart_recovers_pending_authority": false,
+    "restart_recovers_active_authority": false,
+    "opens_network": false
+  },
+  "installation": {
+    "crate_private": true,
+    "accepts_only_authenticated_session_authority": true,
+    "creates_sealed_m1250_handoff_internally": true,
+    "preflights_state_account_device_and_plan": true,
+    "second_pending_rejected": true,
+    "replacement_rejected": true,
+    "active_session_replacement_rejected": true,
+    "foreign_binding_rejected": true,
+    "existing_custody_preserved_on_rejection": true,
+    "incoming_authority_retained_on_rejection": false
+  },
+  "public_local_ux_surface": {
+    "typed_commands": [
+      "prepare",
+      "confirm",
+      "apply",
+      "cancel",
+      "refresh"
+    ],
+    "returns_m1249_safe_view": true,
+    "returns_handoff": false,
+    "returns_start_command": false,
+    "returns_controller": false,
+    "returns_authority_fragments": false,
+    "accepts_state_path_after_construction": false,
+    "accepts_signer_after_construction": false,
+    "accepts_descriptor": false,
+    "accepts_coordinator": false,
+    "accepts_membership": false
+  },
+  "prepare": {
+    "takes_pending_before_fallible_work": true,
+    "uses_m1250_one_shot_producer": true,
+    "consumes_start_command_inside_host": true,
+    "failure_clears_pending_authority": true,
+    "success_clears_pending_authority": true
+  },
+  "custody_cleanup": {
+    "explicit_pending_cancel": true,
+    "exact_active_cancel": true,
+    "pending_expiry": true,
+    "active_expiry": true,
+    "failed_prepare": true,
+    "process_restart": true
+  },
+  "production": {
+    "registered_runtime_ipc_command": false,
+    "registered_cli_command": false,
+    "registered_desktop_control": false,
+    "registered_timer": false,
+    "registered_background_start": false,
+    "adds_filesystem_discovery": false,
+    "changes_peer_wire": false,
+    "changes_runtime_ipc_wire": false,
+    "changes_public_default": false,
+    "public_default": "legacy-only"
+  },
+  "verification": {
+    "new_stable_path_test_count": 2,
+    "new_stable_path_test_seconds": 292.55,
+    "combined_guided_recovery_test_count": 8,
+    "combined_guided_recovery_test_seconds": 1156.88,
+    "readiness_gates": "177/177",
+    "format_verified": true,
+    "offline_strict_clippy_verified": true,
+    "full_lifecycle_tested": true,
+    "second_pending_preservation_tested": true,
+    "active_replacement_preservation_tested": true,
+    "foreign_state_tested": true,
+    "foreign_account_tested": true,
+    "foreign_device_tested": true,
+    "failed_prepare_cleanup_tested": true,
+    "pending_cancel_tested": true,
+    "pending_expiry_tested": true,
+    "restart_is_empty_tested": true,
+    "network_executed": false,
+    "second_host_required": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "next": [
+    "bind-host-installation-to-one-authenticated-process-owner",
+    "retain-dormant-explicit-user-initiation",
+    "keep-runtime-ipc-cli-desktop-network-and-public-default-unchanged"
+  ]
+}

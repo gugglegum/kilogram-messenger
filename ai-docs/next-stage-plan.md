@@ -1,32 +1,33 @@
-# Текущая точка: M1.2.50 завершён, следующий M1.2.51
+# Текущая точка: M1.2.51 завершён, следующий M1.2.52
 
-Дата: 2026-10-21.
+Дата: 2026-10-22.
 
-M1.2.50 закрыл прямое создание UX start-команды: sealed authenticated handoff
-поглощается one-shot producer-ом до fallible preflight. Однако будущему
-process owner пока пришлось бы отдельно удерживать controller, pending handoff,
-producer и UX facade, что оставляет слишком широкую orchestration surface.
+M1.2.51 объединил controller, pending handoff, producer и local-UX facade в
+одном dormant process-owned host. Public API больше не переносит handoff или
+start command. Однако crate-private installation пока принимает уже собранный
+`AuthenticatedGuidedRecipientImportSession`; его реальный единственный producer
+и ownership boundary ещё не оформлены.
 
-## Следующий этап: M1.2.51 — dormant process-owned guided-recovery host
+## Следующий этап: M1.2.52 — authenticated host-installation owner
 
-1. Добавить одного process-local host, владеющего M1.2.48 controller и максимум
-   одним pending M1.2.50 handoff; authority и `LocalUxStart` наружу не выдавать.
-2. Crate-private authenticated owner сможет установить handoff только в пустой
-   host. Replacement, replay, foreign binding и second pending authority должны
-   fail closed без вытеснения живой ceremony.
-3. Public local UX surface host-а должна принимать только безопасные typed
-   prepare/confirm/apply/cancel/refresh команды и возвращать M1.2.49 view.
-4. Prepare атомарно поглощает pending handoff через M1.2.50 producer; failure,
-   cancel, expiry и process restart очищают всю ephemeral custody.
-5. Оставить host dormant: не регистрировать runtime IPC/CLI/desktop/timer/
-   background/network entry point; public default остаётся `legacy-only`.
+1. Добавить одного non-cloneable process-local owner-а, который создаёт host и
+   является единственной точкой установки authenticated recovery authority.
+2. Owner должен принимать только полный результат существующей canonical
+   recovery assembly: signed Plan, exact coordinator и уже загруженный ordered
+   membership set; public loose-fragment constructor запрещён.
+3. Установка должна быть one-shot: authority извлекается до fallible host
+   install, а success/failure/replay/replacement не возвращают reusable grant.
+4. Public local UX остаётся только на host; owner не выдаёт authority, handoff,
+   start command, controller или membership snapshots.
+5. Оставить owner dormant: без runtime IPC/CLI/desktop/timer/background/network
+   entry point; ordinary startup не создаёт owner, default `legacy-only`.
 
 ## Stop conditions
 
-- host экспортирует handoff, start command, path, signer, coordinator либо
-  membership snapshot;
-- pending authority можно заменить или сериализовать;
-- UI получает способ миновать one-shot producer или explicit confirmation;
-- restart восстанавливает pending/active authority из durable state;
-- ordinary startup автоматически создаёт host ceremony;
+- owner получает path/signer/descriptor/coordinator/membership отдельными
+  public аргументами или восстанавливает их из ambient filesystem discovery;
+- install grant можно clone/serialize/replay или вернуть вызывающему при ошибке;
+- owner экспортирует host internals либо второй UX control surface;
+- restart восстанавливает ephemeral grant/pending/active authority;
+- ordinary startup автоматически создаёт owner или host ceremony;
 - peer/runtime wire, product network или public default меняется.

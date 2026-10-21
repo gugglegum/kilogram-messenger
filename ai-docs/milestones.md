@@ -12,6 +12,25 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.51 — dormant process-owned guided-recovery host: выполнено
+
+- Один non-cloneable process-local host владеет M1.2.48 controller и максимум
+  одним pending M1.2.50 handoff; restart не восстанавливает эту custody.
+- Crate-private install повторяет state/Account/Device и canonical Plan
+  preflight, создаёт sealed handoff внутри и не вытесняет pending/active
+  ceremony при replacement, replay или foreign binding.
+- Public surface состоит только из typed prepare/confirm/apply/cancel/refresh и
+  возвращает safe M1.2.49 view. Handoff, start, controller, signer,
+  coordinator и membership наружу не выдаются.
+- Prepare извлекает pending handoff до producer work и сразу потребляет start
+  внутри UX adapter. Failed prepare, explicit cancel, expiry и restart очищают
+  ephemeral authority; stale cancel targets не пересекаются.
+- Stable-name host fixtures прошли 2/2 за 292.55s; combined guided-recovery
+  regression M1.2.47–M1.2.51 прошёл 8/8 за 1156.88s. Dedicated boundary
+  отклонил 18/18 mutations, accepted-tag readiness прошёл 177/177 gates.
+  CLI/desktop/runtime IPC/timer/network не зарегистрированы, public
+  `legacy-only` неизменён.
+
 ### M1.2.50 — authenticated one-shot guided-session start producer: выполнено
 
 - Sealed process-local handoff содержит полный M1.2.48 authority, не имеет
