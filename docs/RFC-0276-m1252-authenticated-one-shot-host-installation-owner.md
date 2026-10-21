@@ -55,3 +55,7 @@ consumed before fallible work and no test opens a network path.
 The two owner fixtures passed 2/2 in 117.98 seconds. The combined guided
 recovery regression passed 10/10 in 1259.16 seconds. Accepted-tag readiness
 passed all 178/178 gates with rustfmt and workspace-wide offline strict Clippy.
+
+M1.2.53 strengthens the upstream side in RFC-0277: the former crate-private
+loose session constructor is private, and a one-shot authenticated assembly
+issuer is now the only production path that may emit this installation owner.

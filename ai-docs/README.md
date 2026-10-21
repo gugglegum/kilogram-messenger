@@ -6,14 +6,14 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.52 связал полный authenticated
-recovery assembly с exact local signer и сделал потребляемый process-local
-installation owner единственным путём создания установленного M1.2.51 host.
-Host constructor/install теперь private; success и failure не возвращают grant,
-а public surface остаётся только typed prepare/confirm/apply/cancel/refresh и
-safe M1.2.49 view. CLI/desktop/runtime IPC/network не подключены. Следующий
-M1.2.53 должен запечатать единственного upstream producer полного assembly,
-убрав loose crate-private assembly constructor из общего runtime surface.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.53 добавил one-shot
+`RecipientImportGuidedRecoveryAssemblyIssuer`, который владеет exact state,
+Account, Device, signer, signed Plan, coordinator и ordered loaded memberships,
+поглощает input до fallible validation и выдаёт только M1.2.52 installation
+owner. Loose session constructor теперь private; отдельный путь остался только
+под `#[cfg(test)]`. CLI/desktop/runtime IPC/network не подключены. Следующий
+M1.2.54 должен добавить явную short-lived local launch authorization перед
+issuer без автоматической активации ceremony.
 
 ## Текущее состояние
 

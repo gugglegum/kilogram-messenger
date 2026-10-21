@@ -65,6 +65,7 @@ foreach ($required in @(
     "'verify-kilogram-recipient-import-guided-session-start-producer-boundary.ps1' = 'recipient_import_guided_session_start_producer_boundary=verified'",
     "'verify-kilogram-recipient-import-guided-recovery-host-boundary.ps1' = 'recipient_import_guided_recovery_host_boundary=verified'",
     "'verify-kilogram-recipient-import-guided-recovery-host-installation-owner-boundary.ps1' = 'recipient_import_guided_recovery_host_installation_owner_boundary=verified'",
+    "'verify-kilogram-recipient-import-guided-recovery-assembly-issuer-boundary.ps1' = 'recipient_import_guided_recovery_assembly_issuer_boundary=verified'",
     "'verify-kilogram-canonical-runtime-ipc-peer-reenrollment-contract-boundary.ps1' = 'canonical_runtime_ipc_peer_reenrollment_contract_boundary=verified'",
     "'verify-kilogram-canonical-runtime-ipc-peer-reenrollment-read-adapter-boundary.ps1' = 'canonical_runtime_ipc_peer_reenrollment_read_adapter_boundary=verified'",
     "'verify-kilogram-canonical-runtime-ipc-peer-reenrollment-mutation-adapter-boundary.ps1' = 'canonical_runtime_ipc_peer_reenrollment_mutation_adapter_boundary=verified'",
@@ -165,7 +166,7 @@ foreach ($required in @(
     "'verify-kilogram-canonical-wire-boundary.ps1' = 'canonical_wire_boundary=verified'",
     "'verify-kilogram-protocol-compatibility-boundary.ps1' = 'protocol_compatibility_boundary=verified'",
     "Get-ChildItem -LiteralPath `$scriptsDirectory -Filter 'verify-*-boundary.ps1'",
-    'M1 readiness boundary inventory must contain exactly 178 gates',
+    'M1 readiness boundary inventory must contain exactly 179 gates',
     'function Invoke-CapturedPowerShell',
     "`$ErrorActionPreference = 'Continue'",
     "`$gateCapture.ExitCode -ne 0",
@@ -280,7 +281,7 @@ if ($LASTEXITCODE -ne 0 -or
 }
 
 Write-Output 'm1_readiness_boundary=verified'
-Write-Output 'boundary_inventory=closed-178'
+Write-Output 'boundary_inventory=closed-179'
 Write-Output 'candidate_or_accepted_tag_verifier=required'
 Write-Output 'accepted_m1_tag=M1.0.0'
 Write-Output 'format_and_offline_strict_clippy=required'

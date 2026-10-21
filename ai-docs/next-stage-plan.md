@@ -1,37 +1,38 @@
-# Текущая точка: M1.2.52 завершён, следующий M1.2.53
+# Текущая точка: M1.2.53 завершён, следующий M1.2.54
 
 Дата: 2026-10-22.
 
-M1.2.52 сделал one-shot process-local owner единственной installation point
-для M1.2.51 host. Owner принимает только opaque full assembly, а host
-constructor/install стали private. Однако сам
-`AuthenticatedGuidedRecipientImportSession::from_authenticated_recovery` пока
-остаётся crate-private loose-fragment assembly constructor; единственный
-upstream producer полного assembly ещё не оформлен отдельной границей.
+M1.2.53 запечатал one-shot full-assembly issuer. Он владеет exact state,
+Account, Device, signer, signed Plan request, coordinator и ordered loaded
+memberships, поглощает input до fallible validation и выдаёт только M1.2.52
+installation owner. Loose session constructor private; production
+CLI/desktop/runtime IPC/network всё ещё не имеют entry point.
 
-## Следующий этап: M1.2.53 — authenticated full-assembly issuer
+## Следующий этап: M1.2.54 — explicit local launch authorization
 
-1. Добавить один non-cloneable process-local issuer полного authenticated
-   recovery assembly поверх существующего canonical signed Plan результата,
-   exact coordinator и already-loaded ordered memberships.
-2. Перенести loose-fragment assembly construction за private issuer boundary;
-   общий crate-private caller не должен собирать session напрямую.
-3. Issuer должен потреблять one-shot authenticated input до fallible assembly
-   validation и выдавать максимум один M1.2.52 installation owner, не сам
-   session, host, handoff или отдельные authority fragments.
-4. Повторно проверить exact state/Account/Device/signer, signed Plan,
-   coordinator plan+sequence, ordered references и membership digests на
-   переходе issuer → owner.
-5. Оставить issuer dormant: без runtime IPC/CLI/desktop/timer/background/
-   network entry point; ordinary startup не создаёт issuer, default
+1. Добавить один non-cloneable process-local launch authorization, который
+   удерживает ровно один M1.2.53 issuer и короткоживущую безопасную preview для
+   явного локального решения пользователя.
+2. Не выдавать issuer наружу: typed approve должен потреблять authorization до
+   fallible work и возвращать максимум один installation owner; cancel,
+   expiry, mismatch и любой failure должны поглощать authorization без reusable
+   grant.
+3. Preview не должна содержать path, Account/Device IDs, descriptor, signer,
+   coordinator, membership snapshots, request/nonce или иной authority. Для
+   подтверждения использовать отдельную domain-bound phrase/ceremony ID.
+4. Повторно связать authorization с exact issuer/session lifetime и запретить
+   replacement уже pending/active ceremony.
+5. Оставить весь путь dormant: без runtime IPC/CLI/desktop/timer/background/
+   network registration; ordinary startup не создаёт authorization, default
    `legacy-only`.
 
 ## Stop conditions
 
-- issuer принимает loose fragments через public API или ищет их в ambient
-  filesystem;
-- прежний loose assembly constructor остаётся callable вне issuer/tests;
-- issuer возвращает raw session, host, handoff, controller или memberships;
-- issuer/grant можно clone/serialize/replay или восстановить после restart;
-- ordinary startup автоматически создаёт issuer/owner/host ceremony;
+- authorization имеет public или loose-fragment constructor;
+- approve принимает issuer/path/signer/descriptor/coordinator/membership как
+  отдельные аргументы либо возвращает issuer/raw session/host/handoff;
+- cancel/expiry/failure возвращает reusable authority или допускает replay;
+- preview раскрывает identity/authority material;
+- authorization можно clone/serialize/восстановить после restart;
+- ordinary startup автоматически создаёт/подтверждает ceremony;
 - peer/runtime wire, product network или public default меняется.

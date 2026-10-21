@@ -91,7 +91,8 @@ pub use recipient_import_guided_recovery_host::{
 };
 pub use recipient_import_guided_session_controller::{
     AuthenticatedGuidedRecipientImportSession,
-    MAX_GUIDED_RECIPIENT_IMPORT_SESSION_LIFETIME_SECONDS, RecipientImportGuidedSessionAttachment,
+    MAX_GUIDED_RECIPIENT_IMPORT_SESSION_LIFETIME_SECONDS,
+    RecipientImportGuidedRecoveryAssemblyIssuer, RecipientImportGuidedSessionAttachment,
     RecipientImportGuidedSessionConfirmation, RecipientImportGuidedSessionConfirmationReceipt,
     RecipientImportGuidedSessionController, RecipientImportGuidedSessionControllerError,
     RecipientImportGuidedSessionMutation, RecipientImportGuidedSessionPhase,

@@ -122,7 +122,9 @@ function Assert-Boundary {
 
     Require-Text $Controller @(
         'pub struct AuthenticatedGuidedRecipientImportSession',
-        'pub(crate) fn from_authenticated_recovery(',
+        'fn from_authenticated_recovery(',
+        '#[cfg(test)]',
+        'pub(crate) fn authenticated_guided_recipient_import_session_fixture(',
         'pub enum RecipientImportGuidedSessionPhase',
         'Idle,', 'Planned,', 'Confirmed,', 'Attached,',
         'pub struct RecipientImportGuidedSessionController',
@@ -141,6 +143,7 @@ function Assert-Boundary {
     Require-MinimumCount $Controller '.take()' 4 'guided session destructive transitions'
     foreach ($forbidden in @(
         'pub fn from_authenticated_recovery(',
+        'pub(crate) fn from_authenticated_recovery(',
         'impl Serialize for AuthenticatedGuidedRecipientImportSession',
         'impl Deserialize for AuthenticatedGuidedRecipientImportSession',
         'derive(Clone, Debug, Serialize)',
@@ -236,7 +239,10 @@ if ($SelfTest) {
     $mutations += { Assert-Boundary $changed $controller $attachment $runtimeLibrary $execution $cli $rfc }
     $changed = Copy-JsonObject $manifest; $changed.controller.opens_network = $true
     $mutations += { Assert-Boundary $changed $controller $attachment $runtimeLibrary $execution $cli $rfc }
-    $changedController = $controller.Replace('pub(crate) fn from_authenticated_recovery(', 'pub fn from_authenticated_recovery(')
+    $changedController = $controller.Replace(
+        '    fn from_authenticated_recovery(',
+        '    pub(crate) fn from_authenticated_recovery('
+    )
     $mutations += { Assert-Boundary $manifest $changedController $attachment $runtimeLibrary $execution $cli $rfc }
     $changedController = $controller.Replace(
         'pub struct AuthenticatedGuidedRecipientImportSession',

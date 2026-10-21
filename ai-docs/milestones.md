@@ -12,6 +12,23 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.53 — authenticated one-shot recovery-assembly issuer: выполнено
+
+- Private process-local input хранит exact state/Account/Device/signer,
+  signed Plan, coordinator и ordered loaded memberships; ambient filesystem
+  discovery и public loose-fragment constructor отсутствуют.
+- Non-cloneable issuer имеет только crate-private authenticated construction
+  seam. `issue(self)` извлекает input до fallible validation, повторяет все
+  canonical bindings и выдаёт только один M1.2.52 installation owner.
+- Прежний loose session constructor стал private. Старые layer-specific
+  regression fixtures используют отдельный явно `#[cfg(test)]` seam, которого
+  нет в production build.
+- Новые stable-name issuer fixtures прошли 2/2 за 119.36s; combined
+  guided-recovery regression M1.2.47–M1.2.53 прошёл 12/12 за 1368.98s.
+  Dedicated boundary отклонил 17/17 mutations; accepted-tag readiness прошёл
+  179/179 gates. CLI/desktop/runtime IPC/timer/network не зарегистрированы,
+  public `legacy-only` неизменён.
+
 ### M1.2.52 — authenticated one-shot host-installation owner: выполнено
 
 - Полный `AuthenticatedGuidedRecipientImportSession` перед owner связывается с

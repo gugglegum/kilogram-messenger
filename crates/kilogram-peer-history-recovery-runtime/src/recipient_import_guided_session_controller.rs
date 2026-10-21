@@ -29,9 +29,10 @@ use crate::{
     RecipientImportConfirmationLedgerError, RecipientImportConsumptionRuntimeActor,
     RecipientImportConsumptionRuntimeActorError,
     RecipientImportConsumptionRuntimeContextInstallOutcome,
-    RecipientImportConsumptionRuntimeDispatch, RecipientImportMembershipLoad,
-    RecipientImportMembershipLoader, RecipientImportMutationAdapterError,
-    RecipientImportReadAdapterDispatch, RecipientImportReadAdapterError,
+    RecipientImportConsumptionRuntimeDispatch, RecipientImportGuidedRecoveryHostInstallationOwner,
+    RecipientImportMembershipLoad, RecipientImportMembershipLoader,
+    RecipientImportMutationAdapterError, RecipientImportReadAdapterDispatch,
+    RecipientImportReadAdapterError,
     execution_api::{
         RecipientHistoryImportStore, RecipientHistoryTransferInbox,
         RecipientRecoveryCoordinationPlan, RecipientRecoveryImportRoundIntentStore,
@@ -63,7 +64,7 @@ pub struct AuthenticatedGuidedRecipientImportSession {
 impl AuthenticatedGuidedRecipientImportSession {
     #[allow(dead_code)]
     #[allow(clippy::too_many_arguments)]
-    pub(crate) fn from_authenticated_recovery(
+    fn from_authenticated_recovery(
         state_directory: impl AsRef<Path>,
         owner_account_id: AccountId,
         owner_device_id: DeviceId,
@@ -185,6 +186,35 @@ impl AuthenticatedGuidedRecipientImportSession {
     }
 }
 
+/// Test-only construction seam for the older controller, local-UX, producer,
+/// and host regression fixtures.
+///
+/// Production code cannot call the loose session constructor. New production
+/// assembly must enter through `RecipientImportGuidedRecoveryAssemblyIssuer`.
+#[cfg(test)]
+#[allow(dead_code)]
+#[allow(clippy::too_many_arguments)]
+pub(crate) fn authenticated_guided_recipient_import_session_fixture(
+    state_directory: impl AsRef<Path>,
+    owner_account_id: AccountId,
+    owner_device_id: DeviceId,
+    descriptor: RuntimeIpcDescriptor,
+    plan_request: RuntimeIpcRecipientImportExecutionRequest,
+    coordination: RecipientRecoveryCoordinationPlan,
+    memberships: Vec<GuidedRecipientImportMembership>,
+) -> Result<AuthenticatedGuidedRecipientImportSession, RecipientImportGuidedSessionControllerError>
+{
+    AuthenticatedGuidedRecipientImportSession::from_authenticated_recovery(
+        state_directory,
+        owner_account_id,
+        owner_device_id,
+        descriptor,
+        plan_request,
+        coordination,
+        memberships,
+    )
+}
+
 /// Complete, one-shot input for the process-owned recovery-host installer.
 ///
 /// This value has no public constructor and deliberately implements neither
@@ -210,6 +240,94 @@ impl<'identity> AuthenticatedGuidedRecipientImportHostInstallation<'identity> {
             owner_account_id,
             self.signer,
             self.authority,
+        )
+    }
+}
+
+/// Complete authenticated input retained by exactly one process-local issuer.
+///
+/// This value is private, non-cloneable, and non-serializable. It owns the
+/// canonical signed Plan result, exact coordinator, and already-loaded ordered
+/// memberships until `issue` consumes the surrounding issuer.
+struct AuthenticatedGuidedRecipientImportAssemblyInput<'identity> {
+    state_directory: PathBuf,
+    owner_account_id: AccountId,
+    owner_device_id: DeviceId,
+    signer: &'identity DeviceIdentity,
+    descriptor: RuntimeIpcDescriptor,
+    plan_request: RuntimeIpcRecipientImportExecutionRequest,
+    coordination: RecipientRecoveryCoordinationPlan,
+    memberships: Vec<GuidedRecipientImportMembership>,
+}
+
+/// One-shot issuer for one complete authenticated guided-recovery assembly.
+///
+/// There is deliberately no public constructor. The issuer exposes no
+/// authority fragments and can emit only the M1.2.52 installation owner.
+/// Issuing consumes `self` before validation, so both success and failure make
+/// the input unavailable for replay.
+pub struct RecipientImportGuidedRecoveryAssemblyIssuer<'identity> {
+    input: AuthenticatedGuidedRecipientImportAssemblyInput<'identity>,
+}
+
+impl<'identity> RecipientImportGuidedRecoveryAssemblyIssuer<'identity> {
+    #[allow(dead_code)]
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn from_authenticated_plan_assembly(
+        state_directory: impl AsRef<Path>,
+        owner_account_id: AccountId,
+        owner_device_id: DeviceId,
+        signer: &'identity DeviceIdentity,
+        descriptor: RuntimeIpcDescriptor,
+        plan_request: RuntimeIpcRecipientImportExecutionRequest,
+        coordination: RecipientRecoveryCoordinationPlan,
+        memberships: Vec<GuidedRecipientImportMembership>,
+    ) -> Self {
+        Self {
+            input: AuthenticatedGuidedRecipientImportAssemblyInput {
+                state_directory: state_directory.as_ref().to_path_buf(),
+                owner_account_id,
+                owner_device_id,
+                signer,
+                descriptor,
+                plan_request,
+                coordination,
+                memberships,
+            },
+        }
+    }
+
+    pub fn issue(
+        self,
+    ) -> Result<
+        RecipientImportGuidedRecoveryHostInstallationOwner<'identity>,
+        RecipientImportGuidedSessionControllerError,
+    > {
+        let AuthenticatedGuidedRecipientImportAssemblyInput {
+            state_directory,
+            owner_account_id,
+            owner_device_id,
+            signer,
+            descriptor,
+            plan_request,
+            coordination,
+            memberships,
+        } = self.input;
+
+        let authority = AuthenticatedGuidedRecipientImportSession::from_authenticated_recovery(
+            state_directory,
+            owner_account_id,
+            owner_device_id,
+            descriptor,
+            plan_request,
+            coordination,
+            memberships,
+        )?;
+        let installation = authority.into_host_installation(signer)?;
+        Ok(
+            RecipientImportGuidedRecoveryHostInstallationOwner::from_authenticated_recovery(
+                installation,
+            ),
         )
     }
 }

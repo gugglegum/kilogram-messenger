@@ -1,5 +1,26 @@
 # Среда разработки
 
+## M1.2.53 verification (2026-10-22)
+
+- Workspace locked/offline check passed. Initial sandboxed focused-test launch
+  could not create the Windows temp fixture root; the identical approved
+  stable-path launch with normal temp access passed and exposed no code error.
+- Two new recovery-assembly issuer fixtures passed 2/2 in 119.36s, then the
+  combined M1.2.47–M1.2.53 guided-recovery regression passed 12/12 in 1368.98s
+  through `scripts/run-cargo-tests-stable.ps1`; direct `cargo test` was not
+  used and the executable path remained stable.
+- Dedicated issuer boundary rejected 17/17 weakening mutations. Host,
+  installation-owner, start-producer, local-UX and controller predecessor
+  boundaries retained 18/18, 21/21, 17/17, 15/15 and 14/14. Accepted-tag M1
+  readiness passed 179/179 gates with rustfmt and workspace-wide locked/offline
+  strict Clippy.
+- Product network, second host, release build, archive, tag and automatic
+  GitHub build were not used. Ordinary startup creates no issuer/owner/host;
+  CLI/desktop/runtime IPC/timer/background remain unregistered and public
+  default remains `legacy-only`.
+- Cargo target after regression is 54.59 GiB. Cache is retained for build
+  speed; no verification or incremental pruning was requested in this stage.
+
 ## M1.2.52 verification (2026-10-22)
 
 - Targeted locked/offline `cargo check` и strict Clippy для recovery

@@ -193,9 +193,10 @@ pub use recipient_import_guided_recovery_host::{
 };
 #[cfg(test)]
 pub use recipient_import_guided_session_controller::{
-    AuthenticatedGuidedRecipientImportSession, RecipientImportGuidedSessionConfirmation,
-    RecipientImportGuidedSessionController, RecipientImportGuidedSessionControllerError,
-    RecipientImportGuidedSessionMutation, RecipientImportGuidedSessionPhase,
+    AuthenticatedGuidedRecipientImportSession, RecipientImportGuidedRecoveryAssemblyIssuer,
+    RecipientImportGuidedSessionConfirmation, RecipientImportGuidedSessionController,
+    RecipientImportGuidedSessionControllerError, RecipientImportGuidedSessionMutation,
+    RecipientImportGuidedSessionPhase,
 };
 #[cfg(test)]
 pub use recipient_import_guided_session_local_ux::{
@@ -6493,7 +6494,7 @@ mod tests {
         let plan_request =
             adapter_plan_request(setup, descriptor, durable, reference.clone(), request_byte)?;
         Ok(
-            AuthenticatedGuidedRecipientImportSession::from_authenticated_recovery(
+            recipient_import_guided_session_controller::authenticated_guided_recipient_import_session_fixture(
                 &setup.state,
                 setup.fixture.owner_account_id,
                 setup.fixture.replacement.identity().device_id(),
@@ -6505,6 +6506,34 @@ mod tests {
                     setup.fixture.membership.clone(),
                 )?],
             )?,
+        )
+    }
+
+    fn guided_recovery_assembly_issuer<'identity>(
+        setup: &IntentRoundFixture,
+        descriptor: &RuntimeIpcDescriptor,
+        durable: &DurableRecipientRecoveryImportRoundIntent,
+        reference: RuntimeIpcRecipientImportMembershipReference,
+        request_byte: u8,
+        signer: &'identity DeviceIdentity,
+    ) -> Result<RecipientImportGuidedRecoveryAssemblyIssuer<'identity>, Box<dyn std::error::Error>>
+    {
+        let plan_request =
+            adapter_plan_request(setup, descriptor, durable, reference.clone(), request_byte)?;
+        Ok(
+            RecipientImportGuidedRecoveryAssemblyIssuer::from_authenticated_plan_assembly(
+                &setup.state,
+                setup.fixture.owner_account_id,
+                setup.fixture.replacement.identity().device_id(),
+                signer,
+                descriptor.clone(),
+                plan_request,
+                setup.coordination.clone(),
+                vec![GuidedRecipientImportMembership::new(
+                    reference,
+                    setup.fixture.membership.clone(),
+                )?],
+            ),
         )
     }
 
@@ -9990,6 +10019,100 @@ mod tests {
             owner.install(17_100, 0),
             Err(RecipientImportGuidedRecoveryHostError::Controller(error))
                 if matches!(*error, RecipientImportGuidedSessionControllerError::InvalidLifetime)
+        ));
+
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_recovery_assembly_issuer_emits_one_installation_owner()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-recovery-assembly-issuer")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 241)?;
+        let signer = setup.fixture.replacement.identity();
+
+        let issuer =
+            guided_recovery_assembly_issuer(&setup, &descriptor, &durable, reference, 242, signer)?;
+        let owner = issuer.issue()?;
+        let mut host = owner.install(17_200, 100)?;
+
+        assert!(host.has_pending_handoff());
+        assert!(!host.opened_network());
+        assert_eq!(
+            host.cancel(
+                RecipientImportGuidedRecoveryHostCancel::pending_handoff(),
+                17_201,
+            )?
+            .phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Idle
+        );
+        assert!(!host.has_pending_handoff());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_recovery_assembly_issuer_is_one_shot_and_fail_closed()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-recovery-assembly-issuer-fail")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 243)?;
+        let signer = setup.fixture.replacement.identity();
+        let foreign_signer = DeviceIdentity::generate()?;
+
+        let issuer = guided_recovery_assembly_issuer(
+            &setup,
+            &descriptor,
+            &durable,
+            reference.clone(),
+            244,
+            &foreign_signer,
+        )?;
+        assert!(matches!(
+            issuer.issue(),
+            Err(RecipientImportGuidedSessionControllerError::OwnerDeviceMismatch)
+        ));
+
+        let plan_request =
+            adapter_plan_request(&setup, &descriptor, &durable, reference.clone(), 245)?;
+        let issuer = RecipientImportGuidedRecoveryAssemblyIssuer::from_authenticated_plan_assembly(
+            setup.state.join("foreign-state"),
+            setup.fixture.owner_account_id,
+            signer.device_id(),
+            signer,
+            descriptor.clone(),
+            plan_request,
+            setup.coordination.clone(),
+            vec![GuidedRecipientImportMembership::new(
+                reference.clone(),
+                setup.fixture.membership.clone(),
+            )?],
+        );
+        assert!(matches!(
+            issuer.issue(),
+            Err(RecipientImportGuidedSessionControllerError::StateDirectoryMismatch)
+        ));
+
+        let plan_request = adapter_plan_request(&setup, &descriptor, &durable, reference, 246)?;
+        let changed_reference = adapter_membership_reference(0, &setup.fixture.membership, 247)?;
+        let issuer = RecipientImportGuidedRecoveryAssemblyIssuer::from_authenticated_plan_assembly(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            signer.device_id(),
+            signer,
+            descriptor,
+            plan_request,
+            setup.coordination.clone(),
+            vec![GuidedRecipientImportMembership::new(
+                changed_reference,
+                setup.fixture.membership.clone(),
+            )?],
+        );
+        assert!(matches!(
+            issuer.issue(),
+            Err(RecipientImportGuidedSessionControllerError::MembershipSetChanged)
         ));
 
         Ok(())
