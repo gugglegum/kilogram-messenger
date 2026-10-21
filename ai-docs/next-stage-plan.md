@@ -1,31 +1,29 @@
-# Текущая точка: M1.2.32 завершён, следующий M1.2.33
+# Текущая точка: M1.2.33 завершён, следующий M1.2.34
 
-Статус на 2026-10-21: один active recipient-signed intent теперь можно
-исполнить через отдельный read-only content-addressed plan и явные foreground
-`apply_next`/`apply_bounded`. Default/hard budget — 1/8, одновременно работает
-ровно один import. Caller заново предоставляет exact live memberships; fresh
-candidate, active intent, coordinator и ordered durable prefix перепроверяются
-после каждого source. Crash-window до coordinator refresh reconciles, complete
-replay не импортирует, consume остаётся отдельной signed ceremony. Focused
-regression 3/3, execution crate 34/34, boundary 10/10, readiness 158/158.
-Network/background/runtime/IPC/CLI/desktop authority отсутствуют, public
-default — `legacy-only`.
+Статус на 2026-10-21: для M1.2.32 определён dormant descriptor-bound
+cross-process contract. Read-only `plan`/`status`, explicit `confirm` и
+`apply-next`/`apply-bounded` являются разными стадиями; active intent сам не
+даёт import authority. Через IPC идут только максимум 8 caller-ordered opaque
+authenticated membership references, которые будущий adapter обязан reload-ить
+из live caller-authorized context. Exact request/response, confirmation и
+mutation nonce bindings fail closed. Focused regression 8/8, runtime IPC crate
+35/35, boundary 10/10, readiness 159/159. Active runtime command/adapter,
+CLI/desktop/network/background и automatic consume отсутствуют, public default
+— `legacy-only`.
 
-## Следующий этап: M1.2.33 dormant cross-process recipient import execution contract
+## Следующий этап: M1.2.34 dormant read-only recipient import adapter
 
-- определить bounded canonical request/result для read-only plan/status и
-  explicit `apply-next`/`apply-bounded`, exact-связанный с intent ID, execution
-  plan ID, current coordinator и caller-confirmed membership bindings;
-- не переносить membership authority в одну durable DB: process boundary
-  должен получать либо проверяемые live snapshots, либо exact authenticated
-  references с обязательной повторной загрузкой из caller-authorized context;
-- разделить request creation/confirmation/execution result, запретить implicit
-  apply из-за одного лишь active intent и сохранить отдельный signed consume;
-- mutation request должен быть replay-safe, bounded и privacy-safe; stale,
-  reordered, substituted или partially decoded input fail closed до import;
-- оставить contract dormant: не регистрировать active runtime command, CLI или
-  desktop control, не запускать worker/timer/network и не менять public default
-  либо существующие wire formats.
+- добавить transport-independent adapter только для `Plan` и `Status`, не
+  регистрируя его в active runtime server;
+- принимать caller-owned membership loader callback, reload-ить каждый exact
+  authenticated reference и строить transient M1.2.32 source list без
+  persistence либо authority inference из recovery DB;
+- `Plan` должен вызвать только read-only M1.2.32 planning и вернуть privacy-safe
+  projection; `Status` не должен создавать intent, plan, confirmation или DB;
+- changed/reordered/missing reference, coordinator/intent/plan mismatch и
+  loader ambiguity fail closed до import; mutation commands adapter отвергает;
+- сохранить IPC v33/domain v14, не добавлять server dispatch, CLI/desktop,
+  worker/timer/network и не менять public default либо wire formats.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

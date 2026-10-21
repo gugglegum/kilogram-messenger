@@ -1312,6 +1312,13 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   перепроверяются, crash-window coordinator reconciles без duplicate import.
   Default/hard budget 1/8, один import in-flight; automatic consume, discovery,
   background/network/runtime/IPC/desktop authority отсутствуют.
+- [`../docs/RFC-0257-m1233-dormant-cross-process-recipient-import-execution-contract.md`](../docs/RFC-0257-m1233-dormant-cross-process-recipient-import-execution-contract.md) —
+  M1.2.33 задаёт dormant descriptor-bound Postcard contract для раздельных
+  `plan`/`status`, explicit `confirm` и `apply-next`/`apply-bounded`. Через
+  границу идут только caller-ordered authenticated membership references;
+  будущий adapter обязан reload-ить live context. Request/response exact-bound,
+  mutation nonce и confirmation раздельны; active runtime/adapter/CLI/desktop,
+  implicit apply и automatic consume не добавлены.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

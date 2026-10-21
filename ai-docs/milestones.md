@@ -8131,3 +8131,24 @@ correlation visible, Windows-only field evidence, independent security audit
 - новый durable store, discovery/background/network/runtime/IPC/CLI/desktop
   authority, product network, second host, release/ZIP/tag и automatic GitHub
   build отсутствуют; default `legacy-only`.
+
+### M1.2.33 — dormant cross-process recipient import execution contract: принят локально
+
+- отдельный canonical Postcard contract ограничен 8 KiB request, 16 KiB signed
+  response и максимум 8 membership references; active IPC остаётся v33/domain
+  v14 и не получает нового command variant;
+- стадии разделены на read-only `plan`/`status`, explicit `confirm` и mutation
+  `apply-next`/`apply-bounded`. Exact confirmation phrase, confirmation ID,
+  confirmation nonce и отдельный mutation nonce обязательны;
+- каждая стадия exact-связана с request/descriptor/current Device, intent,
+  execution plan, coordinator ID+sequence и digest caller-ordered references.
+  Response подписывает current descriptor Device;
+- IPC не переносит membership snapshot. Opaque authority/context references
+  обязаны заново reload-иться будущим adapter из caller-authorized live context;
+  reorder/duplicate/substitution/partial decode и stage skip fail closed;
+- focused stable-path regression прошёл 8/8, полный runtime IPC crate — 35/35,
+  boundary отклонил 10/10 mutations, readiness прошёл 159/159 с rustfmt и
+  workspace-wide locked/offline strict Clippy;
+- active adapter/server dispatch, CLI/desktop, import/consume authority,
+  product network, second host, release/ZIP/tag и automatic GitHub build
+  отсутствуют; default `legacy-only`.

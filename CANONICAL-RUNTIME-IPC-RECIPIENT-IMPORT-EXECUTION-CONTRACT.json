@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.33",
+  "status": "canonical-runtime-ipc-recipient-import-execution-contract-verified",
+  "implementation": [
+    "crates/kilogram-runtime-ipc/src/recipient_import_execution_contract.rs"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_history_transfer_wire": false,
+  "changes_active_runtime_ipc": false,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "contract": {
+    "version": 1,
+    "maximum_request_bytes": 8192,
+    "maximum_signed_response_bytes": 16384,
+    "maximum_membership_references": 8,
+    "default_execution_steps": 1,
+    "canonical_codec": "postcard-reencode-exact",
+    "active_runtime_ipc_version_retained": 33,
+    "active_runtime_descriptor_domain_retained": 14,
+    "active_runtime_command_variant_added": false,
+    "active_adapter_added": false,
+    "cli_command_added": false,
+    "desktop_control_added": false
+  },
+  "stages": [
+    "plan",
+    "status",
+    "confirm",
+    "apply-next",
+    "apply-bounded"
+  ],
+  "stage_boundary": {
+    "plan_is_read_only": true,
+    "status_is_read_only": true,
+    "explicit_confirmation_required": true,
+    "exact_confirmation_phrase_required": true,
+    "mutation_nonce_required": true,
+    "confirmation_id_required_for_apply": true,
+    "implicit_apply_from_active_intent_allowed": false,
+    "automatic_intent_consume_allowed": false,
+    "stage_skip_allowed": false
+  },
+  "membership_authority": {
+    "caller_ordered_authenticated_references_only": true,
+    "strictly_increasing_unique_ordinals": true,
+    "exact_membership_set_digest": true,
+    "reload_before_execution_required": true,
+    "caller_authorized_context_required": true,
+    "membership_snapshot_transported": false,
+    "single_database_membership_authority": false,
+    "automatic_source_discovery": false
+  },
+  "exact_binding": {
+    "request_id": true,
+    "runtime_descriptor": true,
+    "current_descriptor_device": true,
+    "intent_id": true,
+    "execution_plan_id": true,
+    "coordinator_plan_id_and_sequence": true,
+    "ordered_membership_set_digest": true,
+    "confirmation_id_and_nonce": true,
+    "mutation_nonce": true,
+    "bounded_step_count": true,
+    "domain_separated_device_signature": true
+  },
+  "privacy_projection": {
+    "opaque_content_addressed_ids": true,
+    "closed_counts_and_states": true,
+    "raw_account_id_exposed": false,
+    "raw_device_id_exposed": false,
+    "root_or_device_secret_exposed": false,
+    "filesystem_path_exposed": false,
+    "transport_ticket_or_endpoint_exposed": false,
+    "membership_snapshot_exposed": false,
+    "message_body_or_plaintext_exposed": false,
+    "ciphertext_history_artifact_exposed": false
+  },
+  "replay_boundary": {
+    "canonical_reencode_required": true,
+    "response_exact_request_digest_bound": true,
+    "reordered_memberships_rejected": true,
+    "duplicate_memberships_rejected": true,
+    "substituted_memberships_rejected": true,
+    "stale_coordinator_rejected_by_future_adapter": true,
+    "mutation_replay_requires_durable_deduplication_by_future_adapter": true,
+    "partial_decode_rejected": true
+  },
+  "verification": {
+    "stable_path_rust_harness_required_on_windows": true,
+    "targeted_contract_tests": "8/8",
+    "full_runtime_ipc_tests": "35/35",
+    "boundary_negative_mutations": "10/10",
+    "m1_readiness": "159/159",
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "second_host_required": false,
+    "network_executed": false
+  },
+  "non_claims": [
+    "active-runtime-ipc-command",
+    "runtime-read-adapter",
+    "runtime-mutation-adapter",
+    "cli-or-desktop-control",
+    "membership-authority-persistence",
+    "automatic-recipient-import",
+    "automatic-intent-consumption",
+    "network-or-background-worker",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "dormant-read-only-recipient-import-adapter",
+    "explicit-mutation-adapter-with-durable-replay-ledger",
+    "guided-desktop-recipient-import-ceremony"
+  ]
+}

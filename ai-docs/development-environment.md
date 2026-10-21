@@ -5699,3 +5699,25 @@ Hosted follow-up:
   executed outside that filesystem boundary without changing its permanent EXE
   path. No network, second host, release build, ZIP/archive, tag or automatic
   GitHub build was used; public default remains `legacy-only`.
+
+## M1.2.33 dormant cross-process recipient import execution contract environment (2026-10-21)
+
+- `kilogram-runtime-ipc` exports a dormant canonical contract module, but the
+  active `RuntimeIpcCommand`/server remain unchanged at v33/domain v14. No CLI,
+  desktop or adapter registration was added.
+- Requests are bounded to 8 KiB and split into `Plan`, `Status`, `Confirm`,
+  `ApplyNext` and `ApplyBounded`. Signed responses are bounded to 16 KiB and
+  exact-bind request digest, verified descriptor and current descriptor Device.
+- Up to eight strictly ordered membership entries contain only opaque authority
+  reference, membership digest and authenticated context IDs. The contract
+  requires a future adapter to reload the caller-authorized live membership;
+  no membership snapshot or history content crosses the boundary.
+- Confirmation and mutation use distinct nonces/IDs. Stage skip, descriptor or
+  request substitution, reordered/duplicate references and step-budget escape
+  fail closed; response explicitly cannot consume the durable intent.
+- Eight focused stable-path tests and all 35/35 runtime IPC tests pass. Boundary
+  rejects 10/10 mutations; accepted-tag readiness passes 159/159 with rustfmt
+  and workspace-wide locked/offline strict Clippy.
+- Stable Windows test EXE paths were retained. No product network, second host,
+  release build, archive, tag or automatic GitHub build was used; public default
+  remains `legacy-only`.

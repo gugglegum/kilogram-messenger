@@ -2732,6 +2732,14 @@ durable ordered prefix after every source. Crash-window coordinator refresh is
 reconciled without duplicate import, while automatic consume, discovery,
 background work, network and runtime/desktop authority remain absent.
 
+[`RFC-0257`](docs/RFC-0257-m1233-dormant-cross-process-recipient-import-execution-contract.md)
+defines a dormant descriptor-bound cross-process vocabulary for read-only
+planning/status, explicit confirmation and bounded apply. Only ordered
+authenticated membership references cross the boundary and every later stage
+repeats their exact digest; a future adapter must reload the caller-authorized
+live context. No active runtime command, adapter, CLI/desktop control, implicit
+intent execution or automatic consume is introduced.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected
