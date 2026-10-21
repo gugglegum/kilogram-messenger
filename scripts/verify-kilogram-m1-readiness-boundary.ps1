@@ -59,6 +59,10 @@ foreach ($required in @(
     "'verify-kilogram-runtime-ipc-recipient-import-consumption-envelope-boundary.ps1' = 'runtime_ipc_recipient_import_consumption_envelope_boundary=verified'",
     "'verify-kilogram-canonical-recipient-import-consumption-runtime-service-boundary.ps1' = 'canonical_recipient_import_consumption_runtime_service_boundary=verified'",
     "'verify-kilogram-canonical-recipient-import-consumption-runtime-attachment-boundary.ps1' = 'canonical_recipient_import_consumption_runtime_attachment_boundary=verified'",
+    "'verify-kilogram-canonical-recipient-import-consumption-guided-producer-boundary.ps1' = 'canonical_recipient_import_consumption_guided_producer_boundary=verified'",
+    "'verify-kilogram-recipient-import-guided-session-controller-boundary.ps1' = 'recipient_import_guided_session_controller_boundary=verified'",
+    "'verify-kilogram-recipient-import-guided-session-local-ux-boundary.ps1' = 'recipient_import_guided_session_local_ux_boundary=verified'",
+    "'verify-kilogram-recipient-import-guided-session-start-producer-boundary.ps1' = 'recipient_import_guided_session_start_producer_boundary=verified'",
     "'verify-kilogram-canonical-runtime-ipc-peer-reenrollment-contract-boundary.ps1' = 'canonical_runtime_ipc_peer_reenrollment_contract_boundary=verified'",
     "'verify-kilogram-canonical-runtime-ipc-peer-reenrollment-read-adapter-boundary.ps1' = 'canonical_runtime_ipc_peer_reenrollment_read_adapter_boundary=verified'",
     "'verify-kilogram-canonical-runtime-ipc-peer-reenrollment-mutation-adapter-boundary.ps1' = 'canonical_runtime_ipc_peer_reenrollment_mutation_adapter_boundary=verified'",
@@ -159,7 +163,7 @@ foreach ($required in @(
     "'verify-kilogram-canonical-wire-boundary.ps1' = 'canonical_wire_boundary=verified'",
     "'verify-kilogram-protocol-compatibility-boundary.ps1' = 'protocol_compatibility_boundary=verified'",
     "Get-ChildItem -LiteralPath `$scriptsDirectory -Filter 'verify-*-boundary.ps1'",
-    'M1 readiness boundary inventory must contain exactly 175 gates',
+    'M1 readiness boundary inventory must contain exactly 176 gates',
     'function Invoke-CapturedPowerShell',
     "`$ErrorActionPreference = 'Continue'",
     "`$gateCapture.ExitCode -ne 0",
@@ -274,7 +278,7 @@ if ($LASTEXITCODE -ne 0 -or
 }
 
 Write-Output 'm1_readiness_boundary=verified'
-Write-Output 'boundary_inventory=closed-175'
+Write-Output 'boundary_inventory=closed-176'
 Write-Output 'candidate_or_accepted_tag_verifier=required'
 Write-Output 'accepted_m1_tag=M1.0.0'
 Write-Output 'format_and_offline_strict_clippy=required'

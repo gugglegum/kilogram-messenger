@@ -31,6 +31,7 @@ mod recipient_import_consumption_runtime_service;
 mod recipient_import_consumption_session_cache;
 mod recipient_import_guided_session_controller;
 mod recipient_import_guided_session_local_ux;
+mod recipient_import_guided_session_start_producer;
 mod recipient_import_mutation_adapter;
 mod recipient_import_read_adapter;
 
@@ -96,6 +97,10 @@ pub use recipient_import_guided_session_local_ux::{
     RecipientImportGuidedSessionLocalUxError, RecipientImportGuidedSessionLocalUxPhase,
     RecipientImportGuidedSessionLocalUxRefresh, RecipientImportGuidedSessionLocalUxStart,
     RecipientImportGuidedSessionLocalUxView,
+};
+pub use recipient_import_guided_session_start_producer::{
+    AuthenticatedGuidedRecipientImportSessionStartHandoff,
+    RecipientImportGuidedSessionStartProducer, RecipientImportGuidedSessionStartProducerError,
 };
 pub use recipient_import_mutation_adapter::{
     DurableRecipientImportCompletedMutation, MAX_DURABLE_RECIPIENT_IMPORT_MUTATION_RECORDS,

@@ -12,6 +12,25 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.50 — authenticated one-shot guided-session start producer: выполнено
+
+- Sealed process-local handoff содержит полный M1.2.48 authority, не имеет
+  public constructor/Clone/Debug/serde и живёт максимум 300 секунд.
+- Producer заимствует exact controller и принимает только handoff, clock и
+  bounded session lifetime; loose path/signer/descriptor/request/coordinator/
+  membership передать нельзя.
+- Authority извлекается до проверки: success, replay, expiry, cancel, invalid
+  lifetime, foreign state/Account/Device и active session поглощают handoff.
+  Session не может пережить handoff.
+- Перед выдачей единственного `LocalUxStart` повторяются signed request,
+  coordinator, ordered membership/digest и canonical active-intent/source Plan
+  preflight; controller повторяет его при фактическом start.
+- Stable-name producer fixtures прошли 2/2 за 159.64s; combined guided-session
+  regression M1.2.47–M1.2.50 прошёл 6/6 за 862.90s. Dedicated boundary
+  отклонил 17/17 mutations, accepted-tag readiness прошёл 176/176 gates.
+  CLI/desktop/runtime IPC/timer/network не зарегистрированы, ordinary startup
+  idle/unattached, public `legacy-only` неизменён.
+
 ### M1.2.49 — dormant local-UX guided-session adapter: выполнено
 
 - Process-local facade заимствует единственный M1.2.48 controller и выдаёт UI

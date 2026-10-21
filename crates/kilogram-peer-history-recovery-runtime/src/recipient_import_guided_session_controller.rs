@@ -35,6 +35,7 @@ use crate::{
     execution_api::{
         RecipientHistoryImportStore, RecipientHistoryTransferInbox,
         RecipientRecoveryCoordinationPlan, RecipientRecoveryImportRoundIntentStore,
+        recipient_import_membership_digest,
     },
     recipient_import_consumption_runtime_attachment::GuidedRecipientImportMembership,
 };
@@ -71,46 +72,12 @@ impl AuthenticatedGuidedRecipientImportSession {
         coordination: RecipientRecoveryCoordinationPlan,
         memberships: Vec<GuidedRecipientImportMembership>,
     ) -> Result<Self, RecipientImportGuidedSessionControllerError> {
-        let state_directory = state_directory.as_ref().to_path_buf();
-        if coordination.state_directory() != state_directory {
-            return Err(RecipientImportGuidedSessionControllerError::StateDirectoryMismatch);
-        }
-        if coordination.owner_account_id() != owner_account_id
-            || descriptor.account_id() != owner_account_id
-        {
-            return Err(RecipientImportGuidedSessionControllerError::OwnerAccountMismatch);
-        }
-        if coordination.owner_device_id() != owner_device_id
-            || descriptor.device_id() != owner_device_id
-        {
-            return Err(RecipientImportGuidedSessionControllerError::OwnerDeviceMismatch);
-        }
-        let encoded = plan_request.encode()?;
-        RuntimeIpcRecipientImportExecutionRequest::decode_and_validate(&encoded, &descriptor)?;
-        let RuntimeIpcRecipientImportExecutionCommand::Plan {
-            coordinator_plan_id,
-            coordinator_sequence,
-            memberships: requested_memberships,
-            ..
-        } = plan_request.command()
-        else {
-            return Err(RecipientImportGuidedSessionControllerError::NotPlanRequest);
-        };
-        if coordinator_plan_id.to_bytes()? != coordination.plan_id()
-            || *coordinator_sequence != coordination.sequence()
-        {
-            return Err(RecipientImportGuidedSessionControllerError::CoordinatorChanged);
-        }
         let (references, memberships): (Vec<_>, Vec<_>) = memberships
             .into_iter()
             .map(GuidedRecipientImportMembership::into_parts)
             .unzip();
-        recipient_import_membership_set_digest(&references)?;
-        if requested_memberships != &references {
-            return Err(RecipientImportGuidedSessionControllerError::MembershipSetChanged);
-        }
-        Ok(Self {
-            state_directory,
+        let authority = Self {
+            state_directory: state_directory.as_ref().to_path_buf(),
             owner_account_id,
             owner_device_id,
             descriptor,
@@ -118,7 +85,59 @@ impl AuthenticatedGuidedRecipientImportSession {
             coordination,
             references,
             memberships,
-        })
+        };
+        authority.verify_authenticated_recovery()?;
+        Ok(authority)
+    }
+
+    fn verify_authenticated_recovery(
+        &self,
+    ) -> Result<(), RecipientImportGuidedSessionControllerError> {
+        if self.coordination.state_directory() != self.state_directory {
+            return Err(RecipientImportGuidedSessionControllerError::StateDirectoryMismatch);
+        }
+        if self.coordination.owner_account_id() != self.owner_account_id
+            || self.descriptor.account_id() != self.owner_account_id
+        {
+            return Err(RecipientImportGuidedSessionControllerError::OwnerAccountMismatch);
+        }
+        if self.coordination.owner_device_id() != self.owner_device_id
+            || self.descriptor.device_id() != self.owner_device_id
+        {
+            return Err(RecipientImportGuidedSessionControllerError::OwnerDeviceMismatch);
+        }
+        let encoded = self.plan_request.encode()?;
+        RuntimeIpcRecipientImportExecutionRequest::decode_and_validate(&encoded, &self.descriptor)?;
+        let RuntimeIpcRecipientImportExecutionCommand::Plan {
+            coordinator_plan_id,
+            coordinator_sequence,
+            memberships: requested_memberships,
+            ..
+        } = self.plan_request.command()
+        else {
+            return Err(RecipientImportGuidedSessionControllerError::NotPlanRequest);
+        };
+        if coordinator_plan_id.to_bytes()? != self.coordination.plan_id()
+            || *coordinator_sequence != self.coordination.sequence()
+        {
+            return Err(RecipientImportGuidedSessionControllerError::CoordinatorChanged);
+        }
+        if self.references.len() != self.memberships.len() {
+            return Err(RecipientImportGuidedSessionControllerError::MembershipSetChanged);
+        }
+        recipient_import_membership_set_digest(&self.references)?;
+        if requested_memberships != &self.references {
+            return Err(RecipientImportGuidedSessionControllerError::MembershipSetChanged);
+        }
+        for (reference, membership) in self.references.iter().zip(&self.memberships) {
+            let digest = RuntimeIpcRecipientImportArtifactId::from_bytes(
+                recipient_import_membership_digest(membership).map_err(ContractError::from)?,
+            )?;
+            if reference.membership_digest != digest {
+                return Err(RecipientImportGuidedSessionControllerError::MembershipSetChanged);
+            }
+        }
+        Ok(())
     }
 
     fn verify_controller_binding(
@@ -509,28 +528,7 @@ impl<'identity> RecipientImportGuidedSessionController<'identity> {
         now_unix_seconds: u64,
         lifetime_seconds: u64,
     ) -> Result<RecipientImportGuidedSessionPlan, RecipientImportGuidedSessionControllerError> {
-        self.purge_expired(now_unix_seconds)?;
-        if self.active.is_some() {
-            return Err(RecipientImportGuidedSessionControllerError::SessionAlreadyActive);
-        }
-        validate_lifetime(now_unix_seconds, lifetime_seconds)?;
-        authority.verify_controller_binding(
-            &self.state_directory,
-            self.owner_account_id,
-            self.owner_device_id,
-        )?;
-        if self.actor.context_attached() {
-            return Err(RecipientImportGuidedSessionControllerError::ActorStateChanged);
-        }
-        let dispatch = RecipientHistoryRecoveryImportReadAdapter::dispatch(
-            &authority.plan_request,
-            &self.intent_store,
-            &authority.coordination,
-            &self.inbox,
-            &self.imports,
-            &authority,
-            None,
-        )?;
+        let dispatch = self.prepare_start(&authority, now_unix_seconds, lifetime_seconds)?;
         let summary = dispatch
             .planned_summary()
             .cloned()
@@ -560,6 +558,52 @@ impl<'identity> RecipientImportGuidedSessionController<'identity> {
             },
         )));
         Ok(result)
+    }
+
+    pub(crate) fn preflight_local_ux_start(
+        &mut self,
+        authority: &AuthenticatedGuidedRecipientImportSession,
+        now_unix_seconds: u64,
+        lifetime_seconds: u64,
+    ) -> Result<(), RecipientImportGuidedSessionControllerError> {
+        self.prepare_start(authority, now_unix_seconds, lifetime_seconds)?;
+        Ok(())
+    }
+
+    fn prepare_start(
+        &mut self,
+        authority: &AuthenticatedGuidedRecipientImportSession,
+        now_unix_seconds: u64,
+        lifetime_seconds: u64,
+    ) -> Result<RecipientImportReadAdapterDispatch, RecipientImportGuidedSessionControllerError>
+    {
+        self.purge_expired(now_unix_seconds)?;
+        if self.active.is_some() {
+            return Err(RecipientImportGuidedSessionControllerError::SessionAlreadyActive);
+        }
+        validate_lifetime(now_unix_seconds, lifetime_seconds)?;
+        authority.verify_controller_binding(
+            &self.state_directory,
+            self.owner_account_id,
+            self.owner_device_id,
+        )?;
+        authority.verify_authenticated_recovery()?;
+        if self.actor.context_attached() {
+            return Err(RecipientImportGuidedSessionControllerError::ActorStateChanged);
+        }
+        let dispatch = RecipientHistoryRecoveryImportReadAdapter::dispatch(
+            &authority.plan_request,
+            &self.intent_store,
+            &authority.coordination,
+            &self.inbox,
+            &self.imports,
+            authority,
+            None,
+        )?;
+        dispatch
+            .planned_summary()
+            .ok_or(RecipientImportGuidedSessionControllerError::PlanRejected)?;
+        Ok(dispatch)
     }
 
     pub fn confirm(

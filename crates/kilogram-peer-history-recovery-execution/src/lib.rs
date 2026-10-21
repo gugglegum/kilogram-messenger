@@ -106,6 +106,10 @@ mod recipient_import_guided_session_controller;
 mod recipient_import_guided_session_local_ux;
 
 #[cfg(test)]
+#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_guided_session_start_producer.rs"]
+mod recipient_import_guided_session_start_producer;
+
+#[cfg(test)]
 #[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_mutation_adapter.rs"]
 mod recipient_import_mutation_adapter;
 
@@ -189,6 +193,11 @@ pub use recipient_import_guided_session_local_ux::{
     RecipientImportGuidedSessionLocalUxCancel, RecipientImportGuidedSessionLocalUxConfirm,
     RecipientImportGuidedSessionLocalUxError, RecipientImportGuidedSessionLocalUxPhase,
     RecipientImportGuidedSessionLocalUxRefresh, RecipientImportGuidedSessionLocalUxStart,
+};
+#[cfg(test)]
+pub use recipient_import_guided_session_start_producer::{
+    AuthenticatedGuidedRecipientImportSessionStartHandoff,
+    RecipientImportGuidedSessionStartProducer, RecipientImportGuidedSessionStartProducerError,
 };
 #[cfg(test)]
 pub use recipient_import_mutation_adapter::{
@@ -6488,6 +6497,31 @@ mod tests {
         )
     }
 
+    fn guided_session_local_ux_start(
+        controller: &mut RecipientImportGuidedSessionController<'_>,
+        authority: AuthenticatedGuidedRecipientImportSession,
+        issued_at_unix_seconds: u64,
+        handoff_lifetime_seconds: u64,
+        now_unix_seconds: u64,
+        session_lifetime_seconds: u64,
+    ) -> Result<RecipientImportGuidedSessionLocalUxStart, Box<dyn std::error::Error>> {
+        let mut handoff =
+            AuthenticatedGuidedRecipientImportSessionStartHandoff::from_authenticated_recovery(
+                authority,
+                issued_at_unix_seconds,
+                handoff_lifetime_seconds,
+            )?;
+        let start = RecipientImportGuidedSessionStartProducer::new(controller).produce(
+            &mut handoff,
+            now_unix_seconds,
+            session_lifetime_seconds,
+        )?;
+        if !handoff.consumed() {
+            return Err("guided session start hand-off was not consumed".into());
+        }
+        Ok(start)
+    }
+
     struct CompletedAdapterMutation {
         store: RecipientRecoveryImportRoundIntentStore,
         durable: DurableRecipientRecoveryImportRoundIntent,
@@ -9174,7 +9208,6 @@ mod tests {
         let (_store, durable) = committed_adapter_intent(&setup)?;
         let descriptor = adapter_descriptor(&setup)?;
         let reference = adapter_membership_reference(0, &setup.fixture.membership, 161)?;
-        let authority = guided_session_authority(&setup, &descriptor, &durable, reference, 162)?;
         let mut controller = RecipientImportGuidedSessionController::new(
             &setup.state,
             setup.fixture.owner_account_id,
@@ -9191,10 +9224,16 @@ mod tests {
         assert!(!idle.can_apply());
         assert!(!idle.can_cancel());
 
-        let planned = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).start(
-            RecipientImportGuidedSessionLocalUxStart::from_authenticated_recovery(authority, 300),
+        let start = guided_session_local_ux_start(
+            &mut controller,
+            guided_session_authority(&setup, &descriptor, &durable, reference, 162)?,
             11_001,
+            300,
+            11_001,
+            300,
         )?;
+        let planned = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller)
+            .start(start, 11_001)?;
         assert_eq!(
             planned.phase(),
             RecipientImportGuidedSessionLocalUxPhase::Planned
@@ -9306,13 +9345,16 @@ mod tests {
             setup.fixture.replacement.identity(),
         )?;
 
-        let planned = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).start(
-            RecipientImportGuidedSessionLocalUxStart::from_authenticated_recovery(
-                guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 172)?,
-                300,
-            ),
+        let start = guided_session_local_ux_start(
+            &mut controller,
+            guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 172)?,
             12_000,
+            300,
+            12_000,
+            300,
         )?;
+        let planned = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller)
+            .start(start, 12_000)?;
         let first_session = planned
             .session_id()
             .cloned()
@@ -9354,13 +9396,16 @@ mod tests {
             RecipientImportGuidedSessionLocalUxPhase::Idle
         );
 
-        let planned = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).start(
-            RecipientImportGuidedSessionLocalUxStart::from_authenticated_recovery(
-                guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 173)?,
-                300,
-            ),
+        let start = guided_session_local_ux_start(
+            &mut controller,
+            guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 173)?,
             12_100,
+            300,
+            12_100,
+            300,
         )?;
+        let planned = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller)
+            .start(start, 12_100)?;
         let second_session = planned
             .session_id()
             .cloned()
@@ -9394,13 +9439,16 @@ mod tests {
             RecipientImportGuidedSessionLocalUxCancel::new(second_session),
         )?;
 
-        let planned = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).start(
-            RecipientImportGuidedSessionLocalUxStart::from_authenticated_recovery(
-                guided_session_authority(&setup, &descriptor, &durable, reference, 174)?,
-                300,
-            ),
+        let start = guided_session_local_ux_start(
+            &mut controller,
+            guided_session_authority(&setup, &descriptor, &durable, reference, 174)?,
             12_200,
+            300,
+            12_200,
+            300,
         )?;
+        let planned = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller)
+            .start(start, 12_200)?;
         let third_session = planned
             .session_id()
             .cloned()
@@ -9442,6 +9490,230 @@ mod tests {
         )?;
         assert!(!controller.context_attached());
         assert_eq!(controller.consumption_plan_session_count(), 0);
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_session_start_producer_is_one_shot()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-session-start-producer")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 181)?;
+        let authority = guided_session_authority(&setup, &descriptor, &durable, reference, 182)?;
+        let mut handoff =
+            AuthenticatedGuidedRecipientImportSessionStartHandoff::from_authenticated_recovery(
+                authority, 13_000, 300,
+            )?;
+        assert!(!handoff.consumed());
+        assert_eq!(handoff.expires_at_unix_seconds(), 13_300);
+
+        let mut controller = RecipientImportGuidedSessionController::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity(),
+        )?;
+        let start = {
+            let mut producer = RecipientImportGuidedSessionStartProducer::new(&mut controller);
+            assert!(!producer.opened_network());
+            let start = producer.produce(&mut handoff, 13_001, 299)?;
+            assert!(handoff.consumed());
+            assert!(matches!(
+                producer.produce(&mut handoff, 13_002, 298),
+                Err(RecipientImportGuidedSessionStartProducerError::HandoffConsumed)
+            ));
+            start
+        };
+        assert!(!handoff.cancel());
+
+        let planned = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller)
+            .start(start, 13_001)?;
+        assert_eq!(
+            planned.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Planned
+        );
+        assert_eq!(planned.expires_at_unix_seconds(), Some(13_300));
+        let session_id = planned
+            .session_id()
+            .cloned()
+            .ok_or("one-shot producer yielded no guided session ID")?;
+        RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller)
+            .cancel(RecipientImportGuidedSessionLocalUxCancel::new(session_id))?;
+        assert_eq!(controller.phase(), RecipientImportGuidedSessionPhase::Idle);
+        assert!(!controller.context_attached());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_session_start_producer_consumes_failed_authority()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-session-start-fail-closed")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 191)?;
+        let signer = setup.fixture.replacement.identity();
+        let mut controller = RecipientImportGuidedSessionController::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            signer,
+        )?;
+
+        let mut expired =
+            AuthenticatedGuidedRecipientImportSessionStartHandoff::from_authenticated_recovery(
+                guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 192)?,
+                14_000,
+                2,
+            )?;
+        assert!(matches!(
+            RecipientImportGuidedSessionStartProducer::new(&mut controller).produce(
+                &mut expired,
+                14_002,
+                1,
+            ),
+            Err(RecipientImportGuidedSessionStartProducerError::HandoffExpired)
+        ));
+        assert!(expired.consumed());
+        assert_eq!(controller.phase(), RecipientImportGuidedSessionPhase::Idle);
+
+        let mut overlong =
+            AuthenticatedGuidedRecipientImportSessionStartHandoff::from_authenticated_recovery(
+                guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 193)?,
+                14_100,
+                10,
+            )?;
+        assert!(matches!(
+            RecipientImportGuidedSessionStartProducer::new(&mut controller).produce(
+                &mut overlong,
+                14_105,
+                6,
+            ),
+            Err(RecipientImportGuidedSessionStartProducerError::SessionOutlivesHandoff)
+        ));
+        assert!(overlong.consumed());
+
+        let mut cancelled =
+            AuthenticatedGuidedRecipientImportSessionStartHandoff::from_authenticated_recovery(
+                guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 194)?,
+                14_200,
+                100,
+            )?;
+        assert!(cancelled.cancel());
+        assert!(!cancelled.cancel());
+        assert!(matches!(
+            RecipientImportGuidedSessionStartProducer::new(&mut controller).produce(
+                &mut cancelled,
+                14_201,
+                50,
+            ),
+            Err(RecipientImportGuidedSessionStartProducerError::HandoffConsumed)
+        ));
+
+        let mut foreign_state =
+            AuthenticatedGuidedRecipientImportSessionStartHandoff::from_authenticated_recovery(
+                guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 195)?,
+                14_300,
+                100,
+            )?;
+        let mut foreign_state_controller = RecipientImportGuidedSessionController::new(
+            setup.state.join("foreign-start-producer-state"),
+            setup.fixture.owner_account_id,
+            signer,
+        )?;
+        assert!(matches!(
+            RecipientImportGuidedSessionStartProducer::new(&mut foreign_state_controller).produce(
+                &mut foreign_state,
+                14_301,
+                50,
+            ),
+            Err(RecipientImportGuidedSessionStartProducerError::Controller(error))
+                if matches!(*error, RecipientImportGuidedSessionControllerError::StateDirectoryMismatch)
+        ));
+        assert!(foreign_state.consumed());
+
+        let foreign_account =
+            AccountRootState::create(setup.state.join("foreign-start-producer-account"))?;
+        let mut foreign_account_handoff =
+            AuthenticatedGuidedRecipientImportSessionStartHandoff::from_authenticated_recovery(
+                guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 196)?,
+                14_400,
+                100,
+            )?;
+        let mut foreign_account_controller = RecipientImportGuidedSessionController::new(
+            &setup.state,
+            foreign_account.account_id(),
+            signer,
+        )?;
+        assert!(matches!(
+            RecipientImportGuidedSessionStartProducer::new(&mut foreign_account_controller)
+                .produce(&mut foreign_account_handoff, 14_401, 50),
+            Err(RecipientImportGuidedSessionStartProducerError::Controller(error))
+                if matches!(*error, RecipientImportGuidedSessionControllerError::OwnerAccountMismatch)
+        ));
+        assert!(foreign_account_handoff.consumed());
+
+        let foreign_device = DeviceIdentity::generate()?;
+        let mut foreign_device_handoff =
+            AuthenticatedGuidedRecipientImportSessionStartHandoff::from_authenticated_recovery(
+                guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 197)?,
+                14_500,
+                100,
+            )?;
+        let mut foreign_device_controller = RecipientImportGuidedSessionController::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            &foreign_device,
+        )?;
+        assert!(matches!(
+            RecipientImportGuidedSessionStartProducer::new(&mut foreign_device_controller)
+                .produce(&mut foreign_device_handoff, 14_501, 50),
+            Err(RecipientImportGuidedSessionStartProducerError::Controller(error))
+                if matches!(*error, RecipientImportGuidedSessionControllerError::OwnerDeviceMismatch)
+        ));
+        assert!(foreign_device_handoff.consumed());
+
+        let active_start = guided_session_local_ux_start(
+            &mut controller,
+            guided_session_authority(&setup, &descriptor, &durable, reference.clone(), 198)?,
+            14_600,
+            100,
+            14_600,
+            100,
+        )?;
+        let active = RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller)
+            .start(active_start, 14_600)?;
+        let mut blocked =
+            AuthenticatedGuidedRecipientImportSessionStartHandoff::from_authenticated_recovery(
+                guided_session_authority(&setup, &descriptor, &durable, reference, 199)?,
+                14_601,
+                99,
+            )?;
+        assert!(matches!(
+            RecipientImportGuidedSessionStartProducer::new(&mut controller).produce(
+                &mut blocked,
+                14_601,
+                50,
+            ),
+            Err(RecipientImportGuidedSessionStartProducerError::Controller(error))
+                if matches!(*error, RecipientImportGuidedSessionControllerError::SessionAlreadyActive)
+        ));
+        assert!(blocked.consumed());
+        let active_session = active
+            .session_id()
+            .cloned()
+            .ok_or("active guided session has no ID")?;
+        RecipientImportGuidedSessionLocalUxAdapter::new(&mut controller).cancel(
+            RecipientImportGuidedSessionLocalUxCancel::new(active_session),
+        )?;
+        assert_eq!(controller.phase(), RecipientImportGuidedSessionPhase::Idle);
+
+        drop(controller);
+        let restarted = RecipientImportGuidedSessionController::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            signer,
+        )?;
+        assert_eq!(restarted.phase(), RecipientImportGuidedSessionPhase::Idle);
+        assert!(!restarted.context_attached());
         Ok(())
     }
 }

@@ -6,14 +6,14 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.49 добавил dormant local-UX
-facade поверх M1.2.48 controller. UI видит только safe phase/count/deadline/
-confirmation view; request IDs и domain-separated nonces создаются внутри.
-Stale/double submit отсекаются до durable работы, а потерянный ответ
-восстанавливается read-only `refresh`. Adapter не зарегистрирован в
-CLI/desktop/runtime IPC и ordinary startup остаётся idle/unattached. Следующий
-M1.2.50 должен дать ему one-shot start command только из существующего
-authenticated recovery owner без serialized authority fragments.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.50 добавил sealed process-local
+handoff и one-shot producer для M1.2.49 `LocalUxStart`. Authority поглощается
+до fallible preflight; replay, expiry, cancel, foreign binding и already-active
+controller не оставляют повторно используемый start. Producer повторно
+проверяет state/Account/Device, signed Plan, coordinator, active intent,
+approved sources и membership digests, но не зарегистрирован в
+CLI/desktop/runtime IPC. Следующий M1.2.51 должен поместить controller,
+pending handoff, producer и UX facade под одного dormant process owner.
 
 ## Текущее состояние
 

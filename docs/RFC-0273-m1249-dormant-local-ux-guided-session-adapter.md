@@ -70,3 +70,8 @@ wire and runtime IPC remain unchanged, and the public sync default remains
 `legacy-only`. A later stage may create the start command only inside the
 existing authenticated recovery owner; it must not reconstruct authority from
 serialized fragments.
+
+M1.2.50 implemented that successor in RFC-0274. A sealed, expiring hand-off is
+consumed before preflight and can produce at most one start command. The new
+producer repeats the controller's authenticated Plan checks and adds no
+production registration.

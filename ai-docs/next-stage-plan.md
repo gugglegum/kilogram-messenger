@@ -1,33 +1,32 @@
-# Текущая точка: M1.2.49 завершён, следующий M1.2.50
+# Текущая точка: M1.2.50 завершён, следующий M1.2.51
 
 Дата: 2026-10-21.
 
-M1.2.49 добавил dormant process-local UX facade поверх M1.2.48 controller.
-UI получает только безопасные phase/count/deadline/confirmation данные.
-Stale и double submit отсекаются до durable work; потерянный ответ
-восстанавливается read-only refresh. Однако one-shot start command пока
-создаётся только crate-private test helper-ом, а production owner отсутствует.
+M1.2.50 закрыл прямое создание UX start-команды: sealed authenticated handoff
+поглощается one-shot producer-ом до fallible preflight. Однако будущему
+process owner пока пришлось бы отдельно удерживать controller, pending handoff,
+producer и UX facade, что оставляет слишком широкую orchestration surface.
 
-## Следующий этап: M1.2.50 — authenticated one-shot session-start producer
+## Следующий этап: M1.2.51 — dormant process-owned guided-recovery host
 
-1. Выделить существующему in-process authenticated recovery ceremony owner
-   sealed hand-off, который уже содержит exact approved source set,
-   coordinator, Plan request и live memberships; loose fragments не принимать.
-2. Producer должен выдать ровно один non-cloneable/non-serializable
-   `LocalUxStart`, после чего исходный hand-off считается consumed в памяти.
-3. До выдачи повторно проверить state/Account/Device, consent/source binding,
-   coordinator sequence, membership digests и lifetime максимум 300 секунд.
-4. Cancel, expiry, mismatch, failed production и process restart не должны
-   оставлять start authority. Replay того же hand-off не создаёт вторую session.
-5. Оставить producer dormant: без IPC/CLI/desktop registration, filesystem
-   discovery, background start или network; public default — `legacy-only`.
+1. Добавить одного process-local host, владеющего M1.2.48 controller и максимум
+   одним pending M1.2.50 handoff; authority и `LocalUxStart` наружу не выдавать.
+2. Crate-private authenticated owner сможет установить handoff только в пустой
+   host. Replacement, replay, foreign binding и second pending authority должны
+   fail closed без вытеснения живой ceremony.
+3. Public local UX surface host-а должна принимать только безопасные typed
+   prepare/confirm/apply/cancel/refresh команды и возвращать M1.2.49 view.
+4. Prepare атомарно поглощает pending handoff через M1.2.50 producer; failure,
+   cancel, expiry и process restart очищают всю ephemeral custody.
+5. Оставить host dormant: не регистрировать runtime IPC/CLI/desktop/timer/
+   background/network entry point; public default остаётся `legacy-only`.
 
 ## Stop conditions
 
-- producer принимает path, signer secret, coordinator или membership snapshot
-  отдельными public аргументами;
-- hand-off можно clone/serialize/debug или восстановить из durable ledger;
-- один hand-off создаёт более одного start command;
-- stale consent/source/coordinator/membership всё равно получает authority;
-- ordinary startup автоматически создаёт session;
+- host экспортирует handoff, start command, path, signer, coordinator либо
+  membership snapshot;
+- pending authority можно заменить или сериализовать;
+- UI получает способ миновать one-shot producer или explicit confirmation;
+- restart восстанавливает pending/active authority из durable state;
+- ordinary startup автоматически создаёт host ceremony;
 - peer/runtime wire, product network или public default меняется.
