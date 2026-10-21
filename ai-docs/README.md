@@ -1348,6 +1348,12 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   active unconsumed intent и current coordinator сверяются, а caller-owned live
   memberships заново загружаются до выдачи ephemeral plan. `Commit` отвергается
   до state access; persistence, consume и active runtime отсутствуют.
+- [`../docs/RFC-0263-m1239-recipient-import-consumption-authorization-ledger.md`](../docs/RFC-0263-m1239-recipient-import-consumption-authorization-ledger.md) —
+  M1.2.39 сохраняет отдельное Device-signed разрешение только для exact
+  ephemeral consumption plan и explicit `Commit`. Read-only/no-create planning,
+  300-second original TTL, bounded immediate-durability chain, exact nonce
+  replay и fail-closed stale/rebound/corrupt handling отделяют согласие от
+  будущего consume. Intent, active runtime и network пока не изменяются.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

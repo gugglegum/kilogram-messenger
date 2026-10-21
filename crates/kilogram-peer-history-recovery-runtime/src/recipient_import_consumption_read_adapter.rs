@@ -60,6 +60,19 @@ impl RecipientImportConsumptionReadAdapterDispatch {
     pub fn scheduled_background_work(&self) -> bool {
         false
     }
+
+    #[cfg(test)]
+    #[allow(dead_code)]
+    pub(crate) fn planned_for_test(
+        plan: RuntimeIpcRecipientImportConsumptionPlanSummary,
+        loaded_membership_count: usize,
+    ) -> Self {
+        Self {
+            outcome: RuntimeIpcRecipientImportConsumptionOutcome::Planned(plan.clone()),
+            ephemeral_plan: Some(plan),
+            loaded_membership_count,
+        }
+    }
 }
 
 pub struct RecipientHistoryRecoveryImportConsumptionReadAdapter;

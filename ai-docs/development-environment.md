@@ -5840,3 +5840,26 @@ Hosted follow-up:
 - No state mutation, plan persistence, intent consumption, active runtime,
   CLI/desktop, product network, second host, release build, archive, tag or
   automatic GitHub build is used. Default remains `legacy-only`.
+
+## M1.2.39 recipient import-consumption authorization environment (2026-10-21)
+
+- `kilogram-peer-history-recovery-runtime` now owns a separate dormant
+  consumption-authorization ledger; active application manifests and runtime
+  IPC v33/domain v14 remain unchanged.
+- Planning accepts only an exact M1.2.38 ephemeral plan paired with the exact
+  M1.2.37 `Commit`, completed evidence, membership-set digest,
+  `UserConfirmed`, derived phrase and current owner Device. It is read-only and
+  does not create missing state. Durable reads reconstruct the content-addressed
+  plan from stored exact completed evidence rather than trusting its fields.
+- Explicit commit preserves the original maximum 300-second plan lifetime and
+  writes an immediate-durability, Device-signed, content-addressed chain with
+  exact nonce index, state lock and 4096-record cap.
+- Exact replay is idempotent. Rebound nonce, stale concurrent plan, expiry,
+  foreign owner, injected pre-commit failure and corrupt head fail closed;
+  whole-file rollback without an external witness is not claimed.
+- Seven focused tests pass through the stable Windows runner. Package strict
+  Clippy, rustfmt, 10/10 boundary mutations and accepted-tag readiness 165/165
+  pass.
+- No intent consumption, active runtime, CLI/desktop, product network, second
+  host, release build, archive, tag or automatic GitHub build is used. Default
+  remains `legacy-only`.

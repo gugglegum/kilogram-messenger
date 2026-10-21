@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.39",
+  "status": "canonical-recipient-import-consumption-authorization-ledger-verified",
+  "implementation": [
+    "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_authorization.rs",
+    "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_read_adapter.rs",
+    "crates/kilogram-peer-history-recovery-runtime/src/lib.rs",
+    "crates/kilogram-runtime-ipc/src/recipient_import_consumption_contract.rs"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_history_transfer_wire": false,
+  "changes_active_runtime_ipc": false,
+  "changes_runtime_ipc_contract": false,
+  "runtime_ipc_version": 33,
+  "runtime_ipc_domain": 14,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "authorization_boundary": {
+    "dormant_library_api": true,
+    "exact_ephemeral_plan_required": true,
+    "exact_commit_request_required": true,
+    "exact_completed_evidence_required": true,
+    "exact_membership_set_digest_required": true,
+    "user_confirmed_required": true,
+    "derived_confirmation_phrase_required": true,
+    "current_owner_device_signature_required": true,
+    "plan_timestamps_reused_exactly": true,
+    "maximum_lifetime_seconds": 300,
+    "planning_read_only": true,
+    "planning_creates_database": false,
+    "durably_authorizes_exact_future_consumption": true,
+    "consumes_intent": false
+  },
+  "durability": {
+    "separate_database": "history-recovery/recipient-import-consumption-authorizations-v1.redb",
+    "maximum_records": 4096,
+    "state_directory_lock_required": true,
+    "immediate_durability": true,
+    "content_addressed_device_signed_records": true,
+    "single_monotonic_chain": true,
+    "nonce_index_exact": true,
+    "exact_replay_idempotent": true,
+    "precommit_failure_retryable": true,
+    "stale_concurrent_plan_rejected": true,
+    "reused_nonce_for_other_binding_rejected": true,
+    "internal_fork_rollback_corruption_rejected": true,
+    "whole_database_rollback_witnessed": false
+  },
+  "stored_content": {
+    "owner_account_and_device": true,
+    "exact_completed_evidence": true,
+    "exact_consumption_plan": true,
+    "membership_set_digest": true,
+    "nonce_sequence_previous_id_and_expiry": true,
+    "membership_snapshot": false,
+    "message_body_or_plaintext": false,
+    "ciphertext_history_artifact": false,
+    "filesystem_path": false,
+    "transport_authority": false,
+    "raw_runtime_token": false
+  },
+  "activation_boundary": {
+    "active_runtime_registration": false,
+    "runtime_server_dispatch": false,
+    "cli_or_desktop_control": false,
+    "background_worker_or_timer": false,
+    "network": false,
+    "history_import": false,
+    "intent_consumption": false,
+    "signed_runtime_response_dispatch": false
+  },
+  "verification": {
+    "stable_path_rust_harness_required_on_windows": true,
+    "targeted_ledger_tests": "7/7",
+    "boundary_negative_mutations": "10/10",
+    "m1_readiness": "165/165",
+    "strict_clippy": true,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "second_host_required": false,
+    "network_executed": false
+  },
+  "non_claims": [
+    "recipient-import-consumption-mutation-adapter",
+    "active-runtime-recipient-import-consumption-command",
+    "automatic-intent-consumption",
+    "cli-or-desktop-ceremony",
+    "network-or-background-worker",
+    "whole-database-rollback-detection",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "explicit-recipient-import-consumption-mutation-adapter",
+    "signed-runtime-response-dispatch",
+    "guided-desktop-recipient-import-ceremony"
+  ]
+}

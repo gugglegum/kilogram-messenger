@@ -19,6 +19,7 @@ mod execution_api {
 }
 
 mod recipient_import_confirmation;
+mod recipient_import_consumption_authorization;
 mod recipient_import_consumption_read_adapter;
 mod recipient_import_mutation_adapter;
 mod recipient_import_read_adapter;
@@ -28,6 +29,16 @@ pub use recipient_import_confirmation::{
     MAX_RECIPIENT_IMPORT_CONFIRMATION_LIFETIME_SECONDS, RecipientImportConfirmationCommitOutcome,
     RecipientImportConfirmationLedger, RecipientImportConfirmationLedgerError,
     RecipientImportConfirmationPlan, RecipientImportConfirmationStatus,
+};
+pub use recipient_import_consumption_authorization::{
+    DurableRecipientImportConsumptionAuthorization,
+    MAX_DURABLE_RECIPIENT_IMPORT_CONSUMPTION_AUTHORIZATIONS,
+    MAX_RECIPIENT_IMPORT_CONSUMPTION_AUTHORIZATION_LIFETIME_SECONDS,
+    RecipientImportConsumptionAuthorizationCommitOutcome,
+    RecipientImportConsumptionAuthorizationLedger,
+    RecipientImportConsumptionAuthorizationLedgerError,
+    RecipientImportConsumptionAuthorizationPlan, RecipientImportConsumptionAuthorizationStatus,
+    RecipientImportConsumptionAuthorizationSummary,
 };
 pub use recipient_import_consumption_read_adapter::{
     RecipientHistoryRecoveryImportConsumptionReadAdapter,

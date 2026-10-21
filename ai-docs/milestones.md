@@ -8262,3 +8262,23 @@ correlation visible, Windows-only field evidence, independent security audit
   workspace locked/offline strict Clippy;
 - active runtime/server/CLI/desktop, product network, second host,
   release/ZIP/tag и automatic GitHub build отсутствуют; default `legacy-only`.
+
+### M1.2.39 — durable recipient import-consumption authorization: принят локально
+
+- отдельный dormant ledger принимает только exact M1.2.38 ephemeral plan и
+  validated M1.2.37 `Commit` с `UserConfirmed` и derived `CONSUME` phrase;
+- original plan TTL максимум 300 секунд переносится без продления. Planning
+  read-only/no-create; current owner Device подписывает exact completed
+  evidence, plan, membership-set digest, nonce, sequence, previous ID и expiry;
+- explicit commit под state lock атомарно пишет bounded 4096-record redb с
+  immediate durability, exact nonce index и одной content-addressed chain;
+- exact replay idempotent; rebound nonce, stale concurrent head, expiry,
+  foreign owner, pre-commit crash, fork/orphan/corrupt state fail closed;
+- ledger хранит no membership snapshot/message/history artifact/path/token и
+  только разрешает будущую exact consumption mutation, но сам intent не
+  consume-ит;
+- stable-path focused tests прошли 7/7, boundary отклонил 10/10 mutations,
+  readiness прошёл 165/165 с rustfmt и locked/offline strict Clippy;
+- active runtime/server/CLI/desktop/background/network, product network,
+  second host, release/ZIP/tag и automatic GitHub build отсутствуют; default
+  `legacy-only`.

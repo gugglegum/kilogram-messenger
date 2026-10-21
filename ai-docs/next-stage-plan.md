@@ -1,39 +1,37 @@
-# Текущая точка: M1.2.38 завершён, следующий M1.2.39
+# Текущая точка: M1.2.39 завершён, следующий M1.2.40
 
 Дата: 2026-10-21.
 
-M1.2.38 добавил dormant read-only adapter для `Plan` отдельной ceremony consume
-полностью импортированного intent. Adapter без создания missing state exact-
-перечитывает completed mutation, реконструирует canonical evidence, проверяет
-current coordinator, active unconsumed intent и complete progress по заново
-загруженным caller-owned memberships. `Commit` отвергается до state access,
-plan остаётся ephemeral. Проверки: signed fixtures 4/4, ledger projection 1/1,
-boundary 10/10, readiness 164/164.
+M1.2.39 отделил explicit user authorization от будущей destructive mutation.
+Отдельный bounded ledger read-only/no-create планирует и затем атомарно хранит
+Device-signed binding exact M1.2.38 plan + M1.2.37 `Commit`, membership digest,
+nonce и original 300-second TTL. Exact replay idempotent; stale/rebound/
+foreign/expired/corrupt input fail closed. Сам ledger intent не consume-ит.
+Проверки: stable-path 7/7, boundary 10/10, readiness 165/165.
 
-## Следующий этап: M1.2.39 — explicit consumption mutation adapter
+## Следующий этап: M1.2.40 — explicit consumption mutation adapter
 
-1. В runtime-integration crate обработать только M1.2.37 `Commit`; `Plan`
-   оставить read-only adapter-у и не смешивать две authority.
-2. До mutation заново выполнить exact completed-record, current coordinator,
-   active intent и caller-owned membership revalidation M1.2.38.
-3. Добавить отдельный bounded immediate-durability ledger consumption plans и
-   commits: Device-signed, content-addressed, owner-bound, single monotonic
-   chain, exact nonce index и no-clobber replay.
-4. Commit должен exact-match durable plan, быть внутри TTL, содержать точную
-   `CONSUME` phrase и `UserConfirmed`; prepared record записывается до consume,
-   completed receipt — до success response.
-5. Crash/retry после consume до completed record должен reconcile exact already
-   consumed intent без повторного/чужого consume. Rebound nonce, parallel
-   commit, stale plan/evidence и corruption fail closed.
+1. Обрабатывать только M1.2.37 `Commit` и требовать exact durable unexpired
+   M1.2.39 authorization текущего owner Device; `Plan` остаётся read adapter-у.
+2. До mutation заново exact-перечитать completed mutation и revalidate current
+   coordinator, active unconsumed intent и caller-owned memberships/progress.
+3. Добавить отдельный bounded Device-signed mutation ledger: `Prepared` должен
+   стать durable до consume, `Completed` receipt — до возврата success.
+4. Единственная разрешённая mutation — clear exact active complete intent.
+   Membership/history data не удалять; consumption означает только закрытие
+   recovery workflow и не даёт authority на стирание полученной истории.
+5. Crash/retry после consume до `Completed` должен reconcile exact consumed
+   intent без повторного/чужого consume. Exact completed replay не открывает
+   loader и не мутирует state.
 6. Active `RuntimeIpcCommand`, CLI/desktop/background/network и public default
    не менять. Signed runtime response dispatch — отдельный последующий этап.
 7. Добавить stable-path fixtures, formal manifest/RFC, 10/10 negative boundary,
-   увеличить aggregate readiness до 165 gates, затем rustfmt, locked/offline
+   увеличить aggregate readiness до 166 gates, затем rustfmt, locked/offline
    strict Clippy, commit и push.
 
 ## Stop conditions
 
-- commit может пройти без durable exact plan либо explicit approval/phrase;
+- commit может пройти без durable exact M1.2.39 authorization;
 - adapter принимает не-complete, не-active или уже чужим binding consumed intent;
 - membership/coordinator/evidence меняются после plan без fail-closed rejection;
 - crash window позволяет повторно consume другой intent или вернуть success без
