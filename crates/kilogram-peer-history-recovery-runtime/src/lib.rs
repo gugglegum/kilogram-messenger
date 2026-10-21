@@ -24,6 +24,7 @@ mod recipient_import_confirmation;
 mod recipient_import_consumption_authorization;
 mod recipient_import_consumption_mutation_adapter;
 mod recipient_import_consumption_read_adapter;
+mod recipient_import_consumption_response_dispatcher;
 mod recipient_import_mutation_adapter;
 mod recipient_import_read_adapter;
 
@@ -53,6 +54,10 @@ pub use recipient_import_consumption_read_adapter::{
     RecipientHistoryRecoveryImportConsumptionReadAdapter,
     RecipientImportConsumptionReadAdapterDispatch, RecipientImportConsumptionReadAdapterError,
 };
+pub use recipient_import_consumption_response_dispatcher::{
+    RecipientHistoryRecoveryImportConsumptionResponseDispatcher,
+    RecipientImportConsumptionResponseDispatch, RecipientImportConsumptionResponseDispatcherError,
+};
 pub use recipient_import_mutation_adapter::{
     DurableRecipientImportCompletedMutation, MAX_DURABLE_RECIPIENT_IMPORT_MUTATION_RECORDS,
     MAX_DURABLE_RECIPIENT_IMPORT_MUTATIONS, RecipientHistoryRecoveryImportMutationAdapter,
@@ -81,4 +86,5 @@ pub use kilogram_runtime_ipc::{
     RuntimeIpcRecipientImportExplicitApproval, RuntimeIpcRecipientImportIntentState,
     RuntimeIpcRecipientImportMembershipReference, RuntimeIpcRecipientImportStepDisposition,
     RuntimeIpcRecipientImportStepReceipt, RuntimeIpcRequestId,
+    SignedRuntimeIpcRecipientImportConsumptionResponse,
 };

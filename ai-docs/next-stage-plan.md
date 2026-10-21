@@ -1,38 +1,34 @@
-# Текущая точка: M1.2.40 завершён, следующий M1.2.41
+# Текущая точка: M1.2.41 завершён, следующий M1.2.42
 
 Дата: 2026-10-21.
 
-M1.2.40 реализовал только dormant explicit consumption mutation: exact durable
-M1.2.39 authorization, completed evidence, current coordinator, caller-owned
-membership и active complete intent перепроверяются до мутации. Отдельный
-Device-signed ledger сохраняет `Prepared` до consume и `Completed` receipt до
-success; crash между ними exact-reconcile-ится без второго consume. Единственная
-мутация снимает active pointer, но сохраняет intent, membership и всю историю.
-Проверки: stable-path 5/5, boundary 10/10, readiness 166/166.
+M1.2.41 собрал M1.2.38 read, M1.2.39 authorization и M1.2.40 mutation в один
+dormant dispatcher. Plan остаётся no-create, Commit требует opaque exact Plan
+stage и тот же descriptor, authorization durable до mutation, completed receipt
+durable до Device-signed response. Exact replay не вызывает loader/consume.
+Проверки: stable-path 2/2, boundary 10/10, readiness 167/167.
 
-## Следующий этап: M1.2.41 — signed dormant consumption response dispatcher
+## Следующий этап: M1.2.42 — authenticated runtime registration
 
-1. Добавить dormant dispatcher, который принимает уже validated consumption
-   request и использует M1.2.38 для `Plan`, а M1.2.39+M1.2.40 для explicit
-   `Commit`; stage skipping и подмена промежуточного plan должны fail closed.
-2. Подписывать outcome текущим descriptor Device через существующий M1.2.37
-   response contract и exact-bind request digest, descriptor и Device.
-3. Для `Plan` не создавать durable state. Для `Commit` success подписывать
-   только после durable authorization + durable mutation receipt; exact replay
-   возвращает тот же semantic receipt без повторного consume.
-4. Не регистрировать новый active `RuntimeIpcCommand`, socket handler, CLI/GUI,
-   worker или network path. Реальная runtime registration остаётся отдельной.
-5. Добавить real signed fixtures, boundary/RFC/manifest, readiness 167 gates,
-   rustfmt и locked/offline strict Clippy, затем commit/push.
+1. Добавить отдельный authenticated active runtime command для consumption
+   ceremony, не меняя transport wire и public `legacy-only` default.
+2. Runtime должен владеть bounded ephemeral Plan-stage cache: exact descriptor,
+   request digest, Device и TTL; restart/expiry очищают authority, Commit без
+   exact live stage fail closed.
+3. Plan остаётся read-only. Commit требует explicit phrase/approval и вызывает
+   только M1.2.41; response остаётся current-Device-signed.
+4. Не добавлять CLI/desktop control в этом этапе и не выполнять product network.
+5. Добавить authenticated loopback fixtures, boundary/RFC/manifest, следующий
+   readiness gate, rustfmt и locked/offline strict Clippy, затем commit/push.
 
 ## Stop conditions
 
-- unsigned outcome выходит за boundary dispatcher;
-- `Plan` создаёт authorization/mutation state;
-- `Commit` подписывается до durable authorization либо completed receipt;
-- replay повторно вызывает loader/consume или меняет canonical receipt;
-- descriptor/request/current Device binding допускает substitution;
-- active runtime/default меняются ради прохождения теста.
+- runtime cache переживает restart или TTL;
+- Commit принимается без exact same-runtime Plan stage;
+- Plan создаёт durable authorization/mutation state;
+- unsigned outcome либо identity secret выходит в IPC;
+- CLI/desktop получает mutation authority преждевременно;
+- transport wire/public default меняются ради прохождения теста.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 

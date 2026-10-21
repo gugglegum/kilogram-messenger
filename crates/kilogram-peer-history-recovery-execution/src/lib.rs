@@ -81,6 +81,10 @@ mod recipient_import_consumption_authorization;
 mod recipient_import_consumption_mutation_adapter;
 
 #[cfg(test)]
+#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_response_dispatcher.rs"]
+mod recipient_import_consumption_response_dispatcher;
+
+#[cfg(test)]
 #[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_mutation_adapter.rs"]
 mod recipient_import_mutation_adapter;
 
@@ -126,6 +130,11 @@ pub use recipient_import_consumption_mutation_adapter::{
 pub use recipient_import_consumption_read_adapter::{
     RecipientHistoryRecoveryImportConsumptionReadAdapter,
     RecipientImportConsumptionReadAdapterDispatch, RecipientImportConsumptionReadAdapterError,
+};
+#[cfg(test)]
+pub use recipient_import_consumption_response_dispatcher::{
+    RecipientHistoryRecoveryImportConsumptionResponseDispatcher,
+    RecipientImportConsumptionResponseDispatch, RecipientImportConsumptionResponseDispatcherError,
 };
 #[cfg(test)]
 pub use recipient_import_mutation_adapter::{
@@ -2156,7 +2165,7 @@ mod tests {
     };
 
     use super::*;
-    use kilogram_identity::{AccountRootState, DeviceCapability, DeviceState};
+    use kilogram_identity::{AccountRootState, DeviceCapability, DeviceIdentity, DeviceState};
     use kilogram_peer_capability_store::{PeerCapabilityKey, PeerCapabilityStore};
     use kilogram_peer_history_recovery::{
         ConversationHistoryCoverage, ExplicitOldHistoryRecoveryConsent, OldHistoryRecoveryPlan,
@@ -2187,7 +2196,8 @@ mod tests {
         RuntimeIpcRecipientImportExecutionReceiptSummary,
         RuntimeIpcRecipientImportExecutionRequest, RuntimeIpcRecipientImportExplicitApproval,
         RuntimeIpcRecipientImportIntentState, RuntimeIpcRecipientImportMembershipReference,
-        RuntimeIpcRequestId, recipient_import_confirmation_phrase,
+        RuntimeIpcRequestId, SignedRuntimeIpcRecipientImportConsumptionResponse,
+        recipient_import_confirmation_phrase,
     };
     use kilogram_sync_capability::{
         CurrentPeerInvitationBinding, PeerSyncCapabilityEvidence, SignedCurrentPeerInvitation,
@@ -7723,6 +7733,262 @@ mod tests {
                 .map_err(|error| format!("inspect intent after rejected consumption: {error:?}"))?
                 .is_some()
         );
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_consumption_response_dispatcher_signs_read_only_plan_without_state()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-consumption-response-plan")?;
+        let completed = completed_adapter_mutation(&setup, 97, 63)?;
+        let current = current_after_adapter_import(&setup)?;
+        let request = consumption_request(&completed, 66)?;
+        let dispatcher = RecipientHistoryRecoveryImportConsumptionResponseDispatcher::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+        );
+        let loader = |requested: &RuntimeIpcRecipientImportMembershipReference| {
+            RecipientImportMembershipLoad::Exact(LoadedRecipientImportMembership::new(
+                requested.authority_reference_id.clone(),
+                requested.authenticated_context_id.clone(),
+                setup.fixture.membership.clone(),
+            ))
+        };
+        let authorization_path = setup
+            .state
+            .join("history-recovery")
+            .join("recipient-import-consumption-authorizations-v1.redb");
+        let consumption_path = setup
+            .state
+            .join("history-recovery")
+            .join("recipient-import-consumption-mutations-v1.redb");
+        assert!(!authorization_path.exists());
+        assert!(!consumption_path.exists());
+
+        let planned = dispatcher.dispatch_plan(
+            &request,
+            &completed.descriptor,
+            &completed.adapter,
+            &completed.store,
+            &current,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            setup.fixture.replacement.identity(),
+            8_300,
+        )?;
+        assert!(planned.plan_stage_available());
+        assert!(!planned.authorization_committed_before_mutation());
+        assert!(!planned.mutation_receipt_persisted_before_response());
+        assert!(!planned.opened_network());
+        assert!(!planned.registered_active_runtime_command());
+        assert!(matches!(
+            planned.response().outcome(),
+            RuntimeIpcRecipientImportConsumptionOutcome::Planned(_)
+        ));
+        let encoded = planned.response().encode()?;
+        let verified = SignedRuntimeIpcRecipientImportConsumptionResponse::decode_and_verify(
+            &encoded,
+            &request,
+            &completed.descriptor,
+        )?;
+        assert_eq!(verified.request_digest(), request.request_digest()?);
+        assert!(verified.explicit_commit_required());
+        assert!(!verified.automatic_consumption());
+        assert!(!verified.intent_consumed());
+        assert!(!authorization_path.exists());
+        assert!(!consumption_path.exists());
+        assert!(
+            !completed
+                .store
+                .inspect_active()?
+                .ok_or("intent missing")?
+                .consumed()
+        );
+
+        let rejected = dispatcher.dispatch_plan(
+            &request,
+            &completed.descriptor,
+            &completed.adapter,
+            &completed.store,
+            &setup.coordination,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            setup.fixture.replacement.identity(),
+            8_301,
+        )?;
+        assert!(matches!(
+            rejected.response().outcome(),
+            RuntimeIpcRecipientImportConsumptionOutcome::Rejected {
+                hazard: RuntimeIpcRecipientImportConsumptionHazard::CoordinatorChanged,
+                ..
+            }
+        ));
+        assert!(!rejected.plan_stage_available());
+        assert!(!authorization_path.exists());
+        assert!(!consumption_path.exists());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_consumption_response_dispatcher_commits_after_authorization_and_replays()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-consumption-response-commit")?;
+        let completed = completed_adapter_mutation(&setup, 99, 67)?;
+        let current = current_after_adapter_import(&setup)?;
+        let plan_request = consumption_request(&completed, 70)?;
+        let dispatcher = RecipientHistoryRecoveryImportConsumptionResponseDispatcher::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+        );
+        let load_count = Cell::new(0_usize);
+        let loader = |requested: &RuntimeIpcRecipientImportMembershipReference| {
+            load_count.set(load_count.get() + 1);
+            RecipientImportMembershipLoad::Exact(LoadedRecipientImportMembership::new(
+                requested.authority_reference_id.clone(),
+                requested.authenticated_context_id.clone(),
+                setup.fixture.membership.clone(),
+            ))
+        };
+        let planned = dispatcher.dispatch_plan(
+            &plan_request,
+            &completed.descriptor,
+            &completed.adapter,
+            &completed.store,
+            &current,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            setup.fixture.replacement.identity(),
+            8_400,
+        )?;
+        let RuntimeIpcRecipientImportConsumptionOutcome::Planned(plan) =
+            planned.response().outcome()
+        else {
+            return Err("dispatcher did not return a signed plan".into());
+        };
+        let RuntimeIpcRecipientImportConsumptionCommand::Plan {
+            evidence,
+            memberships,
+            ..
+        } = plan_request.command().clone()
+        else {
+            return Err("expected a consumption plan request".into());
+        };
+        let commit_request = RuntimeIpcRecipientImportConsumptionRequest::new(
+            &completed.descriptor,
+            adapter_request_id(71),
+            RuntimeIpcRecipientImportConsumptionCommand::Commit {
+                evidence,
+                memberships,
+                plan: Box::new(plan.clone()),
+                confirmation_phrase: plan.confirmation_phrase.clone(),
+                explicit_approval:
+                    RuntimeIpcRecipientImportConsumptionExplicitApproval::UserConfirmed,
+            },
+        )?;
+
+        assert!(matches!(
+            dispatcher.dispatch_plan(
+                &commit_request,
+                &completed.descriptor,
+                &completed.adapter,
+                &completed.store,
+                &current,
+                &setup.inbox,
+                &setup.imports,
+                &loader,
+                setup.fixture.replacement.identity(),
+                8_401,
+            ),
+            Err(RecipientImportConsumptionResponseDispatcherError::StageMismatch)
+        ));
+        let foreign = DeviceIdentity::generate()?;
+        let foreign_descriptor = RuntimeIpcDescriptor::issue_local(
+            SocketAddr::new(IpAddr::from([127, 0, 0, 1]), 31_338),
+            [92_u8; 32],
+            setup.fixture.owner_account_id,
+            &foreign,
+        )?;
+        assert!(matches!(
+            dispatcher.dispatch_plan(
+                &plan_request,
+                &foreign_descriptor,
+                &completed.adapter,
+                &completed.store,
+                &current,
+                &setup.inbox,
+                &setup.imports,
+                &loader,
+                setup.fixture.replacement.identity(),
+                8_401,
+            ),
+            Err(RecipientImportConsumptionResponseDispatcherError::DescriptorDeviceMismatch)
+        ));
+
+        let committed = dispatcher.dispatch_commit(
+            &planned,
+            &commit_request,
+            &completed.descriptor,
+            &completed.adapter,
+            &completed.store,
+            &current,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            setup.fixture.replacement.identity(),
+            8_402,
+        )?;
+        let RuntimeIpcRecipientImportConsumptionOutcome::Consumed(receipt) =
+            committed.response().outcome()
+        else {
+            return Err("dispatcher did not return a signed consumed receipt".into());
+        };
+        let exact_receipt = receipt.clone();
+        assert!(committed.authorization_committed_before_mutation());
+        assert!(!committed.authorization_replayed());
+        assert!(committed.mutation_receipt_persisted_before_response());
+        assert!(!committed.mutation_replayed());
+        assert!(!committed.plan_stage_available());
+        assert_eq!(load_count.get(), 2);
+        assert!(completed.store.inspect_active()?.is_none());
+        let encoded = committed.response().encode()?;
+        SignedRuntimeIpcRecipientImportConsumptionResponse::decode_and_verify(
+            &encoded,
+            &commit_request,
+            &completed.descriptor,
+        )?;
+
+        let replay_load_count = Cell::new(0_usize);
+        let rejecting_loader = |_requested: &RuntimeIpcRecipientImportMembershipReference| {
+            replay_load_count.set(replay_load_count.get() + 1);
+            RecipientImportMembershipLoad::Ambiguous
+        };
+        let replayed = dispatcher.dispatch_commit(
+            &planned,
+            &commit_request,
+            &completed.descriptor,
+            &completed.adapter,
+            &completed.store,
+            &current,
+            &setup.inbox,
+            &setup.imports,
+            &rejecting_loader,
+            setup.fixture.replacement.identity(),
+            8_403,
+        )?;
+        assert!(matches!(
+            replayed.response().outcome(),
+            RuntimeIpcRecipientImportConsumptionOutcome::AlreadyConsumed(receipt)
+                if receipt == &exact_receipt
+        ));
+        assert!(replayed.authorization_replayed());
+        assert!(replayed.mutation_replayed());
+        assert!(replayed.mutation_receipt_persisted_before_response());
+        assert_eq!(replay_load_count.get(), 0);
         Ok(())
     }
 }

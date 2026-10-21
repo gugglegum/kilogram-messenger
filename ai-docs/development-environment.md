@@ -5889,3 +5889,25 @@ Hosted follow-up:
 - No active runtime response dispatch, CLI/desktop, product network, second
   host, release build, archive, tag or automatic GitHub build is used. Default
   remains `legacy-only`.
+
+## M1.2.41 signed consumption response-dispatch environment (2026-10-21)
+
+- `kilogram-peer-history-recovery-runtime` now composes the read adapter,
+  authorization ledger and mutation adapter behind one dormant dispatcher that
+  returns only `SignedRuntimeIpcRecipientImportConsumptionResponse`.
+- Both Plan and Commit requests are canonical-round-tripped against the exact
+  runtime descriptor before state access. Dispatcher owner Account, descriptor
+  Device and current signing Device must match.
+- Plan returns an opaque in-process stage and creates neither authorization nor
+  consumption-mutation database. Commit cannot skip or fabricate that stage;
+  the retained signed Plan response is verified again against the descriptor.
+- Commit durably records authorization before entering mutation and signs only
+  after M1.2.40 reports a durable completed receipt. Exact replay returns
+  `AlreadyConsumed` with the same semantic receipt and invokes no membership
+  loader.
+- Windows execution used only the fixed-name stable runner with workspace-local
+  `TEMP`/`TMP`; two real signed-fixture tests passed in 348.37 seconds. No
+  product network or second host was involved.
+- Dedicated boundary rejects 10/10 mutations; accepted-tag readiness passes
+  167/167 with rustfmt and locked/offline strict Clippy. No release build,
+  archive, tag or automatic GitHub build is used.

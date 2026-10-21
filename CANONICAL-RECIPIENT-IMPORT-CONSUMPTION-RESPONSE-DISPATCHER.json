@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.41",
+  "status": "canonical-recipient-import-consumption-response-dispatcher-verified",
+  "implementation": [
+    "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_response_dispatcher.rs",
+    "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_read_adapter.rs",
+    "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_authorization.rs",
+    "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_mutation_adapter.rs"
+  ],
+  "changes_connection_ticket_wire": false,
+  "changes_sync_wire": false,
+  "changes_history_transfer_wire": false,
+  "changes_runtime_ipc_contract": false,
+  "changes_active_runtime_ipc": false,
+  "runtime_ipc_version": 33,
+  "runtime_ipc_domain": 14,
+  "changes_public_default": false,
+  "public_default": "legacy-only",
+  "dispatcher_boundary": {
+    "dormant_library_api": true,
+    "canonical_request_revalidated_before_dispatch": true,
+    "descriptor_account_and_device_bound": true,
+    "current_device_signer_required": true,
+    "plan_stage_read_only": true,
+    "plan_stage_creates_no_durable_state": true,
+    "commit_requires_opaque_exact_plan_stage": true,
+    "stage_skipping_rejected": true,
+    "explicit_commit_required": true,
+    "durable_authorization_before_mutation": true,
+    "durable_mutation_receipt_before_signed_success": true,
+    "signed_response_exact_request_digest_bound": true,
+    "signed_response_exact_descriptor_bound": true,
+    "signed_response_current_device_bound": true,
+    "exact_replay_without_second_consume_or_reload": true,
+    "unsigned_outcome_exposed_by_dispatcher": false
+  },
+  "activation_boundary": {
+    "active_runtime_registration": false,
+    "runtime_socket_handler": false,
+    "cli_or_desktop_control": false,
+    "background_worker_or_timer": false,
+    "network": false,
+    "automatic_consumption": false,
+    "history_or_membership_deletion": false
+  },
+  "verification": {
+    "stable_path_rust_harness_required_on_windows": true,
+    "focused_signed_fixture_tests": "2/2",
+    "boundary_negative_mutations": "10/10",
+    "m1_readiness": "167/167",
+    "strict_clippy": true,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "second_host_required": false,
+    "network_executed": false
+  },
+  "non_claims": [
+    "active-runtime-command-registration",
+    "socket-handler-or-network-protocol",
+    "cli-or-desktop-consumption-ceremony",
+    "automatic-intent-consumption",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "guided-desktop-recipient-import-consumption-ceremony",
+    "bounded-recovery-ledger-retention-policy",
+    "independent-security-review"
+  ]
+}

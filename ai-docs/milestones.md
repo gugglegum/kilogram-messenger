@@ -12,6 +12,19 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.41 — signed dormant import-consumption response dispatcher: выполнено
+
+- Plan канонически перепроверяется против exact runtime descriptor, остаётся
+  read-only и не создаёт authorization/mutation state.
+- Commit принимает только непрозрачный Plan stage того же dispatcher и того же
+  descriptor; stage skip и Device/descriptor substitution fail closed.
+- Exact authorization durable до mutation, completed consume receipt durable до
+  Device-signed success response; replay возвращает тот же semantic receipt без
+  loader и второго consume.
+- Active runtime registration, socket/CLI/desktop/network и public-default
+  change отсутствуют. Stable signed fixtures 2/2, boundary 10/10, aggregate
+  readiness 167/167.
+
 ## M0 — проверка сетевого и репликационного фундамента
 
 ### M0.1 — два процесса на одном хосте: выполнено
