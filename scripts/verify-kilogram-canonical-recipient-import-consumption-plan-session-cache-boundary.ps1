@@ -129,10 +129,11 @@ function Assert-Boundary {
             throw "Plan session cache crate gained '$dependency'"
         }
     }
-    foreach ($app in @($Cli, $Desktop)) {
-        if ($app.IndexOf('kilogram-peer-history-recovery-runtime', [StringComparison]::Ordinal) -ge 0) {
-            throw 'Plan session cache was wired into an active application'
-        }
+    $successorDependency = 'kilogram-peer-history-recovery-runtime = { path = "../../crates/kilogram-peer-history-recovery-runtime" }'
+    if ($Cli.IndexOf($successorDependency, [StringComparison]::Ordinal) -lt 0 -or
+        [regex]::Matches($Cli, 'kilogram-peer-history-recovery-runtime\s*=').Count -ne 1 -or
+        $Desktop.IndexOf('kilogram-peer-history-recovery-runtime', [StringComparison]::Ordinal) -ge 0) {
+        throw 'Plan session cache successor application boundary changed'
     }
     foreach ($forbidden in @('serde::', 'redb::', 'tokio::', 'iroh::', 'reqwest::',
                               'TcpListener', 'TcpStream', 'RuntimeIpcCommand::RecipientImport')) {

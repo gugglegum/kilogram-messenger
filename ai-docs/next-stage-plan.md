@@ -1,39 +1,37 @@
-# Текущая точка: M1.2.45 завершён, следующий M1.2.46
+# Текущая точка: M1.2.46 завершён, следующий M1.2.47
 
 Дата: 2026-10-21.
 
-M1.2.45 создал единый process-owned service core: один dispatcher, один bounded
-process-local cache, canonical nested decode, byte-exact повтор Plan без нового
-timestamp/reload и Commit только с live same-process stage. Stage сохраняется
-до TTL для безопасного durable `AlreadyConsumed` replay; restart его теряет.
-Service не реконструирует недостающую source/consent authority из IPC request и
-требует уже аутентифицированный live recovery context. Ordinary runtime handler
-пока честно возвращает service-unavailable. Readiness содержит 171 gate.
+M1.2.46 создал один process-owned actor с M1.2.45 service и process-local
+guided-context slot. Context живёт максимум 300 секунд и exact-привязан к
+state/Account/Device/coordinator/membership. Clear, expiry и restart удаляют
+его вместе со всеми Plan stages; IPC/env/filesystem scan не могут его создать.
+Active v34 handler делегирует actor, но production startup остаётся unattached
+и честно возвращает прежний service-unavailable Error. Readiness содержит 172
+gate.
 
-## Следующий этап: M1.2.46 — guided live-context attachment
+## Следующий этап: M1.2.47 — authenticated guided-context producer
 
-1. Определить один явный runtime-owned slot для already-authenticated recovery
-   context, его install/clear lifetime и exact binding к current Account/Device.
-2. Context может появиться только из существующей guided recovery ceremony;
-   IPC request, environment variable и произвольный filesystem scan не могут
-   создать authority.
-3. Runtime actor создаёт один M1.2.45 service на весь lifetime и передаёт ему
-   envelope только при exact attached context; иначе сохраняет прежний Error.
-4. Loopback regression доказывает signed Plan/Commit/replay, restart с пустым
-   cache, context clear и отсутствие второго consume после durable receipt.
-5. CLI parser, desktop controls, timers и product network остаются вне этапа;
-   нужны stable-path tests, boundary, rustfmt, locked/offline strict Clippy и
-   полная readiness.
+1. Найти и использовать единственный уже аутентифицированный in-process output
+   существующей guided recovery ceremony; не дублировать coordinator или
+   membership validation в runtime actor.
+2. Добавить узкий producer/hand-off, который создаёт M1.2.46 context только
+   после successful ceremony completion и exact current Account/Device match.
+3. Доказать loopback IPC Plan, byte-exact Plan replay, Commit, lost-response
+   `AlreadyConsumed` replay и explicit detach без второго consume.
+4. Доказать, что failed/cancelled/expired ceremony, process restart, changed
+   Account/Device и stale membership не могут установить context.
+5. Не добавлять user-supplied paths/snapshots/secrets в IPC, CLI flag, env или
+   desktop control; product network и public `legacy-only` default неизменны.
 
 ## Stop conditions
 
-- runtime создаёт более одного service/cache либо сохраняет cache/stage на диск;
-- Commit проходит без exact live Plan из того же процесса;
-- error/restart/expiry оставляет частично применённую authority или unsigned
-  success;
-- context создаётся из одного IPC payload, hidden flag или directory scan;
-- handler повторно реализует canonical codec/crypto вместо делегирования;
-- CLI/desktop получает control раньше отдельной guided ceremony;
+- producer принимает unauthenticated, partial или caller-assembled context;
+- успешная ceremony может установить context для другого Account/Device/state;
+- failure/cancel/expiry оставляет actor attached либо сохраняет authority;
+- hand-off сериализует context/Plan stage или отправляет их через runtime IPC;
+- loopback retry повторно consume-ит durable import;
+- CLI/desktop получает arbitrary context control;
 - transport wire либо public `legacy-only` default меняется.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5

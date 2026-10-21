@@ -12,6 +12,22 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.46 — guided recipient-import-consumption runtime attachment: выполнено
+
+- Runtime process создаёт один actor, владеющий ровно одним M1.2.45 service и
+  одним optional guided-context slot; IPC v34 handler делегирует только ему.
+- Context process-local/non-durable, живёт не более 300 секунд и exact-привязан
+  к state directory, Account, Device, coordinator plan/sequence и canonical
+  membership digests.
+- Context разрешено создавать только из already-authenticated recovery
+  ceremony. IPC payload, environment и filesystem scan не создают authority;
+  обычный runtime стартует unattached с прежним явным Error.
+- Clear, expiry и restart уничтожают context и все opaque Plan stages;
+  different live replacement отклоняется, exact install replay идемпотентен.
+- Stable-path real recovery fixture прошёл 1/1; boundary — 11/11 mutations;
+  readiness inventory расширен до 172 gates. CLI/desktop/timer/network,
+  release/ZIP/tag и automatic GitHub build не использовались.
+
 ### M1.2.45 — process-owned recipient-import-consumption service core: выполнено
 
 - Один service object владеет ровно одним M1.2.41 dispatcher и одним bounded

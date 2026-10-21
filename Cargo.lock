@@ -3161,6 +3161,7 @@ dependencies = [
  "kilogram-mailbox-provisioning",
  "kilogram-offline",
  "kilogram-peer-capability-store",
+ "kilogram-peer-history-recovery-runtime",
  "kilogram-peer-reenrollment",
  "kilogram-peer-reenrollment-acceptance",
  "kilogram-peer-reenrollment-runtime",

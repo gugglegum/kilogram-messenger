@@ -72,6 +72,17 @@ impl RecipientImportConsumptionPlanSessionCache {
         self.maximum_sessions
     }
 
+    /// Drops every opaque Plan stage owned by this process.
+    ///
+    /// Context detachment must call this before another authenticated recovery
+    /// context can be installed. No durable authorization or receipt is
+    /// removed: the cache contains only non-serializable pre-Commit custody.
+    pub fn clear(&mut self) -> usize {
+        let cleared = self.sessions.len();
+        self.sessions.clear();
+        cleared
+    }
+
     pub fn is_durable(&self) -> bool {
         false
     }

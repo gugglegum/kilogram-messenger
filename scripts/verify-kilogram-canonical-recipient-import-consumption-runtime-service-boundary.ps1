@@ -58,9 +58,11 @@ function Assert-Boundary {
     ) 'runtime service source'
     Require-Text $Cache @('pub fn exact_plan_replay(', 'entry.plan_request_digest == request_digest') 'Plan cache source'
     Require-Text $Cli @(
-        'RuntimeIpcCommand::RecipientImportConsumption { .. } => RuntimeIpcResponse::Error {',
-        'recipient import-consumption runtime service is not configured'
-    ) 'active runtime handler'
+        'let mut recipient_import_consumption = RecipientImportConsumptionRuntimeActor::new(',
+        'RuntimeIpcCommand::RecipientImportConsumption { request } => {',
+        'recipient_import_consumption.dispatch(',
+        'runtime_recipient_import_consumption_context=unattached'
+    ) 'active runtime successor handler'
     $normalized = [regex]::Replace($Rfc, '\s+', ' ')
     foreach ($needle in @('exact repeated request returns the original signed response byte for byte',
         'Successful Commit retains the opaque Plan stage until its bounded expiry',
@@ -88,7 +90,7 @@ if ($SelfTest) {
     $changed=Copy-JsonObject $manifest; $changed.active_runtime_handler.signed_success_reachable=$true; $mutations += { Assert-Boundary $changed $service $cache $cli $rfc }
     $changed=Copy-JsonObject $manifest; $changed.scope.opens_network=$true; $mutations += { Assert-Boundary $changed $service $cache $cli $rfc }
     $changedService=$service.Replace('.exact_plan_replay(&request, now_unix_seconds)?','.dispatch_plan_again()?'); $mutations += { Assert-Boundary $manifest $changedService $cache $cli $rfc }
-    $changedCli=$cli.Replace('runtime service is not configured','runtime service accepted'); $mutations += { Assert-Boundary $manifest $service $cache $changedCli $rfc }
+    $changedCli=$cli.Replace('recipient_import_consumption.dispatch(','recipient_import_consumption.accept_without_dispatch('); $mutations += { Assert-Boundary $manifest $service $cache $changedCli $rfc }
     $rejected=0
     foreach ($mutation in $mutations) { try { & $mutation; throw 'mutation was accepted' } catch { if ($_.Exception.Message -eq 'mutation was accepted') { throw }; $rejected++ } }
     if ($rejected -ne 8) { throw "expected 8 rejected mutations, got $rejected" }
@@ -96,5 +98,5 @@ if ($SelfTest) {
 }
 
 Write-Output 'canonical_recipient_import_consumption_runtime_service_boundary=verified'
-Write-Output 'active_runtime_handler_configured=false'
+Write-Output 'active_runtime_handler_configured=context-gated'
 Write-Output 'network_executed=false'

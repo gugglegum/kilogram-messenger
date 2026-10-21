@@ -168,15 +168,20 @@ impl RecipientRecoveryCoordinationPlan {
         &self.sources
     }
 
-    pub(crate) fn state_directory(&self) -> &Path {
+    /// Returns the exact state directory bound by the authenticated recovery
+    /// coordinator. Runtime context attachment uses this read-only value to
+    /// reject cross-profile capability substitution.
+    pub fn state_directory(&self) -> &Path {
         &self.state_directory
     }
 
-    pub(crate) fn owner_account_id(&self) -> AccountId {
+    /// Returns the Account identity that owns this recovery plan.
+    pub fn owner_account_id(&self) -> AccountId {
         self.owner_account_id
     }
 
-    pub(crate) fn owner_device_id(&self) -> DeviceId {
+    /// Returns the Device identity that owns this recovery plan.
+    pub fn owner_device_id(&self) -> DeviceId {
         self.owner_device_id
     }
 

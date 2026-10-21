@@ -6,14 +6,16 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.45 добавил единый
-process-owned recipient-import-consumption service core поверх существующих
-dispatcher и bounded cache. Он сохраняет byte-exact Plan replay и принимает
-Commit только с live same-process stage, но намеренно требует уже
-аутентифицированный recovery context. Обычный runtime handler пока остаётся
-service-unavailable: следующий M1.2.46 должен определить guided context
-attachment и только затем открыть loopback success path. CLI/desktop/network
-не подключены, публичный default остаётся legacy-only.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.46 добавил один process-owned
+recipient-import-consumption actor и process-local slot для уже
+аутентифицированного guided recovery context. Context exact-привязан к
+state/Account/Device/coordinator/membership, очищает Plan stages при
+clear/expiry/restart и не может появиться из IPC/env/directory scan. Runtime
+handler теперь делегирует actor, но production startup остаётся unattached и
+возвращает прежний service-unavailable Error. Следующий M1.2.47 должен
+подключить producer из существующей guided ceremony и доказать loopback
+Plan/Commit/replay. CLI/desktop/network не расширены, публичный default остаётся
+legacy-only.
 
 ## Текущее состояние
 
@@ -1355,6 +1357,12 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   300-second original TTL, bounded immediate-durability chain, exact nonce
   replay и fail-closed stale/rebound/corrupt handling отделяют согласие от
   будущего consume. Intent, active runtime и network пока не изменяются.
+- [`../docs/RFC-0270-m1246-guided-recipient-import-consumption-runtime-attachment.md`](../docs/RFC-0270-m1246-guided-recipient-import-consumption-runtime-attachment.md) —
+  M1.2.46 добавляет один process-owned runtime actor и process-local guided
+  context slot. Exact state/Account/Device/coordinator/membership binding,
+  bounded TTL и очистка Plan stages при clear/expiry/restart не позволяют
+  превратить opaque IPC envelope в ambient authority; production startup пока
+  остаётся unattached.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

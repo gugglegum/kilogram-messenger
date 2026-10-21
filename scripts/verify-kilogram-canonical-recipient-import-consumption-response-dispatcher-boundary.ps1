@@ -105,10 +105,11 @@ function Assert-Boundary {
             throw "consumption response dispatcher crate gained '$dependency'"
         }
     }
-    foreach ($app in @($Cli, $Desktop)) {
-        if ($app.IndexOf('kilogram-peer-history-recovery-runtime', [StringComparison]::Ordinal) -ge 0) {
-            throw 'consumption response dispatcher was wired into an active application'
-        }
+    $successorDependency = 'kilogram-peer-history-recovery-runtime = { path = "../../crates/kilogram-peer-history-recovery-runtime" }'
+    if ($Cli.IndexOf($successorDependency, [StringComparison]::Ordinal) -lt 0 -or
+        [regex]::Matches($Cli, 'kilogram-peer-history-recovery-runtime\s*=').Count -ne 1 -or
+        $Desktop.IndexOf('kilogram-peer-history-recovery-runtime', [StringComparison]::Ordinal) -ge 0) {
+        throw 'consumption response dispatcher successor application boundary changed'
     }
     foreach ($forbidden in @('tokio::', 'iroh::', 'reqwest::', 'TcpListener', 'TcpStream',
                               'RuntimeIpcCommand::RecipientImport')) {

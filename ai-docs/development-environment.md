@@ -1,5 +1,21 @@
 # Среда разработки
 
+## M1.2.46 verification (2026-10-21)
+
+- `cargo check` для recovery runtime и CLI passed locked/offline; existing
+  cross-volume incremental hard-link fallback warnings не изменились.
+- Real recovery actor fixture и M1.2.45 service regression passed 2/2 за
+  387.46s через `scripts/run-cargo-tests-stable.ps1` с постоянным EXE; direct
+  `cargo test` не использовался. После добавления exact-install replay и live
+  replacement rejection actor fixture отдельно снова passed 1/1 за 203.38s.
+- Dedicated attachment boundary rejected 11/11 mutations; historical v34
+  envelope и M1.2.45 service boundaries passed their 10/10 and 8/8 successor
+  checks. Accepted-tag M1 readiness passed 172/172 gates, rustfmt и
+  locked/offline strict workspace Clippy. Targeted strict Clippy для recovery
+  runtime/execution и CLI также passed.
+- Product network, second host, release build, archive, tag и automatic GitHub
+  build не использовались. Production runtime по умолчанию остаётся unattached.
+
 ## M1.2.45 verification (2026-10-21)
 
 - `cargo fmt --all -- --check` passed.

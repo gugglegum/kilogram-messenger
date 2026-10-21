@@ -123,20 +123,20 @@ function Assert-Boundary {
         throw 'runtime IPC generation constants are not singular'
     }
     Assert-ContainsAll $Cli @(
-        'RuntimeIpcCommand::RecipientImportConsumption { .. } => RuntimeIpcResponse::Error {',
-        'message: "recipient import-consumption runtime service is not configured".to_owned()'
-    ) 'runtime actor'
+        'RuntimeIpcCommand::RecipientImportConsumption { request } => {',
+        'recipient_import_consumption.dispatch(',
+        'RuntimeIpcResponse::RecipientImportConsumption {',
+        'runtime_recipient_import_consumption_context=unattached'
+    ) 'runtime actor successor'
     if ([regex]::Matches($Cli, 'RuntimeIpcCommand::RecipientImportConsumption').Count -ne 1 -or
-        $Cli.IndexOf('RuntimeIpcResponse::RecipientImportConsumption',
-            [StringComparison]::Ordinal) -ge 0 -or
         $Desktop.IndexOf('RecipientImportConsumption', [StringComparison]::Ordinal) -ge 0) {
-        throw 'recipient import-consumption gained an unreviewed client or success path'
+        throw 'recipient import-consumption gained an unreviewed client path'
     }
-    foreach ($cargo in @($RuntimeCargo, $CliCargo)) {
-        if ($cargo.IndexOf('kilogram-peer-history-recovery-runtime',
-                [StringComparison]::Ordinal) -ge 0) {
-            throw 'runtime IPC envelope prematurely owns the plan-session cache crate'
-        }
+    if ($RuntimeCargo.IndexOf('kilogram-peer-history-recovery-runtime',
+            [StringComparison]::Ordinal) -ge 0 -or
+        $CliCargo.IndexOf('kilogram-peer-history-recovery-runtime',
+            [StringComparison]::Ordinal) -lt 0) {
+        throw 'runtime IPC envelope successor dependency boundary changed'
     }
 
     if (@($Completion.canonical.commands).Count -ne 39 -or
@@ -239,7 +239,7 @@ if ($SelfTest) {
     $mutations += { Assert-Boundary $changed $preflight $runtime $cli $desktop $runtimeCargo $cliCargo $completion $schema $compatibility $cddl $rfc }
     $changedRuntime = $runtime.Replace('const IPC_VERSION: u8 = 34;', 'const IPC_VERSION: u8 = 33;')
     $mutations += { Assert-Boundary $manifest $preflight $changedRuntime $cli $desktop $runtimeCargo $cliCargo $completion $schema $compatibility $cddl $rfc }
-    $changedCli = $cli.Replace('runtime service is not configured', 'runtime service accepted')
+    $changedCli = $cli.Replace('recipient_import_consumption.dispatch(', 'recipient_import_consumption.accept_without_dispatch(')
     $mutations += { Assert-Boundary $manifest $preflight $runtime $changedCli $desktop $runtimeCargo $cliCargo $completion $schema $compatibility $cddl $rfc }
     $changedCddl = $cddl.Replace('runtime-ipc-recipient-import-consumption-request-v1 /', '')
     $mutations += { Assert-Boundary $manifest $preflight $runtime $cli $desktop $runtimeCargo $cliCargo $completion $schema $compatibility $changedCddl $rfc }
@@ -256,7 +256,7 @@ if ($SelfTest) {
 
 Write-Output 'runtime_ipc_recipient_import_consumption_envelope_boundary=verified'
 Write-Output 'active_runtime_ipc=postcard-v34-json-descriptor-v15'
-Write-Output 'runtime_service_configured=false'
-Write-Output 'signed_success_reachable=false'
+Write-Output 'runtime_service_configured=process-owned-context-gated'
+Write-Output 'signed_success_reachable=guided-context-only'
 Write-Output 'public_default=legacy-only'
 Write-Output 'network_executed=false'

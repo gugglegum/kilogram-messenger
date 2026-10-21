@@ -216,10 +216,11 @@ function Assert-Boundary {
             throw "recipient import mutation gained forbidden surface '$forbidden'"
         }
     }
-    foreach ($appManifest in @($CliManifest, $DesktopManifest)) {
-        if ($appManifest.IndexOf('kilogram-peer-history-recovery-runtime', [StringComparison]::Ordinal) -ge 0) {
-            throw 'recipient import mutation was wired into an active application'
-        }
+    $successorDependency = 'kilogram-peer-history-recovery-runtime = { path = "../../crates/kilogram-peer-history-recovery-runtime" }'
+    if ($CliManifest.IndexOf($successorDependency, [StringComparison]::Ordinal) -lt 0 -or
+        [regex]::Matches($CliManifest, 'kilogram-peer-history-recovery-runtime\s*=').Count -ne 1 -or
+        $DesktopManifest.IndexOf('kilogram-peer-history-recovery-runtime', [StringComparison]::Ordinal) -ge 0) {
+        throw 'recipient import mutation successor application boundary changed'
     }
 
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')

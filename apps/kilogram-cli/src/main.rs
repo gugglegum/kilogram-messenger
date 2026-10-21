@@ -59,6 +59,9 @@ use kilogram_mailbox_provisioning::{
 use kilogram_peer_capability_store::{
     PeerCapabilityKey, PeerCapabilityReadStore, PeerCapabilityStore,
 };
+use kilogram_peer_history_recovery_runtime::{
+    MAX_RECIPIENT_IMPORT_CONSUMPTION_PLAN_SESSIONS, RecipientImportConsumptionRuntimeActor,
+};
 use kilogram_peer_reenrollment::{
     ExplicitPeerReenrollmentApproval, MAX_PEER_REENROLLMENT_PLAN_BYTES, PeerReenrollmentPlan,
     SignedPeerReenrollmentTombstone,
@@ -16977,6 +16980,7 @@ async fn handle_runtime_ipc_work(
     endpoint: &Endpoint,
     ticket: &mut ConnectionTicket,
     directory_state: &mut RuntimeDeviceDirectoryState,
+    recipient_import_consumption: &mut RecipientImportConsumptionRuntimeActor,
     view: RuntimeIpcDispatchView<'_>,
     work: RuntimeIpcWork,
 ) -> RuntimeIpcDispatchOutcome {
@@ -17097,9 +17101,29 @@ async fn handle_runtime_ipc_work(
                 },
             }
         }
-        RuntimeIpcCommand::RecipientImportConsumption { .. } => RuntimeIpcResponse::Error {
-            message: "recipient import-consumption runtime service is not configured".to_owned(),
-        },
+        RuntimeIpcCommand::RecipientImportConsumption { request } => {
+            let status = StateDirectoryLock::acquire(state_directory)
+                .context("lock runtime state for explicit recipient import consumption")
+                .and_then(|_lock| {
+                    Ok(recipient_import_consumption.dispatch(
+                        &request,
+                        descriptor,
+                        identity,
+                        unix_time_now()?,
+                    )?)
+                });
+            match status {
+                Ok(dispatch) => {
+                    state_changed = dispatch.state_changed();
+                    RuntimeIpcResponse::RecipientImportConsumption {
+                        signed_response: dispatch.into_signed_response(),
+                    }
+                }
+                Err(error) => RuntimeIpcResponse::Error {
+                    message: format!("{error:#}"),
+                },
+            }
+        }
         RuntimeIpcCommand::AddContact {
             conversation,
             expected_peer_account_id,
@@ -21129,6 +21153,12 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         let (keepalive, receiver) = tokio::sync::mpsc::channel(1);
         (None, receiver, Some(keepalive))
     };
+    let mut recipient_import_consumption = RecipientImportConsumptionRuntimeActor::new(
+        &state_dir,
+        ticket.listener_account_id(),
+        prepared.device_state.identity().device_id(),
+        MAX_RECIPIENT_IMPORT_CONSUMPTION_PLAN_SESSIONS,
+    )?;
     println!("runtime_mode=multi-session-v1");
     print_canonical_sync_v2_runtime_policy(canonical_sync_v2_policy);
     println!("transport_endpoint_id={}", endpoint.id());
@@ -21178,6 +21208,9 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     println!("runtime_own_device_announcement_os_background_service=false");
     println!("runtime_own_device_roster_automation=opt-in");
     println!("runtime_own_device_roster_max_parallel_workflows=1");
+    println!("runtime_recipient_import_consumption_service=process-owned");
+    println!("runtime_recipient_import_consumption_context=unattached");
+    println!("runtime_recipient_import_consumption_context_source=guided-recovery-only");
     println!("runtime_max_outbound_actions={max_outbound_actions}");
     if let Some(directory) = &endpoint_announcement_descriptor_directory {
         println!(
@@ -21296,6 +21329,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
                     &endpoint,
                     &mut ticket,
                     &mut device_directory_state,
+                    &mut recipient_import_consumption,
                     RuntimeIpcDispatchView {
                         canonical_sync_v2_policy,
                         sync_observability: &sync_observability,

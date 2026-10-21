@@ -45,6 +45,25 @@ pub struct RecipientImportConsumptionRuntimeService {
     sessions: RecipientImportConsumptionPlanSessionCache,
 }
 
+pub struct RecipientImportConsumptionRuntimeDispatch {
+    signed_response: Vec<u8>,
+    state_changed: bool,
+}
+
+impl RecipientImportConsumptionRuntimeDispatch {
+    pub fn signed_response(&self) -> &[u8] {
+        &self.signed_response
+    }
+
+    pub fn into_signed_response(self) -> Vec<u8> {
+        self.signed_response
+    }
+
+    pub fn state_changed(&self) -> bool {
+        self.state_changed
+    }
+}
+
 impl RecipientImportConsumptionRuntimeService {
     pub fn new(
         state_directory: impl AsRef<Path>,
@@ -70,6 +89,10 @@ impl RecipientImportConsumptionRuntimeService {
         self.sessions.maximum_sessions()
     }
 
+    pub fn clear_plan_sessions(&mut self) -> usize {
+        self.sessions.clear()
+    }
+
     pub fn is_process_local(&self) -> bool {
         !self.sessions.is_durable()
     }
@@ -86,6 +109,22 @@ impl RecipientImportConsumptionRuntimeService {
         context: RecipientImportConsumptionRuntimeContext<'_, L>,
         now_unix_seconds: u64,
     ) -> Result<Vec<u8>, RecipientImportConsumptionRuntimeServiceError> {
+        Ok(self
+            .dispatch_with_metadata(encoded_request, descriptor, context, now_unix_seconds)?
+            .into_signed_response())
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    pub fn dispatch_with_metadata<L: RecipientImportMembershipLoader>(
+        &mut self,
+        encoded_request: &[u8],
+        descriptor: &RuntimeIpcDescriptor,
+        context: RecipientImportConsumptionRuntimeContext<'_, L>,
+        now_unix_seconds: u64,
+    ) -> Result<
+        RecipientImportConsumptionRuntimeDispatch,
+        RecipientImportConsumptionRuntimeServiceError,
+    > {
         let request = RuntimeIpcRecipientImportConsumptionRequest::decode_and_validate(
             encoded_request,
             descriptor,
@@ -138,7 +177,14 @@ impl RecipientImportConsumptionRuntimeService {
                 .response()
                 .clone(),
         };
-        Ok(response.encode()?)
+        let state_changed = matches!(
+            response.outcome(),
+            RuntimeIpcRecipientImportConsumptionOutcome::Consumed(_)
+        );
+        Ok(RecipientImportConsumptionRuntimeDispatch {
+            signed_response: response.encode()?,
+            state_changed,
+        })
     }
 }
 
