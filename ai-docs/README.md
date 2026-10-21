@@ -6,12 +6,12 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.35 добавил dormant durable
-recipient import confirmation ledger поверх exact M1.2.34 ephemeral plan.
-Planning остаётся no-create/read-only, commit записывает bounded Device-signed
-evidence с monotonic chain и nonce replay protection. Confirmation не даёт
-import/consume authority и не подключена к active runtime/CLI/desktop/network.
-Публичный default остаётся legacy-only.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.36 добавил dormant explicit
+bounded mutation adapter поверх exact M1.2.35 confirmation. До первого import
+сохраняется Device-signed `Prepared`, после выполнения и crash reconciliation
+— durable `Completed` receipt; exact nonce replay не импортирует повторно.
+Intent автоматически не consume-ится, active runtime/CLI/desktop/network не
+подключены. Публичный default остаётся legacy-only.
 
 ## Текущее состояние
 
@@ -1326,6 +1326,15 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   digest; known-plan status reload-ит и replans. Plan остаётся ephemeral,
   `Confirm`/`Apply*` всегда отвергаются, active runtime/CLI/desktop/network,
   import/consume и persistence authority не добавлены.
+- [`../docs/RFC-0259-m1235-durable-recipient-import-confirmation-ledger.md`](../docs/RFC-0259-m1235-durable-recipient-import-confirmation-ledger.md) —
+  M1.2.35 сохраняет explicit Device-signed confirmation только для exact
+  ephemeral plan. Separate bounded ledger даёт atomic commit, monotonic chain
+  и exact nonce replay; stale/rebound/foreign/corrupt input fail closed.
+- [`../docs/RFC-0260-m1236-explicit-bounded-recipient-import-mutation-adapter.md`](../docs/RFC-0260-m1236-explicit-bounded-recipient-import-mutation-adapter.md) —
+  M1.2.36 исполняет только `ApplyNext`/`ApplyBounded` после exact durable
+  confirmation и live membership reload. `Prepared` предшествует import,
+  `Completed` receipt — ответу; crash retry reconciles durable progress без
+  duplicate import. Automatic consume и active runtime authority отсутствуют.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

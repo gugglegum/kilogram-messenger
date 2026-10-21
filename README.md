@@ -2758,6 +2758,15 @@ monotonic chain. Exact replay is idempotent, while nonce substitution, stale
 concurrent plans and internal corruption fail closed. Confirmation alone does
 not import history, consume the intent or activate runtime/desktop control.
 
+[`RFC-0260`](docs/RFC-0260-m1236-explicit-bounded-recipient-import-mutation-adapter.md)
+adds the dormant foreground mutation adapter for only `ApplyNext` and
+`ApplyBounded`. It requires the exact durable confirmation, reloads live
+memberships, revalidates the active intent and coordinator, and persists a
+Device-signed nonce-bound receipt before returning success. A prepared retry
+reconciles the import-before-coordinator-refresh crash window without duplicate
+events; the intent is still never consumed automatically and no active
+runtime, CLI, desktop, background or network authority is introduced.
+
 ## Contributing
 
 See [`CONTRIBUTING.md`](CONTRIBUTING.md) before proposing changes. Suspected

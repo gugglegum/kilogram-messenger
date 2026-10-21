@@ -196,6 +196,14 @@ impl DurableRecipientImportConfirmation {
         self.record.content.sequence
     }
 
+    pub fn owner_account_id(&self) -> AccountId {
+        self.record.content.owner_account_id
+    }
+
+    pub fn owner_device_id(&self) -> DeviceId {
+        self.record.content.owner_device_id
+    }
+
     pub fn expired(&self, now_unix_seconds: u64) -> bool {
         now_unix_seconds > self.record.content.expires_at_unix_seconds
     }
@@ -536,6 +544,24 @@ impl RecipientImportConfirmationLedger {
             },
             None => RecipientImportConfirmationStatus::Absent,
         })
+    }
+
+    pub fn load_by_confirmation_id(
+        &self,
+        confirmation_id: [u8; 32],
+    ) -> Result<Option<DurableRecipientImportConfirmation>, RecipientImportConfirmationLedgerError>
+    {
+        if confirmation_id == [0_u8; 32] {
+            return Err(RecipientImportConfirmationLedgerError::InvalidConfirmationId);
+        }
+        Ok(load_snapshot(
+            &self.state_directory,
+            self.owner_account_id,
+            self.owner_device_id,
+        )?
+        .records
+        .get(&confirmation_id)
+        .cloned())
     }
 
     #[cfg(test)]

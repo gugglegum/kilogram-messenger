@@ -264,6 +264,44 @@ impl RecipientHistoryRecoveryImportRoundExecutor {
         )
     }
 
+    /// Repairs only the durable coordinator projection after an import that
+    /// was committed before its coordinator refresh completed. No additional
+    /// history source is imported. The returned plan is freshly bound to the
+    /// repaired coordinator head and to the caller-selected remaining budget.
+    #[allow(clippy::too_many_arguments)]
+    pub fn reconcile_pending(
+        plan: &RecipientRecoveryImportRoundExecutionPlan,
+        store: &RecipientRecoveryImportRoundIntentStore,
+        sources: &[RecipientRecoveryImportRoundSource<'_>],
+        inbox: &RecipientHistoryTransferInbox,
+        imports: &RecipientHistoryImportStore,
+        next_budget: RecipientRecoveryImportRoundExecutionBudget,
+    ) -> Result<RecipientRecoveryImportRoundExecutionPlan, RecipientRecoveryImportRoundExecutionError>
+    {
+        validate_plan(plan)?;
+        validate_budget(next_budget)?;
+        let durable = reopen_exact(store, plan.intent_id(), plan.round_id())?;
+        let progress =
+            store.inspect_progress(&durable, &plan.coordination_plan, sources, inbox, imports)?;
+        if progress != plan.progress || !progress.coordinator_refresh_required {
+            return Err(RecipientRecoveryImportRoundExecutionError::PlanChanged);
+        }
+        match RecipientHistoryRecoveryCoordinator::apply(&plan.coordination_plan, inbox, imports)? {
+            ApplyRecipientRecoveryCoordinationOutcome::Applied(_)
+            | ApplyRecipientRecoveryCoordinationOutcome::AlreadyApplied(_) => {}
+        }
+        let refreshed = refresh_coordination(&plan.coordination_plan, inbox, imports)?;
+        let next = Self::plan(store, &refreshed, sources, next_budget, inbox, imports)?;
+        if next.progress.coordinator_refresh_required
+            || next.progress.completed_source_count != progress.completed_source_count
+            || next.progress.total_source_count != progress.total_source_count
+            || next.progress.imported_event_count != progress.imported_event_count
+        {
+            return Err(RecipientRecoveryImportRoundExecutionError::ProgressChanged);
+        }
+        Ok(next)
+    }
+
     #[allow(clippy::too_many_arguments)]
     fn apply_inner(
         plan: &RecipientRecoveryImportRoundExecutionPlan,

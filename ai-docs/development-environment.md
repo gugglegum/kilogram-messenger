@@ -5767,3 +5767,28 @@ Hosted follow-up:
   strict Clippy.
 - No import/consume, product network, second host, release build, archive, tag
   or automatic GitHub build was used; public default remains `legacy-only`.
+
+## M1.2.36 explicit bounded recipient import mutation adapter environment (2026-10-21)
+
+- The dormant runtime-integration crate now handles only `ApplyNext` and
+  `ApplyBounded`; active applications still do not depend on it and active IPC
+  remains v33/domain v14.
+- Every first attempt requires an exact unexpired M1.2.35 confirmation, current
+  owner Device, caller-reloaded live memberships and an exact fresh M1.2.32
+  execution plan. Default/hard step budgets remain 1/8 and imports sequential.
+- A separate immediate-durability redb stores a Device-signed `Prepared`
+  record before import and a `Completed` privacy-safe receipt before response.
+  It is bounded to 4096 mutations/8192 records with exact nonce index and one
+  verified content-addressed chain.
+- Exact completed replay performs no loader/import. Prepared retry permits only
+  monotonic progress within the original budget, repairs coordinator-only
+  import-before-refresh state, reconstructs exact already-imported steps and
+  refuses additional import after confirmation expiry.
+- Stable-path ledger tests pass 3/3; a real signed import/replay fixture passes
+  1/1 and a separate crash-reconciliation fixture passes 1/1. Package strict
+  Clippy passes; boundary rejects 10/10 mutations and accepted-tag readiness
+  passes 162/162 with rustfmt and workspace locked/offline strict Clippy.
+- The ledger stores no membership snapshot or message/history artifact. Intent
+  consumption, active runtime/server/CLI/desktop/background/network, product
+  network, second host, release build, archive, tag and automatic GitHub build
+  remain absent; public default is `legacy-only`.

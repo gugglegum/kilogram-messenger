@@ -11,13 +11,15 @@ mod execution_api {
         RecipientHistoryImportStore, RecipientHistoryRecoveryImportRoundExecutor,
         RecipientHistoryTransferInbox, RecipientRecoveryCoordinationPlan,
         RecipientRecoveryImportRoundExecutionBudget, RecipientRecoveryImportRoundExecutionError,
-        RecipientRecoveryImportRoundExecutionPlan, RecipientRecoveryImportRoundIntentProgressState,
+        RecipientRecoveryImportRoundExecutionPlan, RecipientRecoveryImportRoundExecutionReceipt,
+        RecipientRecoveryImportRoundIntentError, RecipientRecoveryImportRoundIntentProgressState,
         RecipientRecoveryImportRoundIntentStore, RecipientRecoveryImportRoundSource,
-        recipient_import_membership_digest,
+        RecipientRecoveryImportRoundStepDisposition, recipient_import_membership_digest,
     };
 }
 
 mod recipient_import_confirmation;
+mod recipient_import_mutation_adapter;
 mod recipient_import_read_adapter;
 
 pub use recipient_import_confirmation::{
@@ -25,6 +27,11 @@ pub use recipient_import_confirmation::{
     MAX_RECIPIENT_IMPORT_CONFIRMATION_LIFETIME_SECONDS, RecipientImportConfirmationCommitOutcome,
     RecipientImportConfirmationLedger, RecipientImportConfirmationLedgerError,
     RecipientImportConfirmationPlan, RecipientImportConfirmationStatus,
+};
+pub use recipient_import_mutation_adapter::{
+    MAX_DURABLE_RECIPIENT_IMPORT_MUTATION_RECORDS, MAX_DURABLE_RECIPIENT_IMPORT_MUTATIONS,
+    RecipientHistoryRecoveryImportMutationAdapter, RecipientImportMutationAdapterDispatch,
+    RecipientImportMutationAdapterError,
 };
 pub use recipient_import_read_adapter::{
     LoadedRecipientImportMembership, RecipientHistoryRecoveryImportReadAdapter,
@@ -40,7 +47,9 @@ pub use kilogram_runtime_ipc::{
     RuntimeIpcRecipientImportExecutionCommand,
     RuntimeIpcRecipientImportExecutionConfirmationSummary,
     RuntimeIpcRecipientImportExecutionHazard, RuntimeIpcRecipientImportExecutionOutcome,
-    RuntimeIpcRecipientImportExecutionPlanSummary, RuntimeIpcRecipientImportExecutionRequest,
+    RuntimeIpcRecipientImportExecutionPlanSummary,
+    RuntimeIpcRecipientImportExecutionReceiptSummary, RuntimeIpcRecipientImportExecutionRequest,
     RuntimeIpcRecipientImportExplicitApproval, RuntimeIpcRecipientImportIntentState,
-    RuntimeIpcRecipientImportMembershipReference, RuntimeIpcRequestId,
+    RuntimeIpcRecipientImportMembershipReference, RuntimeIpcRecipientImportStepDisposition,
+    RuntimeIpcRecipientImportStepReceipt, RuntimeIpcRequestId,
 };

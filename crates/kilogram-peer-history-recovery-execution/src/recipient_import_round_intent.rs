@@ -284,6 +284,15 @@ impl SignedRecipientRecoveryImportRoundIntent {
             .map(|entry| entry.import_plan_id)
     }
 
+    /// Returns the immutable event count bound into each signed import entry.
+    /// This is metadata only; no history body or membership snapshot is exposed.
+    pub fn planned_source_event_counts(&self) -> impl ExactSizeIterator<Item = usize> + '_ {
+        self.content
+            .entries
+            .iter()
+            .map(|entry| usize::from(entry.event_count))
+    }
+
     pub fn committed_at_unix_seconds(&self) -> u64 {
         self.content.committed_at_unix_seconds
     }

@@ -51,15 +51,24 @@ mod execution_api {
         RecipientHistoryImportStore, RecipientHistoryRecoveryImportRoundExecutor,
         RecipientHistoryTransferInbox, RecipientRecoveryCoordinationPlan,
         RecipientRecoveryImportRoundExecutionBudget, RecipientRecoveryImportRoundExecutionError,
-        RecipientRecoveryImportRoundExecutionPlan, RecipientRecoveryImportRoundIntentProgressState,
+        RecipientRecoveryImportRoundExecutionPlan, RecipientRecoveryImportRoundExecutionReceipt,
+        RecipientRecoveryImportRoundIntentError, RecipientRecoveryImportRoundIntentProgressState,
         RecipientRecoveryImportRoundIntentStore, RecipientRecoveryImportRoundSource,
-        recipient_import_membership_digest,
+        RecipientRecoveryImportRoundStepDisposition, recipient_import_membership_digest,
     };
 }
 
 #[cfg(test)]
 #[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_read_adapter.rs"]
 mod recipient_import_read_adapter;
+
+#[cfg(test)]
+#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_confirmation.rs"]
+mod recipient_import_confirmation;
+
+#[cfg(test)]
+#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_mutation_adapter.rs"]
+mod recipient_import_mutation_adapter;
 
 pub use coordinator::{
     ApplyRecipientRecoveryCoordinationOutcome, ApprovedRecipientHistoryRecoverySource,
@@ -81,6 +90,16 @@ pub use recipient_import::{
     RecipientRecoveryCoordinatorRefreshDisposition, RecipientRecoveryImportApplyReceipt,
     RecipientRecoveryImportPlan, RecipientRecoveryImportPlanError,
     membership_digest as recipient_import_membership_digest,
+};
+#[cfg(test)]
+pub use recipient_import_confirmation::{
+    DurableRecipientImportConfirmation, RecipientImportConfirmationCommitOutcome,
+    RecipientImportConfirmationLedger, RecipientImportConfirmationLedgerError,
+};
+#[cfg(test)]
+pub use recipient_import_mutation_adapter::{
+    RecipientHistoryRecoveryImportMutationAdapter, RecipientImportMutationAdapterDispatch,
+    RecipientImportMutationAdapterError,
 };
 #[cfg(test)]
 pub use recipient_import_read_adapter::{
@@ -2129,8 +2148,9 @@ mod tests {
         RuntimeIpcDescriptor, RuntimeIpcRecipientImportArtifactId,
         RuntimeIpcRecipientImportExecutionCommand, RuntimeIpcRecipientImportExecutionHazard,
         RuntimeIpcRecipientImportExecutionOutcome, RuntimeIpcRecipientImportExecutionRequest,
-        RuntimeIpcRecipientImportIntentState, RuntimeIpcRecipientImportMembershipReference,
-        RuntimeIpcRequestId,
+        RuntimeIpcRecipientImportExplicitApproval, RuntimeIpcRecipientImportIntentState,
+        RuntimeIpcRecipientImportMembershipReference, RuntimeIpcRequestId,
+        recipient_import_confirmation_phrase,
     };
     use kilogram_sync_capability::{
         CurrentPeerInvitationBinding, PeerSyncCapabilityEvidence, SignedCurrentPeerInvitation,
@@ -6205,8 +6225,19 @@ mod tests {
         assert_eq!(plan.progress().completed_source_count, 1);
         assert!(plan.progress().coordinator_refresh_required);
         assert_eq!(plan.planned_step_count(), 0);
-        let receipt = RecipientHistoryRecoveryImportRoundExecutor::apply_next(
+        let repaired = RecipientHistoryRecoveryImportRoundExecutor::reconcile_pending(
             &plan,
+            &store,
+            &sources,
+            &setup.inbox,
+            &setup.imports,
+            RecipientRecoveryImportRoundExecutionBudget::default(),
+        )?;
+        assert_eq!(repaired.progress().completed_source_count, 1);
+        assert!(!repaired.progress().coordinator_refresh_required);
+        assert_eq!(repaired.planned_step_count(), 0);
+        let receipt = RecipientHistoryRecoveryImportRoundExecutor::apply_next(
+            &repaired,
             &store,
             &sources,
             &setup.inbox,
@@ -6214,7 +6245,7 @@ mod tests {
             setup.fixture.replacement.identity(),
             5_700,
         )?;
-        assert!(receipt.reconciled_coordinator);
+        assert!(!receipt.reconciled_coordinator);
         assert!(receipt.steps.is_empty());
         assert_eq!(receipt.imported_now_count, 0);
         assert_eq!(receipt.already_imported_count, 0);
@@ -6707,6 +6738,173 @@ mod tests {
                 .imports
                 .status(setup.approved.consent_record_id(), 0)?,
             RecipientHistoryImportStatus::Absent
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_mutation_adapter_executes_persists_and_replays_exact_receipt()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-mutation-adapter-exact")?;
+        let (store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 61)?;
+        let plan_request =
+            adapter_plan_request(&setup, &descriptor, &durable, reference.clone(), 21)?;
+        let loader = |requested: &RuntimeIpcRecipientImportMembershipReference| {
+            RecipientImportMembershipLoad::Exact(LoadedRecipientImportMembership::new(
+                requested.authority_reference_id.clone(),
+                requested.authenticated_context_id.clone(),
+                setup.fixture.membership.clone(),
+            ))
+        };
+        let planned = RecipientHistoryRecoveryImportReadAdapter::dispatch(
+            &plan_request,
+            &store,
+            &setup.coordination,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            None,
+        )?;
+        let summary = planned
+            .planned_summary()
+            .ok_or("planned summary missing")?
+            .clone();
+        let confirmation_nonce = adapter_artifact(72);
+        let confirm_request = RuntimeIpcRecipientImportExecutionRequest::new(
+            &descriptor,
+            adapter_request_id(22),
+            RuntimeIpcRecipientImportExecutionCommand::Confirm {
+                intent_id: summary.intent_id.clone(),
+                execution_plan_id: summary.execution_plan_id.clone(),
+                coordinator_plan_id: summary.coordinator_plan_id.clone(),
+                coordinator_sequence: summary.coordinator_sequence,
+                memberships: vec![reference.clone()],
+                confirmation_nonce,
+                confirmation_phrase: recipient_import_confirmation_phrase(
+                    &summary.execution_plan_id,
+                ),
+                explicit_approval: RuntimeIpcRecipientImportExplicitApproval::UserConfirmed,
+            },
+        )?;
+        let confirmation_ledger = RecipientImportConfirmationLedger::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+        );
+        let confirmation_plan = confirmation_ledger.plan(
+            &planned,
+            &confirm_request,
+            setup.fixture.replacement.identity(),
+            6_100,
+            6_900,
+        )?;
+        let confirmation = match confirmation_ledger.commit(&confirmation_plan, 6_101)? {
+            RecipientImportConfirmationCommitOutcome::Committed(value) => value,
+            other => return Err(format!("unexpected confirmation outcome: {other:?}").into()),
+        };
+        let mutation_nonce = adapter_artifact(73);
+        let apply_request = RuntimeIpcRecipientImportExecutionRequest::new(
+            &descriptor,
+            adapter_request_id(23),
+            RuntimeIpcRecipientImportExecutionCommand::ApplyNext {
+                intent_id: summary.intent_id,
+                execution_plan_id: summary.execution_plan_id,
+                coordinator_plan_id: summary.coordinator_plan_id,
+                coordinator_sequence: summary.coordinator_sequence,
+                memberships: vec![reference.clone()],
+                confirmation_id: RuntimeIpcRecipientImportArtifactId::from_bytes(
+                    confirmation.confirmation_id(),
+                )?,
+                mutation_nonce: mutation_nonce.clone(),
+            },
+        )?;
+        let adapter = RecipientHistoryRecoveryImportMutationAdapter::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+        );
+        let applied = adapter.dispatch(
+            &apply_request,
+            &store,
+            &setup.coordination,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            setup.fixture.replacement.identity(),
+            6_200,
+        )?;
+        let RuntimeIpcRecipientImportExecutionOutcome::Executed(receipt) = applied.outcome() else {
+            return Err(format!("unexpected apply outcome: {:?}", applied.outcome()).into());
+        };
+        assert_eq!(receipt.starting_completed_source_count, 0);
+        assert_eq!(receipt.final_completed_source_count, 1);
+        assert_eq!(receipt.imported_now_count, 1);
+        assert!(receipt.complete);
+        assert!(applied.persisted_receipt_before_response());
+        assert!(!applied.replayed_completed_receipt());
+        assert!(!applied.consumed_intent());
+        assert!(!applied.opened_network());
+        let exact_receipt = receipt.clone();
+        assert!(!store.inspect_active()?.ok_or("intent missing")?.consumed());
+
+        let load_count = Cell::new(0_usize);
+        let rejecting_loader = |_requested: &RuntimeIpcRecipientImportMembershipReference| {
+            load_count.set(load_count.get() + 1);
+            RecipientImportMembershipLoad::Ambiguous
+        };
+        let replay = adapter.dispatch(
+            &apply_request,
+            &store,
+            &setup.coordination,
+            &setup.inbox,
+            &setup.imports,
+            &rejecting_loader,
+            setup.fixture.replacement.identity(),
+            7_500,
+        )?;
+        assert!(replay.replayed_completed_receipt());
+        assert_eq!(load_count.get(), 0);
+        assert!(matches!(
+            replay.outcome(),
+            RuntimeIpcRecipientImportExecutionOutcome::Executed(value)
+                if value == &exact_receipt
+        ));
+
+        let mut conflicting_reference = reference;
+        conflicting_reference.authority_reference_id = adapter_artifact(74);
+        let conflict = RuntimeIpcRecipientImportExecutionRequest::new(
+            &descriptor,
+            adapter_request_id(24),
+            RuntimeIpcRecipientImportExecutionCommand::ApplyNext {
+                intent_id: exact_receipt.intent_id.clone(),
+                execution_plan_id: exact_receipt.execution_plan_id.clone(),
+                coordinator_plan_id: RuntimeIpcRecipientImportArtifactId::from_bytes(
+                    setup.coordination.plan_id(),
+                )?,
+                coordinator_sequence: setup.coordination.sequence(),
+                memberships: vec![conflicting_reference],
+                confirmation_id: exact_receipt.confirmation_id.clone(),
+                mutation_nonce,
+            },
+        )?;
+        let conflict_outcome = adapter.dispatch(
+            &conflict,
+            &store,
+            &setup.coordination,
+            &setup.inbox,
+            &setup.imports,
+            &rejecting_loader,
+            setup.fixture.replacement.identity(),
+            6_300,
+        )?;
+        assert!(matches!(
+            conflict_outcome.outcome(),
+            RuntimeIpcRecipientImportExecutionOutcome::Rejected {
+                hazard: RuntimeIpcRecipientImportExecutionHazard::MutationReplay,
+                ..
+            }
         ));
         Ok(())
     }

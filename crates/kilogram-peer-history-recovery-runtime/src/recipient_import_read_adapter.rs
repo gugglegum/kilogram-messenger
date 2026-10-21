@@ -390,7 +390,7 @@ impl RecipientHistoryRecoveryImportReadAdapter {
     }
 }
 
-fn load_exact_memberships<L: RecipientImportMembershipLoader>(
+pub(crate) fn load_exact_memberships<L: RecipientImportMembershipLoader>(
     references: &[RuntimeIpcRecipientImportMembershipReference],
     loader: &L,
 ) -> Result<Vec<ConversationMembershipSnapshot>, RuntimeIpcRecipientImportExecutionHazard> {
@@ -421,7 +421,7 @@ fn load_exact_memberships<L: RecipientImportMembershipLoader>(
     Ok(loaded)
 }
 
-fn transient_sources<'a>(
+pub(crate) fn transient_sources<'a>(
     references: &[RuntimeIpcRecipientImportMembershipReference],
     memberships: &'a [ConversationMembershipSnapshot],
 ) -> Vec<RecipientRecoveryImportRoundSource<'a>> {
@@ -500,7 +500,7 @@ fn status_summary(
     })
 }
 
-fn execution_hazard(
+pub(crate) fn execution_hazard(
     error: &RecipientRecoveryImportRoundExecutionError,
 ) -> RuntimeIpcRecipientImportExecutionHazard {
     match error {

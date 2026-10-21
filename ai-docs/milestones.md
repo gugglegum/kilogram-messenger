@@ -8201,3 +8201,23 @@ correlation visible, Windows-only field evidence, independent security audit
 - active runtime/server/CLI/desktop/background/network, product network,
   second host, release/ZIP/tag и automatic GitHub build отсутствуют; default
   `legacy-only`.
+
+### M1.2.36 — explicit bounded recipient import mutation adapter: принят локально
+
+- dormant integration adapter исполняет только `ApplyNext`/`ApplyBounded` при
+  exact M1.2.35 confirmation, current owner Device, live membership reload и
+  fresh exact M1.2.32 execution plan;
+- отдельный immediate-durability ledger пишет Device-signed `Prepared` до
+  import и `Completed` receipt до ответа, ограничен 4096 mutations/8192 records
+  и проверяет exact nonce index и единую content-addressed chain;
+- exact completed replay не вызывает loader/import. Rebound nonce, parallel
+  mutation, stale authority, fork/orphan/corrupt state fail closed;
+- prepared retry принимает только monotonic progress внутри исходного budget,
+  reconciles import-before-coordinator-refresh без duplicate и не начинает
+  новый import после confirmation expiry;
+- stable-path ledger regression прошёл 3/3, real signed mutation fixture 1/1,
+  crash-reconciliation fixture 1/1; boundary отклонил 10/10 mutations,
+  readiness прошёл 162/162 с rustfmt и workspace locked/offline strict Clippy;
+- automatic intent consume, active runtime/server/CLI/desktop/background/
+  network, product network, second host, release/ZIP/tag и automatic GitHub
+  build отсутствуют; default `legacy-only`.

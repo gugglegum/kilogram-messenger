@@ -1,28 +1,28 @@
-# Текущая точка: M1.2.35 завершён, следующий M1.2.36
+# Текущая точка: M1.2.36 завершён, следующий M1.2.37
 
-Статус на 2026-10-21: dormant confirmation ledger сохраняет только явное
-Device-signed подтверждение exact M1.2.34 ephemeral plan. Confirm request
-повторяет exact ordered membership references, digest, intent,
-execution/coordinator plan и caller nonce; lifetime ограничен 900 секундами.
-Planning no-create/read-only, commit atomic под state lock, exact replay
-идемпотентен, nonce conflict/stale candidate/expiry/corruption fail closed.
-Ledger не импортирует историю и не consume-ит intent. Focused regression 8/8,
-boundary 10/10, readiness 161/161.
+Статус на 2026-10-21: dormant mutation adapter принимает только explicit
+`ApplyNext`/`ApplyBounded` с exact M1.2.35 confirmation, заново reload-ит live
+memberships и перепроверяет active intent/coordinator/execution plan. Отдельный
+Device-signed ledger пишет `Prepared` до первого import и `Completed` receipt
+до ответа. Exact replay идемпотентен; crash-window coordinator reconciliation
+не импортирует повторно, а остаток не выходит за первоначальный budget.
+Automatic consume отсутствует. Focused ledger 3/3, real mutation 1/1,
+crash-reconcile 1/1, boundary 10/10, readiness 162/162.
 
-## Следующий этап: M1.2.36 explicit bounded mutation adapter
+## Следующий этап: M1.2.37 explicit intent-consumption ceremony contract
 
-- подключить только `ApplyNext`/`ApplyBounded` к существующему M1.2.32
-  foreground executor через exact M1.2.35 durable confirmation;
-- перед первой мутацией заново reload/replan exact memberships и проверить
-  active intent, coordinator, execution plan, confirmation expiry и Device;
-- добавить отдельный durable mutation-nonce ledger: exact replay возвращает
-  прежний receipt, reused nonce for another binding fail closed;
-- сохранять receipt до ответа и корректно восстанавливаться в
-  import-before-coordinator-refresh crash window существующего executor;
-- не consume-ить intent автоматически: финальный consume остаётся отдельной
-  signed ceremony;
-- сохранить sequential/default 1/hard max 8, one import in-flight, IPC
-  v33/domain v14 и отсутствие active server/CLI/desktop/background/network.
+- определить отдельный dormant signed contract для consume уже полностью
+  исполненного M1.2.31 intent; import command не получает implicit consume;
+- привязать request к exact active intent, final coordinator, completed
+  M1.2.36 mutation receipt/head, fresh caller nonce и explicit phrase;
+- требовать статус `CompleteAwaitingSeparateConsume`, current owner Device и
+  live revalidation того же durable результата;
+- разделить read-only plan и explicit commit; exact replay сделать
+  идемпотентным, stale/rebound/foreign/partial input отклонять fail closed;
+- на этом этапе не регистрировать active runtime command и не добавлять CLI,
+  desktop, background или network authority;
+- сохранить IPC v33/domain v14, public default `legacy-only` и отдельный
+  будущий adapter/apply как последующий этап.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5
 
