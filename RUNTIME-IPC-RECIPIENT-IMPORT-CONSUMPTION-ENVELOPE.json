@@ -1,0 +1,82 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.44",
+  "status": "active-envelope-handler-fail-closed",
+  "surface": "runtime-ipc",
+  "encoding": "postcard",
+  "predecessor": "M1.2.43",
+  "previous": {
+    "ipc_version": 33,
+    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v14\\0",
+    "recipient_import_consumption_command_present": false,
+    "recipient_import_consumption_response_present": false
+  },
+  "current": {
+    "ipc_version": 34,
+    "descriptor_signature_domain": "kilogram:runtime-ipc-descriptor:v15\\0",
+    "command_variant": "RecipientImportConsumption { request: Vec<u8> }",
+    "response_variant": "RecipientImportConsumption { signed_response: Vec<u8> }",
+    "append_only_enum_extension": true
+  },
+  "migration": {
+    "strategy": "exact-version-hard-cut-for-co-installed-binaries",
+    "legacy_descriptor": "rejected-before-connect",
+    "legacy_request": "rejected-before-actor-dispatch",
+    "mixed_version_operation": "unsupported-update-both-binaries-and-restart-runtime",
+    "dual_reader": false,
+    "format_sniffing": false,
+    "silent_downgrade": false,
+    "hybrid_version_domain_state_allowed": false
+  },
+  "handler": {
+    "command_recognized": true,
+    "service_configured": false,
+    "response": "RuntimeIpcResponse::Error",
+    "error": "recipient import-consumption runtime service is not configured",
+    "signed_response_reachable": false
+  },
+  "authority_boundary": {
+    "nested_request_reinterpreted_by_outer_envelope": false,
+    "plan_session_cache_owned_by_runtime": false,
+    "dispatcher_wired": false,
+    "mutation_authority_granted": false,
+    "cli_control": false,
+    "desktop_control": false
+  },
+  "scope": {
+    "changes_active_local_control": true,
+    "changes_peer_network_wire": false,
+    "changes_relay_wire": false,
+    "changes_mailbox_wire": false,
+    "changes_sync_wire": false,
+    "network": false,
+    "public_default_changed": false,
+    "public_default": "legacy-only"
+  },
+  "verification": {
+    "legacy_v33_descriptor_rejected": true,
+    "legacy_v33_request_rejected_before_actor_dispatch": true,
+    "negative_mutations": "10/10",
+    "m1_readiness": "170/170",
+    "stable_path_rust_tests": true,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false,
+    "second_host_required": false,
+    "network_executed": false
+  },
+  "non_claims": [
+    "recipient-import-consumption-service-configured",
+    "plan-session-cache-wired",
+    "signed-consumption-response-reachable",
+    "cli-or-desktop-consumption-ceremony",
+    "public-rollout-eligibility",
+    "independent-security-review-completed"
+  ],
+  "next": [
+    "wire-process-local-plan-session-cache-and-response-dispatcher-into-runtime-handler",
+    "add-loopback-handler-integration-regressions",
+    "keep-cli-and-desktop-ceremony-separate"
+  ]
+}

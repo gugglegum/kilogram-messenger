@@ -142,8 +142,8 @@ function Assert-Boundary {
         'serde.workspace = true', 'kilogram-identity ='
     ) 'runtime IPC crate manifest'
     Assert-ContainsAll $Lib @(
-        'const IPC_VERSION: u8 = 33;',
-        'kilogram:runtime-ipc-descriptor:v14',
+        'const IPC_VERSION: u8 = 34;',
+        'kilogram:runtime-ipc-descriptor:v15',
         'mod recipient_import_consumption_contract;',
         'pub use recipient_import_consumption_contract::*;'
     ) 'runtime IPC library'
@@ -208,8 +208,10 @@ function Assert-Boundary {
         'pub enum RuntimeIpcCommand \{(?s:.*?)\r?\n\}'
     )
     if (-not $commandEnum.Success -or
-        $commandEnum.Value.IndexOf('RecipientImportConsumption', [StringComparison]::Ordinal) -ge 0) {
-        throw 'active RuntimeIpcCommand gained recipient import consumption authority'
+        [regex]::Matches($commandEnum.Value, 'RecipientImportConsumption\s*\{').Count -ne 1 -or
+        $commandEnum.Value.IndexOf('RecipientImportConsumption {', [StringComparison]::Ordinal) -lt 0 -or
+        $commandEnum.Value.IndexOf('request: Vec<u8>', [StringComparison]::Ordinal) -lt 0) {
+        throw 'explicit M1.2.44 recipient import consumption successor envelope changed'
     }
 
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')

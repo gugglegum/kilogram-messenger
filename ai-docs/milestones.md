@@ -12,6 +12,20 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.44 — active runtime IPC recipient-import-consumption envelope: выполнено
+
+- Postcard runtime IPC и signed descriptor атомарно мигрировали с 33/v14 на
+  34/v15; command/response variants добавлены append-only и отражены в CDDL,
+  schema, completion inventory, compatibility registry и live-binding gates.
+- Runtime actor распознаёт новую команду, но до M1.2.45 возвращает отдельный
+  service-unavailable Error; success response зарегистрирован, но недостижим.
+- Process-local cache/dispatcher, CLI/desktop ceremony и product network не
+  подключены; регистрация envelope не выдаёт mutation authority.
+- v33 request и корректно v14-подписанный v33 descriptor отвергаются новым
+  runtime. Stable-path downgrade tests прошли 2/2; boundary — 10/10 mutations.
+- Readiness расширен до 170 gates; release/ZIP/tag, automatic GitHub build и
+  second host не использовались, public default остаётся `legacy-only`.
+
 ### M1.2.43 — runtime IPC recipient-import-consumption migration preflight: выполнено
 
 - Postcard command/response extension классифицировано как несовместимое:

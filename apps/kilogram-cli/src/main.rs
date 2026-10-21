@@ -17097,6 +17097,9 @@ async fn handle_runtime_ipc_work(
                 },
             }
         }
+        RuntimeIpcCommand::RecipientImportConsumption { .. } => RuntimeIpcResponse::Error {
+            message: "recipient import-consumption runtime service is not configured".to_owned(),
+        },
         RuntimeIpcCommand::AddContact {
             conversation,
             expected_peer_account_id,

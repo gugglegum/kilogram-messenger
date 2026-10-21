@@ -239,7 +239,7 @@ assert(schema.milestone === "M1.1.49" && schema.status === "candidate-not-active
 assert(schema.limits.maximum_publication_request_bytes === 65536 &&
   schema.limits.maximum_publication_response_bytes === 65536,
 "runtime IPC publication bounds changed");
-assert(schema.activation.current_runtime_encoding === "postcard-v33-with-json-descriptor-v14" &&
+assert(schema.activation.current_runtime_encoding === "postcard-v34-with-json-descriptor-v15" &&
   schema.activation.current_runtime_changed === true, "active runtime IPC changed");
 assert(vectors.schema_version === 1 && vectors.profile === schema.profile &&
   vectors.activation_status === "not-active" &&

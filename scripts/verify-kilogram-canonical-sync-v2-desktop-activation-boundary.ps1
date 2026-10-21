@@ -184,7 +184,7 @@ function Assert-Contract {
         'status.record_id.as_deref() == Some(applied_record_id.as_str())',
         'Starting a fresh runtime for exact verification.'
     ) 'desktop integration'
-    Assert-ContainsAll $Ipc @('const IPC_VERSION: u8 = 33;') 'runtime IPC source'
+    Assert-ContainsAll $Ipc @('const IPC_VERSION: u8 = 34;') 'runtime IPC source'
 
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')
     foreach ($needle in @(

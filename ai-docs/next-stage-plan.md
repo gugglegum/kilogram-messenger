@@ -1,37 +1,35 @@
-# Текущая точка: M1.2.43 завершён, следующий M1.2.44
+# Текущая точка: M1.2.44 завершён, следующий M1.2.45
 
 Дата: 2026-10-21.
 
-M1.2.43 зафиксировал исполняемый, но неактивный migration preflight для
-Postcard runtime IPC. Добавление consumption enum variants требует hard cut
-`33/v14 -> 34/v15`; version и descriptor domain меняются только вместе.
-Инвентаризация нашла 58 live-binding boundary files. Текущие executable bytes
-остались на 33/v14, readiness содержит 169 gates.
+M1.2.44 выполнил preflight M1.2.43: Postcard runtime IPC и подписанный
+descriptor атомарно перешли `33/v14 -> 34/v15`, exact consumption variants
+добавлены в enum/CDDL/schema/completion/compatibility и все live-binding gates.
+Runtime распознаёт envelope, но честно возвращает service-unavailable; cache и
+dispatcher ещё не принадлежат runtime process. Readiness содержит 170 gates.
 
-## Следующий этап: M1.2.44 — atomic IPC v34/domain v15 envelope activation
+## Следующий этап: M1.2.45 — runtime-owned consumption service
 
-1. Одним change-set добавить exact command/response variants, поднять IPC до 34
-   и descriptor domain до v15.
-2. В том же change-set обновить completion/schema/compatibility ledgers и все
-   live-binding gates через явный successor contract, сохранив исторические
-   manifest claims.
-3. Runtime dispatch обязан распознать command, но до wiring M1.2.42 cache
-   вернуть отдельный fail-closed service-unavailable result; нельзя давать
-   ложную mutation authority.
-4. Добавить downgrade regressions: v33 descriptor rejected before connect,
-   v33 request rejected before actor dispatch, hybrid 33/v15 и 34/v14 invalid.
-5. Не добавлять пользовательскую CLI/desktop ceremony и product network;
-   нужны stable-path loopback fixtures, boundary, rustfmt, locked/offline strict
-   Clippy и readiness.
+1. Runtime process создаёт ровно один bounded M1.2.42 plan-session cache и
+   передаёт envelope только существующему M1.2.41 dispatcher.
+2. Plan сохраняет opaque stage по exact descriptor/Device/request digest;
+   Commit требует тот же live same-process stage, после успеха удаляет его.
+3. Restart, expiry, capacity, missing Plan, changed summary/descriptor/Device и
+   malformed nested request fail closed без unsigned либо partial success.
+4. Loopback IPC regressions доказывают signed Plan, signed Commit и exact replay,
+   а также отсутствие второго consume после durable completed receipt.
+5. CLI parser, desktop control, timers и product network остаются вне этапа;
+   нужны stable-path tests, dedicated boundary, rustfmt, locked/offline strict
+   Clippy и полная readiness.
 
 ## Stop conditions
 
-- enum меняется без одновременного version/domain migration;
-- completion/schema/compatibility или хотя бы один live-binding gate остаётся
-  в гибридном состоянии;
-- старый descriptor/request принимается новым runtime;
-- envelope registration выдаёт mutation success до wiring cache/dispatcher;
-- historical manifest переписывается как будто раньше использовал v34;
+- runtime создаёт более одного cache либо сохраняет cache/stage на диск;
+- Commit проходит без exact live Plan из того же процесса;
+- error/restart/expiry оставляет частично применённую authority или unsigned
+  success;
+- handler повторно реализует canonical codec/crypto вместо делегирования;
+- CLI/desktop получает control раньше отдельной guided ceremony;
 - transport wire либо public `legacy-only` default меняется.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5

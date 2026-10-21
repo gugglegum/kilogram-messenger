@@ -30,7 +30,7 @@ pub use peer_reenrollment_contract::*;
 pub use recipient_import_consumption_contract::*;
 pub use recipient_import_execution_contract::*;
 
-const IPC_VERSION: u8 = 33;
+const IPC_VERSION: u8 = 34;
 const MAX_DESCRIPTOR_BYTES: u64 = 16 * 1024;
 const MAX_LAUNCH_PROFILE_BYTES: u64 = 64 * 1024;
 const MAX_LAUNCH_PROFILE_PATHS: usize = 64;
@@ -53,7 +53,7 @@ const MAX_FRAME_BYTES: usize = 256 * 1024;
 const CONNECT_TIMEOUT: Duration = Duration::from_secs(3);
 const IO_TIMEOUT: Duration = Duration::from_secs(30);
 const REQUEST_CHANNEL_CAPACITY: usize = 64;
-const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v14\0";
+const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v15\0";
 pub const RUNTIME_LAUNCH_PROFILE_VERSION: u8 = 1;
 pub const MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE: u16 = 64;
 pub const MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE: u16 = 64;
@@ -711,6 +711,10 @@ pub enum RuntimeIpcCommand {
     },
     /// Nested descriptor-bound explicit peer re-enrollment mutation request.
     PeerReenrollmentMutation {
+        request: Vec<u8>,
+    },
+    /// Nested descriptor-bound recipient import-consumption request.
+    RecipientImportConsumption {
         request: Vec<u8>,
     },
 }
@@ -1933,6 +1937,10 @@ pub enum RuntimeIpcResponse {
     PeerReenrollmentMutation {
         signed_response: Vec<u8>,
     },
+    /// Current-Device-signed response to a recipient import-consumption request.
+    RecipientImportConsumption {
+        signed_response: Vec<u8>,
+    },
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -2488,6 +2496,36 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn version_33_request_is_rejected_before_actor_dispatch() -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let descriptor_path = directory.path().join("runtime.ipc.json");
+        let root = AccountRootState::create(directory.path().join("root"))?;
+        let identity = kilogram_identity::DeviceIdentity::generate()?;
+        let (server, mut receiver) =
+            RuntimeIpcServer::start(descriptor_path.clone(), root.account_id(), &identity).await?;
+        let descriptor = load_descriptor(&descriptor_path)?;
+        let (address, token) = descriptor.verify()?;
+        let mut stream = TcpStream::connect(address).await?;
+        write_frame(
+            &mut stream,
+            &RuntimeIpcRequest {
+                version: 33,
+                token,
+                command: RuntimeIpcCommand::Ping,
+            },
+        )
+        .await?;
+        assert!(read_frame::<RuntimeIpcResponse>(&mut stream).await.is_err());
+        assert!(
+            timeout(Duration::from_millis(100), receiver.recv())
+                .await
+                .is_err()
+        );
+        server.shutdown().await?;
+        Ok(())
+    }
+
+    #[tokio::test]
     async fn change_wait_is_long_polled_without_blocking_actor() -> Result<(), Box<dyn Error>> {
         let directory = tempfile::tempdir()?;
         let descriptor_path = directory.path().join("runtime.ipc.json");
@@ -2586,6 +2624,25 @@ mod tests {
         let mut remote = descriptor;
         remote.content.address = SocketAddr::new(IpAddr::from([192, 0, 2, 1]), 1).to_string();
         assert!(remote.verify().is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn version_33_descriptor_signed_with_v14_domain_is_rejected() -> Result<(), Box<dyn Error>> {
+        let directory = tempfile::tempdir()?;
+        let root = AccountRootState::create(directory.path().join("root"))?;
+        let identity = kilogram_identity::DeviceIdentity::generate()?;
+        let mut descriptor = RuntimeIpcDescriptor::new(
+            SocketAddr::new(IpAddr::from([127, 0, 0, 1]), 1),
+            [7_u8; 32],
+            root.account_id(),
+            &identity,
+        )?;
+        descriptor.content.version = 33;
+        let mut predecessor_signing_bytes = b"kilogram:runtime-ipc-descriptor:v14\0".to_vec();
+        predecessor_signing_bytes.extend_from_slice(&postcard::to_allocvec(&descriptor.content)?);
+        descriptor.signature = identity.sign(&predecessor_signing_bytes).to_vec();
+        assert!(descriptor.verify().is_err());
         Ok(())
     }
 

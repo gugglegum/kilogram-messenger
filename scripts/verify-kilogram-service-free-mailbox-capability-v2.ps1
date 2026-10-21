@@ -73,7 +73,7 @@ foreach ($required in @(
     'CreateExactMailboxCapability {',
     'RotateExactMailboxCapability {',
     'pub capability_format: String',
-    'const IPC_VERSION: u8 = 33;'
+    'const IPC_VERSION: u8 = 34;'
 )) {
     if ($ipc.IndexOf($required, [StringComparison]::Ordinal) -lt 0) {
         throw "runtime IPC v2 mailbox boundary is missing '$required'"

@@ -168,16 +168,16 @@ function Assert-Contract {
         throw 'recipient coordinator verification boundary changed'
     }
 
-    if ([int]$Completion.active_postcard.version -ne 33 -or
-        [string]$Completion.active_postcard.descriptor_signature_domain -cne 'kilogram:runtime-ipc-descriptor:v14\0' -or
-        @($Completion.canonical.commands).Count -ne 38 -or
-        @($Completion.canonical.results).Count -ne 37) {
+    if ([int]$Completion.active_postcard.version -ne 34 -or
+        [string]$Completion.active_postcard.descriptor_signature_domain -cne 'kilogram:runtime-ipc-descriptor:v15\0' -or
+        @($Completion.canonical.commands).Count -ne 39 -or
+        @($Completion.canonical.results).Count -ne 38) {
         throw 'active runtime IPC inventory changed'
     }
     $runtimeSurface = @($Compatibility.surfaces | Where-Object { [string]$_.id -ceq 'runtime-ipc' })
     if ([bool]$Compatibility.changes_wire -or
         $runtimeSurface.Count -ne 1 -or
-        [int](@($runtimeSurface[0].bindings | Where-Object { [string]$_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 33) {
+        [int](@($runtimeSurface[0].bindings | Where-Object { [string]$_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 34) {
         throw 'compatibility inventory changed'
     }
 

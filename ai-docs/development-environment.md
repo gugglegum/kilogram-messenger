@@ -5944,3 +5944,21 @@ Hosted follow-up:
   closed gates. No Rust build is required because executable source is
   unchanged; no network, second host, release build, archive, tag or automatic
   GitHub build is used.
+
+## M1.2.44 active recipient-import-consumption envelope environment (2026-10-21)
+
+- Runtime IPC is now Postcard v34 with signed JSON descriptor domain v15. Both
+  exact recipient-import-consumption enum variants, canonical CDDL aggregate,
+  completion/schema ledgers and compatibility bindings moved together.
+- Historical M1.2.43 manifest still records previous 33/v14 and its 58 observed
+  binding gates; the explicit successor gate is excluded from that historical
+  count rather than rewriting past evidence.
+- Runtime actor currently returns only `recipient import-consumption runtime
+  service is not configured`; no success response, cache ownership, dispatcher,
+  CLI/desktop or product network is reachable.
+- The managed sandbox denied loopback socket creation with Windows error 10013;
+  the same fixed-name stable-path harness passed both v33 downgrade tests 2/2
+  outside that sandbox. This is a verification boundary, not a product error.
+- Dedicated activation boundary rejects 10/10 mutations and readiness contains
+  170 closed gates. No release build, ZIP/archive, tag, automatic GitHub build
+  or second host is used; default remains `legacy-only`.

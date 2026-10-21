@@ -159,8 +159,8 @@ function Assert-Contract {
         'blake3.workspace = true', 'postcard.workspace = true', 'serde.workspace = true'
     ) 'runtime IPC crate manifest'
     Assert-ContainsAll $Lib @(
-        'const IPC_VERSION: u8 = 33;',
-        'kilogram:runtime-ipc-descriptor:v14',
+        'const IPC_VERSION: u8 = 34;',
+        'kilogram:runtime-ipc-descriptor:v15',
         'mod recipient_import_execution_contract;',
         'pub use recipient_import_execution_contract::*;'
     ) 'runtime IPC library'

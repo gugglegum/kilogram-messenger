@@ -88,32 +88,29 @@ function Assert-Boundary {
     }
 
     Assert-ContainsAll $Runtime @(
-        'const IPC_VERSION: u8 = 33;',
-        'const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v14\0";'
-    ) 'active runtime IPC source'
-    foreach ($forbidden in @(
         'const IPC_VERSION: u8 = 34;',
-        'kilogram:runtime-ipc-descriptor:v15\0',
-        'RecipientImportConsumption {'
-    )) {
-        if ($Runtime.IndexOf($forbidden, [StringComparison]::Ordinal) -ge 0) {
-            throw "inactive preflight already contains '$forbidden'"
-        }
+        'const DESCRIPTOR_SIGNATURE_DOMAIN: &[u8] = b"kilogram:runtime-ipc-descriptor:v15\0";',
+        'RecipientImportConsumption {',
+        'request: Vec<u8>',
+        'signed_response: Vec<u8>'
+    ) 'active successor runtime IPC source'
+    if ($Runtime.IndexOf('const IPC_VERSION: u8 = 33;', [StringComparison]::Ordinal) -ge 0) {
+        throw 'legacy IPC version remained active after successor activation'
     }
-    if ([int]$Completion.active_postcard.version -ne 33 -or
+    if ([int]$Completion.active_postcard.version -ne 34 -or
         [string]$Completion.active_postcard.descriptor_signature_domain -cne
-            'kilogram:runtime-ipc-descriptor:v14\0' -or
+            'kilogram:runtime-ipc-descriptor:v15\0' -or
         [string]$Schema.activation.current_runtime_encoding -cne
-            'postcard-v33-with-json-descriptor-v14') {
-        throw 'canonical runtime ledgers changed before atomic activation'
+            'postcard-v34-with-json-descriptor-v15') {
+        throw 'canonical runtime ledgers do not describe the activated successor'
     }
     $surface = @($Compatibility.surfaces | Where-Object { $_.id -ceq 'runtime-ipc' })
     if ($surface.Count -ne 1 -or
-        [int](@($surface[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 33 -or
+        [int](@($surface[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 34 -or
         [string](@($surface[0].bindings | Where-Object {
             $_.symbol -ceq 'DESCRIPTOR_SIGNATURE_DOMAIN'
-        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v14\0') {
-        throw 'protocol compatibility registry changed before atomic activation'
+        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v15\0') {
+        throw 'protocol compatibility registry does not describe the activated successor'
     }
 
     $normalizedRfc = [regex]::Replace($Rfc, '\s+', ' ')
@@ -141,11 +138,15 @@ $schema = Get-Content -LiteralPath $schemaPath -Raw | ConvertFrom-Json
 $compatibility = Get-Content -LiteralPath $compatibilityPath -Raw | ConvertFrom-Json
 $rfc = Get-Content -LiteralPath $rfcPath -Raw
 $versionGates = @(Get-ChildItem -LiteralPath (Join-Path $workspace 'scripts') -Filter '*.ps1' |
-    Where-Object { $_.FullName -cne $PSCommandPath -and (Get-Content -LiteralPath $_.FullName -Raw).IndexOf(
-        'const IPC_VERSION: u8 = 33;', [StringComparison]::Ordinal) -ge 0 })
+    Where-Object { $_.FullName -cne $PSCommandPath -and
+        $_.Name -cne 'verify-kilogram-runtime-ipc-recipient-import-consumption-envelope-boundary.ps1' -and
+        (Get-Content -LiteralPath $_.FullName -Raw).IndexOf(
+        'const IPC_VERSION: u8 = 34;', [StringComparison]::Ordinal) -ge 0 })
 $domainGates = @(Get-ChildItem -LiteralPath (Join-Path $workspace 'scripts') -Filter '*.ps1' |
-    Where-Object { $_.FullName -cne $PSCommandPath -and (Get-Content -LiteralPath $_.FullName -Raw).IndexOf(
-        'kilogram:runtime-ipc-descriptor:v14\0', [StringComparison]::Ordinal) -ge 0 })
+    Where-Object { $_.FullName -cne $PSCommandPath -and
+        $_.Name -cne 'verify-kilogram-runtime-ipc-recipient-import-consumption-envelope-boundary.ps1' -and
+        (Get-Content -LiteralPath $_.FullName -Raw).IndexOf(
+        'kilogram:runtime-ipc-descriptor:v15\0', [StringComparison]::Ordinal) -ge 0 })
 $liveBindingGateCount = @($versionGates.FullName + $domainGates.FullName | Sort-Object -Unique).Count
 $arguments = @($manifest, $predecessor, $runtime, $completion, $schema,
     $compatibility, $rfc, $liveBindingGateCount)
@@ -169,7 +170,7 @@ if ($SelfTest) {
     $mutations += { Assert-Boundary $changed $predecessor $runtime $completion $schema $compatibility $rfc $liveBindingGateCount }
     $changed = Copy-JsonObject $manifest; $changed.activation_boundary.network = $true
     $mutations += { Assert-Boundary $changed $predecessor $runtime $completion $schema $compatibility $rfc $liveBindingGateCount }
-    $changedRuntime = $runtime.Replace('const IPC_VERSION: u8 = 33;', 'const IPC_VERSION: u8 = 34;')
+    $changedRuntime = $runtime.Replace('const IPC_VERSION: u8 = 34;', 'const IPC_VERSION: u8 = 33;')
     $mutations += { Assert-Boundary $manifest $predecessor $changedRuntime $completion $schema $compatibility $rfc $liveBindingGateCount }
     $changed = Copy-JsonObject $manifest; $changed.required_atomic_update.preserve_historical_manifest_claims = $false
     $mutations += { Assert-Boundary $changed $predecessor $runtime $completion $schema $compatibility $rfc $liveBindingGateCount }
@@ -185,7 +186,7 @@ if ($SelfTest) {
 }
 
 Write-Output 'runtime_ipc_recipient_import_consumption_migration_preflight_boundary=verified'
-Write-Output 'active_runtime_ipc=postcard-v33-json-descriptor-v14'
+Write-Output 'active_runtime_ipc=postcard-v34-json-descriptor-v15'
 Write-Output 'target_runtime_ipc=postcard-v34-json-descriptor-v15'
-Write-Output 'active_runtime_changed=false'
+Write-Output 'preflight_fulfilled=true'
 Write-Output 'network_executed=false'

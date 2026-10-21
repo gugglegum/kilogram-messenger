@@ -81,8 +81,8 @@ function Assert-Boundary {
     }
 
     Assert-ContainsExact $Runtime @(
-        'const IPC_VERSION: u8 = 33;',
-        'kilogram:runtime-ipc-descriptor:v14\0',
+        'const IPC_VERSION: u8 = 34;',
+        'kilogram:runtime-ipc-descriptor:v15\0',
         'pub const MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE: u16 = 64;',
         'ConversationListPage {',
         'pub struct RuntimeIpcConversationCursor',
@@ -123,7 +123,7 @@ function Assert-Boundary {
 
     if ([string]$Schema.milestone -cne 'M1.1.49' -or
         [string]$Schema.activation.current_runtime_encoding -cne
-            'postcard-v33-with-json-descriptor-v14' -or
+            'postcard-v34-with-json-descriptor-v15' -or
         -not [bool]$Schema.activation.current_runtime_changed -or
         @($Schema.semantic_rules).Count -ne 192 -or
         @($Schema.remaining_runtime_ipc_surface).Count -ne 0) {
@@ -140,10 +140,10 @@ function Assert-Boundary {
     if ($source.Count -ne 1 -or [string]$source[0].encoding -cne 'postcard' -or
         [string]$source[0].compatibility -cne 'exact-version' -or
         [string]$source[0].migration -cne 'new-version-explicit-migration' -or
-        [int](@($source[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 33 -or
+        [int](@($source[0].bindings | Where-Object { $_.symbol -ceq 'IPC_VERSION' })[0].value) -ne 34 -or
         [string](@($source[0].bindings | Where-Object {
             $_.symbol -ceq 'DESCRIPTOR_SIGNATURE_DOMAIN'
-        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v14\0') {
+        })[0].value) -cne 'kilogram:runtime-ipc-descriptor:v15\0') {
         throw 'protocol compatibility registry does not exactly describe active IPC v33'
     }
 
