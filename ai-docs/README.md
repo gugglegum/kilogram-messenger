@@ -6,14 +6,14 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.53 добавил one-shot
-`RecipientImportGuidedRecoveryAssemblyIssuer`, который владеет exact state,
-Account, Device, signer, signed Plan, coordinator и ordered loaded memberships,
-поглощает input до fallible validation и выдаёт только M1.2.52 installation
-owner. Loose session constructor теперь private; отдельный путь остался только
-под `#[cfg(test)]`. CLI/desktop/runtime IPC/network не подключены. Следующий
-M1.2.54 должен добавить явную short-lived local launch authorization перед
-issuer без автоматической активации ceremony.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.54 добавил short-lived one-shot
+`RecipientImportGuidedRecoveryLaunchAuthorization`, который удерживает exact
+M1.2.53 issuer, показывает только safe membership-count/expiry/domain-bound
+phrase preview и после typed exact approval выдаёт максимум один M1.2.52
+installation owner. Cancel, expiry, mismatch и downstream failure поглощают
+authorization. CLI/desktop/runtime IPC/network не подключены. Следующий
+M1.2.55 должен добавить один process-owned pending-authorization slot и
+запретить replacement до install/cancel/expiry.
 
 ## Текущее состояние
 
@@ -1366,6 +1366,11 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   успешной complete guided mutation. Canonical final coordinator и live
   memberships сохраняются in-process, actor повторно связывает state/Account/
   Device, а loopback Plan/Commit/replay/detach не открывает ambient authority.
+- [`../docs/RFC-0278-m1254-explicit-local-guided-recovery-launch-authorization.md`](../docs/RFC-0278-m1254-explicit-local-guided-recovery-launch-authorization.md) —
+  M1.2.54 удерживает один authenticated assembly issuer в short-lived
+  process-local authorization, показывает только safe preview и требует exact
+  typed phrase. Любой результат потребляет grant; product surfaces и network
+  остаются dormant.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

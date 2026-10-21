@@ -42,6 +42,8 @@ use crate::{
 };
 
 const SESSION_ID_DOMAIN: &[u8] = b"kilogram:recipient-import-guided-session:v1\0";
+const RECOVERY_LAUNCH_BINDING_DOMAIN: &[u8] =
+    b"kilogram:recipient-import-guided-recovery-launch-binding:v1\0";
 
 pub const MAX_GUIDED_RECIPIENT_IMPORT_SESSION_LIFETIME_SECONDS: u64 = 5 * 60;
 
@@ -270,6 +272,25 @@ pub struct RecipientImportGuidedRecoveryAssemblyIssuer<'identity> {
     input: AuthenticatedGuidedRecipientImportAssemblyInput<'identity>,
 }
 
+/// Safe, non-authoritative commitment used by the local launch-confirmation
+/// layer. It deliberately reveals only a membership count and an opaque
+/// digest; it cannot recreate, inspect, or issue the retained assembly.
+pub(crate) struct AuthenticatedGuidedRecoveryLaunchBinding {
+    assembly_digest: [u8; 32],
+    membership_count: usize,
+    membership_count_u64: u64,
+}
+
+impl AuthenticatedGuidedRecoveryLaunchBinding {
+    pub(crate) fn into_parts(self) -> ([u8; 32], usize, u64) {
+        (
+            self.assembly_digest,
+            self.membership_count,
+            self.membership_count_u64,
+        )
+    }
+}
+
 impl<'identity> RecipientImportGuidedRecoveryAssemblyIssuer<'identity> {
     #[allow(dead_code)]
     #[allow(clippy::too_many_arguments)]
@@ -295,6 +316,32 @@ impl<'identity> RecipientImportGuidedRecoveryAssemblyIssuer<'identity> {
                 memberships,
             },
         }
+    }
+
+    /// Creates only a safe commitment for an explicit local launch preview.
+    ///
+    /// The issuer remains owned by its caller. No path, identity, signer,
+    /// descriptor, coordinator, request, membership snapshot, or reusable
+    /// authority is returned.
+    pub(crate) fn launch_binding(
+        &self,
+    ) -> Result<AuthenticatedGuidedRecoveryLaunchBinding, RecipientImportGuidedSessionControllerError>
+    {
+        let encoded_plan_request = self.input.plan_request.encode()?;
+        let membership_count = self.input.memberships.len();
+        let membership_count_u64 = u64::try_from(membership_count)
+            .map_err(|_| RecipientImportGuidedSessionControllerError::MembershipSetChanged)?;
+        let mut hasher = blake3::Hasher::new();
+        hasher.update(RECOVERY_LAUNCH_BINDING_DOMAIN);
+        hasher.update(&encoded_plan_request);
+        hasher.update(&self.input.coordination.plan_id());
+        hasher.update(&self.input.coordination.sequence().to_le_bytes());
+        hasher.update(&membership_count_u64.to_le_bytes());
+        Ok(AuthenticatedGuidedRecoveryLaunchBinding {
+            assembly_digest: *hasher.finalize().as_bytes(),
+            membership_count,
+            membership_count_u64,
+        })
     }
 
     pub fn issue(

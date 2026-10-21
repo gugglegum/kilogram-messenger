@@ -106,6 +106,10 @@ mod recipient_import_guided_session_controller;
 mod recipient_import_guided_recovery_host;
 
 #[cfg(test)]
+#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_guided_recovery_launch_authorization.rs"]
+mod recipient_import_guided_recovery_launch_authorization;
+
+#[cfg(test)]
 #[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_guided_session_local_ux.rs"]
 mod recipient_import_guided_session_local_ux;
 
@@ -190,6 +194,13 @@ pub use recipient_import_guided_recovery_host::{
     RecipientImportGuidedRecoveryHost, RecipientImportGuidedRecoveryHostCancel,
     RecipientImportGuidedRecoveryHostError, RecipientImportGuidedRecoveryHostInstallationOwner,
     RecipientImportGuidedRecoveryHostPrepare,
+};
+#[cfg(test)]
+pub use recipient_import_guided_recovery_launch_authorization::{
+    MAX_GUIDED_RECIPIENT_IMPORT_LAUNCH_AUTHORIZATION_LIFETIME_SECONDS,
+    RecipientImportGuidedRecoveryLaunchApproval, RecipientImportGuidedRecoveryLaunchAuthorization,
+    RecipientImportGuidedRecoveryLaunchAuthorizationError,
+    RecipientImportGuidedRecoveryLaunchPreview,
 };
 #[cfg(test)]
 pub use recipient_import_guided_session_controller::{
@@ -10113,6 +10124,174 @@ mod tests {
         assert!(matches!(
             issuer.issue(),
             Err(RecipientImportGuidedSessionControllerError::MembershipSetChanged)
+        ));
+
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_recovery_launch_authorization_requires_explicit_exact_approval()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-recovery-launch-authorization")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 248)?;
+        let signer = setup.fixture.replacement.identity();
+
+        let issuer =
+            guided_recovery_assembly_issuer(&setup, &descriptor, &durable, reference, 249, signer)?;
+        let authorization =
+            RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(
+                issuer, 17_300, 100,
+            )?;
+        assert_eq!(authorization.preview().membership_count(), 1);
+        assert_eq!(authorization.preview().expires_at_unix_seconds(), 17_400);
+        assert!(
+            authorization
+                .preview()
+                .confirmation_phrase()
+                .starts_with("RECOVER-")
+        );
+        let phrase = authorization.preview().confirmation_phrase().to_owned();
+        let owner = authorization.approve(
+            RecipientImportGuidedRecoveryLaunchApproval::new(phrase),
+            17_301,
+        )?;
+        let mut host = owner.install(17_302, 100)?;
+
+        assert!(host.has_pending_handoff());
+        assert!(!host.opened_network());
+        assert_eq!(
+            host.cancel(
+                RecipientImportGuidedRecoveryHostCancel::pending_handoff(),
+                17_303,
+            )?
+            .phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Idle
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_recovery_launch_authorization_is_one_shot_and_fail_closed()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-recovery-launch-fail-closed")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 250)?;
+        let signer = setup.fixture.replacement.identity();
+
+        let issuer = guided_recovery_assembly_issuer(
+            &setup,
+            &descriptor,
+            &durable,
+            reference.clone(),
+            251,
+            signer,
+        )?;
+        assert!(matches!(
+            RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(
+                issuer, 17_400, 0,
+            ),
+            Err(RecipientImportGuidedRecoveryLaunchAuthorizationError::InvalidLifetime)
+        ));
+
+        let issuer = guided_recovery_assembly_issuer(
+            &setup,
+            &descriptor,
+            &durable,
+            reference.clone(),
+            252,
+            signer,
+        )?;
+        let authorization =
+            RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(
+                issuer, 17_500, 100,
+            )?;
+        assert!(matches!(
+            authorization.approve(
+                RecipientImportGuidedRecoveryLaunchApproval::new("RECOVER-WRONG"),
+                17_501,
+            ),
+            Err(RecipientImportGuidedRecoveryLaunchAuthorizationError::ConfirmationMismatch)
+        ));
+
+        let issuer = guided_recovery_assembly_issuer(
+            &setup,
+            &descriptor,
+            &durable,
+            reference.clone(),
+            253,
+            signer,
+        )?;
+        let authorization =
+            RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(
+                issuer, 17_600, 10,
+            )?;
+        let phrase = authorization.preview().confirmation_phrase().to_owned();
+        assert!(matches!(
+            authorization.approve(
+                RecipientImportGuidedRecoveryLaunchApproval::new(phrase),
+                17_610,
+            ),
+            Err(RecipientImportGuidedRecoveryLaunchAuthorizationError::Expired)
+        ));
+
+        let issuer = guided_recovery_assembly_issuer(
+            &setup,
+            &descriptor,
+            &durable,
+            reference.clone(),
+            254,
+            signer,
+        )?;
+        let authorization =
+            RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(
+                issuer, 17_700, 10,
+            )?;
+        let phrase = authorization.preview().confirmation_phrase().to_owned();
+        assert!(matches!(
+            authorization.approve(
+                RecipientImportGuidedRecoveryLaunchApproval::new(phrase),
+                17_699,
+            ),
+            Err(RecipientImportGuidedRecoveryLaunchAuthorizationError::ClockRegressed)
+        ));
+
+        let issuer = guided_recovery_assembly_issuer(
+            &setup,
+            &descriptor,
+            &durable,
+            reference.clone(),
+            1,
+            signer,
+        )?;
+        RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(
+            issuer, 17_800, 10,
+        )?
+        .cancel();
+
+        let foreign_signer = DeviceIdentity::generate()?;
+        let issuer = guided_recovery_assembly_issuer(
+            &setup,
+            &descriptor,
+            &durable,
+            reference,
+            2,
+            &foreign_signer,
+        )?;
+        let authorization =
+            RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(
+                issuer, 17_900, 10,
+            )?;
+        let phrase = authorization.preview().confirmation_phrase().to_owned();
+        assert!(matches!(
+            authorization.approve(
+                RecipientImportGuidedRecoveryLaunchApproval::new(phrase),
+                17_901,
+            ),
+            Err(RecipientImportGuidedRecoveryLaunchAuthorizationError::Controller(error))
+                if matches!(*error, RecipientImportGuidedSessionControllerError::OwnerDeviceMismatch)
         ));
 
         Ok(())

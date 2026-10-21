@@ -12,6 +12,25 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.54 — explicit local guided-recovery launch authorization: выполнено
+
+- Non-cloneable process-local authorization удерживает ровно один M1.2.53
+  issuer и имеет только crate-private authenticated construction seam. Срок
+  жизни ограничен 300 секундами; restart authorization не восстанавливает.
+- Safe preview содержит только membership count, expiry и отдельную
+  domain-bound confirmation phrase. Path, Account/Device ID, descriptor,
+  signer, coordinator, membership snapshot, signed request/nonce и authority
+  наружу не попадают.
+- `approve(self, typed_approval, now)` извлекает и поглощает authorization до
+  clock/expiry/phrase/downstream validation. Success выдаёт только один M1.2.52
+  installation owner; mismatch, expiry, clock regression, downstream failure
+  и explicit `cancel(self)` не оставляют reusable grant.
+- Новые stable-name authorization fixtures прошли 2/2 за 119.64s; combined
+  guided-recovery regression M1.2.47–M1.2.54 прошёл 14/14 за 1491.09s.
+  Dedicated boundary отклонил 14/14 mutations; accepted-tag readiness прошёл
+  180/180 gates. CLI/desktop/runtime IPC/timer/network не зарегистрированы,
+  public `legacy-only` неизменён.
+
 ### M1.2.53 — authenticated one-shot recovery-assembly issuer: выполнено
 
 - Private process-local input хранит exact state/Account/Device/signer,

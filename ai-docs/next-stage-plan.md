@@ -1,38 +1,38 @@
-# Текущая точка: M1.2.53 завершён, следующий M1.2.54
+# Текущая точка: M1.2.54 завершён, следующий M1.2.55
 
 Дата: 2026-10-22.
 
-M1.2.53 запечатал one-shot full-assembly issuer. Он владеет exact state,
-Account, Device, signer, signed Plan request, coordinator и ordered loaded
-memberships, поглощает input до fallible validation и выдаёт только M1.2.52
-installation owner. Loose session constructor private; production
+M1.2.54 поместил exact M1.2.53 issuer в short-lived one-shot local launch
+authorization. Safe preview показывает только membership count, expiry и
+domain-bound phrase; exact typed approve, cancel, expiry, mismatch, clock
+regression и downstream failure всегда поглощают authorization. Production
 CLI/desktop/runtime IPC/network всё ещё не имеют entry point.
 
-## Следующий этап: M1.2.54 — explicit local launch authorization
+## Следующий этап: M1.2.55 — process-owned pending launch slot
 
-1. Добавить один non-cloneable process-local launch authorization, который
-   удерживает ровно один M1.2.53 issuer и короткоживущую безопасную preview для
-   явного локального решения пользователя.
-2. Не выдавать issuer наружу: typed approve должен потреблять authorization до
-   fallible work и возвращать максимум один installation owner; cancel,
-   expiry, mismatch и любой failure должны поглощать authorization без reusable
-   grant.
-3. Preview не должна содержать path, Account/Device IDs, descriptor, signer,
-   coordinator, membership snapshots, request/nonce или иной authority. Для
-   подтверждения использовать отдельную domain-bound phrase/ceremony ID.
-4. Повторно связать authorization с exact issuer/session lifetime и запретить
-   replacement уже pending/active ceremony.
-5. Оставить весь путь dormant: без runtime IPC/CLI/desktop/timer/background/
-   network registration; ordinary startup не создаёт authorization, default
-   `legacy-only`.
+1. Добавить один non-cloneable process-owned slot, который может владеть не
+   более чем одной M1.2.54 pending authorization и не восстанавливается после
+   restart.
+2. Install должен принимать только complete authorization, проверять expiry и
+   отказывать, если pending authorization либо установленная host ceremony уже
+   существуют; silent replacement и eviction запрещены.
+3. Typed preview/approve/cancel должны идти через slot без выдачи issuer,
+   authorization, installation owner, raw host/session/handoff или identity
+   material наружу.
+4. Approve должен извлекать pending authorization до fallible M1.2.54 work;
+   success устанавливает ровно один host, а mismatch/expiry/failure очищают
+   pending custody. Cancel также очищает её явно.
+5. Оставить путь dormant: без runtime IPC/CLI/desktop/timer/background/network
+   registration; ordinary startup создаёт максимум пустой slot либо вообще его
+   не создаёт, default остаётся `legacy-only`.
 
 ## Stop conditions
 
-- authorization имеет public или loose-fragment constructor;
-- approve принимает issuer/path/signer/descriptor/coordinator/membership как
-  отдельные аргументы либо возвращает issuer/raw session/host/handoff;
-- cancel/expiry/failure возвращает reusable authority или допускает replay;
-- preview раскрывает identity/authority material;
-- authorization можно clone/serialize/восстановить после restart;
-- ordinary startup автоматически создаёт/подтверждает ceremony;
+- slot допускает больше одной pending authorization, replacement или eviction;
+- public API принимает issuer/authorization/path/signer/descriptor/coordinator/
+  membership либо возвращает installation owner/raw host/session/handoff;
+- approve/cancel/expiry/failure сохраняет reusable pending authority;
+- preview раскрывает identity/authority material или обходит M1.2.54 phrase;
+- slot/authorization можно clone/serialize/восстановить после restart;
+- ordinary startup автоматически устанавливает или подтверждает ceremony;
 - peer/runtime wire, product network или public default меняется.
