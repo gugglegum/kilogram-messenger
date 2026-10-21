@@ -1,42 +1,37 @@
-# Текущая точка: M1.2.39 завершён, следующий M1.2.40
+# Текущая точка: M1.2.40 завершён, следующий M1.2.41
 
 Дата: 2026-10-21.
 
-M1.2.39 отделил explicit user authorization от будущей destructive mutation.
-Отдельный bounded ledger read-only/no-create планирует и затем атомарно хранит
-Device-signed binding exact M1.2.38 plan + M1.2.37 `Commit`, membership digest,
-nonce и original 300-second TTL. Exact replay idempotent; stale/rebound/
-foreign/expired/corrupt input fail closed. Сам ledger intent не consume-ит.
-Проверки: stable-path 7/7, boundary 10/10, readiness 165/165.
+M1.2.40 реализовал только dormant explicit consumption mutation: exact durable
+M1.2.39 authorization, completed evidence, current coordinator, caller-owned
+membership и active complete intent перепроверяются до мутации. Отдельный
+Device-signed ledger сохраняет `Prepared` до consume и `Completed` receipt до
+success; crash между ними exact-reconcile-ится без второго consume. Единственная
+мутация снимает active pointer, но сохраняет intent, membership и всю историю.
+Проверки: stable-path 5/5, boundary 10/10, readiness 166/166.
 
-## Следующий этап: M1.2.40 — explicit consumption mutation adapter
+## Следующий этап: M1.2.41 — signed dormant consumption response dispatcher
 
-1. Обрабатывать только M1.2.37 `Commit` и требовать exact durable unexpired
-   M1.2.39 authorization текущего owner Device; `Plan` остаётся read adapter-у.
-2. До mutation заново exact-перечитать completed mutation и revalidate current
-   coordinator, active unconsumed intent и caller-owned memberships/progress.
-3. Добавить отдельный bounded Device-signed mutation ledger: `Prepared` должен
-   стать durable до consume, `Completed` receipt — до возврата success.
-4. Единственная разрешённая mutation — clear exact active complete intent.
-   Membership/history data не удалять; consumption означает только закрытие
-   recovery workflow и не даёт authority на стирание полученной истории.
-5. Crash/retry после consume до `Completed` должен reconcile exact consumed
-   intent без повторного/чужого consume. Exact completed replay не открывает
-   loader и не мутирует state.
-6. Active `RuntimeIpcCommand`, CLI/desktop/background/network и public default
-   не менять. Signed runtime response dispatch — отдельный последующий этап.
-7. Добавить stable-path fixtures, formal manifest/RFC, 10/10 negative boundary,
-   увеличить aggregate readiness до 166 gates, затем rustfmt, locked/offline
-   strict Clippy, commit и push.
+1. Добавить dormant dispatcher, который принимает уже validated consumption
+   request и использует M1.2.38 для `Plan`, а M1.2.39+M1.2.40 для explicit
+   `Commit`; stage skipping и подмена промежуточного plan должны fail closed.
+2. Подписывать outcome текущим descriptor Device через существующий M1.2.37
+   response contract и exact-bind request digest, descriptor и Device.
+3. Для `Plan` не создавать durable state. Для `Commit` success подписывать
+   только после durable authorization + durable mutation receipt; exact replay
+   возвращает тот же semantic receipt без повторного consume.
+4. Не регистрировать новый active `RuntimeIpcCommand`, socket handler, CLI/GUI,
+   worker или network path. Реальная runtime registration остаётся отдельной.
+5. Добавить real signed fixtures, boundary/RFC/manifest, readiness 167 gates,
+   rustfmt и locked/offline strict Clippy, затем commit/push.
 
 ## Stop conditions
 
-- commit может пройти без durable exact M1.2.39 authorization;
-- adapter принимает не-complete, не-active или уже чужим binding consumed intent;
-- membership/coordinator/evidence меняются после plan без fail-closed rejection;
-- crash window позволяет повторно consume другой intent или вернуть success без
-  durable completed receipt;
-- read-only planning начинает создавать state или mutation path открывает сеть;
+- unsigned outcome выходит за boundary dispatcher;
+- `Plan` создаёт authorization/mutation state;
+- `Commit` подписывается до durable authorization либо completed receipt;
+- replay повторно вызывает loader/consume или меняет canonical receipt;
+- descriptor/request/current Device binding допускает substitution;
 - active runtime/default меняются ради прохождения теста.
 
 # Завершённый расширенный пакет: M1.1.92–M1.2.5

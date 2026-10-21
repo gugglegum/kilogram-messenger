@@ -8,18 +8,21 @@
 
 mod execution_api {
     pub use kilogram_peer_history_recovery_execution::{
-        RecipientHistoryImportStore, RecipientHistoryRecoveryImportRoundExecutor,
-        RecipientHistoryTransferInbox, RecipientRecoveryCoordinationPlan,
-        RecipientRecoveryImportRoundExecutionBudget, RecipientRecoveryImportRoundExecutionError,
-        RecipientRecoveryImportRoundExecutionPlan, RecipientRecoveryImportRoundExecutionReceipt,
-        RecipientRecoveryImportRoundIntentError, RecipientRecoveryImportRoundIntentProgressState,
-        RecipientRecoveryImportRoundIntentStore, RecipientRecoveryImportRoundSource,
-        RecipientRecoveryImportRoundStepDisposition, recipient_import_membership_digest,
+        DurableRecipientRecoveryImportRoundIntent, RecipientHistoryImportStore,
+        RecipientHistoryRecoveryImportRoundExecutor, RecipientHistoryTransferInbox,
+        RecipientRecoveryCoordinationPlan, RecipientRecoveryImportRoundExecutionBudget,
+        RecipientRecoveryImportRoundExecutionError, RecipientRecoveryImportRoundExecutionPlan,
+        RecipientRecoveryImportRoundExecutionReceipt,
+        RecipientRecoveryImportRoundIntentConsumeOutcome, RecipientRecoveryImportRoundIntentError,
+        RecipientRecoveryImportRoundIntentProgressState, RecipientRecoveryImportRoundIntentStore,
+        RecipientRecoveryImportRoundSource, RecipientRecoveryImportRoundStepDisposition,
+        recipient_import_membership_digest,
     };
 }
 
 mod recipient_import_confirmation;
 mod recipient_import_consumption_authorization;
+mod recipient_import_consumption_mutation_adapter;
 mod recipient_import_consumption_read_adapter;
 mod recipient_import_mutation_adapter;
 mod recipient_import_read_adapter;
@@ -39,6 +42,12 @@ pub use recipient_import_consumption_authorization::{
     RecipientImportConsumptionAuthorizationLedgerError,
     RecipientImportConsumptionAuthorizationPlan, RecipientImportConsumptionAuthorizationStatus,
     RecipientImportConsumptionAuthorizationSummary,
+};
+pub use recipient_import_consumption_mutation_adapter::{
+    MAX_DURABLE_RECIPIENT_IMPORT_CONSUMPTION_MUTATIONS,
+    RecipientHistoryRecoveryImportConsumptionMutationAdapter,
+    RecipientImportConsumptionMutationAdapterDispatch,
+    RecipientImportConsumptionMutationAdapterError, RecipientImportConsumptionMutationReadStatus,
 };
 pub use recipient_import_consumption_read_adapter::{
     RecipientHistoryRecoveryImportConsumptionReadAdapter,

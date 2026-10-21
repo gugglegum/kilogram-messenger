@@ -438,6 +438,18 @@ impl SignedRecipientRecoveryImportRoundConsumption {
         self.content.final_coordinator_plan_id
     }
 
+    pub fn final_coordinator_sequence(&self) -> u64 {
+        self.content.final_coordinator_sequence
+    }
+
+    pub fn completed_source_count(&self) -> usize {
+        usize::from(self.content.completed_source_count)
+    }
+
+    pub fn imported_event_count(&self) -> u64 {
+        self.content.imported_event_count
+    }
+
     fn verify(
         &self,
         intent: &SignedRecipientRecoveryImportRoundIntent,

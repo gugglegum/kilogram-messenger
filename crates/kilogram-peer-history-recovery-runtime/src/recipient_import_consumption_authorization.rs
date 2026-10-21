@@ -597,6 +597,26 @@ impl RecipientImportConsumptionAuthorizationLedger {
         .cloned())
     }
 
+    /// Loads the exact durable authorization bound to `consumption_nonce`.
+    /// Missing storage remains missing; this read path never creates state.
+    pub fn load_by_consumption_nonce(
+        &self,
+        consumption_nonce: [u8; 32],
+    ) -> Result<
+        Option<DurableRecipientImportConsumptionAuthorization>,
+        RecipientImportConsumptionAuthorizationLedgerError,
+    > {
+        if consumption_nonce == [0_u8; 32] {
+            return Err(RecipientImportConsumptionAuthorizationLedgerError::InvalidNonce);
+        }
+        load_snapshot(
+            &self.state_directory,
+            self.owner_account_id,
+            self.owner_device_id,
+        )?
+        .by_nonce(consumption_nonce)
+    }
+
     #[cfg(test)]
     fn commit_with_fault_before_commit(
         &self,
@@ -1215,6 +1235,8 @@ pub enum RecipientImportConsumptionAuthorizationLedgerError {
     SequenceExhausted,
     #[error("recipient import consumption authorization ID is invalid")]
     InvalidAuthorizationId,
+    #[error("recipient import consumption authorization nonce is invalid")]
+    InvalidNonce,
     #[error("recipient import consumption authorization ledger path is unsafe")]
     UnsafePath,
     #[error("stored recipient import consumption authorization ID has invalid length {0}")]

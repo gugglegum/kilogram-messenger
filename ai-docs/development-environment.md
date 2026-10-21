@@ -5863,3 +5863,29 @@ Hosted follow-up:
 - No intent consumption, active runtime, CLI/desktop, product network, second
   host, release build, archive, tag or automatic GitHub build is used. Default
   remains `legacy-only`.
+
+## M1.2.40 recipient import-consumption mutation environment (2026-10-21)
+
+- `kilogram-peer-history-recovery-runtime` now contains the dormant mutation
+  adapter and a separate
+  `history-recovery/recipient-import-consumption-mutations-v1.redb` ledger.
+- The adapter accepts only exact `Commit`, durable authorization and current
+  owner Device. It reopens completed mutation evidence, reloads live
+  caller-owned memberships, and requires exact current coordinator plus active
+  complete progress before calling the existing intent-store consume method.
+- The ledger writes immediate-durability Device-signed `Prepared` before
+  consume and `Completed` before success. A post-consume/pre-completed injected
+  failure reconciles from the exact signed consumption without another consume;
+  exact completed replay never invokes the membership loader.
+- Consumption removes only the active pointer. The signed intent, memberships,
+  imported events and projections remain stored and readable.
+- The managed Codex sandbox denied key-file writes to the external Windows
+  `%TEMP%`; stable tests were therefore run with `TEMP` and `TMP` pointed at
+  `.tmp/stable-test-temp` inside the workspace. This is a verification-host
+  permission boundary, not a product-path requirement.
+- Stable-path ledger tests pass 2/2 and real signed fixtures pass 3/3. Package
+  strict Clippy, rustfmt, 10/10 boundary mutations and accepted-tag readiness
+  166/166 pass.
+- No active runtime response dispatch, CLI/desktop, product network, second
+  host, release build, archive, tag or automatic GitHub build is used. Default
+  remains `legacy-only`.

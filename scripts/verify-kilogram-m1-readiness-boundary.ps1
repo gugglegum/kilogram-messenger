@@ -52,6 +52,7 @@ foreach ($required in @(
     "'verify-kilogram-canonical-recipient-import-consumption-contract-boundary.ps1' = 'canonical_recipient_import_consumption_contract_boundary=verified'",
     "'verify-kilogram-canonical-recipient-import-consumption-read-adapter-boundary.ps1' = 'canonical_recipient_import_consumption_read_adapter_boundary=verified'",
     "'verify-kilogram-canonical-recipient-import-consumption-authorization-ledger-boundary.ps1' = 'canonical_recipient_import_consumption_authorization_ledger_boundary=verified'",
+    "'verify-kilogram-canonical-recipient-import-consumption-mutation-adapter-boundary.ps1' = 'canonical_recipient_import_consumption_mutation_adapter_boundary=verified'",
     "'verify-kilogram-canonical-runtime-ipc-peer-reenrollment-contract-boundary.ps1' = 'canonical_runtime_ipc_peer_reenrollment_contract_boundary=verified'",
     "'verify-kilogram-canonical-runtime-ipc-peer-reenrollment-read-adapter-boundary.ps1' = 'canonical_runtime_ipc_peer_reenrollment_read_adapter_boundary=verified'",
     "'verify-kilogram-canonical-runtime-ipc-peer-reenrollment-mutation-adapter-boundary.ps1' = 'canonical_runtime_ipc_peer_reenrollment_mutation_adapter_boundary=verified'",
@@ -152,7 +153,7 @@ foreach ($required in @(
     "'verify-kilogram-canonical-wire-boundary.ps1' = 'canonical_wire_boundary=verified'",
     "'verify-kilogram-protocol-compatibility-boundary.ps1' = 'protocol_compatibility_boundary=verified'",
     "Get-ChildItem -LiteralPath `$scriptsDirectory -Filter 'verify-*-boundary.ps1'",
-    'M1 readiness boundary inventory must contain exactly 165 gates',
+    'M1 readiness boundary inventory must contain exactly 166 gates',
     'function Invoke-CapturedPowerShell',
     "`$ErrorActionPreference = 'Continue'",
     "`$gateCapture.ExitCode -ne 0",
@@ -267,7 +268,7 @@ if ($LASTEXITCODE -ne 0 -or
 }
 
 Write-Output 'm1_readiness_boundary=verified'
-Write-Output 'boundary_inventory=closed-165'
+Write-Output 'boundary_inventory=closed-166'
 Write-Output 'candidate_or_accepted_tag_verifier=required'
 Write-Output 'accepted_m1_tag=M1.0.0'
 Write-Output 'format_and_offline_strict_clippy=required'

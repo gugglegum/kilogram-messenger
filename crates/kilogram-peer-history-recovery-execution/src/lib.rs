@@ -48,13 +48,15 @@ mod transfer;
 #[cfg(test)]
 mod execution_api {
     pub use crate::{
-        RecipientHistoryImportStore, RecipientHistoryRecoveryImportRoundExecutor,
-        RecipientHistoryTransferInbox, RecipientRecoveryCoordinationPlan,
-        RecipientRecoveryImportRoundExecutionBudget, RecipientRecoveryImportRoundExecutionError,
-        RecipientRecoveryImportRoundExecutionPlan, RecipientRecoveryImportRoundExecutionReceipt,
-        RecipientRecoveryImportRoundIntentError, RecipientRecoveryImportRoundIntentProgressState,
-        RecipientRecoveryImportRoundIntentStore, RecipientRecoveryImportRoundSource,
-        RecipientRecoveryImportRoundStepDisposition, recipient_import_membership_digest,
+        DurableRecipientRecoveryImportRoundIntent, RecipientHistoryImportStore,
+        RecipientHistoryRecoveryImportRoundExecutor, RecipientHistoryTransferInbox,
+        RecipientRecoveryCoordinationPlan, RecipientRecoveryImportRoundExecutionBudget,
+        RecipientRecoveryImportRoundExecutionError, RecipientRecoveryImportRoundExecutionPlan,
+        RecipientRecoveryImportRoundExecutionReceipt,
+        RecipientRecoveryImportRoundIntentConsumeOutcome, RecipientRecoveryImportRoundIntentError,
+        RecipientRecoveryImportRoundIntentProgressState, RecipientRecoveryImportRoundIntentStore,
+        RecipientRecoveryImportRoundSource, RecipientRecoveryImportRoundStepDisposition,
+        recipient_import_membership_digest,
     };
 }
 
@@ -69,6 +71,14 @@ mod recipient_import_confirmation;
 #[cfg(test)]
 #[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_read_adapter.rs"]
 mod recipient_import_consumption_read_adapter;
+
+#[cfg(test)]
+#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_authorization.rs"]
+mod recipient_import_consumption_authorization;
+
+#[cfg(test)]
+#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_mutation_adapter.rs"]
+mod recipient_import_consumption_mutation_adapter;
 
 #[cfg(test)]
 #[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_mutation_adapter.rs"]
@@ -99,6 +109,18 @@ pub use recipient_import::{
 pub use recipient_import_confirmation::{
     DurableRecipientImportConfirmation, RecipientImportConfirmationCommitOutcome,
     RecipientImportConfirmationLedger, RecipientImportConfirmationLedgerError,
+};
+#[cfg(test)]
+pub use recipient_import_consumption_authorization::{
+    RecipientImportConsumptionAuthorizationCommitOutcome,
+    RecipientImportConsumptionAuthorizationLedger,
+    RecipientImportConsumptionAuthorizationLedgerError,
+};
+#[cfg(test)]
+pub use recipient_import_consumption_mutation_adapter::{
+    RecipientHistoryRecoveryImportConsumptionMutationAdapter,
+    RecipientImportConsumptionMutationAdapterDispatch,
+    RecipientImportConsumptionMutationAdapterError, RecipientImportConsumptionMutationReadStatus,
 };
 #[cfg(test)]
 pub use recipient_import_consumption_read_adapter::{
@@ -2245,9 +2267,11 @@ mod tests {
         event_count: usize,
         checkpoint_page_size: Option<usize>,
     ) -> Result<Fixture, Box<dyn std::error::Error>> {
-        let root = tempfile::tempdir()?;
-        let local_root = AccountRootState::create(root.path().join("local-root"))?;
-        let local_device = DeviceState::load_or_create(root.path().join("local-device"))?;
+        let root = tempfile::tempdir().map_err(|error| format!("create tempdir: {error:?}"))?;
+        let local_root = AccountRootState::create(root.path().join("local-root"))
+            .map_err(|error| format!("create local root: {error:?}"))?;
+        let local_device = DeviceState::load_or_create(root.path().join("local-device"))
+            .map_err(|error| format!("create local device: {error:?}"))?;
         let local_certificate = local_root.issue_device_certificate(
             local_device.identity().device_id(),
             local_device.encryption().public_key(),
@@ -2255,8 +2279,10 @@ mod tests {
         )?;
         let local_authority = local_root.publish_device_list(&[local_certificate])?;
 
-        let history_root = AccountRootState::create(root.path().join("history-root"))?;
-        let source = DeviceState::load_or_create(root.path().join("history-source"))?;
+        let history_root = AccountRootState::create(root.path().join("history-root"))
+            .map_err(|error| format!("create history root: {error:?}"))?;
+        let source = DeviceState::load_or_create(root.path().join("history-source"))
+            .map_err(|error| format!("create history source: {error:?}"))?;
         let source_certificate = history_root.issue_device_certificate(
             source.identity().device_id(),
             source.encryption().public_key(),
@@ -5417,17 +5443,24 @@ mod tests {
     }
 
     fn intent_round_fixture(label: &str) -> Result<IntentRoundFixture, Box<dyn std::error::Error>> {
-        let fixture = fixture(1, None)?;
-        let consent = fixture.open_consent()?;
-        let consent_record_id = fixture.commit_consent(&consent)?;
-        let approved = approved_recipient_source(&fixture, &consent)?;
+        let fixture =
+            fixture(1, None).map_err(|error| format!("create base fixture: {error:?}"))?;
+        let consent = fixture
+            .open_consent()
+            .map_err(|error| format!("open fixture consent: {error:?}"))?;
+        let consent_record_id = fixture
+            .commit_consent(&consent)
+            .map_err(|error| format!("commit fixture consent: {error:?}"))?;
+        let approved = approved_recipient_source(&fixture, &consent)
+            .map_err(|error| format!("approve fixture source: {error:?}"))?;
         let envelope = build_transfer_backlog(
             &fixture,
             &consent,
             consent_record_id,
             &format!("{label}-execution"),
             1,
-        )?
+        )
+        .map_err(|error| format!("build fixture transfer backlog: {error:?}"))?
         .remove(0);
         let state = fixture.root.path().join(label);
         let inbox = RecipientHistoryTransferInbox::new(
@@ -5440,9 +5473,12 @@ mod tests {
             fixture.owner_account_id,
             fixture.replacement.identity().device_id(),
         );
-        inbox.stage_envelope(&envelope)?;
+        inbox
+            .stage_envelope(&envelope)
+            .map_err(|error| format!("stage fixture envelope: {error:?}"))?;
         let coordination =
-            initialize_recipient_coordinator(&fixture, &state, &approved, &inbox, &imports)?;
+            initialize_recipient_coordinator(&fixture, &state, &approved, &inbox, &imports)
+                .map_err(|error| format!("initialize fixture coordinator: {error:?}"))?;
         let round = RecipientHistoryRecoveryImportRound::plan(
             &coordination,
             &[RecipientRecoveryImportRoundSource::new(
@@ -5451,7 +5487,8 @@ mod tests {
             )],
             &inbox,
             &imports,
-        )?;
+        )
+        .map_err(|error| format!("plan fixture import round: {error:?}"))?;
         Ok(IntentRoundFixture {
             fixture,
             approved,
@@ -7399,6 +7436,293 @@ mod tests {
                 ..
             }
         ));
+        Ok(())
+    }
+
+    fn authorized_consumption_request(
+        setup: &IntentRoundFixture,
+        completed: &CompletedAdapterMutation,
+        current: &RecipientRecoveryCoordinationPlan,
+        request_byte: u8,
+        planned_at_unix_seconds: u64,
+    ) -> Result<
+        (
+            RuntimeIpcRecipientImportConsumptionRequest,
+            RecipientImportConsumptionAuthorizationLedger,
+        ),
+        Box<dyn std::error::Error>,
+    > {
+        let plan_request = consumption_request(completed, request_byte)
+            .map_err(|error| format!("build consumption request: {error}"))?;
+        let loader = |requested: &RuntimeIpcRecipientImportMembershipReference| {
+            RecipientImportMembershipLoad::Exact(LoadedRecipientImportMembership::new(
+                requested.authority_reference_id.clone(),
+                requested.authenticated_context_id.clone(),
+                setup.fixture.membership.clone(),
+            ))
+        };
+        let planned = RecipientHistoryRecoveryImportConsumptionReadAdapter::dispatch(
+            &plan_request,
+            &completed.adapter,
+            &completed.store,
+            current,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            planned_at_unix_seconds,
+        )
+        .map_err(|error| format!("dispatch consumption plan: {error}"))?;
+        let plan = planned
+            .ephemeral_plan()
+            .ok_or("ephemeral consumption plan missing")?
+            .clone();
+        let RuntimeIpcRecipientImportConsumptionCommand::Plan {
+            evidence,
+            memberships,
+            ..
+        } = plan_request.command().clone()
+        else {
+            return Err("expected consumption plan request".into());
+        };
+        let commit = RuntimeIpcRecipientImportConsumptionRequest::new(
+            &completed.descriptor,
+            adapter_request_id(request_byte.wrapping_add(1)),
+            RuntimeIpcRecipientImportConsumptionCommand::Commit {
+                evidence,
+                memberships,
+                confirmation_phrase: plan.confirmation_phrase.clone(),
+                explicit_approval:
+                    RuntimeIpcRecipientImportConsumptionExplicitApproval::UserConfirmed,
+                plan: Box::new(plan),
+            },
+        )?;
+        let authorizations = RecipientImportConsumptionAuthorizationLedger::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+        );
+        let authorization_plan = authorizations
+            .plan(&planned, &commit, setup.fixture.replacement.identity())
+            .map_err(|error| format!("plan consumption authorization: {error}"))?;
+        authorizations
+            .commit(&authorization_plan, planned_at_unix_seconds + 1)
+            .map_err(|error| format!("commit consumption authorization: {error}"))?;
+        Ok((commit, authorizations))
+    }
+
+    #[test]
+    fn recipient_import_consumption_mutation_consumes_once_and_replays_without_loader()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-consumption-mutation-exact")?;
+        let completed = completed_adapter_mutation(&setup, 91, 51)?;
+        let current = current_after_adapter_import(&setup)?;
+        let (request, authorizations) =
+            authorized_consumption_request(&setup, &completed, &current, 52, 8_000)?;
+        let adapter = RecipientHistoryRecoveryImportConsumptionMutationAdapter::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+        );
+        let load_count = Cell::new(0_usize);
+        let loader = |requested: &RuntimeIpcRecipientImportMembershipReference| {
+            load_count.set(load_count.get() + 1);
+            RecipientImportMembershipLoad::Exact(LoadedRecipientImportMembership::new(
+                requested.authority_reference_id.clone(),
+                requested.authenticated_context_id.clone(),
+                setup.fixture.membership.clone(),
+            ))
+        };
+        let dispatched = adapter.dispatch(
+            &request,
+            &authorizations,
+            &completed.adapter,
+            &completed.store,
+            &current,
+            &setup.inbox,
+            &setup.imports,
+            &loader,
+            setup.fixture.replacement.identity(),
+            8_002,
+        )?;
+        let RuntimeIpcRecipientImportConsumptionOutcome::Consumed(receipt) = dispatched.outcome()
+        else {
+            return Err(
+                format!("unexpected consumption outcome: {:?}", dispatched.outcome()).into(),
+            );
+        };
+        assert!(receipt.active_intent_cleared);
+        assert_eq!(receipt.consumed_at_unix_seconds, 8_002);
+        assert_eq!(load_count.get(), 1);
+        assert!(dispatched.consumed_intent());
+        assert!(dispatched.persisted_prepared_before_consume());
+        assert!(dispatched.persisted_receipt_before_response());
+        assert!(!dispatched.opened_network());
+        assert!(completed.store.inspect_active()?.is_none());
+        assert!(
+            completed
+                .store
+                .load_by_intent_id(completed.durable.intent_id())?
+                .ok_or("consumed intent missing")?
+                .consumed()
+        );
+        assert!(matches!(
+            adapter.inspect_by_nonce(&request)?,
+            RecipientImportConsumptionMutationReadStatus::Completed(_)
+        ));
+
+        let replay_load_count = Cell::new(0_usize);
+        let rejecting_loader = |_requested: &RuntimeIpcRecipientImportMembershipReference| {
+            replay_load_count.set(replay_load_count.get() + 1);
+            RecipientImportMembershipLoad::Ambiguous
+        };
+        let replay = adapter.dispatch(
+            &request,
+            &authorizations,
+            &completed.adapter,
+            &completed.store,
+            &current,
+            &setup.inbox,
+            &setup.imports,
+            &rejecting_loader,
+            setup.fixture.replacement.identity(),
+            8_003,
+        )?;
+        assert!(matches!(
+            replay.outcome(),
+            RuntimeIpcRecipientImportConsumptionOutcome::AlreadyConsumed(value)
+                if value == receipt
+        ));
+        assert!(replay.replayed_completed_receipt());
+        assert_eq!(replay_load_count.get(), 0);
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_consumption_mutation_reconciles_crash_after_consume()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-consumption-mutation-crash")?;
+        let completed = completed_adapter_mutation(&setup, 93, 55)?;
+        let current = current_after_adapter_import(&setup)?;
+        let (request, authorizations) =
+            authorized_consumption_request(&setup, &completed, &current, 56, 8_100)?;
+        let adapter = RecipientHistoryRecoveryImportConsumptionMutationAdapter::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+        );
+        let loader = |requested: &RuntimeIpcRecipientImportMembershipReference| {
+            RecipientImportMembershipLoad::Exact(LoadedRecipientImportMembership::new(
+                requested.authority_reference_id.clone(),
+                requested.authenticated_context_id.clone(),
+                setup.fixture.membership.clone(),
+            ))
+        };
+        assert!(matches!(
+            adapter.dispatch_with_fault_after_consume(
+                &request,
+                &authorizations,
+                &completed.adapter,
+                &completed.store,
+                &current,
+                &setup.inbox,
+                &setup.imports,
+                &loader,
+                setup.fixture.replacement.identity(),
+                8_102,
+            ),
+            Err(RecipientImportConsumptionMutationAdapterError::InjectedAfterConsume)
+        ));
+        assert!(matches!(
+            adapter.inspect_by_nonce(&request)?,
+            RecipientImportConsumptionMutationReadStatus::Prepared
+        ));
+        assert!(completed.store.inspect_active()?.is_none());
+
+        let replay_load_count = Cell::new(0_usize);
+        let rejecting_loader = |_requested: &RuntimeIpcRecipientImportMembershipReference| {
+            replay_load_count.set(replay_load_count.get() + 1);
+            RecipientImportMembershipLoad::Ambiguous
+        };
+        let recovered = adapter.dispatch(
+            &request,
+            &authorizations,
+            &completed.adapter,
+            &completed.store,
+            &current,
+            &setup.inbox,
+            &setup.imports,
+            &rejecting_loader,
+            setup.fixture.replacement.identity(),
+            8_103,
+        )?;
+        assert!(matches!(
+            recovered.outcome(),
+            RuntimeIpcRecipientImportConsumptionOutcome::AlreadyConsumed(_)
+        ));
+        assert!(recovered.reconciled_consumed_intent());
+        assert!(recovered.persisted_receipt_before_response());
+        assert_eq!(replay_load_count.get(), 0);
+        assert!(matches!(
+            adapter.inspect_by_nonce(&request)?,
+            RecipientImportConsumptionMutationReadStatus::Completed(_)
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_consumption_mutation_requires_durable_authorization_before_reload()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-consumption-mutation-no-authorization")?;
+        let completed = completed_adapter_mutation(&setup, 95, 59)?;
+        let current = current_after_adapter_import(&setup)?;
+        let (request, _committed_authorizations) =
+            authorized_consumption_request(&setup, &completed, &current, 60, 8_200)?;
+        let missing_root = setup.state.join("missing-consumption-authorization");
+        let missing_authorizations = RecipientImportConsumptionAuthorizationLedger::new(
+            &missing_root,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+        );
+        let adapter = RecipientHistoryRecoveryImportConsumptionMutationAdapter::new(
+            &setup.state,
+            setup.fixture.owner_account_id,
+            setup.fixture.replacement.identity().device_id(),
+        );
+        let load_count = Cell::new(0_usize);
+        let rejecting_loader = |_requested: &RuntimeIpcRecipientImportMembershipReference| {
+            load_count.set(load_count.get() + 1);
+            RecipientImportMembershipLoad::Ambiguous
+        };
+        let rejected = adapter
+            .dispatch(
+                &request,
+                &missing_authorizations,
+                &completed.adapter,
+                &completed.store,
+                &current,
+                &setup.inbox,
+                &setup.imports,
+                &rejecting_loader,
+                setup.fixture.replacement.identity(),
+                8_202,
+            )
+            .map_err(|error| format!("dispatch without consumption authorization: {error:?}"))?;
+        assert!(matches!(
+            rejected.outcome(),
+            RuntimeIpcRecipientImportConsumptionOutcome::Rejected {
+                hazard: RuntimeIpcRecipientImportConsumptionHazard::CommitRejected,
+                ..
+            }
+        ));
+        assert_eq!(load_count.get(), 0);
+        assert!(!missing_root.exists());
+        assert!(
+            completed
+                .store
+                .inspect_active()
+                .map_err(|error| format!("inspect intent after rejected consumption: {error:?}"))?
+                .is_some()
+        );
         Ok(())
     }
 }

@@ -6,13 +6,13 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.38 подключил только read-only
-`Plan` consumption ceremony к durable completed mutation, active unconsumed
-intent, current coordinator и caller-owned live membership. Missing storage не
-создаётся, `Commit` отвергается до state reload, plan остаётся ephemeral и
-ничего не consume-ит. Следующий M1.2.39 — отдельный explicit mutation adapter с
-durable plan/commit replay. Active runtime/CLI/desktop/network ещё отсутствуют;
-публичный default остаётся legacy-only.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.40 добавил dormant crash-safe
+consumption mutation adapter. Exact authorization и live completed state
+перепроверяются, `Prepared` durable до consume, `Completed` до success, а crash
+после consume exact-reconcile-ится без повторной мутации. Intent, membership и
+история не удаляются. Следующий M1.2.41 — подписанный dormant response
+dispatcher; active runtime/CLI/desktop/network ещё отсутствуют, публичный
+default остаётся legacy-only.
 
 ## Текущее состояние
 

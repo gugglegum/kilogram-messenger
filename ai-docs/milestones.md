@@ -8282,3 +8282,23 @@ correlation visible, Windows-only field evidence, independent security audit
 - active runtime/server/CLI/desktop/background/network, product network,
   second host, release/ZIP/tag и automatic GitHub build отсутствуют; default
   `legacy-only`.
+
+### M1.2.40 — crash-safe recipient import-consumption mutation: принят локально
+
+- dormant adapter принимает только exact M1.2.37 `Commit` с durable M1.2.39
+  authorization текущего owner Device и заново проверяет completed mutation,
+  coordinator, caller-owned membership и active complete intent;
+- отдельная bounded redb хранит immutable Device-signed `Prepared` до consume
+  и `Completed` receipt до success. Разрешена одна pending ceremony, nonce
+  rebound и broken prepared/completed linkage fail closed;
+- intent-store атомарно записывает signed consumption и снимает лишь exact
+  active pointer. Intent, membership и импортированная история сохраняются;
+- crash после consume до completed receipt восстанавливается по exact signed
+  consumption timestamp/coordinator/counts без второго consume; completed
+  replay не вызывает membership loader и не мутирует state;
+- stable-path ledger tests прошли 2/2, real signed fixtures 3/3, boundary
+  отклонил 10/10 mutations, readiness прошёл 166/166 с rustfmt и
+  locked/offline strict Clippy;
+- active runtime/server/response dispatcher/CLI/desktop/background/network,
+  product network, second host, release/ZIP/tag и automatic GitHub build
+  отсутствуют; default `legacy-only`.
