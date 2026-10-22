@@ -10530,4 +10530,212 @@ mod tests {
         );
         Ok(())
     }
+
+    #[test]
+    fn recipient_import_guided_recovery_launch_slot_router_runs_one_full_host_lifecycle()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-recovery-launch-slot-router")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 44)?;
+        let signer = setup.fixture.replacement.identity();
+        let issuer =
+            guided_recovery_assembly_issuer(&setup, &descriptor, &durable, reference, 45, signer)?;
+        let authorization =
+            RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(
+                issuer, 19_000, 100,
+            )?;
+        let mut slot = RecipientImportGuidedRecoveryLaunchSlot::new_empty();
+        slot.install(authorization, 19_001)?;
+        let phrase = slot.preview()?.confirmation_phrase().to_owned();
+        slot.approve(
+            RecipientImportGuidedRecoveryLaunchSlotApprove::new(phrase, 300),
+            19_002,
+        )?;
+
+        let idle = slot.host_refresh(
+            RecipientImportGuidedSessionLocalUxRefresh::current(),
+            19_002,
+        )?;
+        assert_eq!(idle.phase(), RecipientImportGuidedSessionLocalUxPhase::Idle);
+        let planned =
+            slot.host_prepare(RecipientImportGuidedRecoveryHostPrepare::new(299), 19_003)?;
+        assert_eq!(
+            planned.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Planned
+        );
+        assert_eq!(planned.expires_at_unix_seconds(), Some(19_302));
+        let session_id = planned
+            .session_id()
+            .cloned()
+            .ok_or("slot-routed planned view has no session ID")?;
+        let confirmation_phrase = planned
+            .confirmation_phrase()
+            .ok_or("slot-routed planned view has no confirmation phrase")?
+            .to_owned();
+        assert_eq!(
+            slot.host_refresh(
+                RecipientImportGuidedSessionLocalUxRefresh::exact(session_id.clone()),
+                19_004,
+            )?,
+            planned
+        );
+
+        let confirmed = slot.host_confirm(
+            RecipientImportGuidedSessionLocalUxConfirm::new(
+                session_id.clone(),
+                confirmation_phrase,
+            ),
+            19_005,
+        )?;
+        assert_eq!(
+            confirmed.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Confirmed
+        );
+        let attached = slot.host_apply(
+            RecipientImportGuidedSessionLocalUxApply::new(session_id.clone()),
+            19_006,
+        )?;
+        assert_eq!(
+            attached.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Attached
+        );
+        assert!(attached.complete());
+        assert!(attached.imported_event_count() > 0);
+        assert_eq!(
+            slot.host_refresh(
+                RecipientImportGuidedSessionLocalUxRefresh::exact(session_id.clone()),
+                19_007,
+            )?,
+            attached
+        );
+        assert_eq!(
+            slot.host_cancel(
+                RecipientImportGuidedRecoveryHostCancel::active_session(session_id),
+                19_008,
+            )?
+            .phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Idle
+        );
+        assert_eq!(
+            slot.state(),
+            RecipientImportGuidedRecoveryLaunchSlotState::HostInstalled
+        );
+        assert!(!slot.opened_network());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_recovery_launch_slot_router_rejects_preinstall_and_retains_host()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup =
+            intent_round_fixture("recipient-import-guided-recovery-launch-slot-router-guard")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 46)?;
+        let signer = setup.fixture.replacement.identity();
+        let make_authorization = |request_byte| {
+            let issuer = guided_recovery_assembly_issuer(
+                &setup,
+                &descriptor,
+                &durable,
+                reference.clone(),
+                request_byte,
+                signer,
+            )?;
+            RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(
+                issuer, 19_100, 100,
+            )
+            .map_err(|error| -> Box<dyn std::error::Error> { Box::new(error) })
+        };
+        let unavailable = |result: Result<_, RecipientImportGuidedRecoveryLaunchSlotError>| {
+            assert!(matches!(
+                result,
+                Err(RecipientImportGuidedRecoveryLaunchSlotError::HostUnavailable)
+            ));
+        };
+        let fake_session = adapter_artifact(47);
+        let mut slot = RecipientImportGuidedRecoveryLaunchSlot::new_empty();
+
+        unavailable(slot.host_prepare(RecipientImportGuidedRecoveryHostPrepare::new(10), 19_100));
+        unavailable(slot.host_confirm(
+            RecipientImportGuidedSessionLocalUxConfirm::new(fake_session.clone(), "RECOVER-NONE"),
+            19_100,
+        ));
+        unavailable(slot.host_apply(
+            RecipientImportGuidedSessionLocalUxApply::new(fake_session.clone()),
+            19_100,
+        ));
+        unavailable(slot.host_cancel(
+            RecipientImportGuidedRecoveryHostCancel::active_session(fake_session.clone()),
+            19_100,
+        ));
+        unavailable(slot.host_refresh(
+            RecipientImportGuidedSessionLocalUxRefresh::current(),
+            19_100,
+        ));
+
+        slot.install(make_authorization(48)?, 19_101)?;
+        let retained_phrase = slot.preview()?.confirmation_phrase().to_owned();
+        unavailable(slot.host_prepare(RecipientImportGuidedRecoveryHostPrepare::new(10), 19_102));
+        unavailable(slot.host_confirm(
+            RecipientImportGuidedSessionLocalUxConfirm::new(fake_session.clone(), "RECOVER-NONE"),
+            19_102,
+        ));
+        unavailable(slot.host_apply(
+            RecipientImportGuidedSessionLocalUxApply::new(fake_session.clone()),
+            19_102,
+        ));
+        unavailable(slot.host_cancel(
+            RecipientImportGuidedRecoveryHostCancel::pending_handoff(),
+            19_102,
+        ));
+        unavailable(slot.host_refresh(
+            RecipientImportGuidedSessionLocalUxRefresh::current(),
+            19_102,
+        ));
+        assert_eq!(slot.preview()?.confirmation_phrase(), retained_phrase);
+
+        slot.approve(
+            RecipientImportGuidedRecoveryLaunchSlotApprove::new(retained_phrase, 100),
+            19_103,
+        )?;
+        assert!(matches!(
+            slot.host_confirm(
+                RecipientImportGuidedSessionLocalUxConfirm::new(
+                    fake_session.clone(),
+                    "RECOVER-NONE",
+                ),
+                19_104,
+            ),
+            Err(RecipientImportGuidedRecoveryLaunchSlotError::Host(_))
+        ));
+        assert_eq!(
+            slot.state(),
+            RecipientImportGuidedRecoveryLaunchSlotState::HostInstalled
+        );
+        assert_eq!(
+            slot.host_refresh(
+                RecipientImportGuidedSessionLocalUxRefresh::current(),
+                19_105,
+            )?
+            .phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Idle
+        );
+        assert!(matches!(
+            slot.install(make_authorization(49)?, 19_105),
+            Err(RecipientImportGuidedRecoveryLaunchSlotError::HostAlreadyInstalled)
+        ));
+        assert_eq!(
+            slot.host_prepare(RecipientImportGuidedRecoveryHostPrepare::new(90), 19_106)?
+                .phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Planned
+        );
+        assert_eq!(
+            slot.state(),
+            RecipientImportGuidedRecoveryLaunchSlotState::HostInstalled
+        );
+        assert!(!slot.opened_network());
+        Ok(())
+    }
 }

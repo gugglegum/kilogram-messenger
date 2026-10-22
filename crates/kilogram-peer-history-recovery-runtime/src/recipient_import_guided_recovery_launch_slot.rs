@@ -8,10 +8,13 @@
 use thiserror::Error;
 
 use crate::{
-    RecipientImportGuidedRecoveryHost, RecipientImportGuidedRecoveryHostError,
+    RecipientImportGuidedRecoveryHost, RecipientImportGuidedRecoveryHostCancel,
+    RecipientImportGuidedRecoveryHostError, RecipientImportGuidedRecoveryHostPrepare,
     RecipientImportGuidedRecoveryLaunchApproval, RecipientImportGuidedRecoveryLaunchAuthorization,
     RecipientImportGuidedRecoveryLaunchAuthorizationError,
-    RecipientImportGuidedRecoveryLaunchPreview,
+    RecipientImportGuidedRecoveryLaunchPreview, RecipientImportGuidedSessionLocalUxApply,
+    RecipientImportGuidedSessionLocalUxConfirm, RecipientImportGuidedSessionLocalUxRefresh,
+    RecipientImportGuidedSessionLocalUxView,
 };
 
 /// Safe process-local state projection. It contains no recovery identity,
@@ -161,8 +164,88 @@ impl<'identity> RecipientImportGuidedRecoveryLaunchSlot<'identity> {
         Ok(RecipientImportGuidedRecoveryLaunchSlotState::Empty)
     }
 
+    /// Routes a typed prepare command to the installed host without exposing
+    /// or borrowing that host. Empty and pending slots are rejected before
+    /// controller or durable work can begin.
+    pub fn host_prepare(
+        &mut self,
+        command: RecipientImportGuidedRecoveryHostPrepare,
+        now_unix_seconds: u64,
+    ) -> Result<RecipientImportGuidedSessionLocalUxView, RecipientImportGuidedRecoveryLaunchSlotError>
+    {
+        self.installed_host_mut()?
+            .prepare(command, now_unix_seconds)
+            .map_err(Into::into)
+    }
+
+    /// Routes a typed confirmation command while retaining process ownership
+    /// of the installed host on success and failure.
+    pub fn host_confirm(
+        &mut self,
+        command: RecipientImportGuidedSessionLocalUxConfirm,
+        now_unix_seconds: u64,
+    ) -> Result<RecipientImportGuidedSessionLocalUxView, RecipientImportGuidedRecoveryLaunchSlotError>
+    {
+        self.installed_host_mut()?
+            .confirm(command, now_unix_seconds)
+            .map_err(Into::into)
+    }
+
+    /// Routes a typed apply command and returns only the existing privacy-safe
+    /// local UX projection.
+    pub fn host_apply(
+        &mut self,
+        command: RecipientImportGuidedSessionLocalUxApply,
+        now_unix_seconds: u64,
+    ) -> Result<RecipientImportGuidedSessionLocalUxView, RecipientImportGuidedRecoveryLaunchSlotError>
+    {
+        self.installed_host_mut()?
+            .apply(command, now_unix_seconds)
+            .map_err(Into::into)
+    }
+
+    /// Routes a typed host cancellation. This is distinct from cancelling the
+    /// pending launch authorization and cannot target an uninstalled host.
+    pub fn host_cancel(
+        &mut self,
+        command: RecipientImportGuidedRecoveryHostCancel,
+        now_unix_seconds: u64,
+    ) -> Result<RecipientImportGuidedSessionLocalUxView, RecipientImportGuidedRecoveryLaunchSlotError>
+    {
+        self.installed_host_mut()?
+            .cancel(command, now_unix_seconds)
+            .map_err(Into::into)
+    }
+
+    /// Routes a typed refresh without making the host, controller, authority,
+    /// session context, or start hand-off observable.
+    pub fn host_refresh(
+        &mut self,
+        command: RecipientImportGuidedSessionLocalUxRefresh,
+        now_unix_seconds: u64,
+    ) -> Result<RecipientImportGuidedSessionLocalUxView, RecipientImportGuidedRecoveryLaunchSlotError>
+    {
+        self.installed_host_mut()?
+            .refresh(command, now_unix_seconds)
+            .map_err(Into::into)
+    }
+
     pub fn opened_network(&self) -> bool {
         false
+    }
+
+    fn installed_host_mut(
+        &mut self,
+    ) -> Result<
+        &mut RecipientImportGuidedRecoveryHost<'identity>,
+        RecipientImportGuidedRecoveryLaunchSlotError,
+    > {
+        if self.pending_authorization.is_some() {
+            return Err(RecipientImportGuidedRecoveryLaunchSlotError::HostUnavailable);
+        }
+        self.installed_host
+            .as_mut()
+            .ok_or(RecipientImportGuidedRecoveryLaunchSlotError::HostUnavailable)
     }
 }
 
@@ -174,6 +257,8 @@ pub enum RecipientImportGuidedRecoveryLaunchSlotError {
     HostAlreadyInstalled,
     #[error("guided recovery launch slot has no pending authorization")]
     PendingUnavailable,
+    #[error("guided recovery launch slot has no installed host")]
+    HostUnavailable,
     #[error(transparent)]
     Authorization(Box<RecipientImportGuidedRecoveryLaunchAuthorizationError>),
     #[error(transparent)]

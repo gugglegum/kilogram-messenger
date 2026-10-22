@@ -6,14 +6,15 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.55 добавил non-cloneable
-process-owned `RecipientImportGuidedRecoveryLaunchSlot`, который удерживает не
-более одной complete M1.2.54 authorization и одного установленного host.
-Install/approve принимают custody по значению, replacement и eviction
-запрещены, а mismatch/expiry/clock/downstream failure очищают pending grant.
-Наружу выходят только safe state/preview; owner/raw host/session/handoff не
-выдаются. CLI/desktop/runtime IPC/network не подключены. Следующий M1.2.56
-должен маршрутизировать typed host controls через этот же opaque slot.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.56 маршрутизирует все пять
+typed host-команд через process-owned
+`RecipientImportGuidedRecoveryLaunchSlot`. `Empty` и
+`PendingAuthorization` отвергаются общим gate до host/controller/durable work;
+наружу выходит только прежний privacy-safe UX view. Ошибка не извлекает и не
+заменяет установленный host. CLI/desktop/runtime IPC/network не подключены.
+Следующий M1.2.57 должен атомарно создавать authorization внутри slot из
+one-shot issuer, чтобы готовая authorization больше не переносилась между
+crate-internal владельцами.
 
 ## Текущее состояние
 

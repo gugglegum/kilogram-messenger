@@ -1,5 +1,25 @@
 # Среда разработки
 
+## M1.2.56 verification (2026-10-22)
+
+- Два новых opaque host-command-router fixtures прошли 2/2 за 271.86s, затем
+  combined M1.2.47–M1.2.56 guided-recovery regression прошёл 18/18 за 1926.66s
+  через `scripts/run-cargo-tests-stable.ps1` с постоянным EXE,
+  workspace-local TEMP/TMP, двумя cargo jobs и below-normal priority; direct
+  `cargo test` не использовался.
+- Dedicated router boundary отклонил 16/16 weakening mutations: отсутствие
+  HostInstalled gate, допуск Empty/Pending, unsafe return/extraction/clone,
+  потерю host после ошибки, replacement/restart и product activation.
+- Accepted-tag M1 readiness прошёл 182/182 gates с rustfmt и workspace-wide
+  locked/offline strict Clippy. Cross-volume incremental hard-link fallback
+  остался только обычным Cargo warning.
+- Product network, second host, release build, archive, tag и automatic GitHub
+  build не использовались. Ordinary startup не создаёт slot и не маршрутизирует
+  команды; CLI/desktop/runtime IPC/timer/background остаются unregistered,
+  default — `legacy-only`.
+- Cargo target после regression занимает 54.59 GiB. Кэш сохранён ради скорости;
+  verification profile и incremental generations не очищались.
+
 ## M1.2.55 verification (2026-10-22)
 
 - Два новых process-owned launch-slot fixtures прошли 2/2 за 130.65s, затем

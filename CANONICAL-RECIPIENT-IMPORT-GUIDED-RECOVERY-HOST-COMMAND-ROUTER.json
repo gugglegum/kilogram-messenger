@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.56",
+  "status": "opaque-installed-host-command-router-verified",
+  "predecessor": "M1.2.55",
+  "router": {
+    "owner_type": "RecipientImportGuidedRecoveryLaunchSlot",
+    "installed_host_remains_process_owned": true,
+    "typed_prepare": true,
+    "typed_confirm": true,
+    "typed_apply": true,
+    "typed_cancel": true,
+    "typed_refresh": true,
+    "requires_host_installed": true,
+    "rejects_empty_before_host_work": true,
+    "rejects_pending_authorization_before_host_work": true,
+    "returns_existing_safe_ux_view_only": true,
+    "returns_raw_host": false,
+    "returns_installation_owner": false,
+    "returns_authorization_or_issuer": false,
+    "returns_session_authority_or_handoff": false,
+    "returns_identity_or_membership": false
+  },
+  "failure": {
+    "host_errors_remain_typed": true,
+    "installed_host_retained_after_routed_error": true,
+    "replacement_after_routed_error": false,
+    "host_extraction_after_routed_error": false,
+    "host_restart_recovery": false,
+    "slot_cloneable": false,
+    "slot_serializable": false
+  },
+  "production": {
+    "registered_runtime_ipc_command": false,
+    "registered_cli_command": false,
+    "registered_desktop_control": false,
+    "registered_timer": false,
+    "registered_background_start": false,
+    "adds_filesystem_discovery": false,
+    "changes_peer_wire": false,
+    "changes_runtime_ipc_wire": false,
+    "ordinary_startup_creates_slot": false,
+    "ordinary_startup_routes_host_commands": false,
+    "changes_public_default": false,
+    "public_default": "legacy-only"
+  },
+  "verification": {
+    "new_stable_path_test_count": 2,
+    "new_stable_path_test_seconds": 271.86,
+    "combined_guided_recovery_test_count": 18,
+    "combined_guided_recovery_test_seconds": 1926.66,
+    "negative_mutations_rejected": "16/16",
+    "readiness_gates": "182/182",
+    "format_verified": true,
+    "offline_strict_clippy_verified": true,
+    "full_host_lifecycle_routed": true,
+    "all_commands_reject_empty": true,
+    "all_commands_reject_pending_authorization": true,
+    "host_retained_after_routed_error": true,
+    "installed_host_replacement_rejected": true,
+    "network_executed": false,
+    "second_host_required": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "next": [
+    "admit-a-complete-launch-authorization-into-one-process-owned-slot-without-returning-custody",
+    "keep-installed-host-commands-behind-the-opaque-slot",
+    "keep-runtime-ipc-cli-desktop-network-and-public-default-unchanged"
+  ]
+}

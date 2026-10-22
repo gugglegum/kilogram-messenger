@@ -12,6 +12,22 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.56 — opaque installed-host command router: выполнено
+
+- Existing typed prepare/confirm/apply/cancel/refresh проходят только через
+  process-owned launch slot; raw host не возвращается и не заимствуется.
+- Один private `installed_host_mut` gate отвергает `Empty` и
+  `PendingAuthorization` до host/controller/durable work. Pending preview при
+  отказе остаётся неизменным.
+- Все команды возвращают только existing M1.2.49 safe UX view. Routed error
+  сохраняет host внутри slot и не открывает extraction/replacement/restart
+  seam; новый authorization после ошибки по-прежнему отвергается.
+- Stable-name router fixtures прошли 2/2 за 271.86s; combined guided-recovery
+  regression M1.2.47–M1.2.56 прошёл 18/18 за 1926.66s. Dedicated boundary
+  отклонил 16/16 mutations; accepted-tag readiness прошёл 182/182 gates.
+  CLI/desktop/runtime IPC/timer/network не зарегистрированы, public
+  `legacy-only` неизменён.
+
 ### M1.2.55 — process-owned pending guided-recovery launch slot: выполнено
 
 - Non-cloneable process-local slot владеет максимум одной complete M1.2.54
