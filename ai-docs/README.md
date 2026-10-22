@@ -6,14 +6,14 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.58 связывает complete
-authenticated Plan/coordinator/ordered-membership assembly с process-owned
-slot одним opaque transition. Caller передаёт non-cloneable crate-private
-staging input по значению; issuer создаётся только внутри slot и немедленно
-становится authorization. Failed staging не возвращает authority и не
-вытесняет прежнюю custody. CLI/desktop/runtime IPC/network не подключены.
-Следующий M1.2.59 должен поместить сам slot под один dormant process-owned
-service facade без выдачи raw slot/host/authority.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.59 помещает один complete
+guided-recovery lifecycle под dormant process-owned service facade. Service
+сам владеет private launch slot, принимает opaque assembly staging input и
+маршрутизирует только safe state/preview, typed launch commands и existing
+safe host UX. Raw slot/host/issuer/authorization наружу не выдаются;
+CLI/desktop/runtime IPC/network не подключены. Следующий M1.2.60 должен убрать
+raw launch-slot type из public API, оставив service единственным production
+owner этой custody.
 
 ## Текущее состояние
 
@@ -1385,6 +1385,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.2.58 принимает только opaque complete authenticated assembly input,
   создаёт issuer внутри slot и удаляет production seam, через который caller
   мог временно владеть ready issuer.
+- [`../docs/RFC-0283-m1259-dormant-process-owned-guided-recovery-launch-service.md`](../docs/RFC-0283-m1259-dormant-process-owned-guided-recovery-launch-service.md) —
+  M1.2.59 помещает один launch slot под dormant process-owned facade,
+  маршрутизирует staging и все typed launch/host команды без выдачи raw
+  slot/host/authority и сохраняет predecessor one-shot custody.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

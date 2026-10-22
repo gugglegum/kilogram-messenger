@@ -1,5 +1,25 @@
 # Среда разработки
 
+## M1.2.59 verification (2026-10-22)
+
+- Два новых process-owned launch-service fixtures прошли 2/2 за 244.59s,
+  затем combined M1.2.47–M1.2.59 guided-recovery regression прошёл 24/24 за
+  2326.12s через `scripts/run-cargo-tests-stable.ps1` с постоянным EXE,
+  workspace-local TEMP/TMP, двумя cargo jobs и below-normal priority; direct
+  `cargo test` не использовался.
+- Dedicated launch-service boundary отклонил 18/18 weakening mutations.
+  Assembly issuer, launch authorization, launch slot, host router,
+  issuer-to-slot и assembly-to-slot predecessor boundaries сохранили полное
+  mutation coverage.
+- Accepted-tag M1 readiness прошёл 185/185 gates с rustfmt и workspace-wide
+  locked/offline strict Clippy.
+- Product network, second host, release build, archive, tag и automatic GitHub
+  build не использовались. Ordinary startup не создаёт service и не выполняет
+  staging; CLI/desktop/runtime IPC/timer/background остаются unregistered,
+  default — `legacy-only`.
+- Cargo target после regression занимает 54.60 GiB. Кэш сохранён ради скорости;
+  verification profile и incremental generations не очищались.
+
 ## M1.2.58 verification (2026-10-22)
 
 - Два новых atomic authenticated-assembly-to-slot fixtures прошли 2/2 за

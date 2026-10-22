@@ -12,6 +12,23 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.59 — dormant process-owned guided-recovery launch service: выполнено
+
+- Один non-cloneable process-owned service теперь сам владеет ровно одним
+  private launch slot. Constructor и opaque assembly staging crate-private;
+  raw slot/host/issuer/authorization/assembly fragments не возвращаются.
+- Safe state/preview, typed approve/pending-cancel и существующие host
+  prepare/confirm/apply/cancel/refresh проходят через единый facade. Наружу
+  выходят только существующие safe projections и typed wrapper ошибки.
+- Replacement, extraction, second-slot, Clone/Debug/Default/serde и restart
+  recovery seams отсутствуют. Failure сохраняет или уничтожает custody строго
+  по predecessor one-shot правилам; ordinary startup service не создаёт.
+- Stable-name service fixtures прошли 2/2 за 244.59s; combined guided-recovery
+  regression M1.2.47–M1.2.59 прошёл 24/24 за 2326.12s. Dedicated boundary
+  отклонил 18/18 mutations; accepted-tag readiness прошёл 185/185 gates.
+  CLI/desktop/runtime IPC/timer/network не зарегистрированы, public
+  `legacy-only` неизменён.
+
 ### M1.2.58 — atomic authenticated-assembly-to-slot staging: выполнено
 
 - Complete signed Plan/coordinator/ordered-membership assembly теперь

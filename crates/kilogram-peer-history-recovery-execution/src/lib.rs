@@ -110,6 +110,10 @@ mod recipient_import_guided_recovery_host;
 mod recipient_import_guided_recovery_launch_authorization;
 
 #[cfg(test)]
+#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_guided_recovery_launch_service.rs"]
+mod recipient_import_guided_recovery_launch_service;
+
+#[cfg(test)]
 #[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_guided_recovery_launch_slot.rs"]
 mod recipient_import_guided_recovery_launch_slot;
 
@@ -205,6 +209,10 @@ pub use recipient_import_guided_recovery_launch_authorization::{
     RecipientImportGuidedRecoveryLaunchApproval, RecipientImportGuidedRecoveryLaunchAuthorization,
     RecipientImportGuidedRecoveryLaunchAuthorizationError,
     RecipientImportGuidedRecoveryLaunchPreview,
+};
+#[cfg(test)]
+pub use recipient_import_guided_recovery_launch_service::{
+    RecipientImportGuidedRecoveryLaunchService, RecipientImportGuidedRecoveryLaunchServiceError,
 };
 #[cfg(test)]
 pub use recipient_import_guided_recovery_launch_slot::{
@@ -10960,6 +10968,234 @@ mod tests {
             RecipientImportGuidedRecoveryLaunchSlotState::HostInstalled
         );
         assert!(!slot.opened_network());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_recovery_launch_service_runs_one_safe_lifecycle()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-recovery-launch-service")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 65)?;
+        let signer = setup.fixture.replacement.identity();
+        let assembly = guided_recovery_assembly_staging_input(
+            &setup,
+            &descriptor,
+            &durable,
+            reference,
+            66,
+            signer,
+        )?;
+        let mut service = RecipientImportGuidedRecoveryLaunchService::new_dormant();
+
+        assert_eq!(
+            service.state(),
+            RecipientImportGuidedRecoveryLaunchSlotState::Empty
+        );
+        assert_eq!(
+            service.stage_authenticated_assembly(assembly, 20_800, 100, 20_801)?,
+            RecipientImportGuidedRecoveryLaunchSlotState::PendingAuthorization
+        );
+        assert_eq!(service.preview()?.membership_count(), 1);
+        assert_eq!(service.preview()?.expires_at_unix_seconds(), 20_900);
+        let launch_phrase = service.preview()?.confirmation_phrase().to_owned();
+        assert_eq!(
+            service.approve(
+                RecipientImportGuidedRecoveryLaunchSlotApprove::new(launch_phrase, 300),
+                20_802,
+            )?,
+            RecipientImportGuidedRecoveryLaunchSlotState::HostInstalled
+        );
+        assert_eq!(
+            service
+                .host_refresh(
+                    RecipientImportGuidedSessionLocalUxRefresh::current(),
+                    20_802,
+                )?
+                .phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Idle
+        );
+
+        let planned =
+            service.host_prepare(RecipientImportGuidedRecoveryHostPrepare::new(299), 20_803)?;
+        assert_eq!(
+            planned.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Planned
+        );
+        let session_id = planned
+            .session_id()
+            .cloned()
+            .ok_or("service-routed planned view has no session ID")?;
+        let confirmation_phrase = planned
+            .confirmation_phrase()
+            .ok_or("service-routed planned view has no confirmation phrase")?
+            .to_owned();
+        assert_eq!(
+            service.host_refresh(
+                RecipientImportGuidedSessionLocalUxRefresh::exact(session_id.clone()),
+                20_804,
+            )?,
+            planned
+        );
+        assert_eq!(
+            service
+                .host_confirm(
+                    RecipientImportGuidedSessionLocalUxConfirm::new(
+                        session_id.clone(),
+                        confirmation_phrase,
+                    ),
+                    20_805,
+                )?
+                .phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Confirmed
+        );
+        let attached = service.host_apply(
+            RecipientImportGuidedSessionLocalUxApply::new(session_id.clone()),
+            20_806,
+        )?;
+        assert_eq!(
+            attached.phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Attached
+        );
+        assert!(attached.complete());
+        assert!(attached.imported_event_count() > 0);
+        assert_eq!(
+            service
+                .host_cancel(
+                    RecipientImportGuidedRecoveryHostCancel::active_session(session_id),
+                    20_807,
+                )?
+                .phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Idle
+        );
+        assert_eq!(
+            service.state(),
+            RecipientImportGuidedRecoveryLaunchSlotState::HostInstalled
+        );
+        assert!(!service.opened_network());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_recovery_launch_service_preserves_and_consumes_custody()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-recovery-launch-service-guard")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 67)?;
+        let signer = setup.fixture.replacement.identity();
+        let make_assembly = |request_byte| {
+            guided_recovery_assembly_staging_input(
+                &setup,
+                &descriptor,
+                &durable,
+                reference.clone(),
+                request_byte,
+                signer,
+            )
+        };
+        let mut service = RecipientImportGuidedRecoveryLaunchService::new_dormant();
+
+        assert!(matches!(
+            service.host_refresh(
+                RecipientImportGuidedSessionLocalUxRefresh::current(),
+                20_900,
+            ),
+            Err(RecipientImportGuidedRecoveryLaunchServiceError::Slot(error))
+                if matches!(*error, RecipientImportGuidedRecoveryLaunchSlotError::HostUnavailable)
+        ));
+        assert!(matches!(
+            service.stage_authenticated_assembly(make_assembly(68)?, 20_900, 0, 20_900),
+            Err(RecipientImportGuidedRecoveryLaunchServiceError::Slot(error))
+                if matches!(
+                    &*error,
+                    RecipientImportGuidedRecoveryLaunchSlotError::Authorization(source)
+                        if matches!(
+                            &**source,
+                            RecipientImportGuidedRecoveryLaunchAuthorizationError::InvalidLifetime
+                        )
+                )
+        ));
+        assert_eq!(
+            service.state(),
+            RecipientImportGuidedRecoveryLaunchSlotState::Empty
+        );
+
+        service.stage_authenticated_assembly(make_assembly(69)?, 21_000, 100, 21_001)?;
+        let retained_phrase = service.preview()?.confirmation_phrase().to_owned();
+        assert!(matches!(
+            service.stage_authenticated_assembly(make_assembly(70)?, 21_000, 100, 21_001),
+            Err(RecipientImportGuidedRecoveryLaunchServiceError::Slot(error))
+                if matches!(
+                    *error,
+                    RecipientImportGuidedRecoveryLaunchSlotError::PendingAlreadyInstalled
+                )
+        ));
+        assert_eq!(service.preview()?.confirmation_phrase(), retained_phrase);
+        assert_eq!(
+            service.cancel(RecipientImportGuidedRecoveryLaunchSlotCancel::pending())?,
+            RecipientImportGuidedRecoveryLaunchSlotState::Empty
+        );
+
+        service.stage_authenticated_assembly(make_assembly(71)?, 21_100, 100, 21_101)?;
+        assert!(matches!(
+            service.approve(
+                RecipientImportGuidedRecoveryLaunchSlotApprove::new("RECOVER-WRONG", 100),
+                21_102,
+            ),
+            Err(RecipientImportGuidedRecoveryLaunchServiceError::Slot(error))
+                if matches!(
+                    &*error,
+                    RecipientImportGuidedRecoveryLaunchSlotError::Authorization(source)
+                        if matches!(
+                            &**source,
+                            RecipientImportGuidedRecoveryLaunchAuthorizationError::ConfirmationMismatch
+                        )
+                )
+        ));
+        assert_eq!(
+            service.state(),
+            RecipientImportGuidedRecoveryLaunchSlotState::Empty
+        );
+
+        service.stage_authenticated_assembly(make_assembly(72)?, 21_200, 100, 21_201)?;
+        let phrase = service.preview()?.confirmation_phrase().to_owned();
+        service.approve(
+            RecipientImportGuidedRecoveryLaunchSlotApprove::new(phrase, 100),
+            21_202,
+        )?;
+        assert!(matches!(
+            service.stage_authenticated_assembly(make_assembly(73)?, 21_200, 100, 21_203),
+            Err(RecipientImportGuidedRecoveryLaunchServiceError::Slot(error))
+                if matches!(
+                    *error,
+                    RecipientImportGuidedRecoveryLaunchSlotError::HostAlreadyInstalled
+                )
+        ));
+        let fake_session = adapter_artifact(74);
+        assert!(matches!(
+            service.host_confirm(
+                RecipientImportGuidedSessionLocalUxConfirm::new(fake_session, "RECOVER-NONE"),
+                21_204,
+            ),
+            Err(RecipientImportGuidedRecoveryLaunchServiceError::Slot(error))
+                if matches!(*error, RecipientImportGuidedRecoveryLaunchSlotError::Host(_))
+        ));
+        assert_eq!(
+            service.state(),
+            RecipientImportGuidedRecoveryLaunchSlotState::HostInstalled
+        );
+        assert_eq!(
+            service
+                .host_refresh(
+                    RecipientImportGuidedSessionLocalUxRefresh::current(),
+                    21_205,
+                )?
+                .phase(),
+            RecipientImportGuidedSessionLocalUxPhase::Idle
+        );
+        assert!(!service.opened_network());
         Ok(())
     }
 }

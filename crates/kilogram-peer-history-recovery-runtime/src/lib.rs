@@ -31,6 +31,7 @@ mod recipient_import_consumption_runtime_service;
 mod recipient_import_consumption_session_cache;
 mod recipient_import_guided_recovery_host;
 mod recipient_import_guided_recovery_launch_authorization;
+mod recipient_import_guided_recovery_launch_service;
 mod recipient_import_guided_recovery_launch_slot;
 mod recipient_import_guided_session_controller;
 mod recipient_import_guided_session_local_ux;
@@ -96,6 +97,9 @@ pub use recipient_import_guided_recovery_launch_authorization::{
     RecipientImportGuidedRecoveryLaunchApproval, RecipientImportGuidedRecoveryLaunchAuthorization,
     RecipientImportGuidedRecoveryLaunchAuthorizationError,
     RecipientImportGuidedRecoveryLaunchPreview,
+};
+pub use recipient_import_guided_recovery_launch_service::{
+    RecipientImportGuidedRecoveryLaunchService, RecipientImportGuidedRecoveryLaunchServiceError,
 };
 pub use recipient_import_guided_recovery_launch_slot::{
     RecipientImportGuidedRecoveryLaunchSlot, RecipientImportGuidedRecoveryLaunchSlotApprove,
