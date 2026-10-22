@@ -75,7 +75,7 @@ pub(crate) struct RecipientImportGuidedRecoveryHost<'identity> {
 /// The owner has no public constructor and accepts no loose authority
 /// fragments. Installing consumes the owner itself, so success and every
 /// failure make the grant unavailable for replay.
-pub struct RecipientImportGuidedRecoveryHostInstallationOwner<'identity> {
+pub(crate) struct RecipientImportGuidedRecoveryHostInstallationOwner<'identity> {
     installation: AuthenticatedGuidedRecipientImportHostInstallation<'identity>,
 }
 

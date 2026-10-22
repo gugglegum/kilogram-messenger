@@ -144,7 +144,7 @@ function Assert-Boundary {
         'pub(crate) fn from_authenticated_plan_assembly_fixture(',
         "pub struct RecipientImportGuidedRecoveryAssemblyIssuer<'identity>",
         "input: RecipientImportGuidedRecoveryAssemblyStagingInput<'identity>",
-        'pub fn issue(', 'self,'
+        'pub(crate) fn issue(', 'self,'
     ) 'assembly-to-slot controller source'
     foreach ($forbidden in @(
         'pub struct RecipientImportGuidedRecoveryAssemblyStagingInput',

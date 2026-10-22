@@ -144,7 +144,7 @@ function Assert-Boundary {
         'pub(crate) fn into_issuer(self)',
         '#[cfg(test)]',
         'pub(crate) fn from_authenticated_plan_assembly_fixture(',
-        'pub fn issue(', 'self,',
+        'pub(crate) fn issue(', 'self,',
         'let RecipientImportGuidedRecoveryAssemblyStagingInput {',
         'AuthenticatedGuidedRecipientImportSession::from_authenticated_recovery(',
         'let installation = authority.into_host_installation(signer)?;',
@@ -181,7 +181,7 @@ function Assert-Boundary {
     }
     if (-not [regex]::IsMatch(
         $Controller,
-        '(?s)pub struct RecipientImportGuidedRecoveryAssemblyIssuer<''identity>.*?pub fn issue\(\s*self,'
+        '(?s)pub struct RecipientImportGuidedRecoveryAssemblyIssuer<''identity>.*?pub\(crate\) fn issue\(\s*self,'
     )) {
         throw 'recovery-assembly issuer issue no longer consumes self'
     }
@@ -219,7 +219,7 @@ function Assert-Boundary {
     }
 
     Require-Text $HostSource @(
-        "pub struct RecipientImportGuidedRecoveryHostInstallationOwner<'identity>",
+        "pub(crate) struct RecipientImportGuidedRecoveryHostInstallationOwner<'identity>",
         'pub(crate) fn from_authenticated_recovery(', 'pub(crate) fn install(', 'self,'
     ) 'installation-owner predecessor'
     Require-Text $RuntimeLibrary @(
@@ -325,7 +325,7 @@ if ($SelfTest) {
     $mutations += ({ Assert-Boundary $manifest $changedController $hostSource $runtimeLibrary $otherRuntimeSources $execution $cli $desktop $rfc }.GetNewClosure())
     $changedController = [regex]::Replace(
         $controller,
-        '(?s)(pub fn issue\(\s+)self,',
+        '(?s)(pub\(crate\) fn issue\(\s+)self,',
         '${1}&mut self,',
         1
     )

@@ -87,10 +87,12 @@ pub use recipient_import_consumption_session_cache::{
     RecipientImportConsumptionPlanSessionCacheError,
     RecipientImportConsumptionPlanSessionInsertOutcome,
 };
-pub(crate) use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;
+pub(crate) use recipient_import_guided_recovery_host::{
+    RecipientImportGuidedRecoveryHost, RecipientImportGuidedRecoveryHostInstallationOwner,
+};
 pub use recipient_import_guided_recovery_host::{
     RecipientImportGuidedRecoveryHostCancel, RecipientImportGuidedRecoveryHostError,
-    RecipientImportGuidedRecoveryHostInstallationOwner, RecipientImportGuidedRecoveryHostPrepare,
+    RecipientImportGuidedRecoveryHostPrepare,
 };
 pub use recipient_import_guided_recovery_launch_authorization::{
     MAX_GUIDED_RECIPIENT_IMPORT_LAUNCH_AUTHORIZATION_LIFETIME_SECONDS,

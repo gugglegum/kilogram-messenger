@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.62",
+  "status": "host-installation-owner-public-surface-retired",
+  "predecessor": "M1.2.61",
+  "installation_owner": {
+    "type": "RecipientImportGuidedRecoveryHostInstallationOwner",
+    "crate_private": true,
+    "public_reexport": false,
+    "publicly_nameable": false,
+    "constructed_only_from_authenticated_recovery": true,
+    "consumed_only_by_launch_slot_path": true,
+    "install_consumes_self": true,
+    "cloneable": false,
+    "serializable": false,
+    "debuggable": false,
+    "default_constructible": false,
+    "raw_accessor": false,
+    "extraction_seam": false,
+    "replacement_seam": false,
+    "restart_recovery": false
+  },
+  "returning_transitions": {
+    "issuer_issue_crate_private": true,
+    "authorization_approve_crate_private": true,
+    "owner_install_crate_private": true,
+    "all_consume_self": true,
+    "public_transition_returns_owner": false,
+    "failure_returns_reusable_authority": false
+  },
+  "safe_vocabulary": {
+    "public_launch_service": true,
+    "public_safe_preview": true,
+    "public_safe_state": true,
+    "public_typed_launch_commands": true,
+    "public_typed_host_commands": true,
+    "public_typed_errors": true,
+    "public_safe_local_ux_view": true,
+    "service_routing_preserved": true,
+    "exposes_installation_owner": false,
+    "exposes_raw_host": false,
+    "exposes_controller": false,
+    "changes_semantics": false,
+    "changes_wire_representation": false
+  },
+  "test_boundary": {
+    "copied_module_only": true,
+    "owner_reexport_crate_private": true,
+    "predecessor_fixtures_retained": true,
+    "production_api_reopened": false
+  },
+  "production": {
+    "ordinary_startup_creates_service": false,
+    "ordinary_startup_creates_owner": false,
+    "ordinary_startup_creates_host": false,
+    "registered_runtime_ipc_command": false,
+    "registered_cli_command": false,
+    "registered_desktop_control": false,
+    "registered_timer": false,
+    "registered_background_start": false,
+    "adds_filesystem_discovery": false,
+    "changes_peer_wire": false,
+    "changes_runtime_ipc_wire": false,
+    "changes_public_default": false,
+    "public_default": "legacy-only"
+  },
+  "verification": {
+    "new_stable_path_test_count": 0,
+    "combined_guided_recovery_test_count": 24,
+    "combined_guided_recovery_test_seconds": 2367.73,
+    "negative_mutations_rejected": "18/18",
+    "readiness_gates": "188/188",
+    "format_verified": true,
+    "offline_strict_clippy_verified": true,
+    "owner_not_publicly_nameable": true,
+    "returning_transitions_not_public": true,
+    "safe_facade_regression_verified": true,
+    "network_executed": false,
+    "second_host_required": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "next": [
+    "retire-the-transitional-assembly-issuer-public-surface",
+    "keep-launch-service-and-safe-command-vocabulary-public",
+    "keep-runtime-ipc-cli-desktop-network-and-public-default-unchanged"
+  ]
+}

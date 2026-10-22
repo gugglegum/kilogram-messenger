@@ -12,6 +12,24 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.62 — host installation-owner public surface retirement: выполнено
+
+- `RecipientImportGuidedRecoveryHostInstallationOwner` теперь crate-private и
+  больше не re-exported как public runtime API. Возвращающие owner переходы
+  issuer `issue`, authorization `approve` и owner `install` crate-private и
+  по-прежнему consume `self`.
+- Единственный production path выводит owner внутри crate-private launch slot,
+  немедленно устанавливает raw host и сохраняет его в slot. Ни success, ни
+  failure не возвращают owner/issuer/authorization/host наружу.
+- Public остаются launch-service facade, safe preview/state, typed launch и
+  host commands/errors и safe local UX view. Copied-module harness re-exported
+  owner только как `pub(crate)`; semantic и wire contracts не менялись.
+- Новых behavioral tests нет; unchanged combined M1.2.47–M1.2.59 regression
+  прошёл 24/24 за 2367.73s через stable-name EXE. Dedicated boundary
+  отклонил 18/18 mutations; accepted-tag readiness прошёл 188/188 gates.
+  Product network, CLI/desktop/runtime IPC/timer не подключены, public
+  `legacy-only` неизменён.
+
 ### M1.2.61 — raw installed-host public surface retirement: выполнено
 
 - `RecipientImportGuidedRecoveryHost` теперь crate-private и больше не

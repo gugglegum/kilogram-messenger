@@ -205,7 +205,8 @@ function Assert-Boundary {
     ) 'M1.2.49 safe UX predecessor'
     Require-Text $RuntimeLibrary @(
         'mod recipient_import_guided_recovery_host;',
-        'pub(crate) use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;',
+        'pub(crate) use recipient_import_guided_recovery_host::{',
+        'RecipientImportGuidedRecoveryHost, RecipientImportGuidedRecoveryHostInstallationOwner,',
         'pub use recipient_import_guided_recovery_host::{',
         'RecipientImportGuidedRecoveryHostPrepare',
         'RecipientImportGuidedRecoveryHostCancel'
@@ -221,7 +222,8 @@ function Assert-Boundary {
     }
     Require-Text $Execution @(
         '#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_guided_recovery_host.rs"]',
-        'pub(crate) use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;',
+        'pub(crate) use recipient_import_guided_recovery_host::{',
+        'RecipientImportGuidedRecoveryHost, RecipientImportGuidedRecoveryHostInstallationOwner,',
         'pub use recipient_import_guided_recovery_host::{',
         'recipient_import_guided_recovery_host_owns_one_full_local_ux_ceremony',
         'recipient_import_guided_recovery_host_fails_closed_and_drops_ephemeral_custody',

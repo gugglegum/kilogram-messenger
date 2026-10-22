@@ -213,7 +213,7 @@ function Assert-Boundary {
     ) 'issuer-to-slot authorization'
     Require-Text $Issuer @(
         "pub struct RecipientImportGuidedRecoveryAssemblyIssuer<'identity>",
-        'pub(crate) fn launch_binding(', 'pub fn issue(', 'self,'
+        'pub(crate) fn launch_binding(', 'pub(crate) fn issue(', 'self,'
     ) 'issuer-to-slot issuer'
     Require-Text $RuntimeLibrary @(
         'mod recipient_import_guided_recovery_launch_slot;',

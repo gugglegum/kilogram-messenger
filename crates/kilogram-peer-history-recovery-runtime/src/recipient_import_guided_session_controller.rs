@@ -381,7 +381,7 @@ impl<'identity> RecipientImportGuidedRecoveryAssemblyIssuer<'identity> {
         })
     }
 
-    pub fn issue(
+    pub(crate) fn issue(
         self,
     ) -> Result<
         RecipientImportGuidedRecoveryHostInstallationOwner<'identity>,

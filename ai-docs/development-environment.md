@@ -1,5 +1,23 @@
 # Среда разработки
 
+## M1.2.62 verification (2026-10-22)
+
+- Этап меняет только Rust visibility/API boundary и не добавляет новый
+  behavioral fixture. Unchanged combined M1.2.47–M1.2.59 guided-recovery
+  regression прошёл 24/24 за 2367.73s через
+  `scripts/run-cargo-tests-stable.ps1` с постоянным EXE, workspace-local
+  TEMP/TMP, двумя cargo jobs и below-normal priority; direct `cargo test` не
+  использовался.
+- Dedicated installation-owner retirement boundary отклонил 18/18 weakening
+  mutations. Host/owner, assembly issuer, launch authorization, atomic
+  staging, slot, router, service и оба raw-surface retirement predecessor
+  gates сохранили полное mutation coverage.
+- Accepted-tag M1 readiness прошёл 188/188 gates с rustfmt и workspace-wide
+  locked/offline strict Clippy.
+- Product network, second host, release build, archive, tag и automatic GitHub
+  build не использовались. CLI/desktop/runtime IPC/timer/background остаются
+  unregistered, default — `legacy-only`; build cache сохранён.
+
 ## M1.2.61 verification (2026-10-22)
 
 - Этап меняет только Rust visibility/API boundary и не добавляет новый

@@ -141,7 +141,7 @@ function Assert-Boundary {
         'issued_at_unix_seconds: u64',
         'pub(crate) fn from_authenticated_issuer(',
         "issuer: RecipientImportGuidedRecoveryAssemblyIssuer<'identity>",
-        'pub fn preview(&self)', 'pub fn approve(', 'self,',
+        'pub fn preview(&self)', 'pub(crate) fn approve(', 'self,',
         'approval: RecipientImportGuidedRecoveryLaunchApproval',
         'let Self {', 'issuer,', 'preview,', 'issued_at_unix_seconds,',
         'RecipientImportGuidedRecoveryLaunchAuthorizationError::ClockRegressed',
@@ -173,7 +173,7 @@ function Assert-Boundary {
     }
     if (-not [regex]::IsMatch(
         $Authorization,
-        '(?s)pub struct RecipientImportGuidedRecoveryLaunchAuthorization<''identity>.*?pub fn approve\(\s*self,'
+        '(?s)pub struct RecipientImportGuidedRecoveryLaunchAuthorization<''identity>.*?pub\(crate\) fn approve\(\s*self,'
     )) {
         throw 'launch authorization approval no longer consumes self'
     }
@@ -310,7 +310,7 @@ if ($SelfTest) {
     $mutations += ({ Assert-Boundary $manifest $changedAuthorization $controller $runtimeLibrary $execution $cli $desktop $rfc }.GetNewClosure())
     $changedAuthorization = [regex]::Replace(
         $authorization,
-        '(?s)(pub fn approve\(\s+)self,',
+        '(?s)(pub\(crate\) fn approve\(\s+)self,',
         '${1}&mut self,',
         1
     )

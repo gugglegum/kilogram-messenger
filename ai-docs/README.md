@@ -6,14 +6,14 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.61 сделал raw
-`RecipientImportGuidedRecoveryHost` crate-private implementation detail и
-удалил его public re-export. Единственным production owner остаётся
-crate-private launch slot, а typed host commands/errors, safe UX view и public
-service facade сохранены. Copied-module regression видит raw host только как
-`pub(crate)`; CLI/desktop/runtime IPC/network не подключены. Следующий M1.2.62
-должен закрыть transitional public installation-owner surface без изменения
-safe facade.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.62 сделал
+`RecipientImportGuidedRecoveryHostInstallationOwner` crate-private и удалил
+его public re-export. Возвращающие owner переходы `issue` и `approve` также
+crate-private; owner по-прежнему one-shot проходит только через private
+launch-slot path. Public launch service, safe preview/state, typed commands,
+errors и UX view сохранены; CLI/desktop/runtime IPC/network не подключены.
+Следующий M1.2.63 должен закрыть transitional public assembly-issuer surface
+без изменения safe facade.
 
 ## Текущее состояние
 
@@ -1397,6 +1397,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.2.61 удаляет raw installed recovery host из public API; единственный
   production owner — crate-private slot, а typed commands/errors, safe UX view
   и service routing остаются public.
+- [`../docs/RFC-0286-m1262-host-installation-owner-public-surface-retirement.md`](../docs/RFC-0286-m1262-host-installation-owner-public-surface-retirement.md) —
+  M1.2.62 удаляет host installation owner и возвращающие его transitions из
+  public API; one-shot installation остаётся только внутри private slot path,
+  а safe service vocabulary остаётся public.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

@@ -132,7 +132,7 @@ impl<'identity> RecipientImportGuidedRecoveryLaunchAuthorization<'identity> {
     }
 
     /// Consumes the authorization before checking the fallible approval path.
-    pub fn approve(
+    pub(crate) fn approve(
         self,
         approval: RecipientImportGuidedRecoveryLaunchApproval,
         now_unix_seconds: u64,

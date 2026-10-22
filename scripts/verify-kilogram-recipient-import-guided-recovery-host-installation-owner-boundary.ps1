@@ -160,7 +160,7 @@ function Assert-Boundary {
 
     Require-Text $HostSource @(
         "pub(crate) struct RecipientImportGuidedRecoveryHost<'identity>",
-        "pub struct RecipientImportGuidedRecoveryHostInstallationOwner<'identity>",
+        "pub(crate) struct RecipientImportGuidedRecoveryHostInstallationOwner<'identity>",
         "installation: AuthenticatedGuidedRecipientImportHostInstallation<'identity>",
         'pub(crate) fn from_authenticated_recovery(',
         "installation: AuthenticatedGuidedRecipientImportHostInstallation<'identity>",
@@ -187,7 +187,7 @@ function Assert-Boundary {
     }
     if ([regex]::IsMatch(
         $HostSource,
-        "(?m)^[ \t]*#\[derive[^\]]*\][ \t]*\r?\n[ \t]*pub struct RecipientImportGuidedRecoveryHostInstallationOwner"
+        "(?m)^[ \t]*#\[derive[^\]]*\][ \t]*\r?\n[ \t]*pub\(crate\) struct RecipientImportGuidedRecoveryHostInstallationOwner"
     )) {
         throw 'host-installation owner gained a derive attribute'
     }
@@ -213,9 +213,9 @@ function Assert-Boundary {
     }
 
     Require-Text $RuntimeLibrary @(
-        'pub(crate) use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;',
+        'pub(crate) use recipient_import_guided_recovery_host::{',
+        'RecipientImportGuidedRecoveryHost, RecipientImportGuidedRecoveryHostInstallationOwner,',
         'pub use recipient_import_guided_recovery_host::{',
-        'RecipientImportGuidedRecoveryHostInstallationOwner',
         'RecipientImportGuidedRecoveryHostPrepare',
         'RecipientImportGuidedRecoveryHostCancel'
     ) 'runtime installation-owner export'
@@ -326,8 +326,8 @@ if ($SelfTest) {
     )
     $mutations += ({ Assert-Boundary $manifest $changedHost $controller $runtimeLibrary $execution $cli $desktop $rfc }.GetNewClosure())
     $changedHost = $hostSource.Replace(
-        "pub struct RecipientImportGuidedRecoveryHostInstallationOwner<'identity>",
-        "#[derive(Clone)]`r`npub struct RecipientImportGuidedRecoveryHostInstallationOwner<'identity>"
+        "pub(crate) struct RecipientImportGuidedRecoveryHostInstallationOwner<'identity>",
+        "#[derive(Clone)]`r`npub(crate) struct RecipientImportGuidedRecoveryHostInstallationOwner<'identity>"
     )
     $mutations += ({ Assert-Boundary $manifest $changedHost $controller $runtimeLibrary $execution $cli $desktop $rfc }.GetNewClosure())
     $changedHost = [regex]::Replace(

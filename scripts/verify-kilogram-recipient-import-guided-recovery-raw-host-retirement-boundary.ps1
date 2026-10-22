@@ -126,7 +126,7 @@ function Assert-Boundary {
         'pub struct RecipientImportGuidedRecoveryHostPrepare',
         'pub struct RecipientImportGuidedRecoveryHostCancel',
         'pub enum RecipientImportGuidedRecoveryHostError',
-        "pub struct RecipientImportGuidedRecoveryHostInstallationOwner<'identity>",
+        "pub(crate) struct RecipientImportGuidedRecoveryHostInstallationOwner<'identity>",
         'pub(crate) fn install(', 'self,',
         'RecipientImportGuidedRecoveryHost::new(',
         'pub fn prepare(', 'pub fn confirm(', 'pub fn apply(',
@@ -189,11 +189,11 @@ function Assert-Boundary {
 
     Require-Text $RuntimeLibrary @(
         'mod recipient_import_guided_recovery_host;',
-        'pub(crate) use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;',
+        'pub(crate) use recipient_import_guided_recovery_host::{',
+        'RecipientImportGuidedRecoveryHost, RecipientImportGuidedRecoveryHostInstallationOwner,',
         'pub use recipient_import_guided_recovery_host::{',
         'RecipientImportGuidedRecoveryHostCancel,',
         'RecipientImportGuidedRecoveryHostError,',
-        'RecipientImportGuidedRecoveryHostInstallationOwner,',
         'RecipientImportGuidedRecoveryHostPrepare,'
     ) 'raw installed-host runtime exports'
     if ([regex]::IsMatch(
@@ -206,7 +206,8 @@ function Assert-Boundary {
 
     Require-Text $Execution @(
         '#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_guided_recovery_host.rs"]',
-        'pub(crate) use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;',
+        'pub(crate) use recipient_import_guided_recovery_host::{',
+        'RecipientImportGuidedRecoveryHost, RecipientImportGuidedRecoveryHostInstallationOwner,',
         'pub use recipient_import_guided_recovery_host::{',
         'recipient_import_guided_recovery_host_owns_one_full_local_ux_ceremony',
         'recipient_import_guided_recovery_host_installation_owner_accepts_only_full_assembly',
@@ -299,12 +300,12 @@ if ($SelfTest) {
 
     $sourceMutations = @(
         @{ Label = 'public_raw_struct'; Target = 'host'; From = "pub(crate) struct RecipientImportGuidedRecoveryHost<'identity>"; To = "pub struct RecipientImportGuidedRecoveryHost<'identity>" },
-        @{ Label = 'public_runtime_reexport'; Target = 'runtime'; From = 'pub(crate) use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;'; To = 'pub use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;' },
+        @{ Label = 'public_runtime_reexport'; Target = 'runtime'; From = 'pub(crate) use recipient_import_guided_recovery_host::{'; To = 'pub use recipient_import_guided_recovery_host::{' },
         @{ Label = 'public_installation_method'; Target = 'host'; From = '    pub(crate) fn install('; To = '    pub fn install(' },
         @{ Label = 'public_slot_field'; Target = 'slot'; From = '    installed_host: Option<RecipientImportGuidedRecoveryHost'; To = '    pub installed_host: Option<RecipientImportGuidedRecoveryHost' },
         @{ Label = 'raw_slot_accessor'; Target = 'slot_append'; From = ''; To = "`r`npub fn installed_host(&self) -> &RecipientImportGuidedRecoveryHost<'identity> { todo!() }`r`n" },
         @{ Label = 'second_runtime_owner'; Target = 'other_append'; From = ''; To = "`r`nstruct AlternateHostOwner<'identity> { host: RecipientImportGuidedRecoveryHost<'identity> }`r`n" },
-        @{ Label = 'public_test_reexport'; Target = 'execution'; From = 'pub(crate) use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;'; To = 'pub use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;' },
+        @{ Label = 'public_test_reexport'; Target = 'execution'; From = 'pub(crate) use recipient_import_guided_recovery_host::{'; To = 'pub use recipient_import_guided_recovery_host::{' },
         @{ Label = 'cli_raw_host'; Target = 'cli_append'; From = ''; To = "`r`nRecipientImportGuidedRecoveryHost::new`r`n" }
     )
     foreach ($mutation in $sourceMutations) {
