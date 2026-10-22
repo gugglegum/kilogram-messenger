@@ -8,7 +8,7 @@
 use thiserror::Error;
 
 use crate::{
-    RecipientImportGuidedRecoveryAssemblyIssuer, RecipientImportGuidedRecoveryHost,
+    RecipientImportGuidedRecoveryAssemblyStagingInput, RecipientImportGuidedRecoveryHost,
     RecipientImportGuidedRecoveryHostCancel, RecipientImportGuidedRecoveryHostError,
     RecipientImportGuidedRecoveryHostPrepare, RecipientImportGuidedRecoveryLaunchApproval,
     RecipientImportGuidedRecoveryLaunchAuthorization,
@@ -78,18 +78,19 @@ impl<'identity> RecipientImportGuidedRecoveryLaunchSlot<'identity> {
         }
     }
 
-    /// Atomically stages one authenticated issuer without permitting
+    /// Atomically stages one authenticated assembly without permitting
     /// replacement.
     ///
-    /// The issuer is accepted by ownership and the complete launch
-    /// authorization is created only inside this process-owned slot. Rejection
-    /// for existing custody, invalid lifetime, clock regression, expiry, or
-    /// binding failure drops the incoming one-shot authority and never returns
-    /// either the issuer or a ready authorization to the caller.
+    /// The opaque assembly is accepted by ownership, converted into its one-shot
+    /// issuer, and immediately sealed into the complete launch authorization
+    /// inside this process-owned slot. The caller therefore never owns a ready
+    /// issuer. Rejection for existing custody, invalid lifetime, clock
+    /// regression, expiry, or binding failure drops the incoming assembly and
+    /// never returns assembly, issuer, or authorization authority.
     #[allow(dead_code)]
-    pub(crate) fn stage_from_authenticated_issuer(
+    pub(crate) fn stage_from_authenticated_assembly(
         &mut self,
-        issuer: RecipientImportGuidedRecoveryAssemblyIssuer<'identity>,
+        assembly: RecipientImportGuidedRecoveryAssemblyStagingInput<'identity>,
         issued_at_unix_seconds: u64,
         lifetime_seconds: u64,
         now_unix_seconds: u64,
@@ -103,6 +104,7 @@ impl<'identity> RecipientImportGuidedRecoveryLaunchSlot<'identity> {
         if self.installed_host.is_some() {
             return Err(RecipientImportGuidedRecoveryLaunchSlotError::HostAlreadyInstalled);
         }
+        let issuer = assembly.into_issuer();
         let authorization =
             RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(
                 issuer,

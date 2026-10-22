@@ -152,13 +152,14 @@ function Assert-Boundary {
         "pending_authorization: Option<RecipientImportGuidedRecoveryLaunchAuthorization<'identity>>",
         "installed_host: Option<RecipientImportGuidedRecoveryHost<'identity>>",
         'pub(crate) fn new_empty() -> Self',
-        'pub(crate) fn stage_from_authenticated_issuer(',
-        "issuer: RecipientImportGuidedRecoveryAssemblyIssuer<'identity>",
+        'pub(crate) fn stage_from_authenticated_assembly(',
+        "assembly: RecipientImportGuidedRecoveryAssemblyStagingInput<'identity>",
         'issued_at_unix_seconds: u64', 'lifetime_seconds: u64',
         'if self.pending_authorization.is_some()',
         'RecipientImportGuidedRecoveryLaunchSlotError::PendingAlreadyInstalled',
         'if self.installed_host.is_some()',
         'RecipientImportGuidedRecoveryLaunchSlotError::HostAlreadyInstalled',
+        'let issuer = assembly.into_issuer();',
         'RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(',
         'authorization.validate_pending_at(now_unix_seconds)?;',
         'self.pending_authorization = Some(authorization);',
@@ -178,7 +179,8 @@ function Assert-Boundary {
         'pub struct RecipientImportGuidedRecoveryLaunchSlotCancel'
     ) 'launch-slot source'
     foreach ($forbidden in @(
-        'pub fn new_empty()', 'pub fn stage_from_authenticated_issuer(',
+        'pub fn new_empty()', 'pub fn stage_from_authenticated_assembly(',
+        'pub(crate) fn stage_from_authenticated_issuer(',
         'pub(crate) fn install(', 'pub fn install(', 'use serde::',
         '#[derive(Serialize', '#[derive(Deserialize', 'impl Serialize',
         'impl Deserialize', 'TcpListener', 'UdpSocket', 'iroh::Endpoint',
@@ -329,8 +331,8 @@ if ($SelfTest) {
     $changedSlot = $slot.Replace('pub(crate) fn new_empty()', 'pub fn new_empty()')
     $mutations += ({ Assert-Boundary $manifest $changedSlot $authorization $runtimeLibrary $execution $cli $desktop $rfc }.GetNewClosure())
     $changedSlot = $slot.Replace(
-        'pub(crate) fn stage_from_authenticated_issuer(',
-        'pub fn stage_from_authenticated_issuer('
+        'pub(crate) fn stage_from_authenticated_assembly(',
+        'pub fn stage_from_authenticated_assembly('
     )
     $mutations += ({ Assert-Boundary $manifest $changedSlot $authorization $runtimeLibrary $execution $cli $desktop $rfc }.GetNewClosure())
     $changedSlot = $slot.Replace(

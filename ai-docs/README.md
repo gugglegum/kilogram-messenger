@@ -6,14 +6,14 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.57 заменяет передачу готовой
-launch authorization атомарным crate-internal переходом `issuer -> slot`.
-Slot принимает one-shot issuer по значению, сам создаёт и проверяет grant и
-только затем сохраняет его. Invalid lifetime, clock regression, expiry и
-occupied-slot отказ не возвращают authority и не вытесняют прежнюю custody.
-CLI/desktop/runtime IPC/network не подключены. Следующий M1.2.58 должен так же
-атомарно связать authenticated plan assembly с process-owned slot, не оставляя
-issuer во временном владении вызывающего кода.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.58 связывает complete
+authenticated Plan/coordinator/ordered-membership assembly с process-owned
+slot одним opaque transition. Caller передаёт non-cloneable crate-private
+staging input по значению; issuer создаётся только внутри slot и немедленно
+становится authorization. Failed staging не возвращает authority и не
+вытесняет прежнюю custody. CLI/desktop/runtime IPC/network не подключены.
+Следующий M1.2.59 должен поместить сам slot под один dormant process-owned
+service facade без выдачи raw slot/host/authority.
 
 ## Текущее состояние
 
@@ -1381,6 +1381,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.2.57 создаёт authorization только внутри slot из issuer, принятого по
   значению; admission/replacement failures поглощают incoming authority и
   сохраняют прежнюю custody.
+- [`../docs/RFC-0282-m1258-atomic-authenticated-assembly-to-slot-staging.md`](../docs/RFC-0282-m1258-atomic-authenticated-assembly-to-slot-staging.md) —
+  M1.2.58 принимает только opaque complete authenticated assembly input,
+  создаёт issuer внутри slot и удаляет production seam, через который caller
+  мог временно владеть ready issuer.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

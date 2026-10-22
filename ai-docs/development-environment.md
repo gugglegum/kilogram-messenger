@@ -1,5 +1,29 @@
 # Среда разработки
 
+## M1.2.58 verification (2026-10-22)
+
+- Два новых atomic authenticated-assembly-to-slot fixtures прошли 2/2 за
+  106.03s, затем combined M1.2.47–M1.2.58 guided-recovery regression прошёл
+  22/22 за 2147.89s через `scripts/run-cargo-tests-stable.ps1` с постоянным
+  EXE, workspace-local TEMP/TMP, двумя cargo jobs и below-normal priority;
+  direct `cargo test` не использовался.
+- Dedicated assembly-to-slot boundary отклонил 18/18 weakening mutations.
+  Successor-aware assembly-issuer, launch-slot и issuer-to-slot boundaries
+  сохранили соответственно 17/17, 16/16 и 18/18 mutation coverage.
+- Accepted-tag M1 readiness прошёл 184/184 gates с rustfmt и workspace-wide
+  locked/offline strict Clippy. Cross-volume incremental hard-link fallback
+  остался только обычным Cargo warning. Первый aggregate pass дошёл до strict
+  Clippy и остановился на test-only fixture, который используется copied-module
+  execution harness, но не собственный runtime test target; узкий
+  `#[allow(dead_code)]` добавлен только под `#[cfg(test)]`, после чего полный
+  readiness повтор прошёл.
+- Product network, second host, release build, archive, tag и automatic GitHub
+  build не использовались. Ordinary startup не создаёт slot и не выполняет
+  staging; CLI/desktop/runtime IPC/timer/background остаются unregistered,
+  default — `legacy-only`.
+- Cargo target после regression занимает 54.60 GiB. Кэш сохранён ради скорости;
+  verification profile и incremental generations не очищались.
+
 ## M1.2.57 verification (2026-10-22)
 
 - Два новых atomic issuer-to-slot staging fixtures прошли 2/2 за 123.30s,

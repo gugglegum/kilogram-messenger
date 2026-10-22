@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.58",
+  "status": "atomic-authenticated-assembly-to-slot-staging-verified",
+  "predecessor": "M1.2.57",
+  "staging_input": {
+    "type": "RecipientImportGuidedRecoveryAssemblyStagingInput",
+    "process_local": true,
+    "crate_private_type": true,
+    "crate_private_constructor": true,
+    "contains_exact_authenticated_assembly": true,
+    "opaque_fields": true,
+    "cloneable": false,
+    "serializable": false,
+    "debuggable": false,
+    "public_constructor": false,
+    "returns_authority_fragments": false,
+    "restart_recovers_input": false
+  },
+  "transition": {
+    "owner_type": "RecipientImportGuidedRecoveryLaunchSlot",
+    "accepts_staging_input_by_value": true,
+    "constructs_issuer_inside_slot": true,
+    "constructs_authorization_inside_slot": true,
+    "validates_before_retaining": true,
+    "returns_safe_state_only": true,
+    "production_caller_constructs_ready_issuer": false,
+    "accepts_loose_authority_fragments": false,
+    "returns_staging_input": false,
+    "returns_issuer": false,
+    "returns_authorization": false,
+    "returns_owner_host_session_handoff_identity_or_membership": false
+  },
+  "failure": {
+    "invalid_lifetime_consumes_input_issuer_and_grant": true,
+    "clock_regression_consumes_input_issuer_and_grant": true,
+    "expiry_consumes_input_issuer_and_grant": true,
+    "pending_replacement_consumes_incoming_input": true,
+    "installed_host_replacement_consumes_incoming_input": true,
+    "existing_custody_preserved": true,
+    "returns_rejected_authority": false,
+    "silently_replaces_or_evicts_custody": false
+  },
+  "predecessor_compatibility": {
+    "issuer_constructor_available_to_production_callers": false,
+    "issuer_fixture_explicitly_cfg_test": true,
+    "issuer_still_one_shot": true,
+    "authorization_still_created_once_inside_slot": true,
+    "slot_cloneable": false,
+    "slot_serializable": false,
+    "restart_recovers_authority": false
+  },
+  "production": {
+    "registered_runtime_ipc_command": false,
+    "registered_cli_command": false,
+    "registered_desktop_control": false,
+    "registered_timer": false,
+    "registered_background_start": false,
+    "adds_filesystem_discovery": false,
+    "changes_peer_wire": false,
+    "changes_runtime_ipc_wire": false,
+    "ordinary_startup_creates_slot": false,
+    "ordinary_startup_stages_assembly": false,
+    "changes_public_default": false,
+    "public_default": "legacy-only"
+  },
+  "verification": {
+    "new_stable_path_test_count": 2,
+    "new_stable_path_test_seconds": 106.03,
+    "combined_guided_recovery_test_count": 22,
+    "combined_guided_recovery_test_seconds": 2147.89,
+    "negative_mutations_rejected": "18/18",
+    "readiness_gates": "184/184",
+    "format_verified": true,
+    "offline_strict_clippy_verified": true,
+    "atomic_success_verified": true,
+    "invalid_lifetime_rejected": true,
+    "pending_replacement_rejected": true,
+    "installed_host_replacement_rejected": true,
+    "existing_custody_preserved": true,
+    "network_executed": false,
+    "second_host_required": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "next": [
+    "introduce-one-process-owned-guided-recovery-launch-service",
+    "keep-slot-host-and-authority-unextractable",
+    "keep-runtime-ipc-cli-desktop-network-and-public-default-unchanged"
+  ]
+}

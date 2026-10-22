@@ -131,7 +131,7 @@ function Assert-Boundary {
     }
 
     Require-Text $Controller @(
-        "struct AuthenticatedGuidedRecipientImportAssemblyInput<'identity>",
+        "pub(crate) struct RecipientImportGuidedRecoveryAssemblyStagingInput<'identity>",
         'state_directory: PathBuf', 'owner_account_id: AccountId',
         'owner_device_id: DeviceId', "signer: &'identity DeviceIdentity",
         'descriptor: RuntimeIpcDescriptor',
@@ -139,10 +139,13 @@ function Assert-Boundary {
         'coordination: RecipientRecoveryCoordinationPlan',
         'memberships: Vec<GuidedRecipientImportMembership>',
         "pub struct RecipientImportGuidedRecoveryAssemblyIssuer<'identity>",
-        "input: AuthenticatedGuidedRecipientImportAssemblyInput<'identity>",
+        "input: RecipientImportGuidedRecoveryAssemblyStagingInput<'identity>",
         'pub(crate) fn from_authenticated_plan_assembly(',
+        'pub(crate) fn into_issuer(self)',
+        '#[cfg(test)]',
+        'pub(crate) fn from_authenticated_plan_assembly_fixture(',
         'pub fn issue(', 'self,',
-        'let AuthenticatedGuidedRecipientImportAssemblyInput {',
+        'let RecipientImportGuidedRecoveryAssemblyStagingInput {',
         'AuthenticatedGuidedRecipientImportSession::from_authenticated_recovery(',
         'let installation = authority.into_host_installation(signer)?;',
         'RecipientImportGuidedRecoveryHostInstallationOwner::from_authenticated_recovery(',
@@ -158,7 +161,7 @@ function Assert-Boundary {
         'pub fn from_authenticated_plan_assembly(',
         'pub fn from_authenticated_recovery(',
         'pub(crate) fn from_authenticated_recovery(',
-        'pub struct AuthenticatedGuidedRecipientImportAssemblyInput',
+        'pub struct RecipientImportGuidedRecoveryAssemblyStagingInput',
         'TcpListener', 'UdpSocket', 'iroh::Endpoint', 'std::fs::read_dir'
     )) {
         if ($Controller.IndexOf($forbidden, [StringComparison]::Ordinal) -ge 0) {
@@ -166,7 +169,7 @@ function Assert-Boundary {
         }
     }
     foreach ($type in @(
-        'AuthenticatedGuidedRecipientImportAssemblyInput',
+        'RecipientImportGuidedRecoveryAssemblyStagingInput',
         'RecipientImportGuidedRecoveryAssemblyIssuer'
     )) {
         if ([regex]::IsMatch(
@@ -195,7 +198,7 @@ function Assert-Boundary {
         throw 'private loose session assembly is no longer limited to issuer plus test fixture'
     }
     $extractOffset = $Controller.IndexOf(
-        'let AuthenticatedGuidedRecipientImportAssemblyInput {',
+        'let RecipientImportGuidedRecoveryAssemblyStagingInput {',
         [StringComparison]::Ordinal
     )
     $validateOffset = $Controller.LastIndexOf(

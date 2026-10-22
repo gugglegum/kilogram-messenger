@@ -213,6 +213,8 @@ pub use recipient_import_guided_recovery_launch_slot::{
     RecipientImportGuidedRecoveryLaunchSlotState,
 };
 #[cfg(test)]
+pub(crate) use recipient_import_guided_session_controller::RecipientImportGuidedRecoveryAssemblyStagingInput;
+#[cfg(test)]
 pub use recipient_import_guided_session_controller::{
     AuthenticatedGuidedRecipientImportSession, RecipientImportGuidedRecoveryAssemblyIssuer,
     RecipientImportGuidedSessionConfirmation, RecipientImportGuidedSessionController,
@@ -6542,7 +6544,37 @@ mod tests {
         let plan_request =
             adapter_plan_request(setup, descriptor, durable, reference.clone(), request_byte)?;
         Ok(
-            RecipientImportGuidedRecoveryAssemblyIssuer::from_authenticated_plan_assembly(
+            RecipientImportGuidedRecoveryAssemblyIssuer::from_authenticated_plan_assembly_fixture(
+                &setup.state,
+                setup.fixture.owner_account_id,
+                setup.fixture.replacement.identity().device_id(),
+                signer,
+                descriptor.clone(),
+                plan_request,
+                setup.coordination.clone(),
+                vec![GuidedRecipientImportMembership::new(
+                    reference,
+                    setup.fixture.membership.clone(),
+                )?],
+            ),
+        )
+    }
+
+    fn guided_recovery_assembly_staging_input<'identity>(
+        setup: &IntentRoundFixture,
+        descriptor: &RuntimeIpcDescriptor,
+        durable: &DurableRecipientRecoveryImportRoundIntent,
+        reference: RuntimeIpcRecipientImportMembershipReference,
+        request_byte: u8,
+        signer: &'identity DeviceIdentity,
+    ) -> Result<
+        RecipientImportGuidedRecoveryAssemblyStagingInput<'identity>,
+        Box<dyn std::error::Error>,
+    > {
+        let plan_request =
+            adapter_plan_request(setup, descriptor, durable, reference.clone(), request_byte)?;
+        Ok(
+            RecipientImportGuidedRecoveryAssemblyStagingInput::from_authenticated_plan_assembly(
                 &setup.state,
                 setup.fixture.owner_account_id,
                 setup.fixture.replacement.identity().device_id(),
@@ -10098,19 +10130,20 @@ mod tests {
 
         let plan_request =
             adapter_plan_request(&setup, &descriptor, &durable, reference.clone(), 245)?;
-        let issuer = RecipientImportGuidedRecoveryAssemblyIssuer::from_authenticated_plan_assembly(
-            setup.state.join("foreign-state"),
-            setup.fixture.owner_account_id,
-            signer.device_id(),
-            signer,
-            descriptor.clone(),
-            plan_request,
-            setup.coordination.clone(),
-            vec![GuidedRecipientImportMembership::new(
-                reference.clone(),
-                setup.fixture.membership.clone(),
-            )?],
-        );
+        let issuer =
+            RecipientImportGuidedRecoveryAssemblyIssuer::from_authenticated_plan_assembly_fixture(
+                setup.state.join("foreign-state"),
+                setup.fixture.owner_account_id,
+                signer.device_id(),
+                signer,
+                descriptor.clone(),
+                plan_request,
+                setup.coordination.clone(),
+                vec![GuidedRecipientImportMembership::new(
+                    reference.clone(),
+                    setup.fixture.membership.clone(),
+                )?],
+            );
         assert!(matches!(
             issuer.issue(),
             Err(RecipientImportGuidedSessionControllerError::StateDirectoryMismatch)
@@ -10118,19 +10151,20 @@ mod tests {
 
         let plan_request = adapter_plan_request(&setup, &descriptor, &durable, reference, 246)?;
         let changed_reference = adapter_membership_reference(0, &setup.fixture.membership, 247)?;
-        let issuer = RecipientImportGuidedRecoveryAssemblyIssuer::from_authenticated_plan_assembly(
-            &setup.state,
-            setup.fixture.owner_account_id,
-            signer.device_id(),
-            signer,
-            descriptor,
-            plan_request,
-            setup.coordination.clone(),
-            vec![GuidedRecipientImportMembership::new(
-                changed_reference,
-                setup.fixture.membership.clone(),
-            )?],
-        );
+        let issuer =
+            RecipientImportGuidedRecoveryAssemblyIssuer::from_authenticated_plan_assembly_fixture(
+                &setup.state,
+                setup.fixture.owner_account_id,
+                signer.device_id(),
+                signer,
+                descriptor,
+                plan_request,
+                setup.coordination.clone(),
+                vec![GuidedRecipientImportMembership::new(
+                    changed_reference,
+                    setup.fixture.membership.clone(),
+                )?],
+            );
         assert!(matches!(
             issuer.issue(),
             Err(RecipientImportGuidedSessionControllerError::MembershipSetChanged)
@@ -10315,8 +10349,14 @@ mod tests {
         let descriptor = adapter_descriptor(&setup)?;
         let reference = adapter_membership_reference(0, &setup.fixture.membership, 31)?;
         let signer = setup.fixture.replacement.identity();
-        let issuer =
-            guided_recovery_assembly_issuer(&setup, &descriptor, &durable, reference, 32, signer)?;
+        let assembly = guided_recovery_assembly_staging_input(
+            &setup,
+            &descriptor,
+            &durable,
+            reference,
+            32,
+            signer,
+        )?;
         let mut slot = RecipientImportGuidedRecoveryLaunchSlot::new_empty();
 
         assert_eq!(
@@ -10324,7 +10364,7 @@ mod tests {
             RecipientImportGuidedRecoveryLaunchSlotState::Empty
         );
         assert_eq!(
-            slot.stage_from_authenticated_issuer(issuer, 18_000, 100, 18_001)?,
+            slot.stage_from_authenticated_assembly(assembly, 18_000, 100, 18_001)?,
             RecipientImportGuidedRecoveryLaunchSlotState::PendingAuthorization
         );
         assert_eq!(
@@ -10362,12 +10402,18 @@ mod tests {
         let descriptor = adapter_descriptor(&setup)?;
         let reference = adapter_membership_reference(0, &setup.fixture.membership, 50)?;
         let signer = setup.fixture.replacement.identity();
-        let issuer =
-            guided_recovery_assembly_issuer(&setup, &descriptor, &durable, reference, 51, signer)?;
+        let assembly = guided_recovery_assembly_staging_input(
+            &setup,
+            &descriptor,
+            &durable,
+            reference,
+            51,
+            signer,
+        )?;
         let mut slot = RecipientImportGuidedRecoveryLaunchSlot::new_empty();
 
         assert_eq!(
-            slot.stage_from_authenticated_issuer(issuer, 20_000, 100, 20_001)?,
+            slot.stage_from_authenticated_assembly(assembly, 20_000, 100, 20_001)?,
             RecipientImportGuidedRecoveryLaunchSlotState::PendingAuthorization
         );
         assert_eq!(slot.preview()?.membership_count(), 1);
@@ -10393,8 +10439,8 @@ mod tests {
         let descriptor = adapter_descriptor(&setup)?;
         let reference = adapter_membership_reference(0, &setup.fixture.membership, 52)?;
         let signer = setup.fixture.replacement.identity();
-        let make_issuer = |request_byte| {
-            guided_recovery_assembly_issuer(
+        let make_assembly = |request_byte| {
+            guided_recovery_assembly_staging_input(
                 &setup,
                 &descriptor,
                 &durable,
@@ -10406,7 +10452,7 @@ mod tests {
         let mut slot = RecipientImportGuidedRecoveryLaunchSlot::new_empty();
 
         assert!(matches!(
-            slot.stage_from_authenticated_issuer(make_issuer(53)?, 20_100, 0, 20_100),
+            slot.stage_from_authenticated_assembly(make_assembly(53)?, 20_100, 0, 20_100),
             Err(RecipientImportGuidedRecoveryLaunchSlotError::Authorization(error))
                 if matches!(
                     *error,
@@ -10418,7 +10464,7 @@ mod tests {
             RecipientImportGuidedRecoveryLaunchSlotState::Empty
         );
         assert!(matches!(
-            slot.stage_from_authenticated_issuer(make_issuer(54)?, 20_200, 10, 20_199),
+            slot.stage_from_authenticated_assembly(make_assembly(54)?, 20_200, 10, 20_199),
             Err(RecipientImportGuidedRecoveryLaunchSlotError::Authorization(error))
                 if matches!(
                     *error,
@@ -10426,7 +10472,7 @@ mod tests {
                 )
         ));
         assert!(matches!(
-            slot.stage_from_authenticated_issuer(make_issuer(55)?, 20_300, 10, 20_310),
+            slot.stage_from_authenticated_assembly(make_assembly(55)?, 20_300, 10, 20_310),
             Err(RecipientImportGuidedRecoveryLaunchSlotError::Authorization(error))
                 if matches!(
                     *error,
@@ -10434,10 +10480,10 @@ mod tests {
                 )
         ));
 
-        slot.stage_from_authenticated_issuer(make_issuer(56)?, 20_400, 100, 20_401)?;
+        slot.stage_from_authenticated_assembly(make_assembly(56)?, 20_400, 100, 20_401)?;
         let retained_phrase = slot.preview()?.confirmation_phrase().to_owned();
         assert!(matches!(
-            slot.stage_from_authenticated_issuer(make_issuer(57)?, 20_400, 100, 20_401),
+            slot.stage_from_authenticated_assembly(make_assembly(57)?, 20_400, 100, 20_401),
             Err(RecipientImportGuidedRecoveryLaunchSlotError::PendingAlreadyInstalled)
         ));
         assert_eq!(slot.preview()?.confirmation_phrase(), retained_phrase);
@@ -10449,12 +10495,97 @@ mod tests {
             RecipientImportGuidedRecoveryLaunchSlotState::HostInstalled
         );
         assert!(matches!(
-            slot.stage_from_authenticated_issuer(make_issuer(58)?, 20_400, 100, 20_403),
+            slot.stage_from_authenticated_assembly(make_assembly(58)?, 20_400, 100, 20_403),
             Err(RecipientImportGuidedRecoveryLaunchSlotError::HostAlreadyInstalled)
         ));
         assert_eq!(
             slot.state(),
             RecipientImportGuidedRecoveryLaunchSlotState::HostInstalled
+        );
+        assert!(!slot.opened_network());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_recovery_assembly_to_slot_staging_is_atomic_and_safe()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-recovery-assembly-slot-stage")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 59)?;
+        let signer = setup.fixture.replacement.identity();
+        let assembly = guided_recovery_assembly_staging_input(
+            &setup,
+            &descriptor,
+            &durable,
+            reference,
+            60,
+            signer,
+        )?;
+        let mut slot = RecipientImportGuidedRecoveryLaunchSlot::new_empty();
+
+        assert_eq!(
+            slot.stage_from_authenticated_assembly(assembly, 20_500, 100, 20_501)?,
+            RecipientImportGuidedRecoveryLaunchSlotState::PendingAuthorization
+        );
+        assert_eq!(slot.preview()?.membership_count(), 1);
+        assert_eq!(slot.preview()?.expires_at_unix_seconds(), 20_600);
+        assert!(
+            slot.preview()?
+                .confirmation_phrase()
+                .starts_with("RECOVER-")
+        );
+        assert_eq!(
+            slot.cancel(RecipientImportGuidedRecoveryLaunchSlotCancel::pending())?,
+            RecipientImportGuidedRecoveryLaunchSlotState::Empty
+        );
+        assert!(!slot.opened_network());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_recovery_assembly_to_slot_staging_consumes_failures_and_preserves_custody()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-recovery-assembly-slot-guard")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 61)?;
+        let signer = setup.fixture.replacement.identity();
+        let make_assembly = |request_byte| {
+            guided_recovery_assembly_staging_input(
+                &setup,
+                &descriptor,
+                &durable,
+                reference.clone(),
+                request_byte,
+                signer,
+            )
+        };
+        let mut slot = RecipientImportGuidedRecoveryLaunchSlot::new_empty();
+
+        assert!(matches!(
+            slot.stage_from_authenticated_assembly(make_assembly(62)?, 20_600, 0, 20_600),
+            Err(RecipientImportGuidedRecoveryLaunchSlotError::Authorization(error))
+                if matches!(
+                    *error,
+                    RecipientImportGuidedRecoveryLaunchAuthorizationError::InvalidLifetime
+                )
+        ));
+        assert_eq!(
+            slot.state(),
+            RecipientImportGuidedRecoveryLaunchSlotState::Empty
+        );
+
+        slot.stage_from_authenticated_assembly(make_assembly(63)?, 20_700, 100, 20_701)?;
+        let retained_phrase = slot.preview()?.confirmation_phrase().to_owned();
+        assert!(matches!(
+            slot.stage_from_authenticated_assembly(make_assembly(64)?, 20_700, 100, 20_701),
+            Err(RecipientImportGuidedRecoveryLaunchSlotError::PendingAlreadyInstalled)
+        ));
+        assert_eq!(slot.preview()?.confirmation_phrase(), retained_phrase);
+        assert_eq!(
+            slot.cancel(RecipientImportGuidedRecoveryLaunchSlotCancel::pending())?,
+            RecipientImportGuidedRecoveryLaunchSlotState::Empty
         );
         assert!(!slot.opened_network());
         Ok(())
@@ -10469,8 +10600,8 @@ mod tests {
         let reference = adapter_membership_reference(0, &setup.fixture.membership, 33)?;
         let signer = setup.fixture.replacement.identity();
 
-        let make_issuer = |request_byte| {
-            guided_recovery_assembly_issuer(
+        let make_assembly = |request_byte| {
+            guided_recovery_assembly_staging_input(
                 &setup,
                 &descriptor,
                 &durable,
@@ -10482,7 +10613,7 @@ mod tests {
 
         let mut slot = RecipientImportGuidedRecoveryLaunchSlot::new_empty();
         assert!(matches!(
-            slot.stage_from_authenticated_issuer(make_issuer(34)?, 18_100, 10, 18_099),
+            slot.stage_from_authenticated_assembly(make_assembly(34)?, 18_100, 10, 18_099),
             Err(RecipientImportGuidedRecoveryLaunchSlotError::Authorization(error))
                 if matches!(
                     *error,
@@ -10494,7 +10625,7 @@ mod tests {
             RecipientImportGuidedRecoveryLaunchSlotState::Empty
         );
         assert!(matches!(
-            slot.stage_from_authenticated_issuer(make_issuer(35)?, 18_200, 10, 18_210),
+            slot.stage_from_authenticated_assembly(make_assembly(35)?, 18_200, 10, 18_210),
             Err(RecipientImportGuidedRecoveryLaunchSlotError::Authorization(error))
                 if matches!(
                     *error,
@@ -10502,10 +10633,10 @@ mod tests {
                 )
         ));
 
-        slot.stage_from_authenticated_issuer(make_issuer(36)?, 18_300, 100, 18_301)?;
+        slot.stage_from_authenticated_assembly(make_assembly(36)?, 18_300, 100, 18_301)?;
         let retained_phrase = slot.preview()?.confirmation_phrase().to_owned();
         assert!(matches!(
-            slot.stage_from_authenticated_issuer(make_issuer(37)?, 18_300, 100, 18_301),
+            slot.stage_from_authenticated_assembly(make_assembly(37)?, 18_300, 100, 18_301),
             Err(RecipientImportGuidedRecoveryLaunchSlotError::PendingAlreadyInstalled)
         ));
         assert_eq!(slot.preview()?.confirmation_phrase(), retained_phrase);
@@ -10518,7 +10649,7 @@ mod tests {
             Err(RecipientImportGuidedRecoveryLaunchSlotError::PendingUnavailable)
         ));
 
-        slot.stage_from_authenticated_issuer(make_issuer(38)?, 18_400, 100, 18_401)?;
+        slot.stage_from_authenticated_assembly(make_assembly(38)?, 18_400, 100, 18_401)?;
         assert!(matches!(
             slot.approve(
                 RecipientImportGuidedRecoveryLaunchSlotApprove::new("RECOVER-WRONG", 100),
@@ -10535,7 +10666,7 @@ mod tests {
             RecipientImportGuidedRecoveryLaunchSlotState::Empty
         );
 
-        slot.stage_from_authenticated_issuer(make_issuer(39)?, 18_500, 10, 18_501)?;
+        slot.stage_from_authenticated_assembly(make_assembly(39)?, 18_500, 10, 18_501)?;
         let phrase = slot.preview()?.confirmation_phrase().to_owned();
         assert!(matches!(
             slot.approve(
@@ -10553,7 +10684,7 @@ mod tests {
             RecipientImportGuidedRecoveryLaunchSlotState::Empty
         );
 
-        slot.stage_from_authenticated_issuer(make_issuer(40)?, 18_600, 100, 18_601)?;
+        slot.stage_from_authenticated_assembly(make_assembly(40)?, 18_600, 100, 18_601)?;
         let phrase = slot.preview()?.confirmation_phrase().to_owned();
         assert!(matches!(
             slot.approve(
@@ -10576,7 +10707,7 @@ mod tests {
         );
 
         let foreign_signer = DeviceIdentity::generate()?;
-        let issuer = guided_recovery_assembly_issuer(
+        let assembly = guided_recovery_assembly_staging_input(
             &setup,
             &descriptor,
             &durable,
@@ -10584,7 +10715,7 @@ mod tests {
             41,
             &foreign_signer,
         )?;
-        slot.stage_from_authenticated_issuer(issuer, 18_700, 100, 18_701)?;
+        slot.stage_from_authenticated_assembly(assembly, 18_700, 100, 18_701)?;
         let phrase = slot.preview()?.confirmation_phrase().to_owned();
         assert!(matches!(
             slot.approve(
@@ -10606,7 +10737,7 @@ mod tests {
             RecipientImportGuidedRecoveryLaunchSlotState::Empty
         );
 
-        slot.stage_from_authenticated_issuer(make_issuer(42)?, 18_800, 100, 18_801)?;
+        slot.stage_from_authenticated_assembly(make_assembly(42)?, 18_800, 100, 18_801)?;
         let phrase = slot.preview()?.confirmation_phrase().to_owned();
         assert_eq!(
             slot.approve(
@@ -10616,7 +10747,7 @@ mod tests {
             RecipientImportGuidedRecoveryLaunchSlotState::HostInstalled
         );
         assert!(matches!(
-            slot.stage_from_authenticated_issuer(make_issuer(43)?, 18_800, 100, 18_803),
+            slot.stage_from_authenticated_assembly(make_assembly(43)?, 18_800, 100, 18_803),
             Err(RecipientImportGuidedRecoveryLaunchSlotError::HostAlreadyInstalled)
         ));
         assert_eq!(
@@ -10634,10 +10765,16 @@ mod tests {
         let descriptor = adapter_descriptor(&setup)?;
         let reference = adapter_membership_reference(0, &setup.fixture.membership, 44)?;
         let signer = setup.fixture.replacement.identity();
-        let issuer =
-            guided_recovery_assembly_issuer(&setup, &descriptor, &durable, reference, 45, signer)?;
+        let assembly = guided_recovery_assembly_staging_input(
+            &setup,
+            &descriptor,
+            &durable,
+            reference,
+            45,
+            signer,
+        )?;
         let mut slot = RecipientImportGuidedRecoveryLaunchSlot::new_empty();
-        slot.stage_from_authenticated_issuer(issuer, 19_000, 100, 19_001)?;
+        slot.stage_from_authenticated_assembly(assembly, 19_000, 100, 19_001)?;
         let phrase = slot.preview()?.confirmation_phrase().to_owned();
         slot.approve(
             RecipientImportGuidedRecoveryLaunchSlotApprove::new(phrase, 300),
@@ -10725,8 +10862,8 @@ mod tests {
         let descriptor = adapter_descriptor(&setup)?;
         let reference = adapter_membership_reference(0, &setup.fixture.membership, 46)?;
         let signer = setup.fixture.replacement.identity();
-        let make_issuer = |request_byte| {
-            guided_recovery_assembly_issuer(
+        let make_assembly = |request_byte| {
+            guided_recovery_assembly_staging_input(
                 &setup,
                 &descriptor,
                 &durable,
@@ -10762,7 +10899,7 @@ mod tests {
             19_100,
         ));
 
-        slot.stage_from_authenticated_issuer(make_issuer(48)?, 19_100, 100, 19_101)?;
+        slot.stage_from_authenticated_assembly(make_assembly(48)?, 19_100, 100, 19_101)?;
         let retained_phrase = slot.preview()?.confirmation_phrase().to_owned();
         unavailable(slot.host_prepare(RecipientImportGuidedRecoveryHostPrepare::new(10), 19_102));
         unavailable(slot.host_confirm(
@@ -10810,7 +10947,7 @@ mod tests {
             RecipientImportGuidedSessionLocalUxPhase::Idle
         );
         assert!(matches!(
-            slot.stage_from_authenticated_issuer(make_issuer(49)?, 19_100, 100, 19_105),
+            slot.stage_from_authenticated_assembly(make_assembly(49)?, 19_100, 100, 19_105),
             Err(RecipientImportGuidedRecoveryLaunchSlotError::HostAlreadyInstalled)
         ));
         assert_eq!(

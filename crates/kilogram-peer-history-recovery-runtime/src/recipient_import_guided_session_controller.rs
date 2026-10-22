@@ -246,12 +246,14 @@ impl<'identity> AuthenticatedGuidedRecipientImportHostInstallation<'identity> {
     }
 }
 
-/// Complete authenticated input retained by exactly one process-local issuer.
+/// Complete authenticated input accepted only by the process-local launch slot.
 ///
-/// This value is private, non-cloneable, and non-serializable. It owns the
-/// canonical signed Plan result, exact coordinator, and already-loaded ordered
-/// memberships until `issue` consumes the surrounding issuer.
-struct AuthenticatedGuidedRecipientImportAssemblyInput<'identity> {
+/// This opaque crate-private value is non-cloneable and non-serializable. It
+/// owns the canonical signed Plan result, exact coordinator, and already-loaded
+/// ordered memberships. Callers may assemble it, but cannot inspect it or turn
+/// it into a ready issuer; the launch slot consumes it in one atomic staging
+/// transition.
+pub(crate) struct RecipientImportGuidedRecoveryAssemblyStagingInput<'identity> {
     state_directory: PathBuf,
     owner_account_id: AccountId,
     owner_device_id: DeviceId,
@@ -269,7 +271,7 @@ struct AuthenticatedGuidedRecipientImportAssemblyInput<'identity> {
 /// Issuing consumes `self` before validation, so both success and failure make
 /// the input unavailable for replay.
 pub struct RecipientImportGuidedRecoveryAssemblyIssuer<'identity> {
-    input: AuthenticatedGuidedRecipientImportAssemblyInput<'identity>,
+    input: RecipientImportGuidedRecoveryAssemblyStagingInput<'identity>,
 }
 
 /// Safe, non-authoritative commitment used by the local launch-confirmation
@@ -291,7 +293,7 @@ impl AuthenticatedGuidedRecoveryLaunchBinding {
     }
 }
 
-impl<'identity> RecipientImportGuidedRecoveryAssemblyIssuer<'identity> {
+impl<'identity> RecipientImportGuidedRecoveryAssemblyStagingInput<'identity> {
     #[allow(dead_code)]
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn from_authenticated_plan_assembly(
@@ -305,17 +307,52 @@ impl<'identity> RecipientImportGuidedRecoveryAssemblyIssuer<'identity> {
         memberships: Vec<GuidedRecipientImportMembership>,
     ) -> Self {
         Self {
-            input: AuthenticatedGuidedRecipientImportAssemblyInput {
-                state_directory: state_directory.as_ref().to_path_buf(),
-                owner_account_id,
-                owner_device_id,
-                signer,
-                descriptor,
-                plan_request,
-                coordination,
-                memberships,
-            },
+            state_directory: state_directory.as_ref().to_path_buf(),
+            owner_account_id,
+            owner_device_id,
+            signer,
+            descriptor,
+            plan_request,
+            coordination,
+            memberships,
         }
+    }
+
+    /// Sole production conversion into a ready issuer. Boundary verification
+    /// permits this call only inside the process-owned launch slot.
+    pub(crate) fn into_issuer(self) -> RecipientImportGuidedRecoveryAssemblyIssuer<'identity> {
+        RecipientImportGuidedRecoveryAssemblyIssuer { input: self }
+    }
+}
+
+impl<'identity> RecipientImportGuidedRecoveryAssemblyIssuer<'identity> {
+    /// Explicit test-only seam for exercising predecessor issuer and launch-
+    /// authorization invariants without reopening a production caller-owned
+    /// issuer constructor.
+    #[cfg(test)]
+    #[allow(dead_code)]
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn from_authenticated_plan_assembly_fixture(
+        state_directory: impl AsRef<Path>,
+        owner_account_id: AccountId,
+        owner_device_id: DeviceId,
+        signer: &'identity DeviceIdentity,
+        descriptor: RuntimeIpcDescriptor,
+        plan_request: RuntimeIpcRecipientImportExecutionRequest,
+        coordination: RecipientRecoveryCoordinationPlan,
+        memberships: Vec<GuidedRecipientImportMembership>,
+    ) -> Self {
+        RecipientImportGuidedRecoveryAssemblyStagingInput::from_authenticated_plan_assembly(
+            state_directory,
+            owner_account_id,
+            owner_device_id,
+            signer,
+            descriptor,
+            plan_request,
+            coordination,
+            memberships,
+        )
+        .into_issuer()
     }
 
     /// Creates only a safe commitment for an explicit local launch preview.
@@ -350,7 +387,7 @@ impl<'identity> RecipientImportGuidedRecoveryAssemblyIssuer<'identity> {
         RecipientImportGuidedRecoveryHostInstallationOwner<'identity>,
         RecipientImportGuidedSessionControllerError,
     > {
-        let AuthenticatedGuidedRecipientImportAssemblyInput {
+        let RecipientImportGuidedRecoveryAssemblyStagingInput {
             state_directory,
             owner_account_id,
             owner_device_id,

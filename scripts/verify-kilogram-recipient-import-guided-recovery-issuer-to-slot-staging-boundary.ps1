@@ -138,20 +138,22 @@ function Assert-Boundary {
         "pub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>",
         "pending_authorization: Option<RecipientImportGuidedRecoveryLaunchAuthorization<'identity>>",
         "installed_host: Option<RecipientImportGuidedRecoveryHost<'identity>>",
-        'pub(crate) fn stage_from_authenticated_issuer(',
-        "issuer: RecipientImportGuidedRecoveryAssemblyIssuer<'identity>",
+        'pub(crate) fn stage_from_authenticated_assembly(',
+        "assembly: RecipientImportGuidedRecoveryAssemblyStagingInput<'identity>",
         'issued_at_unix_seconds: u64', 'lifetime_seconds: u64',
         'if self.pending_authorization.is_some()',
         'RecipientImportGuidedRecoveryLaunchSlotError::PendingAlreadyInstalled',
         'if self.installed_host.is_some()',
         'RecipientImportGuidedRecoveryLaunchSlotError::HostAlreadyInstalled',
+        'let issuer = assembly.into_issuer();',
         'RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(',
         'authorization.validate_pending_at(now_unix_seconds)?;',
         'self.pending_authorization = Some(authorization);',
         'Ok(RecipientImportGuidedRecoveryLaunchSlotState::PendingAuthorization)'
     ) 'issuer-to-slot source'
     foreach ($forbidden in @(
-        'pub fn stage_from_authenticated_issuer(', 'pub(crate) fn install(',
+        'pub fn stage_from_authenticated_assembly(',
+        'pub(crate) fn stage_from_authenticated_issuer(', 'pub(crate) fn install(',
         'pub fn install(', 'use serde::', '#[derive(Serialize',
         '#[derive(Deserialize', 'TcpListener', 'UdpSocket', 'iroh::Endpoint',
         'std::fs::read_dir'
@@ -172,7 +174,7 @@ function Assert-Boundary {
     )).Count -ne 1) {
         throw 'issuer-to-slot authorization is not constructed exactly once inside the slot'
     }
-    $stageStart = $Slot.IndexOf('pub(crate) fn stage_from_authenticated_issuer(', [StringComparison]::Ordinal)
+    $stageStart = $Slot.IndexOf('pub(crate) fn stage_from_authenticated_assembly(', [StringComparison]::Ordinal)
     $stageEnd = $Slot.IndexOf('pub fn state(&self)', $stageStart, [StringComparison]::Ordinal)
     if ($stageStart -lt 0 -or $stageEnd -lt 0) {
         throw 'issuer-to-slot staging method boundary is missing'
@@ -191,12 +193,13 @@ function Assert-Boundary {
     }
     $pendingCheck = $stage.IndexOf('if self.pending_authorization.is_some()', [StringComparison]::Ordinal)
     $hostCheck = $stage.IndexOf('if self.installed_host.is_some()', [StringComparison]::Ordinal)
+    $issue = $stage.IndexOf('let issuer = assembly.into_issuer();', [StringComparison]::Ordinal)
     $construct = $stage.IndexOf('RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(', [StringComparison]::Ordinal)
     $validate = $stage.IndexOf('authorization.validate_pending_at(now_unix_seconds)?;', [StringComparison]::Ordinal)
     $retain = $stage.IndexOf('self.pending_authorization = Some(authorization);', [StringComparison]::Ordinal)
-    if ($pendingCheck -lt 0 -or $hostCheck -lt 0 -or $construct -lt 0 -or
+    if ($pendingCheck -lt 0 -or $hostCheck -lt 0 -or $issue -lt 0 -or $construct -lt 0 -or
         $validate -lt 0 -or $retain -lt 0 -or
-        $pendingCheck -gt $construct -or $hostCheck -gt $construct -or
+        $pendingCheck -gt $issue -or $hostCheck -gt $issue -or $issue -gt $construct -or
         $construct -gt $validate -or $validate -gt $retain) {
         throw 'issuer-to-slot ownership checks, construction, validation, and retention are out of order'
     }
@@ -215,7 +218,8 @@ function Assert-Boundary {
     Require-Text $RuntimeLibrary @(
         'mod recipient_import_guided_recovery_launch_slot;',
         'RecipientImportGuidedRecoveryLaunchSlot',
-        'RecipientImportGuidedRecoveryAssemblyIssuer'
+        'RecipientImportGuidedRecoveryAssemblyIssuer',
+        'RecipientImportGuidedRecoveryAssemblyStagingInput'
     ) 'issuer-to-slot runtime library'
     Require-Text $Execution @(
         'recipient_import_guided_recovery_issuer_to_slot_staging_is_atomic_and_safe',
@@ -228,6 +232,7 @@ function Assert-Boundary {
     ) 'issuer-to-slot real-storage fixtures'
     foreach ($surface in @($Cli, $Desktop)) {
         if ($surface.IndexOf('RecipientImportGuidedRecoveryLaunchSlot', [StringComparison]::Ordinal) -ge 0 -or
+            $surface.IndexOf('stage_from_authenticated_assembly', [StringComparison]::Ordinal) -ge 0 -or
             $surface.IndexOf('stage_from_authenticated_issuer', [StringComparison]::Ordinal) -ge 0) {
             throw 'issuer-to-slot staging became reachable from an active product surface'
         }
@@ -294,14 +299,14 @@ foreach ($mutation in $manifestMutations) {
 }
 
 $sourceMutations = @(
-    [PSCustomObject]@{ Label = 'public_stage'; Target = 'slot'; From = 'pub(crate) fn stage_from_authenticated_issuer('; To = 'pub fn stage_from_authenticated_issuer(' },
+    [PSCustomObject]@{ Label = 'public_stage'; Target = 'slot'; From = 'pub(crate) fn stage_from_authenticated_assembly('; To = 'pub fn stage_from_authenticated_assembly(' },
     [PSCustomObject]@{ Label = 'constructor_removed'; Target = 'slot'; From = 'RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer('; To = 'removed_internal_authorization_constructor(' },
     [PSCustomObject]@{ Label = 'validation_removed'; Target = 'slot'; From = 'authorization.validate_pending_at(now_unix_seconds)?;'; To = 'removed_pending_validation();' },
     [PSCustomObject]@{ Label = 'prebuilt_install_added'; Target = 'slot_append'; From = ''; To = "`r`npub(crate) fn install() {}`r`n" },
     [PSCustomObject]@{ Label = 'clone_added'; Target = 'slot'; From = "pub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>"; To = "#[derive(Clone)]`r`npub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>" },
     [PSCustomObject]@{ Label = 'success_fixture_removed'; Target = 'execution'; From = 'recipient_import_guided_recovery_issuer_to_slot_staging_is_atomic_and_safe'; To = 'removed_atomic_staging_fixture' },
     [PSCustomObject]@{ Label = 'failure_fixture_removed'; Target = 'execution'; From = 'recipient_import_guided_recovery_issuer_to_slot_staging_consumes_failures_and_preserves_custody'; To = 'removed_staging_failure_fixture' },
-    [PSCustomObject]@{ Label = 'cli_activation'; Target = 'cli_append'; From = ''; To = "`r`nRecipientImportGuidedRecoveryLaunchSlot::stage_from_authenticated_issuer`r`n" }
+    [PSCustomObject]@{ Label = 'cli_activation'; Target = 'cli_append'; From = ''; To = "`r`nRecipientImportGuidedRecoveryLaunchSlot::stage_from_authenticated_assembly`r`n" }
 )
 foreach ($mutation in $sourceMutations) {
     $mutatedSlot = $slot

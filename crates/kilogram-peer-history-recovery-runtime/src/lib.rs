@@ -102,6 +102,7 @@ pub use recipient_import_guided_recovery_launch_slot::{
     RecipientImportGuidedRecoveryLaunchSlotCancel, RecipientImportGuidedRecoveryLaunchSlotError,
     RecipientImportGuidedRecoveryLaunchSlotState,
 };
+pub(crate) use recipient_import_guided_session_controller::RecipientImportGuidedRecoveryAssemblyStagingInput;
 pub use recipient_import_guided_session_controller::{
     AuthenticatedGuidedRecipientImportSession,
     MAX_GUIDED_RECIPIENT_IMPORT_SESSION_LIFETIME_SECONDS,

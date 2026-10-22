@@ -12,6 +12,23 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.58 — atomic authenticated-assembly-to-slot staging: выполнено
+
+- Complete signed Plan/coordinator/ordered-membership assembly теперь
+  помещается в opaque crate-private staging input с private fields, без
+  Clone/Debug/serde/restart recovery и без выдачи loose authority fragments.
+- Единственный production transition принимает input по значению, проверяет
+  existing custody, создаёт issuer только внутри slot и немедленно запечатывает
+  его в authorization. Caller больше не владеет ready issuer даже временно.
+- Старый production issuer constructor удалён; test-only fixture явно ограничен
+  `#[cfg(test)]`. Failed staging поглощает input/issuer/grant, а occupied slot
+  сохраняет pending/installed custody без replacement или eviction.
+- Stable-name assembly-to-slot fixtures прошли 2/2 за 106.03s; combined
+  guided-recovery regression M1.2.47–M1.2.58 прошёл 22/22 за 2147.89s.
+  Dedicated boundary отклонил 18/18 mutations; accepted-tag readiness прошёл
+  184/184 gates. CLI/desktop/runtime IPC/timer/network не зарегистрированы,
+  public `legacy-only` неизменён.
+
 ### M1.2.57 — atomic issuer-to-slot launch staging: выполнено
 
 - Единственный crate-internal staging transition принимает M1.2.53 issuer по
