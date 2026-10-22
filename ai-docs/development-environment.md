@@ -1,5 +1,29 @@
 # Среда разработки
 
+## M1.2.57 verification (2026-10-22)
+
+- Два новых atomic issuer-to-slot staging fixtures прошли 2/2 за 123.30s,
+  затем combined M1.2.47–M1.2.57 guided-recovery regression прошёл 20/20 за
+  2116.74s через `scripts/run-cargo-tests-stable.ps1` с
+  постоянным EXE, workspace-local TEMP/TMP, двумя cargo jobs и below-normal
+  priority; direct `cargo test` не использовался.
+- Dedicated staging boundary отклонил 18/18 weakening mutations: public seam,
+  external ready-authorization construction, пропуск admission, prebuilt
+  install, clone, потерю success/failure fixtures и product activation.
+  Predecessor launch-slot и host-router boundaries сохранили 16/16 каждый.
+- Accepted-tag M1 readiness прошёл 183/183 gates с rustfmt и workspace-wide
+  locked/offline strict Clippy. Cross-volume incremental hard-link fallback
+  остался только обычным Cargo warning. Первый aggregate pass дошёл до
+  readiness meta-gate и честно остановился на его старом closed count 182;
+  successor inventory и meta-audit были согласованно обновлены до 183, после
+  чего полный повтор прошёл.
+- Product network, second host, release build, archive, tag и automatic GitHub
+  build не использовались. Ordinary startup не создаёт slot и не выполняет
+  staging; CLI/desktop/runtime IPC/timer/background остаются unregistered,
+  default — `legacy-only`.
+- Cargo target после regression занимает 54.60 GiB. Кэш сохранён
+  ради скорости; verification profile и incremental generations не очищались.
+
 ## M1.2.56 verification (2026-10-22)
 
 - Два новых opaque host-command-router fixtures прошли 2/2 за 271.86s, затем

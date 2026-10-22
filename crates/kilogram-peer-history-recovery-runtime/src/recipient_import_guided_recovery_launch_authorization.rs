@@ -111,11 +111,13 @@ impl<'identity> RecipientImportGuidedRecoveryLaunchAuthorization<'identity> {
         &self.preview
     }
 
-    /// Checks whether this complete authorization may enter the process-owned
-    /// pending slot without exposing or consuming its retained issuer.
+    /// Checks whether this complete authorization may remain in the
+    /// process-owned pending slot without exposing or consuming its retained
+    /// issuer.
     ///
-    /// The slot still accepts the authorization by value, so every rejected
-    /// install drops the complete grant rather than returning it to a caller.
+    /// M1.2.57 constructs the authorization inside the slot from an issuer
+    /// accepted by value. Every rejected staging attempt therefore drops the
+    /// complete grant rather than returning it to a caller.
     pub(crate) fn validate_pending_at(
         &self,
         now_unix_seconds: u64,

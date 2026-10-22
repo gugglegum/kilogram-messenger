@@ -10317,17 +10317,16 @@ mod tests {
         let signer = setup.fixture.replacement.identity();
         let issuer =
             guided_recovery_assembly_issuer(&setup, &descriptor, &durable, reference, 32, signer)?;
-        let authorization =
-            RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(
-                issuer, 18_000, 100,
-            )?;
         let mut slot = RecipientImportGuidedRecoveryLaunchSlot::new_empty();
 
         assert_eq!(
             slot.state(),
             RecipientImportGuidedRecoveryLaunchSlotState::Empty
         );
-        slot.install(authorization, 18_001)?;
+        assert_eq!(
+            slot.stage_from_authenticated_issuer(issuer, 18_000, 100, 18_001)?,
+            RecipientImportGuidedRecoveryLaunchSlotState::PendingAuthorization
+        );
         assert_eq!(
             slot.state(),
             RecipientImportGuidedRecoveryLaunchSlotState::PendingAuthorization
@@ -10356,6 +10355,112 @@ mod tests {
     }
 
     #[test]
+    fn recipient_import_guided_recovery_issuer_to_slot_staging_is_atomic_and_safe()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-recovery-issuer-slot-stage")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 50)?;
+        let signer = setup.fixture.replacement.identity();
+        let issuer =
+            guided_recovery_assembly_issuer(&setup, &descriptor, &durable, reference, 51, signer)?;
+        let mut slot = RecipientImportGuidedRecoveryLaunchSlot::new_empty();
+
+        assert_eq!(
+            slot.stage_from_authenticated_issuer(issuer, 20_000, 100, 20_001)?,
+            RecipientImportGuidedRecoveryLaunchSlotState::PendingAuthorization
+        );
+        assert_eq!(slot.preview()?.membership_count(), 1);
+        assert_eq!(slot.preview()?.expires_at_unix_seconds(), 20_100);
+        assert!(
+            slot.preview()?
+                .confirmation_phrase()
+                .starts_with("RECOVER-")
+        );
+        assert_eq!(
+            slot.cancel(RecipientImportGuidedRecoveryLaunchSlotCancel::pending())?,
+            RecipientImportGuidedRecoveryLaunchSlotState::Empty
+        );
+        assert!(!slot.opened_network());
+        Ok(())
+    }
+
+    #[test]
+    fn recipient_import_guided_recovery_issuer_to_slot_staging_consumes_failures_and_preserves_custody()
+    -> Result<(), Box<dyn std::error::Error>> {
+        let setup = intent_round_fixture("recipient-import-guided-recovery-issuer-slot-guard")?;
+        let (_store, durable) = committed_adapter_intent(&setup)?;
+        let descriptor = adapter_descriptor(&setup)?;
+        let reference = adapter_membership_reference(0, &setup.fixture.membership, 52)?;
+        let signer = setup.fixture.replacement.identity();
+        let make_issuer = |request_byte| {
+            guided_recovery_assembly_issuer(
+                &setup,
+                &descriptor,
+                &durable,
+                reference.clone(),
+                request_byte,
+                signer,
+            )
+        };
+        let mut slot = RecipientImportGuidedRecoveryLaunchSlot::new_empty();
+
+        assert!(matches!(
+            slot.stage_from_authenticated_issuer(make_issuer(53)?, 20_100, 0, 20_100),
+            Err(RecipientImportGuidedRecoveryLaunchSlotError::Authorization(error))
+                if matches!(
+                    *error,
+                    RecipientImportGuidedRecoveryLaunchAuthorizationError::InvalidLifetime
+                )
+        ));
+        assert_eq!(
+            slot.state(),
+            RecipientImportGuidedRecoveryLaunchSlotState::Empty
+        );
+        assert!(matches!(
+            slot.stage_from_authenticated_issuer(make_issuer(54)?, 20_200, 10, 20_199),
+            Err(RecipientImportGuidedRecoveryLaunchSlotError::Authorization(error))
+                if matches!(
+                    *error,
+                    RecipientImportGuidedRecoveryLaunchAuthorizationError::ClockRegressed
+                )
+        ));
+        assert!(matches!(
+            slot.stage_from_authenticated_issuer(make_issuer(55)?, 20_300, 10, 20_310),
+            Err(RecipientImportGuidedRecoveryLaunchSlotError::Authorization(error))
+                if matches!(
+                    *error,
+                    RecipientImportGuidedRecoveryLaunchAuthorizationError::Expired
+                )
+        ));
+
+        slot.stage_from_authenticated_issuer(make_issuer(56)?, 20_400, 100, 20_401)?;
+        let retained_phrase = slot.preview()?.confirmation_phrase().to_owned();
+        assert!(matches!(
+            slot.stage_from_authenticated_issuer(make_issuer(57)?, 20_400, 100, 20_401),
+            Err(RecipientImportGuidedRecoveryLaunchSlotError::PendingAlreadyInstalled)
+        ));
+        assert_eq!(slot.preview()?.confirmation_phrase(), retained_phrase);
+        assert_eq!(
+            slot.approve(
+                RecipientImportGuidedRecoveryLaunchSlotApprove::new(retained_phrase, 100),
+                20_402,
+            )?,
+            RecipientImportGuidedRecoveryLaunchSlotState::HostInstalled
+        );
+        assert!(matches!(
+            slot.stage_from_authenticated_issuer(make_issuer(58)?, 20_400, 100, 20_403),
+            Err(RecipientImportGuidedRecoveryLaunchSlotError::HostAlreadyInstalled)
+        ));
+        assert_eq!(
+            slot.state(),
+            RecipientImportGuidedRecoveryLaunchSlotState::HostInstalled
+        );
+        assert!(!slot.opened_network());
+        Ok(())
+    }
+
+    #[test]
     fn recipient_import_guided_recovery_launch_slot_rejects_replacement_and_clears_failures()
     -> Result<(), Box<dyn std::error::Error>> {
         let setup = intent_round_fixture("recipient-import-guided-recovery-launch-slot-fail")?;
@@ -10364,26 +10469,20 @@ mod tests {
         let reference = adapter_membership_reference(0, &setup.fixture.membership, 33)?;
         let signer = setup.fixture.replacement.identity();
 
-        let make_authorization = |request_byte, issued_at_unix_seconds, lifetime_seconds| {
-            let issuer = guided_recovery_assembly_issuer(
+        let make_issuer = |request_byte| {
+            guided_recovery_assembly_issuer(
                 &setup,
                 &descriptor,
                 &durable,
                 reference.clone(),
                 request_byte,
                 signer,
-            )?;
-            RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(
-                issuer,
-                issued_at_unix_seconds,
-                lifetime_seconds,
             )
-            .map_err(|error| -> Box<dyn std::error::Error> { Box::new(error) })
         };
 
         let mut slot = RecipientImportGuidedRecoveryLaunchSlot::new_empty();
         assert!(matches!(
-            slot.install(make_authorization(34, 18_100, 10)?, 18_099),
+            slot.stage_from_authenticated_issuer(make_issuer(34)?, 18_100, 10, 18_099),
             Err(RecipientImportGuidedRecoveryLaunchSlotError::Authorization(error))
                 if matches!(
                     *error,
@@ -10395,7 +10494,7 @@ mod tests {
             RecipientImportGuidedRecoveryLaunchSlotState::Empty
         );
         assert!(matches!(
-            slot.install(make_authorization(35, 18_200, 10)?, 18_210),
+            slot.stage_from_authenticated_issuer(make_issuer(35)?, 18_200, 10, 18_210),
             Err(RecipientImportGuidedRecoveryLaunchSlotError::Authorization(error))
                 if matches!(
                     *error,
@@ -10403,10 +10502,10 @@ mod tests {
                 )
         ));
 
-        slot.install(make_authorization(36, 18_300, 100)?, 18_301)?;
+        slot.stage_from_authenticated_issuer(make_issuer(36)?, 18_300, 100, 18_301)?;
         let retained_phrase = slot.preview()?.confirmation_phrase().to_owned();
         assert!(matches!(
-            slot.install(make_authorization(37, 18_300, 100)?, 18_301),
+            slot.stage_from_authenticated_issuer(make_issuer(37)?, 18_300, 100, 18_301),
             Err(RecipientImportGuidedRecoveryLaunchSlotError::PendingAlreadyInstalled)
         ));
         assert_eq!(slot.preview()?.confirmation_phrase(), retained_phrase);
@@ -10419,7 +10518,7 @@ mod tests {
             Err(RecipientImportGuidedRecoveryLaunchSlotError::PendingUnavailable)
         ));
 
-        slot.install(make_authorization(38, 18_400, 100)?, 18_401)?;
+        slot.stage_from_authenticated_issuer(make_issuer(38)?, 18_400, 100, 18_401)?;
         assert!(matches!(
             slot.approve(
                 RecipientImportGuidedRecoveryLaunchSlotApprove::new("RECOVER-WRONG", 100),
@@ -10436,7 +10535,7 @@ mod tests {
             RecipientImportGuidedRecoveryLaunchSlotState::Empty
         );
 
-        slot.install(make_authorization(39, 18_500, 10)?, 18_501)?;
+        slot.stage_from_authenticated_issuer(make_issuer(39)?, 18_500, 10, 18_501)?;
         let phrase = slot.preview()?.confirmation_phrase().to_owned();
         assert!(matches!(
             slot.approve(
@@ -10454,7 +10553,7 @@ mod tests {
             RecipientImportGuidedRecoveryLaunchSlotState::Empty
         );
 
-        slot.install(make_authorization(40, 18_600, 100)?, 18_601)?;
+        slot.stage_from_authenticated_issuer(make_issuer(40)?, 18_600, 100, 18_601)?;
         let phrase = slot.preview()?.confirmation_phrase().to_owned();
         assert!(matches!(
             slot.approve(
@@ -10485,11 +10584,7 @@ mod tests {
             41,
             &foreign_signer,
         )?;
-        let foreign_authorization =
-            RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(
-                issuer, 18_700, 100,
-            )?;
-        slot.install(foreign_authorization, 18_701)?;
+        slot.stage_from_authenticated_issuer(issuer, 18_700, 100, 18_701)?;
         let phrase = slot.preview()?.confirmation_phrase().to_owned();
         assert!(matches!(
             slot.approve(
@@ -10511,7 +10606,7 @@ mod tests {
             RecipientImportGuidedRecoveryLaunchSlotState::Empty
         );
 
-        slot.install(make_authorization(42, 18_800, 100)?, 18_801)?;
+        slot.stage_from_authenticated_issuer(make_issuer(42)?, 18_800, 100, 18_801)?;
         let phrase = slot.preview()?.confirmation_phrase().to_owned();
         assert_eq!(
             slot.approve(
@@ -10521,7 +10616,7 @@ mod tests {
             RecipientImportGuidedRecoveryLaunchSlotState::HostInstalled
         );
         assert!(matches!(
-            slot.install(make_authorization(43, 18_800, 100)?, 18_803),
+            slot.stage_from_authenticated_issuer(make_issuer(43)?, 18_800, 100, 18_803),
             Err(RecipientImportGuidedRecoveryLaunchSlotError::HostAlreadyInstalled)
         ));
         assert_eq!(
@@ -10541,12 +10636,8 @@ mod tests {
         let signer = setup.fixture.replacement.identity();
         let issuer =
             guided_recovery_assembly_issuer(&setup, &descriptor, &durable, reference, 45, signer)?;
-        let authorization =
-            RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(
-                issuer, 19_000, 100,
-            )?;
         let mut slot = RecipientImportGuidedRecoveryLaunchSlot::new_empty();
-        slot.install(authorization, 19_001)?;
+        slot.stage_from_authenticated_issuer(issuer, 19_000, 100, 19_001)?;
         let phrase = slot.preview()?.confirmation_phrase().to_owned();
         slot.approve(
             RecipientImportGuidedRecoveryLaunchSlotApprove::new(phrase, 300),
@@ -10634,19 +10725,15 @@ mod tests {
         let descriptor = adapter_descriptor(&setup)?;
         let reference = adapter_membership_reference(0, &setup.fixture.membership, 46)?;
         let signer = setup.fixture.replacement.identity();
-        let make_authorization = |request_byte| {
-            let issuer = guided_recovery_assembly_issuer(
+        let make_issuer = |request_byte| {
+            guided_recovery_assembly_issuer(
                 &setup,
                 &descriptor,
                 &durable,
                 reference.clone(),
                 request_byte,
                 signer,
-            )?;
-            RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(
-                issuer, 19_100, 100,
             )
-            .map_err(|error| -> Box<dyn std::error::Error> { Box::new(error) })
         };
         let unavailable = |result: Result<_, RecipientImportGuidedRecoveryLaunchSlotError>| {
             assert!(matches!(
@@ -10675,7 +10762,7 @@ mod tests {
             19_100,
         ));
 
-        slot.install(make_authorization(48)?, 19_101)?;
+        slot.stage_from_authenticated_issuer(make_issuer(48)?, 19_100, 100, 19_101)?;
         let retained_phrase = slot.preview()?.confirmation_phrase().to_owned();
         unavailable(slot.host_prepare(RecipientImportGuidedRecoveryHostPrepare::new(10), 19_102));
         unavailable(slot.host_confirm(
@@ -10723,7 +10810,7 @@ mod tests {
             RecipientImportGuidedSessionLocalUxPhase::Idle
         );
         assert!(matches!(
-            slot.install(make_authorization(49)?, 19_105),
+            slot.stage_from_authenticated_issuer(make_issuer(49)?, 19_100, 100, 19_105),
             Err(RecipientImportGuidedRecoveryLaunchSlotError::HostAlreadyInstalled)
         ));
         assert_eq!(

@@ -12,6 +12,23 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.57 — atomic issuer-to-slot launch staging: выполнено
+
+- Единственный crate-internal staging transition принимает M1.2.53 issuer по
+  значению и создаёт M1.2.54 authorization непосредственно внутри пустого
+  process-owned slot. Прежний slot seam для готовой authorization удалён.
+- Occupied-slot checks выполняются до construction; затем grant проходит
+  lifetime/clock/expiry admission до retention. Любой отказ поглощает incoming
+  authority, не возвращая issuer/grant и не вытесняя pending/installed custody.
+- Наружу возвращается только safe `PendingAuthorization`; issuer,
+  authorization, owner, host, session, handoff, identity и membership не
+  выдаются. Slot остаётся non-cloneable, non-serializable и restart-empty.
+- Stable-name staging fixtures прошли 2/2 за 123.30s; combined guided-recovery
+  regression M1.2.47–M1.2.57 прошёл 20/20 за 2116.74s.
+  Dedicated boundary отклонил 18/18 mutations; accepted-tag readiness прошёл
+  183/183 gates. CLI/desktop/runtime IPC/timer/network не зарегистрированы,
+  public `legacy-only` неизменён.
+
 ### M1.2.56 — opaque installed-host command router: выполнено
 
 - Existing typed prepare/confirm/apply/cancel/refresh проходят только через

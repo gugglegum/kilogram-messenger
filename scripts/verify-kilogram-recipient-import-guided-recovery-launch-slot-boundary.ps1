@@ -151,12 +151,15 @@ function Assert-Boundary {
         "pub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>",
         "pending_authorization: Option<RecipientImportGuidedRecoveryLaunchAuthorization<'identity>>",
         "installed_host: Option<RecipientImportGuidedRecoveryHost<'identity>>",
-        'pub(crate) fn new_empty() -> Self', 'pub(crate) fn install(',
-        "authorization: RecipientImportGuidedRecoveryLaunchAuthorization<'identity>",
+        'pub(crate) fn new_empty() -> Self',
+        'pub(crate) fn stage_from_authenticated_issuer(',
+        "issuer: RecipientImportGuidedRecoveryAssemblyIssuer<'identity>",
+        'issued_at_unix_seconds: u64', 'lifetime_seconds: u64',
         'if self.pending_authorization.is_some()',
         'RecipientImportGuidedRecoveryLaunchSlotError::PendingAlreadyInstalled',
         'if self.installed_host.is_some()',
         'RecipientImportGuidedRecoveryLaunchSlotError::HostAlreadyInstalled',
+        'RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(',
         'authorization.validate_pending_at(now_unix_seconds)?;',
         'self.pending_authorization = Some(authorization);',
         'pub fn state(&self) -> RecipientImportGuidedRecoveryLaunchSlotState',
@@ -175,7 +178,8 @@ function Assert-Boundary {
         'pub struct RecipientImportGuidedRecoveryLaunchSlotCancel'
     ) 'launch-slot source'
     foreach ($forbidden in @(
-        'pub fn new_empty()', 'pub fn install(', 'use serde::',
+        'pub fn new_empty()', 'pub fn stage_from_authenticated_issuer(',
+        'pub(crate) fn install(', 'pub fn install(', 'use serde::',
         '#[derive(Serialize', '#[derive(Deserialize', 'impl Serialize',
         'impl Deserialize', 'TcpListener', 'UdpSocket', 'iroh::Endpoint',
         'std::fs::read_dir'
@@ -190,6 +194,10 @@ function Assert-Boundary {
     )) {
         throw 'launch slot gained a derive attribute'
     }
+    $constructOffset = $Slot.IndexOf(
+        'RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(',
+        [StringComparison]::Ordinal
+    )
     $validateOffset = $Slot.IndexOf(
         'authorization.validate_pending_at(now_unix_seconds)?;',
         [StringComparison]::Ordinal
@@ -198,8 +206,9 @@ function Assert-Boundary {
         'self.pending_authorization = Some(authorization);',
         [StringComparison]::Ordinal
     )
-    if ($validateOffset -lt 0 -or $retainOffset -lt 0 -or $validateOffset -gt $retainOffset) {
-        throw 'launch slot retains authorization before validation'
+    if ($constructOffset -lt 0 -or $validateOffset -lt 0 -or $retainOffset -lt 0 -or
+        $constructOffset -gt $validateOffset -or $validateOffset -gt $retainOffset) {
+        throw 'launch slot no longer constructs, validates, and retains authorization in order'
     }
     $takeOffset = $Slot.IndexOf('let authorization = self', [StringComparison]::Ordinal)
     $approvalOffset = $Slot.IndexOf(
@@ -319,7 +328,10 @@ if ($SelfTest) {
     $mutations += ({ Assert-Boundary $changed $slot $authorization $runtimeLibrary $execution $cli $desktop $rfc }.GetNewClosure())
     $changedSlot = $slot.Replace('pub(crate) fn new_empty()', 'pub fn new_empty()')
     $mutations += ({ Assert-Boundary $manifest $changedSlot $authorization $runtimeLibrary $execution $cli $desktop $rfc }.GetNewClosure())
-    $changedSlot = $slot.Replace('pub(crate) fn install(', 'pub fn install(')
+    $changedSlot = $slot.Replace(
+        'pub(crate) fn stage_from_authenticated_issuer(',
+        'pub fn stage_from_authenticated_issuer('
+    )
     $mutations += ({ Assert-Boundary $manifest $changedSlot $authorization $runtimeLibrary $execution $cli $desktop $rfc }.GetNewClosure())
     $changedSlot = $slot.Replace(
         "pub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>",

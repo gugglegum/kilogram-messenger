@@ -8,9 +8,10 @@
 use thiserror::Error;
 
 use crate::{
-    RecipientImportGuidedRecoveryHost, RecipientImportGuidedRecoveryHostCancel,
-    RecipientImportGuidedRecoveryHostError, RecipientImportGuidedRecoveryHostPrepare,
-    RecipientImportGuidedRecoveryLaunchApproval, RecipientImportGuidedRecoveryLaunchAuthorization,
+    RecipientImportGuidedRecoveryAssemblyIssuer, RecipientImportGuidedRecoveryHost,
+    RecipientImportGuidedRecoveryHostCancel, RecipientImportGuidedRecoveryHostError,
+    RecipientImportGuidedRecoveryHostPrepare, RecipientImportGuidedRecoveryLaunchApproval,
+    RecipientImportGuidedRecoveryLaunchAuthorization,
     RecipientImportGuidedRecoveryLaunchAuthorizationError,
     RecipientImportGuidedRecoveryLaunchPreview, RecipientImportGuidedSessionLocalUxApply,
     RecipientImportGuidedSessionLocalUxConfirm, RecipientImportGuidedSessionLocalUxRefresh,
@@ -58,8 +59,9 @@ impl RecipientImportGuidedRecoveryLaunchSlotCancel {
 /// Owns the complete pre-launch grant and the installed host for one process.
 ///
 /// The slot is intentionally neither Clone nor serializable. Its constructor
-/// and install seam are crate-private while the feature is dormant. A process
-/// restart therefore recreates no pending authorization and no installed host.
+/// and issuer-staging seam are crate-private while the feature is dormant. A
+/// process restart therefore recreates no pending authorization and no
+/// installed host.
 pub struct RecipientImportGuidedRecoveryLaunchSlot<'identity> {
     pending_authorization: Option<RecipientImportGuidedRecoveryLaunchAuthorization<'identity>>,
     installed_host: Option<RecipientImportGuidedRecoveryHost<'identity>>,
@@ -76,26 +78,40 @@ impl<'identity> RecipientImportGuidedRecoveryLaunchSlot<'identity> {
         }
     }
 
-    /// Installs one complete authorization without permitting replacement.
+    /// Atomically stages one authenticated issuer without permitting
+    /// replacement.
     ///
-    /// The value is accepted by ownership. Rejection for existing custody,
-    /// clock regression, or expiry drops the incoming authorization and never
-    /// returns it to the caller.
+    /// The issuer is accepted by ownership and the complete launch
+    /// authorization is created only inside this process-owned slot. Rejection
+    /// for existing custody, invalid lifetime, clock regression, expiry, or
+    /// binding failure drops the incoming one-shot authority and never returns
+    /// either the issuer or a ready authorization to the caller.
     #[allow(dead_code)]
-    pub(crate) fn install(
+    pub(crate) fn stage_from_authenticated_issuer(
         &mut self,
-        authorization: RecipientImportGuidedRecoveryLaunchAuthorization<'identity>,
+        issuer: RecipientImportGuidedRecoveryAssemblyIssuer<'identity>,
+        issued_at_unix_seconds: u64,
+        lifetime_seconds: u64,
         now_unix_seconds: u64,
-    ) -> Result<(), RecipientImportGuidedRecoveryLaunchSlotError> {
+    ) -> Result<
+        RecipientImportGuidedRecoveryLaunchSlotState,
+        RecipientImportGuidedRecoveryLaunchSlotError,
+    > {
         if self.pending_authorization.is_some() {
             return Err(RecipientImportGuidedRecoveryLaunchSlotError::PendingAlreadyInstalled);
         }
         if self.installed_host.is_some() {
             return Err(RecipientImportGuidedRecoveryLaunchSlotError::HostAlreadyInstalled);
         }
+        let authorization =
+            RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer(
+                issuer,
+                issued_at_unix_seconds,
+                lifetime_seconds,
+            )?;
         authorization.validate_pending_at(now_unix_seconds)?;
         self.pending_authorization = Some(authorization);
-        Ok(())
+        Ok(RecipientImportGuidedRecoveryLaunchSlotState::PendingAuthorization)
     }
 
     pub fn state(&self) -> RecipientImportGuidedRecoveryLaunchSlotState {

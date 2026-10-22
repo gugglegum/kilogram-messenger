@@ -6,15 +6,14 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.56 маршрутизирует все пять
-typed host-команд через process-owned
-`RecipientImportGuidedRecoveryLaunchSlot`. `Empty` и
-`PendingAuthorization` отвергаются общим gate до host/controller/durable work;
-наружу выходит только прежний privacy-safe UX view. Ошибка не извлекает и не
-заменяет установленный host. CLI/desktop/runtime IPC/network не подключены.
-Следующий M1.2.57 должен атомарно создавать authorization внутри slot из
-one-shot issuer, чтобы готовая authorization больше не переносилась между
-crate-internal владельцами.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.57 заменяет передачу готовой
+launch authorization атомарным crate-internal переходом `issuer -> slot`.
+Slot принимает one-shot issuer по значению, сам создаёт и проверяет grant и
+только затем сохраняет его. Invalid lifetime, clock regression, expiry и
+occupied-slot отказ не возвращают authority и не вытесняют прежнюю custody.
+CLI/desktop/runtime IPC/network не подключены. Следующий M1.2.58 должен так же
+атомарно связать authenticated plan assembly с process-owned slot, не оставляя
+issuer во временном владении вызывающего кода.
 
 ## Текущее состояние
 
@@ -1372,6 +1371,16 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   process-local authorization, показывает только safe preview и требует exact
   typed phrase. Любой результат потребляет grant; product surfaces и network
   остаются dormant.
+- [`../docs/RFC-0279-m1255-process-owned-pending-guided-recovery-launch-slot.md`](../docs/RFC-0279-m1255-process-owned-pending-guided-recovery-launch-slot.md) —
+  M1.2.55 помещает один pending grant и один installed host под non-cloneable
+  process-owned custody без replacement, eviction или restart recovery.
+- [`../docs/RFC-0280-m1256-opaque-installed-host-command-router.md`](../docs/RFC-0280-m1256-opaque-installed-host-command-router.md) —
+  M1.2.56 маршрутизирует все typed host commands через slot и возвращает только
+  existing safe UX view, не раскрывая и не извлекая host.
+- [`../docs/RFC-0281-m1257-atomic-issuer-to-slot-launch-staging.md`](../docs/RFC-0281-m1257-atomic-issuer-to-slot-launch-staging.md) —
+  M1.2.57 создаёт authorization только внутри slot из issuer, принятого по
+  значению; admission/replacement failures поглощают incoming authority и
+  сохраняют прежнюю custody.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —
