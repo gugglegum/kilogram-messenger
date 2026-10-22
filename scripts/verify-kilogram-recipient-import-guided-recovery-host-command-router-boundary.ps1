@@ -160,7 +160,7 @@ function Assert-Boundary {
     ) 'host-command-router verification'
 
     Require-Text $Slot @(
-        "pub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>",
+        "pub(crate) struct RecipientImportGuidedRecoveryLaunchSlot<'identity>",
         "installed_host: Option<RecipientImportGuidedRecoveryHost<'identity>>",
         'pub fn host_prepare(', 'pub fn host_confirm(', 'pub fn host_apply(',
         'pub fn host_cancel(', 'pub fn host_refresh(',
@@ -204,7 +204,7 @@ function Assert-Boundary {
     }
     if ([regex]::IsMatch(
         $Slot,
-        "(?m)^[ \t]*#\[derive[^\]]*\][ \t]*\r?\n[ \t]*pub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>"
+        "(?m)^[ \t]*#\[derive[^\]]*\][ \t]*\r?\n[ \t]*pub\(crate\) struct RecipientImportGuidedRecoveryLaunchSlot<'identity>"
     )) {
         throw 'host-command-router slot became derive-enabled'
     }
@@ -299,7 +299,7 @@ $sourceMutations = @(
     [PSCustomObject]@{ Label = 'prepare_route_removed'; Target = 'slot'; From = 'pub fn host_prepare('; To = 'pub fn removed_host_prepare(' },
     [PSCustomObject]@{ Label = 'safe_return_removed'; Target = 'slot'; From = 'RecipientImportGuidedSessionLocalUxView'; To = "RecipientImportGuidedRecoveryHost<'identity>" },
     [PSCustomObject]@{ Label = 'host_extraction_added'; Target = 'slot_append'; From = ''; To = "`r`npub fn take_host() {}`r`n" },
-    [PSCustomObject]@{ Label = 'clone_added'; Target = 'slot'; From = "pub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>"; To = "#[derive(Clone)]`r`npub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>" },
+    [PSCustomObject]@{ Label = 'clone_added'; Target = 'slot'; From = "pub(crate) struct RecipientImportGuidedRecoveryLaunchSlot<'identity>"; To = "#[derive(Clone)]`r`npub(crate) struct RecipientImportGuidedRecoveryLaunchSlot<'identity>" },
     [PSCustomObject]@{ Label = 'fixture_removed'; Target = 'execution'; From = 'recipient_import_guided_recovery_launch_slot_router_runs_one_full_host_lifecycle'; To = 'removed_router_lifecycle_fixture' },
     [PSCustomObject]@{ Label = 'cli_activation_added'; Target = 'cli_append'; From = ''; To = "`r`nRecipientImportGuidedRecoveryLaunchSlot`r`n" }
 )

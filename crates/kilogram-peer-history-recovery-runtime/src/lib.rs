@@ -101,10 +101,10 @@ pub use recipient_import_guided_recovery_launch_authorization::{
 pub use recipient_import_guided_recovery_launch_service::{
     RecipientImportGuidedRecoveryLaunchService, RecipientImportGuidedRecoveryLaunchServiceError,
 };
+pub(crate) use recipient_import_guided_recovery_launch_slot::RecipientImportGuidedRecoveryLaunchSlot;
 pub use recipient_import_guided_recovery_launch_slot::{
-    RecipientImportGuidedRecoveryLaunchSlot, RecipientImportGuidedRecoveryLaunchSlotApprove,
-    RecipientImportGuidedRecoveryLaunchSlotCancel, RecipientImportGuidedRecoveryLaunchSlotError,
-    RecipientImportGuidedRecoveryLaunchSlotState,
+    RecipientImportGuidedRecoveryLaunchSlotApprove, RecipientImportGuidedRecoveryLaunchSlotCancel,
+    RecipientImportGuidedRecoveryLaunchSlotError, RecipientImportGuidedRecoveryLaunchSlotState,
 };
 pub(crate) use recipient_import_guided_session_controller::RecipientImportGuidedRecoveryAssemblyStagingInput;
 pub use recipient_import_guided_session_controller::{

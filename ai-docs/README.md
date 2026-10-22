@@ -6,14 +6,13 @@
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
 
 Последний рабочий блок описан в
-[`next-stage-plan.md`](next-stage-plan.md): M1.2.59 помещает один complete
-guided-recovery lifecycle под dormant process-owned service facade. Service
-сам владеет private launch slot, принимает opaque assembly staging input и
-маршрутизирует только safe state/preview, typed launch commands и existing
-safe host UX. Raw slot/host/issuer/authorization наружу не выдаются;
-CLI/desktop/runtime IPC/network не подключены. Следующий M1.2.60 должен убрать
-raw launch-slot type из public API, оставив service единственным production
-owner этой custody.
+[`next-stage-plan.md`](next-stage-plan.md): M1.2.60 сделал raw guided-recovery
+launch slot crate-private implementation detail и удалил его public re-export.
+Единственным production owner остался M1.2.59 service, а safe state,
+approve/cancel, typed error и facade остаются public. Copied-module regression
+видит raw slot только как `pub(crate)`; CLI/desktop/runtime IPC/network не
+подключены. Следующий M1.2.61 должен аналогично закрыть raw installed recovery
+host, сохранив public typed host commands и safe UX view.
 
 ## Текущее состояние
 
@@ -1389,6 +1388,10 @@ byte-for-byte и создал attestation `48691093`. Cross-host divergence за
   M1.2.59 помещает один launch slot под dormant process-owned facade,
   маршрутизирует staging и все typed launch/host команды без выдачи raw
   slot/host/authority и сохраняет predecessor one-shot custody.
+- [`../docs/RFC-0284-m1260-raw-launch-slot-public-surface-retirement.md`](../docs/RFC-0284-m1260-raw-launch-slot-public-surface-retirement.md) —
+  M1.2.60 удаляет raw launch slot из public API и оставляет его crate-private
+  implementation detail единственного production service owner; safe facade
+  vocabulary и test-only predecessor coverage сохранены.
 - [`../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md`](../docs/M0.9.87-INDEPENDENT-PROVIDER-FIELD-TEST-RU.md) —
   краткая русская инструкция будущего трёх- или четырёхмашинного запуска.
 - [`../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md`](../docs/M0.9.30-OPAQUE-STORE-INTERNET-TEST-RU.md) —

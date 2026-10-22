@@ -62,7 +62,7 @@ impl RecipientImportGuidedRecoveryLaunchSlotCancel {
 /// and issuer-staging seam are crate-private while the feature is dormant. A
 /// process restart therefore recreates no pending authorization and no
 /// installed host.
-pub struct RecipientImportGuidedRecoveryLaunchSlot<'identity> {
+pub(crate) struct RecipientImportGuidedRecoveryLaunchSlot<'identity> {
     pending_authorization: Option<RecipientImportGuidedRecoveryLaunchAuthorization<'identity>>,
     installed_host: Option<RecipientImportGuidedRecoveryHost<'identity>>,
 }

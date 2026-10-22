@@ -12,6 +12,23 @@
 - В финале каждого этапа указываются его номер, commit hash и номер следующего
   target. Package/binary SemVer не смешивается с product milestone `M`.
 
+### M1.2.60 — raw launch-slot public surface retirement: выполнено
+
+- `RecipientImportGuidedRecoveryLaunchSlot` теперь crate-private и больше не
+  re-exported как public runtime API. В production его называет, создаёт и
+  хранит только M1.2.59 service с одним private field.
+- Public остаются service facade, safe slot state, typed approve/cancel и typed
+  error. Custody/error/wire semantics не менялись; raw accessor, replacement,
+  second owner, Clone/Debug/Default/serde/restart recovery отсутствуют.
+- Copied-module execution harness re-exported raw slot только как `pub(crate)`;
+  все predecessor atomic staging, one-shot approval, cancellation, router и
+  service fixtures сохранены без возврата production API.
+- Новых behavioral tests нет; unchanged combined M1.2.47–M1.2.59 regression
+  прошёл 24/24 за 2328.66s через stable-name EXE. Dedicated boundary отклонил
+  18/18 mutations; accepted-tag readiness прошёл 186/186 gates. Product
+  network, CLI/desktop/runtime IPC/timer не подключены, public `legacy-only`
+  неизменён.
+
 ### M1.2.59 — dormant process-owned guided-recovery launch service: выполнено
 
 - Один non-cloneable process-owned service теперь сам владеет ровно одним

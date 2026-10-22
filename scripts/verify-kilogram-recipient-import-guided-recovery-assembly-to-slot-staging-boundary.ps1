@@ -175,7 +175,7 @@ function Assert-Boundary {
     }
 
     Require-Text $Slot @(
-        "pub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>",
+        "pub(crate) struct RecipientImportGuidedRecoveryLaunchSlot<'identity>",
         'pub(crate) fn stage_from_authenticated_assembly(',
         "assembly: RecipientImportGuidedRecoveryAssemblyStagingInput<'identity>",
         'if self.pending_authorization.is_some()',

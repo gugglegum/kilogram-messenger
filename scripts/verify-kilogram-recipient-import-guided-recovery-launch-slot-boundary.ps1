@@ -148,7 +148,7 @@ function Assert-Boundary {
     }
 
     Require-Text $Slot @(
-        "pub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>",
+        "pub(crate) struct RecipientImportGuidedRecoveryLaunchSlot<'identity>",
         "pending_authorization: Option<RecipientImportGuidedRecoveryLaunchAuthorization<'identity>>",
         "installed_host: Option<RecipientImportGuidedRecoveryHost<'identity>>",
         'pub(crate) fn new_empty() -> Self',
@@ -192,7 +192,7 @@ function Assert-Boundary {
     }
     if ([regex]::IsMatch(
         $Slot,
-        "(?m)^[ \t]*#\[derive[^\]]*\][ \t]*\r?\n[ \t]*pub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>"
+        "(?m)^[ \t]*#\[derive[^\]]*\][ \t]*\r?\n[ \t]*pub\(crate\) struct RecipientImportGuidedRecoveryLaunchSlot<'identity>"
     )) {
         throw 'launch slot gained a derive attribute'
     }
@@ -336,8 +336,8 @@ if ($SelfTest) {
     )
     $mutations += ({ Assert-Boundary $manifest $changedSlot $authorization $runtimeLibrary $execution $cli $desktop $rfc }.GetNewClosure())
     $changedSlot = $slot.Replace(
-        "pub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>",
-        "#[derive(Clone)]`r`npub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>"
+        "pub(crate) struct RecipientImportGuidedRecoveryLaunchSlot<'identity>",
+        "#[derive(Clone)]`r`npub(crate) struct RecipientImportGuidedRecoveryLaunchSlot<'identity>"
     )
     $mutations += ({ Assert-Boundary $manifest $changedSlot $authorization $runtimeLibrary $execution $cli $desktop $rfc }.GetNewClosure())
     $changedSlot = $slot.Replace(

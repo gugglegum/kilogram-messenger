@@ -135,7 +135,7 @@ function Assert-Boundary {
     ) 'issuer-to-slot verification'
 
     Require-Text $Slot @(
-        "pub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>",
+        "pub(crate) struct RecipientImportGuidedRecoveryLaunchSlot<'identity>",
         "pending_authorization: Option<RecipientImportGuidedRecoveryLaunchAuthorization<'identity>>",
         "installed_host: Option<RecipientImportGuidedRecoveryHost<'identity>>",
         'pub(crate) fn stage_from_authenticated_assembly(',
@@ -164,7 +164,7 @@ function Assert-Boundary {
     }
     if ([regex]::IsMatch(
         $Slot,
-        "(?m)^[ \t]*#\[derive[^\]]*\][ \t]*\r?\n[ \t]*pub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>"
+        "(?m)^[ \t]*#\[derive[^\]]*\][ \t]*\r?\n[ \t]*pub\(crate\) struct RecipientImportGuidedRecoveryLaunchSlot<'identity>"
     )) {
         throw 'issuer-to-slot launch slot gained a derive attribute'
     }
@@ -303,7 +303,7 @@ $sourceMutations = @(
     [PSCustomObject]@{ Label = 'constructor_removed'; Target = 'slot'; From = 'RecipientImportGuidedRecoveryLaunchAuthorization::from_authenticated_issuer('; To = 'removed_internal_authorization_constructor(' },
     [PSCustomObject]@{ Label = 'validation_removed'; Target = 'slot'; From = 'authorization.validate_pending_at(now_unix_seconds)?;'; To = 'removed_pending_validation();' },
     [PSCustomObject]@{ Label = 'prebuilt_install_added'; Target = 'slot_append'; From = ''; To = "`r`npub(crate) fn install() {}`r`n" },
-    [PSCustomObject]@{ Label = 'clone_added'; Target = 'slot'; From = "pub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>"; To = "#[derive(Clone)]`r`npub struct RecipientImportGuidedRecoveryLaunchSlot<'identity>" },
+    [PSCustomObject]@{ Label = 'clone_added'; Target = 'slot'; From = "pub(crate) struct RecipientImportGuidedRecoveryLaunchSlot<'identity>"; To = "#[derive(Clone)]`r`npub(crate) struct RecipientImportGuidedRecoveryLaunchSlot<'identity>" },
     [PSCustomObject]@{ Label = 'success_fixture_removed'; Target = 'execution'; From = 'recipient_import_guided_recovery_issuer_to_slot_staging_is_atomic_and_safe'; To = 'removed_atomic_staging_fixture' },
     [PSCustomObject]@{ Label = 'failure_fixture_removed'; Target = 'execution'; From = 'recipient_import_guided_recovery_issuer_to_slot_staging_consumes_failures_and_preserves_custody'; To = 'removed_staging_failure_fixture' },
     [PSCustomObject]@{ Label = 'cli_activation'; Target = 'cli_append'; From = ''; To = "`r`nRecipientImportGuidedRecoveryLaunchSlot::stage_from_authenticated_assembly`r`n" }

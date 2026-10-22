@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.60",
+  "status": "raw-launch-slot-public-surface-retired",
+  "predecessor": "M1.2.59",
+  "raw_slot": {
+    "type": "RecipientImportGuidedRecoveryLaunchSlot",
+    "crate_private": true,
+    "public_reexport": false,
+    "production_constructible": false,
+    "service_only_production_owner": true,
+    "cloneable": false,
+    "serializable": false,
+    "debuggable": false,
+    "default_constructible": false,
+    "raw_accessor": false,
+    "replacement_seam": false,
+    "restart_recovery": false
+  },
+  "safe_vocabulary": {
+    "public_service": true,
+    "public_state": true,
+    "public_approve_command": true,
+    "public_cancel_command": true,
+    "public_typed_error": true,
+    "safe_preview_preserved": true,
+    "host_commands_preserved": true,
+    "exposes_raw_slot": false,
+    "exposes_host": false,
+    "exposes_issuer": false,
+    "exposes_authorization": false,
+    "changes_semantics": false,
+    "changes_wire_representation": false
+  },
+  "test_boundary": {
+    "copied_module_only": true,
+    "raw_reexport_crate_private": true,
+    "predecessor_fixtures_retained": true,
+    "production_api_reopened": false
+  },
+  "production": {
+    "ordinary_startup_creates_service": false,
+    "ordinary_startup_creates_slot": false,
+    "registered_runtime_ipc_command": false,
+    "registered_cli_command": false,
+    "registered_desktop_control": false,
+    "registered_timer": false,
+    "registered_background_start": false,
+    "adds_filesystem_discovery": false,
+    "changes_peer_wire": false,
+    "changes_runtime_ipc_wire": false,
+    "changes_public_default": false,
+    "public_default": "legacy-only"
+  },
+  "verification": {
+    "new_stable_path_test_count": 0,
+    "combined_guided_recovery_test_count": 24,
+    "combined_guided_recovery_test_seconds": 2328.66,
+    "negative_mutations_rejected": "18/18",
+    "readiness_gates": "186/186",
+    "format_verified": true,
+    "offline_strict_clippy_verified": true,
+    "raw_slot_not_publicly_nameable": true,
+    "service_only_production_owner_verified": true,
+    "safe_facade_regression_verified": true,
+    "network_executed": false,
+    "second_host_required": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "next": [
+    "retire-the-raw-installed-recovery-host-public-surface",
+    "keep-service-and-safe-command-vocabulary-public",
+    "keep-runtime-ipc-cli-desktop-network-and-public-default-unchanged"
+  ]
+}

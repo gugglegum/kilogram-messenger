@@ -184,6 +184,7 @@ function Assert-Boundary {
     }
 
     Require-Text $Slot @(
+        "pub(crate) struct RecipientImportGuidedRecoveryLaunchSlot<'identity>",
         'pub(crate) fn new_empty() -> Self',
         'pub(crate) fn stage_from_authenticated_assembly(',
         'fn installed_host_mut(', 'pub fn opened_network(&self) -> bool'
@@ -197,8 +198,20 @@ function Assert-Boundary {
         'pub use recipient_import_guided_recovery_launch_service::{',
         'RecipientImportGuidedRecoveryLaunchService,',
         'RecipientImportGuidedRecoveryLaunchServiceError,',
+        'pub(crate) use recipient_import_guided_recovery_launch_slot::RecipientImportGuidedRecoveryLaunchSlot;',
+        'pub use recipient_import_guided_recovery_launch_slot::{',
+        'RecipientImportGuidedRecoveryLaunchSlotApprove,',
         'pub(crate) use recipient_import_guided_session_controller::RecipientImportGuidedRecoveryAssemblyStagingInput;'
     ) 'launch-service runtime library'
+    if ($RuntimeLibrary.IndexOf(
+        'pub struct RecipientImportGuidedRecoveryLaunchSlot<',
+        [StringComparison]::Ordinal
+    ) -ge 0 -or $RuntimeLibrary.IndexOf(
+        "pub use recipient_import_guided_recovery_launch_slot::{`r`n    RecipientImportGuidedRecoveryLaunchSlot,",
+        [StringComparison]::Ordinal
+    ) -ge 0) {
+        throw 'launch-service predecessor reopened the raw slot as public API'
+    }
     Require-Text $Execution @(
         'recipient_import_guided_recovery_launch_service_runs_one_safe_lifecycle',
         'recipient_import_guided_recovery_launch_service_preserves_and_consumes_custody',

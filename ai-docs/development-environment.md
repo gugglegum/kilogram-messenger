@@ -1,5 +1,24 @@
 # Среда разработки
 
+## M1.2.60 verification (2026-10-22)
+
+- Этап меняет только Rust visibility/API boundary и не добавляет новый
+  behavioral fixture. Unchanged combined M1.2.47–M1.2.59 guided-recovery
+  regression прошёл 24/24 за 2328.66s через
+  `scripts/run-cargo-tests-stable.ps1` с постоянным EXE, workspace-local
+  TEMP/TMP, двумя cargo jobs и below-normal priority; direct `cargo test` не
+  использовался.
+- Dedicated raw-slot retirement boundary отклонил 18/18 weakening mutations.
+  Launch slot, host router, issuer-to-slot, assembly-to-slot и launch-service
+  predecessor gates сохранили полное mutation coverage.
+- Accepted-tag M1 readiness прошёл 186/186 gates с rustfmt и workspace-wide
+  locked/offline strict Clippy.
+- Product network, second host, release build, archive, tag и automatic GitHub
+  build не использовались. CLI/desktop/runtime IPC/timer/background остаются
+  unregistered, default — `legacy-only`.
+- Cargo target после regression занимает 54.60 GiB. Кэш сохранён ради скорости;
+  verification profile и incremental generations не очищались.
+
 ## M1.2.59 verification (2026-10-22)
 
 - Два новых process-owned launch-service fixtures прошли 2/2 за 244.59s,
