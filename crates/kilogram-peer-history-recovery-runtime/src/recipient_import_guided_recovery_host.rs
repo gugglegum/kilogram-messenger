@@ -1,9 +1,9 @@
 //! Dormant process owner for one explicit guided recipient-import ceremony.
 //!
-//! The host is the only public local-UX surface that composes the controller,
-//! sealed start hand-off, one-shot producer, and UX adapter. It deliberately
-//! has no IPC, CLI, desktop, timer, background, filesystem-discovery, or
-//! network registration.
+//! The host is the crate-private local-UX implementation that composes the
+//! controller, sealed start hand-off, one-shot producer, and UX adapter. It
+//! deliberately has no IPC, CLI, desktop, timer, background,
+//! filesystem-discovery, or network registration.
 
 use std::path::Path;
 
@@ -64,7 +64,7 @@ impl RecipientImportGuidedRecoveryHostCancel {
 /// The host is intentionally neither Clone nor serializable. Process restart
 /// constructs an empty host; no pending hand-off or active session authority
 /// is recovered from durable state.
-pub struct RecipientImportGuidedRecoveryHost<'identity> {
+pub(crate) struct RecipientImportGuidedRecoveryHost<'identity> {
     controller: RecipientImportGuidedSessionController<'identity>,
     pending_handoff: Option<AuthenticatedGuidedRecipientImportSessionStartHandoff>,
 }
@@ -87,7 +87,7 @@ impl<'identity> RecipientImportGuidedRecoveryHostInstallationOwner<'identity> {
         Self { installation }
     }
 
-    pub fn install(
+    pub(crate) fn install(
         self,
         issued_at_unix_seconds: u64,
         lifetime_seconds: u64,
@@ -248,6 +248,10 @@ impl<'identity> RecipientImportGuidedRecoveryHost<'identity> {
             .map_err(Into::into)
     }
 
+    // The copied-module execution harness observes this invariant directly;
+    // the production runtime reaches the same safe projection through the
+    // slot/service facade rather than naming the crate-private host.
+    #[allow(dead_code)]
     pub fn opened_network(&self) -> bool {
         false
     }

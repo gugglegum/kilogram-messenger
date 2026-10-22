@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "milestone": "M1.2.61",
+  "status": "raw-installed-host-public-surface-retired",
+  "predecessor": "M1.2.60",
+  "raw_host": {
+    "type": "RecipientImportGuidedRecoveryHost",
+    "crate_private": true,
+    "public_reexport": false,
+    "production_constructible": false,
+    "slot_only_production_owner": true,
+    "installation_method_crate_private": true,
+    "cloneable": false,
+    "serializable": false,
+    "debuggable": false,
+    "default_constructible": false,
+    "raw_accessor": false,
+    "extraction_seam": false,
+    "replacement_seam": false,
+    "restart_recovery": false
+  },
+  "safe_vocabulary": {
+    "public_prepare_command": true,
+    "public_cancel_command": true,
+    "public_typed_error": true,
+    "public_service": true,
+    "safe_local_ux_view": true,
+    "service_host_routing_preserved": true,
+    "transitional_installation_owner_public": true,
+    "exposes_raw_host": false,
+    "exposes_controller": false,
+    "exposes_handoff": false,
+    "changes_semantics": false,
+    "changes_wire_representation": false
+  },
+  "test_boundary": {
+    "copied_module_only": true,
+    "raw_reexport_crate_private": true,
+    "predecessor_fixtures_retained": true,
+    "production_api_reopened": false
+  },
+  "production": {
+    "ordinary_startup_creates_service": false,
+    "ordinary_startup_creates_host": false,
+    "registered_runtime_ipc_command": false,
+    "registered_cli_command": false,
+    "registered_desktop_control": false,
+    "registered_timer": false,
+    "registered_background_start": false,
+    "adds_filesystem_discovery": false,
+    "changes_peer_wire": false,
+    "changes_runtime_ipc_wire": false,
+    "changes_public_default": false,
+    "public_default": "legacy-only"
+  },
+  "verification": {
+    "new_stable_path_test_count": 0,
+    "combined_guided_recovery_test_count": 24,
+    "combined_guided_recovery_test_seconds": 2266.98,
+    "negative_mutations_rejected": "18/18",
+    "readiness_gates": "187/187",
+    "format_verified": true,
+    "offline_strict_clippy_verified": true,
+    "raw_host_not_publicly_nameable": true,
+    "slot_only_production_owner_verified": true,
+    "safe_facade_regression_verified": true,
+    "network_executed": false,
+    "second_host_required": false,
+    "release_build": false,
+    "archive_created": false,
+    "git_tag_created": false,
+    "automatic_github_build": false
+  },
+  "next": [
+    "retire-the-transitional-host-installation-owner-public-surface",
+    "keep-launch-service-and-safe-command-vocabulary-public",
+    "keep-runtime-ipc-cli-desktop-network-and-public-default-unchanged"
+  ]
+}

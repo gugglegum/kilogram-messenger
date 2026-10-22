@@ -198,10 +198,11 @@ pub use recipient_import_consumption_session_cache::{
     RecipientImportConsumptionPlanSessionInsertOutcome,
 };
 #[cfg(test)]
+pub(crate) use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;
+#[cfg(test)]
 pub use recipient_import_guided_recovery_host::{
-    RecipientImportGuidedRecoveryHost, RecipientImportGuidedRecoveryHostCancel,
-    RecipientImportGuidedRecoveryHostError, RecipientImportGuidedRecoveryHostInstallationOwner,
-    RecipientImportGuidedRecoveryHostPrepare,
+    RecipientImportGuidedRecoveryHostCancel, RecipientImportGuidedRecoveryHostError,
+    RecipientImportGuidedRecoveryHostInstallationOwner, RecipientImportGuidedRecoveryHostPrepare,
 };
 #[cfg(test)]
 pub use recipient_import_guided_recovery_launch_authorization::{

@@ -159,11 +159,12 @@ function Assert-Boundary {
     }
 
     Require-Text $HostSource @(
+        "pub(crate) struct RecipientImportGuidedRecoveryHost<'identity>",
         "pub struct RecipientImportGuidedRecoveryHostInstallationOwner<'identity>",
         "installation: AuthenticatedGuidedRecipientImportHostInstallation<'identity>",
         'pub(crate) fn from_authenticated_recovery(',
         "installation: AuthenticatedGuidedRecipientImportHostInstallation<'identity>",
-        'pub fn install(', 'self,', 'self.installation.into_parts()',
+        'pub(crate) fn install(', 'self,', 'self.installation.into_parts()',
         'RecipientImportGuidedRecoveryHost::new(',
         'host.install_authenticated_handoff(', 'Ok(host)',
         "impl<'identity> RecipientImportGuidedRecoveryHost<'identity>",
@@ -173,6 +174,8 @@ function Assert-Boundary {
         'pub fn cancel(', 'pub fn refresh('
     ) 'host-installation owner source'
     foreach ($forbidden in @(
+        "pub struct RecipientImportGuidedRecoveryHost<'identity>",
+        'pub fn install(',
         'pub fn install_authenticated_handoff(',
         'pub(crate) fn install_authenticated_handoff(',
         'pub fn into_parts(', 'use serde::', 'TcpListener', 'UdpSocket',
@@ -190,7 +193,7 @@ function Assert-Boundary {
     }
     if (-not [regex]::IsMatch(
         $HostSource,
-        '(?s)impl<''identity> RecipientImportGuidedRecoveryHostInstallationOwner<''identity> \{.*?pub fn install\(\s*self,'
+        '(?s)impl<''identity> RecipientImportGuidedRecoveryHostInstallationOwner<''identity> \{.*?pub\(crate\) fn install\(\s*self,'
     )) {
         throw 'host-installation owner install no longer consumes self'
     }
@@ -210,10 +213,21 @@ function Assert-Boundary {
     }
 
     Require-Text $RuntimeLibrary @(
+        'pub(crate) use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;',
+        'pub use recipient_import_guided_recovery_host::{',
         'RecipientImportGuidedRecoveryHostInstallationOwner',
         'RecipientImportGuidedRecoveryHostPrepare',
         'RecipientImportGuidedRecoveryHostCancel'
     ) 'runtime installation-owner export'
+    if ([regex]::IsMatch(
+        $RuntimeLibrary,
+        '(?m)^pub use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;'
+    ) -or [regex]::IsMatch(
+        $RuntimeLibrary,
+        '(?ms)pub use\s+recipient_import_guided_recovery_host::\{[^}]*\bRecipientImportGuidedRecoveryHost\b'
+    )) {
+        throw 'runtime crate publicly re-exported the raw guided-recovery host'
+    }
     if ($RuntimeLibrary.IndexOf(
         'AuthenticatedGuidedRecipientImportHostInstallation',
         [StringComparison]::Ordinal
@@ -318,7 +332,7 @@ if ($SelfTest) {
     $mutations += ({ Assert-Boundary $manifest $changedHost $controller $runtimeLibrary $execution $cli $desktop $rfc }.GetNewClosure())
     $changedHost = [regex]::Replace(
         $hostSource,
-        '(?s)(pub fn install\(\s+)self,',
+        '(?s)(pub\(crate\) fn install\(\s+)self,',
         '${1}&mut self,',
         1
     )

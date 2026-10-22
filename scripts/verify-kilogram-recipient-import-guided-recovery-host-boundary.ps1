@@ -134,7 +134,7 @@ function Assert-Boundary {
     }
 
     Require-Text $HostSource @(
-        'pub struct RecipientImportGuidedRecoveryHost',
+        "pub(crate) struct RecipientImportGuidedRecoveryHost<'identity>",
         "controller: RecipientImportGuidedSessionController<'identity>",
         'pending_handoff: Option<AuthenticatedGuidedRecipientImportSessionStartHandoff>',
         'fn install_authenticated_handoff(',
@@ -150,6 +150,7 @@ function Assert-Boundary {
         'pub fn opened_network(&self) -> bool', 'false'
     ) 'guided-recovery host source'
     foreach ($forbidden in @(
+        "pub struct RecipientImportGuidedRecoveryHost<'identity>",
         'pub fn install_authenticated_handoff(',
         'pub(crate) fn install_authenticated_handoff(', 'use serde::', 'TcpListener',
         'UdpSocket', 'iroh::Endpoint', 'std::fs::read_dir'
@@ -160,7 +161,7 @@ function Assert-Boundary {
     }
     if ([regex]::IsMatch(
         $HostSource,
-        "(?m)^[ \t]*#\[derive[^\]]*\][ \t]*\r?\n[ \t]*pub struct RecipientImportGuidedRecoveryHost(?:<'identity>)?[ \t]*\{"
+        "(?m)^[ \t]*#\[derive[^\]]*\][ \t]*\r?\n[ \t]*pub\(crate\) struct RecipientImportGuidedRecoveryHost<'identity>[ \t]*\{"
     )) {
         throw 'guided-recovery host gained a derive attribute'
     }
@@ -204,11 +205,24 @@ function Assert-Boundary {
     ) 'M1.2.49 safe UX predecessor'
     Require-Text $RuntimeLibrary @(
         'mod recipient_import_guided_recovery_host;',
-        'RecipientImportGuidedRecoveryHost',
+        'pub(crate) use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;',
+        'pub use recipient_import_guided_recovery_host::{',
         'RecipientImportGuidedRecoveryHostPrepare',
         'RecipientImportGuidedRecoveryHostCancel'
     ) 'runtime guided-recovery host export'
+    if ([regex]::IsMatch(
+        $RuntimeLibrary,
+        '(?m)^pub use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;'
+    ) -or [regex]::IsMatch(
+        $RuntimeLibrary,
+        '(?ms)pub use\s+recipient_import_guided_recovery_host::\{[^}]*\bRecipientImportGuidedRecoveryHost\b'
+    )) {
+        throw 'runtime crate publicly re-exported the raw guided-recovery host'
+    }
     Require-Text $Execution @(
+        '#[path = "../../kilogram-peer-history-recovery-runtime/src/recipient_import_guided_recovery_host.rs"]',
+        'pub(crate) use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;',
+        'pub use recipient_import_guided_recovery_host::{',
         'recipient_import_guided_recovery_host_owns_one_full_local_ux_ceremony',
         'recipient_import_guided_recovery_host_fails_closed_and_drops_ephemeral_custody',
         'recipient_import_guided_recovery_host_installation_owner_accepts_only_full_assembly',
@@ -217,6 +231,15 @@ function Assert-Boundary {
         'RecipientImportGuidedRecoveryHostCancel::pending_handoff()',
         'drop(host)'
     ) 'guided-recovery host fixtures'
+    if ([regex]::IsMatch(
+        $Execution,
+        '(?m)^pub use recipient_import_guided_recovery_host::RecipientImportGuidedRecoveryHost;'
+    ) -or [regex]::IsMatch(
+        $Execution,
+        '(?ms)pub use\s+recipient_import_guided_recovery_host::\{[^}]*\bRecipientImportGuidedRecoveryHost\b'
+    )) {
+        throw 'copied-module test boundary publicly re-exported the raw guided-recovery host'
+    }
     foreach ($surface in @($Cli, $Desktop)) {
         if ($surface.IndexOf('RecipientImportGuidedRecoveryHost', [StringComparison]::Ordinal) -ge 0) {
             throw 'ordinary CLI/desktop startup registered guided-recovery host'
@@ -291,7 +314,10 @@ if ($SelfTest) {
     $mutations += { Assert-Boundary $changed $hostSource $producer $ux $runtimeLibrary $execution $cli $desktop $rfc }
     $changedHost = $hostSource.Replace('fn install_authenticated_handoff(', 'pub fn install_authenticated_handoff(')
     $mutations += { Assert-Boundary $manifest $changedHost $producer $ux $runtimeLibrary $execution $cli $desktop $rfc }
-    $changedHost = $hostSource.Replace('pub struct RecipientImportGuidedRecoveryHost', "#[derive(Clone)]`r`npub struct RecipientImportGuidedRecoveryHost")
+    $changedHost = $hostSource.Replace(
+        "pub(crate) struct RecipientImportGuidedRecoveryHost<'identity>",
+        "#[derive(Clone)]`r`npub(crate) struct RecipientImportGuidedRecoveryHost<'identity>"
+    )
     $mutations += { Assert-Boundary $manifest $changedHost $producer $ux $runtimeLibrary $execution $cli $desktop $rfc }
     $changedCli = $cli + "`r`nRecipientImportGuidedRecoveryHost::new"
     $mutations += { Assert-Boundary $manifest $hostSource $producer $ux $runtimeLibrary $execution $changedCli $desktop $rfc }

@@ -220,7 +220,7 @@ function Assert-Boundary {
 
     Require-Text $HostSource @(
         "pub struct RecipientImportGuidedRecoveryHostInstallationOwner<'identity>",
-        'pub(crate) fn from_authenticated_recovery(', 'pub fn install(', 'self,'
+        'pub(crate) fn from_authenticated_recovery(', 'pub(crate) fn install(', 'self,'
     ) 'installation-owner predecessor'
     Require-Text $RuntimeLibrary @(
         'RecipientImportGuidedRecoveryAssemblyIssuer',
