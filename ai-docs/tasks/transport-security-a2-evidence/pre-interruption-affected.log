@@ -1,0 +1,410 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+     Locking 6 packages to latest Rust 1.98.0 compatible versions
+    Removing ab_glyph v0.2.32
+    Removing ab_glyph_rasterizer v0.1.10
+    Removing accesskit v0.21.1
+    Removing accesskit_atspi_common v0.14.2
+    Removing accesskit_consumer v0.31.0
+    Removing accesskit_macos v0.22.2
+    Removing accesskit_unix v0.17.2
+    Removing accesskit_windows v0.29.2
+    Removing accesskit_winit v0.29.2
+    Removing adler2 v2.0.1
+    Removing aead v0.6.1
+    Removing ahash v0.8.12
+    Removing android-activity v0.6.1
+    Removing android-properties v0.2.2
+    Removing arboard v3.6.1
+    Removing argon2 v0.5.3
+    Removing as-raw-xcb-connection v1.0.1
+    Removing async-broadcast v0.7.2
+    Removing async-channel v2.5.0
+    Removing async-executor v1.14.0
+    Removing async-io v2.6.0
+    Removing async-lock v3.4.2
+    Removing async-process v2.5.0
+    Removing async-recursion v1.1.1
+    Removing async-signal v0.2.14
+    Removing async-task v4.7.1
+    Removing atomic-polyfill v1.0.3
+    Removing atspi v0.25.0
+    Removing atspi-common v0.9.0
+    Removing atspi-connection v0.9.0
+    Removing atspi-proxies v0.9.0
+    Removing aws-lc-rs v1.18.1
+    Removing aws-lc-sys v0.45.0
+    Removing bip39 v2.2.2
+    Removing bit-set v0.8.0
+    Removing bit-vec v0.8.0
+    Removing bitcoin_hashes v0.14.101
+    Removing bitflags v1.3.2
+    Removing blake2 v0.10.6
+    Removing block-buffer v0.10.4
+    Removing block-padding v0.3.3
+    Removing block2 v0.5.1
+    Removing blocking v1.7.0
+    Removing bytemuck v1.25.2
+    Removing bytemuck_derive v1.12.0
+    Removing byteorder v1.5.0
+    Removing byteorder-lite v0.1.0
+    Removing calloop v0.13.0
+    Removing calloop v0.14.4
+    Removing calloop-wayland-source v0.3.0
+    Removing calloop-wayland-source v0.4.1
+    Removing cbc v0.1.2
+    Removing cgl v0.3.2
+    Removing chacha20 v0.9.1
+    Removing chacha20poly1305 v0.10.1
+    Removing chacha20poly1305 v0.11.0
+    Removing cipher v0.5.2
+    Removing clipboard-win v5.4.1
+    Removing cmake v0.1.58
+    Removing codespan-reporting v0.12.0
+    Removing concurrent-queue v2.5.0
+    Removing const-oid v0.9.6
+    Removing core-graphics v0.23.2
+    Removing core-graphics-types v0.1.3
+    Removing crc32fast v1.5.1
+    Removing crunchy v0.2.4
+    Removing cursor-icon v1.2.0
+    Removing curve25519-dalek v4.1.3
+    Removing der v0.7.10
+    Removing digest v0.10.7
+    Removing dispatch v0.2.0
+    Removing dlib v0.5.3
+    Removing document-features v0.2.12
+    Removing downcast-rs v1.2.1
+    Removing dpi v0.1.2
+    Removing dunce v1.0.5
+    Removing ecolor v0.33.3
+    Removing ed25519 v2.2.3
+    Removing ed25519-dalek v2.2.0
+    Removing eframe v0.33.3
+    Removing egui v0.33.3
+    Removing egui-wgpu v0.33.3
+    Removing egui-winit v0.33.3
+    Removing egui_glow v0.33.3
+    Removing emath v0.33.3
+    Removing endi v1.1.1
+    Removing enumflags2 v0.7.12
+    Removing enumflags2_derive v0.7.12
+    Removing epaint v0.33.3
+    Removing epaint_default_fonts v0.33.3
+    Removing error-code v3.4.0
+    Removing event-listener v5.4.2
+    Removing event-listener-strategy v0.5.4
+    Removing fax v0.2.7
+    Removing fdeflate v0.3.7
+    Removing fiat-crypto v0.2.9
+    Removing flate2 v1.1.10
+    Removing foldhash v0.1.5
+    Removing foreign-types v0.5.0
+    Removing foreign-types-macros v0.2.4
+    Removing foreign-types-shared v0.3.1
+    Removing fs_extra v1.3.0
+    Removing g2gen v1.2.2
+    Removing g2p v1.2.2
+    Removing g2poly v1.2.2
+    Removing gethostname v1.1.0
+    Removing getrandom v0.3.4
+    Removing gl_generator v0.14.0
+    Removing glow v0.16.0
+    Removing glutin v0.32.3
+    Removing glutin-winit v0.5.0
+    Removing glutin_egl_sys v0.7.1
+    Removing glutin_glx_sys v0.6.1
+    Removing glutin_wgl_sys v0.6.1
+    Removing half v2.7.1
+    Removing hash32 v0.2.1
+    Removing hashbrown v0.15.5
+    Removing hashbrown v0.16.1
+    Removing heapless v0.7.17
+    Removing hermit-abi v0.5.3
+    Removing hex v0.4.3
+    Removing hex-conservative v0.2.3
+    Removing hexf-parse v0.2.1
+    Removing hkdf v0.12.4
+    Removing hkdf v0.13.0
+    Removing hmac v0.12.1
+    Removing hmac v0.13.0
+    Removing hpke v0.14.0
+    Removing image v0.25.10
+    Removing inout v0.2.2
+ Downgrading iroh v1.1.0 -> v1.0.3 (available: v1.1.0)
+ Downgrading iroh-base v1.1.0 -> v1.0.3 (available: v1.1.0)
+ Downgrading iroh-dns v1.1.0 -> v1.0.3 (available: v1.1.0)
+ Downgrading iroh-relay v1.1.0 -> v1.0.3 (available: v1.1.0)
+    Removing itertools v0.14.0
+    Removing jobserver v0.1.35
+    Removing khronos_api v3.1.0
+      Adding kilogram-a2-relay-baseline v0.0.0 (E:\AI-Projects\kilogram-p2p-messenger\.tmp\transport-security-a2\affected-relay)
+    Removing libloading v0.8.9
+    Removing libm v0.2.16
+    Removing libredox v0.1.23
+    Removing linux-raw-sys v0.4.15
+    Removing linux-raw-sys v0.12.1
+    Removing litrs v1.0.0
+    Removing lru v0.16.4
+    Removing matrix-pickle v0.2.3
+    Removing matrix-pickle-derive v0.2.3
+    Removing memmap2 v0.9.11
+    Removing memoffset v0.9.1
+    Removing miniz_oxide v0.8.9
+    Removing miniz_oxide v0.9.1
+    Removing moxcms v0.8.1
+    Removing naga v27.0.3
+    Removing ndk v0.9.0
+    Removing ndk-sys v0.6.0+11769913
+    Removing nohash-hasher v0.2.0
+    Removing objc-sys v0.3.5
+    Removing objc2 v0.5.2
+    Removing objc2-app-kit v0.2.2
+    Removing objc2-app-kit v0.3.2
+    Removing objc2-cloud-kit v0.2.2
+    Removing objc2-contacts v0.2.2
+    Removing objc2-core-data v0.2.2
+    Removing objc2-core-graphics v0.3.2
+    Removing objc2-core-image v0.2.2
+    Removing objc2-core-location v0.2.2
+    Removing objc2-foundation v0.2.2
+    Removing objc2-io-surface v0.3.2
+    Removing objc2-link-presentation v0.2.2
+    Removing objc2-metal v0.2.2
+    Removing objc2-quartz-core v0.2.2
+    Removing objc2-symbols v0.2.2
+    Removing objc2-ui-kit v0.2.2
+    Removing objc2-uniform-type-identifiers v0.2.2
+    Removing objc2-user-notifications v0.2.2
+    Removing orbclient v0.3.55
+    Removing ordered-stream v0.2.0
+    Removing owned_ttf_parser v0.25.1
+    Removing password-hash v0.5.0
+    Removing piper v0.2.5
+    Removing pkcs8 v0.10.2
+    Removing pkg-config v0.3.34
+    Removing plain v0.2.3
+    Removing png v0.18.1
+    Removing polling v3.11.0
+    Removing poly1305 v0.8.0
+    Removing poly1305 v0.9.1
+    Removing portable-atomic-util v0.2.7
+    Removing ppv-lite86 v0.2.21
+    Removing profiling v1.0.18
+    Removing prost v0.14.4
+    Removing prost-derive v0.14.4
+    Removing pxfm v0.1.30
+    Removing qrcode v0.14.1
+    Removing quick-error v2.0.1
+    Removing quinn v0.11.11
+    Removing quinn-proto v0.11.17
+    Removing quinn-udp v0.5.15
+    Removing r-efi v5.3.0
+    Removing rand v0.8.8
+    Removing rand_chacha v0.3.1
+    Removing rand_core v0.6.4
+    Removing raw-window-handle v0.6.2
+    Removing redb v4.2.0
+    Removing redox_syscall v0.4.1
+    Removing redox_syscall v0.9.3
+    Removing renderdoc-sys v1.1.0
+    Removing rqrr v0.10.1
+    Removing rustc-hash v1.1.0
+    Removing rustix v0.38.44
+    Removing rustix v1.1.4
+    Removing serde_repr v0.1.21
+    Removing sha2 v0.10.9
+    Removing signature v2.2.0
+    Removing simd-adler32 v0.3.10
+ Downgrading simple-dns v0.12.0 -> v0.11.3
+    Removing slotmap v1.1.1
+    Removing smithay-client-toolkit v0.19.2
+    Removing smithay-client-toolkit v0.20.0
+    Removing smithay-clipboard v0.7.3
+    Removing smol_str v0.2.2
+    Removing spin v0.9.9
+    Removing spki v0.7.3
+    Removing static_assertions v1.1.0
+    Removing stellar-agent-windows-identity v0.1.0-alpha.6
+    Removing tempfile v3.27.0
+    Removing tiff v0.11.3
+    Removing ttf-parser v0.25.1
+    Removing type-map v0.5.1
+    Removing uds_windows v1.2.1
+    Removing unicode-normalization v0.1.25
+    Removing unicode-width v0.2.2
+    Removing universal-hash v0.6.1
+    Removing vodozemac v0.10.0
+    Removing wasip2 v1.0.4+wasi-0.2.12
+    Removing wayland-backend v0.3.17
+    Removing wayland-client v0.31.15
+    Removing wayland-csd-frame v0.3.0
+    Removing wayland-cursor v0.31.14
+    Removing wayland-protocols v0.32.13
+    Removing wayland-protocols-experimental v20250721.0.1
+    Removing wayland-protocols-misc v0.3.12
+    Removing wayland-protocols-plasma v0.3.12
+    Removing wayland-protocols-wlr v0.3.12
+    Removing wayland-scanner v0.31.11
+    Removing wayland-sys v0.31.11
+    Removing webbrowser v1.2.4
+    Removing weezl v0.1.12
+    Removing wgpu v27.0.1
+    Removing wgpu-core v27.0.3
+    Removing wgpu-core-deps-windows-linux-android v27.0.0
+    Removing wgpu-hal v27.0.4
+    Removing wgpu-types v27.0.1
+    Removing windows v0.61.3
+    Removing windows-collections v0.2.0
+    Removing windows-core v0.61.2
+    Removing windows-future v0.2.1
+    Removing windows-link v0.1.3
+    Removing windows-numerics v0.2.0
+    Removing windows-result v0.3.4
+    Removing windows-strings v0.4.2
+    Removing windows-threading v0.1.0
+    Removing winit v0.30.13
+    Removing wit-bindgen v0.57.1
+    Removing x11-dl v2.21.0
+    Removing x11rb v0.13.2
+    Removing x11rb-protocol v0.13.2
+    Removing x25519-dalek v2.0.1
+    Removing x25519-dalek v3.0.0
+    Removing xcursor v0.3.11
+    Removing xkbcommon-dl v0.4.2
+    Removing xkeysym v0.2.1
+    Removing zbus v5.19.0
+    Removing zbus-lockstep v0.5.2
+    Removing zbus-lockstep-macros v0.5.2
+    Removing zbus_macros v5.19.0
+    Removing zbus_names v4.3.4
+    Removing zbus_xml v5.2.1
+    Removing zcheapstr v1.1.0
+    Removing zerocopy v0.8.56
+    Removing zerocopy-derive v0.8.56
+    Removing zlib-rs v0.6.7
+    Removing zune-core v0.5.3
+    Removing zune-jpeg v0.5.15
+    Removing zvariant v5.15.0
+    Removing zvariant_derive v5.15.0
+    Removing zvariant_utils v4.2.0
+note: pass `--verbose` to see 23 unchanged dependencies behind latest
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling windows-sys v0.61.2
+   Compiling subtle v2.6.1
+   Compiling ring v0.17.14
+   Compiling rustls-webpki v0.103.15
+   Compiling rustls v0.23.43
+   Compiling socket2 v0.6.5
+   Compiling mio v1.2.2
+   Compiling tokio v1.53.1
+   Compiling chacha20 v0.10.1
+   Compiling rand v0.10.2
+   Compiling crypto-common v0.1.7
+   Compiling pem-rfc7468 v1.0.0
+   Compiling fastrand v2.5.0
+   Compiling digest v0.11.3
+   Compiling der v0.8.1
+   Compiling tokio-util v0.7.19
+   Compiling h2 v0.4.19
+   Compiling tokio-rustls v0.26.4
+   Compiling inout v0.1.4
+   Compiling rustls-platform-verifier v0.7.0
+   Compiling futures-lite v2.6.1
+   Compiling tower v0.5.3
+   Compiling cipher v0.4.4
+   Compiling spki v0.8.0
+   Compiling universal-hash v0.5.1
+   Compiling polyval v0.6.2
+   Compiling hyper v1.11.0
+   Compiling hyper-util v0.1.20
+   Compiling serde_json v1.0.151
+   Compiling hyper-rustls v0.27.9
+   Compiling pkcs8 v0.11.0
+   Compiling n0-future v0.3.2
+   Compiling tower-http v0.6.11
+   Compiling anstyle-wincon v3.0.11
+   Compiling curve25519-dalek v5.0.0
+   Compiling reqwest v0.13.4
+   Compiling ed25519 v3.0.0
+   Compiling noq-udp v1.2.0
+   Compiling ghash v0.5.1
+   Compiling hickory-proto v0.26.1
+   Compiling ctr v0.9.2
+   Compiling aes v0.8.4
+   Compiling sha2 v0.11.0
+   Compiling aead v0.5.2
+   Compiling anstyle-query v1.1.5
+   Compiling anstream v1.0.0
+   Compiling ed25519-dalek v3.0.0
+   Compiling ipconfig v0.3.4
+   Compiling aes-gcm v0.10.3
+   Compiling x509-parser v0.18.1
+   Compiling hickory-net v0.26.1
+   Compiling hickory-resolver v0.26.1
+   Compiling clap_builder v4.6.6
+   Compiling reloadable-state v0.1.0
+   Compiling noq-proto v1.2.0
+   Compiling netdev v0.45.1
+   Compiling iroh-metrics v1.0.1
+   Compiling rcgen v0.14.10
+   Compiling iroh-base v1.0.3
+   Compiling n0-watcher v1.0.0
+   Compiling tokio-stream v0.1.19
+   Compiling nu-ansi-term v0.50.3
+   Compiling iroh-relay v1.0.3
+   Compiling tokio-websockets v0.13.3
+   Compiling postcard v1.1.3
+   Compiling tracing-subscriber v0.3.23
+   Compiling tokio-rustls-acme v0.9.1
+   Compiling igd-next v0.17.1
+   Compiling clap v4.6.6
+   Compiling iroh-dns v1.0.3
+   Compiling noq v1.2.0
+   Compiling netwatch v0.19.3
+   Compiling rustls-cert-reloadable-resolver v0.7.1
+   Compiling rustls-cert-file-reader v0.4.2
+   Compiling sha1 v0.11.0
+   Compiling portmapper v0.19.3
+   Compiling backon v1.6.0
+   Compiling iroh v1.0.3
+   Compiling kilogram-a2-relay-baseline v0.0.0 (E:\AI-Projects\kilogram-p2p-messenger\.tmp\transport-security-a2\affected-relay)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1m 03s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-a2-relay-baseline-test-relay_batch-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-a2-relay-baseline-test-relay_batch-tests.exe
+
+running 2 tests
+test oversized_relay_batch_preserves_delivery_and_reconnect ...
+running 1 test
+test relay_batch_worker ... phase=1 relay_only=true datagrams_both_ways=exact stream_echo_bytes=8123
+local_batch_injected segment_size=1473 segments=2
+Error: forward datagram progress
+
+Caused by:
+    deadline has elapsed
+FAILED
+
+failures:
+
+failures:
+    relay_batch_worker
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 3.79s
+
+Error: local relay child failed: exit code: 101
+FAILED
+test relay_batch_worker ... ignored, only the bounded parent starts this worker
+
+failures:
+
+failures:
+    oversized_relay_batch_preserves_delivery_and_reconnect
+
+test result: FAILED. 0 passed; 1 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.83s
+

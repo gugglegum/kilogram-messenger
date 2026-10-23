@@ -1,0 +1,16 @@
+{
+  "status": "PASS",
+  "text_count": 64,
+  "source_exe_sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+  "reader_exe_sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+  "reopen_seconds": 0.8496222,
+  "history_and_reauth_seconds": 3.6911771,
+  "total_seconds": 4.5408012,
+  "history_page_p50_ms": 117.18330000000014,
+  "history_page_p95_ms": 644.2008000000001,
+  "pids": [
+    6620,
+    57056
+  ],
+  "immutable_records_verified": 272
+}

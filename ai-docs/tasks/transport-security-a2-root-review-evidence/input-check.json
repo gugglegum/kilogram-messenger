@@ -1,0 +1,41 @@
+{
+  "source_count": 1080,
+  "artifact_count": 74,
+  "failures": [],
+  "pins": [
+    {
+      "sha256": "278d0b0cb2a48319353459ac6a9d4da6dae1cc9b0d9a0e8b411871e2acde8876",
+      "path": "ai-docs/tasks/transport-security-a2-implementation.md"
+    },
+    {
+      "sha256": "7c506febccd357286d2bc06de935bf2132be8286f201a657ba55241baf98c28e",
+      "path": "ai-docs/tasks/transport-security-a2-evidence/review-code.patch"
+    },
+    {
+      "sha256": "e45587ee97d8e2c262708529b363f4a1c95c3b7c2397374069c9d09ed79927b8",
+      "path": "ai-docs/tasks/transport-security-a2-evidence/review.patch"
+    },
+    {
+      "sha256": "161dea857c66a1f23cea7b1f89051b1e93bdda6df8342bd2d3939cd3eb5c3545",
+      "path": "ai-docs/tasks/transport-security-a2-evidence/artifact-manifest.json"
+    },
+    {
+      "sha256": "e20ef799429eac661740a40694c632becae2af579ebe3a8f29c5b8052efaca15",
+      "path": "ai-docs/tasks/transport-security-a2-evidence/final-checks.json"
+    },
+    {
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+      "path": "target/field-tests/ordered-dialog/kilogram-cli.exe"
+    },
+    {
+      "sha256": "3f42245b899e678c423b3137b5d99dc225cb0c2bc36d99b5bfa99daf506a6626",
+      "path": "target/field-tests/transport-a2/baseline/kilogram-cli.exe"
+    },
+    {
+      "sha256": "330ad3c4d1941b213e7e5bef958416a6847d3defb8e368f79d6d21c944efe798",
+      "path": "ai-docs/development-environment.md"
+    }
+  ],
+  "head": "bc86cd25518077cef8977522e0c750f3bee2c0d7",
+  "index_files": []
+}

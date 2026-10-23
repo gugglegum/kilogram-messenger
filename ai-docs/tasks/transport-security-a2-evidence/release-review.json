@@ -1,0 +1,13 @@
+{
+  "source": "https://github.com/n0-computer/iroh/releases/tag/v1.1.0",
+  "tag": "v1.1.0",
+  "published_at": "2026-08-25T19:01:44Z",
+  "registry_vcs_commit": "fddf1a4ce29f92c6651eccff68fb366007b9be7d",
+  "reviewed_changes": [
+    "Relay reconnect task scheduling fixes",
+    "CustomAddr serialization change; not used by the application",
+    "Mapped address randomization",
+    "noq/net-tools dependency requirements reviewed"
+  ],
+  "selection": "Minimal official non-yanked release declared patched for all three upstream advisories; no LTS claim"
+}

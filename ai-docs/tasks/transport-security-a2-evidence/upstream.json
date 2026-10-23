@@ -1,0 +1,73 @@
+{
+  "checked_at_utc": "2026-10-23T18:50:38.1240236Z",
+  "advisory": {
+    "ghsa_id": "GHSA-7cq4-mhxw-xw78",
+    "published_at": "2026-10-05T14:54:44Z",
+    "updated_at": "2026-10-05T14:54:44Z",
+    "html_url": "https://github.com/n0-computer/iroh/security/advisories/GHSA-7cq4-mhxw-xw78",
+    "severity": "high",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "rust",
+          "name": "iroh"
+        },
+        "vulnerable_version_range": ">= 0.91.0, <= 1.0.3",
+        "patched_versions": "1.1.0",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  "available_iroh_releases": [
+    {
+      "num": "1.4.1",
+      "yanked": false,
+      "rust_version": "1.91",
+      "created_at": "2026-10-21T17:08:50.039731Z",
+      "checksum": "e3689cab508af9bcef7816c1201b403595ec6aa20e7d15e1f9683bb4be4a5b17"
+    },
+    {
+      "num": "1.4.0",
+      "yanked": false,
+      "rust_version": "1.91",
+      "created_at": "2026-10-20T17:44:17.173936Z",
+      "checksum": "a11e776f1bf36f140e465133ff4108e46bd37a3d10ecdf5b1ea8dfb3bd35a7d2"
+    },
+    {
+      "num": "1.3.0",
+      "yanked": false,
+      "rust_version": "1.91",
+      "created_at": "2026-09-28T19:22:11.46512Z",
+      "checksum": "885787b892b5e2507c701f132ecbd45d2bad4bbb75157a19427087c16dadb833"
+    },
+    {
+      "num": "1.2.0",
+      "yanked": false,
+      "rust_version": "1.91",
+      "created_at": "2026-09-09T19:21:42.059442Z",
+      "checksum": "b2f8d1cfffc83efe39a1031aab423ce09cb8048071baba550508931e9a81ce46"
+    },
+    {
+      "num": "1.1.0",
+      "yanked": false,
+      "rust_version": "1.91",
+      "created_at": "2026-08-25T18:55:19.721515Z",
+      "checksum": "329552fad4e46b5ccb4439d5635216f6289eec2c46f3fde4bc732d762694b9e5"
+    },
+    {
+      "num": "1.0.3",
+      "yanked": false,
+      "rust_version": "1.91",
+      "created_at": "2026-07-20T19:55:01.594551Z",
+      "checksum": "460de6bc52163b41b1646931f2897e5ab986f0966ade444467fec25024751a72"
+    }
+  ],
+  "selected": "1.1.0",
+  "release_url": "https://github.com/n0-computer/iroh/releases/tag/v1.1.0",
+  "registry_source_vcs": {
+    "git": {
+      "sha1": "fddf1a4ce29f92c6651eccff68fb366007b9be7d"
+    },
+    "path_in_vcs": "iroh"
+  }
+}

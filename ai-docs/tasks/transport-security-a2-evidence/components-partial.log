@@ -1,0 +1,138 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling ctutils v0.4.4
+   Compiling windows_x86_64_msvc v0.52.6
+   Compiling digest v0.11.3
+   Compiling curve25519-dalek v5.0.0
+   Compiling windows-targets v0.52.6
+   Compiling tokio v1.53.3
+   Compiling windows-sys v0.52.0
+   Compiling sha2 v0.11.0
+   Compiling universal-hash v0.6.1
+   Compiling poly1305 v0.9.1
+   Compiling hmac v0.13.0
+   Compiling chacha20poly1305 v0.11.0
+   Compiling hkdf v0.13.0
+   Compiling ed25519-dalek v3.0.0
+   Compiling x25519-dalek v3.0.0
+   Compiling hpke v0.14.0
+   Compiling tokio-util v0.7.19
+   Compiling kilogram-crypto v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-crypto)
+   Compiling tempfile v3.27.0
+   Compiling rustls v0.23.46
+   Compiling rustls-webpki v0.103.16
+   Compiling kilogram-identity v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-identity)
+   Compiling h2 v0.4.19
+   Compiling kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+   Compiling tokio-rustls v0.26.4
+   Compiling hyper v1.11.0
+   Compiling kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+   Compiling hyper-util v0.1.20
+   Compiling rustls-platform-verifier v0.7.0
+   Compiling tower v0.5.3
+   Compiling n0-future v0.3.2
+   Compiling tower-http v0.6.11
+   Compiling hyper-rustls v0.27.9
+   Compiling data-encoding-macro-internal v0.1.19
+   Compiling reqwest v0.13.4
+   Compiling hickory-net v0.26.1
+   Compiling data-encoding-macro v0.1.21
+   Compiling noq-proto v1.2.0
+   Compiling hickory-resolver v0.26.1
+   Compiling iroh-metrics v1.0.1
+   Compiling reloadable-state v0.1.0
+   Compiling iroh-base v1.1.0
+   Compiling n0-watcher v1.0.0
+   Compiling tokio-stream v0.1.19
+   Compiling webpki-roots v1.0.10
+   Compiling tokio-websockets v0.13.3
+   Compiling tokio-rustls-acme v0.9.1
+   Compiling noq v1.2.0
+   Compiling igd-next v0.17.1
+   Compiling iroh-dns v1.1.0
+   Compiling netwatch v0.19.3
+   Compiling rustls-cert-reloadable-resolver v0.7.1
+   Compiling rustls-cert-file-reader v0.4.2
+   Compiling sha1 v0.11.0
+   Compiling portmapper v0.19.3
+   Compiling iroh-relay v1.1.0
+   Compiling backon v1.6.0
+   Compiling kilogram-mailbox v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox)
+   Compiling kilogram-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-store)
+   Compiling iroh v1.1.0
+   Compiling kilogram-sync-capability v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-sync-capability)
+   Compiling kilogram-session v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-session)
+   Compiling kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1m 10s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-crypto-lib-kilogram_crypto-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-identity-lib-kilogram_identity-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-lib-kilogram_protocol-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_decoder_mutations-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_sync_v2_decoder_mutations-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_sync_v2_fuzz_seeds-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-ordered_dialog_bounds-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-ratchet-lib-kilogram_ratchet-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-session-lib-kilogram_session-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-crypto-lib-kilogram_crypto-tests.exe
+
+running 3 tests
+test tests::pairwise_key_is_symmetric_context_bound_and_peer_specific ... ok
+test tests::sealed_message_round_trips ... ok
+test tests::wrong_device_and_tampered_metadata_are_rejected ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-identity-lib-kilogram_identity-tests.exe
+
+running 24 tests
+test account::tests::authority_snapshot_is_complete_durable_and_enforces_revocation ... ok
+test account::tests::conversation_membership_is_durable_add_only_and_rollback_safe ... ok
+test account::tests::device_enrollment_is_complete_idempotent_and_conflict_safe ... ok
+test account::tests::device_snapshot_store_detects_rollback_and_equivocation ... ok
+test account::tests::duplicate_capabilities_and_root_recreation_are_rejected ... ok
+test account::tests::legacy_plaintext_root_key_migrates_without_changing_account ... ok
+test account::tests::legacy_root_with_prior_operations_cannot_claim_complete_snapshot ... ok
+test account::tests::missing_capability_and_mismatched_device_are_rejected ... ok
+test account::tests::recovery_phrase_is_stable_and_root_key_is_enveloped ... ok
+test account::tests::recovery_requires_a_device_list_at_the_exact_current_authority_revision ... ok
+test account::tests::root_publishes_one_complete_canonical_device_list_per_authority_revision ... ok
+test account::tests::root_signed_revocation_permanently_rejects_device_key ... ok
+test account::tests::root_state_issues_persistent_device_certificate ... ok
+test account::tests::transactional_removal_repairs_interrupted_publication_and_protects_last_device ... ok
+test account::tests::wrong_account_and_tampering_are_rejected ... ok
+test recovery_policy::tests::joint_majority_counts_overlap_in_both_rosters ... ok
+test recovery_policy::tests::new_only_signature_does_not_replace_old_majority ... ok
+test recovery_quorum::tests::exact_roster_majority_rejects_duplicates_and_replay ... ok
+test recovery_quorum::tests::request_is_bounded_exact_and_expires ... ok
+test tests::a_signature_is_bound_to_its_device_and_message ... ok
+test tests::authenticated_secret_material_does_not_read_or_create_shadow_files ... ok
+test tests::device_id_text_round_trips ... ok
+test tests::identity_persists_across_reloads ... ok
+test tests::sequence_survives_reloads ... ok
+
+test result: ok. 24 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 48.06s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-lib-kilogram_protocol-tests.exe
+
+running 173 tests
+test canonical_account_recovery_policy_v1::tests::canonical_policy_transition_substitutions_fail_closed ... ok
+test canonical_account_recovery_policy_v1::tests::canonical_policy_transition_vectors_reach_joint_majority ... ok
+test canonical_account_recovery_v1::tests::canonical_account_recovery_substitutions_fail_closed ... ok
+test canonical_account_recovery_v1::tests::canonical_account_recovery_vectors_round_trip_and_reach_majority ... ok
+test canonical_account_v1::tests::account_collaboration_rejects_noncanonical_and_tampered_inputs ... ok
+test canonical_account_v1::tests::account_collaboration_vectors_match_bytes_and_signatures ... ok
+test canonical_account_v1::tests::authority_fixture_shape_remains_closed ... ok
+test canonical_authority_v1::tests::authority_session_round_trip_and_signatures_are_strict ... ok
+test canonical_authority_v1::tests::decoder_rejects_non_minimal_version_and_trailing_data ... ok
+test canonical_authority_v1::tests::golden_authority_vector_matches_bytes_and_signatures ... ok
+test canonical_authority_v1::tests::structural_rules_reject_ambiguous_or_incoherent_authority ... ok
+test canonical_device_link_v1::tests::authorization_rejects_wrong_request_signature_and_trailing_data ... ok
+test canonical_device_link_v1::tests::device_link_vector_matches_exact_bytes_and_signature ... ok
+test canonical_endpoint_announcement_transport_v1::tests::endpoint_announcement_transport_rejects_wrong_recipient_tampering_and_replay ... ok
+test canonical_endpoint_announcement_transport_v1::tests::endpoint_announcement_transport_vectors_open_acknowledge_and_round_trip ...

@@ -1,0 +1,110 @@
+{
+  "format_version": 1,
+  "checked_at_utc": "2026-10-23T19:42:37.0753921Z",
+  "status": "FAIL",
+  "source_advisory": "https://github.com/n0-computer/iroh/security/advisories/GHSA-7cq4-mhxw-xw78",
+  "source_version_gate": "PASS",
+  "database_revision": "84d943a6deeb8cc6c6f632531aaf4f1c62275239",
+  "database_commit_date": "2026-10-23T16:42:16+02:00",
+  "source_advisory_in_rustsec": false,
+  "cargo_audit_version": "cargo-audit 0.22.2",
+  "cargo_audit_exit": 1,
+  "vulnerability_count": 0,
+  "warning_count": 7,
+  "registry_checksums": [
+    {
+      "actual": "329552fad4e46b5ccb4439d5635216f6289eec2c46f3fde4bc732d762694b9e5",
+      "match": true,
+      "version": "1.1.0",
+      "package": "iroh",
+      "expected": "329552fad4e46b5ccb4439d5635216f6289eec2c46f3fde4bc732d762694b9e5"
+    },
+    {
+      "actual": "3ccf4cde68a02ef03c0095ab2c031c6adfe508f3bc8e7c258558a027ebe64a8e",
+      "match": true,
+      "version": "1.1.0",
+      "package": "iroh-base",
+      "expected": "3ccf4cde68a02ef03c0095ab2c031c6adfe508f3bc8e7c258558a027ebe64a8e"
+    },
+    {
+      "actual": "9a41224eb0140a5c519935d4073fc6b236d174080be401f9bf7da126b2ee3aa4",
+      "match": true,
+      "version": "1.1.0",
+      "package": "iroh-dns",
+      "expected": "9a41224eb0140a5c519935d4073fc6b236d174080be401f9bf7da126b2ee3aa4"
+    },
+    {
+      "actual": "1b5f6f07e2c9b0c4bc82e2864be09f4aea4320165d5316e668616dbc822f428a",
+      "match": true,
+      "version": "1.1.0",
+      "package": "iroh-relay",
+      "expected": "1b5f6f07e2c9b0c4bc82e2864be09f4aea4320165d5316e668616dbc822f428a"
+    }
+  ],
+  "findings": [
+    {
+      "patched": [],
+      "version": "1.0.3",
+      "package": "atomic-polyfill",
+      "url": "https://rustsec.org/advisories/RUSTSEC-2023-0089.html",
+      "kind": "unmaintained",
+      "id": "RUSTSEC-2023-0089"
+    },
+    {
+      "patched": [],
+      "version": "1.0.15",
+      "package": "paste",
+      "url": "https://rustsec.org/advisories/RUSTSEC-2024-0436.html",
+      "kind": "unmaintained",
+      "id": "RUSTSEC-2024-0436"
+    },
+    {
+      "patched": [],
+      "version": "0.25.1",
+      "package": "ttf-parser",
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0192.html",
+      "kind": "unmaintained",
+      "id": "RUSTSEC-2026-0192"
+    },
+    {
+      "patched": [],
+      "version": "4.3.4",
+      "package": "zbus_names",
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0371.html",
+      "kind": "unmaintained",
+      "id": "RUSTSEC-2026-0371"
+    },
+    {
+      "patched": [],
+      "version": "5.15.0",
+      "package": "zvariant",
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0370.html",
+      "kind": "unmaintained",
+      "id": "RUSTSEC-2026-0370"
+    },
+    {
+      "patched": [],
+      "version": "5.15.0",
+      "package": "zvariant_derive",
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0372.html",
+      "kind": "unmaintained",
+      "id": "RUSTSEC-2026-0372"
+    },
+    {
+      "patched": [
+        ">=0.18.2"
+      ],
+      "version": "0.16.4",
+      "package": "lru",
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0253.html",
+      "kind": "unsound",
+      "id": "RUSTSEC-2026-0253"
+    }
+  ],
+  "errors": [
+    "RustSec findings remain; inspect findings and classify reachability. No ignore list is used."
+  ],
+  "yanked_check": "separate from this reproducible advisory snapshot",
+  "lockfile_sha256": "86e2dfeaac31a176842107cb838db95433b31bacb28c6886718cf64d801c8547",
+  "manifest_sha256": "b8a0c6695826cd38d27ddb15c6c2d6aa77ca2e67ee61009554e55a785179e3d6"
+}

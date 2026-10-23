@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$Executable = 'target/field-tests/ordered-dialog/kilogram-cli.exe',
+    [string]$PeerExecutable,
     [string]$RunDirectory,
     [ValidateSet('Duplex','Gap','Partial','BOnly','Crash','TwoContexts','Expiry','ConsentExpiry','Conflict','UnsupportedSuite','MissingAuth','CrossContext')][string]$Scenario = 'Duplex',
     [string]$KillPoint,
@@ -12,6 +13,9 @@ $ErrorActionPreference = 'Stop'
 [Diagnostics.Process]::GetCurrentProcess().PriorityClass=[Diagnostics.ProcessPriorityClass]::BelowNormal
 $workspace = Split-Path -Parent $PSScriptRoot
 $exe = (Resolve-Path -LiteralPath (Join-Path $workspace $Executable)).Path
+$peerExe = if ($PeerExecutable) {
+    (Resolve-Path -LiteralPath (Join-Path $workspace $PeerExecutable)).Path
+} else { $exe }
 if (-not $RunDirectory) { $RunDirectory = Join-Path $workspace ('.tmp/ordered-dialog-process/' + [guid]::NewGuid().ToString('N')) }
 if (Test-Path -LiteralPath $RunDirectory) { throw 'Process acceptance requires a new run directory.' }
 [void](New-Item -ItemType Directory -Path $RunDirectory)
@@ -54,7 +58,8 @@ function Start-Runtime([string]$Side) {
             $env:KILOGRAM_TEST_OD1_PRIMARY_PAUSE_FILE=Path-In "$Side.primary"
         }
         $suffix = [guid]::NewGuid().ToString('N').Substring(0,8)
-        $process = Start-Process -FilePath $exe -ArgumentList @('runtime-from-profile','--profile-file',('"{0}"' -f (Path-In "$Side.profile"))) -WindowStyle Hidden -PassThru -RedirectStandardOutput (Path-In "$Side.$suffix.stdout.log") -RedirectStandardError (Path-In "$Side.$suffix.stderr.log")
+        $runtimeExe = if ($Side -ceq 'two') { $peerExe } else { $exe }
+        $process = Start-Process -FilePath $runtimeExe -ArgumentList @('runtime-from-profile','--profile-file',('"{0}"' -f (Path-In "$Side.profile"))) -WindowStyle Hidden -PassThru -RedirectStandardOutput (Path-In "$Side.$suffix.stdout.log") -RedirectStandardError (Path-In "$Side.$suffix.stderr.log")
         $runtimeBySide[$Side]=$process
         Add-Content -LiteralPath $trace -Value "runtime_start side=$Side pid=$($process.Id) log_suffix=$suffix"
         return $process
@@ -413,6 +418,7 @@ try {
     $result = [pscustomobject]@{
         status='PASS'; scope="real CLI/runtime TLS $Scenario; scheduler delays only committed serialized records";
         exe=$exe; exe_sha256=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant();
+        runtime_executables=@{one=@{path=$exe;sha256=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()};two=@{path=$peerExe;sha256=(Get-FileHash -LiteralPath $peerExe -Algorithm SHA256).Hash.ToLowerInvariant()}};
         pids=@($processes.Id); context=$context; elected_a=$a; elected_b=$b;
         text_count=$expected.Count; setup_seconds=$setupSeconds; total_seconds=$watch.Elapsed.TotalSeconds;
         exchange_seconds=$exchangeSeconds;history_seconds=$watch.Elapsed.TotalSeconds-$historyStarted;vault_commits=$commitSummary;

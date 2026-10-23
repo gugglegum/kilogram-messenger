@@ -1,0 +1,59 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1.01s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+
+running 10 tests
+test ordered::tests::ordered_alpn_does_not_downgrade_to_a_real_legacy_peer ... ok
+test ordered::tests::ordered_exporter_is_symmetric_and_changes_on_real_reconnect ... ok
+test tests::bidirectional_response_larger_than_one_packet_is_delivered ... ok
+test tests::local_path_domain_tags_are_installation_scoped_and_redacted ... ok
+test tests::local_path_domain_tags_strip_direct_ports_and_relay_paths ... ok
+test tests::relay_only_dialer_requires_a_remote_relay ... ok
+test tests::route_policy_uses_stable_ticket_names ... ok
+test tests::signed_mailbox_offer_carries_a_bounded_iroh_endpoint ... ok
+test tests::strict_route_policies_accept_only_the_requested_path ... ok
+test tests::synchronization_alpns_are_exact_distinct_and_fail_closed ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.41s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+
+running 1 test
+test real_local_relay_preserves_adapter_frames_route_policies_and_reconnect ... relay_round=0 exact_adapter_payload=8123 selected=relay peer_identity=verified exporter=symmetric,fresh
+relay_round=1 exact_adapter_payload=8123 selected=relay peer_identity=verified exporter=symmetric,fresh
+relay_round=2 exact_adapter_payload=8123 selected=relay peer_identity=verified exporter=symmetric,fresh
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.33s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      14718  9.51
+release            5111  1.74
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=58893
+target_gib=63.98
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations,
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

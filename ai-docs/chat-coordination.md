@@ -228,3 +228,69 @@ public evidence), проверить staged blobs и вернуть SHA/remote. 
 перед commit не переписывать; development-environment.md исключён. Это выполнение
 постоянного указания пользователя, а не новый запрос разрешения. После callback
 оркестратор сверяет committed tree с allowlist и remote master. Нового этапа нет.
+
+OD1 сохранён: code `f80aabc30c5a9406ce147b96ed27c2ede5801697`, docs/evidence
+`bc86cd25518077cef8977522e0c750f3bee2c0d7`. Root независимо сверил706 committed
+blobs,545 frozen source hashes, parents и фактический remote master; всё совпало.
+Индекс пуст; единственный dirty файл — сохранённый development-environment.md.
+
+## Следующий разрешённый этап A2
+
+2026-10-23 пользователь прямо поручил выбрать следующий приоритет и передать тому
+же исполнителю либо создать новый чат, выбрав модель/effort по сложности, кроме
+GPT-6 Astra и без1.5x Fast. Выбран [A2 task](tasks/transport-security-a2-task.md):
+known-vulnerable Iroh1.0.3 upgrade, bounded relay regression и dependency security gate
+до будущих внешних испытаний. Выбор модели — GPT-6.1 Sol Max, ordinary default tier.
+Локальная config.toml показывает именно эту модель/effort и service_tier=default;
+настройки нового чата также проверяются после запуска. Работа выделяется в отдельный
+чат с компактным dossier; прежний lossless-sync исполнитель остаётся завершённым.
+Продолжается схема одного substantive callback, root review/repair и commit/push только
+после приёмки. Не запускать автоматические отдельные следующие задачи/heartbeats.
+
+Создан отдельный исполнитель `01a16a10-6a33-7823-9242-d1581fab824b`, host local,
+«Закрыть A2: безопасность транспорта Iroh», в том же локальном проекте. Первый turn
+`01a16a10-6dd3-79f0-91cf-48878cb7aaf3` уже выполняется. Root независимо прочитал его
+turn_context: `model=gpt-6.1-sol`, `effort=max`; отдельный service_tier там не задан.
+Действующая config.toml содержит `service_tier="default"`; Fast не включался.
+Исполнитель также подтвердил эти настройки и начал с проверки baseline/advisory.
+Полное поручение передано через create_thread; содержательный callback адресован
+root `01a164ec-589c-7b41-bc34-3ba158d1f22b`. Commit/push A2 ещё не разрешён: сначала
+проверки и review; обычное поручение на сохранение последует после явной приёмки.
+
+2026-10-24 пользователь сообщил о прерывании ограничителем. Root проверил failed turn
+`01a16a10-6dd3-79f0-91cf-48878cb7aaf3`: системная причина — cybersecurity safeguard,
+не rate limit; usage tool подтверждает ordinaryUsageAllowed=true. Изменения сохранены,
+HEAD всё ещё bc86cd2, excluded development-environment.md сохранил hash330ad3c4….
+Обновлён task: прямое воспроизведение DoS снято с текущего поручения; уже полученные
+timeout результаты остаются невыясненными. Продолжение тому же исполнителю касается
+только обновления зависимостей, обычных transport/OD1 проверок и advisory gate. Не
+повторять заблокированную операцию в другом чате/инструменте. Review и commit/push
+сохраняют прежний порядок; незавершённую security regression не объявлять пройденной.
+
+Поддерживающая часть A2 подготовлена к review в
+[implementation report](tasks/transport-security-a2-implementation.md): Iroh/base/dns/relay1.1.0,
+point security patches и строгий advisory/source gate; final RustSec snapshot даёт
+0 vulnerability records и7 warnings, поэтому gate остаётся FAIL.94 адресных tests,
+Clippy7 crates/all targets и реальные duplex64/reopen/C3/mixed old-new checks прошли.
+Final EXE `d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1`;
+baseline3f42245b сохранён. Специальные незакоммиченные заготовки перенесены побайтно
+под `.tmp/transport-security-a2/deferred/`, исключены из discovery/принимаемого diff и
+не исполнялись после уточнения. Их одинаковые timeout остаются unresolved.
+Это сдача supporting implementation, не закрытие всего A2. Далее один содержательный
+callback root и остановка до review; commit/push ещё не поручены.
+
+Уточнённое поручение успешно отправлено тому же чату. `wait_threads` подтвердил
+активный turn `01a16a2e-2288-7982-8b4a-3c0d11ed8dd4` без ошибки; исполнитель явно
+принял исключение прямого reproducer и продолжил обычное dependency maintenance.
+
+## A2: приёмка поддерживающей части
+
+[Review 1](tasks/transport-security-a2-implementation-review-1.md) принимает dependency
+upgrade, обычные regressions и advisory gate. Root сверил1080 source/74 artifact hashes,
+полноту source set, reverse patches и process histories; независимо повторил11 transport
+tests, advisory replay (0 vulnerabilities/7 warnings/FAIL) и mixed old/new duplex64 с
+reopen272 immutable hashes. Code/CI blockers не найдены. Весь A2 НЕ закрыт; deferred
+security regression, strict gate warnings и external-use ограничения явно сохраняются.
+Следующее поручение исполнителю — commit/push точного accepted-files allowlist без
+source/evidence drift, исключая development-environment.md. После callback root
+проверит Git blobs, parent и remote. Новый этап/heartbeat не запускать.

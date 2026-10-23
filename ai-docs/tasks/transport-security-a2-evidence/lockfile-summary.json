@@ -1,0 +1,119 @@
+{
+  "before_packages": 704,
+  "after_packages": 736,
+  "added_entries": 48,
+  "removed_entries": 16,
+  "removed_versions": [
+    {
+      "name": "ctutils",
+      "version": "0.4.2"
+    },
+    {
+      "name": "iroh",
+      "version": "1.0.3"
+    },
+    {
+      "name": "iroh-base",
+      "version": "1.0.3"
+    },
+    {
+      "name": "iroh-dns",
+      "version": "1.0.3"
+    },
+    {
+      "name": "iroh-relay",
+      "version": "1.0.3"
+    },
+    {
+      "name": "netwatch",
+      "version": "0.19.2"
+    },
+    {
+      "name": "portmapper",
+      "version": "0.19.2"
+    },
+    {
+      "name": "quinn-proto",
+      "version": "0.11.17"
+    },
+    {
+      "name": "rustls",
+      "version": "0.23.43"
+    },
+    {
+      "name": "rustls-webpki",
+      "version": "0.103.15"
+    },
+    {
+      "name": "simple-dns",
+      "version": "0.11.3"
+    },
+    {
+      "name": "tokio",
+      "version": "1.53.1"
+    },
+    {
+      "name": "toml_datetime",
+      "version": "1.1.1+spec-1.1.0"
+    },
+    {
+      "name": "toml_parser",
+      "version": "1.1.3+spec-1.1.0"
+    },
+    {
+      "name": "webpki-root-certs",
+      "version": "1.0.9"
+    },
+    {
+      "name": "webpki-roots",
+      "version": "1.0.9"
+    }
+  ],
+  "iroh_after": [
+    {
+      "name": "iroh",
+      "version": "1.1.0"
+    },
+    {
+      "name": "iroh-base",
+      "version": "1.1.0"
+    },
+    {
+      "name": "iroh-dns",
+      "version": "1.1.0"
+    },
+    {
+      "name": "iroh-relay",
+      "version": "1.1.0"
+    }
+  ],
+  "noq_before": [
+    {
+      "name": "noq",
+      "version": "1.2.0"
+    },
+    {
+      "name": "noq-proto",
+      "version": "1.2.0"
+    },
+    {
+      "name": "noq-udp",
+      "version": "1.2.0"
+    }
+  ],
+  "noq_after": [
+    {
+      "name": "noq",
+      "version": "1.2.0"
+    },
+    {
+      "name": "noq-proto",
+      "version": "1.2.0"
+    },
+    {
+      "name": "noq-udp",
+      "version": "1.2.0"
+    }
+  ],
+  "note": "Added entries include version replacements, additional copies and test-relay dependencies; this is not a workspace-wide update."
+}

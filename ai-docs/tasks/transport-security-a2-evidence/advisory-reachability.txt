@@ -1,0 +1,46 @@
+Windows x86_64-pc-windows-msvc, workspace defaults, edges normal/build, locked/offline
+package=atomic-polyfill
+warning: nothing to print.
+
+To find dependencies that require specific target platforms, try to use option `--target all` first, and then narrow your search scope accordingly.
+package=paste
+warning: nothing to print.
+
+To find dependencies that require specific target platforms, try to use option `--target all` first, and then narrow your search scope accordingly.
+package=ttf-parser
+ttf-parser v0.25.1
+└── owned_ttf_parser v0.25.1
+    └── ab_glyph v0.2.32
+        └── epaint v0.33.3
+            └── egui v0.33.3
+                ├── eframe v0.33.3
+                │   └── kilogram-windows v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-windows)
+                ├── egui-winit v0.33.3
+                │   └── eframe v0.33.3 (*)
+                └── egui_glow v0.33.3
+                    └── eframe v0.33.3 (*)
+package=zbus_names
+warning: nothing to print.
+
+To find dependencies that require specific target platforms, try to use option `--target all` first, and then narrow your search scope accordingly.
+package=zvariant
+warning: nothing to print.
+
+To find dependencies that require specific target platforms, try to use option `--target all` first, and then narrow your search scope accordingly.
+package=zvariant_derive
+warning: nothing to print.
+
+To find dependencies that require specific target platforms, try to use option `--target all` first, and then narrow your search scope accordingly.
+package=lru@0.16.4
+lru v0.16.4
+└── rqrr v0.10.1
+    ├── kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    └── kilogram-offline v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-offline)
+package=quinn-proto
+warning: nothing to print.
+
+To find dependencies that require specific target platforms, try to use option `--target all` first, and then narrow your search scope accordingly.
+package=webpki-root-certs
+warning: nothing to print.
+
+To find dependencies that require specific target platforms, try to use option `--target all` first, and then narrow your search scope accordingly.

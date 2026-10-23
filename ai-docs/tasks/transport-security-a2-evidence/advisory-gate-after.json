@@ -1,0 +1,230 @@
+{
+  "format_version": 1,
+  "checked_at_utc": "2026-10-23T18:58:14.9716515Z",
+  "status": "FAIL",
+  "source_advisory": "https://github.com/n0-computer/iroh/security/advisories/GHSA-7cq4-mhxw-xw78",
+  "source_version_gate": "PASS",
+  "database_revision": "84d943a6deeb8cc6c6f632531aaf4f1c62275239",
+  "database_commit_date": "2026-10-23T16:42:16+02:00",
+  "source_advisory_in_rustsec": false,
+  "cargo_audit_version": "cargo-audit 0.22.2",
+  "cargo_audit_exit": 1,
+  "registry_checksums": [
+    {
+      "package": "iroh",
+      "actual": "329552fad4e46b5ccb4439d5635216f6289eec2c46f3fde4bc732d762694b9e5",
+      "match": true,
+      "version": "1.1.0",
+      "expected": "329552fad4e46b5ccb4439d5635216f6289eec2c46f3fde4bc732d762694b9e5"
+    },
+    {
+      "package": "iroh-base",
+      "actual": "3ccf4cde68a02ef03c0095ab2c031c6adfe508f3bc8e7c258558a027ebe64a8e",
+      "match": true,
+      "version": "1.1.0",
+      "expected": "3ccf4cde68a02ef03c0095ab2c031c6adfe508f3bc8e7c258558a027ebe64a8e"
+    },
+    {
+      "package": "iroh-dns",
+      "actual": "9a41224eb0140a5c519935d4073fc6b236d174080be401f9bf7da126b2ee3aa4",
+      "match": true,
+      "version": "1.1.0",
+      "expected": "9a41224eb0140a5c519935d4073fc6b236d174080be401f9bf7da126b2ee3aa4"
+    },
+    {
+      "package": "iroh-relay",
+      "actual": "1b5f6f07e2c9b0c4bc82e2864be09f4aea4320165d5316e668616dbc822f428a",
+      "match": true,
+      "version": "1.1.0",
+      "expected": "1b5f6f07e2c9b0c4bc82e2864be09f4aea4320165d5316e668616dbc822f428a"
+    }
+  ],
+  "findings": [
+    {
+      "id": "RUSTSEC-2026-0385",
+      "patched": [
+        ">=0.4.4"
+      ],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0385.html",
+      "kind": "vulnerability",
+      "version": "0.4.2",
+      "package": "ctutils"
+    },
+    {
+      "id": "RUSTSEC-2026-0338",
+      "patched": [
+        ">=0.11.18"
+      ],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0338.html",
+      "kind": "vulnerability",
+      "version": "0.11.17",
+      "package": "quinn-proto"
+    },
+    {
+      "id": "RUSTSEC-2026-0340",
+      "patched": [
+        ">=0.11.18"
+      ],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0340.html",
+      "kind": "vulnerability",
+      "version": "0.11.17",
+      "package": "quinn-proto"
+    },
+    {
+      "id": "RUSTSEC-2026-0343",
+      "patched": [
+        ">=0.11.18"
+      ],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0343.html",
+      "kind": "vulnerability",
+      "version": "0.11.17",
+      "package": "quinn-proto"
+    },
+    {
+      "id": "RUSTSEC-2026-0285",
+      "patched": [
+        ">=0.23.45"
+      ],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0285.html",
+      "kind": "vulnerability",
+      "version": "0.23.43",
+      "package": "rustls"
+    },
+    {
+      "id": "RUSTSEC-2026-0346",
+      "patched": [
+        ">=0.23.46"
+      ],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0346.html",
+      "kind": "vulnerability",
+      "version": "0.23.43",
+      "package": "rustls"
+    },
+    {
+      "id": "RUSTSEC-2026-0348",
+      "patched": [
+        ">=0.23.46"
+      ],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0348.html",
+      "kind": "vulnerability",
+      "version": "0.23.43",
+      "package": "rustls"
+    },
+    {
+      "id": "RUSTSEC-2026-0349",
+      "patched": [
+        ">=0.23.46"
+      ],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0349.html",
+      "kind": "vulnerability",
+      "version": "0.23.43",
+      "package": "rustls"
+    },
+    {
+      "id": "RUSTSEC-2026-0382",
+      "patched": [
+        ">=0.103.16, <0.104.0-alpha.1",
+        ">=0.104.0-alpha.8"
+      ],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0382.html",
+      "kind": "vulnerability",
+      "version": "0.103.15",
+      "package": "rustls-webpki"
+    },
+    {
+      "id": "RUSTSEC-2026-0383",
+      "patched": [
+        ">=1.0.10"
+      ],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0383.html",
+      "kind": "vulnerability",
+      "version": "1.0.9",
+      "package": "webpki-root-certs"
+    },
+    {
+      "id": "RUSTSEC-2026-0381",
+      "patched": [
+        ">=1.0.10"
+      ],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0381.html",
+      "kind": "vulnerability",
+      "version": "1.0.9",
+      "package": "webpki-roots"
+    },
+    {
+      "id": "RUSTSEC-2023-0089",
+      "patched": [],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2023-0089.html",
+      "kind": "unmaintained",
+      "version": "1.0.3",
+      "package": "atomic-polyfill"
+    },
+    {
+      "id": "RUSTSEC-2024-0436",
+      "patched": [],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2024-0436.html",
+      "kind": "unmaintained",
+      "version": "1.0.15",
+      "package": "paste"
+    },
+    {
+      "id": "RUSTSEC-2026-0192",
+      "patched": [],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0192.html",
+      "kind": "unmaintained",
+      "version": "0.25.1",
+      "package": "ttf-parser"
+    },
+    {
+      "id": "RUSTSEC-2026-0371",
+      "patched": [],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0371.html",
+      "kind": "unmaintained",
+      "version": "4.3.4",
+      "package": "zbus_names"
+    },
+    {
+      "id": "RUSTSEC-2026-0370",
+      "patched": [],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0370.html",
+      "kind": "unmaintained",
+      "version": "5.15.0",
+      "package": "zvariant"
+    },
+    {
+      "id": "RUSTSEC-2026-0372",
+      "patched": [],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0372.html",
+      "kind": "unmaintained",
+      "version": "5.15.0",
+      "package": "zvariant_derive"
+    },
+    {
+      "id": "RUSTSEC-2026-0253",
+      "patched": [
+        ">=0.18.2"
+      ],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0253.html",
+      "kind": "unsound",
+      "version": "0.16.4",
+      "package": "lru"
+    },
+    {
+      "id": "RUSTSEC-2026-0386",
+      "patched": [
+        ">=1.51.6, <1.52.0",
+        ">=1.53.3"
+      ],
+      "url": "https://rustsec.org/advisories/RUSTSEC-2026-0386.html",
+      "kind": "unsound",
+      "version": "1.53.1",
+      "package": "tokio"
+    }
+  ],
+  "errors": [
+    "RustSec findings remain; inspect findings and classify reachability. No ignore list is used."
+  ],
+  "yanked_check": "separate from this reproducible advisory snapshot",
+  "lockfile_sha256": "3eac89059fffde0185a394ef36205bdd3a9aa0ee61ed36904151c9331a680187",
+  "manifest_sha256": "b8a0c6695826cd38d27ddb15c6c2d6aa77ca2e67ee61009554e55a785179e3d6"
+}

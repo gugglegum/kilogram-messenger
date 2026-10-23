@@ -1,0 +1,20 @@
+iroh v1.1.0
+├── iroh feature "default"
+│   ├── kilogram-bootstrap v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-bootstrap)
+│   │   └── kilogram-bootstrap feature "default" (command-line)
+│   ├── kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+│   │   └── kilogram-cli feature "default" (command-line)
+│   ├── kilogram-peer-history-recovery-transport v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-transport)
+│   │   └── kilogram-peer-history-recovery-transport feature "default" (command-line)
+│   └── kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+│       └── kilogram-transport-iroh feature "default" (command-line)
+│           ├── kilogram-bootstrap v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-bootstrap) (*)
+│           └── kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli) (*)
+├── iroh feature "fast-apple-datapath"
+│   └── iroh feature "default" (*)
+├── iroh feature "metrics"
+│   └── iroh feature "default" (*)
+├── iroh feature "portmapper"
+│   └── iroh feature "default" (*)
+└── iroh feature "tls-ring"
+    └── iroh feature "default" (*)

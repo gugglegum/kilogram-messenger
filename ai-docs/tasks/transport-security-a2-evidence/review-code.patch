@@ -1,0 +1,1417 @@
+diff --git a/.github/workflows/windows-ci.yml b/.github/workflows/windows-ci.yml
+index 363e776..b242b8a 100644
+--- a/.github/workflows/windows-ci.yml
++++ b/.github/workflows/windows-ci.yml
+@@ -11,6 +11,41 @@ concurrency:
+   cancel-in-progress: true
+ 
+ jobs:
++  dependencies:
++    name: Dependency advisory gate (RustSec + upstream Iroh)
++    runs-on: windows-2022
++    timeout-minutes: 20
++    defaults:
++      run:
++        shell: pwsh
++    steps:
++      - name: Check out source
++        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
++        with:
++          persist-credentials: false
++      - name: Fetch locked registry archives
++        run: cargo fetch --locked --target x86_64-pc-windows-msvc
++      - name: Install pinned auditor and fetch fresh advisory snapshot
++        run: |
++          . ./scripts/cargo-resource-policy.ps1
++          $jobs = Set-KilogramCargoResourcePolicy -RequestedJobs 2
++          $policy = Get-Content ./scripts/dependency-advisory-policy.json -Raw | ConvertFrom-Json
++          cargo install cargo-audit --version $policy.cargo_audit_version --locked --jobs $jobs --root .tmp/dependency-tools
++          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
++          git clone --depth 1 https://github.com/RustSec/advisory-db.git .tmp/transport-security-a2/advisory-db
++          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
++      - name: Check every advisory and explicit upstream version floor
++        run: |
++          $revision = git -C .tmp/transport-security-a2/advisory-db rev-parse HEAD
++          ./scripts/check-dependency-advisories.ps1 -DatabaseRevision $revision -AuditExecutable .tmp/dependency-tools/bin/cargo-audit.exe
++      - name: Preserve the database revision and findings
++        if: ${{ always() }}
++        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
++        with:
++          name: dependency-advisory-gate
++          path: .tmp/dependency-advisory-gate.json
++          if-no-files-found: warn
++
+   verify:
+     name: Verify M1 readiness and Rust tests
+     runs-on: windows-2022
+diff --git a/Cargo.lock b/Cargo.lock
+index 74aae39..d44a341 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -333,6 +333,45 @@ version = "1.0.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "175571dd1d178ced59193a6fc02dde1b972eb0bc56c892cde9beeceac5bf0f6b"
+ 
++[[package]]
++name = "asn1-rs"
++version = "0.7.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b7f43a50ac4fdca5df8e885c21b835997f0a1cdee65494a6847694a98652d9d8"
++dependencies = [
++ "asn1-rs-derive",
++ "asn1-rs-impl",
++ "displaydoc",
++ "nom",
++ "num-traits",
++ "rusticata-macros",
++ "thiserror 2.0.20",
++ "time",
++]
++
++[[package]]
++name = "asn1-rs-derive"
++version = "0.6.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "3109e49b1e4909e9db6515a30c633684d68cdeaa252f215214cb4fa1a5bfee2c"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn 2.0.119",
++ "synstructure",
++]
++
++[[package]]
++name = "asn1-rs-impl"
++version = "0.2.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "7b18050c2cd6fe86c3a76584ef5e0baf286d038cda203eb6223df2cc413565f7"
++dependencies = [
++ "proc-macro2",
++ "quote",
++ "syn 2.0.119",
++]
++
+ [[package]]
+ name = "async-broadcast"
+ version = "0.7.2"
+@@ -546,7 +585,7 @@ version = "0.30.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "16e2cdb6d5ed835199484bb92bb8b3edd526effe995c61732580439c1a67e2e9"
+ dependencies = [
+- "base64",
++ "base64 0.22.1",
+  "http",
+  "log",
+  "url",
+@@ -604,6 +643,12 @@ version = "0.22.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "72b3254f16251a8381aa12e40e3c4d2f0199f8c6508fbecb9d91f575e0fbb8c6"
+ 
++[[package]]
++name = "base64"
++version = "0.23.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "ac07cdecf99051d9a5238b80f35af32cdeba5b336e55d957b318b50137e18da5"
++
+ [[package]]
+ name = "base64ct"
+ version = "1.8.3"
+@@ -628,7 +673,7 @@ version = "0.8.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "08807e080ed7f9d5433fa9b275196cfc35414f66a0c79d864dc51a0d825231a3"
+ dependencies = [
+- "bit-vec",
++ "bit-vec 0.8.0",
+ ]
+ 
+ [[package]]
+@@ -637,6 +682,15 @@ version = "0.8.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "5e764a1d40d510daf35e07be9eb06e75770908c27d411ee6c92109c9840eaaf7"
+ 
++[[package]]
++name = "bit-vec"
++version = "0.9.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b71798fca2c1fe1086445a7258a4bc81e6e49dcd24c8d0dd9a1e57395b603f51"
++dependencies = [
++ "serde",
++]
++
+ [[package]]
+ name = "bitcoin_hashes"
+ version = "0.14.101"
+@@ -1252,9 +1306,9 @@ dependencies = [
+ 
+ [[package]]
+ name = "ctutils"
+-version = "0.4.2"
++version = "0.4.4"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "7d5515a3834141de9eafb9717ad39eea8247b5674e6066c404e8c4b365d2a29e"
++checksum = "12218662ccac37d9714f2191252553d67585b97df8c839cbe49e0bde278dc865"
+ dependencies = [
+  "cmov",
+ ]
+@@ -1311,6 +1365,20 @@ dependencies = [
+  "syn 2.0.119",
+ ]
+ 
++[[package]]
++name = "dashmap"
++version = "6.2.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "e6361d5c062261c78a176addb82d4c821ae42bed6089de0e12603cd25de2059c"
++dependencies = [
++ "cfg-if",
++ "crossbeam-utils",
++ "hashbrown 0.14.5",
++ "lock_api",
++ "once_cell",
++ "parking_lot_core",
++]
++
+ [[package]]
+ name = "data-encoding"
+ version = "2.11.1"
+@@ -1334,7 +1402,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "c54e03a951783e8b327515db3f2a2fd0e3bed362a96b066f341ce66ed49b4ead"
+ dependencies = [
+  "data-encoding",
+- "syn 3.0.4",
++ "syn 2.0.119",
+ ]
+ 
+ [[package]]
+@@ -1358,6 +1426,20 @@ dependencies = [
+  "zeroize",
+ ]
+ 
++[[package]]
++name = "der-parser"
++version = "10.0.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "07da5016415d5a3c4dd39b11ed26f915f52fc4e0dc197d87908bc916e51bc1a6"
++dependencies = [
++ "asn1-rs",
++ "displaydoc",
++ "nom",
++ "num-bigint",
++ "num-traits",
++ "rusticata-macros",
++]
++
+ [[package]]
+ name = "deranged"
+ version = "0.5.8"
+@@ -1411,6 +1493,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2"
+ dependencies = [
+  "block-buffer 0.12.1",
++ "const-oid 0.10.2",
+  "crypto-common 0.2.2",
+  "ctutils",
+ ]
+@@ -1768,7 +1851,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
+ dependencies = [
+  "libc",
+- "windows-sys 0.61.2",
++ "windows-sys 0.52.0",
+ ]
+ 
+ [[package]]
+@@ -2060,8 +2143,8 @@ dependencies = [
+  "libc",
+  "log",
+  "rustversion",
+- "windows-link 0.2.1",
+- "windows-result 0.4.1",
++ "windows-link 0.1.3",
++ "windows-result 0.3.4",
+ ]
+ 
+ [[package]]
+@@ -2274,6 +2357,12 @@ dependencies = [
+  "byteorder",
+ ]
+ 
++[[package]]
++name = "hashbrown"
++version = "0.14.5"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "e5274423e17b7c9fc20b6e7e208532f9b19825d82dfd615708b70edd83df41f1"
++
+ [[package]]
+ name = "hashbrown"
+ version = "0.15.5"
+@@ -2580,7 +2669,7 @@ version = "0.1.20"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "96547c2556ec9d12fb1578c4eaf448b04993e7fb79cbaad930a656880a6bdfa0"
+ dependencies = [
+- "base64",
++ "base64 0.22.1",
+  "bytes",
+  "futures-channel",
+  "futures-util",
+@@ -2820,9 +2909,9 @@ dependencies = [
+ 
+ [[package]]
+ name = "iroh"
+-version = "1.0.3"
++version = "1.1.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "460de6bc52163b41b1646931f2897e5ab986f0966ade444467fec25024751a72"
++checksum = "329552fad4e46b5ccb4439d5635216f6289eec2c46f3fde4bc732d762694b9e5"
+ dependencies = [
+  "backon",
+  "blake3",
+@@ -2871,9 +2960,9 @@ dependencies = [
+ 
+ [[package]]
+ name = "iroh-base"
+-version = "1.0.3"
++version = "1.1.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "6be73e16ee21c923aca9b3121aaa0db936f7c7ecc156ff47b8dac944c68d59a8"
++checksum = "3ccf4cde68a02ef03c0095ab2c031c6adfe508f3bc8e7c258558a027ebe64a8e"
+ dependencies = [
+  "curve25519-dalek 5.0.0",
+  "data-encoding",
+@@ -2890,9 +2979,9 @@ dependencies = [
+ 
+ [[package]]
+ name = "iroh-dns"
+-version = "1.0.3"
++version = "1.1.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "46f6a9b39d18e6345f5c151afd299f2488e2cb5c520fe41b107b6bd3dc4c3349"
++checksum = "9a41224eb0140a5c519935d4073fc6b236d174080be401f9bf7da126b2ee3aa4"
+ dependencies = [
+  "arc-swap",
+  "cfg_aliases",
+@@ -2918,12 +3007,20 @@ version = "1.0.1"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "291065721ad7c477b972e581bbc528df031dc8eb5e39fe1ff3300ae5dfb157ef"
+ dependencies = [
++ "http-body-util",
++ "hyper",
++ "hyper-util",
+  "iroh-metrics-derive",
+  "itoa",
+  "n0-error",
+  "portable-atomic",
++ "reqwest",
++ "rustls",
++ "rustls-platform-verifier",
+  "ryu",
+  "serde",
++ "tokio",
++ "tokio-util",
+  "tracing",
+ ]
+ 
+@@ -2941,13 +3038,15 @@ dependencies = [
+ 
+ [[package]]
+ name = "iroh-relay"
+-version = "1.0.3"
++version = "1.1.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "24bd586cf927f7b700f56ec3639b53cb5fa901ce284784051ff71092bfbf8193"
++checksum = "1b5f6f07e2c9b0c4bc82e2864be09f4aea4320165d5316e668616dbc822f428a"
+ dependencies = [
+  "blake3",
+  "bytes",
+  "cfg_aliases",
++ "clap",
++ "dashmap",
+  "data-encoding",
+  "derive_more",
+  "getrandom 0.4.3",
+@@ -2968,17 +3067,28 @@ dependencies = [
+  "pin-project",
+  "postcard",
+  "rand 0.10.2",
++ "rcgen",
++ "reloadable-state",
+  "reqwest",
+  "rustls",
++ "rustls-cert-file-reader",
++ "rustls-cert-reloadable-resolver",
+  "rustls-pki-types",
+  "serde",
+  "serde_bytes",
++ "serde_json",
++ "sha1",
++ "simdutf8",
+  "strum",
++ "time",
+  "tokio",
+  "tokio-rustls",
++ "tokio-rustls-acme",
+  "tokio-util",
+  "tokio-websockets",
++ "toml",
+  "tracing",
++ "tracing-subscriber",
+  "url",
+  "webpki-roots",
+  "ws_stream_wasm",
+@@ -3111,7 +3221,7 @@ name = "kilogram-bootstrap"
+ version = "0.1.0"
+ dependencies = [
+  "anyhow",
+- "base64",
++ "base64 0.22.1",
+  "blake3",
+  "clap",
+  "getrandom 0.4.3",
+@@ -3147,7 +3257,7 @@ name = "kilogram-cli"
+ version = "0.1.0"
+ dependencies = [
+  "anyhow",
+- "base64",
++ "base64 0.22.1",
+  "blake3",
+  "clap",
+  "ed25519-dalek 3.0.0",
+@@ -3274,7 +3384,7 @@ name = "kilogram-offline"
+ version = "0.1.0"
+ dependencies = [
+  "anyhow",
+- "base64",
++ "base64 0.22.1",
+  "blake3",
+  "clap",
+  "image",
+@@ -3388,7 +3498,7 @@ dependencies = [
+ name = "kilogram-peer-history-recovery-transport"
+ version = "0.1.0"
+ dependencies = [
+- "base64",
++ "base64 0.22.1",
+  "blake3",
+  "iroh",
+  "kilogram-identity",
+@@ -3468,7 +3578,7 @@ dependencies = [
+ name = "kilogram-protocol"
+ version = "0.1.0"
+ dependencies = [
+- "base64",
++ "base64 0.22.1",
+  "blake3",
+  "ed25519-dalek 3.0.0",
+  "kilogram-crypto",
+@@ -3488,7 +3598,7 @@ name = "kilogram-publication-conflict"
+ version = "0.1.0"
+ dependencies = [
+  "anyhow",
+- "base64",
++ "base64 0.22.1",
+  "blake3",
+  "kilogram-identity",
+  "kilogram-ticket-publication",
+@@ -3535,7 +3645,7 @@ name = "kilogram-runtime-ipc"
+ version = "0.1.0"
+ dependencies = [
+  "anyhow",
+- "base64",
++ "base64 0.22.1",
+  "blake3",
+  "getrandom 0.4.3",
+  "kilogram-identity",
+@@ -3642,6 +3752,7 @@ dependencies = [
+  "anyhow",
+  "blake3",
+  "iroh",
++ "iroh-relay",
+  "kilogram-mailbox",
+  "kilogram-protocol",
+  "serde",
+@@ -3843,6 +3954,12 @@ dependencies = [
+  "autocfg",
+ ]
+ 
++[[package]]
++name = "minimal-lexical"
++version = "0.2.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "68354c5c6bd36d73ff3feceb05efa59b6acb7626617f4962be322a825e61f79a"
++
+ [[package]]
+ name = "miniz_oxide"
+ version = "0.8.9"
+@@ -4009,6 +4126,33 @@ dependencies = [
+  "jni-sys 0.3.1",
+ ]
+ 
++[[package]]
++name = "netdev"
++version = "0.45.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "096c44b66a9b09b99b4dd36b1c295ff3a492039ccecaf55466bd6ddcdba59968"
++dependencies = [
++ "block2 0.6.2",
++ "dispatch2",
++ "dlopen2",
++ "ipnet",
++ "jni 0.21.1",
++ "libc",
++ "mac-addr",
++ "ndk-context",
++ "netlink-packet-core",
++ "netlink-packet-route",
++ "netlink-sys",
++ "objc2 0.6.4",
++ "objc2-core-foundation",
++ "objc2-core-wlan",
++ "objc2-foundation 0.3.2",
++ "objc2-system-configuration",
++ "once_cell",
++ "plist",
++ "windows-sys 0.61.2",
++]
++
+ [[package]]
+ name = "netdev"
+ version = "0.46.1"
+@@ -4084,9 +4228,9 @@ dependencies = [
+ 
+ [[package]]
+ name = "netwatch"
+-version = "0.19.2"
++version = "0.19.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "9554f614feba706ae804dfa9a50f04ae5998a161b3680c7d318a412330ccab87"
++checksum = "39da9cad5f23aa43401f09497d3b280e51b5feba115d9ffbf38ca35d6ff95e96"
+ dependencies = [
+  "atomic-waker",
+  "bytes",
+@@ -4098,7 +4242,8 @@ dependencies = [
+  "n0-error",
+  "n0-future",
+  "n0-watcher",
+- "netdev",
++ "netdev 0.45.1",
++ "netdev 0.46.1",
+  "netlink-packet-core",
+  "netlink-packet-route",
+  "netlink-proto",
+@@ -4125,6 +4270,16 @@ version = "0.2.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "2bf50223579dc7cdcfb3bfcacf7069ff68243f8c363f62ffa99cf000a6b9c451"
+ 
++[[package]]
++name = "nom"
++version = "7.1.3"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d273983c5a657a70a3e8f2a01329822f3b8c8172b73826411a55751e404a0a4a"
++dependencies = [
++ "memchr",
++ "minimal-lexical",
++]
++
+ [[package]]
+ name = "noq"
+ version = "1.2.0"
+@@ -4166,6 +4321,7 @@ dependencies = [
+  "rustc-hash 2.1.3",
+  "rustls",
+  "rustls-pki-types",
++ "rustls-platform-verifier",
+  "slab",
+  "sorted-index-buffer",
+  "thiserror 2.0.20",
+@@ -4196,12 +4352,31 @@ dependencies = [
+  "windows-sys 0.61.2",
+ ]
+ 
++[[package]]
++name = "num-bigint"
++version = "0.4.8"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "c89e69e7e0f03bea5ef08013795c25018e101932225a656383bd384495ecc367"
++dependencies = [
++ "num-integer",
++ "num-traits",
++]
++
+ [[package]]
+ name = "num-conv"
+ version = "0.2.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "521739c6d2bac4aa25192232afe6841231376b2b26d4d9fae5ecf8ca5772e441"
+ 
++[[package]]
++name = "num-integer"
++version = "0.1.47"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "7ce2d95d4b3734dc35aa2f45e1aa22cd416814592a4f9d9205e11affd5b8e10b"
++dependencies = [
++ "num-traits",
++]
++
+ [[package]]
+ name = "num-traits"
+ version = "0.2.19"
+@@ -4374,6 +4549,20 @@ dependencies = [
+  "objc2-foundation 0.2.2",
+ ]
+ 
++[[package]]
++name = "objc2-core-wlan"
++version = "0.3.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "c71e34919aba0d701380d911702455038a8a3587467fe0141d6a71501e7ffe48"
++dependencies = [
++ "bitflags 2.13.1",
++ "objc2 0.6.4",
++ "objc2-core-foundation",
++ "objc2-foundation 0.3.2",
++ "objc2-security",
++ "objc2-security-foundation",
++]
++
+ [[package]]
+ name = "objc2-encode"
+ version = "4.1.0"
+@@ -4400,6 +4589,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "e3e0adef53c21f888deb4fa59fc59f7eb17404926ee8a6f59f5df0fd7f9f3272"
+ dependencies = [
+  "bitflags 2.13.1",
++ "block2 0.6.2",
++ "libc",
+  "objc2 0.6.4",
+  "objc2-core-foundation",
+ ]
+@@ -4463,6 +4654,16 @@ dependencies = [
+  "objc2-core-foundation",
+ ]
+ 
++[[package]]
++name = "objc2-security-foundation"
++version = "0.3.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "ef76382e9cedd18123099f17638715cc3d81dba3637d4c0d39ab69df2ef345a5"
++dependencies = [
++ "objc2 0.6.4",
++ "objc2-foundation 0.3.2",
++]
++
+ [[package]]
+ name = "objc2-symbols"
+ version = "0.2.2"
+@@ -4532,6 +4733,15 @@ dependencies = [
+  "objc2-foundation 0.2.2",
+ ]
+ 
++[[package]]
++name = "oid-registry"
++version = "0.8.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "12f40cff3dde1b6087cc5d5f5d4d65712f34016a03ed60e9c08dcc392736b5b7"
++dependencies = [
++ "asn1-rs",
++]
++
+ [[package]]
+ name = "once_cell"
+ version = "1.21.4"
+@@ -4645,6 +4855,26 @@ version = "1.0.15"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "57c0d7b74b563b49d38dae00a0c37d4d6de9b432382b2892f0574ddcae73fd0a"
+ 
++[[package]]
++name = "pem"
++version = "3.0.6"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "1d30c53c26bc5b31a98cd02d20f25a7c8567146caf63ed593a9d87b2775291be"
++dependencies = [
++ "base64 0.22.1",
++ "serde_core",
++]
++
++[[package]]
++name = "pem"
++version = "4.0.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d354a98a3d1251555de99e8fdd8afda05573c31b82f59063a7b0a29b5527f120"
++dependencies = [
++ "base64 0.23.1",
++ "serde_core",
++]
++
+ [[package]]
+ name = "pem-rfc7468"
+ version = "1.0.0"
+@@ -4745,7 +4975,7 @@ version = "1.10.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "7da1d65da6dd5d1e44199ac0f58712d241c0f439f80adea8924d832384087f85"
+ dependencies = [
+- "base64",
++ "base64 0.22.1",
+  "indexmap",
+  "quick-xml",
+  "serde",
+@@ -4832,11 +5062,11 @@ dependencies = [
+ 
+ [[package]]
+ name = "portmapper"
+-version = "0.19.2"
++version = "0.19.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "daed0c299f997c4b929f5c111e69bb58401376e525d8ef2c07cadfe25282fd71"
++checksum = "ca97242f016e090a25330613bc2382aab65eb22f9149dbe84d8f8e711d49a530"
+ dependencies = [
+- "base64",
++ "base64 0.22.1",
+  "bytes",
+  "derive_more",
+  "hyper-util",
+@@ -5018,9 +5248,9 @@ dependencies = [
+ 
+ [[package]]
+ name = "quinn-proto"
+-version = "0.11.17"
++version = "0.11.18"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "04759210543be93709136e28212294a659ef5001836ff4eab4d663e4529bba83"
++checksum = "a9746dbde176634f4f2f1faf2404e30a31b2bc1e9cafb5329c95d8177a18c9fc"
+ dependencies = [
+  "aws-lc-rs",
+  "bytes",
+@@ -5136,6 +5366,20 @@ version = "0.6.2"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "20675572f6f24e9e76ef639bc5552774ed45f1c30e2951e1e99c59888861c539"
+ 
++[[package]]
++name = "rcgen"
++version = "0.14.10"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "8774e05a7d0de114588e6a28fe7e71694b82614ed569d86d8b389dfbc98b8ad8"
++dependencies = [
++ "pem 4.0.0",
++ "ring",
++ "rustls-pki-types",
++ "time",
++ "x509-parser",
++ "yasna",
++]
++
+ [[package]]
+ name = "redb"
+ version = "4.2.0"
+@@ -5189,6 +5433,23 @@ version = "0.8.11"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "d6f6ff9a378485b298a5286656da665ba74413d36db0979633275d2e708145d4"
+ 
++[[package]]
++name = "reloadable-core"
++version = "0.1.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "1dc20ac1418988b60072d783c9f68e28a173fb63493c127952f6face3b40c6e0"
++
++[[package]]
++name = "reloadable-state"
++version = "0.1.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "3853ef78d45b50f8b989896304a85239539d39b7f866a000e8846b9b72d74ce8"
++dependencies = [
++ "arc-swap",
++ "reloadable-core",
++ "tokio",
++]
++
+ [[package]]
+ name = "renderdoc-sys"
+ version = "1.1.0"
+@@ -5201,7 +5462,7 @@ version = "0.13.4"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "219c5811de6525e5416c7d5d53bb656d3afdbc6c5af816e0802bcfa42dbdc1c3"
+ dependencies = [
+- "base64",
++ "base64 0.22.1",
+  "bytes",
+  "futures-core",
+  "futures-util",
+@@ -5219,6 +5480,8 @@ dependencies = [
+  "rustls",
+  "rustls-pki-types",
+  "rustls-platform-verifier",
++ "serde",
++ "serde_json",
+  "sync_wrapper",
+  "tokio",
+  "tokio-rustls",
+@@ -5285,6 +5548,15 @@ dependencies = [
+  "semver",
+ ]
+ 
++[[package]]
++name = "rusticata-macros"
++version = "4.1.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "faf0c4a6ece9950b9abdb62b1cfcf2a68b3b67a10ba445b3bb85be2a293d0632"
++dependencies = [
++ "nom",
++]
++
+ [[package]]
+ name = "rustix"
+ version = "0.38.44"
+@@ -5308,14 +5580,14 @@ dependencies = [
+  "errno",
+  "libc",
+  "linux-raw-sys 0.12.1",
+- "windows-sys 0.61.2",
++ "windows-sys 0.52.0",
+ ]
+ 
+ [[package]]
+ name = "rustls"
+-version = "0.23.43"
++version = "0.23.46"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "0283386ce02abc0151e1761d08802dfe86c173b0b494af5cbc086574e453da06"
++checksum = "48e13bd8c0e9365c43cfa5c9e8f9ad49d3c8444926c9aac819e0e4dc503c8fdf"
+ dependencies = [
+  "aws-lc-rs",
+  "log",
+@@ -5327,6 +5599,40 @@ dependencies = [
+  "zeroize",
+ ]
+ 
++[[package]]
++name = "rustls-cert-file-reader"
++version = "0.4.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "8bb47c2a50fdfdaf95b0ac8b12620fc327da1fd4adbb30d0c56d866b005873ff"
++dependencies = [
++ "rustls-cert-read",
++ "rustls-pki-types",
++ "thiserror 2.0.20",
++ "tokio",
++]
++
++[[package]]
++name = "rustls-cert-read"
++version = "0.3.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "dd46e8c5ae4de3345c4786a83f99ec7aff287209b9e26fa883c473aeb28f19d5"
++dependencies = [
++ "rustls-pki-types",
++]
++
++[[package]]
++name = "rustls-cert-reloadable-resolver"
++version = "0.7.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "fe1baa8a3a1f05eaa9fc55aed4342867f70e5c170ea3bfed1b38c51a4857c0c8"
++dependencies = [
++ "futures-util",
++ "reloadable-state",
++ "rustls",
++ "rustls-cert-read",
++ "thiserror 2.0.20",
++]
++
+ [[package]]
+ name = "rustls-native-certs"
+ version = "0.8.4"
+@@ -5367,7 +5673,7 @@ dependencies = [
+  "security-framework",
+  "security-framework-sys",
+  "webpki-root-certs",
+- "windows-sys 0.61.2",
++ "windows-sys 0.52.0",
+ ]
+ 
+ [[package]]
+@@ -5378,9 +5684,9 @@ checksum = "f87165f0995f63a9fbeea62b64d10b4d9d8e78ec6d7d51fb2125fda7bb36788f"
+ 
+ [[package]]
+ name = "rustls-webpki"
+-version = "0.103.15"
++version = "0.103.16"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "f3c3cf1d8b1e7d4927e2d154c3fcb02979afb9939629c62cd9048d4f07b60ac2"
++checksum = "4443b1b6d39d7c663139942cc4558262562d2c84123bb6282ef177009ca8b281"
+ dependencies = [
+  "aws-lc-rs",
+  "ring",
+@@ -5535,6 +5841,15 @@ dependencies = [
+  "syn 3.0.4",
+ ]
+ 
++[[package]]
++name = "serde_spanned"
++version = "1.1.2"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "4e7523beb55eece201a2356bee0bbca0d1ab466c14c07703b2e0ee6d42cb0c2c"
++dependencies = [
++ "serde_core",
++]
++
+ [[package]]
+ name = "serdect"
+ version = "0.4.3"
+@@ -5545,6 +5860,17 @@ dependencies = [
+  "serde",
+ ]
+ 
++[[package]]
++name = "sha1"
++version = "0.11.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "aacc4cc499359472b4abe1bf11d0b12e688af9a805fa5e3016f9a386dc2d0214"
++dependencies = [
++ "cfg-if",
++ "cpufeatures 0.3.0",
++ "digest 0.11.3",
++]
++
+ [[package]]
+ name = "sha1_smol"
+ version = "1.0.1"
+@@ -5640,9 +5966,9 @@ checksum = "e3a9fe34e3e7a50316060351f37187a3f546bce95496156754b601a5fa71b76e"
+ 
+ [[package]]
+ name = "simple-dns"
+-version = "0.11.3"
++version = "0.12.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "7a75cbde1bf934313596a004973e462f9a82caa814dcf1a5f507bdf51597eeb4"
++checksum = "2b6f884fa9a8d48101774bfbd3aeb81e968dd22cffd19a372da69f183db22c1a"
+ dependencies = [
+  "bitflags 2.13.1",
+ ]
+@@ -5933,10 +6259,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
+ dependencies = [
+  "fastrand",
+- "getrandom 0.4.3",
++ "getrandom 0.3.4",
+  "once_cell",
+  "rustix 1.1.4",
+- "windows-sys 0.61.2",
++ "windows-sys 0.52.0",
+ ]
+ 
+ [[package]]
+@@ -6060,9 +6386,9 @@ checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
+ 
+ [[package]]
+ name = "tokio"
+-version = "1.53.1"
++version = "1.53.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "202caea871b69668250d242070849eb495be178ed697a3e98aebce5bc81a0bed"
++checksum = "ce3335fa71841cda333a58d7615b03901380ecf09d59b3296d21f8bbac0dde4e"
+ dependencies = [
+  "bytes",
+  "libc",
+@@ -6095,6 +6421,34 @@ dependencies = [
+  "tokio",
+ ]
+ 
++[[package]]
++name = "tokio-rustls-acme"
++version = "0.9.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "1af8573b15fdad8d66da116198cd8fd8d87ff62a67c1c6c3df7f62da1170793f"
++dependencies = [
++ "async-trait",
++ "base64 0.22.1",
++ "chrono",
++ "futures",
++ "log",
++ "num-bigint",
++ "pem 3.0.6",
++ "proc-macro2",
++ "rcgen",
++ "reqwest",
++ "ring",
++ "rustls",
++ "serde",
++ "serde_json",
++ "thiserror 2.0.20",
++ "time",
++ "tokio",
++ "tokio-rustls",
++ "webpki-roots",
++ "x509-parser",
++]
++
+ [[package]]
+ name = "tokio-stream"
+ version = "0.1.19"
+@@ -6128,7 +6482,7 @@ version = "0.13.3"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "d52efb639344a7c6adb8e62c6f3d2c19c001ff1b79a5041ba1c6ed42e19c6aa5"
+ dependencies = [
+- "base64",
++ "base64 0.22.1",
+  "bytes",
+  "futures-core",
+  "futures-sink",
+@@ -6145,11 +6499,26 @@ dependencies = [
+  "tokio-util",
+ ]
+ 
++[[package]]
++name = "toml"
++version = "1.1.8+spec-1.1.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "20489e00e4d8741d6be680764cc12e270655e375a20d1011e844a9c3379e678d"
++dependencies = [
++ "indexmap",
++ "serde_core",
++ "serde_spanned",
++ "toml_datetime",
++ "toml_parser",
++ "toml_writer",
++ "winnow",
++]
++
+ [[package]]
+ name = "toml_datetime"
+-version = "1.1.1+spec-1.1.0"
++version = "1.1.2+spec-1.1.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "3165f65f62e28e0115a00b2ebdd37eb6f3b641855f9d636d3cd4103767159ad7"
++checksum = "2b86d767906c6c42421dcba507eb9d203e779497710a47782a224bb871653053"
+ dependencies = [
+  "serde_core",
+ ]
+@@ -6168,13 +6537,19 @@ dependencies = [
+ 
+ [[package]]
+ name = "toml_parser"
+-version = "1.1.3+spec-1.1.0"
++version = "1.1.5+spec-1.1.0"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "1d38ac1cf9b95face32296c0a3ede1fdc270627c9d9c02a7274dd6d960dc4d56"
++checksum = "baa693a8032d7e1cada7d0041e96126df243179ff061456783ac7f12bda4744c"
+ dependencies = [
+  "winnow",
+ ]
+ 
++[[package]]
++name = "toml_writer"
++version = "1.1.3+spec-1.1.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "06bdbd8cfc056b8d2e2e85f29b56a3bdbecb527cef81eb39e3e7b98af4652770"
++
+ [[package]]
+ name = "tower"
+ version = "0.5.3"
+@@ -6436,7 +6811,7 @@ checksum = "b98bf83c0992966775b8012f194b07b44928996163e5a05b741b43891571ae5b"
+ dependencies = [
+  "aes",
+  "arrayvec",
+- "base64",
++ "base64 0.22.1",
+  "base64ct",
+  "cbc",
+  "chacha20poly1305 0.10.1",
+@@ -6733,18 +7108,18 @@ dependencies = [
+ 
+ [[package]]
+ name = "webpki-root-certs"
+-version = "1.0.9"
++version = "1.0.10"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "b96554aa2acc8ccdb7e1c9a58a7a68dd5d13bccc69cd124cb09406db612a1c9b"
++checksum = "58ec80e73fd8baf57bf0d9615554c75348bda990d6d5bbeab964dd068319fecb"
+ dependencies = [
+  "rustls-pki-types",
+ ]
+ 
+ [[package]]
+ name = "webpki-roots"
+-version = "1.0.9"
++version = "1.0.10"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+-checksum = "7dcd9d09a39985f5344844e66b0c530a33843579125f23e21e9f0f220850f22a"
++checksum = "1c1c8e20c8a38fc7d65abfe74eb7280e4aa667e8eec8bc84996d2874810748d9"
+ dependencies = [
+  "rustls-pki-types",
+ ]
+@@ -6786,7 +7161,7 @@ checksum = "27a75de515543b1897b26119f93731b385a19aea165a1ec5f0e3acecc229cae7"
+ dependencies = [
+  "arrayvec",
+  "bit-set",
+- "bit-vec",
++ "bit-vec 0.8.0",
+  "bitflags 2.13.1",
+  "bytemuck",
+  "cfg_aliases",
+@@ -6879,7 +7254,7 @@ version = "0.1.11"
+ source = "registry+https://github.com/rust-lang/crates.io-index"
+ checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
+ dependencies = [
+- "windows-sys 0.61.2",
++ "windows-sys 0.52.0",
+ ]
+ 
+ [[package]]
+@@ -7407,6 +7782,24 @@ dependencies = [
+  "zeroize",
+ ]
+ 
++[[package]]
++name = "x509-parser"
++version = "0.18.1"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "d43b0f71ce057da06bc0851b23ee24f3f86190b07203dd8f567d0b706a185202"
++dependencies = [
++ "asn1-rs",
++ "data-encoding",
++ "der-parser",
++ "lazy_static",
++ "nom",
++ "oid-registry",
++ "ring",
++ "rusticata-macros",
++ "thiserror 2.0.20",
++ "time",
++]
++
+ [[package]]
+ name = "xcursor"
+ version = "0.3.11"
+@@ -7447,6 +7840,16 @@ dependencies = [
+  "xml-rs",
+ ]
+ 
++[[package]]
++name = "yasna"
++version = "0.6.0"
++source = "registry+https://github.com/rust-lang/crates.io-index"
++checksum = "b5f6765e852b9b4dc8e2a76843e4d64d1cea8e79bcde0b6901aea8e7c7f08282"
++dependencies = [
++ "bit-vec 0.9.1",
++ "time",
++]
++
+ [[package]]
+ name = "yoke"
+ version = "0.8.3"
+diff --git a/Cargo.toml b/Cargo.toml
+index 4d6366e..96a2a35 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -53,7 +53,7 @@ eframe = { version = "=0.33.3", default-features = false, features = ["accesskit
+ getrandom = "0.4"
+ hpke = { version = "0.14", default-features = false, features = ["alloc", "chacha", "getrandom", "x25519"] }
+ image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
+-iroh = "1.0.3"
++iroh = "=1.1.0"
+ postcard = { version = "1.1", features = ["alloc"] }
+ qrcode = { version = "0.14.1", default-features = false, features = ["image"] }
+ redb = "4.2"
+diff --git a/crates/kilogram-transport-iroh/Cargo.toml b/crates/kilogram-transport-iroh/Cargo.toml
+index d4f24ae..2fcb6ce 100644
+--- a/crates/kilogram-transport-iroh/Cargo.toml
++++ b/crates/kilogram-transport-iroh/Cargo.toml
+@@ -17,5 +17,8 @@ serde.workspace = true
+ serde_json.workspace = true
+ tokio.workspace = true
+ 
++[dev-dependencies]
++iroh-relay = { version = "=1.1.0", default-features = false, features = ["server", "tls-ring"] }
++
+ [lints]
+ workspace = true
+diff --git a/scripts/test-ordered-dialog-process.ps1 b/scripts/test-ordered-dialog-process.ps1
+index 86c8191..f8d1ce2 100644
+--- a/scripts/test-ordered-dialog-process.ps1
++++ b/scripts/test-ordered-dialog-process.ps1
+@@ -1,6 +1,7 @@
+ [CmdletBinding()]
+ param(
+     [string]$Executable = 'target/field-tests/ordered-dialog/kilogram-cli.exe',
++    [string]$PeerExecutable,
+     [string]$RunDirectory,
+     [ValidateSet('Duplex','Gap','Partial','BOnly','Crash','TwoContexts','Expiry','ConsentExpiry','Conflict','UnsupportedSuite','MissingAuth','CrossContext')][string]$Scenario = 'Duplex',
+     [string]$KillPoint,
+@@ -12,6 +13,9 @@ $ErrorActionPreference = 'Stop'
+ [Diagnostics.Process]::GetCurrentProcess().PriorityClass=[Diagnostics.ProcessPriorityClass]::BelowNormal
+ $workspace = Split-Path -Parent $PSScriptRoot
+ $exe = (Resolve-Path -LiteralPath (Join-Path $workspace $Executable)).Path
++$peerExe = if ($PeerExecutable) {
++    (Resolve-Path -LiteralPath (Join-Path $workspace $PeerExecutable)).Path
++} else { $exe }
+ if (-not $RunDirectory) { $RunDirectory = Join-Path $workspace ('.tmp/ordered-dialog-process/' + [guid]::NewGuid().ToString('N')) }
+ if (Test-Path -LiteralPath $RunDirectory) { throw 'Process acceptance requires a new run directory.' }
+ [void](New-Item -ItemType Directory -Path $RunDirectory)
+@@ -54,7 +58,8 @@ function Start-Runtime([string]$Side) {
+             $env:KILOGRAM_TEST_OD1_PRIMARY_PAUSE_FILE=Path-In "$Side.primary"
+         }
+         $suffix = [guid]::NewGuid().ToString('N').Substring(0,8)
+-        $process = Start-Process -FilePath $exe -ArgumentList @('runtime-from-profile','--profile-file',('"{0}"' -f (Path-In "$Side.profile"))) -WindowStyle Hidden -PassThru -RedirectStandardOutput (Path-In "$Side.$suffix.stdout.log") -RedirectStandardError (Path-In "$Side.$suffix.stderr.log")
++        $runtimeExe = if ($Side -ceq 'two') { $peerExe } else { $exe }
++        $process = Start-Process -FilePath $runtimeExe -ArgumentList @('runtime-from-profile','--profile-file',('"{0}"' -f (Path-In "$Side.profile"))) -WindowStyle Hidden -PassThru -RedirectStandardOutput (Path-In "$Side.$suffix.stdout.log") -RedirectStandardError (Path-In "$Side.$suffix.stderr.log")
+         $runtimeBySide[$Side]=$process
+         Add-Content -LiteralPath $trace -Value "runtime_start side=$Side pid=$($process.Id) log_suffix=$suffix"
+         return $process
+@@ -413,6 +418,7 @@ try {
+     $result = [pscustomobject]@{
+         status='PASS'; scope="real CLI/runtime TLS $Scenario; scheduler delays only committed serialized records";
+         exe=$exe; exe_sha256=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant();
++        runtime_executables=@{one=@{path=$exe;sha256=(Get-FileHash -LiteralPath $exe -Algorithm SHA256).Hash.ToLowerInvariant()};two=@{path=$peerExe;sha256=(Get-FileHash -LiteralPath $peerExe -Algorithm SHA256).Hash.ToLowerInvariant()}};
+         pids=@($processes.Id); context=$context; elected_a=$a; elected_b=$b;
+         text_count=$expected.Count; setup_seconds=$setupSeconds; total_seconds=$watch.Elapsed.TotalSeconds;
+         exchange_seconds=$exchangeSeconds;history_seconds=$watch.Elapsed.TotalSeconds-$historyStarted;vault_commits=$commitSummary;
+diff --git a/crates/kilogram-transport-iroh/tests/local_relay_transport.rs b/crates/kilogram-transport-iroh/tests/local_relay_transport.rs
+new file mode 100644
+index 0000000..76306f0
+--- /dev/null
++++ b/crates/kilogram-transport-iroh/tests/local_relay_transport.rs
+@@ -0,0 +1,100 @@
++use std::{net::Ipv4Addr, time::Duration};
++
++use anyhow::{Context, Result, ensure};
++use iroh::{Endpoint, RelayMode, endpoint::presets};
++use iroh_relay::server::{RelayConfig, Server, ServerConfig};
++use kilogram_protocol::{ClientRequest, ServerResponse};
++use kilogram_transport_iroh::{
++    ALPN, RoutePolicy, SelectedPathKind, await_route_policy, endpoint_builder_for_remote,
++    read_client_request, read_server_response, write_client_request, write_server_response,
++};
++
++#[tokio::test]
++async fn real_local_relay_preserves_adapter_frames_route_policies_and_reconnect() -> Result<()> {
++    tokio::time::timeout(Duration::from_secs(15), async {
++        let mut config = ServerConfig::default();
++        config.relay = Some(RelayConfig::new((Ipv4Addr::LOCALHOST, 0)));
++        let relay = Server::spawn(config).await?;
++        let relay_addr = relay.http_addr().context("loopback relay listener")?;
++        ensure!(relay_addr.ip().is_loopback());
++        let url: iroh::RelayUrl = format!("http://{relay_addr}/").parse()?;
++        let receiver = Endpoint::builder(presets::Minimal)
++            .clear_ip_transports()
++            .relay_mode(RelayMode::custom([url]))
++            .alpns(vec![ALPN.to_vec()])
++            .bind()
++            .await?;
++        receiver.online().await;
++        // Exercise the actual production RelayOnly builder, removing external
++        // address lookup services only in this local test fixture.
++        let sender = endpoint_builder_for_remote(RoutePolicy::RelayOnly, &receiver.addr())?
++            .clear_address_lookup()
++            .bind()
++            .await?;
++        sender.online().await;
++        let mut previous_exporter = None;
++        for round in 0..3_u8 {
++        let (left, right) = tokio::try_join!(
++            async { Ok::<_, anyhow::Error>(sender.connect(receiver.addr(), ALPN).await?) },
++            async {
++                Ok::<_, anyhow::Error>(receiver.accept().await.context("incoming relay")?.await?)
++            },
++        )?;
++        ensure!(left.remote_id() == receiver.id() && right.remote_id() == sender.id());
++        let mut local_exporter = [0; 32];
++        let mut remote_exporter = [0; 32];
++        left.export_keying_material(&mut local_exporter, b"kilogram local relay", b"functional")
++            .map_err(|_| anyhow::anyhow!("local relay exporter"))?;
++        right.export_keying_material(&mut remote_exporter, b"kilogram local relay", b"functional")
++            .map_err(|_| anyhow::anyhow!("remote relay exporter"))?;
++        ensure!(local_exporter == remote_exporter);
++        ensure!(previous_exporter != Some(local_exporter), "reconnect reused a TLS exporter");
++        previous_exporter = Some(local_exporter);
++        for connection in [&left, &right] {
++            for policy in [RoutePolicy::Auto, RoutePolicy::RelayOnly] {
++                ensure!(
++                    await_route_policy(connection, policy, Duration::from_secs(2))
++                        .await?
++                        .kind
++                        == SelectedPathKind::Relay
++                );
++            }
++            ensure!(
++                await_route_policy(
++                    connection,
++                    RoutePolicy::DirectOnly,
++                    Duration::from_millis(100)
++                )
++                .await
++                .is_err()
++            );
++        }
++        let frame = ClientRequest::EndpointAnnouncementPush(vec![round; 8_123]);
++        let response = ServerResponse::EndpointAnnouncementRejected;
++        tokio::try_join!(
++            async {
++                let (mut send, mut receive) = left.open_bi().await?;
++                write_client_request(&mut send, &frame).await?;
++                ensure!(read_server_response(&mut receive).await? == response);
++                Ok::<_, anyhow::Error>(())
++            },
++            async {
++                let (mut send, mut receive) = right.accept_bi().await?;
++                ensure!(read_client_request(&mut receive).await? == frame);
++                write_server_response(&mut send, &response).await?;
++                Ok::<_, anyhow::Error>(())
++            },
++        )?;
++        println!("relay_round={round} exact_adapter_payload=8123 selected=relay peer_identity=verified exporter=symmetric,fresh");
++        left.close(0_u32.into(), b"functional reconnect");
++        right.close(0_u32.into(), b"functional reconnect");
++        }
++        sender.close().await;
++        receiver.close().await;
++        relay.shutdown().await?;
++        Ok::<_, anyhow::Error>(())
++    })
++    .await
++    .context("local adapter relay timeout")??;
++    Ok(())
++}
+diff --git a/scripts/check-dependency-advisories.ps1 b/scripts/check-dependency-advisories.ps1
+new file mode 100644
+index 0000000..c1104b5
+--- /dev/null
++++ b/scripts/check-dependency-advisories.ps1
+@@ -0,0 +1,123 @@
++[CmdletBinding()]
++param(
++    [string]$LockfilePath = 'Cargo.lock',
++    [string]$ManifestPath = 'Cargo.toml',
++    [string]$DatabasePath = '.tmp/transport-security-a2/advisory-db',
++    [string]$DatabaseRevision,
++    [string]$AuditExecutable = 'cargo-audit',
++    [string]$OutputPath = '.tmp/dependency-advisory-gate.json'
++)
++
++Set-StrictMode -Version Latest
++$ErrorActionPreference = 'Stop'
++$workspace = Split-Path -Parent $PSScriptRoot
++$policy = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'dependency-advisory-policy.json') -Raw | ConvertFrom-Json
++if (-not $DatabaseRevision) { $DatabaseRevision = $policy.reviewed_database_revision }
++$summary = [ordered]@{
++    format_version = 1
++    checked_at_utc = [DateTime]::UtcNow.ToString('o')
++    status = 'FAIL'
++    source_advisory = $policy.source_advisory
++    source_version_gate = 'FAIL'
++    database_revision = $DatabaseRevision
++    database_commit_date = $null
++    source_advisory_in_rustsec = $null
++    cargo_audit_version = $null
++    cargo_audit_exit = $null
++    vulnerability_count = $null
++    warning_count = $null
++    registry_checksums = @()
++    findings = @()
++    errors = @()
++    # Yank status is a mutable registry property. Replays use the exact RustSec
++    # git snapshot and lockfile; no advisory or warning is ignored.
++    yanked_check = 'separate from this reproducible advisory snapshot'
++}
++
++function Resolve-InputPath([string]$Path) {
++    if ([IO.Path]::IsPathRooted($Path)) { return (Resolve-Path -LiteralPath $Path).Path }
++    return (Resolve-Path -LiteralPath (Join-Path $workspace $Path)).Path
++}
++function Lock-Field([string]$Block, [string]$Name) {
++    return [regex]::Match($Block, ('(?m)^' + [regex]::Escape($Name) + ' = "([^"]+)"')).Groups[1].Value
++}
++
++try {
++    $lock = Resolve-InputPath $LockfilePath
++    $manifest = Resolve-InputPath $ManifestPath
++    $summary.lockfile_sha256 = (Get-FileHash -LiteralPath $lock -Algorithm SHA256).Hash.ToLowerInvariant()
++    $summary.manifest_sha256 = (Get-FileHash -LiteralPath $manifest -Algorithm SHA256).Hash.ToLowerInvariant()
++    $lockText = Get-Content -LiteralPath $lock -Raw
++    $packages = @([regex]::Matches($lockText, '(?ms)^\[\[package\]\]\r?\n(.*?)(?=^\[\[package\]\]|\z)'))
++    $manifestSection = [regex]::Match((Get-Content -LiteralPath $manifest -Raw), '(?ms)^\[workspace.dependencies\]\r?\n(.*?)(?=^\[|\z)').Groups[1].Value
++    $floor = [regex]::Match($manifestSection, '(?m)^iroh\s*=\s*"[=^~]?(\d+\.\d+\.\d+)"\s*$')
++    $sourceErrors = @()
++    if (-not $floor.Success -or [version]$floor.Groups[1].Value -lt [version]$policy.iroh_minimum) {
++        $sourceErrors += 'Workspace Iroh requirement must have an explicit stable floor >= 1.1.0.'
++    }
++    $cargoRoot = if ($env:CARGO_HOME) { $env:CARGO_HOME } else { Join-Path $env:USERPROFILE '.cargo' }
++    foreach ($name in @('iroh', 'iroh-base', 'iroh-dns', 'iroh-relay')) {
++        $lockedPackages = @($packages | Where-Object { (Lock-Field $_.Value 'name') -ceq $name })
++        if ($lockedPackages.Count -ne 1) { $sourceErrors += "Expected exactly one locked $name package." }
++        foreach ($package in $lockedPackages) {
++            $version = Lock-Field $package.Value 'version'
++            $source = Lock-Field $package.Value 'source'
++            $checksum = Lock-Field $package.Value 'checksum'
++            if ($version -notmatch '^\d+\.\d+\.\d+$' -or [version]$version -lt [version]$policy.iroh_minimum) {
++                $sourceErrors += "Affected or unreviewed $name version: $version"
++            }
++            if ($source -cne 'registry+https://github.com/rust-lang/crates.io-index' -or $checksum -notmatch '^[a-f0-9]{64}$') {
++                $sourceErrors += "Unreviewed source/checksum for $name $version"
++            }
++            $archives = @(Get-ChildItem -Path (Join-Path $cargoRoot "registry/cache/*/$name-$version.crate") -File)
++            if ($archives.Count -eq 0) { $sourceErrors += "Missing registry archive for $name $version; run cargo fetch --locked." }
++            foreach ($archive in $archives) {
++                $actual = (Get-FileHash -LiteralPath $archive.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
++                $summary.registry_checksums += @{package=$name;version=$version;expected=$checksum;actual=$actual;match=($actual -ceq $checksum)}
++                if ($actual -cne $checksum) { $sourceErrors += "Registry checksum mismatch: $name $version" }
++            }
++        }
++    }
++    if ($sourceErrors.Count -eq 0) { $summary.source_version_gate = 'PASS' }
++    $summary.errors += $sourceErrors
++
++    if ($DatabaseRevision -notmatch '^[a-f0-9]{40}$') { throw 'DatabaseRevision must be an exact git commit, not a branch or tag.' }
++    $database = Resolve-InputPath $DatabasePath
++    $actualRevision = & git -C $database rev-parse HEAD
++    if ($LASTEXITCODE -ne 0 -or $actualRevision -cne $DatabaseRevision) { throw 'RustSec database HEAD differs from the requested revision.' }
++    $dirty = @(& git -C $database status --porcelain --untracked-files=all)
++    if ($LASTEXITCODE -ne 0 -or $dirty.Count -ne 0) { throw 'RustSec database must be a clean git checkout.' }
++    $summary.database_commit_date = & git -C $database log -1 --format=%cI
++    $summary.source_advisory_in_rustsec = @(Get-ChildItem -LiteralPath (Join-Path $database 'crates') -File -Recurse -Filter '*.md' |
++        Select-String -SimpleMatch 'GHSA-7cq4-mhxw-xw78' -List).Count -gt 0
++    $audit = (Get-Command $AuditExecutable -ErrorAction Stop).Source
++    $summary.cargo_audit_version = (& $audit --version) -join ''
++    if ($LASTEXITCODE -ne 0 -or $summary.cargo_audit_version -cne "cargo-audit $($policy.cargo_audit_version)") { throw 'Install the exact cargo-audit version from dependency-advisory-policy.json.' }
++    $auditText = @(& $audit audit --db $database --no-fetch --no-yanked --deny warnings --file $lock --json)
++    $summary.cargo_audit_exit = $LASTEXITCODE
++    $report = ($auditText -join "`n") | ConvertFrom-Json
++    $summary.vulnerability_count = [int]$report.vulnerabilities.count
++    if ($report.vulnerabilities.count -gt 0) {
++        foreach ($finding in @($report.vulnerabilities.list)) {
++            $summary.findings += @{kind='vulnerability';id=$finding.advisory.id;package=$finding.package.name;version=$finding.package.version;patched=@($finding.versions.patched);url="https://rustsec.org/advisories/$($finding.advisory.id).html"}
++        }
++    }
++    foreach ($warning in $report.warnings.PSObject.Properties) {
++        foreach ($finding in @($warning.Value)) {
++            $summary.findings += @{kind=$warning.Name;id=$finding.advisory.id;package=$finding.package.name;version=$finding.package.version;patched=@($finding.versions.patched);url="https://rustsec.org/advisories/$($finding.advisory.id).html"}
++        }
++    }
++    $summary.warning_count = @($summary.findings | Where-Object { $_.kind -cne 'vulnerability' }).Count
++    if ($summary.cargo_audit_exit -ne 0 -or $summary.findings.Count -ne 0) {
++        $summary.errors += 'RustSec findings remain; inspect findings and classify reachability. No ignore list is used.'
++    }
++    if ($summary.errors.Count -eq 0) { $summary.status = 'PASS' }
++} catch { $summary.errors += $_.Exception.Message }
++
++$output = if ([IO.Path]::IsPathRooted($OutputPath)) { $OutputPath } else { Join-Path $workspace $OutputPath }
++[void](New-Item -ItemType Directory -Path (Split-Path -Parent $output) -Force)
++$json = $summary | ConvertTo-Json -Depth 10
++$json | Set-Content -LiteralPath $output -Encoding utf8
++Write-Output $json
++if ($summary.status -cne 'PASS') { exit 1 }
++exit 0
+diff --git a/scripts/dependency-advisory-policy.json b/scripts/dependency-advisory-policy.json
+new file mode 100644
+index 0000000..f3c3fb4
+--- /dev/null
++++ b/scripts/dependency-advisory-policy.json
+@@ -0,0 +1,10 @@
++{
++  "format_version": 1,
++  "cargo_audit_version": "0.22.2",
++  "reviewed_database_revision": "84d943a6deeb8cc6c6f632531aaf4f1c62275239",
++  "reviewed_at": "2026-10-23",
++  "iroh_minimum": "1.1.0",
++  "source_advisory": "https://github.com/n0-computer/iroh/security/advisories/GHSA-7cq4-mhxw-xw78",
++  "source_affected_range": ">=0.91.0, <=1.0.3",
++  "source_patched_version": "1.1.0"
++}

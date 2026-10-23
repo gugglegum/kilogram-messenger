@@ -1,0 +1,51 @@
+[
+  {
+    "raw_path": ".tmp\\transport-security-a2\\cli-ordered-tests.log",
+    "raw_sha256": "4be36790780ed022781b1a188725c92bb6cfc806af2cdc855f2ffa3735426cef",
+    "public_path": "ai-docs\\tasks\\transport-security-a2-evidence\\cli-ordered-tests.log",
+    "public_sha256": "a40ce464809364c527c8aa7c66e9203a2b82eb216ee5bd5d51917d817f059f89",
+    "normalization": "LF and trailing whitespace only; raw local log retained"
+  },
+  {
+    "raw_path": ".tmp\\transport-security-a2\\final-components.log",
+    "raw_sha256": "88234f8f98b66ffea20c62ec53a9c2bc40cec7494de39a340597c5a3a62bfee1",
+    "public_path": "ai-docs\\tasks\\transport-security-a2-evidence\\components-partial.log",
+    "public_sha256": "73c928213105ee080c03fa84288415cfa434d274faabc77a94bdbbc4bb3e269d",
+    "normalization": "LF and trailing whitespace only; raw local log retained"
+  },
+  {
+    "raw_path": ".tmp\\transport-security-a2\\relay-baseline.log",
+    "raw_sha256": "d9d20fe8bf98463268c4c26d445789397a54c3923cc0a37c476f529dc1ba09ec",
+    "public_path": "ai-docs\\tasks\\transport-security-a2-evidence\\pre-interruption-affected.log",
+    "public_sha256": "a295bc3f1f68b7d76292c3a7714a8942e049a652f43f76b564e68a920c3f4df4",
+    "normalization": "LF and trailing whitespace only; raw local log retained"
+  },
+  {
+    "raw_path": ".tmp\\transport-security-a2\\transport-tests.log",
+    "raw_sha256": "5671b0071eeb9cd3b62920beda6b4d47e6e3ed4c13a376013c799bbebbf7d7d5",
+    "public_path": "ai-docs\\tasks\\transport-security-a2-evidence\\pre-interruption-transport.log",
+    "public_sha256": "2af82e3ca27f4cc0456507e460199f307723a1b7ef72f5cff57dca5b7852816a",
+    "normalization": "LF and trailing whitespace only; raw local log retained"
+  },
+  {
+    "raw_path": ".tmp\\transport-security-a2\\protocol-ordered.log",
+    "raw_sha256": "1fa15671124d0e0f08c8044cb15caddfbc4ca24ebe30404a0951584cb1857842",
+    "public_path": "ai-docs\\tasks\\transport-security-a2-evidence\\protocol-ordered.log",
+    "public_sha256": "6088a77952536cc2bc1fb5be001a5baa5c0bd37c0978d58260f9b7150fea437c",
+    "normalization": "LF and trailing whitespace only; raw local log retained"
+  },
+  {
+    "raw_path": ".tmp\\transport-security-a2\\protocol-wire.log",
+    "raw_sha256": "69168bec3016e10d365261dacc4f9508dc39a938191609d5dc219584eedd7f98",
+    "public_path": "ai-docs\\tasks\\transport-security-a2-evidence\\protocol-wire.log",
+    "public_sha256": "99ac06091eef15ea0373f48b52066a81395037ae3080f79e9c090fbdcbbf6c95",
+    "normalization": "LF and trailing whitespace only; raw local log retained"
+  },
+  {
+    "raw_path": ".tmp\\transport-security-a2\\final-transport-session-ratchet.log",
+    "raw_sha256": "2d313e6a5da2a23874bd2b972fbb131bdcec5de78c5db360ecb7bfadeb62c4ea",
+    "public_path": "ai-docs\\tasks\\transport-security-a2-evidence\\transport-session-ratchet.log",
+    "public_sha256": "d47c266268b2507d7c7931172048eaaaad600fb1bf7c1deeb416bcaeaaef5505",
+    "normalization": "LF and trailing whitespace only; raw local log retained"
+  }
+]

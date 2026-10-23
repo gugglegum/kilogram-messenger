@@ -1,0 +1,26 @@
+{
+  "head": "bc86cd25518077cef8977522e0c750f3bee2c0d7",
+  "model": "gpt-6.1-sol",
+  "effort": "max",
+  "configured_service_tier": "default",
+  "runtime_tier_not_recorded": true,
+  "timestamp_utc": "2026-10-23T18:42:22.7765922Z",
+  "files": [
+    {
+      "path": "Cargo.toml",
+      "sha256": "f0aed55d818a4926c449c215af586d253f5c05be918a4937b68c542ee6307d8c"
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "d978b4c7380c476a0af67e705452349bc372c6cc78f2747d8b5c181634b93a71"
+    },
+    {
+      "path": "ai-docs/development-environment.md",
+      "sha256": "330ad3c4d1941b213e7e5bef958416a6847d3defb8e368f79d6d21c944efe798"
+    },
+    {
+      "path": "target/field-tests/transport-a2/baseline/kilogram-cli.exe",
+      "sha256": "3f42245b899e678c423b3137b5d99dc225cb0c2bc36d99b5bfa99daf506a6626"
+    }
+  ]
+}

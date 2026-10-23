@@ -1,6 +1,6 @@
 # Память проекта Kilogram
 
-Актуально на: 2026-10-23.
+Актуально на: 2026-10-24.
 
 Текущая компактная передача состояния, границы active/dormant/planned,
 корректировки архитектурного аудита и три ближайших product-приоритета:
@@ -39,10 +39,22 @@ C1–C3 [принят повторным review](tasks/lossless-sync-a1-bidirect
 [приняты после repair/review2](tasks/lossless-sync-a1-bidirectional-implementation-review-2.md).
 R1–R4 закрыты: consent renewal, interrupted creation, lifetime exhaustion и genesis
 metadata. Независимые финальные components6/6 прошли; prior full64/DH/kill/reopen
-и новые duplex64/reopen подтверждены с явными fingerprints. Следующий шаг —
-commit/push принятого diff тем же исполнителем и сверка оркестратором.
+и новые duplex64/reopen подтверждены с явными fingerprints. Код сохранён в
+`f80aabc30c5a9406ce147b96ed27c2ede5801697`, docs/evidence — в
+`bc86cd25518077cef8977522e0c750f3bee2c0d7`; push и706 committed blobs независимо сверены.
 Fresh-only/L1, loopback two-process и ручной обмен locator остаются ограничениями;
 внешний/daily MVP и весь A1 ещё не готовы, A2 gate сохраняется.
+
+Следующий выбранный этап — [A2: Iroh security upgrade и transport regressions](tasks/transport-security-a2-task.md).
+Пользователь разрешил выбор направления и отдельного исполнителя; GPT-6.1 Sol Max,
+обычный tier default без Fast. [Поддерживающая реализация](tasks/transport-security-a2-implementation.md)
+[принята независимым review](tasks/transport-security-a2-implementation-review-1.md):
+Iroh stack1.1.0, совместимые security patches,94 адресных tests,
+обычный local relay/reconnect и реальные OD1 upgrade/old-new checks. Advisory gate
+показывает0 vulnerability records и7 предупреждений, оставаясь FAIL. Конкретная
+security runtime regression отложена после safeguard: **весь A2 не закрыт**.
+Root повторил11 transport tests, mixed old/new duplex64 и reopen272 hashes.
+Следующий шаг — commit/push принятой поддерживающей части и сверка committed tree.
 
 Независимый обзор архитектуры и пути до пользовательского MVP на ревизии
 `3e82e63`: [аудит 2026-10-22](reviews/2026-10-22-architecture-mvp-audit.md).

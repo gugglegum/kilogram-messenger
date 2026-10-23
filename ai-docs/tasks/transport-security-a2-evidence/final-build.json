@@ -1,0 +1,13 @@
+{
+  "built_at_utc": "2026-10-23T19:22:29.9380872Z",
+  "head": "bc86cd25518077cef8977522e0c750f3bee2c0d7",
+  "executable": "target/field-tests/ordered-dialog/kilogram-cli.exe",
+  "executable_sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+  "manifest_sha256": "b8a0c6695826cd38d27ddb15c6c2d6aa77ca2e67ee61009554e55a785179e3d6",
+  "lockfile_sha256": "86e2dfeaac31a176842107cb838db95433b31bacb28c6886718cf64d801c8547",
+  "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)",
+  "cargo": "cargo 1.98.0 (797e8a9bc 2026-08-05)",
+  "profile": "verification",
+  "cargo_jobs": 2,
+  "priority": "BelowNormal"
+}

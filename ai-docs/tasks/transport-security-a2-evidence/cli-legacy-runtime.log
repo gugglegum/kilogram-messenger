@@ -1,0 +1,12 @@
+Public allowlisted excerpt; full local output remains in ignored .tmp.
+raw_sha256=3237ee0152c13fa3d79275be282766502bcc31dc7975eefe525cc89354c8eeb4
+filter=runtime_outbox_delivers_and_automatic_sync_converges
+cargo_process_priority=below-normal
+cargo_jobs=2
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 111 filtered out; finished in 69.33s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+status=passed
+cargo_process_priority=below-normal
+cargo_jobs=12

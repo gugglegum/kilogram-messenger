@@ -1,0 +1,403 @@
+{
+  "format_version": 1,
+  "created_at_utc": "2026-10-23T19:54:24.7714103Z",
+  "baseline_head": "bc86cd25518077cef8977522e0c750f3bee2c0d7",
+  "scope": "Complete candidate excluding this derived hash index; full review.patch excludes itself and this index",
+  "full_patch_reverse_check": "PASS",
+  "code_patch_reverse_check": "PASS",
+  "full_patch_file_coverage": "PASS",
+  "patch_file_count": 73,
+  "source_verification": {
+    "source_files": 1080,
+    "source_drift": 0,
+    "checked_local_links": 33,
+    "pending_generated_link": [],
+    "model": "gpt-6.1-sol",
+    "effort": "max",
+    "configured_tier": "default",
+    "runtime_tier_override": null,
+    "callback_human_authorization_verified": [
+      "01a1657e-b03f-7d01-aaf0-e5af979125fd",
+      "01a16568-4515-7420-b3af-32d6fc0bfeb4"
+    ]
+  },
+  "process_cleanup": {
+    "checked_at_utc": "2026-10-23T19:53:24.0049834Z",
+    "owned_test_or_field_processes_remaining": [],
+    "no_owned_processes": true
+  },
+  "sensitive_machine_evidence_candidates": 0,
+  "excluded_foreign_path": "ai-docs/development-environment.md",
+  "files": [
+    {
+      "path": ".github/workflows/windows-ci.yml",
+      "bytes": 3465,
+      "sha256": "0c10653b484be20d8b748caf211a5a5bc8554bedd6d9fa7e556c1d30512a5ac0"
+    },
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "bytes": 27605,
+      "sha256": "0db4596d6104c9c4b951241ba62d5cb780c50a77a5f850eb2a40b9a09289badc"
+    },
+    {
+      "path": "ai-docs/README.md",
+      "bytes": 144214,
+      "sha256": "8612d70e8132e97d932ffb6e69fe9f85b14a83e147a98aaeb902b128f61850c2"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/advisory-classification.md",
+      "bytes": 5156,
+      "sha256": "9e2dc6e32fdf12990b6c8e067a5ced2976e7b54889f6dd0470fd63414a9a02bc"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/advisory-gate-after.json",
+      "bytes": 6812,
+      "sha256": "f2d778f46669ab7969c4d8d5b25a4939e48ad6c52b41fb4889d88a8d9dd81a0a"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/advisory-gate-before.json",
+      "bytes": 7111,
+      "sha256": "b43c643d9ed7a989153e24ad41ceb26d3e1ca306df89f022ca2dd9303863017c"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/advisory-gate-final.json",
+      "bytes": 3655,
+      "sha256": "231e24738cb9c8f537cf417cff3046c46f2e1f9f7e62fbe66a3a4a5fcc8a8ceb"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/advisory-gate-negative-checks.json",
+      "bytes": 1944,
+      "sha256": "17f95d336d5011ef0f6bb17e0989f6c838241fb3cc00379379af05498900e255"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/advisory-reachability.txt",
+      "bytes": 2275,
+      "sha256": "3d35287992d567397aee1c95e008650cc3565a2f6b011e04820cc3ed9fc799f2"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/baseline.json",
+      "bytes": 840,
+      "sha256": "384c637ecd4af77d8c6d5b5cf920fe9bb5dc80c24692c821b35f337dbc5816f3"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/broad-protocol-interruption.json",
+      "bytes": 314,
+      "sha256": "4225ac4f6762dd867bdcfe80883b94c032b0d29a0aecc8ba9e722ee8fe98850b"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/build-environment.json",
+      "bytes": 699,
+      "sha256": "5c9a42d3f315d1bd86a4221d24470b2ad9c4221e1d94f6b731b101e58a9a723b"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/build-final.log",
+      "bytes": 4898,
+      "sha256": "459a5db295e7ca7bb371f7966fb8ad16a434e9cdbc9dd8e9360175a3a15d4af8"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/cli-legacy-runtime.log",
+      "bytes": 775,
+      "sha256": "325a6d8b0f78d94dc11cac8e09ac0eded4c8ecd02443b0623a25e0a51c07f21f"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/cli-ordered-tests.log",
+      "bytes": 9320,
+      "sha256": "a40ce464809364c527c8aa7c66e9203a2b82eb216ee5bd5d51917d817f059f89"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/clippy-wrapper-forwarding-failure.log",
+      "bytes": 194,
+      "sha256": "bba28573238f715d3337c844996c148c53d29f24d41ebc1f8b910d6cc9cf530b"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/clippy.log",
+      "bytes": 10344,
+      "sha256": "5e42151688edba93315e57f403221dd6a467dcf665b303d5c1b63ab1e9491b25"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/commands.md",
+      "bytes": 6964,
+      "sha256": "54d7b51d7bc875c0425b260cb3a270d6069d990f25dd737f9b7ec8ead84bbca6"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/components-partial.log",
+      "bytes": 9055,
+      "sha256": "73c928213105ee080c03fa84288415cfa434d274faabc77a94bdbbc4bb3e269d"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/deferred-security-regression.json",
+      "bytes": 1724,
+      "sha256": "69b2223a1d015bc78c9b5fc00de0451b26a0a86a8cd2c37c607f382e34886515"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/final-build.json",
+      "bytes": 636,
+      "sha256": "37655b54a2f8feced9f4e04e72769fc13527dd0051e2ff3fde69e2179eb97387"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/final-checks.json",
+      "bytes": 4148,
+      "sha256": "e20ef799429eac661740a40694c632becae2af579ebe3a8f29c5b8052efaca15"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/frozen-source-manifest.json",
+      "bytes": 211104,
+      "sha256": "0d5d19c9d970490569c290df48f31d822106c00b942b7c4d89c105fdd3878706"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/lockfile-changes.json",
+      "bytes": 8469,
+      "sha256": "b71d45b9a25fd4cae140bd8e2788d3ae1776c330e6f10b6e4086379bd6554285"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/lockfile-summary.json",
+      "bytes": 2167,
+      "sha256": "d9b132751239111db3b284e23ee5dee38224724650e0cc8b619eb02ea1151423"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/log-provenance.json",
+      "bytes": 3053,
+      "sha256": "193d7e1d9af995c21f5e76b48322b48dddb139803fe0990ecd4e7303872880e2"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/pre-interruption-affected.log",
+      "bytes": 13767,
+      "sha256": "a295bc3f1f68b7d76292c3a7714a8942e049a652f43f76b564e68a920c3f4df4"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/pre-interruption-transport.log",
+      "bytes": 3109,
+      "sha256": "2af82e3ca27f4cc0456507e460199f307723a1b7ef72f5cff57dca5b7852816a"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process-run-index.json",
+      "bytes": 6759,
+      "sha256": "3aca94edbc213e046849e9ceffb71747f6e4cc43b3ef2cf038245d9d1898c1a9"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/baseline-duplex-native/a2-upgrade-reopen-result.json",
+      "bytes": 509,
+      "sha256": "4d23a4d10bb75215fe1655ffa64bab84fea00d9176f8d476a0f00ecc0a422ec6"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/baseline-duplex-native/one.history.json",
+      "bytes": 16207,
+      "sha256": "24773404602fb34262e2bd75c53ecde6900b398292b65baf1342243f470f957d"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/baseline-duplex-native/result.json",
+      "bytes": 2756,
+      "sha256": "036126012274395e7a8954cc876c94d2c5f8f6c4c72ebc8b5eee7cf1ebb1f19f"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/baseline-duplex-native/two.history.json",
+      "bytes": 16207,
+      "sha256": "24773404602fb34262e2bd75c53ecde6900b398292b65baf1342243f470f957d"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/final-duplex/one.history.json",
+      "bytes": 16207,
+      "sha256": "87b5c2b645e39cc5010ceabcc3613d3fdd6112e2d3b0de5d6537c20758f94545"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/final-duplex/reopen-result.json",
+      "bytes": 509,
+      "sha256": "a5a7a1e6fa48054b1ebd319678c3578416cbc2d0e1cfcb59c9d09a46fa95fe4e"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/final-duplex/result.json",
+      "bytes": 3208,
+      "sha256": "200a6acf16bef4f9d0e2d14c74640350a8d86047e676f80d990ab322935710b9"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/final-duplex/two.history.json",
+      "bytes": 16207,
+      "sha256": "87b5c2b645e39cc5010ceabcc3613d3fdd6112e2d3b0de5d6537c20758f94545"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/final-gap/full64-before-kill.json",
+      "bytes": 619,
+      "sha256": "adc80c0bced0fec0fb981264097946235c84256f6ad81082548e25156ec174e3"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/final-gap/one.history.json",
+      "bytes": 16993,
+      "sha256": "777d6d8a78463080980f2174b95a87b19b9fd4a15380f96fcaeec13aead23890"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/final-gap/prefix-progress.log",
+      "bytes": 1960,
+      "sha256": "e7eca0a31a4a8a4252197ff171c8aa6765111dc43e44328022f5247902da5d0b"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/final-gap/result.json",
+      "bytes": 3202,
+      "sha256": "27d740c9ccba6951906d0aaf5cf06bbf9abfcb864c4999bbb99ec27bbfe0cd9f"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/final-gap/two.history.json",
+      "bytes": 16993,
+      "sha256": "777d6d8a78463080980f2174b95a87b19b9fd4a15380f96fcaeec13aead23890"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/final-partial/full64-before-kill.json",
+      "bytes": 619,
+      "sha256": "1070b99d566b59c46f1c818ef1d0712c03167d4bffb263a3ad411948087e12e1"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/final-partial/one.history.json",
+      "bytes": 20552,
+      "sha256": "371722131447927c960307ccfec11d9bc358a061328215275706d6b66f510853"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/final-partial/prefix-progress.log",
+      "bytes": 1681,
+      "sha256": "75283313d16f8086bee7bebca0b024b7877b819ed0dbd85a281bd688c399d424"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/final-partial/result.json",
+      "bytes": 3212,
+      "sha256": "9554c49c06ca85dff7be3e17957d9d9b9ce084fba990a220302a6e04c8c3212d"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/final-partial/two.history.json",
+      "bytes": 20552,
+      "sha256": "371722131447927c960307ccfec11d9bc358a061328215275706d6b66f510853"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/mixed-duplex/one.history.json",
+      "bytes": 16207,
+      "sha256": "fc59ccb22cc6b54e1a6d6cafc2c2479f6e381263312c54f3093cc65c80158ebe"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/mixed-duplex/reopen-result.json",
+      "bytes": 508,
+      "sha256": "007db5f5f5231bb605c011f623b6655f552efec74f1981d51d645ddda5d72fe8"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/mixed-duplex/result.json",
+      "bytes": 3224,
+      "sha256": "bb4fe4cf29b2c3edd3fb01b1b2635c2991a90083ee417bf2eac73e4f924c2c68"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/process/mixed-duplex/two.history.json",
+      "bytes": 16207,
+      "sha256": "fc59ccb22cc6b54e1a6d6cafc2c2479f6e381263312c54f3093cc65c80158ebe"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/protocol-ordered.log",
+      "bytes": 3343,
+      "sha256": "6088a77952536cc2bc1fb5be001a5baa5c0bd37c0978d58260f9b7150fea437c"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/protocol-wire.log",
+      "bytes": 4902,
+      "sha256": "99ac06091eef15ea0373f48b52066a81395037ae3080f79e9c090fbdcbbf6c95"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/registry-checksums.json",
+      "bytes": 8212,
+      "sha256": "c9a5f52e9a4d6cc75dd4fd6d8058ec0ac71d128c3aad6ebab6626af47270bebd"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/release-review.json",
+      "bytes": 567,
+      "sha256": "80a5253e933bc29bc0ce2f80d2c96953fd851aac04fc7b549766466dc8db6724"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/review-code.patch",
+      "bytes": 46536,
+      "sha256": "7c506febccd357286d2bc06de935bf2132be8286f201a657ba55241baf98c28e"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/review.patch",
+      "bytes": 728804,
+      "sha256": "e45587ee97d8e2c262708529b363f4a1c95c3b7c2397374069c9d09ed79927b8"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/test-results.json",
+      "bytes": 3914,
+      "sha256": "9f2f44df4331da1bc3af5cf336cf011035d418f024678b7e3d59450baf7b3501"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/transport-session-ratchet.log",
+      "bytes": 7762,
+      "sha256": "d47c266268b2507d7c7931172048eaaaad600fb1bf7c1deeb416bcaeaaef5505"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/tree-after-iroh.txt",
+      "bytes": 1372,
+      "sha256": "928f9868781bef3cc8cc48e42e218a92d4f985049a2b22787926af232b0b1e4b"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/tree-before-iroh.txt",
+      "bytes": 558,
+      "sha256": "9691362f14ef8947d095ccb8b84bb1edcf792ea90571a104272dde7ecf9d35b5"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/tree-final-ctutils.txt",
+      "bytes": 16132,
+      "sha256": "0f80e5cd86fc5e6f2457b9a0a112938eea7023ed42c764672361c87301a0f912"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/tree-final-production-relay-features.txt",
+      "bytes": 1157,
+      "sha256": "73a134aaa148b61c4fc8ee26f80ced50d34a639f4783d1d1280f4ddae5e37387"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/upstream-all-advisories.json",
+      "bytes": 1861,
+      "sha256": "7f0be634b8ecb8a075c87e08e57d367d7e5556fedbafb5965968abedd5e864c8"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-evidence/upstream.json",
+      "bytes": 2270,
+      "sha256": "3be2eb5039eda0e01e68ca8796bc9d8f5c6ed7f66a37d5a464a6cca6c8bd8985"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-implementation.md",
+      "bytes": 17407,
+      "sha256": "278d0b0cb2a48319353459ac6a9d4da6dae1cc9b0d9a0e8b411871e2acde8876"
+    },
+    {
+      "path": "ai-docs/tasks/transport-security-a2-task.md",
+      "bytes": 14361,
+      "sha256": "2280bfa3cb7d44190cb3216046f72336e5b6d1cb7e11872c0403ea2bd875d21f"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 194126,
+      "sha256": "86e2dfeaac31a176842107cb838db95433b31bacb28c6886718cf64d801c8547"
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 3201,
+      "sha256": "b8a0c6695826cd38d27ddb15c6c2d6aa77ca2e67ee61009554e55a785179e3d6"
+    },
+    {
+      "path": "crates/kilogram-transport-iroh/Cargo.toml",
+      "bytes": 644,
+      "sha256": "d4b0a5097f0d54a76a65dd52e0a64d26d75a93537ff595a7b31485a25f7029e4"
+    },
+    {
+      "path": "crates/kilogram-transport-iroh/tests/local_relay_transport.rs",
+      "bytes": 4564,
+      "sha256": "b2f6d19b2a9c555dabf656a4fe532e3d5bb135b16756476257b32579d8c709dd"
+    },
+    {
+      "path": "scripts/check-dependency-advisories.ps1",
+      "bytes": 7527,
+      "sha256": "a845e600ad8b5245563a2256969699cbb360865276b1dd94bf80ab3cd74332e9"
+    },
+    {
+      "path": "scripts/dependency-advisory-policy.json",
+      "bytes": 380,
+      "sha256": "6216b460f9058af796c8069285fedba5ee42638873586f9c255271938945b2ad"
+    },
+    {
+      "path": "scripts/test-ordered-dialog-process.ps1",
+      "bytes": 33180,
+      "sha256": "de23a08dca8e8cf444a1e0dd66602db6d970b61db357c440130e4cc11b72b071"
+    }
+  ]
+}

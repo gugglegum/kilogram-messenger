@@ -1,0 +1,6 @@
+{
+  "reason": "Stop unneeded broad protocol corpus; retain completed crypto/identity results and run transport-relevant filters",
+  "pid": 44160,
+  "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-protocol-lib-kilogram_protocol-tests.exe",
+  "cpu_seconds": 155.328125
+}

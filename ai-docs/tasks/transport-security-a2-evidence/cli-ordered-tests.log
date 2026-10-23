@@ -1,0 +1,145 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-crypto v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-crypto)
+   Compiling kilogram-ticket-publication v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ticket-publication)
+   Compiling kilogram-identity v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-identity)
+   Compiling kilogram-mailbox v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox)
+   Compiling kilogram-sync-capability v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-sync-capability)
+   Compiling kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+   Compiling kilogram-peer-capability-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-capability-store)
+   Compiling kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+   Compiling kilogram-peer-reenrollment v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment)
+   Compiling kilogram-peer-reenrollment-acceptance v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-acceptance)
+   Compiling kilogram-peer-reenrollment-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-runtime)
+   Compiling iroh-relay v1.1.0
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+   Compiling kilogram-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-store)
+   Compiling kilogram-peer-history-recovery v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery)
+   Compiling kilogram-peer-history-recovery-consent v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-consent)
+   Compiling iroh v1.1.0
+   Compiling kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+   Compiling kilogram-session v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-session)
+   Compiling kilogram-runtime-ipc v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-runtime-ipc)
+   Compiling kilogram-publication-conflict v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-publication-conflict)
+   Compiling kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+   Compiling kilogram-rollout v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-rollout)
+   Compiling kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+   Compiling kilogram-ticket-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-ticket-store)
+   Compiling kilogram-peer-reenrollment-staging v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-staging)
+   Compiling kilogram-mailbox-provisioning v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-provisioning)
+   Compiling kilogram-mailbox-client v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-client)
+   Compiling kilogram-offline v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-offline)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1m 05s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+skipping_unchanged_test=ordered_dialog::repair_tests::review_r3_engine_ipc_lifetime_capacity_reopen_receive_and_repair
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 6 tests
+test ordered_dialog::ratchet::tests::ordered_full_lifetime_native_snapshot_and_max_text_stay_within_encoded_caps ... OD1 maximal encoded event_bytes=4978 selected_blob_bytes=37749 lifetime_frames_per_lane=512
+ok
+test ordered_dialog::ratchet::tests::ordered_late_tail_64_gap_and_forged_transition_never_skip_native ... ok
+test ordered_dialog::repair_tests::review_r1_renewal_before_offer_and_historical_selection ... account_id=54f310060894922f29240d838df3a6b9041a248752f73486889fd2d49a5fb523
+device_id=1e02896c6fcc0b839bfb80d0f975da1b8e436484757e5b69c8b8cbce102536d8
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=646a0ae3afd7b7a1da8ac8656555a92eb42bce3a2900eeda8483b527b13f67b0
+device_id=e1dd361f014a5084be317ffab221ef85586e7821293d3d534c0cbc2f1ba08168
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+review_r1 selected_at=0 renewal_restart=PASS
+account_id=4ebca10a60929f14ec86c581c12a036e15887d127dc97550c2f88e611cdd6cca
+device_id=0e8acc74e64574fb8e175391b330cd2050e2cd774b292ad59a8d325deceaf00f
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=3bb57dd6682e7feee44d4ef4826c9f39f620d22d8afe1d5c8e9646181eec06d9
+device_id=99e5668bd8f484ebffb318fb2948671f960d75a90963d5f838111dfdad24a88d
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+review_r1 selected_at=1 renewal_restart=PASS
+account_id=28dc49932a89f57775561e2b52cbe84793ad8b9d7ae1f620cf03d30fc34960c9
+device_id=eebe04e396323b0f7fdbb01cc08beb1cee846e3dbcf58091ee3de7ef93659af7
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=a91cc17c5ad486f0647be04ce1261aa541751d642190802beb534935f3634284
+device_id=764a4884d4ab45f7fadefe144124dc312fbc80ec6d4bdaffe3d12a4186295304
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+review_r1 selected_at=2 renewal_restart=PASS
+account_id=483ac74a4d3f44729e9230b9f9af7bf08c764d4da2b47e7c125709321380ba68
+device_id=390e497df2ec7349560d39c3f21bbf8d978d07b3a01fbd9665c96f8e5a8f7e0d
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=c983d94709cefa33ffbb9dc6f2cd95ba9c9f96224e51dc6a90a82727f589a5fe
+device_id=aa9153f01eaed393b5d3551148e8f9d80738862df85ac6d89984e67da6194662
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+review_r1 selected_at=3 renewal_restart=PASS
+account_id=258404ad471e53c13ec284a396b113ffe179abec4709f263541277829e3830cf
+device_id=3cae3bfc3f9eb19be885950942fa1c9f69f487d6c01c006bf07430bcbcc0b8f7
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=54e7340c4219d50a4c83c735ced7abd61864d41779f6d6ca0d728f5e78846279
+device_id=4fdc6971d47afdd820567d5eae5333d9e0ec538986c4053faf0deccbd06e3d46
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+ok
+test ordered_dialog::repair_tests::review_r2_fence_only_refused_and_durable_claim_resumes_same_keys ... account_id=daaf55fee5ea52aa9ef4340e997d4a058e483691c8950d2f7549ed026b6f98c3
+device_id=02ad135c39d415c40c7053e63f3f4c2e18343ed40e73da96d33abeeb070396d9
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=daaf55fee5ea52aa9ef4340e997d4a058e483691c8950d2f7549ed026b6f98c3
+device_id=3a96600974a8f2a0e502149be3cea3ad9d1a92e9d4f125b0909d52d12a9cd495
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+review_r2 fence_only_same_different=CreationConflict durable_resume_same_keys=PASS normal_reopen=PASS
+ok
+test ordered_dialog::repair_tests::review_r4_self_consistent_genesis_request_and_user_parents_refused ... account_id=fc8e764f806d444823dd31ef9376f252a3d1bc5606330f47b35e4c1508d5d40a
+device_id=af1ee13404c462736e2d452d7d78a41aa5d54aee73e1e67a0a630559d815c1a8
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=abe7f3cb71342341c36cd094f3ae29b725dd4fb3da19cd1b563ec8390b71c2a7
+device_id=cd24a4fb78388fdb522fac0499a41cff2a23f5ae16615ba272d49ea7e5525fde
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+review_r4 real_native_inner_outer wrong_request_and_parents_init_confirm=refused original_after_reject=PASS
+ok
+test ordered_dialog::state::tests::ordered_pre_session_blobs_need_no_future_ids_and_reject_swaps ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 40.13s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      12848  8.97
+release            5111  1.74
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=57023
+target_gib=63.45
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations,
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

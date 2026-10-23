@@ -1,0 +1,98 @@
+{
+  "status": "PASS",
+  "scope": "real CLI/runtime TLS Gap; scheduler delays only committed serialized records",
+  "exe": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\field-tests\\ordered-dialog\\kilogram-cli.exe",
+  "exe_sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+  "runtime_executables": {
+    "one": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\field-tests\\ordered-dialog\\kilogram-cli.exe",
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    },
+    "two": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\field-tests\\ordered-dialog\\kilogram-cli.exe",
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    }
+  },
+  "pids": [
+    53864,
+    58728
+  ],
+  "context": "31b66dc72beee0c79cc608744e2a8116cbda738db9ea99d30d47937505e25dca",
+  "elected_a": {
+    "side": "two",
+    "account": "693856469bc56e8bf570d04d33c4659d10402c477d9a9ce5c7cdf33d8fc5bc4b",
+    "device": "3274437547f59e7f567deb9f6acd3f66ebdd624c9e59e12f0ac75dd9518d249f"
+  },
+  "elected_b": {
+    "side": "one",
+    "account": "cc1a79d42f608d71b678c841f2919ca8d1efd0a346058929b232424e1f7e6f6d",
+    "device": "9446ece84bbd1e2e2276598d548575f0d6f7219e7f56c2900ec8e3388bff2bf7"
+  },
+  "text_count": 67,
+  "setup_seconds": 4.9291621,
+  "total_seconds": 79.3610197,
+  "exchange_seconds": 70.3603793,
+  "history_seconds": 4.071476899999993,
+  "vault_commits": {
+    "count": 312,
+    "native_count": 83,
+    "delta_max_bytes": 195832.0,
+    "delta_total_bytes": 26876665.0,
+    "p95_ms": 90.868,
+    "p50_ms": 45.217
+  },
+  "vault_file_bytes": [
+    847872,
+    823296
+  ],
+  "crash_point": "",
+  "immutable_reopen_records_checked": 11,
+  "queue_p50_ms": 176.65580000000045,
+  "queue_p95_ms": 274.3188999999984,
+  "final_one": {
+    "commits": 24,
+    "contexts": [
+      {
+        "context": "31b66dc72beee0c79cc608744e2a8116cbda738db9ea99d30d47937505e25dca",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 13,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 1,
+        "peer_generation": 2,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 67,
+        "send_next": 2,
+        "session_id": "KjTPFKN/Cwyl3tgXS1Z+WcNwQgdg41b5ueV1myGAxWQ",
+        "status": "Active",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  },
+  "final_two": {
+    "commits": 211,
+    "contexts": [
+      {
+        "context": "31b66dc72beee0c79cc608744e2a8116cbda738db9ea99d30d47937505e25dca",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 70,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 2,
+        "peer_generation": 1,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 2,
+        "send_next": 67,
+        "session_id": "KjTPFKN/Cwyl3tgXS1Z+WcNwQgdg41b5ueV1myGAxWQ",
+        "status": "Active",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  }
+}

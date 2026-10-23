@@ -1,0 +1,64 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1.28s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-relay_batch-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+
+running 10 tests
+test ordered::tests::ordered_alpn_does_not_downgrade_to_a_real_legacy_peer ... ok
+test ordered::tests::ordered_exporter_is_symmetric_and_changes_on_real_reconnect ... ok
+test tests::bidirectional_response_larger_than_one_packet_is_delivered ... ok
+test tests::local_path_domain_tags_are_installation_scoped_and_redacted ... ok
+test tests::local_path_domain_tags_strip_direct_ports_and_relay_paths ... ok
+test tests::relay_only_dialer_requires_a_remote_relay ... ok
+test tests::route_policy_uses_stable_ticket_names ... ok
+test tests::signed_mailbox_offer_carries_a_bounded_iroh_endpoint ... ok
+test tests::strict_route_policies_accept_only_the_requested_path ... ok
+test tests::synchronization_alpns_are_exact_distinct_and_fail_closed ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.37s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+
+running 1 test
+test real_local_relay_preserves_adapter_frames_and_route_policies ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.83s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-relay_batch-tests.exe
+
+running 2 tests
+test oversized_relay_batch_preserves_delivery_and_reconnect ...
+running 1 test
+test relay_batch_worker ... phase=1 relay_only=true datagrams_both_ways=exact stream_echo_bytes=8123
+local_batch_injected segment_size=1473 segments=2
+Error: forward datagram progress
+
+Caused by:
+    deadline has elapsed
+FAILED
+
+failures:
+
+failures:
+    relay_batch_worker
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 1 filtered out; finished in 3.82s
+
+Error: local relay child failed: exit code: 101
+FAILED
+test relay_batch_worker ... ignored, only the bounded parent starts this worker
+
+failures:
+
+failures:
+    oversized_relay_batch_preserves_delivery_and_reconnect
+
+test result: FAILED. 0 passed; 1 failed; 1 ignored; 0 measured; 0 filtered out; finished in 3.85s
+

@@ -1,0 +1,56 @@
+[
+  {
+    "ghsa_id": "GHSA-vwh7-9883-83xj",
+    "html_url": "https://github.com/n0-computer/iroh/security/advisories/GHSA-vwh7-9883-83xj",
+    "summary": "Peer-supplied addresses in the reserved ULA prefix are treated as internal mapped addresses",
+    "published_at": "2026-10-05T14:53:06Z",
+    "updated_at": "2026-10-05T14:53:06Z",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "rust",
+          "name": "iroh"
+        },
+        "vulnerable_version_range": ">= 0.96.0, <= 1.0.3",
+        "patched_versions": "1.1.0",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-jx4g-cg2x-jc35",
+    "html_url": "https://github.com/n0-computer/iroh/security/advisories/GHSA-jx4g-cg2x-jc35",
+    "summary": "Deserializing a crafted CustomAddr can set an out-of-bounds inline length, causing a panic",
+    "published_at": "2026-10-05T14:55:03Z",
+    "updated_at": "2026-10-05T14:55:03Z",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "rust",
+          "name": "iroh-base"
+        },
+        "vulnerable_version_range": ">= 0.97.0, <= 1.0.3",
+        "patched_versions": "1.1.0",
+        "vulnerable_functions": []
+      }
+    ]
+  },
+  {
+    "ghsa_id": "GHSA-7cq4-mhxw-xw78",
+    "html_url": "https://github.com/n0-computer/iroh/security/advisories/GHSA-7cq4-mhxw-xw78",
+    "summary": "Crafted relay batch frame permanently blocks a client's relay-inbound traffic",
+    "published_at": "2026-10-05T14:54:44Z",
+    "updated_at": "2026-10-05T14:54:44Z",
+    "vulnerabilities": [
+      {
+        "package": {
+          "ecosystem": "rust",
+          "name": "iroh"
+        },
+        "vulnerable_version_range": ">= 0.91.0, <= 1.0.3",
+        "patched_versions": "1.1.0",
+        "vulnerable_functions": []
+      }
+    ]
+  }
+]

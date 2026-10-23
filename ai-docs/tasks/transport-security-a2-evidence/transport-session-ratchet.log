@@ -1,0 +1,113 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 0.89s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-ratchet-lib-kilogram_ratchet-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-session-lib-kilogram_session-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-ratchet-lib-kilogram_ratchet-tests.exe
+
+running 13 tests
+test ordered::tests::accounts_reopen_before_session_and_binary_duplex_survives_eight_dh_changes ... ok
+test tests::account_session_and_bundle_survive_reload_without_plaintext_on_disk ... ok
+test tests::bundle_is_device_signed_and_tampering_is_rejected ... ok
+test tests::existing_ratchet_state_cannot_be_rebound_to_another_device ... ok
+test tests::legacy_single_session_record_is_read_and_rewritten_as_v2 ... ok
+test tests::ordered_ingress_i1_error_classification_is_typed_and_unknown_is_operational ... ok
+test tests::ordered_ingress_i2_allowed_save_uses_loaded_format_when_disk_tag_is_unreadable ... ordered_i2_actual_sharing_violation=32; permitted_write_tag_read=InvalidData; allowed_write_succeeded=true; fence_retained=true
+ordered_i2=passed; explicit_fenced_save=true; reopen_legacy_encrypt_decrypt=refused
+ok
+test tests::peer_prekey_high_water_rejects_rollback_and_equivocation ... ok
+test tests::peer_retirement_removes_session_and_prekey_observation_idempotently ... ok
+test tests::persistent_prekey_reply_and_normal_message_complete_a_ratchet_cycle ... ok
+test tests::prekey_directory_requires_exact_root_signed_device_list_coverage ... ok
+test tests::signed_prekey_pool_has_freshness_contiguous_sequences_and_stable_selection ... ok
+test tests::simultaneous_outbound_sessions_converge_on_one_active_session ... ok
+
+test result: ok. 13 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.32s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-session-lib-kilogram_session-tests.exe
+
+running 25 tests
+test canonical_sync_v2_activation::tests::authority_rejects_interrupted_tail_until_exact_high_water_is_published ... ok
+test canonical_sync_v2_activation::tests::chain_rejects_replay_epoch_skip_fork_and_wrong_device ... ok
+test canonical_sync_v2_activation::tests::containment_preserves_evidence_and_blocks_rollback ... ok
+test canonical_sync_v2_activation::tests::high_water_rejects_truncated_or_replaced_chain_head ... ok
+test canonical_sync_v2_activation::tests::signed_chain_round_trips_and_survives_restart ... ok
+test canonical_sync_v2_adapter::tests::activation_containment_preserves_only_exact_canonical_resume ... ok
+test canonical_sync_v2_adapter::tests::activation_permissions_separate_publication_registration_and_session_rights ... ok
+test canonical_sync_v2_adapter::tests::concrete_client_bootstrap_requires_the_completed_exact_legacy_import ... ok
+test canonical_sync_v2_adapter::tests::concrete_membership_policy_accepts_both_carriers_with_both_snapshot_formats ... ok
+test canonical_sync_v2_adapter::tests::concrete_membership_policy_rejects_nonmembers_mismatch_and_invalid_snapshot ... ok
+test canonical_sync_v2_adapter::tests::dormant_dual_reader_coordinator_requires_canonical_runtime_only_for_canonical_plan ... ok
+test canonical_sync_v2_adapter::tests::dormant_rollback_drill_is_restart_stable_and_fails_closed_on_evidence ... ok
+test canonical_sync_v2_adapter::tests::duplicate_inventory_and_incomplete_store_reads_fail_closed ... ok
+test canonical_sync_v2_adapter::tests::durable_client_transitions_resume_exact_frames_and_complete_two_rounds ... ok
+test canonical_sync_v2_adapter::tests::durable_responder_transitions_resume_exact_frames_and_commit_batch_atomically ... ok
+test canonical_sync_v2_adapter::tests::durable_typed_store_trait_survives_reopen ... ok
+test canonical_sync_v2_adapter::tests::full_frame_round_converges_legacy_and_canonical_carriers ... ok
+test canonical_sync_v2_adapter::tests::membership_policy_rejection_prevents_storage ... ok
+test canonical_sync_v2_adapter::tests::mixed_version_and_downgrade_matrix_fails_closed ... ok
+test canonical_sync_v2_adapter::tests::mutual_candidate_selection_binds_ticket_authorities_and_both_durable_adapters ... ok
+test tests::account_authorization_accepts_new_device_and_rejects_revocation ... ok
+test tests::authorized_new_requester_is_accepted_without_prior_events ... ok
+test tests::completed_round_resumes_with_a_new_transport_session ... ok
+test tests::more_than_one_batch_converges_bidirectionally ... ok
+test tests::sync_client_rejects_an_event_from_a_non_member_account ... ok
+
+test result: ok. 25 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 217.01s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+
+running 10 tests
+test ordered::tests::ordered_alpn_does_not_downgrade_to_a_real_legacy_peer ... ok
+test ordered::tests::ordered_exporter_is_symmetric_and_changes_on_real_reconnect ... ok
+test tests::bidirectional_response_larger_than_one_packet_is_delivered ... ok
+test tests::local_path_domain_tags_are_installation_scoped_and_redacted ... ok
+test tests::local_path_domain_tags_strip_direct_ports_and_relay_paths ... ok
+test tests::relay_only_dialer_requires_a_remote_relay ... ok
+test tests::route_policy_uses_stable_ticket_names ... ok
+test tests::signed_mailbox_offer_carries_a_bounded_iroh_endpoint ... ok
+test tests::strict_route_policies_accept_only_the_requested_path ... ok
+test tests::synchronization_alpns_are_exact_distinct_and_fail_closed ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.42s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+
+running 1 test
+test real_local_relay_preserves_adapter_frames_route_policies_and_reconnect ... relay_round=0 exact_adapter_payload=8123 selected=relay peer_identity=verified exporter=symmetric,fresh
+relay_round=1 exact_adapter_payload=8123 selected=relay peer_identity=verified exporter=symmetric,fresh
+relay_round=2 exact_adapter_payload=8123 selected=relay peer_identity=verified exporter=symmetric,fresh
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.36s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      12848  8.97
+release            5111  1.74
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=57023
+target_gib=63.45
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations,
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

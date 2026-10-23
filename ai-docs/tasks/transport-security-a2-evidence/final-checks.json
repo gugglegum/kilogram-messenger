@@ -1,0 +1,83 @@
+{
+  "timestamp_utc": "2026-10-23T19:45:22.9350418Z",
+  "status": "Supporting implementation ready for review; A2 not closed",
+  "head": "bc86cd25518077cef8977522e0c750f3bee2c0d7",
+  "index_empty": true,
+  "source_manifest_count": 1080,
+  "source_manifest_sha256": "0d5d19c9d970490569c290df48f31d822106c00b942b7c4d89c105fdd3878706",
+  "report_sha256": "278d0b0cb2a48319353459ac6a9d4da6dae1cc9b0d9a0e8b411871e2acde8876",
+  "lockfile_sha256": "86e2dfeaac31a176842107cb838db95433b31bacb28c6886718cf64d801c8547",
+  "field_exe_sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+  "baseline_exe_sha256": "3f42245b899e678c423b3137b5d99dc225cb0c2bc36d99b5bfa99daf506a6626",
+  "preserved_foreign_sha256": "330ad3c4d1941b213e7e5bef958416a6847d3defb8e368f79d6d21c944efe798",
+  "tests_passed": 94,
+  "clippy": "PASS 7 crates/all targets -D warnings",
+  "cargo_jobs": 2,
+  "cargo_priority": "BelowNormal; cache housekeeping reports its default jobs without building",
+  "source_version_gate": "PASS",
+  "rustsec_vulnerabilities": 0,
+  "rustsec_warnings": 7,
+  "full_advisory_gate_exit": 1,
+  "security_runtime_regression": "DEFERRED, unresolved, not accepted as a fix regression",
+  "deferred_hashes_unchanged": true,
+  "test_harnesses": [
+    {
+      "path": "target/verification/deps/kilogram-cli-bin-kilogram-cli-tests.exe",
+      "sha256": "e3ae96f2a79b5a4eb2f4cdc6bc768593eaa03419054910994e6e7885197e3ee8"
+    },
+    {
+      "path": "target/verification/deps/kilogram-cli-lib-kilogram_cli-tests.exe",
+      "sha256": "812de85d97cdaa963095ceecb23edbdddc871918ed1080c8fb1615b7930a1614"
+    },
+    {
+      "path": "target/verification/deps/kilogram-crypto-lib-kilogram_crypto-tests.exe",
+      "sha256": "49cecfed223ddd67a6574a9bb531e1c0d877db402200e83cd47696aa0b95058c"
+    },
+    {
+      "path": "target/verification/deps/kilogram-identity-lib-kilogram_identity-tests.exe",
+      "sha256": "42a8ae4e759e267ab333d50ee5aab1ed831cf9a7e2f172cc5ded08d90b69678c"
+    },
+    {
+      "path": "target/verification/deps/kilogram-protocol-lib-kilogram_protocol-tests.exe",
+      "sha256": "8aa3085fd911a4bcb7dd90d2f98821142378c9460f74f76085e7f0f0dfcb726b"
+    },
+    {
+      "path": "target/verification/deps/kilogram-protocol-test-canonical_decoder_mutations-tests.exe",
+      "sha256": "c93cb593c4fca2c9b13e6f3d6e54d7b26223d0d102dfc5c50c02f7a60062ca55"
+    },
+    {
+      "path": "target/verification/deps/kilogram-protocol-test-canonical_sync_v2_decoder_mutations-tests.exe",
+      "sha256": "107064be04daa64bfddb66e49199c92749cfba29492af51b3a492173a0804ee9"
+    },
+    {
+      "path": "target/verification/deps/kilogram-protocol-test-canonical_sync_v2_fuzz_seeds-tests.exe",
+      "sha256": "c1d8eae5c4dd003bdcafbe703b1017a0c6d6919c677e35356b38ad3aa2cbad5b"
+    },
+    {
+      "path": "target/verification/deps/kilogram-protocol-test-ordered_dialog_bounds-tests.exe",
+      "sha256": "dfed68f159d9230dab3666c175f974792e05c5c84fe35cc59f030e57be213e73"
+    },
+    {
+      "path": "target/verification/deps/kilogram-ratchet-lib-kilogram_ratchet-tests.exe",
+      "sha256": "6f183e84a4bd623828d540b7a0e29810ae1a40d2780d195b3bc011c40f45fc32"
+    },
+    {
+      "path": "target/verification/deps/kilogram-session-lib-kilogram_session-tests.exe",
+      "sha256": "e721f8801dd8c53152d6cbdb521e7e8249044bc056da2f8c040337f3a3fbdba8"
+    },
+    {
+      "path": "target/verification/deps/kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+      "sha256": "d6a954481d7aff5dcaa80e3a2a7dd604ef184bd9a2673604eca1e1544b5d1450"
+    },
+    {
+      "path": "target/verification/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+      "sha256": "c60e9ce782aeeed3d28ef8e9f55f8459cfa12c146a1ef49e3d4bca3cab4877a9"
+    }
+  ],
+  "cargo_audit_exe_sha256": "42b58df938f437a0a3b07a95be5410462e21ade6b6031c17f9ade44680a06ad1",
+  "rustfmt": "PASS",
+  "whitespace": "PASS",
+  "other_platform_builds": "not run",
+  "old_new_transport_scope": "actual loopback IP OD1; relay current/current only",
+  "commit_push": "not performed, awaiting root acceptance"
+}

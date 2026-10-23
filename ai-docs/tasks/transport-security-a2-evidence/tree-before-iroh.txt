@@ -1,0 +1,12 @@
+iroh v1.0.3
+├── iroh feature "default"
+│   └── kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+│       └── kilogram-transport-iroh feature "default" (command-line)
+├── iroh feature "fast-apple-datapath"
+│   └── iroh feature "default" (*)
+├── iroh feature "metrics"
+│   └── iroh feature "default" (*)
+├── iroh feature "portmapper"
+│   └── iroh feature "default" (*)
+└── iroh feature "tls-ring"
+    └── iroh feature "default" (*)

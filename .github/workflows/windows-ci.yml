@@ -11,6 +11,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  dependencies:
+    name: Dependency advisory gate (RustSec + upstream Iroh)
+    runs-on: windows-2022
+    timeout-minutes: 20
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Check out source
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Fetch locked registry archives
+        run: cargo fetch --locked --target x86_64-pc-windows-msvc
+      - name: Install pinned auditor and fetch fresh advisory snapshot
+        run: |
+          . ./scripts/cargo-resource-policy.ps1
+          $jobs = Set-KilogramCargoResourcePolicy -RequestedJobs 2
+          $policy = Get-Content ./scripts/dependency-advisory-policy.json -Raw | ConvertFrom-Json
+          cargo install cargo-audit --version $policy.cargo_audit_version --locked --jobs $jobs --root .tmp/dependency-tools
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git clone --depth 1 https://github.com/RustSec/advisory-db.git .tmp/transport-security-a2/advisory-db
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Check every advisory and explicit upstream version floor
+        run: |
+          $revision = git -C .tmp/transport-security-a2/advisory-db rev-parse HEAD
+          ./scripts/check-dependency-advisories.ps1 -DatabaseRevision $revision -AuditExecutable .tmp/dependency-tools/bin/cargo-audit.exe
+      - name: Preserve the database revision and findings
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: dependency-advisory-gate
+          path: .tmp/dependency-advisory-gate.json
+          if-no-files-found: warn
+
   verify:
     name: Verify M1 readiness and Rust tests
     runs-on: windows-2022

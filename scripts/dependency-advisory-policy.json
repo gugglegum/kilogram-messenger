@@ -1,0 +1,10 @@
+{
+  "format_version": 1,
+  "cargo_audit_version": "0.22.2",
+  "reviewed_database_revision": "84d943a6deeb8cc6c6f632531aaf4f1c62275239",
+  "reviewed_at": "2026-10-23",
+  "iroh_minimum": "1.1.0",
+  "source_advisory": "https://github.com/n0-computer/iroh/security/advisories/GHSA-7cq4-mhxw-xw78",
+  "source_affected_range": ">=0.91.0, <=1.0.3",
+  "source_patched_version": "1.1.0"
+}

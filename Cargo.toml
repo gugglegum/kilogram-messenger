@@ -53,7 +53,7 @@ eframe = { version = "=0.33.3", default-features = false, features = ["accesskit
 getrandom = "0.4"
 hpke = { version = "0.14", default-features = false, features = ["alloc", "chacha", "getrandom", "x25519"] }
 image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
-iroh = "1.0.3"
+iroh = "=1.1.0"
 postcard = { version = "1.1", features = ["alloc"] }
 qrcode = { version = "0.14.1", default-features = false, features = ["image"] }
 redb = "4.2"

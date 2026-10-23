@@ -1,0 +1,30 @@
+{
+  "timestamp_utc": "2026-10-23T19:14:06.5138126Z",
+  "status": "DEFERRED; do not execute or debug",
+  "reason": "scope narrowed after platform cybersecurity safeguard",
+  "moves": [
+    {
+      "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\crates\\kilogram-transport-iroh\\tests\\relay_batch.rs",
+      "destination": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\transport-security-a2\\deferred\\relay_batch.rs",
+      "sha256_before": "30f699e0bde27b192c8886233de59ed63a304f7dc799e8905e415f35809f18ff",
+      "sha256_after": "30f699e0bde27b192c8886233de59ed63a304f7dc799e8905e415f35809f18ff",
+      "identical": true
+    },
+    {
+      "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\test-iroh-relay-baseline.ps1",
+      "destination": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\transport-security-a2\\deferred\\test-iroh-relay-baseline.ps1",
+      "sha256_before": "f85a6ac221bd05f0b3a770af5c99ae4d74598d63dc1bbe6f1279f74e40fb86d7",
+      "sha256_after": "f85a6ac221bd05f0b3a770af5c99ae4d74598d63dc1bbe6f1279f74e40fb86d7",
+      "identical": true
+    },
+    {
+      "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\transport-security-a2\\affected-relay\\tests\\relay_batch.rs",
+      "destination": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\transport-security-a2\\deferred\\affected-relay-source.rs",
+      "sha256_before": "30f699e0bde27b192c8886233de59ed63a304f7dc799e8905e415f35809f18ff",
+      "sha256_after": "30f699e0bde27b192c8886233de59ed63a304f7dc799e8905e415f35809f18ff",
+      "identical": true
+    }
+  ],
+  "runtime_result": "Both versions timed out; cause unresolved; neither persistence nor fix proved",
+  "processes_remaining": []
+}
