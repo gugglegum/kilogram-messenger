@@ -1,0 +1,22 @@
+client_date=2026-10-23
+timezone=Asia/Yekaterinburg
+recorded_utc=2026-10-22T20:10:33.0243716Z
+head=3e82e6380c30d0f9443b6692ea34faccaacddef7
+git_status_initial:
+## master...origin/master
+ M ai-docs/README.md
+ M ai-docs/development-environment.md
+ M ai-docs/next-stage-plan.md
+?? ai-docs/project-handoff-2026-10-23.md
+?? ai-docs/reviews/
+?? ai-docs/tasks/
+production_diff_initial:
+input_sha256:
+65678ffdd99df29952e563b12e9278dc297058d376ba47a3fbc913798e62714c  E:\AI-Projects\kilogram-p2p-messenger\ai-docs\reviews\repro-2026-10-22\src\main.rs
+9e1246a65d812e193bd556b5f296908b986a165209c9abae6563136951144874  E:\AI-Projects\kilogram-p2p-messenger\ai-docs\reviews\repro-2026-10-22\Cargo.lock
+0dbc143a2cf96b561f2029f2291f5d4b9af1c1f6792b5a287bc436b8303d2b7a  E:\AI-Projects\kilogram-p2p-messenger\ai-docs\reviews\repro-2026-10-22\Cargo.toml
+d978b4c7380c476a0af67e705452349bc372c6cc78f2747d8b5c181634b93a71  E:\AI-Projects\kilogram-p2p-messenger\Cargo.lock
+toolchain:
+rustc 1.98.0 (88d9e12ae 2026-08-18)
+cargo 1.98.0 (797e8a9bc 2026-08-05)
+executable_sha256=13bcf45bc2d424f9c0e393aab1d5fb3861e4711816ce5efc001c267b00dd76e5  E:\AI-Projects\kilogram-p2p-messenger\target\debug\kilogram-audit-probe.exe

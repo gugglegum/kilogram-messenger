@@ -1,0 +1,35 @@
+scope=offline-feasibility; olm=0.10.0; synthetic-keys=true
+f1.context-A=256 exact plaintexts; dh_transitions=8; held_new_chain_successors=7; native_chains=5
+f1.context-B=256 exact plaintexts; dh_transitions=8; held_new_chain_successors=7; native_chains=5
+f1.user_plaintexts=512; contexts=2; guard_pickle_reloads=48
+f1.reject_or_replay.same_chain_wrong_index=expected; canonical_state_unchanged=true
+f1.reject_or_replay.signed_wrong_ordinal=expected; canonical_state_unchanged=true
+f1.reject_or_replay.signed_inner_binding_rollback=expected; canonical_state_unchanged=true
+f1.reject_or_replay.wrong_context=expected; canonical_state_unchanged=true
+f1.reject_or_replay.wrong_epoch=expected; canonical_state_unchanged=true
+f1.reject_or_replay.double_predecessor=expected; canonical_state_unchanged=true
+f1.reject_or_replay.bad_signature=expected; canonical_state_unchanged=true
+f1.reject_or_replay.bad_mac=expected; canonical_state_unchanged=true
+f1.reject_or_replay.competing_session=expected; canonical_state_unchanged=true
+f1.reject_or_replay.old_event_replay=expected; canonical_state_unchanged=true
+f1.reject_or_replay.same_slot_fork=expected; canonical_state_unchanged=true
+f1.reject_or_replay.old_chain_new_position=expected; canonical_state_unchanged=true
+f1.legacy_known_genesis_single_chain=256; native_reload=true; migration_generalized=false
+f1.legacy_K0_K1_B0_L0=UnresolvedLegacyTail; local_next=1; sender_tail_length=unknown; canonical_state_unchanged=true
+f1.unsafe_native_control=old_chain_evicted; retained_chains=5; delayed_K1_unreadable=true
+f1.native_import=SameChainCursorOnly; next=6; skipped=[1,2,3,4]; one_retained_key_decrypted=true; unknown_schema=rejected
+f1.native_import_cannot_prove=application_ordinal,sender_tail_length,evicted_chains,global_genesis
+f1.auth=real_Device_signatures,real_Olm_MAC,mutually_signed_test_transcript; trusted=credential_admission,role_election,OTK_reservation; production_wire_or_vault=false
+f2.interrupted_after_two=InterruptedPartial; SyncComplete=none; restart_inventory=[4,5]; crypto_next=0; readable=[]; causal=[]; ACK=[]
+f2.legacy_hash_sender=CompatibilityBlocked/UpgradeRequired; repeat_page=[2,1]; head=0 absent; ordinary_slots=3; head_slot_reserved=1; head_commit_lease=30; ciphertext_preserved=true; retry=external_change_only
+f2.prefix_capable_sender=AcceptedReadable/6; responses=2; frame_cap=28; max_response_items=2; exact_complete_ids=true
+f2.mailbox_cursor=AcceptedReadable/6; blocked_items_scanned=3; wrap_scans=2; restart_cursor=true; delete_only_readable=true; scan_budget=2_items_per_turn_then_backoff
+f2.full_history=StorageBlocked/FullCommitBudget; ciphertext_alone_fits=true; state_unchanged=true; false_progress=false
+f2.physical_write_failure=StorageBlocked; accepted_head_retained=true; ACK_before_commit=false; explicit_capacity_retry=AcceptedReadable
+f2.oversized_legacy=StorageBlocked/OversizedLegacyEvent; no_rewrite=true; no_ACK=true; new_credit_not_assumed_for_legacy=true
+f2.real_limit_arithmetic=64x512KiB_exceeds_8MiB_frame; vault_global_cap=512MiB; model_units_are_scaled_not_vault_measurements
+f2.invalid=Invalid; state_unchanged=true; ACK=false
+f2.third_epoch=StorageBlocked/RetainedEpochCapacity; consent_does_not_create_capacity=true; automatic_deletion=false
+f2.transition_contract=AcceptedPending,AcceptedReadable,Backpressure,StorageBlocked,InterruptedPartial,Invalid; partial_batch=round_error_no_SyncComplete; retry=capacity_or_peer_or_inventory_change_else_backoff
+status=passed; production-a1-closed=false
+probe_exit=0

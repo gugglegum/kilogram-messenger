@@ -1,0 +1,5 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+   Compiling kilogram-a1-feasibility v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\.tmp\a1-review-probe)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 10.76s

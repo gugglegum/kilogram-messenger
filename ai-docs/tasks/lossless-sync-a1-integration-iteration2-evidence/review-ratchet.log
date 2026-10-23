@@ -1,0 +1,52 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1.07s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-ratchet-lib-kilogram_ratchet-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-ratchet-lib-kilogram_ratchet-tests.exe
+
+running 12 tests
+test tests::account_session_and_bundle_survive_reload_without_plaintext_on_disk ... ok
+test tests::bundle_is_device_signed_and_tampering_is_rejected ... ok
+test tests::existing_ratchet_state_cannot_be_rebound_to_another_device ... ok
+test tests::legacy_single_session_record_is_read_and_rewritten_as_v2 ... ok
+test tests::ordered_ingress_i1_error_classification_is_typed_and_unknown_is_operational ... ok
+test tests::ordered_ingress_i2_allowed_save_uses_loaded_format_when_disk_tag_is_unreadable ... ordered_i2_actual_sharing_violation=32; permitted_write_tag_read=InvalidData; allowed_write_succeeded=true; fence_retained=true
+ordered_i2=passed; explicit_fenced_save=true; reopen_legacy_encrypt_decrypt=refused
+ok
+test tests::peer_prekey_high_water_rejects_rollback_and_equivocation ... ok
+test tests::peer_retirement_removes_session_and_prekey_observation_idempotently ... ok
+test tests::persistent_prekey_reply_and_normal_message_complete_a_ratchet_cycle ... ok
+test tests::prekey_directory_requires_exact_root_signed_device_list_coverage ... ok
+test tests::signed_prekey_pool_has_freshness_contiguous_sequences_and_stable_selection ... ok
+test tests::simultaneous_outbound_sessions_converge_on_one_active_session ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.04s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10407 10.36
+debug-total       36216 51.59
+verification       8434  3.76
+release            5111  1.74
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=52502
+target_gib=57.8
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

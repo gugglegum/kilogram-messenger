@@ -1,0 +1,37 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+   Compiling getrandom v0.4.3
+   Compiling dunce v1.0.5
+   Compiling fs_extra v1.3.0
+   Compiling jobserver v0.1.35
+   Compiling cc v1.4.4
+   Compiling aws-lc-rs v1.18.1
+   Compiling rustls v0.23.43
+   Compiling prost-derive v0.14.4
+   Compiling blake3 v1.8.7
+   Compiling cmake v0.1.58
+   Compiling aws-lc-sys v0.45.0
+   Compiling kilogram-crypto v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-crypto)
+   Compiling kilogram-identity v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-identity)
+   Compiling ring v0.17.14
+   Compiling prost v0.14.4
+   Compiling vodozemac v0.10.0
+   Compiling kilogram-sync-capability v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-sync-capability)
+   Compiling kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+error[E0282]: type annotations needed
+   --> crates\kilogram-ratchet\src\lib.rs:744:41
+    |
+744 |         let directory = state_directory.as_ref().join(STATE_DIRECTORY);
+    |                                         ^^^^^^
+    |
+help: try using a fully qualified path to specify the expected types
+    |
+744 -         let directory = state_directory.as_ref().join(STATE_DIRECTORY);
+744 +         let directory = <Path as AsRef<T>>::as_ref(state_directory).join(STATE_DIRECTORY);
+    |
+
+For more information about this error, try `rustc --explain E0282`.
+error: could not compile `kilogram-ratchet` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+compile_exit=101

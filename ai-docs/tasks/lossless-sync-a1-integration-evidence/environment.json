@@ -1,0 +1,62 @@
+{
+  "recorded_at": "2026-10-23T03:26:09+05:00",
+  "head": "3e82e6380c30d0f9443b6692ea34faccaacddef7",
+  "branch": "master",
+  "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)",
+  "cargo": "cargo 1.98.0 (797e8a9bc 2026-08-05)",
+  "platform": "Microsoft Windows NT 10.0.26300.0",
+  "sources": [
+    {
+      "path": "apps/kilogram-cli/src/main.rs",
+      "sha256": "69323b14bfaa90299286c1d7a59b0dfee5fef585b5c59138609c881a94300046"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_ingress.rs",
+      "sha256": "498a6fad94824e5e332968d5af74f3887163733fc7c0155e98c256a9754641aa"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_ingress_tests.rs",
+      "sha256": "0c9288e0a002fe24a77a55a3aeefe724bbed45ca828310d0984992e582e351fb"
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/lib.rs",
+      "sha256": "02c4d8c83f195172dce824c32bc18e3c7d419a208277f9ec184f13ecddf74d15"
+    }
+  ],
+  "manifests_unchanged_from_head": true,
+  "manifests": [
+    {
+      "path": "Cargo.toml",
+      "sha256": "f0aed55d818a4926c449c215af586d253f5c05be918a4937b68c542ee6307d8c"
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "d978b4c7380c476a0af67e705452349bc372c6cc78f2747d8b5c181634b93a71"
+    },
+    {
+      "path": "apps/kilogram-cli/Cargo.toml",
+      "sha256": "da9f7903ebe19a09a0b1ff141a2a74c9bf13f23f4682595044f591caba0d0d0a"
+    },
+    {
+      "path": "crates/kilogram-ratchet/Cargo.toml",
+      "sha256": "e1c9ec6d09a4618f5df5ff96de72b6867380ed88b4c677307489effe3bc82729"
+    }
+  ],
+  "stable_executables": [
+    {
+      "path": "target/verification/deps/kilogram-cli-bin-kilogram-cli-tests.exe",
+      "sha256": "29ef66eeafe5cd049f54a2b328c29be73dfdbe08dd26cbe10e529c8fa36631c3"
+    },
+    {
+      "path": "target/verification/deps/kilogram-ratchet-lib-kilogram_ratchet-tests.exe",
+      "sha256": "43330a422846fbfa77ca0b709fd6013dd6dcd841bd4b14efbdd6340edf9ec8f2"
+    }
+  ],
+  "patch_sha256": "a8e635ef671c623f6d4d6ce4d73eccc90ee81d0ac4c482a716c1ed4faf3e2a1b",
+  "test_environment": {
+    "CARGO_NET_OFFLINE": "true",
+    "CargoJobs": 2,
+    "TEMP": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp",
+    "network_exercised": false
+  }
+}

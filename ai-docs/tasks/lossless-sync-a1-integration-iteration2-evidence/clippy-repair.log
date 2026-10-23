@@ -1,0 +1,80 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_crypto-2nmsj9tegn19b\s-hneo1y8jk4-0amb8ay-working`
+
+warning: `kilogram-crypto` (lib) generated 1 warning
+    Checking kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_mailbox-2wifpgtzuyqy4\s-hneo1yj3dd-1bde3bt-working`
+
+warning: `kilogram-mailbox` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_ticket_publication-2knqkvg1bgvgl\s-hneo1zm34o-0cg2w96-working`
+
+warning: `kilogram-ticket-publication` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_ratchet-2s201je3qblrc\s-hngo1n3a83-03anb9y-working`
+
+warning: `kilogram-ratchet` (lib) generated 1 warning
+    Checking kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+    Checking kilogram-offline v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-offline)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_offline-2v38xkllnjl7x\s-hngo1npku3-136ki40-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_protocol-3aa9cph3i0dqn\s-hngo1noq9c-1wo403s-working`
+
+warning: `kilogram-offline` (lib) generated 1 warning
+warning: `kilogram-protocol` (lib) generated 1 warning
+    Checking kilogram-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-store)
+    Checking kilogram-peer-history-recovery v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery-1byslibmpgfwc\s-hngo1qmdkh-18r1vc6-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_store-1pji997l46zmb\s-hngo1qmevn-0es4elp-working`
+
+warning: `kilogram-peer-history-recovery` (lib) generated 1 warning
+    Checking kilogram-peer-history-recovery-consent v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-consent)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery_consent-26itsuz82drb8\s-hngo1r4njj-0yfxnsx-working`
+
+warning: `kilogram-store` (lib) generated 1 warning
+    Checking kilogram-session v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-session)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_session-2ssbxtvv52boy\s-hngo1r6xec-171kghv-working`
+
+warning: `kilogram-peer-history-recovery-consent` (lib) generated 1 warning
+    Checking kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery_execution-15o9tlbsvx0ek\s-hngo1rizq2-1vatt68-working`
+
+warning: `kilogram-session` (lib) generated 1 warning
+    Checking kilogram-runtime-ipc v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-runtime-ipc)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_runtime_ipc-1m93l69v6ikl8\s-hngo1rohbf-0iptver-working`
+
+warning: `kilogram-peer-history-recovery-execution` (lib) generated 1 warning
+    Checking kilogram-rollout v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-rollout)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_rollout-30dyceg83yfhi\s-hngo1svmv8-0zo7rhr-working`
+
+warning: `kilogram-rollout` (lib) generated 1 warning
+    Checking kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_transport_iroh-37phfqcbiouks\s-hngo1tmcyt-1dfqad4-working`
+
+warning: `kilogram-runtime-ipc` (lib) generated 1 warning
+    Checking kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+warning: `kilogram-transport-iroh` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery_runtime-2cd08lkmd1hal\s-hngo1uci3o-04hqz9r-working`
+
+warning: `kilogram-peer-history-recovery-runtime` (lib) generated 1 warning
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_cli-3d8uc05s586wg\s-hngo1vhgaa-1ymf8bt-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_cli-37bu13moc7h52\s-hngo1vhqdt-065gsxj-working`
+
+warning: `kilogram-cli` (lib test) generated 1 warning
+warning: `kilogram-cli` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_sync_v2_evidence-2uzj6zbzycmeh\s-hngo1vwq70-181ejy4-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_cli-0g10brhv0a9v3\s-hngo1vxv79-15t1phx-working`
+
+warning: `kilogram-cli` (bin "kilogram-sync-v2-evidence") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_cli-3hyegppsx76wk\s-hngo1x16h1-02hjewt-working`
+
+warning: `kilogram-cli` (bin "kilogram-cli") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_sync_v2_evidence-0c73z91xb4o4u\s-hngo25yf61-1m3zr6o-working`
+
+warning: `kilogram-cli` (bin "kilogram-sync-v2-evidence" test) generated 1 warning
+warning: `kilogram-cli` (bin "kilogram-cli" test) generated 1 warning
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 40.50s

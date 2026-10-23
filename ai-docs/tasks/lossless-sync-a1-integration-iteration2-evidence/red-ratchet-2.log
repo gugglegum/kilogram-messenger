@@ -1,0 +1,26 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 3.31s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-ratchet-lib-kilogram_ratchet-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-ratchet-lib-kilogram_ratchet-tests.exe
+
+running 1 test
+test tests::ordered_ingress_i2_allowed_save_uses_loaded_format_when_disk_tag_is_unreadable ... ordered_i2_actual_sharing_violation=32; permitted_write_tag_read=InvalidData; allowed_write_succeeded=true; fence_retained=false
+
+thread 'tests::ordered_ingress_i2_allowed_save_uses_loaded_format_when_disk_tag_is_unreadable' (48020) panicked at crates\kilogram-ratchet\src\lib.rs:2441:9:
+a permitted save silently removed the account fence
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+
+failures:
+
+failures:
+    tests::ordered_ingress_i2_allowed_save_uses_loaded_format_when_disk_tag_is_unreadable
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.20s
+

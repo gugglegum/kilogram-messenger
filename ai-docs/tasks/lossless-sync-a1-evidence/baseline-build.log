@@ -1,0 +1,5 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.80s
+build_exit=0

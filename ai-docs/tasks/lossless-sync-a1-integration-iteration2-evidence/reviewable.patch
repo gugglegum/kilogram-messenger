@@ -1,0 +1,2677 @@
+diff --git a/apps/kilogram-cli/src/main.rs b/apps/kilogram-cli/src/main.rs
+index 82a3ea8..81ea021 100644
+--- a/apps/kilogram-cli/src/main.rs
++++ b/apps/kilogram-cli/src/main.rs
+@@ -215,6 +215,7 @@ use tokio::{
+ };
+ use zeroize::Zeroizing;
+ 
++mod ordered_ingress;
+ mod publication_conflict_ceremony;
+ mod recovery_discovery;
+ mod recovery_link;
+@@ -3648,13 +3649,21 @@ async fn async_main() -> Result<()> {
+     let command = cli.command;
+     let state_directory = command.state_directory().map(Path::to_path_buf);
+     let uses_state_vault_dual_write = command.uses_state_vault_dual_write();
+-    let _state_lock = command
++    let mut _state_lock = command
+         .uses_outer_state_lock()
+         .then(|| command.state_directory())
+         .flatten()
+         .map(StateDirectoryLock::acquire)
+         .transpose()
+         .context("lock state directory and recover interrupted local transaction")?;
++    if let Some(root) = state_directory.as_deref()
++        && RatchetState::is_ordered_ingress(root)?
++    {
++        let lock = _state_lock
++            .take()
++            .context("internal ordered profile forbids this unlocked runtime/worker path")?;
++        return ordered_ingress::run_command(command, lock).await;
++    }
+     let vault_guard = if uses_state_vault_dual_write {
+         state_directory
+             .as_deref()
+@@ -3664,6 +3673,22 @@ async fn async_main() -> Result<()> {
+     } else {
+         None
+     };
++    // Recovery may have restored a protected account after the initial tag check.
++    // Never execute a generic writer against that newly recovered internal profile.
++    if let Some(root) = state_directory.as_deref()
++        && RatchetState::is_ordered_ingress(root)?
++    {
++        let mirror = match vault_guard {
++            Some(guard) => guard.finish(),
++            None => Ok(()),
++        };
++        return combine_operation_and_mirror(
++            Err(anyhow::anyhow!(
++                "recovered internal ordered profile; retry through ordered Sync or History"
++            )),
++            mirror,
++        );
++    }
+     let command_result = Box::pin(run_command(command)).await;
+     let mirror_result = match vault_guard {
+         Some(guard) => guard.finish(),
+@@ -5279,6 +5304,12 @@ impl<'a> CommandTransactionContext<'a> {
+     }
+ 
+     fn load_ratchet_state(&mut self) -> Result<RatchetState> {
++        self.prepare_ratchet_workspace()?;
++        RatchetState::load_or_create(self.state_directory)
++            .context("load persistent ratchet state from the transaction workspace")
++    }
++
++    fn prepare_ratchet_workspace(&mut self) -> Result<()> {
+         if !self.ratchet_workspace_prepared {
+             if EncryptedStateVault::is_initialized(self.state_directory)
+                 .context("inspect state vault before mutable ratchet read")?
+@@ -5299,8 +5330,7 @@ impl<'a> CommandTransactionContext<'a> {
+             }
+             self.ratchet_workspace_prepared = true;
+         }
+-        RatchetState::load_or_create(self.state_directory)
+-            .context("load persistent ratchet state from the transaction workspace")
++        Ok(())
+     }
+ 
+     fn load_ratchet_state_for_store(&mut self) -> Result<RatchetState, StoreError> {
+@@ -21029,20 +21059,30 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
+         volunteer_storage,
+     } = options;
+     let mut runtime_test_faults = RuntimeSessionTestFaults::from_environment()?;
+-    let endpoint_announcement_descriptor_directory =
+-        resolve_runtime_received_endpoint_descriptor_directory(
++    let (
++        prepared,
++        endpoint_announcement_descriptor_directory,
++        own_device_discovery_ticket_directory,
++    ) = with_locked_state(&state_dir, || {
++        // RuntimeFromProfile resolves its root inside runtime. Check under the
++        // existing lock, after vault/shadow recovery and before any trust writer.
++        ensure!(
++            !RatchetState::is_ordered_ingress(&state_dir)?,
++            "internal ordered profile forbids runtime preparation"
++        );
++        let endpoint_descriptors = resolve_runtime_received_endpoint_descriptor_directory(
+             &state_dir,
+             ipc_file.as_deref(),
+             ticket_file.as_deref(),
+         )?;
+-    let own_device_discovery_ticket_directory =
+-        resolve_runtime_own_device_discovery_ticket_directory(
++        let own_discovery = resolve_runtime_own_device_discovery_ticket_directory(
+             &state_dir,
+             ipc_file.as_deref(),
+             ticket_file.as_deref(),
+         )?;
+-    let prepared = with_locked_state(&state_dir, || {
+-        prepare_runtime_listener(&state_dir, &device_list_file, &peer_prekey_pool_files)
++        let prepared =
++            prepare_runtime_listener(&state_dir, &device_list_file, &peer_prekey_pool_files)?;
++        Ok((prepared, endpoint_descriptors, own_discovery))
+     })?;
+     let peer_reenrollment_startup = with_locked_state(&state_dir, || {
+         consume_peer_reenrollment_transitions_at_runtime_start(
+@@ -28272,6 +28312,27 @@ async fn sync(
+     conversation: String,
+     max_rounds: usize,
+     expected_listener_account_id: AccountId,
++) -> Result<RuntimeSyncPathObservationDraft> {
++    sync_with_ordered_lease(
++        state_dir,
++        ticket,
++        ticket_file,
++        conversation,
++        max_rounds,
++        expected_listener_account_id,
++        None,
++    )
++    .await
++}
++
++async fn sync_with_ordered_lease(
++    state_dir: PathBuf,
++    ticket: Option<String>,
++    ticket_file: Option<PathBuf>,
++    conversation: String,
++    max_rounds: usize,
++    expected_listener_account_id: AccountId,
++    ordered_lease: Option<&ordered_ingress::Lease>,
+ ) -> Result<RuntimeSyncPathObservationDraft> {
+     ensure!(
+         (1..=MAX_SYNC_ROUNDS).contains(&max_rounds),
+@@ -28282,6 +28343,14 @@ async fn sync(
+     let device_state = load_command_device_state(&state_dir)?;
+     let canonical_sync_v2_policy =
+         load_canonical_sync_v2_runtime_policy(&state_dir, device_state.identity().device_id())?;
++    if ordered_lease.is_some() {
++        ensure!(
++            !canonical_sync_v2_policy
++                .permissions
++                .publish_canonical_capability(),
++            "internal ordered profile requires legacy-only sync"
++        );
++    }
+     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
+     let requester_certificate = trust
+         .load_certificate()
+@@ -28295,12 +28364,14 @@ async fn sync(
+     let local_message_store = open_local_message_store(&state_dir)?;
+     let ticket = load_connection_ticket(ticket, ticket_file).await?;
+     ticket.verify_listener_account(expected_listener_account_id)?;
+-    run_state_transaction(&state_dir, |transaction| {
+-        let ratchet_state = transaction.load_ratchet_state()?;
+-        ratchet_state
+-            .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)
+-            .context("observe listener prekey directory and reject rollback")
+-    })?;
++    if ordered_lease.is_none() {
++        run_state_transaction(&state_dir, |transaction| {
++            let ratchet_state = transaction.load_ratchet_state()?;
++            ratchet_state
++                .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)
++                .context("observe listener prekey directory and reject rollback")
++        })?;
++    }
+     let listener_snapshot_store = pin_peer_authority_primary(
+         &state_dir,
+         &device_state,
+@@ -28338,11 +28409,18 @@ async fn sync(
+         expected_listener_device_id,
+         &ticket,
+     )?;
++    if ordered_lease.is_some() {
++        ordered_ingress::verify_selected_peer(&state_dir, expected_listener_device_id)?;
++        ensure!(
++            peer_capability_context.canonical_selection.is_none(),
++            "internal ordered profile forbids canonical activation"
++        );
++    }
+     let mut canonical_selection = peer_capability_context.canonical_selection;
+     let peer_capability_authorization = peer_capability_context.authorization;
+     print_peer_capability_transport_authorization(peer_capability_authorization);
+     print_immutable_read_diagnostics("sync", &immutable_reads);
+-    let decrypting_store = DecryptingSessionStore::new(
++    let mut decrypting_store = DecryptingSessionStore::new(
+         &state_dir,
+         &event_store,
+         &local_message_store,
+@@ -28350,6 +28428,7 @@ async fn sync(
+         requester_certificate.account_id(),
+         immutable_reads,
+     );
++    decrypting_store.ordered_lease = ordered_lease;
+     let client = SyncClient::new(
+         device_state.identity(),
+         &decrypting_store,
+@@ -28715,6 +28794,9 @@ async fn sync(
+         );
+ 
+         if !stats.more_available {
++            if ordered_lease.is_some() {
++                ordered_ingress::require_readable_convergence(&state_dir)?;
++            }
+             println!("sync_rounds_completed={round_number}");
+             println!("sync_received_events={total_received_events}");
+             println!("sync_sent_events={total_sent_events}");
+@@ -35223,6 +35305,7 @@ fn ensure_received_local_text_projection(
+ }
+ 
+ struct DecryptingSessionStore<'a> {
++    ordered_lease: Option<&'a ordered_ingress::Lease>,
+     state_directory: PathBuf,
+     event_writes: &'a EventStore,
+     local_message_writes: &'a LocalMessageStore,
+@@ -35247,6 +35330,7 @@ impl<'a> DecryptingSessionStore<'a> {
+             ..
+         } = read_repositories;
+         Self {
++            ordered_lease: None,
+             state_directory: state_directory.as_ref().to_path_buf(),
+             event_writes: store,
+             local_message_writes: local_messages,
+@@ -35257,6 +35341,19 @@ impl<'a> DecryptingSessionStore<'a> {
+         }
+     }
+ 
++    fn protected_lease(&self) -> Result<Option<&ordered_ingress::Lease>, StoreError> {
++        if !RatchetState::is_ordered_ingress(&self.state_directory)
++            .map_err(kilogram_protocol::ProtocolError::from)?
++        {
++            return Ok(None);
++        }
++        self.ordered_lease.map(Some).ok_or_else(|| {
++            StoreError::from(io::Error::other(
++                "protected single-chain profile requires an exclusive ordered-ingress lease",
++            ))
++        })
++    }
++
+     fn ensure_local_projections(
+         &self,
+         transaction: &mut CommandTransactionContext<'_>,
+@@ -35357,6 +35454,15 @@ impl SessionStore for DecryptingSessionStore<'_> {
+         conversation_id: ConversationId,
+         membership: &ConversationMembershipSnapshot,
+     ) -> Result<Vec<kilogram_protocol::EventId>, StoreError> {
++        if self.protected_lease()?.is_some() {
++            return ordered_ingress::inventory(
++                &self.state_directory,
++                self.device_state.identity().device_id(),
++                conversation_id,
++                membership,
++            )
++            .map_err(|error| StoreError::from(io::Error::other(format!("{error:#}"))));
++        }
+         self.event_reads
+             .authorized_inventory(conversation_id, membership)
+     }
+@@ -35367,6 +35473,16 @@ impl SessionStore for DecryptingSessionStore<'_> {
+         event_ids: &[kilogram_protocol::EventId],
+         membership: &ConversationMembershipSnapshot,
+     ) -> Result<Vec<AuthorizedEvent>, StoreError> {
++        if self.protected_lease()?.is_some() {
++            return ordered_ingress::events(
++                &self.state_directory,
++                self.device_state.identity().device_id(),
++                conversation_id,
++                event_ids,
++                membership,
++            )
++            .map_err(|error| StoreError::from(io::Error::other(format!("{error:#}"))));
++        }
+         let events =
+             self.event_reads
+                 .authorized_events_by_id(conversation_id, event_ids, membership)?;
+@@ -35385,6 +35501,10 @@ impl SessionStore for DecryptingSessionStore<'_> {
+         events: &[AuthorizedEvent],
+         membership: &ConversationMembershipSnapshot,
+     ) -> Result<(), StoreError> {
++        if let Some(lease) = self.protected_lease()? {
++            return ordered_ingress::put_for_session(self, lease, events, membership)
++                .map_err(|error| StoreError::from(io::Error::other(format!("{error:#}"))));
++        }
+         let staged_events = self.event_reads.stage_committed(events, membership)?;
+         let staged_projections = run_store_transaction(&self.state_directory, |transaction| {
+             for event in events {
+diff --git a/crates/kilogram-ratchet/src/lib.rs b/crates/kilogram-ratchet/src/lib.rs
+index 4abffab..9658225 100644
+--- a/crates/kilogram-ratchet/src/lib.rs
++++ b/crates/kilogram-ratchet/src/lib.rs
+@@ -34,6 +34,8 @@ const STATE_DIRECTORY: &str = "ratchet";
+ const SESSIONS_DIRECTORY: &str = "sessions";
+ const PICKLE_SECRET_FILE: &str = "pickle-secret.key";
+ const ACCOUNT_FILE: &str = "account.pickle";
++// Internal disposable single-chain profiles. Old account loaders reject this prefix.
++const ORDERED_ACCOUNT_PREFIX: &str = "kilogram:internal-ordered-ingress:v1\n";
+ const PREKEY_BUNDLE_FILE: &str = "prekey-bundle.bin";
+ const PREKEY_POOL_FILE: &str = "prekey-pool.bin";
+ const PEER_PREKEY_POOLS_DIRECTORY: &str = "peer-prekey-pools";
+@@ -533,7 +535,33 @@ pub struct RatchetCiphertext {
+     ciphertext: Vec<u8>,
+ }
+ 
++#[derive(Clone, Debug, Eq, PartialEq)]
++pub struct RatchetOrderingHeader {
++    pub ratchet_key: [u8; 32],
++    pub index: u64,
++    pub prekey_session_id: Option<String>,
++}
++
++pub struct SingleChainReceiveGuard {
++    pub peer_device_id: DeviceId,
++    pub session_id: String,
++    pub ratchet_key: [u8; 32],
++    pub next_index: u64,
++}
++
+ impl RatchetCiphertext {
++    pub fn ordering_header(&self) -> Result<RatchetOrderingHeader, RatchetError> {
++        let message = self.to_olm()?;
++        let (message, prekey_session_id) = match &message {
++            OlmMessage::Normal(message) => (message, None),
++            OlmMessage::PreKey(message) => (message.message(), Some(message.session_id())),
++        };
++        Ok(RatchetOrderingHeader {
++            ratchet_key: message.ratchet_key().to_bytes(),
++            index: message.chain_index(),
++            prekey_session_id,
++        })
++    }
+     fn from_olm(message: &OlmMessage) -> Result<Self, RatchetError> {
+         let (message_type, ciphertext) = message.to_parts();
+         let message_type = u8::try_from(message_type)
+@@ -685,11 +713,35 @@ pub struct RatchetState {
+     account: Account,
+     current_bundle: Option<SignedPrekeyBundle>,
+     current_pool: Option<SignedPrekeyPool>,
++    ordered_access: bool,
+ }
+ 
+ impl RatchetState {
+     pub fn load_or_create(state_directory: impl AsRef<Path>) -> Result<Self, RatchetError> {
+-        let directory = state_directory.as_ref().join(STATE_DIRECTORY);
++        Self::load_inner(state_directory.as_ref(), false)
++    }
++
++    /// Internal single-chain ingress only; ordinary encrypt/decrypt remain forbidden.
++    pub fn load_for_ordered_ingress(
++        state_directory: impl AsRef<Path>,
++    ) -> Result<Self, RatchetError> {
++        Self::load_inner(state_directory.as_ref(), true)
++    }
++
++    pub fn is_ordered_ingress(state_directory: impl AsRef<Path>) -> Result<bool, RatchetError> {
++        let path = state_directory
++            .as_ref()
++            .join(STATE_DIRECTORY)
++            .join(ACCOUNT_FILE);
++        match fs::read_to_string(path) {
++            Ok(bytes) => Ok(bytes.starts_with(ORDERED_ACCOUNT_PREFIX)),
++            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
++            Err(error) => Err(error.into()),
++        }
++    }
++
++    fn load_inner(state_directory: &Path, ordered_access: bool) -> Result<Self, RatchetError> {
++        let directory = state_directory.join(STATE_DIRECTORY);
+         let sessions_directory = directory.join(SESSIONS_DIRECTORY);
+         let peer_prekey_pools_directory = directory.join(PEER_PREKEY_POOLS_DIRECTORY);
+         fs::create_dir_all(&sessions_directory)?;
+@@ -698,13 +750,29 @@ impl RatchetState {
+             Zeroizing::new(load_or_create_secret(&directory.join(PICKLE_SECRET_FILE))?);
+         let account_path = directory.join(ACCOUNT_FILE);
+         let account = match fs::read_to_string(&account_path) {
+-            Ok(ciphertext) => Account::from_pickle(AccountPickle::from_encrypted(
+-                ciphertext.trim(),
+-                &pickle_secret,
+-            )?),
++            Ok(ciphertext) => {
++                let fenced = ciphertext.starts_with(ORDERED_ACCOUNT_PREFIX);
++                if fenced != ordered_access {
++                    return Err(RatchetError::OrderedIngressViolation(
++                        "account access fence",
++                    ));
++                }
++                let ciphertext = ciphertext
++                    .strip_prefix(ORDERED_ACCOUNT_PREFIX)
++                    .unwrap_or(&ciphertext);
++                Account::from_pickle(AccountPickle::from_encrypted(
++                    ciphertext.trim(),
++                    &pickle_secret,
++                )?)
++            }
+             Err(error) if error.kind() == io::ErrorKind::NotFound => {
++                if ordered_access {
++                    return Err(RatchetError::OrderedIngressViolation(
++                        "missing protected account",
++                    ));
++                }
+                 let account = Account::new();
+-                persist_account(&account_path, &account, &pickle_secret)?;
++                persist_account(&account_path, &account, &pickle_secret, false)?;
+                 account
+             }
+             Err(error) => return Err(error.into()),
+@@ -736,9 +804,38 @@ impl RatchetState {
+             account,
+             current_bundle,
+             current_pool,
++            ordered_access,
+         })
+     }
+ 
++    /// Only for a newly created disposable profile, before any session exists.
++    pub fn protect_for_ordered_ingress(&mut self) -> Result<(), RatchetError> {
++        if self.ordered_access || fs::read_dir(&self.sessions_directory)?.next().is_some() {
++            return Err(RatchetError::OrderedIngressViolation(
++                "profile already has sessions",
++            ));
++        }
++        let native = self.account.pickle().encrypt(&self.pickle_secret);
++        atomic_write(
++            &self.directory.join(ACCOUNT_FILE),
++            format!("{ORDERED_ACCOUNT_PREFIX}{native}").as_bytes(),
++        )?;
++        self.ordered_access = true;
++        Ok(())
++    }
++
++    fn ensure_legacy_access(&self) -> Result<(), RatchetError> {
++        if self.ordered_access
++            || fs::read_to_string(self.directory.join(ACCOUNT_FILE))?
++                .starts_with(ORDERED_ACCOUNT_PREFIX)
++        {
++            return Err(RatchetError::OrderedIngressViolation(
++                "legacy writer/decrypt forbidden",
++            ));
++        }
++        Ok(())
++    }
++
+     pub fn signed_identity(
+         &self,
+         identity: &DeviceIdentity,
+@@ -750,6 +847,7 @@ impl RatchetState {
+         &mut self,
+         identity: &DeviceIdentity,
+     ) -> Result<SignedPrekeyBundle, RatchetError> {
++        self.ensure_legacy_access()?;
+         if let Some(bundle) = &self.current_bundle {
+             if identity.device_id() != bundle.device_id() {
+                 return Err(RatchetError::PrekeyBundleDeviceMismatch {
+@@ -774,6 +872,7 @@ impl RatchetState {
+         now_unix_seconds: u64,
+         validity_seconds: u64,
+     ) -> Result<SignedPrekeyPool, RatchetError> {
++        self.ensure_legacy_access()?;
+         validate_prekey_pool_request(count, validity_seconds)?;
+         if let Some(pool) = &self.current_pool {
+             if identity.device_id() != pool.device_id() {
+@@ -800,6 +899,7 @@ impl RatchetState {
+         now_unix_seconds: u64,
+         validity_seconds: u64,
+     ) -> Result<SignedPrekeyPool, RatchetError> {
++        self.ensure_legacy_access()?;
+         validate_prekey_pool_request(count, validity_seconds)?;
+         self.create_new_prekey_pool(identity, count, now_unix_seconds, validity_seconds)
+     }
+@@ -812,6 +912,7 @@ impl RatchetState {
+         &self,
+         peer_device_id: DeviceId,
+     ) -> Result<RatchetRetirement, RatchetError> {
++        self.ensure_legacy_access()?;
+         Ok(RatchetRetirement {
+             session_removed: remove_file_if_present(&self.session_path(peer_device_id))?,
+             prekey_observation_removed: remove_file_if_present(
+@@ -846,6 +947,7 @@ impl RatchetState {
+         peer_pool: &SignedPrekeyPool,
+         now_unix_seconds: u64,
+     ) -> Result<(), RatchetError> {
++        self.ensure_legacy_access()?;
+         peer_pool.verify_at(now_unix_seconds)?;
+         self.observe_peer_prekey_pool(peer_pool)
+     }
+@@ -855,6 +957,7 @@ impl RatchetState {
+         directory: &AccountPrekeyDirectory,
+         now_unix_seconds: u64,
+     ) -> Result<(), RatchetError> {
++        self.ensure_legacy_access()?;
+         directory.verify_at(now_unix_seconds)?;
+         for pool in directory.pools() {
+             self.observe_peer_prekey_pool(pool)?;
+@@ -868,6 +971,7 @@ impl RatchetState {
+         peer_bundle: &SignedPrekeyBundle,
+         plaintext: &str,
+     ) -> Result<(SignedRatchetIdentity, RatchetCiphertext, RatchetOperation), RatchetError> {
++        self.ensure_legacy_access()?;
+         peer_bundle.verify()?;
+         validate_plaintext(plaintext)?;
+         let peer_device_id = peer_bundle.device_id();
+@@ -926,6 +1030,59 @@ impl RatchetState {
+         identity: &DeviceIdentity,
+         sender_identity: &SignedRatchetIdentity,
+         ciphertext: &RatchetCiphertext,
++    ) -> Result<(DecryptedMessage, RatchetOperation), RatchetError> {
++        self.ensure_legacy_access()?;
++        self.decrypt_inner(identity, sender_identity, ciphertext)
++    }
++
++    /// Decrypt exactly one pinned receiving chain. No skipped keys, DH transition,
++    /// concurrent candidate selection, or caller-provided session replacement.
++    pub fn decrypt_ordered_single_chain(
++        &mut self,
++        identity: &DeviceIdentity,
++        sender_identity: &SignedRatchetIdentity,
++        ciphertext: &RatchetCiphertext,
++        guard: &SingleChainReceiveGuard,
++    ) -> Result<(DecryptedMessage, RatchetOperation), RatchetError> {
++        if !self.ordered_access || sender_identity.device_id() != guard.peer_device_id {
++            return Err(RatchetError::OrderedIngressViolation(
++                "selected peer/access",
++            ));
++        }
++        let header = ciphertext.ordering_header()?;
++        if header.ratchet_key != guard.ratchet_key || header.index != guard.next_index {
++            return Err(RatchetError::OrderedIngressViolation(
++                "unknown DH tail or noncontiguous index",
++            ));
++        }
++        if header
++            .prekey_session_id
++            .as_ref()
++            .is_some_and(|id| id != &guard.session_id)
++        {
++            return Err(RatchetError::OrderedIngressViolation(
++                "different prekey session",
++            ));
++        }
++        match self.load_session_set(guard.peer_device_id)? {
++            Some(set) if set.candidates.len() == 1 && set.active_session_id == guard.session_id => {
++            }
++            None if guard.next_index == 0
++                && header.prekey_session_id.as_ref() == Some(&guard.session_id) => {}
++            _ => {
++                return Err(RatchetError::OrderedIngressViolation(
++                    "selected session/genesis",
++                ));
++            }
++        }
++        self.decrypt_inner(identity, sender_identity, ciphertext)
++    }
++
++    fn decrypt_inner(
++        &mut self,
++        identity: &DeviceIdentity,
++        sender_identity: &SignedRatchetIdentity,
++        ciphertext: &RatchetCiphertext,
+     ) -> Result<(DecryptedMessage, RatchetOperation), RatchetError> {
+         sender_identity.verify()?;
+         ciphertext.validate()?;
+@@ -1038,6 +1195,7 @@ impl RatchetState {
+                 &self.directory.join(ACCOUNT_FILE),
+                 &self.account,
+                 &self.pickle_secret,
++                self.ordered_access,
+             )?;
+             if let Some(pool) = &self.current_pool {
+                 let count = pool.bundles().len();
+@@ -1081,6 +1239,7 @@ impl RatchetState {
+             &self.directory.join(ACCOUNT_FILE),
+             &self.account,
+             &self.pickle_secret,
++            self.ordered_access,
+         )?;
+         atomic_write(&self.directory.join(PREKEY_BUNDLE_FILE), &bundle.encode()?)?;
+         self.current_bundle = Some(bundle.clone());
+@@ -1159,6 +1318,7 @@ impl RatchetState {
+             &self.directory.join(ACCOUNT_FILE),
+             &self.account,
+             &self.pickle_secret,
++            self.ordered_access,
+         )?;
+         atomic_write(&self.directory.join(PREKEY_POOL_FILE), &pool.encode()?)?;
+         self.current_pool = Some(pool.clone());
+@@ -1573,8 +1733,17 @@ fn persist_account(
+     path: &Path,
+     account: &Account,
+     pickle_secret: &[u8; PICKLE_SECRET_BYTES],
++    ordered_access: bool,
+ ) -> Result<(), RatchetError> {
+-    atomic_write(path, account.pickle().encrypt(pickle_secret).as_bytes())
++    let native = account.pickle().encrypt(pickle_secret);
++    // The format is fixed by the successful loader/protection transition. A
++    // failed or stale disk read must never downgrade this account to legacy.
++    let bytes = if ordered_access {
++        format!("{ORDERED_ACCOUNT_PREFIX}{native}")
++    } else {
++        native
++    };
++    atomic_write(path, bytes.as_bytes())
+ }
+ 
+ fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), RatchetError> {
+@@ -1601,6 +1770,8 @@ fn remove_file_if_present(path: &Path) -> Result<bool, RatchetError> {
+ 
+ #[derive(Debug, Error)]
+ pub enum RatchetError {
++    #[error("internal ordered ingress: {0}")]
++    OrderedIngressViolation(&'static str),
+     #[error("ratchet state I/O failed")]
+     Io(#[from] io::Error),
+ 
+@@ -1806,6 +1977,36 @@ pub enum RatchetError {
+     SystemTimeBeforeUnixEpoch,
+ }
+ 
++impl RatchetError {
++    /// Only deterministic failures of incoming bytes may be quarantined. Missing
++    /// keys, local pickle/record failures, I/O and maintenance errors require
++    /// rollback of the caller's transaction, including any earlier native writes.
++    pub fn is_invalid_ordered_input(&self) -> bool {
++        match self {
++            Self::Decryption(error)
++            | Self::SessionCreation(SessionCreationError::Decryption(error)) => matches!(
++                error,
++                DecryptionError::InvalidMAC(_)
++                    | DecryptionError::InvalidMACLength(_, _)
++                    | DecryptionError::InvalidPadding(_)
++                    | DecryptionError::NonContributoryKey
++            ),
++            Self::SessionCreation(
++                SessionCreationError::MismatchedIdentityKey(_, _)
++                | SessionCreationError::MismatchedSessionConfig { .. }
++                | SessionCreationError::NonContributoryKey,
++            )
++            | Self::MessageDecode(_)
++            | Self::InvalidUtf8(_)
++            | Self::InvalidPlaintextLength(_)
++            | Self::UnsupportedCiphertextVersion(_)
++            | Self::InvalidMessageType(_)
++            | Self::InvalidCiphertextLength(_) => true,
++            _ => false,
++        }
++    }
++}
++
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+@@ -2221,6 +2422,104 @@ mod tests {
+         Ok(())
+     }
+ 
++    #[test]
++    fn ordered_ingress_i1_error_classification_is_typed_and_unknown_is_operational() {
++        assert!(
++            RatchetError::Decryption(DecryptionError::InvalidMACLength(8, 0))
++                .is_invalid_ordered_input()
++        );
++        assert!(!RatchetError::Io(io::Error::other("invalid MAC")).is_invalid_ordered_input());
++        assert!(!RatchetError::UnsupportedSessionRecordVersion(99).is_invalid_ordered_input());
++        assert!(
++            !RatchetError::Decryption(DecryptionError::MissingMessageKey(0))
++                .is_invalid_ordered_input()
++        );
++        assert!(
++            !RatchetError::SessionCreation(SessionCreationError::MissingOneTimeKey(
++                Curve25519PublicKey::from_bytes([1; 32])
++            ))
++            .is_invalid_ordered_input()
++        );
++        assert!(!RatchetError::PrekeySequenceExhausted.is_invalid_ordered_input());
++    }
++
++    #[cfg(windows)]
++    #[test]
++    fn ordered_ingress_i2_allowed_save_uses_loaded_format_when_disk_tag_is_unreadable()
++    -> Result<(), Box<dyn std::error::Error>> {
++        use std::os::windows::fs::OpenOptionsExt;
++        let directory = tempdir()?;
++        let alice_dir = directory.path().join("alice");
++        let bob_dir = directory.path().join("bob");
++        let alice_identity = DeviceIdentity::generate()?;
++        let bob_identity = DeviceIdentity::generate()?;
++        let mut bob = RatchetState::load_or_create(&bob_dir)?;
++        let bob_bundle = bob.prekey_bundle(&bob_identity)?;
++        let mut stale_legacy = RatchetState::load_or_create(&bob_dir)?;
++        bob.protect_for_ordered_ingress()?;
++        let mut alice = RatchetState::load_or_create(&alice_dir)?;
++        let (sender, ciphertext, operation) =
++            alice.encrypt(&alice_identity, &bob_bundle, "exact")?;
++        let alice_bundle = alice.prekey_bundle(&alice_identity)?;
++        let guard = SingleChainReceiveGuard {
++            peer_device_id: alice_identity.device_id(),
++            session_id: operation.session_id,
++            ratchet_key: ciphertext.ordering_header()?.ratchet_key,
++            next_index: 0,
++        };
++        let account = bob_dir.join("ratchet/account.pickle");
++        // FILE_SHARE_WRITE | FILE_SHARE_DELETE: subsequent reads are denied,
++        // but the already loaded account can still be atomically replaced.
++        let blocker = OpenOptions::new()
++            .read(true)
++            .share_mode(0x2 | 0x4)
++            .open(&account)?;
++        let read_error = fs::read_to_string(&account)
++            .err()
++            .ok_or("account read was not denied")?;
++        assert_eq!(read_error.raw_os_error(), Some(32));
++        drop(blocker);
++        // MoveFileEx replacement of an open target can itself fail on Windows.
++        // For the permitted-write case, make the disk tag unreadable as UTF-8
++        // while retaining the previously loaded, authenticated account in memory.
++        fs::write(&account, [0xff])?;
++        let invalid_tag = fs::read_to_string(&account).err().ok_or("tag decoded")?;
++        assert_eq!(invalid_tag.kind(), io::ErrorKind::InvalidData);
++        let (plaintext, _) =
++            bob.decrypt_ordered_single_chain(&bob_identity, &sender, &ciphertext, &guard)?;
++        assert_eq!(plaintext.as_str(), "exact");
++        let fenced = fs::read_to_string(&account)?.starts_with(ORDERED_ACCOUNT_PREFIX);
++        println!(
++            "ordered_i2_actual_sharing_violation=32; permitted_write_tag_read=InvalidData; allowed_write_succeeded=true; fence_retained={fenced}"
++        );
++        assert!(
++            fenced,
++            "a permitted save silently removed the account fence"
++        );
++        drop(bob);
++        assert!(matches!(
++            RatchetState::load_or_create(&bob_dir),
++            Err(RatchetError::OrderedIngressViolation(_))
++        ));
++        let mut reopened = RatchetState::load_for_ordered_ingress(&bob_dir)?;
++        assert!(matches!(
++            reopened.decrypt(&bob_identity, &sender, &ciphertext),
++            Err(RatchetError::OrderedIngressViolation(_))
++        ));
++        assert!(matches!(
++            stale_legacy.decrypt(&bob_identity, &sender, &ciphertext),
++            Err(RatchetError::OrderedIngressViolation(_))
++        ));
++        assert!(matches!(
++            stale_legacy.encrypt(&bob_identity, &alice_bundle, "forbidden"),
++            Err(RatchetError::OrderedIngressViolation(_))
++        ));
++        println!(
++            "ordered_i2=passed; explicit_fenced_save=true; reopen_legacy_encrypt_decrypt=refused"
++        );
++        Ok(())
++    }
++
+     fn walk_files(directory: &Path) -> Result<Vec<PathBuf>, io::Error> {
+         let mut files = Vec::new();
+         let mut pending = vec![directory.to_path_buf()];
+diff --git a/apps/kilogram-cli/src/ordered_ingress.rs b/apps/kilogram-cli/src/ordered_ingress.rs
+new file mode 100644
+--- /dev/null
++++ b/apps/kilogram-cli/src/ordered_ingress.rs
+@@ -0,0 +1,796 @@
++//! Internal, disposable, known-genesis single-chain integration. No profile migration.
++//! The lease excludes every other CLI writer; the account fence rejects legacy ratchets.
++use super::*;
++use kilogram_protocol::EventId;
++use kilogram_ratchet::SingleChainReceiveGuard;
++
++const STATE_PATH: &str = "ratchet/ordered-ingress.state";
++const DOMAIN: &[u8] = b"kilogram:internal-ordered-ingress-state:v1\0";
++const MAX_CHECKPOINT: usize = 4 * 1024 * 1024;
++const MAX_EVENT: usize = 8 * 1024;
++const MAX_CIPHERTEXT: usize = 2 * 1024;
++const COMMIT_LEASE: u64 = 256 * 1024;
++
++// Existing CLI commands on an already protected disposable profile. Every other
++// writer/transport path is refused; ordinary profiles never enter this branch.
++pub(super) async fn run_command(command: Command, lock: StateDirectoryLock) -> Result<()> {
++    let lease = Lease::adopt(lock)?;
++    let root = lease.lock.root();
++    let device = load_command_device_state(root)?;
++    let selected = read(root, device.identity().device_id())?.selection;
++    let result = async { match command {
++        Command::Sync {
++            state_dir,
++            ticket,
++            ticket_file,
++            conversation,
++            max_rounds,
++            expect_account,
++        } => {
++            ensure!(
++                ConversationId::from_label(&conversation) == selected.conversation
++                    && expect_account == selected.peer_account,
++                "unsupported protected sync context"
++            );
++            sync_with_ordered_lease(
++                state_dir,
++                ticket,
++                ticket_file,
++                conversation,
++                max_rounds,
++                expect_account,
++                Some(&lease),
++            )
++            .await
++            .map(|_| ())
++        }
++        Command::History {
++            state_dir,
++            conversation,
++        } => {
++            ensure!(
++                ConversationId::from_label(&conversation) == selected.conversation,
++                "unsupported protected history context"
++            );
++            show_history(state_dir, conversation)
++        }
++        _ => Err(anyhow::anyhow!(
++            "internal single-chain profile supports only ordered Sync and readable History; direct/mailbox/runtime/other writers forbidden"
++        )),
++    } }.await;
++    combine_operation_and_mirror(result, lease.finish())
++}
++
++pub(super) fn require_readable_convergence(root: &Path) -> Result<()> {
++    let device = load_command_device_state(root)?;
++    let checkpoint = read(root, device.identity().device_id())?;
++    ensure!(
++        checkpoint.pending.is_empty(),
++        "ordered sync has durable pending/quarantine, not readable convergence"
++    );
++    Ok(())
++}
++
++pub(super) fn verify_selected_peer(root: &Path, peer: DeviceId) -> Result<()> {
++    let device = load_command_device_state(root)?;
++    ensure!(
++        read(root, device.identity().device_id())?
++            .selection
++            .peer_device
++            == peer,
++        "unsupported peer device on protected session"
++    );
++    Ok(())
++}
++
++pub(super) struct Lease {
++    lock: StateDirectoryLock,
++    mirror: Option<VaultDualWriteGuard>,
++}
++
++impl Lease {
++    #[cfg(test)]
++    pub(super) fn acquire(root: &Path) -> Result<Self> {
++        Self::adopt(StateDirectoryLock::acquire(root)?)
++    }
++
++    fn adopt(lock: StateDirectoryLock) -> Result<Self> {
++        let mirror = VaultDualWriteGuard::prepare(lock.root())?
++            .context("ordered ingress requires an encrypted vault")?;
++        Ok(Self {
++            lock,
++            mirror: Some(mirror),
++        })
++    }
++
++    pub(super) fn finish(mut self) -> Result<()> {
++        self.mirror
++            .take()
++            .context("ordered lease already finished")?
++            .finish()
++    }
++
++    fn check(&self, root: &Path) -> Result<()> {
++        ensure!(
++            self.lock.root() == fs::canonicalize(root)?,
++            "ordered lease root mismatch"
++        );
++        Ok(())
++    }
++}
++
++#[derive(Clone, Debug, Serialize, Deserialize)]
++pub(super) struct Limits {
++    pub(super) ordinary_slots: usize,
++    pub(super) pending_bytes: usize,
++    pub(super) vault_charge: u64,
++    pub(super) transient_charge: u64,
++}
++
++impl Default for Limits {
++    fn default() -> Self {
++        Self {
++            ordinary_slots: 512,
++            pending_bytes: 2 * 1024 * 1024,
++            vault_charge: 128 * 1024 * 1024,
++            transient_charge: 512 * 1024 * 1024,
++        }
++    }
++}
++
++#[derive(Clone, Debug, Serialize, Deserialize)]
++pub(super) struct Selection {
++    pub(super) conversation: ConversationId,
++    pub(super) peer_account: AccountId,
++    pub(super) peer_device: DeviceId,
++    pub(super) recipient: DeviceId,
++    pub(super) recipient_account: AccountId,
++    pub(super) session_id: String,
++    pub(super) chain: [u8; 32],
++    pub(super) genesis: EventId,
++    pub(super) limits: Limits,
++}
++
++#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
++enum EntryState {
++    Pending,
++    Quarantined(String),
++}
++
++#[derive(Clone, Debug, Serialize, Deserialize)]
++struct Pending {
++    id: EventId,
++    bytes: Vec<u8>,
++    state: EntryState,
++}
++
++#[derive(Clone, Debug, Serialize, Deserialize)]
++struct Receipt {
++    id: EventId,
++    ack: EventId,
++}
++
++#[derive(Clone, Debug, Serialize, Deserialize)]
++pub(super) struct Checkpoint {
++    selection: Selection,
++    generation: u64,
++    next: u64,
++    pending: BTreeMap<u64, Pending>,
++    readable: BTreeMap<u64, Receipt>,
++}
++
++#[derive(Serialize, Deserialize)]
++struct SignedCheckpoint {
++    device: DeviceId,
++    checkpoint: Checkpoint,
++    signature: Vec<u8>,
++}
++
++#[derive(Clone, Debug, PartialEq, Eq)]
++pub(super) enum Drain {
++    Waiting,
++    Readable(usize),
++    Quarantined { index: u64, committed_prefix: usize },
++    StorageBlocked { committed_prefix: usize },
++}
++
++#[derive(Debug)]
++pub(super) struct BatchResult {
++    pub(super) durable_ids: Vec<EventId>,
++    pub(super) event_error: Option<String>,
++    pub(super) drain: Drain,
++}
++
++impl BatchResult {
++    fn complete(&self, expected: &[EventId]) -> bool {
++        self.event_error.is_none()
++            && self.durable_ids == expected
++            && !matches!(
++                self.drain,
++                Drain::Quarantined { .. } | Drain::StorageBlocked { .. }
++            )
++    }
++}
++
++fn signed_bytes(checkpoint: &Checkpoint) -> Result<Vec<u8>> {
++    let mut bytes = DOMAIN.to_vec();
++    bytes.extend(postcard::to_allocvec(checkpoint)?);
++    Ok(bytes)
++}
++
++fn decode(bytes: &[u8], recipient: DeviceId) -> Result<Checkpoint> {
++    ensure!(
++        bytes.len() <= MAX_CHECKPOINT,
++        "ordered checkpoint too large"
++    );
++    let signed: SignedCheckpoint = postcard::from_bytes(bytes)?;
++    ensure!(
++        signed.device == recipient && signed.checkpoint.selection.recipient == recipient,
++        "ordered checkpoint identity mismatch"
++    );
++    recipient.verify(&signed_bytes(&signed.checkpoint)?, &signed.signature)?;
++    let checkpoint = signed.checkpoint;
++    ensure!(
++        checkpoint.next <= 512 && checkpoint.readable.len() == checkpoint.next as usize,
++        "ordered checkpoint frontier mismatch"
++    );
++    ensure!(
++        checkpoint.pending.len() <= checkpoint.selection.limits.ordinary_slots + 1
++            && checkpoint.selection.limits.ordinary_slots <= 512
++            && checkpoint.selection.limits.pending_bytes <= 2 * 1024 * 1024
++            && checkpoint.selection.limits.vault_charge <= 128 * 1024 * 1024
++            && checkpoint.selection.limits.transient_charge <= 512 * 1024 * 1024,
++        "ordered checkpoint limits"
++    );
++    Ok(checkpoint)
++}
++
++fn read(root: &Path, recipient: DeviceId) -> Result<Checkpoint> {
++    let vault = EncryptedStateVault::open_existing(root)?;
++    let primary = vault.read_mutable_primary_canary(&[StateRecordKind::Ratchet])?;
++    let bytes = primary
++        .records()
++        .iter()
++        .find(|record| record.relative_path() == STATE_PATH)
++        .context("protected account has no authenticated ordered checkpoint")?
++        .content();
++    decode(bytes, recipient)
++}
++
++fn write(
++    root: &Path,
++    checkpoint: &mut Checkpoint,
++    device: &DeviceIdentity,
++    transaction: &mut CommandTransactionContext<'_>,
++) -> Result<()> {
++    transaction.prepare_ratchet_workspace()?;
++    checkpoint.generation = checkpoint
++        .generation
++        .checked_add(1)
++        .context("ordered generation exhausted")?;
++    let signature = device.sign(&signed_bytes(checkpoint)?).to_vec();
++    let bytes = postcard::to_allocvec(&SignedCheckpoint {
++        device: device.device_id(),
++        checkpoint: checkpoint.clone(),
++        signature,
++    })?;
++    ensure!(bytes.len() <= MAX_CHECKPOINT, "ordered checkpoint capacity");
++    let path = root.join(STATE_PATH);
++    let parent = path.parent().context("ordered parent")?;
++    let mut temporary = NamedTempFile::new_in(parent)?;
++    temporary.write_all(&bytes)?;
++    temporary.as_file().sync_all()?;
++    temporary
++        .persist(&path)
++        .map_err(|error| error.error)?
++        .sync_all()?;
++    Ok(())
++}
++
++fn directory_bytes(root: &Path) -> Result<u64> {
++    let mut total = 0_u64;
++    for entry in fs::read_dir(root)? {
++        let entry = entry?;
++        let meta = entry.metadata()?;
++        ensure!(
++            !entry.file_type()?.is_symlink(),
++            "ordered profile contains symlink"
++        );
++        total = total
++            .checked_add(if meta.is_dir() {
++                directory_bytes(&entry.path())?
++            } else {
++                meta.len()
++            })
++            .context("ordered disk accounting overflow")?;
++    }
++    Ok(total)
++}
++
++// This includes a complete future commit for each accepted entry and an additional
++// moving head, plus a checkpoint allowance. It is conservative logical/staging
++// admission, NOT a promise about future OS disk availability or redb allocation.
++fn charge(base: u64, entries: usize, lease: u64, control: u64) -> Option<u64> {
++    base.checked_mul(3)?
++        .checked_add((entries as u64).checked_add(1)?.checked_mul(lease)?)?
++        .checked_add(control)
++}
++
++fn has_capacity(root: &Path, checkpoint: &Checkpoint, entries: usize) -> Result<bool> {
++    let logical = EncryptedStateVault::open_existing(root)?
++        .verify()?
++        .plaintext_bytes();
++    let physical_files = directory_bytes(root)?;
++    Ok(
++        charge(logical, entries, COMMIT_LEASE, MAX_CHECKPOINT as u64)
++            .is_some_and(|bytes| bytes <= checkpoint.selection.limits.vault_charge)
++            && charge(physical_files, entries, COMMIT_LEASE, MAX_CHECKPOINT as u64)
++                .is_some_and(|bytes| bytes <= checkpoint.selection.limits.transient_charge),
++    )
++}
++
++fn validate_event(
++    event: &AuthorizedEvent,
++    selection: &Selection,
++    membership: &ConversationMembershipSnapshot,
++) -> Result<kilogram_ratchet::RatchetOrderingHeader> {
++    event.verify_for_membership(membership)?;
++    ensure!(
++        event.author_account_id() == selection.peer_account
++            && event.event().author_device_id() == selection.peer_device
++            && event.event().conversation_id() == selection.conversation,
++        "unsupported author/conversation on protected session"
++    );
++    ensure!(
++        event.event().recipient_device_list()?.account_id() == selection.recipient_account
++            && event.event().ratchet_recipients()?.len() == 1,
++        "internal ingress requires one recipient"
++    );
++    let (_, ciphertext) = event.event().ratchet_message_for(selection.recipient)?;
++    ensure!(
++        ciphertext.ciphertext().len() <= MAX_CIPHERTEXT,
++        "StorageBlocked: oversized legacy ciphertext"
++    );
++    let header = ciphertext.ordering_header()?;
++    ensure!(
++        header.ratchet_key == selection.chain,
++        "UnresolvedLegacyTail: unknown DH chain"
++    );
++    ensure!(
++        header
++            .prekey_session_id
++            .as_ref()
++            .is_none_or(|id| id == &selection.session_id),
++        "unsupported Olm session"
++    );
++    ensure!(header.index < 512, "internal single-chain lifetime bound");
++    if header.index == 0 {
++        ensure!(
++            event.event().event_id()? == selection.genesis,
++            "different genesis"
++        );
++    }
++    Ok(header)
++}
++
++fn current_peer_authority(
++    root: &Path,
++    device: &DeviceState,
++    account: AccountId,
++) -> Result<AccountAuthoritySnapshot> {
++    #[cfg(all(test, windows))]
++    let _read_fault = tests::trust_read_fault(root)?;
++    let trust = CommandTrustReadRepository::open(root, device)?;
++    trust.load_peer_authority_snapshot(account)
++}
++
++fn check_authority(
++    event: &AuthorizedEvent,
++    pinned: &AccountAuthoritySnapshot,
++) -> std::result::Result<(), kilogram_identity::IdentityError> {
++    verify_device_authorization_with_snapshot(
++        event.author_account_id(),
++        event.author_certificate(),
++        pinned,
++        &[DeviceCapability::SignEvents],
++    )?;
++    Ok(())
++}
++
++fn authorize_current(root: &Path, device: &DeviceState, event: &AuthorizedEvent) -> Result<()> {
++    let pinned = current_peer_authority(root, device, event.author_account_id())?;
++    check_authority(event, &pinned)?;
++    Ok(())
++}
++
++pub(super) fn put(
++    store: &DecryptingSessionStore<'_>,
++    lease: &Lease,
++    events: &[AuthorizedEvent],
++    membership: &ConversationMembershipSnapshot,
++) -> Result<BatchResult> {
++    lease.check(&store.state_directory)?;
++    let root = &store.state_directory;
++    let device = store.device_state;
++    let mut checkpoint = read(root, device.identity().device_id())?;
++    ensure!(
++        checkpoint.selection.recipient_account == store.local_account_id,
++        "protected recipient account mismatch"
++    );
++    let own_trust = CommandTrustReadRepository::open(root, device)?;
++    let own_certificate = own_trust.load_certificate()?;
++    let own_authority = own_trust.load_own_authority_snapshot(&own_certificate)?;
++    ensure!(
++        own_certificate.encode()?.len() + own_authority.encode()?.len() <= MAX_EVENT,
++        "StorageBlocked: own ACK authorization exceeds the internal commit envelope bound"
++    );
++    let mut durable_ids = Vec::new();
++    let mut event_error = None;
++    // One bounded admission transaction. A quota/conflict commits the exact accepted prefix,
++    // then returns an explicit failed round. No subset SyncComplete is constructed.
++    let mut changed = false;
++    for event in events {
++        let raw = event.encode()?;
++        let id = event.event().event_id()?;
++        let candidate = (|| -> Result<bool> {
++            ensure!(
++                raw.len() <= MAX_EVENT,
++                "StorageBlocked: oversized legacy event"
++            );
++            let header = validate_event(event, &checkpoint.selection, membership)?;
++            authorize_current(root, device, event)?;
++            if let Some(receipt) = checkpoint.readable.get(&header.index) {
++                ensure!(receipt.id == id, "Conflict: ordinal is not EventId");
++                let existing = store.event_writes.authorized_events_by_id(
++                    checkpoint.selection.conversation,
++                    &[id],
++                    membership,
++                )?;
++                ensure!(
++                    existing[0].encode()? == raw,
++                    "conflicting authorization bytes"
++                );
++                return Ok(false);
++            }
++            if let Some(existing) = checkpoint.pending.get(&header.index) {
++                ensure!(
++                    existing.id == id && existing.bytes == raw,
++                    "Conflict: ordinal is not EventId"
++                );
++                return Ok(false);
++            }
++            let ordinary = checkpoint
++                .pending
++                .keys()
++                .filter(|index| **index != checkpoint.next)
++                .count();
++            ensure!(
++                header.index == checkpoint.next
++                    || ordinary < checkpoint.selection.limits.ordinary_slots,
++                "Backpressure: ordinary pending capacity"
++            );
++            let pending_bytes: usize = checkpoint
++                .pending
++                .values()
++                .map(|entry| entry.bytes.len())
++                .sum();
++            let head_reserve = if header.index == checkpoint.next {
++                0
++            } else {
++                MAX_EVENT
++            };
++            ensure!(
++                pending_bytes
++                    .checked_add(raw.len())
++                    .and_then(|bytes| bytes.checked_add(head_reserve))
++                    .is_some_and(|bytes| bytes <= checkpoint.selection.limits.pending_bytes),
++                "Backpressure: pending bytes/head reserve"
++            );
++            ensure!(
++                has_capacity(root, &checkpoint, checkpoint.pending.len() + 1)?,
++                "StorageBlocked: full commit reserve"
++            );
++            checkpoint.pending.insert(
++                header.index,
++                Pending {
++                    id,
++                    bytes: raw,
++                    state: EntryState::Pending,
++                },
++            );
++            Ok(true)
++        })();
++        match candidate {
++            Ok(inserted) => {
++                changed |= inserted;
++                durable_ids.push(id);
++            }
++            Err(error) => {
++                event_error = Some(format!("{error:#}"));
++                break;
++            }
++        }
++    }
++    if changed {
++        run_state_transaction(root, |transaction| {
++            write(root, &mut checkpoint, device.identity(), transaction)
++        })?;
++    }
++    fault(Fault::PendingCommitted)?;
++    let drain = drain(store, &mut checkpoint, membership)?;
++    Ok(BatchResult {
++        durable_ids,
++        event_error,
++        drain,
++    })
++}
++
++fn drain(
++    store: &DecryptingSessionStore<'_>,
++    checkpoint: &mut Checkpoint,
++    membership: &ConversationMembershipSnapshot,
++) -> Result<Drain> {
++    let root = &store.state_directory;
++    if checkpoint
++        .pending
++        .get(&checkpoint.next)
++        .is_some_and(|entry| matches!(entry.state, EntryState::Quarantined(_)))
++    {
++        return Ok(Drain::Quarantined {
++            index: checkpoint.next,
++            committed_prefix: 0,
++        });
++    }
++    if !checkpoint.pending.contains_key(&checkpoint.next) {
++        return Ok(Drain::Waiting);
++    }
++    if !has_capacity(root, checkpoint, checkpoint.pending.len())? {
++        return Ok(Drain::StorageBlocked {
++            committed_prefix: 0,
++        });
++    }
++    let device = store.device_state;
++    let trust = CommandTrustReadRepository::open(root, device)?;
++    let certificate = trust.load_certificate()?;
++    let authority = trust.load_own_authority_snapshot(&certificate)?;
++    let result = run_state_transaction(root, |transaction| {
++        transaction.prepare_ratchet_workspace()?;
++        let mut ratchet = RatchetState::load_for_ordered_ingress(root)?;
++        let mut readable = Vec::new();
++        let mut acknowledgements = Vec::new();
++        let mut blocked = None;
++        while let Some(entry) = checkpoint.pending.get(&checkpoint.next).cloned() {
++            if let EntryState::Quarantined(_) = entry.state {
++                blocked = Some(checkpoint.next);
++                break;
++            }
++            let validated = (|| -> Result<AuthorizedEvent> {
++                let event = AuthorizedEvent::decode_and_verify_author(&entry.bytes)?;
++                validate_event(&event, &checkpoint.selection, membership)?;
++                Ok(event)
++            })();
++            let event = match validated {
++                Ok(event) => event,
++                Err(error) => {
++                    checkpoint
++                        .pending
++                        .get_mut(&checkpoint.next)
++                        .context("missing quarantine entry")?
++                        .state =
++                        EntryState::Quarantined(format!("authorization/encoding: {error:#}"));
++                    blocked = Some(checkpoint.next);
++                    break;
++                }
++            };
++            // A failure loading local trust (including corrupt/missing records)
++            // is operational, regardless of its underlying error variant.
++            let pinned = current_peer_authority(root, device, event.author_account_id())?;
++            if let Err(error) = check_authority(&event, &pinned) {
++                checkpoint
++                    .pending
++                    .get_mut(&checkpoint.next)
++                    .context("missing quarantine entry")?
++                    .state = EntryState::Quarantined(format!("authorization: {error}"));
++                blocked = Some(checkpoint.next);
++                break;
++            }
++            let (sender, ciphertext) = event
++                .event()
++                .ratchet_message_for(device.identity().device_id())?;
++            let guard = SingleChainReceiveGuard {
++                peer_device_id: checkpoint.selection.peer_device,
++                session_id: checkpoint.selection.session_id.clone(),
++                ratchet_key: checkpoint.selection.chain,
++                next_index: checkpoint.next,
++            };
++            #[cfg(all(test, windows))]
++            let write_fault = tests::native_write_fault(root)?;
++            let decrypted =
++                ratchet.decrypt_ordered_single_chain(device.identity(), sender, ciphertext, &guard);
++            #[cfg(all(test, windows))]
++            drop(write_fault);
++            let decrypted = match decrypted {
++                Ok((decrypted, _)) => decrypted,
++                Err(error) if error.is_invalid_ordered_input() => {
++                    checkpoint
++                        .pending
++                        .get_mut(&checkpoint.next)
++                        .context("missing quarantine entry")?
++                        .state = EntryState::Quarantined(format!("{error}"));
++                    blocked = Some(checkpoint.next);
++                    break;
++                }
++                Err(error) => {
++                    return Err(anyhow::Error::new(error).context(
++                        "ordered ingress operational failure; roll back native workspace",
++                    ));
++                }
++            };
++            fault(Fault::TrialDecrypted)?;
++            let (_, projection) = ensure_received_local_text_projection(
++                store.local_message_writes,
++                device,
++                store.local_account_id,
++                event.event(),
++                &decrypted,
++            )?;
++            transaction.register_store_receipt(&projection)?;
++            let ack = AuthorizedEvent::new(
++                SignedEvent::sign_acknowledgement(
++                    device.identity(),
++                    checkpoint.selection.conversation,
++                    transaction.allocate_sequence(device)?,
++                    vec![entry.id],
++                    entry.id,
++                )?,
++                certificate.clone(),
++                authority.clone(),
++            )?;
++            let ack_id = ack.event().event_id()?;
++            checkpoint.readable.insert(
++                checkpoint.next,
++                Receipt {
++                    id: entry.id,
++                    ack: ack_id,
++                },
++            );
++            checkpoint.pending.remove(&checkpoint.next);
++            checkpoint.next += 1;
++            readable.push(event);
++            acknowledgements.push(ack);
++        }
++        // The invalid trial never persisted native session/account files. A valid prefix and
++        // its projections, exact events, ACK intents and quarantine commit together here.
++        let count = readable.len();
++        readable.extend(acknowledgements);
++        let receipt = store
++            .event_writes
++            .put_authorized_batch_with_receipt(&readable, membership)?;
++        transaction.register_store_receipt(&receipt)?;
++        write(root, checkpoint, device.identity(), transaction)?;
++        Ok(match blocked {
++            Some(index) => Drain::Quarantined {
++                index,
++                committed_prefix: count,
++            },
++            None => Drain::Readable(count),
++        })
++    })?;
++    fault(Fault::ReadableCommitted)?;
++    Ok(result)
++}
++
++pub(super) fn put_for_session(
++    store: &DecryptingSessionStore<'_>,
++    lease: &Lease,
++    events: &[AuthorizedEvent],
++    membership: &ConversationMembershipSnapshot,
++) -> Result<()> {
++    let result = put(store, lease, events, membership)?;
++    let expected = events
++        .iter()
++        .map(|event| event.event().event_id())
++        .collect::<Result<Vec<_>, _>>()?;
++    ensure!(
++        result.complete(&expected),
++        "ordered ingress incomplete round: {result:?}; no SyncComplete"
++    );
++    Ok(())
++}
++
++pub(super) fn inventory(
++    root: &Path,
++    recipient: DeviceId,
++    conversation: ConversationId,
++    membership: &ConversationMembershipSnapshot,
++) -> Result<Vec<EventId>> {
++    let checkpoint = read(root, recipient)?;
++    ensure!(
++        checkpoint.selection.conversation == conversation,
++        "unsupported protected conversation"
++    );
++    let mut ids = open_immutable_read_repositories(root)?
++        .events
++        .authorized_inventory(conversation, membership)?;
++    ids.extend(checkpoint.pending.values().map(|entry| entry.id));
++    ids.sort();
++    ids.dedup();
++    Ok(ids)
++}
++
++pub(super) fn events(
++    root: &Path,
++    recipient: DeviceId,
++    conversation: ConversationId,
++    ids: &[EventId],
++    membership: &ConversationMembershipSnapshot,
++) -> Result<Vec<AuthorizedEvent>> {
++    let checkpoint = read(root, recipient)?;
++    ensure!(
++        checkpoint.selection.conversation == conversation,
++        "unsupported protected conversation"
++    );
++    let repository = open_immutable_read_repositories(root)?;
++    ids.iter()
++        .map(|id| {
++            if let Some(entry) = checkpoint.pending.values().find(|entry| &entry.id == id) {
++                let event = AuthorizedEvent::decode_and_verify_author(&entry.bytes)?;
++                event.verify_for_membership(membership)?;
++                Ok(event)
++            } else {
++                repository
++                    .events
++                    .authorized_events_by_id(conversation, &[*id], membership)?
++                    .pop()
++                    .context("missing protected stored event")
++            }
++        })
++        .collect()
++}
++
++#[derive(Clone, Copy, PartialEq, Eq)]
++pub(super) enum Fault {
++    PendingCommitted,
++    TrialDecrypted,
++    ReadableCommitted,
++}
++
++#[cfg(test)]
++thread_local! { static INJECTED: std::cell::Cell<Option<Fault>> = const { std::cell::Cell::new(None) }; }
++
++fn fault(point: Fault) -> Result<()> {
++    #[cfg(test)]
++    if INJECTED.with(|value| value.get() == Some(point)) {
++        INJECTED.with(|value| value.set(None));
++        bail!("injected ordered ingress reopen boundary");
++    }
++    let _ = point;
++    Ok(())
++}
++
++// There is intentionally no production CLI activation/migration command.
++#[cfg(test)]
++fn initialize(lease: &Lease, device: &DeviceState, selection: Selection) -> Result<()> {
++    let root = lease.lock.root();
++    let read = open_immutable_read_repositories(root)?;
++    ensure!(
++        read.event_record_count == 0 && read.local_projection_record_count == 0,
++        "only an empty disposable profile may be protected"
++    );
++    let mut checkpoint = Checkpoint {
++        selection,
++        generation: 0,
++        next: 0,
++        pending: BTreeMap::new(),
++        readable: BTreeMap::new(),
++    };
++    run_state_transaction(root, |transaction| {
++        let mut ratchet = transaction.load_ratchet_state()?;
++        ratchet.protect_for_ordered_ingress()?;
++        write(root, &mut checkpoint, device.identity(), transaction)
++    })
++}
++
++#[cfg(test)]
++#[path = "ordered_ingress_tests.rs"]
++mod tests;
+diff --git a/apps/kilogram-cli/src/ordered_ingress_tests.rs b/apps/kilogram-cli/src/ordered_ingress_tests.rs
+new file mode 100644
+--- /dev/null
++++ b/apps/kilogram-cli/src/ordered_ingress_tests.rs
+@@ -0,0 +1,1103 @@
++use super::*;
++use kilogram_protocol::RatchetRecipient;
++
++const LABEL: &str = "internal-ordered-single-chain";
++
++struct Fixture {
++    temp: tempfile::TempDir,
++    source: PathBuf,
++    recipient: PathBuf,
++    events: Vec<AuthorizedEvent>,
++    membership: ConversationMembershipSnapshot,
++}
++
++#[derive(Serialize, Deserialize)]
++struct Manifest {
++    source: PathBuf,
++    recipient: PathBuf,
++    membership: Vec<u8>,
++    expected: Vec<(EventId, String)>,
++}
++
++impl Fixture {
++    fn new(count: usize, limits: Limits) -> Result<Self> {
++        let temp = tempfile::tempdir()?;
++        let source = temp.path().join("source");
++        let recipient = temp.path().join("recipient");
++        let alice_root = AccountRootState::create(temp.path().join("alice-root"))?;
++        let bob_root = AccountRootState::create(temp.path().join("bob-root"))?;
++        let alice = DeviceState::load_or_create(&source)?;
++        let bob = DeviceState::load_or_create(&recipient)?;
++        let alice_cert = alice_root.issue_device_certificate(
++            alice.identity().device_id(),
++            alice.encryption().public_key(),
++            &DeviceCapability::MESSAGING,
++        )?;
++        let bob_cert = bob_root.issue_device_certificate(
++            bob.identity().device_id(),
++            bob.encryption().public_key(),
++            &DeviceCapability::MESSAGING,
++        )?;
++        let alice_authority = alice_root.authority_snapshot()?;
++        let bob_list = bob_root.publish_device_list(std::slice::from_ref(&bob_cert))?;
++        alice.install_certificate(&alice_cert)?;
++        alice.install_own_authority_snapshot(&alice_authority)?;
++        bob.install_certificate(&bob_cert)?;
++        bob.install_own_authority_snapshot(bob_list.authority_snapshot())?;
++        bob.pin_peer_authority_snapshot(&alice_authority)?;
++        let conversation = ConversationId::from_label(LABEL);
++        let membership = alice_root
++            .create_conversation_membership(conversation.scope_id(), &[bob_root.account_id()])?;
++        alice.install_conversation_membership(&membership)?;
++        bob.install_conversation_membership(&membership)?;
++        let pool = RatchetState::load_or_create(&recipient)?.prekey_pool(
++            bob.identity(),
++            4,
++            unix_time_now()?,
++            DEFAULT_PREKEY_POOL_VALIDITY_SECONDS,
++        )?;
++        // Synthetic ordinary-peer control, captured before the recipient fence.
++        // It creates a real B0/L0 on the SAME selected session for the tail test.
++        let control = temp.path().join("bob-native-control/ratchet");
++        fs::create_dir_all(&control)?;
++        for file in fs::read_dir(recipient.join("ratchet"))? {
++            let file = file?;
++            if file.file_type()?.is_file() {
++                fs::copy(file.path(), control.join(file.file_name()))?;
++            }
++        }
++        let mut sender = RatchetState::load_or_create(&source)?;
++        let mut events = Vec::new();
++        let mut parents = Vec::new();
++        let mut session_id = None;
++        for index in 0..count {
++            let (identity, ciphertext, operation) = sender.encrypt_with_pool(
++                alice.identity(),
++                &pool,
++                &format!("exact-{index:03}"),
++                unix_time_now()?,
++            )?;
++            session_id = Some(operation.session_id);
++            let event = AuthorizedEvent::new(
++                SignedEvent::sign_ratchet_text(
++                    alice.identity(),
++                    conversation,
++                    index as u64 * 2 + 7,
++                    parents,
++                    bob_list.clone(),
++                    identity,
++                    vec![RatchetRecipient::new(
++                        bob.identity().device_id(),
++                        ciphertext,
++                    )?],
++                )?,
++                alice_cert.clone(),
++                alice_authority.clone(),
++            )?;
++            parents = vec![event.event().event_id()?];
++            events.push(event);
++        }
++        open_event_store(&source)?.put_authorized_batch(&events, &membership)?;
++        let contact = SignedRuntimeContact::sign(
++            bob.identity(),
++            bob_root.account_id(),
++            alice_root.account_id(),
++            alice.identity().device_id(),
++            LABEL.into(),
++            conversation,
++            RoutePolicy::DirectOnly,
++            temp.path().join("synthetic-descriptor-not-dialed"),
++        )?;
++        let contact_path = recipient.join(runtime_contact_relative_path(contact.contact_id()));
++        fs::create_dir_all(contact_path.parent().context("contact parent")?)?;
++        fs::write(contact_path, contact.encode()?)?;
++        let vault = EncryptedStateVault::open_or_create(&recipient)?;
++        vault.migrate_legacy_snapshot()?;
++        drop(vault);
++        let lease = Lease::acquire(&recipient)?;
++        let bob = load_command_device_state(&recipient)?;
++        let header = events[0]
++            .event()
++            .ratchet_message_for(bob.identity().device_id())?
++            .1
++            .ordering_header()?;
++        initialize(
++            &lease,
++            &bob,
++            Selection {
++                conversation,
++                peer_account: alice_root.account_id(),
++                peer_device: alice.identity().device_id(),
++                recipient: bob.identity().device_id(),
++                recipient_account: bob_root.account_id(),
++                session_id: session_id.context("session")?,
++                chain: header.ratchet_key,
++                genesis: events[0].event().event_id()?,
++                limits,
++            },
++        )?;
++        lease.finish()?;
++        let manifest = Manifest {
++            source: source.clone(),
++            recipient: recipient.clone(),
++            membership: membership.encode()?,
++            expected: events
++                .iter()
++                .enumerate()
++                .map(|(index, event)| Ok((event.event().event_id()?, format!("exact-{index:03}"))))
++                .collect::<Result<Vec<_>>>()?,
++        };
++        fs::write(
++            temp.path().join("manifest.json"),
++            serde_json::to_vec(&manifest)?,
++        )?;
++        Ok(Self {
++            temp,
++            source,
++            recipient,
++            events,
++            membership,
++        })
++    }
++
++    fn resign(&self, original: &AuthorizedEvent, wrong_mac: bool) -> Result<AuthorizedEvent> {
++        let alice = load_command_device_state(&self.source)?;
++        let recipient = load_command_device_state(&self.recipient)?;
++        let (identity, ciphertext) = original
++            .event()
++            .ratchet_message_for(recipient.identity().device_id())?;
++        let mut ciphertext = serde_json::to_value(ciphertext)?;
++        if wrong_mac {
++            let bytes = ciphertext["ciphertext"]
++                .as_array_mut()
++                .context("cipher bytes")?;
++            let last = bytes.last_mut().context("last byte")?;
++            *last = serde_json::json!(last.as_u64().context("byte")? ^ 1);
++        }
++        let ciphertext = serde_json::from_value(ciphertext)?;
++        AuthorizedEvent::new(
++            SignedEvent::sign_ratchet_text(
++                alice.identity(),
++                original.event().conversation_id(),
++                original.event().author_sequence() + 1000,
++                original.event().parents().to_vec(),
++                original.event().recipient_device_list()?.clone(),
++                identity.clone(),
++                vec![RatchetRecipient::new(
++                    recipient.identity().device_id(),
++                    ciphertext,
++                )?],
++            )?,
++            original.author_certificate().clone(),
++            original.author_authority_snapshot().clone(),
++        )
++        .map_err(Into::into)
++    }
++}
++
++fn with_store<T>(
++    root: &Path,
++    lease: &Lease,
++    action: impl FnOnce(&DecryptingSessionStore<'_>) -> Result<T>,
++) -> Result<T> {
++    let device = load_command_device_state(root)?;
++    let events = open_event_store(root)?;
++    let projections = open_local_message_store(root)?;
++    let mut store = DecryptingSessionStore::new(
++        root,
++        &events,
++        &projections,
++        &device,
++        device.load_certificate()?.account_id(),
++        open_immutable_read_repositories(root)?,
++    );
++    store.ordered_lease = Some(lease);
++    action(&store)
++}
++
++fn state(root: &Path) -> Result<Checkpoint> {
++    read(
++        root,
++        load_command_device_state(root)?.identity().device_id(),
++    )
++}
++
++fn native_digest(root: &Path) -> Result<blake3::Hash> {
++    let vault = EncryptedStateVault::open_existing(root)?;
++    let read = vault.read_mutable_primary_canary(&[StateRecordKind::Ratchet])?;
++    let mut hasher = blake3::Hasher::new();
++    for record in read
++        .records()
++        .iter()
++        .filter(|record| record.relative_path() != STATE_PATH)
++    {
++        hasher.update(record.relative_path().as_bytes());
++        hasher.update(record.content());
++    }
++    Ok(hasher.finalize())
++}
++
++#[test]
++fn ordered_ingress_s1_pending_invalid_reopen_keeps_valid_prefix() -> Result<()> {
++    let fixture = Fixture::new(3, Limits::default())?;
++    let bad = fixture.resign(&fixture.events[1], true)?;
++    let raw = bad.encode()?;
++    let before;
++    {
++        let lease = Lease::acquire(&fixture.recipient)?;
++        before = native_digest(&fixture.recipient)?;
++        let result = with_store(&fixture.recipient, &lease, |store| {
++            put(
++                store,
++                &lease,
++                std::slice::from_ref(&bad),
++                &fixture.membership,
++            )
++        })?;
++        ensure!(result.drain == Drain::Waiting && result.durable_ids == [bad.event().event_id()?]);
++        ensure!(native_digest(&fixture.recipient)? == before);
++        lease.finish()?;
++    }
++    let lease = Lease::acquire(&fixture.recipient)?;
++    let result = with_store(&fixture.recipient, &lease, |store| {
++        put(store, &lease, &fixture.events[..1], &fixture.membership)
++    })?;
++    ensure!(
++        result.drain
++            == (Drain::Quarantined {
++                index: 1,
++                committed_prefix: 1
++            })
++    );
++    ensure!(!result.complete(&[fixture.events[0].event().event_id()?]));
++    let checkpoint = state(&fixture.recipient)?;
++    ensure!(
++        checkpoint.next == 1
++            && checkpoint.readable.len() == 1
++            && checkpoint.pending[&1].bytes == raw
++    );
++    ensure!(matches!(
++        checkpoint.pending[&1].state,
++        EntryState::Quarantined(_)
++    ));
++    let snapshot = native_digest(&fixture.recipient)?;
++    let generation = checkpoint.generation;
++    for _ in 0..3 {
++        let retry = with_store(&fixture.recipient, &lease, |store| {
++            put(store, &lease, &fixture.events[..1], &fixture.membership)
++        })?;
++        ensure!(
++            retry.drain
++                == (Drain::Quarantined {
++                    index: 1,
++                    committed_prefix: 0
++                })
++        );
++        ensure!(
++            native_digest(&fixture.recipient)? == snapshot
++                && state(&fixture.recipient)?.generation == generation
++        );
++    }
++    let history = collect_runtime_history_page(&fixture.recipient, LABEL, None, 100)?;
++    ensure!(history.total_messages == 1 && history.messages[0].body == "exact-000");
++    let ack_ids = &checkpoint.readable;
++    ensure!(ack_ids.len() == 1 && !ack_ids.contains_key(&1));
++    lease.finish()?;
++    println!(
++        "ordered_s1=passed; durable_quarantine=true; prefix=1; bad_bytes_retained=true; retry_decrypts=0; full_completion=false"
++    );
++    Ok(())
++}
++
++#[test]
++fn ordered_ingress_s2_exact_ids_partial_and_restart() -> Result<()> {
++    let limits = Limits {
++        ordinary_slots: 2,
++        ..Limits::default()
++    };
++    let fixture = Fixture::new(5, limits)?;
++    let lease = Lease::acquire(&fixture.recipient)?;
++    let page = [
++        fixture.events[4].clone(),
++        fixture.events[3].clone(),
++        fixture.events[2].clone(),
++    ];
++    let result = with_store(&fixture.recipient, &lease, |store| {
++        put(store, &lease, &page, &fixture.membership)
++    })?;
++    ensure!(
++        result.durable_ids.len() == 2
++            && result
++                .event_error
++                .as_ref()
++                .is_some_and(|error| error.contains("Backpressure"))
++    );
++    let expected = page
++        .iter()
++        .map(|event| event.event().event_id())
++        .collect::<Result<Vec<_>, _>>()?;
++    ensure!(!result.complete(&expected));
++    lease.finish()?;
++    let lease = Lease::acquire(&fixture.recipient)?;
++    let checkpoint = state(&fixture.recipient)?;
++    ensure!(
++        checkpoint.pending.len() == 2 && checkpoint.next == 0 && checkpoint.readable.is_empty()
++    );
++    with_store(&fixture.recipient, &lease, |store| {
++        let inventory = store.inventory(
++            fixture.events[0].event().conversation_id(),
++            &fixture.membership,
++        )?;
++        ensure!(
++            inventory.len() == 2
++                && inventory.contains(&expected[0])
++                && inventory.contains(&expected[1])
++        );
++        let duplicate = put(store, &lease, &page[..1], &fixture.membership)?;
++        ensure!(duplicate.complete(&expected[..1]));
++        ensure!(
++            store.put_events(&page, &fixture.membership).is_err(),
++            "partial admission must fail the real SessionStore round"
++        );
++        let saved = state(&fixture.recipient)?;
++        ensure!(
++            saved.pending[&4].bytes == page[0].encode()?
++                && saved.pending[&3].bytes == page[1].encode()?
++        );
++        let conflict = fixture.resign(&page[0], false)?;
++        ensure!(conflict.event().event_id()? != page[0].event().event_id()?);
++        let conflict = put(store, &lease, &[conflict], &fixture.membership)?;
++        ensure!(
++            conflict.durable_ids.is_empty()
++                && conflict
++                    .event_error
++                    .as_ref()
++                    .is_some_and(|error| error.contains("Conflict"))
++        );
++        Ok(())
++    })?;
++    lease.finish()?;
++    println!(
++        "ordered_s2=passed; partial_round=no_SyncComplete; restart_inventory=exact_two_EventIds; ordinal_conflict_not_duplicate=true"
++    );
++    Ok(())
++}
++
++#[test]
++fn ordered_ingress_reopen_boundaries_and_isolation() -> Result<()> {
++    for point in [
++        Fault::PendingCommitted,
++        Fault::TrialDecrypted,
++        Fault::ReadableCommitted,
++    ] {
++        let fixture = Fixture::new(2, Limits::default())?;
++        let lease = Lease::acquire(&fixture.recipient)?;
++        ensure!(matches!(
++            StateDirectoryLock::acquire(&fixture.recipient),
++            Err(kilogram_state::StateError::AlreadyLocked { .. })
++        ));
++        ensure!(matches!(
++            RatchetState::load_or_create(&fixture.recipient),
++            Err(kilogram_ratchet::RatchetError::OrderedIngressViolation(
++                "account access fence"
++            ))
++        ));
++        with_store(&fixture.recipient, &lease, |store| {
++            let ordinary = DecryptingSessionStore::new(
++                &fixture.recipient,
++                store.event_writes,
++                store.local_message_writes,
++                store.device_state,
++                store.local_account_id,
++                open_immutable_read_repositories(&fixture.recipient)?,
++            );
++            let error = ordinary
++                .put_events(&fixture.events[..1], &fixture.membership)
++                .err()
++                .context("unguarded SessionStore bypass")?;
++            ensure!(
++                matches!(error, StoreError::Io(ref cause)
++                if cause.to_string().contains("exclusive ordered-ingress lease")),
++                "{error:?}"
++            );
++            Ok(())
++        })?;
++        let before = native_digest(&fixture.recipient)?;
++        INJECTED.with(|value| value.set(Some(point)));
++        let injected = with_store(&fixture.recipient, &lease, |store| {
++            store
++                .put_events(&fixture.events[..1], &fixture.membership)
++                .map_err(Into::into)
++        })
++        .err()
++        .context("fault seam did not fire")?;
++        ensure!(format!("{injected:#}").contains("injected ordered ingress reopen boundary"));
++        drop(lease); // Reopen recovers existing transaction/primary-shadow/mirror seams.
++        let lease = Lease::acquire(&fixture.recipient)?;
++        let checkpoint = state(&fixture.recipient)?;
++        if point == Fault::ReadableCommitted {
++            ensure!(
++                checkpoint.next == 1
++                    && checkpoint.readable.len() == 1
++                    && checkpoint.pending.is_empty()
++            );
++            let digest = native_digest(&fixture.recipient)?;
++            with_store(&fixture.recipient, &lease, |store| {
++                store
++                    .put_events(&fixture.events[..1], &fixture.membership)
++                    .map_err(Into::into)
++            })?;
++            ensure!(native_digest(&fixture.recipient)? == digest);
++        } else {
++            ensure!(
++                checkpoint.next == 0
++                    && checkpoint.pending.len() == 1
++                    && checkpoint.readable.is_empty()
++            );
++            ensure!(native_digest(&fixture.recipient)? == before);
++            with_store(&fixture.recipient, &lease, |store| {
++                store
++                    .put_events(&fixture.events[..1], &fixture.membership)
++                    .map_err(Into::into)
++            })?;
++            ensure!(state(&fixture.recipient)?.next == 1);
++        }
++        with_store(&fixture.recipient, &lease, |store| {
++            let checkpoint = state(&fixture.recipient)?;
++            let receipt = &checkpoint.readable[&0];
++            let acknowledgement = store.events_by_id(
++                checkpoint.selection.conversation,
++                &[receipt.ack],
++                &fixture.membership,
++            )?;
++            ensure!(
++                matches!(acknowledgement[0].event().payload(), EventPayload::Acknowledgement { acknowledged_event_id }
++                if *acknowledged_event_id == receipt.id)
++            );
++            ensure!(acknowledgement[0].event().parents() == [receipt.id]);
++            let stored = open_immutable_read_repositories(&fixture.recipient)?
++                .events
++                .load_authorized_conversation(
++                    checkpoint.selection.conversation,
++                    &fixture.membership,
++                )?;
++            ensure!(stored.len() == 2, "duplicate event/ACK intent");
++            let history = collect_runtime_history_page(&fixture.recipient, LABEL, None, 100)?;
++            ensure!(history.total_messages == 1 && history.messages[0].body == "exact-000");
++            Ok(())
++        })?;
++        lease.finish()?;
++    }
++    println!(
++        "ordered_reopen=passed; pending,trial,readable-before-ACK; actual_vault=true; double_decrypt=false; all_power_loss_windows_proven=false"
++    );
++    Ok(())
++}
++
++#[test]
++fn ordered_ingress_s3_full_budget_and_unknown_tail() -> Result<()> {
++    // Review S3: current obligations 138 fit cap 150; moving head 30 does not,
++    // even though final history would occupy 144. Admission must report exhaustion.
++    ensure!(138 < 150 && 144 < 150 && charge(46, 0, 30, 0) == Some(168));
++    let fixture = Fixture::new(6, Limits::default())?;
++    let lease = Lease::acquire(&fixture.recipient)?;
++    with_store(&fixture.recipient, &lease, |store| {
++        store.put_events(&fixture.events[3..], &fixture.membership)?;
++        store
++            .put_events(&fixture.events[..2], &fixture.membership)
++            .map_err(Into::into)
++    })?;
++    let mut checkpoint = state(&fixture.recipient)?;
++    ensure!(checkpoint.next == 2 && checkpoint.pending.len() == 3);
++    let device = load_command_device_state(&fixture.recipient)?;
++    let actual = EncryptedStateVault::open_existing(&fixture.recipient)?
++        .verify()?
++        .plaintext_bytes();
++    // Account for the real existing vault and all retained entries, but leave
++    // less than one full extra admission lease. This is deliberately allowed
++    // to block the moving head even if the final six-message history fits.
++    let blocked_limit = charge(
++        actual,
++        checkpoint.pending.len(),
++        COMMIT_LEASE,
++        MAX_CHECKPOINT as u64,
++    )
++    .context("budget overflow")?
++        + 64 * 1024;
++    checkpoint.selection.limits.vault_charge = blocked_limit;
++    run_state_transaction(&fixture.recipient, |transaction| {
++        write(
++            &fixture.recipient,
++            &mut checkpoint,
++            device.identity(),
++            transaction,
++        )
++    })?;
++    let digest = native_digest(&fixture.recipient)?;
++    let result = with_store(&fixture.recipient, &lease, |store| {
++        put(store, &lease, &fixture.events[2..3], &fixture.membership)
++    })?;
++    ensure!(
++        result.durable_ids.is_empty()
++            && result
++                .event_error
++                .as_ref()
++                .is_some_and(|error| error.contains("StorageBlocked"))
++    );
++    let retained = state(&fixture.recipient)?;
++    ensure!(retained.next == 2 && retained.readable.len() == 2 && retained.pending.len() == 3);
++    for index in 3..6 {
++        ensure!(retained.pending[&(index as u64)].bytes == fixture.events[index].encode()?);
++    }
++    ensure!(native_digest(&fixture.recipient)? == digest);
++    // K0 was received; K2 is still delayed. An ordinary synthetic Bob sends B0,
++    // Alice receives it and emits valid L0 on the SAME Olm session, new DH chain.
++    let mut control = RatchetState::load_or_create(fixture.temp.path().join("bob-native-control"))?;
++    let alice = load_command_device_state(&fixture.source)?;
++    let bob = load_command_device_state(&fixture.recipient)?;
++    let (sender, k0) = fixture.events[0]
++        .event()
++        .ratchet_message_for(bob.identity().device_id())?;
++    control.decrypt(bob.identity(), sender, k0)?;
++    let mut sender_ratchet = RatchetState::load_or_create(&fixture.source)?;
++    let bundle = sender_ratchet.prekey_bundle(alice.identity())?;
++    let (reply_identity, b0, _) = control.encrypt(bob.identity(), &bundle, "B0")?;
++    sender_ratchet.decrypt(alice.identity(), &reply_identity, &b0)?;
++    let pool = SignedPrekeyPool::decode(&fs::read(
++        fixture.recipient.join("ratchet/prekey-pool.bin"),
++    )?)?;
++    let (identity, ciphertext, operation) = sender_ratchet.encrypt_with_pool(
++        alice.identity(),
++        &pool,
++        "unknown-tail",
++        unix_time_now()?,
++    )?;
++    ensure!(
++        operation.session_id == checkpoint.selection.session_id
++            && ciphertext.ordering_header()?.ratchet_key != checkpoint.selection.chain
++            && ciphertext.ordering_header()?.index == 0
++    );
++    let old = &fixture.events[1];
++    let unknown = AuthorizedEvent::new(
++        SignedEvent::sign_ratchet_text(
++            alice.identity(),
++            old.event().conversation_id(),
++            9000,
++            old.event().parents().to_vec(),
++            old.event().recipient_device_list()?.clone(),
++            identity,
++            vec![RatchetRecipient::new(
++                bob.identity().device_id(),
++                ciphertext,
++            )?],
++        )?,
++        old.author_certificate().clone(),
++        old.author_authority_snapshot().clone(),
++    )?;
++    let result = with_store(&fixture.recipient, &lease, |store| {
++        put(store, &lease, &[unknown], &fixture.membership)
++    })?;
++    ensure!(
++        result
++            .event_error
++            .as_ref()
++            .is_some_and(|error| error.contains("UnresolvedLegacyTail"))
++    );
++    ensure!(native_digest(&fixture.recipient)? == digest);
++    // Only the fixture's explicit quota increase enables progress. Afterwards
++    // verify against the REAL final vault that the previous budget did fit
++    // the finished history; final size alone never proved admission capacity.
++    let mut checkpoint = state(&fixture.recipient)?;
++    checkpoint.selection.limits.vault_charge = Limits::default().vault_charge;
++    run_state_transaction(&fixture.recipient, |transaction| {
++        write(
++            &fixture.recipient,
++            &mut checkpoint,
++            device.identity(),
++            transaction,
++        )
++    })?;
++    with_store(&fixture.recipient, &lease, |store| {
++        store
++            .put_events(&fixture.events[2..3], &fixture.membership)
++            .map_err(Into::into)
++    })?;
++    let checkpoint = state(&fixture.recipient)?;
++    ensure!(
++        checkpoint.next == 6 && checkpoint.pending.is_empty() && checkpoint.readable.len() == 6
++    );
++    let final_bytes = EncryptedStateVault::open_existing(&fixture.recipient)?
++        .verify()?
++        .plaintext_bytes();
++    let final_charge =
++        charge(final_bytes, 0, COMMIT_LEASE, MAX_CHECKPOINT as u64).context("budget overflow")?;
++    ensure!(
++        final_charge <= blocked_limit,
++        "final history did not fit the previously blocked budget"
++    );
++    let history = collect_runtime_history_page(&fixture.recipient, LABEL, None, 100)?;
++    ensure!(history.total_messages == 6);
++    lease.finish()?;
++    println!(
++        "ordered_s3=passed; moving_head_138_plus_30_gt_150=StorageBlocked; real_vault_pending_3_4_5_then_0_1_then_2=StorageBlocked; retained_bytes=exact; final_charge={final_charge}; blocked_limit={blocked_limit}; explicit_quota_increase_required=true; unknown_same_session_DH_tail=blocked"
++    );
++    Ok(())
++}
++
++#[test]
++#[ignore = "subprocess worker, explicitly launched by the 256-message acceptance test"]
++fn ordered_ingress_process_worker() -> Result<()> {
++    let Some(directory) = std::env::var_os("KILOGRAM_ORDERED_FIXTURE_ROOT") else {
++        return Ok(());
++    };
++    let root = PathBuf::from(directory);
++    let manifest: Manifest = serde_json::from_slice(&fs::read(root.join("manifest.json"))?)?;
++    let membership = ConversationMembershipSnapshot::decode_and_verify(&manifest.membership)?;
++    let lease = Lease::acquire(&manifest.recipient)?;
++    let source = load_command_device_state(&manifest.source)?;
++    let recipient = load_command_device_state(&manifest.recipient)?;
++    if std::env::var("KILOGRAM_ORDERED_FIXTURE_PHASE")? == "page" {
++        let binding =
++            SyncSessionBinding::from_transport_label("internal-real-session-process-fixture");
++        let source_store = open_event_store(&manifest.source)?;
++        let server = SyncServer::new(
++            source.identity(),
++            &source_store,
++            binding,
++            recipient.identity().device_id(),
++            &membership,
++        );
++        with_store(&manifest.recipient, &lease, |store| {
++            let client = SyncClient::new(
++                recipient.identity(),
++                store,
++                ConversationId::from_label(LABEL),
++                &membership,
++                binding,
++                source.identity().device_id(),
++            );
++            let round = client.begin_round()?;
++            let ServerInventoryOutcome::Accepted(remote) =
++                server.accept_inventory(round.inventory())?
++            else {
++                bail!("inventory rejected")
++            };
++            let page_ids = remote
++                .diff()
++                .events()
++                .iter()
++                .map(|event| event.event().event_id())
++                .collect::<Result<Vec<_>, _>>()?;
++            let batch = client.accept_diff(round, remote.diff().clone())?;
++            let completed = server.complete_round(*remote, batch.batch().clone())?;
++            let stats = client.accept_complete(batch, completed.response().clone())?;
++            ensure!(stats.received_events == page_ids.len());
++            let inventory = store.inventory(ConversationId::from_label(LABEL), &membership)?;
++            ensure!(page_ids.iter().all(|id| inventory.contains(id)));
++            println!(
++                "ordered_process_page=accepted; ciphertexts={}; next={}; exact_EventIds=true",
++                page_ids.len(),
++                state(&manifest.recipient)?.next
++            );
++            Ok(())
++        })?;
++    } else {
++        let mut cursor = None;
++        let mut actual = BTreeMap::new();
++        loop {
++            let page = collect_runtime_history_page(
++                &manifest.recipient,
++                LABEL,
++                cursor,
++                MAX_RUNTIME_HISTORY_PAGE_SIZE,
++            )?;
++            ensure!(page.total_messages as usize == manifest.expected.len());
++            for message in page.messages {
++                actual.insert(message.event_id, message.body);
++            }
++            match page.next_cursor {
++                Some(next) => cursor = Some(next),
++                None => break,
++            }
++        }
++        ensure!(actual == manifest.expected.into_iter().collect());
++        ensure!(
++            state(&manifest.recipient)?.pending.is_empty()
++                && state(&manifest.recipient)?.next == 256
++        );
++        println!(
++            "ordered_process_history=256_exact_plaintexts; source=encrypted-vault; API=collect_runtime_history_page; pending=0"
++        );
++    }
++    lease.finish()?;
++    Ok(())
++}
++
++#[test]
++fn ordered_ingress_256_signed_hash_pages_process_restart_history() -> Result<()> {
++    let fixture = Fixture::new(256, Limits::default())?;
++    let executable = std::env::current_exe()?; // Stable runner path, inherited by every child.
++    for phase in ["page", "page", "page", "page", "history"] {
++        let output = std::process::Command::new(&executable)
++            .args([
++                "ordered_ingress::tests::ordered_ingress_process_worker",
++                "--exact",
++                "--ignored",
++                "--nocapture",
++                "--test-threads=1",
++            ])
++            .env("KILOGRAM_ORDERED_FIXTURE_ROOT", fixture.temp.path())
++            .env("KILOGRAM_ORDERED_FIXTURE_PHASE", phase)
++            .output()?;
++        println!("{}", String::from_utf8_lossy(&output.stdout));
++        ensure!(
++            output.status.success(),
++            "ordered child failed: {}",
++            String::from_utf8_lossy(&output.stderr)
++        );
++    }
++    println!(
++        "ordered_process_acceptance=passed; pages=4; ciphertexts=256; actual_child_process_reopens=5; network_runtime_actors=false"
++    );
++    Ok(())
++}
++
++// Real Windows storage faults, confined to the disposable fixture and the
++// current test thread. Guards release the fault before transaction rollback.
++#[cfg(windows)]
++thread_local! {
++    static FAIL_NATIVE_ACCOUNT_WRITE: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
++    static SESSION_SAVE_OBSERVED: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
++    static FAIL_TRUST_READ_AFTER: std::cell::Cell<Option<usize>> = const { std::cell::Cell::new(None) };
++}
++
++#[cfg(windows)]
++pub(super) struct NativeWriteFault {
++    account: PathBuf,
++    permissions: fs::Permissions,
++    sessions: PathBuf,
++}
++
++#[cfg(windows)]
++impl Drop for NativeWriteFault {
++    fn drop(&mut self) {
++        SESSION_SAVE_OBSERVED.with(|observed| {
++            observed.set(fs::read_dir(&self.sessions).is_ok_and(|entries| {
++                entries
++                    .filter_map(|entry| entry.ok())
++                    .any(|entry| entry.path().is_file())
++            }));
++        });
++        let _ = fs::set_permissions(&self.account, self.permissions.clone());
++    }
++}
++
++#[cfg(windows)]
++pub(super) fn native_write_fault(root: &Path) -> Result<Option<NativeWriteFault>> {
++    if !FAIL_NATIVE_ACCOUNT_WRITE.with(|armed| armed.replace(false)) {
++        return Ok(None);
++    }
++    let account = root.join("ratchet/account.pickle");
++    let permissions = fs::metadata(&account)?.permissions();
++    let mut read_only = permissions.clone();
++    read_only.set_readonly(true);
++    fs::set_permissions(&account, read_only)?;
++    Ok(Some(NativeWriteFault {
++        account,
++        permissions,
++        sessions: root.join("ratchet/sessions"),
++    }))
++}
++
++#[cfg(windows)]
++pub(super) fn trust_read_fault(root: &Path) -> Result<Option<fs::File>> {
++    use std::os::windows::fs::OpenOptionsExt;
++    let armed = FAIL_TRUST_READ_AFTER.with(|value| match value.get() {
++        Some(0) => {
++            value.set(None);
++            true
++        }
++        Some(remaining) => {
++            value.set(Some(remaining - 1));
++            false
++        }
++        None => false,
++    });
++    if !armed {
++        return Ok(None);
++    }
++    // The repository really reopens the encrypted vault and encounters a
++    // sharing violation while reading its key; no synthetic bad-author error.
++    Ok(Some(
++        fs::OpenOptions::new()
++            .read(true)
++            .share_mode(0x2 | 0x4)
++            .open(root.join("state-vault.key"))?,
++    ))
++}
++
++#[cfg(windows)]
++fn operational_fault_reopens_without_quarantine(native_write: bool) -> Result<()> {
++    let count = if native_write { 1 } else { 2 };
++    let fixture = Fixture::new(count, Limits::default())?;
++    let lease = Lease::acquire(&fixture.recipient)?;
++    INJECTED.with(|value| value.set(Some(Fault::PendingCommitted)));
++    let admitted = with_store(&fixture.recipient, &lease, |store| {
++        put(store, &lease, &fixture.events, &fixture.membership)
++    });
++    ensure!(admitted.is_err_and(|error| {
++        format!("{error:#}").contains("injected ordered ingress reopen boundary")
++    }));
++    drop(lease);
++    let lease = Lease::acquire(&fixture.recipient)?;
++    let before = native_digest(&fixture.recipient)?;
++    let generation = EncryptedStateVault::open_existing(&fixture.recipient)?
++        .verify()?
++        .mirror_generation();
++    if native_write {
++        SESSION_SAVE_OBSERVED.with(|value| value.set(false));
++        FAIL_NATIVE_ACCOUNT_WRITE.with(|value| value.set(true));
++    } else {
++        // K0 and its native/projection writes succeed in this transaction;
++        // the second pending entry encounters the transient local read error.
++        FAIL_TRUST_READ_AFTER.with(|value| value.set(Some(1)));
++    }
++    let result = with_store(&fixture.recipient, &lease, |store| {
++        put(store, &lease, &[], &fixture.membership)
++    });
++    if native_write {
++        let saved = SESSION_SAVE_OBSERVED.with(|value| value.get());
++        println!("ordered_i1_native_session_save_observed={saved}");
++        ensure!(saved, "fault did not follow real session save");
++        ensure!(
++            !fs::metadata(fixture.recipient.join("ratchet/account.pickle"))?
++                .permissions()
++                .readonly()
++        );
++    }
++    println!("ordered_i1_operational_result={result:?}");
++    ensure!(
++        result.is_err(),
++        "operational error became successful quarantine commit"
++    );
++    drop(lease);
++    let lease = Lease::acquire(&fixture.recipient)?;
++    let checkpoint = state(&fixture.recipient)?;
++    ensure!(
++        checkpoint.next == 0 && checkpoint.readable.is_empty() && checkpoint.pending.len() == count
++    );
++    for (index, event) in fixture.events.iter().enumerate() {
++        let entry = &checkpoint.pending[&(index as u64)];
++        ensure!(entry.state == EntryState::Pending && entry.bytes == event.encode()?);
++    }
++    ensure!(native_digest(&fixture.recipient)? == before);
++    ensure!(
++        EncryptedStateVault::open_existing(&fixture.recipient)?
++            .verify()?
++            .mirror_generation()
++            == generation
++    );
++    ensure!(
++        collect_runtime_history_page(&fixture.recipient, LABEL, None, 100)?.total_messages == 0
++    );
++    with_store(&fixture.recipient, &lease, |store| {
++        ensure!(
++            store
++                .inventory(checkpoint.selection.conversation, &fixture.membership)?
++                .len()
++                == count
++        );
++        store.put_events(&[], &fixture.membership)?;
++        let after = native_digest(&fixture.recipient)?;
++        store.put_events(&fixture.events, &fixture.membership)?;
++        ensure!(native_digest(&fixture.recipient)? == after);
++        let events = open_immutable_read_repositories(&fixture.recipient)?
++            .events
++            .load_authorized_conversation(checkpoint.selection.conversation, &fixture.membership)?;
++        ensure!(events.len() == count * 2, "duplicate or missing text/ACK");
++        Ok(())
++    })?;
++    let history = collect_runtime_history_page(&fixture.recipient, LABEL, None, 100)?;
++    ensure!(history.total_messages as usize == count);
++    let actual: BTreeMap<_, _> = history
++        .messages
++        .iter()
++        .map(|message| (message.event_id, message.body.clone()))
++        .collect();
++    let expected: BTreeMap<_, _> = fixture
++        .events
++        .iter()
++        .enumerate()
++        .map(|(index, event)| Ok((event.event().event_id()?, format!("exact-{index:03}"))))
++        .collect::<Result<_>>()?;
++    ensure!(actual == expected);
++    lease.finish()?;
++    println!(
++        "ordered_i1=passed; native_write_fault={native_write}; rollback_native_prefix=true; pending_exact=true; quarantine=false; retry_exact_once=true"
++    );
++    Ok(())
++}
++
++#[cfg(windows)]
++#[test]
++fn ordered_ingress_i1_session_saved_then_account_write_fails() -> Result<()> {
++    operational_fault_reopens_without_quarantine(true)
++}
++
++#[cfg(windows)]
++#[test]
++fn ordered_ingress_i1_trust_read_fault_after_valid_prefix() -> Result<()> {
++    operational_fault_reopens_without_quarantine(false)
++}
++
++#[test]
++fn ordered_ingress_i3_head_spends_byte_reserve_and_hard_cap_holds() -> Result<()> {
++    let fixture = Fixture::new(5, Limits::default())?;
++    let lease = Lease::acquire(&fixture.recipient)?;
++    let device = load_command_device_state(&fixture.recipient)?;
++    let future_bytes = fixture.events[1].encode()?.len();
++    let head_bytes = fixture.events[0].encode()?.len();
++    let cap = future_bytes + MAX_EVENT;
++    let set_cap = |limit: usize| -> Result<()> {
++        let mut checkpoint = state(&fixture.recipient)?;
++        checkpoint.selection.limits.pending_bytes = limit;
++        run_state_transaction(&fixture.recipient, |transaction| {
++            write(
++                &fixture.recipient,
++                &mut checkpoint,
++                device.identity(),
++                transaction,
++            )
++        })
++    };
++    set_cap(cap)?;
++    with_store(&fixture.recipient, &lease, |store| {
++        store.put_events(&fixture.events[1..2], &fixture.membership)?;
++        let ordinary = put(store, &lease, &fixture.events[2..3], &fixture.membership)?;
++        ensure!(ordinary.event_error.is_some() && ordinary.durable_ids.is_empty());
++        Ok(())
++    })?;
++    set_cap(future_bytes + head_bytes - 1)?;
++    with_store(&fixture.recipient, &lease, |store| {
++        let overflow = put(store, &lease, &fixture.events[..1], &fixture.membership)?;
++        ensure!(overflow.event_error.is_some() && overflow.durable_ids.is_empty());
++        ensure!(state(&fixture.recipient)?.pending[&1].bytes == fixture.events[1].encode()?);
++        Ok(())
++    })?;
++    set_cap(cap)?;
++    with_store(&fixture.recipient, &lease, |store| {
++        store.put_events(&fixture.events[..1], &fixture.membership)?;
++        ensure!(state(&fixture.recipient)?.next == 2);
++        store.put_events(&fixture.events[3..4], &fixture.membership)?;
++        let ordinary = put(store, &lease, &fixture.events[4..5], &fixture.membership)?;
++        ensure!(ordinary.event_error.is_some() && ordinary.durable_ids.is_empty());
++        ensure!(state(&fixture.recipient)?.pending[&3].bytes == fixture.events[3].encode()?);
++        Ok(())
++    })?;
++    ensure!(
++        collect_runtime_history_page(&fixture.recipient, LABEL, None, 100)?.total_messages == 2
++    );
++    lease.finish()?;
++    println!(
++        "ordered_i3=passed; pending_cap={cap}; future_bytes={future_bytes}; head_bytes={head_bytes}; head_uses_reserve=true; hard_cap_holds=true; later_future_reserve=true"
++    );
++    Ok(())
++}
++
++#[tokio::test]
++async fn ordered_ingress_i4_runtime_profile_refuses_before_authority_mutation() -> Result<()> {
++    for recover_shadow in [false, true] {
++        let fixture = Fixture::new(1, Limits::default())?;
++        let bob = load_command_device_state(&fixture.recipient)?;
++        let root = AccountRootState::load(fixture.temp.path().join("bob-root"))?;
++        let newer_device = DeviceState::load_or_create(fixture.temp.path().join("newer-device"))?;
++        let newer_cert = root.issue_device_certificate(
++            newer_device.identity().device_id(),
++            newer_device.encryption().public_key(),
++            &DeviceCapability::MESSAGING,
++        )?;
++        let own = CommandTrustReadRepository::open(&fixture.recipient, &bob)?;
++        let cert = own.load_certificate()?;
++        let old_authority = own.load_own_authority_snapshot(&cert)?.encode()?;
++        let newer_list = root.publish_device_list(&[cert, newer_cert])?;
++        ensure!(newer_list.authority_snapshot().encode()? != old_authority);
++        let device_list_file = fixture.temp.path().join("newer-device-list.snapshot");
++        fs::write(&device_list_file, newer_list.encode()?)?;
++        let profile_file = fixture.temp.path().join("runtime.launch.json");
++        let ipc = fixture.temp.path().join("runtime.ipc.json");
++        let ticket = fixture.temp.path().join("runtime.ticket");
++        create_runtime_launch_profile(
++            profile_file.clone(),
++            RuntimeLaunchSettings {
++                state_dir: fixture.recipient.clone(),
++                allowed_requester_account_id: root.account_id(),
++                device_list_file,
++                peer_prekey_pool_files: Vec::new(),
++                ticket_file: Some(ticket.clone()),
++                relay_wait_seconds: 0,
++                route_policy: RuntimeIpcRoutePolicy::DirectOnly,
++                relay_url: None,
++                poll_milliseconds: 20,
++                retry_base_seconds: 1,
++                retry_max_seconds: 1,
++                auto_sync_seconds: 0,
++                ipc_file: ipc.clone(),
++                volunteer_storage: None,
++            },
++        )?;
++        if recover_shadow {
++            let lease = Lease::acquire(&fixture.recipient)?;
++            let mut checkpoint = state(&fixture.recipient)?;
++            let mut transaction = StateTransaction::begin(&fixture.recipient)?;
++            {
++                let mut context =
++                    CommandTransactionContext::new(&fixture.recipient, &mut transaction);
++                write(
++                    &fixture.recipient,
++                    &mut checkpoint,
++                    bob.identity(),
++                    &mut context,
++                )?;
++            }
++            let primary = PendingVaultPrimaryWrite::prepare(&fixture.recipient, &transaction)?
++                .context("no real vault-primary commit")?;
++            transaction.commit()?;
++            drop(primary); // Existing committed-primary, unconfirmed-shadow recovery seam.
++            drop(lease);
++            fs::remove_file(fixture.recipient.join("ratchet/account.pickle"))?;
++            ensure!(!RatchetState::is_ordered_ingress(&fixture.recipient)?);
++        }
++        let before = EncryptedStateVault::open_existing(&fixture.recipient)?.verify()?;
++        let discovery_directory = fixture.temp.path().join("kilogram-discovered-own-devices");
++        ensure!(!discovery_directory.exists());
++        let result = crate::run_command(Command::RuntimeFromProfile { profile_file }).await;
++        let after = EncryptedStateVault::open_existing(&fixture.recipient)?.verify()?;
++        let own_after = CommandTrustReadRepository::open(&fixture.recipient, &bob)?
++            .load_own_authority_snapshot(&own.load_certificate()?)?
++            .encode()?;
++        println!(
++            "ordered_i4_recover_shadow={recover_shadow}; generation_before={}; generation_after={}; authority_changed={}",
++            before.mirror_generation(),
++            after.mirror_generation(),
++            own_after != old_authority
++        );
++        ensure!(
++            before.mirror_generation() == after.mirror_generation()
++                && before.snapshot_id() == after.snapshot_id()
++        );
++        ensure!(own_after == old_authority);
++        ensure!(RatchetState::is_ordered_ingress(&fixture.recipient)?);
++        let error = result.err().context("protected runtime was allowed")?;
++        ensure!(
++            format!("{error:#}").contains("internal ordered profile forbids runtime preparation")
++        );
++        ensure!(
++            !ipc.exists() && !ticket.exists() && !discovery_directory.exists(),
++            "network/runtime startup was reached"
++        );
++    }
++    println!(
++        "ordered_i4=passed; newer_valid_authority_not_installed=true; recovered_tag_checked=true; endpoint_started=false"
++    );
++    Ok(())
++}

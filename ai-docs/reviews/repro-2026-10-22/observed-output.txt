@@ -1,0 +1,7 @@
+ordered_control_decrypted=256
+hash_order_first_batch_decrypted=64
+hash_order_first_batch_sequences=[5, 8, 9, 12, 14, 19, 20, 21, 25, 33, 38, 43, 46, 48, 51, 53, 59, 61, 63, 64, 72, 78, 81, 102, 103, 109, 111, 112, 113, 114, 115, 119, 123, 128, 131, 135, 141, 142, 143, 146, 151, 154, 157, 158, 171, 177, 179, 180, 186, 198, 202, 206, 208, 221, 225, 226, 230, 231, 232, 238, 240, 242, 244, 248]
+hash_order_second_batch_failure_sequence=3
+hash_order_second_batch_failure=Decryption(MissingMessageKey(3))
+backlog_missing_key_reproduced=true
+established_session_expired_pool_rejected=PrekeyPoolExpired { expires_at: 1793300055, now: 1793300356 }

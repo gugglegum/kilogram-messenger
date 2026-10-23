@@ -1,0 +1,5 @@
+review.f1=invalid_future_pending_survives_reload; valid_predecessor_committed_before_error; invalid_remains_pending; predecessor_retry=Replay_no_drain
+review.f2_identity=distinct_fake_event_same_ordinal_confirmed; original_retained; exact_EventId_semantics_not_proven
+review.f2_reserve=cap150; committed_plus_leases138; next_head_lease30; StorageBlocked; final_history144_fits; moving_head_reserve_not_invariant
+review_counterexamples=3_confirmed; submitted_sources_unchanged=true
+probe_exit=0

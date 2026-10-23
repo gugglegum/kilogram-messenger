@@ -1,0 +1,16 @@
+[package]
+name = "kilogram-audit-probe"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+kilogram-identity = { path = "../../../crates/kilogram-identity" }
+kilogram-ratchet = { path = "../../../crates/kilogram-ratchet" }
+kilogram-protocol = { path = "../../../crates/kilogram-protocol" }
+kilogram-session = { path = "../../../crates/kilogram-session" }
+kilogram-store = { path = "../../../crates/kilogram-store" }
+tempfile = "3.0"
+

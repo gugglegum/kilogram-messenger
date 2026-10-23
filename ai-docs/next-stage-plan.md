@@ -2,6 +2,11 @@
 
 Дата: 2026-10-22.
 
+Статус передачи на 2026-10-23: M1.2.63 не начат, частичного implementation
+change-set нет. Этот план сохранён как узкий допустимый successor, но не должен
+запускаться автоматически до выбора приоритета по
+[`project-handoff-2026-10-23.md`](project-handoff-2026-10-23.md).
+
 M1.2.62 удалил transitional host installation owner из public runtime API.
 Owner и возвращающие его `issue`/`approve`/`install` transitions теперь
 crate-private и доступны только one-shot launch-slot path. Public safe launch

@@ -1,0 +1,88 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling syn v2.0.119
+   Compiling syn v3.0.4
+   Compiling serde_derive v1.0.229
+   Compiling zeroize_derive v1.5.0
+   Compiling zeroize v1.9.0
+   Compiling serde v1.0.229
+   Compiling curve25519-dalek-derive v0.1.1
+   Compiling thiserror-impl v2.0.20
+   Compiling arrayvec v0.7.8
+   Compiling curve25519-dalek v5.0.0
+   Compiling thiserror v2.0.20
+   Compiling cipher v0.4.4
+   Compiling curve25519-dalek v4.1.3
+   Compiling x25519-dalek v3.0.0
+   Compiling hex-conservative v0.2.3
+   Compiling serde_json v1.0.151
+   Compiling ed25519 v2.2.3
+   Compiling heapless v0.7.17
+   Compiling blake3 v1.8.7
+   Compiling bitcoin_hashes v0.14.101
+   Compiling hpke v0.14.0
+   Compiling prost-derive v0.14.4
+   Compiling matrix-pickle-derive v0.2.3
+   Compiling chacha20 v0.9.1
+   Compiling cobs v0.3.0
+   Compiling prost v0.14.4
+   Compiling chacha20poly1305 v0.10.1
+   Compiling ed25519-dalek v2.2.0
+   Compiling postcard v1.1.3
+   Compiling bip39 v2.2.2
+   Compiling matrix-pickle v0.2.3
+   Compiling kilogram-crypto v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-crypto)
+   Compiling x25519-dalek v2.0.1
+   Compiling ed25519-dalek v3.0.0
+   Compiling stellar-agent-windows-identity v0.1.0-alpha.6
+   Compiling aes v0.8.4
+   Compiling cbc v0.1.2
+   Compiling kilogram-identity v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-identity)
+   Compiling vodozemac v0.10.0
+   Compiling kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 21.68s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-ratchet-lib-kilogram_ratchet-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-ratchet-lib-kilogram_ratchet-tests.exe
+
+running 10 tests
+test tests::account_session_and_bundle_survive_reload_without_plaintext_on_disk ... ok
+test tests::bundle_is_device_signed_and_tampering_is_rejected ... ok
+test tests::existing_ratchet_state_cannot_be_rebound_to_another_device ... ok
+test tests::legacy_single_session_record_is_read_and_rewritten_as_v2 ... ok
+test tests::peer_prekey_high_water_rejects_rollback_and_equivocation ... ok
+test tests::peer_retirement_removes_session_and_prekey_observation_idempotently ... ok
+test tests::persistent_prekey_reply_and_normal_message_complete_a_ratchet_cycle ... ok
+test tests::prekey_directory_requires_exact_root_signed_device_list_coverage ... ok
+test tests::signed_prekey_pool_has_freshness_contiguous_sequences_and_stable_selection ... ok
+test tests::simultaneous_outbound_sessions_converge_on_one_active_session ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 8.38s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10318  9.93
+debug-total       36103 51.16
+verification       8434  3.75
+release            5111  1.74
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=52389
+target_gib=57.36
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

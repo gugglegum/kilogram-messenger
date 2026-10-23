@@ -1,0 +1,22 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 3.46s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-ratchet-lib-kilogram_ratchet-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-ratchet-lib-kilogram_ratchet-tests.exe
+
+running 1 test
+Error: Io(Os { code: 5, kind: PermissionDenied, message: "Отказано в доступе." })
+test tests::ordered_ingress_i2_allowed_save_preserves_fence_when_account_read_is_denied ... FAILED
+
+failures:
+
+failures:
+    tests::ordered_ingress_i2_allowed_save_preserves_fence_when_account_read_is_denied
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.14s
+

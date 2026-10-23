@@ -1,0 +1,33 @@
+scope=offline component baseline and design documentation only
+completed_utc=2026-10-22T20:21:09.3227453Z
+head=3e82e6380c30d0f9443b6692ea34faccaacddef7
+baseline_build_exit=0
+baseline_probe_exit=0 (expected old defect reproduced)
+ordered_control=256; first_page=64; persisted_second_page=MissingMessageKey(0)
+unchanged_sha256=65678ffdd99df29952e563b12e9278dc297058d376ba47a3fbc913798e62714c  ai-docs\reviews\repro-2026-10-22\src\main.rs
+unchanged_sha256=9e1246a65d812e193bd556b5f296908b986a165209c9abae6563136951144874  ai-docs\reviews\repro-2026-10-22\Cargo.lock
+unchanged_sha256=0dbc143a2cf96b561f2029f2291f5d4b9af1c1f6792b5a287bc436b8303d2b7a  ai-docs\reviews\repro-2026-10-22\Cargo.toml
+unchanged_sha256=d978b4c7380c476a0af67e705452349bc372c6cc78f2747d8b5c181634b93a71  Cargo.lock
+unchanged_sha256=13bcf45bc2d424f9c0e393aab1d5fb3861e4711816ce5efc001c267b00dd76e5  target\debug\kilogram-audit-probe.exe
+local_links_and_source_line_anchors_checked=37
+missing_links_or_placeholders=0
+git_diff_check_exit=0
+warning: in the working copy of 'ai-docs/development-environment.md', CRLF will be replaced by LF the next time Git touches it
+production_tracked_changes=0
+production_untracked_files=0
+git_status_final:
+## master...origin/master
+ M ai-docs/README.md
+ M ai-docs/development-environment.md
+ M ai-docs/next-stage-plan.md
+?? ai-docs/project-handoff-2026-10-23.md
+?? ai-docs/reviews/
+?? ai-docs/tasks/
+new_or_untracked_task_artifacts:
+?? ai-docs/tasks/lossless-sync-a1-design.md
+?? ai-docs/tasks/lossless-sync-a1-evidence/baseline-build.log
+?? ai-docs/tasks/lossless-sync-a1-evidence/baseline-environment.txt
+?? ai-docs/tasks/lossless-sync-a1-evidence/baseline-run.log
+?? ai-docs/tasks/lossless-sync-a1-proposal.md
+not_executed=workspace tests; mutation corpus; runtime/process tests; GUI; physical two-host/network checks
+final_documentation_check_utc=2026-10-22T20:22:56.4253035Z final_local_links_and_line_anchors_checked=39 final_missing_links_and_trailing_whitespace=0

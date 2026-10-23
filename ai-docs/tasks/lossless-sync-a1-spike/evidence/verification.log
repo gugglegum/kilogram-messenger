@@ -1,0 +1,30 @@
+completed_utc=2026-10-22T21:11:16.9560250Z
+head=3e82e6380c30d0f9443b6692ea34faccaacddef7
+scope=standalone offline F1 real Olm and F2 fake ingress model; no product implementation
+run.log exit=0; expected_rejection_or_replay_checks=14
+run-repeat.log exit=0; expected_rejection_or_replay_checks=14
+final_repeat_stdout_and_exit_identical=true
+build_exit=0
+format_check_exit=0
+preserved_sha256=0c76d62dd4672fb0f50acb840ca1d9e6bcf3eb79a487aabf8ac91f5dd8358dc6  AGENTS.md
+preserved_sha256=f0aed55d818a4926c449c215af586d253f5c05be918a4937b68c542ee6307d8c  Cargo.toml
+preserved_sha256=d978b4c7380c476a0af67e705452349bc372c6cc78f2747d8b5c181634b93a71  Cargo.lock
+preserved_sha256=4fbae7700c99403ceffdc8cfe0efd703ccb34fdcd7f4aa138569c92e7a30fdc5  ai-docs\tasks\lossless-sync-a1-review.md
+preserved_sha256=5195f065d277a5d2c6f3b64c2d493bed0648eaf0b837837e29c4027e42717a7a  ai-docs\README.md
+preserved_sha256=330ad3c4d1941b213e7e5bef958416a6847d3defb8e368f79d6d21c944efe798  ai-docs\development-environment.md
+preserved_sha256=a510a7091be28e6894bad7e42e18a690eabca42c33dd763fd444aaf4d032dc9d  ai-docs\next-stage-plan.md
+preserved_sha256=19c7e72d7edafa25367407b91870c673da5925497d57fb799527217422adf4af  C:\Users\Paul\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\vodozemac-0.10.0\src\olm\session\mod.rs
+preserved_sha256=f7e8193b32be128504d80afc9ada5f7d75964ef095542762aaae51a955556868  C:\Users\Paul\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\vodozemac-0.10.0\src\olm\session\receiver_chain.rs
+production_tracked_changes=0; production_untracked_files=0
+artifact_sha256=625ef5511c75d0fb4ea198037224abd79c28cd9ba46923ea443ebe83e9b365c8  E:\AI-Projects\kilogram-p2p-messenger\ai-docs\tasks\lossless-sync-a1-spike\Cargo.toml
+artifact_sha256=0e5d7fcbd3b4745b0fe9ffb46b561adc207cd8e00132c38b3a9080b70509f0b5  E:\AI-Projects\kilogram-p2p-messenger\ai-docs\tasks\lossless-sync-a1-spike\Cargo.lock
+artifact_sha256=1ff5ea23ad4b76575e4337c4d4a4b420cb8d369a063b287ca9f216855783ba20  E:\AI-Projects\kilogram-p2p-messenger\ai-docs\tasks\lossless-sync-a1-spike\src\main.rs
+artifact_sha256=4de4b0cc2b2399025660353781445c9f2941aaee5daf747b7699bbfc5d9c15b3  E:\AI-Projects\kilogram-p2p-messenger\ai-docs\tasks\lossless-sync-a1-spike\src\f1.rs
+artifact_sha256=1936c00afdfbd8278151dc87aef94b9ee3e2934ecec43a8fff43e2e779ffd8db  E:\AI-Projects\kilogram-p2p-messenger\ai-docs\tasks\lossless-sync-a1-spike\src\f2.rs
+artifact_sha256=b3e4a5721db868955f92d833912a1c8f56f879c447c02cda95bf9d6c6f4d29c0  E:\AI-Projects\kilogram-p2p-messenger\target\debug\kilogram-a1-feasibility.exe
+callback_authorization_verified=human userMessage 01a16568-4515-7420-b3af-32d6fc0bfeb4 in thread 01a164ec-589c-7b41-bc34-3ba158d1f22b via read_thread
+not_run=workspace corpus; network harnesses; product runtime/process; real vault crash/migration/fencing; GUI; physical two-host
+local_links_checked=48
+local_missing_links_or_trailing_whitespace=0
+warning: in the working copy of 'ai-docs/development-environment.md', CRLF will be replaced by LF the next time Git touches it
+git_diff_check_exit=0

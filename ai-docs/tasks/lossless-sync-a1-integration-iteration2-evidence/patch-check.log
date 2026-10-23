@@ -1,0 +1,11 @@
+ apps/kilogram-cli/src/main.rs                  |  152 +++
+ crates/kilogram-ratchet/src/lib.rs             |  313 +++++++
+ apps/kilogram-cli/src/ordered_ingress.rs       |  796 +++++++++++++++++
+ apps/kilogram-cli/src/ordered_ingress_tests.rs | 1103 ++++++++++++++++++++++++
+ 4 files changed, 2341 insertions(+), 23 deletions(-)
+reviewable_patch_reverse_check=passed
+
+Hash                                                             Path
+----                                                             ----
+D4BCCD100FBA4D89F19FF44C159BF37B252627A05633E1AB8B9A4FAD9CB6E359 E:\AI-Projects\kilogram-p2p-messenger\ai-docs\tasks\lo…
+

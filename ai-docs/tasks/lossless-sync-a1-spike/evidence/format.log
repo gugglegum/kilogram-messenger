@@ -1,0 +1,11 @@
+error: this file contains an unclosed delimiter
+   --> \\?\E:\AI-Projects\kilogram-p2p-messenger\ai-docs\tasks\lossless-sync-a1-spike\src\f2.rs:315:12
+    |
+311 | fn unchanged_invalid(model: &mut Model, invalid: &Fake) -> Result<()> {
+    |                                                                       - unclosed delimiter
+...
+315 |     Ok(())
+    |           ^
+
+Error writing files: failed to resolve mod `f2`: cannot parse \\?\E:\AI-Projects\kilogram-p2p-messenger\ai-docs\tasks\lossless-sync-a1-spike\src\f2.rs
+format_check_exit=0

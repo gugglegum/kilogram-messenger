@@ -1,0 +1,459 @@
+m1_readiness_gate=verify-kilogram-bootstrap-safe-provider-selection-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-authority-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-account-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-account-recovery-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-account-recovery-policy-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-mailbox-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-mailbox-gossip-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-mailbox-provisioning-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-mailbox-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-read-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-contact-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-directory-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-queue-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-outbox-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-provider-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-mailbox-status-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-mailbox-mutation-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-publication-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-publication-network-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-publication-conflict-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-own-device-announcement-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-own-device-discovery-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-own-device-roster-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-recovery-plan-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-recovery-execution-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-recipient-import-execution-contract-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-recipient-import-read-adapter-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-recipient-import-confirmation-ledger-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-recipient-import-mutation-adapter-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-recipient-import-consumption-contract-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-recipient-import-consumption-read-adapter-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-recipient-import-consumption-authorization-ledger-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-recipient-import-consumption-mutation-adapter-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-recipient-import-consumption-response-dispatcher-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-recipient-import-consumption-plan-session-cache-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-runtime-ipc-recipient-import-consumption-migration-preflight-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-runtime-ipc-recipient-import-consumption-envelope-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-recipient-import-consumption-runtime-service-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-recipient-import-consumption-runtime-attachment-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-recipient-import-consumption-guided-producer-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-recipient-import-guided-session-controller-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-recipient-import-guided-session-local-ux-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-recipient-import-guided-session-start-producer-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-recipient-import-guided-recovery-host-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-recipient-import-guided-recovery-host-installation-owner-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-recipient-import-guided-recovery-assembly-issuer-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-recipient-import-guided-recovery-launch-authorization-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-recipient-import-guided-recovery-launch-slot-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-recipient-import-guided-recovery-host-command-router-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-recipient-import-guided-recovery-issuer-to-slot-staging-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-recipient-import-guided-recovery-assembly-to-slot-staging-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-recipient-import-guided-recovery-launch-service-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-recipient-import-guided-recovery-raw-launch-slot-retirement-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-recipient-import-guided-recovery-raw-host-retirement-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-recipient-import-guided-recovery-installation-owner-retirement-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-peer-reenrollment-contract-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-peer-reenrollment-read-adapter-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-peer-reenrollment-mutation-adapter-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-peer-reenrollment-desktop-ceremony-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-peer-reenrollment-old-history-recovery-plan-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-old-history-recovery-consent-store-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-old-history-recovery-execution-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-recipient-history-import-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-history-recovery-transfer-inbox-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-history-recovery-iroh-session-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-history-recovery-transfer-outbox-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-history-recovery-transfer-executor-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-history-recovery-recipient-acceptor-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-history-recovery-multi-source-scheduler-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-history-recovery-recipient-coordinator-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-history-recovery-recipient-import-plan-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-history-recovery-recipient-import-round-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-history-recovery-recipient-import-round-intent-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-history-recovery-recipient-import-round-executor-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-runtime-ipc-ticket-automation-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-runtime-ipc-conversation-pagination-migration-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-runtime-ipc-completion-inventory-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-runtime-ipc-endpoint-bootstrap-retirement-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-runtime-ipc-legacy-mailbox-retirement-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-mailbox-transport-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-device-link-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-endpoint-announcement-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-endpoint-announcement-transport-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-event-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-prekey-selection-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-publication-conflict-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-conformance-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-coverage-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-migration-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-ratchet-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-recovery-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-recovery-exchange-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-rewrap-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-legacy-event-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-history-v2-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-adapter-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-typed-store-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-membership-policy-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-legacy-import-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-import-checkpoint-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-session-bootstrap-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-session-successor-store-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-session-runtime-frame-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-atomic-runtime-transition-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-durable-client-adapter-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-durable-responder-adapter-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-mutual-candidate-selection-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-mixed-version-downgrade-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-dual-reader-runtime-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-rollback-drill-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-decoder-mutations-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-fuzz-harness-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-fuzz-smoke-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-fuzz-sustained-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-activation-policy-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-activation-authority-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-production-dark-launch-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-opt-in-dark-launch-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-desktop-activation-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-runtime-observability-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-guided-restart-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-public-rollout-decision-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-rollout-local-authority-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-peer-capability-floor-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-current-peer-invitation-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-peer-capability-store-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-peer-capability-transport-enforcement-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-automated-runtime-enforcement-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-runtime-quarantine-observability-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-peer-reenrollment-plan-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-peer-reenrollment-acceptance-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-peer-reenrollment-runtime-consumption-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-peer-reenrollment-two-host-rehearsal-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-peer-capability-two-host-rehearsal-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-dormant-rollout-controller-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-rollout-controller-observer-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-rollout-containment-rehearsal-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-release-keyring-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-trusted-policy-bundle-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-trusted-policy-inbox-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-device-rollout-approval-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-containment-recovery-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-rollout-operator-ux-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-rollout-end-to-end-rehearsal-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-v2-n-minus-one-interop-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-sync-v2-evidence-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-session-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-sync-session-v2-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-transport-sync-alpn-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-connection-ticket-sync-capability-migration-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-ticket-publication-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-canonical-wire-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-independent-builder-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-m0967-simple-kit-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-m0969-exact-locator-kit-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-m0972-no-https-kit-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-m0973-no-https-kit-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-m0974-no-https-kit-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-m0976-service-free-v2-kit-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-m0987-independent-provider-kit-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-m1-acceptance-kit-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-m1-candidate-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-m1-readiness-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-mailbox-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-mailbox-client-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-mailbox-field-test-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-mailbox-https-retirement-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-mailbox-legacy-upgrade-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-mailbox-provisioning-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-offline-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-protocol-compatibility-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-provider-admission-work-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-provider-colocation-avoidance-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-provider-observation-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-provider-path-domain-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-volunteer-field-kit-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-volunteer-iroh-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-volunteer-provider-gossip-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-volunteer-provider-selection-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-volunteer-replica-locator-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-volunteer-replication-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-volunteer-retrieval-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-volunteer-storage-boundary.ps1:passed
+m1_readiness_gate=verify-kilogram-windows-ci-boundary.ps1:passed
+m1_readiness_gate=verify-publication-conflict-boundary.ps1:passed
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_crypto-2nmsj9tegn19b\s-hneo1y8jk4-0amb8ay-working`
+
+warning: `kilogram-crypto` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_identity-2ch23i7vozsuo\s-hneo1ycpdw-1him86z-working`
+
+warning: `kilogram-identity` (lib) generated 1 warning
+    Checking kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_sync_capability-1nno0ecse6648\s-hneo1ytl79-06jfi0n-working`
+
+warning: `kilogram-sync-capability` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_capability_store-282xfe4zfm4of\s-hneo1z0ceb-0r9gd4c-working`
+
+warning: `kilogram-peer-capability-store` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_reenrollment-3mw4wvqjcxwfv\s-hneo1z5kkg-06001il-working`
+
+warning: `kilogram-peer-reenrollment` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_mailbox-2wifpgtzuyqy4\s-hneo1yj3dd-1bde3bt-working`
+
+warning: `kilogram-mailbox` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_reenrollment_acceptance-013pg1ux2zoq9\s-hneo1zaimw-030n55d-working`
+
+warning: `kilogram-peer-reenrollment-acceptance` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_reenrollment_runtime-35brsaxb62g30\s-hneo1zfwdd-0hiamnl-working`
+
+warning: `kilogram-peer-reenrollment-runtime` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_state-2kwcrjsxvalnc\s-hneo1ya0gd-10y4rfd-working`
+
+warning: `kilogram-state` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_ticket_publication-2knqkvg1bgvgl\s-hneo1zm34o-0cg2w96-working`
+
+warning: `kilogram-ticket-publication` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_ratchet-3iwi0lwbo40qu\s-hngo8g40qa-0fyqfo3-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_publication_conflict-35r2qmgujvkz1\s-hneo1zpl7f-0sdqj2p-working`
+
+warning: `kilogram-publication-conflict` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_ticket_store-0sfruyhx52it2\s-hneo1zy6aa-0bwv1k4-working`
+
+warning: `kilogram-ticket-store` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_bootstrap_contract-1a8tqm81yhh31\s-hneo20xd7z-1v420bo-working`
+
+warning: `kilogram-bootstrap-contract` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_mailbox_client-1czv5ocwz76k2\s-hneo21yycj-1ktwiot-working`
+
+warning: `kilogram-mailbox-client` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_mailbox_provisioning-3ofom3tyyp0se\s-hneo21oqf5-0hiqbxx-working`
+
+warning: `kilogram-mailbox-provisioning` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_reenrollment_staging-31n5ipgs6vs7t\s-hneo21jznu-1djogdj-working`
+
+warning: `kilogram-peer-reenrollment-staging` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_ticket_store-27w49udplntd8\s-hneo2aew3a-03ybtud-working`
+
+warning: `kilogram-ticket-store` (bin "kilogram-ticket-store" test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_ticket_store-22jwtjofa6bz3\s-hneo2acm6g-1ounw48-working`
+
+warning: `kilogram-ticket-store` (bin "kilogram-ticket-store") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_ticket_store-1mty28qt62lk9\s-hneo2bjqy2-1b4geq1-working`
+
+warning: `kilogram-ticket-store` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_publication_conflict-2i9ehhu80rb9v\s-hneo2brtwa-03jyvqp-working`
+
+warning: `kilogram-publication-conflict` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_reenrollment_runtime-1nknnv9qicwhl\s-hneo2bzulb-1dsyy7g-working`
+
+warning: `kilogram-peer-reenrollment-runtime` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_state-3h79yi6wxuw9w\s-hneo2el4s8-0kzdujq-working`
+
+warning: `kilogram-state` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_mailbox_provisioning-0x76zxzh7fps1\s-hneo2cs0d1-0ecsbjw-working`
+
+warning: `kilogram-mailbox-provisioning` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_mailbox_client-0li6wnpl8j7e9\s-hneo2d2wey-02hjlq0-working`
+
+warning: `kilogram-mailbox-client` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_reenrollment_acceptance-0egnnycpm72u0\s-hneo2c64un-10wgcru-working`
+
+warning: `kilogram-peer-reenrollment-acceptance` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_reenrollment-0yzepmdft0q26\s-hneo2cbb1y-0gpwp3c-working`
+
+warning: `kilogram-peer-reenrollment` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_capability_store-15gxzjffncxlf\s-hneo2cgavl-0xpbx74-working`
+
+warning: `kilogram-peer-capability-store` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_reenrollment_staging-0h0vyuutwhrk1\s-hneo2clj43-1kohnzx-working`
+
+warning: `kilogram-peer-reenrollment-staging` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_bootstrap_contract-1x2un58emyf7e\s-hneo2dikmk-0eekdw1-working`
+
+warning: `kilogram-bootstrap-contract` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_mailbox-1atfxn0wzgahm\s-hneo2e1z5d-01py9em-working`
+
+warning: `kilogram-mailbox` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_ratchet-0n48gspbklqh3\s-hngo8g5ykv-129y9vg-working`
+
+warning: `kilogram-ratchet` (lib) generated 1 warning
+    Checking kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_protocol-0kkvcgzgpczc7\s-hngo8geh6o-012rabx-working`
+
+warning: `kilogram-ratchet` (lib test) generated 1 warning
+    Checking kilogram-offline v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-offline)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_offline-2q6k4nult7nxg\s-hngo8grfr7-1fqki0z-working`
+
+warning: `kilogram-offline` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_offline-23ey5k5bakng3\s-hngo8h4kux-1biw2cv-working`
+
+warning: `kilogram-offline` (bin "kilogram-offline" test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_offline-2vas8c3gl2f4e\s-hngo8hdaem-1wr9k29-working`
+
+warning: `kilogram-offline` (bin "kilogram-offline") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_offline-1j5zmfguisovo\s-hngo8hljnu-03vjbbk-working`
+
+warning: `kilogram-protocol` (lib) generated 1 warning
+    Checking kilogram-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-store)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_store-0cdquvzmlxo6p\s-hngo8hvbg7-0va35pw-working`
+
+warning: `kilogram-offline` (lib test) generated 1 warning
+    Checking kilogram-peer-history-recovery v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery-3m2nkake4svrb\s-hngo8hxeam-0x9kj9e-working`
+
+warning: `kilogram-store` (lib) generated 1 warning
+    Checking kilogram-runtime-ipc v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-runtime-ipc)
+warning: `kilogram-peer-history-recovery` (lib) generated 1 warning
+    Checking kilogram-peer-history-recovery-consent v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-consent)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_runtime_ipc-02yb74ofevuif\s-hngo8idcg5-010rraw-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery_consent-1bu4y0dietmz5\s-hngo8iehaf-1wf3eg1-working`
+
+warning: `kilogram-peer-history-recovery-consent` (lib) generated 1 warning
+    Checking kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery_execution-1idie015lsoa3\s-hngo8irlen-0ymphpc-working`
+
+warning: `kilogram-peer-history-recovery-execution` (lib) generated 1 warning
+    Checking kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_transport_iroh-1a49sy3cserdu\s-hngo8k1cqi-1ubyvvg-working`
+
+warning: `kilogram-transport-iroh` (lib) generated 1 warning
+    Checking kilogram-session v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-session)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_session-1c7f96u2a18is\s-hngo8kjgmo-0hmkx6w-working`
+
+warning: `kilogram-session` (lib) generated 1 warning
+    Checking kilogram-rollout v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-rollout)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_rollout-0dut6vly9iuvw\s-hngo8ky9b4-1oicnzl-working`
+
+warning: `kilogram-runtime-ipc` (lib) generated 1 warning
+    Checking kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery_runtime-04cuimco2kw1l\s-hngo8l0fij-1ox41dj-working`
+
+warning: `kilogram-rollout` (lib) generated 1 warning
+    Checking kilogram-windows v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-windows)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_windows-1z8cjcisl9pb4\s-hngo8lrkzb-0742ex9-working`
+
+warning: `kilogram-peer-history-recovery-runtime` (lib) generated 1 warning
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_cli-3lnhuj1b2heza\s-hngo8m1oca-133x91m-working`
+
+warning: `kilogram-cli` (lib) generated 1 warning
+    Checking kilogram-bootstrap v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-bootstrap)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_bootstrap-3mirvhx1d7shs\s-hngo8mg4te-1kfpq9v-working`
+
+warning: `kilogram-windows` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_windows-3hs7wiplvcr0f\s-hngo8net7f-02hz9pw-working`
+
+warning: `kilogram-windows` (bin "kilogram-windows") generated 1 warning
+warning: `kilogram-bootstrap` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_windows-3qamh7zcmxcap\s-hngo8nkp6w-1hmkuoi-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_bootstrap-1pq9c5z2njapp\s-hngo8nl8rc-074l0bm-working`
+
+warning: `kilogram-windows` (bin "kilogram-windows" test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_bootstrap-1aavksedi8j8g\s-hngo8nrifj-0bulua1-working`
+
+warning: `kilogram-bootstrap` (bin "kilogram-bootstrap" test) generated 1 warning
+warning: `kilogram-bootstrap` (bin "kilogram-bootstrap") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_cli-1f18ikx5nsz1m\s-hngo8obt7r-0rl1cvy-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_cli-33nclfakkpgty\s-hngo8oh6ie-0f4uiok-working`
+
+warning: `kilogram-cli` (bin "kilogram-cli") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_sync_v2_evidence-1afcrev6hm8ow\s-hngo8xk0k4-03z85iu-working`
+
+warning: `kilogram-cli` (bin "kilogram-sync-v2-evidence") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_sync_v2_evidence-1ga6v6huleeho\s-hngo8yigad-00egnu5-working`
+
+warning: `kilogram-cli` (bin "kilogram-sync-v2-evidence" test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_cli-1gy994dguh5no\s-hngo8zfxww-1kkl5pv-working`
+
+warning: `kilogram-cli` (bin "kilogram-cli" test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery_runtime-3qonrw1801jev\s-hngo8zm0sk-0m7gisl-working`
+
+warning: `kilogram-cli` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_windows-13h60h1vupamm\s-hngo8zv208-011q0z7-working`
+
+warning: `kilogram-peer-history-recovery-runtime` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery_execution-3pvi3mtmg7lp9\s-hngo90ou0z-0ysp2uy-working`
+
+warning: `kilogram-windows` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_rollout-0pxntgb1qfed7\s-hngo91sc6s-067p89w-working`
+
+warning: `kilogram-rollout` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_bootstrap-2hg96pjrk83wi\s-hngo92r28w-1psyn97-working`
+
+warning: `kilogram-peer-history-recovery-execution` (lib test) generated 1 warning
+    Checking kilogram-peer-history-recovery-transport v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-transport)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery_transport-3nzz32u5yxmbm\s-hngo93nq2j-0kb5eg3-working`
+
+warning: `kilogram-bootstrap` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery_transport-190x6cczwpnf7\s-hngo942q8j-1w28i1g-working`
+
+warning: `kilogram-peer-history-recovery-transport` (lib) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery_consent-2kr20zgu2cz3m\s-hngo94cnbb-0x2fnf6-working`
+
+warning: `kilogram-peer-history-recovery-consent` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_session-2ypryti9sugkn\s-hngo94qhzp-19js9tj-working`
+
+warning: `kilogram-peer-history-recovery-transport` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\canonical_decoder_mutations-150bp81cpdo6v\s-hngo9520ol-0ivg42e-working`
+
+warning: `kilogram-session` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_transport_iroh-2gelworzkjata\s-hngo95cugz-0j8jqmh-working`
+
+warning: `kilogram-protocol` (test "canonical_decoder_mutations") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery-1wg5qpme0mt7t\s-hngo95queg-0v1jbqq-working`
+
+warning: `kilogram-transport-iroh` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_runtime_ipc-28ec9ijnndy0n\s-hngo95vbvh-0a6qf1n-working`
+
+warning: `kilogram-peer-history-recovery` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_store-06hwuaknqrkmj\s-hngo969ci5-0ujdndj-working`
+
+warning: `kilogram-store` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\canonical_sync_v2_fuzz_seeds-0f65xtsfowuj1\s-hngo96zxvl-1udiylt-working`
+
+warning: `kilogram-protocol` (test "canonical_sync_v2_fuzz_seeds") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\canonical_sync_v2_decoder_mutations-3fwev65j7pyik\s-hngo9766mh-03uxuxk-working`
+
+warning: `kilogram-protocol` (test "canonical_sync_v2_decoder_mutations") generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_protocol-06608w6knvw3o\s-hngo97f7ce-0c2zgcv-working`
+
+warning: `kilogram-runtime-ipc` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_sync_capability-0cc5joolvacnt\s-hneo2dmukx-1mpv947-working`
+
+warning: `kilogram-sync-capability` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_identity-0rv2qoc60wfpf\s-hneo2ed9m9-1qngvbh-working`
+
+warning: `kilogram-identity` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_crypto-34t17zqkajyu3\s-hneo2eoi92-0v87xuk-working`
+
+warning: `kilogram-crypto` (lib test) generated 1 warning
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_ticket_publication-12gqjpj59nati\s-hneo2erobw-1nw5iut-working`
+
+warning: `kilogram-ticket-publication` (lib test) generated 1 warning
+warning: `kilogram-protocol` (lib test) generated 1 warning
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 56.86s
+m1_readiness_status=verified
+boundary_gates=188/188
+verification_mode=accepted-tag
+accepted_m1_tag_status=verified
+accepted_m1_tag=M1.0.0
+format_status=verified
+offline_strict_clippy=verified
+test_executables_started=false
+network_executed=false
+release_build=false
+archive_created=false
+git_tag_created=false
+strict_independent_provider_field_acceptance=pending
+public_security_release=false

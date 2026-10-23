@@ -1,6 +1,36 @@
 # Память проекта Kilogram
 
-Актуально на: 2026-10-22.
+Актуально на: 2026-10-23.
+
+Текущая компактная передача состояния, границы active/dormant/planned,
+корректировки архитектурного аудита и три ближайших product-приоритета:
+[`project-handoff-2026-10-23.md`](project-handoff-2026-10-23.md).
+Implementation baseline в ней — `3e82e63`; M1.2.63 не начат.
+
+[Координация чатов](chat-coordination.md): пользователь разрешил прямую передачу
+задания и обратное уведомление. Исполнитель GPT-6.1 Sol Max передал F1/F2;
+автоматический запуск review оркестратора подтверждён.
+
+Первая задача после передачи —
+[`tasks/lossless-sync-a1-design.md`](tasks/lossless-sync-a1-design.md):
+baseline воспроизведён, [проект](tasks/lossless-sync-a1-proposal.md) и
+[архитектурное review](tasks/lossless-sync-a1-review.md) готовы.
+Offline F1/F2 завершён и [независимо проверен](tasks/lossless-sync-a1-spike-review.md).
+Осуществимость направления подтверждена; три ограничения прототипа воспроизведены
+и включены в условия первого runtime/vault slice. Пользователь одобрил реализацию
+и циклы review/исправлений; задача отправлена тому же исполнителю GPT-6.1 Sol Max.
+Implementation baseline — `3e82e63`; [реализация после repair iteration 2](tasks/lossless-sync-a1-integration.md)
+сохранена коммитом `dcc1300b759d45b0dfbb77e08b93d2cac0957b80` после приёмки.
+[Повторное review](tasks/lossless-sync-a1-integration-review-2.md)
+закрыло I1–I4 и приняло узкий runtime/vault single-chain slice. Цикл исправлений
+завершён, новая задача не запущена. Публичного включения/миграции нет, A1 открыт.
+Весь P1 из handoff в задачу не входит.
+
+Независимый обзор архитектуры и пути до пользовательского MVP на ревизии
+`3e82e63`: [аудит 2026-10-22](reviews/2026-10-22-architecture-mvp-audit.md).
+В нём отдельно перечислены active-path blockers, dormant mechanisms и
+предлагаемые пользовательские критерии готовности; это review, не изменение
+утверждённого следующего этапа.
 
 Эта папка — краткая проектная память и дорожная карта. Подробная техническая
 спецификация находится в [`docs/RFC-0001-core-architecture.md`](../docs/RFC-0001-core-architecture.md).
@@ -13,7 +43,9 @@ crate-private; owner по-прежнему one-shot проходит тольк�
 launch-slot path. Public launch service, safe preview/state, typed commands,
 errors и UX view сохранены; CLI/desktop/runtime IPC/network не подключены.
 Следующий M1.2.63 должен закрыть transitional public assembly-issuer surface
-без изменения safe facade.
+без изменения safe facade. После передачи он оставлен намеренно не начатым:
+сначала требуется решение, продолжать dormant recovery subseries или переключить
+реализацию на active-path P1 blockers из handoff.
 
 ## Текущее состояние
 

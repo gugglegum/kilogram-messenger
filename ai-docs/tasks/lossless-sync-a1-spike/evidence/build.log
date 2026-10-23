@@ -1,0 +1,9 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+   Compiling kilogram-a1-feasibility v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\ai-docs\tasks\lossless-sync-a1-spike)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_a1_feasibility-0ffqhn2x9dkkp\s-hngki2dnh8-0n17agt-working`
+
+warning: `kilogram-a1-feasibility` (bin "kilogram-a1-feasibility") generated 1 warning
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.40s
+build_exit=0

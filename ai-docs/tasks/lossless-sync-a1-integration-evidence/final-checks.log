@@ -1,0 +1,14 @@
+head=3e82e6380c30d0f9443b6692ea34faccaacddef7
+git_diff_check=passed
+patch_reverse_check=passed
+hash_unchanged=apps/kilogram-cli/src/main.rs
+hash_unchanged=apps/kilogram-cli/src/ordered_ingress.rs
+hash_unchanged=apps/kilogram-cli/src/ordered_ingress_tests.rs
+hash_unchanged=crates/kilogram-ratchet/src/lib.rs
+hash_unchanged=Cargo.toml
+hash_unchanged=Cargo.lock
+hash_unchanged=apps/kilogram-cli/Cargo.toml
+hash_unchanged=crates/kilogram-ratchet/Cargo.toml
+hash_unchanged=target/verification/deps/kilogram-cli-bin-kilogram-cli-tests.exe
+hash_unchanged=target/verification/deps/kilogram-ratchet-lib-kilogram_ratchet-tests.exe
+evidence_completed_at=2026-10-23T03:42:27+05:00

@@ -1,0 +1,133 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+   Compiling aws-lc-rs v1.18.1
+   Compiling aws-lc-sys v0.45.0
+   Compiling rustls v0.23.43
+   Compiling kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+   Compiling kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+   Compiling rustls-webpki v0.103.15
+   Compiling tokio-rustls v0.26.4
+   Compiling simd-adler32 v0.3.10
+   Compiling adler2 v2.0.1
+   Compiling crc32fast v1.5.1
+   Compiling kilogram-peer-capability-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-capability-store)
+   Compiling kilogram-peer-reenrollment v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment)
+   Compiling miniz_oxide v0.9.1
+   Compiling once_cell_polyfill v1.70.2
+   Compiling utf8parse v0.2.2
+   Compiling anstyle v1.0.14
+   Compiling anstyle-wincon v3.0.11
+   Compiling anstyle-parse v1.0.0
+   Compiling flate2 v1.1.10
+   Compiling hickory-net v0.26.1
+   Compiling windows v0.62.2
+   Compiling kilogram-peer-reenrollment-acceptance v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-acceptance)
+   Compiling miniz_oxide v0.8.9
+   Compiling hyper-rustls v0.27.9
+   Compiling fdeflate v0.3.7
+   Compiling rustls-platform-verifier v0.7.0
+   Compiling anstyle-query v1.1.5
+   Compiling pxfm v0.1.30
+   Compiling colorchoice v1.0.5
+   Compiling is_terminal_polyfill v1.70.2
+   Compiling zune-core v0.5.3
+   Compiling zune-jpeg v0.5.15
+   Compiling noq-proto v1.2.0
+   Compiling anstream v1.0.0
+   Compiling hickory-resolver v0.26.1
+   Compiling wmi v0.18.4
+   Compiling moxcms v0.8.1
+   Compiling reqwest v0.13.4
+   Compiling png v0.18.1
+   Compiling kilogram-peer-reenrollment-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-runtime)
+   Compiling kilogram-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-store)
+   Compiling kilogram-mailbox v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox)
+   Compiling byteorder-lite v0.1.0
+   Compiling g2poly v1.2.2
+   Compiling bytemuck v1.25.2
+   Compiling clap_lex v1.1.0
+   Compiling strsim v0.11.1
+   Compiling tokio-websockets v0.13.3
+   Compiling clap_builder v4.6.6
+   Compiling image v0.25.10
+   Compiling g2gen v1.2.2
+   Compiling noq v1.2.0
+   Compiling iroh-dns v1.0.3
+   Compiling netwatch v0.19.2
+   Compiling kilogram-peer-history-recovery v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery)
+   Compiling clap_derive v4.6.4
+   Compiling hashbrown v0.16.1
+   Compiling kilogram-ticket-publication v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ticket-publication)
+   Compiling clap v4.6.6
+   Compiling iroh-relay v1.0.3
+   Compiling lru v0.16.4
+   Compiling kilogram-peer-history-recovery-consent v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-consent)
+   Compiling portmapper v0.19.2
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+   Compiling g2p v1.2.2
+   Compiling iroh v1.0.3
+   Compiling kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+   Compiling rqrr v0.10.1
+   Compiling kilogram-publication-conflict v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-publication-conflict)
+   Compiling qrcode v0.14.1
+   Compiling kilogram-session v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-session)
+   Compiling kilogram-runtime-ipc v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-runtime-ipc)
+   Compiling kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+   Compiling kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+   Compiling kilogram-rollout v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-rollout)
+   Compiling kilogram-ticket-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-ticket-store)
+   Compiling kilogram-mailbox-provisioning v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-provisioning)
+   Compiling kilogram-mailbox-client v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-client)
+   Compiling kilogram-peer-reenrollment-staging v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-staging)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+   Compiling kilogram-offline v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-offline)
+error[E0599]: no associated function or constant named `decode` found for struct `kilogram_identity::ConversationMembershipSnapshot` in the current scope
+    --> apps\kilogram-cli\src\ordered_ingress_tests.rs:512:54
+     |
+ 512 |     let membership = ConversationMembershipSnapshot::decode(&manifest.membership)?;
+     |                                                      ^^^^^^ associated function or constant not found in `kilogram_identity::ConversationMembershipSnapshot`
+     |
+note: if you're trying to build a new `kilogram_identity::ConversationMembershipSnapshot`, consider using `kilogram_identity::ConversationMembershipSnapshot::decode_and_verify` which returns `std::result::Result<kilogram_identity::ConversationMembershipSnapshot, IdentityError>`
+    --> crates\kilogram-identity\src\account.rs:2154:5
+     |
+2154 |     pub fn decode_and_verify(bytes: &[u8]) -> Result<Self, IdentityError> {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: there is a method `encode` with a similar name, but with different arguments
+    --> crates\kilogram-identity\src\account.rs:2160:5
+     |
+2160 |     pub fn encode(&self) -> Result<Vec<u8>, IdentityError> {
+     |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0308]: arguments to this function are incorrect
+   --> apps\kilogram-cli\src\ordered_ingress_tests.rs:528:26
+    |
+528 |             let client = SyncClient::new(
+    |                          ^^^^^^^^^^^^^^^
+...
+532 |                 binding,
+    |                 ------- argument #4 of type `&kilogram_identity::ConversationMembershipSnapshot` is missing
+533 |                 source.identity().device_id(),
+    |                 ----------------------------- unexpected argument #5 of type `kilogram_identity::DeviceId`
+    |
+note: associated function defined here
+   --> crates\kilogram-session\src\lib.rs:94:12
+    |
+ 94 |     pub fn new(
+    |            ^^^
+help: did you mean
+    |
+528 ~             let client = SyncClient::new(
+529 +                 recipient.identity(),
+530 +                 store,
+531 +                 ConversationId::from_label(LABEL),
+532 +                 /* &kilogram_identity::ConversationMembershipSnapshot */,
+533 +                 binding,
+534 +                 &membership,
+535 ~             );
+    |
+
+Some errors have detailed explanations: E0308, E0599.
+For more information about an error, try `rustc --explain E0308`.
+error: could not compile `kilogram-cli` (bin "kilogram-cli" test) due to 2 previous errors
+compile_exit=101
