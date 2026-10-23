@@ -1,0 +1,39 @@
+cargo_process_priority=below-normal
+
+
+cargo_logical_processors=24
+
+
+cargo_jobs=2
+
+
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Checking kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+    Checking kilogram-identity v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-identity)
+    Checking kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: used `unwrap()` on a `Result` value
+  --> apps\kilogram-cli\src\ordered_dialog\repair_tests.rs:46:37
+   |
+46 |         stores.sort_by_key(|(_, s)| admin::credentials(s).unwrap().cert.device_id());
+   |                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: if this value is an `Err`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unwrap_used
+   = note: requested on the command line with `-D clippy::unwrap-used`
+NotSpecified: (:) [], RemoteException
+error: used `unwrap_err()` on a `Result` value
+   --> apps\kilogram-cli\src\ordered_dialog\repair_tests.rs:338:9
+    |
+338 | /         admin::enroll(StateDirectoryLock::acquire(&root)?, &owners[1], None)
+339 | |             .unwrap_err()
+    | |_________________________^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unwrap_used
+NotSpecified: (:) [], RemoteException
+error: could not compile `kilogram-cli` (lib test) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...

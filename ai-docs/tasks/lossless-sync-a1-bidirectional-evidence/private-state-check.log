@@ -1,0 +1,61 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_protocol-29okk2njxrtm1\s-hnh8dvm4q2-0pfph4s-working`
+
+warning: `kilogram-protocol` (lib) generated 1 warning
+    Checking kilogram-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-store)
+    Checking kilogram-peer-history-recovery v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery)
+    Checking kilogram-runtime-ipc v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-runtime-ipc)
+    Checking kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery-1h8air8rhqqmg\s-hnh8e07y14-0rvv19e-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_transport_iroh-3cvjhntlluzvb\s-hnh8e080gq-1yo8ghf-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_store-326xzn19s0cph\s-hnh8e08hj0-162gtvl-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_runtime_ipc-2cmejfwf4fqdg\s-hnh8e08j32-0hkjrcb-working`
+
+warning: `kilogram-peer-history-recovery` (lib) generated 1 warning
+    Checking kilogram-peer-history-recovery-consent v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-consent)
+warning: `kilogram-store` (lib) generated 1 warning
+    Checking kilogram-session v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-session)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery_consent-2r4o27y98xbr6\s-hnh8e0lx2n-0h0itze-working`
+
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_session-396l5535duxq0\s-hnh8e0n0qa-0ou7sju-working`
+
+warning: `kilogram-peer-history-recovery-consent` (lib) generated 1 warning
+    Checking kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_peer_history_recovery_execution-08qgqptuq48ti\s-hnh8e0wrr8-1bi0uix-working`
+
+warning: `kilogram-session` (lib) generated 1 warning
+    Checking kilogram-rollout v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-rollout)
+warning: hard linking files in the incremental compilation cache failed. copying files instead. consider moving the cache directory to a file system which supports hard linking in session dir `\\?\E:\AI-Projects\kilogram-p2p-messenger\target\debug\incremental\kilogram_rollout-16r4ipfepheb5\s-hnh8e0zm62-0l73bg8-working`
+
+warning: `kilogram-rollout` (lib) generated 1 warning
+warning: `kilogram-peer-history-recovery-execution` (lib) generated 1 warning
+error[E0599]: the method `context` exists for enum `Result<(), ExportKeyingMaterialError>`, but its trait bounds were not satisfied
+   --> crates\kilogram-transport-iroh\src\ordered.rs:38:10
+    |
+ 36 | /     connection
+ 37 | |         .export_keying_material(&mut material, b"kilogram ordered-dialog v1", &context)
+ 38 | |         .context("OD1 TLS exporter")?;
+    | |         -^^^^^^^ method cannot be called on `Result<(), ExportKeyingMaterialError>` due to unsatisfied trait bounds
+    | |_________|
+    |
+    |
+   ::: C:\Users\Paul\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\noq-proto-1.2.0\src\crypto.rs:201:1
+    |
+201 |   pub struct ExportKeyingMaterialError;
+    |   ------------------------------------ doesn't satisfy `_: StdError`
+    |
+    = note: the following trait bounds were not satisfied:
+            `ExportKeyingMaterialError: anyhow::context::ext::StdError`
+            which is required by `Result<(), ExportKeyingMaterialError>: anyhow::Context<(), ExportKeyingMaterialError>`
+
+For more information about this error, try `rustc --explain E0599`.
+warning: `kilogram-transport-iroh` (lib) generated 1 warning
+error: could not compile `kilogram-transport-iroh` (lib) due to 1 previous error; 1 warning emitted
+warning: build failed, waiting for other jobs to finish...
+warning: `kilogram-runtime-ipc` (lib) generated 1 warning

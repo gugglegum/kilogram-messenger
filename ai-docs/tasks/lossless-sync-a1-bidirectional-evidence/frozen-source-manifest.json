@@ -1,0 +1,2196 @@
+{
+  "baseline_commit": "47d19c41be449deea9c1af003f7a27cb6992710c",
+  "baseline_tree": "699d7d73ac261e08006ecd3f82f01010fc738f32",
+  "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)",
+  "cargo": "cargo 1.98.0 (797e8a9bc 2026-08-05)",
+  "build_log": "repair1-build.log; repair1-build-confirmation.log",
+  "build_command": "scripts/invoke-cargo-friendly.ps1 build -CargoJobs 2 --locked --offline --profile verification --package kilogram-cli --bin kilogram-cli",
+  "executable": "target/field-tests/ordered-dialog/kilogram-cli.exe",
+  "executable_sha256": "3f42245b899e678c423b3137b5d99dc225cb0c2bc36d99b5bfa99daf506a6626",
+  "old_executable_sha256": "df4ae0d4760c85eb41ab833655061875472e4054295844d452137859f7d4c58c",
+  "contract_sha256": "587cf786cff1cb4e946a68d37ea508f82141b27e4909e80b2b95236485f54b18",
+  "sources": [
+    {
+      "path": "apps/kilogram-bootstrap/Cargo.toml",
+      "sha256": "6922bb4d7bc31ce6720657c5492674c01162cd3e633cd240b405e5565ba57647"
+    },
+    {
+      "path": "apps/kilogram-bootstrap/src/account_recovery.rs",
+      "sha256": "9a998fc672785fac60b8d2986c18cf40eba2f48b77a99ff486bd6ae5ec9c72c5"
+    },
+    {
+      "path": "apps/kilogram-bootstrap/src/device_link.rs",
+      "sha256": "0da2162bf01e129fd05e1d17445d33d84d559cc47900a250bdc7463a44a1742e"
+    },
+    {
+      "path": "apps/kilogram-bootstrap/src/device_removal.rs",
+      "sha256": "3c7d49c9686ae3eb77fe04c13923bad57ccd82bc9e9cd8e8ce1d7a9f787bd6e0"
+    },
+    {
+      "path": "apps/kilogram-bootstrap/src/lib.rs",
+      "sha256": "bf7d0f2a990f1abe7790856253993aba3e9b5566c6162c4072d696d881663a37"
+    },
+    {
+      "path": "apps/kilogram-bootstrap/src/main.rs",
+      "sha256": "a15fa4b3e3a2c0b59586a2cf6773c43184fc095efc7d7d1ae7fba93cafa83d37"
+    },
+    {
+      "path": "apps/kilogram-bootstrap/src/recovery_policy.rs",
+      "sha256": "97240f6b3c232ffb0e001e021094ef2cd8d1996c287daa6bdd3ca2ff45c001cf"
+    },
+    {
+      "path": "apps/kilogram-bootstrap/src/recovery_quorum.rs",
+      "sha256": "32366e5e38d13539bfd460aaec32538d6e6c38f10f79b992579240e7445a8a71"
+    },
+    {
+      "path": "apps/kilogram-cli/Cargo.toml",
+      "sha256": "da9f7903ebe19a09a0b1ff141a2a74c9bf13f23f4682595044f591caba0d0d0a"
+    },
+    {
+      "path": "apps/kilogram-cli/src/bin/kilogram-sync-v2-evidence.rs",
+      "sha256": "d78d442b66842b490f0e8db2f3ee9eefd4f3f86da22a918e78a0f599bd4a08cd"
+    },
+    {
+      "path": "apps/kilogram-cli/src/canonical_sync_v2_runtime.rs",
+      "sha256": "54ed4f49365d34a4adae5791d23213f33718a7f864d66b062c2e1e7e4c6719d3"
+    },
+    {
+      "path": "apps/kilogram-cli/src/lib.rs",
+      "sha256": "2a57461a8ea1ad5498d448f1d41526e6b153bffba7790e7026560dd8bae93af5"
+    },
+    {
+      "path": "apps/kilogram-cli/src/main.rs",
+      "sha256": "b7340d8593c408b9638b583b042e39010525d9fa2fe581372bc664d0212e08ae"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_cli.rs",
+      "sha256": "c257372ec80f10118e96ffeed1537ef55c532284a2cb2f643a0dde76e7dedcdb"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/admin.rs",
+      "sha256": "91d89a9e9e319ed86c85e81570030513337d72164040ac49523827654d575316"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/engine.rs",
+      "sha256": "d67136ee020a7ebfb42e6b905cb7a0310d2e3f85e5248f7c294e9d91f280fa0e"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/handshake.rs",
+      "sha256": "655e787da623c86188cfe886a5ccd9497b7a2067db65a6b799818adf0d813fc1"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/ingress.rs",
+      "sha256": "c6500b8941d155a430348a3ea8165a02b96477ccd0d0195fefaab6e0f696fd66"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+      "sha256": "dbae9c98c8cb552050b348ca631a31ebfc14067298421f736faf172fdd7bd18a"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/outbox.rs",
+      "sha256": "1758520b96fce5480e33e6dbcb37b21a5410d9fc1d2aa6605c0d72c1b6d7436d"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/ratchet.rs",
+      "sha256": "6be651241886ea33aeeb76148937257739297a5e9a9d63f180a014af10972139"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/repair_tests.rs",
+      "sha256": "2000df2e75e3385377b4dfa9a7cdf76111b7ccaf59190c1428781ed704ff309e"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/repair.rs",
+      "sha256": "201107275a889b46a828afcefc3683ec3ed98b4e023d05d3564e776e48ab4126"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime.rs",
+      "sha256": "150a3345701139016fbb8467db84df42b510fdf618d1957a5cd385cc43ad4e49"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/state.rs",
+      "sha256": "47e7602d9ef9dbbcbf9c902734657987ca25e14a454beeddb1c6a53c6cc00be7"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/test_support.rs",
+      "sha256": "b2c192a18de737ed45ba4c36c17c2b928478d82d8831747d295a87ffd38f06b6"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_ingress_tests.rs",
+      "sha256": "a07a6a8a9a903c147287c1e2af7e1410b6f5e9192ebfb4da71c1318467aa693a"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_ingress.rs",
+      "sha256": "881315820c49eff23a0b2c8575966003dd2de7914e22c9c35d536dfbf9f8b4f1"
+    },
+    {
+      "path": "apps/kilogram-cli/src/publication_conflict_ceremony.rs",
+      "sha256": "530b78bcde3bf0f20010eab5a7ddb294ed9f32a62053711bdcb9935e54f3d4be"
+    },
+    {
+      "path": "apps/kilogram-cli/src/recovery_discovery.rs",
+      "sha256": "baac3e667fe1e203984a8b63ebe038c8c95354d03561e415361a511c7820e18e"
+    },
+    {
+      "path": "apps/kilogram-cli/src/recovery_link.rs",
+      "sha256": "2fe6ad2705b0fec4da6531add56f46a473ef280687a682498c24668de2d9bfe3"
+    },
+    {
+      "path": "apps/kilogram-cli/src/recovery_plan.rs",
+      "sha256": "be03c0b8a3c1fc1072a25c867f1d2a25a004007f6d01068be36f9f4640aeab88"
+    },
+    {
+      "path": "apps/kilogram-cli/src/recovery_platform.rs",
+      "sha256": "b8bb8f3a12f648b12bc980eaa3dbd7cadec2f81c34232843e7bb7c86b1659710"
+    },
+    {
+      "path": "apps/kilogram-cli/src/recovery_qr.rs",
+      "sha256": "6e4d0014589e4af69640a27e0390ca5040a840738ed56ac4d71ce9a57aec88c6"
+    },
+    {
+      "path": "apps/kilogram-cli/src/recovery_scheduler.rs",
+      "sha256": "31506625b9c33c73790354e5b30e7c7afdc32466f2d6d40faa113330a9e5dc74"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_endpoint_announcement.rs",
+      "sha256": "851dbee48d8a4077b3c5b5289383abc9a5dc6c843bbd96d52b44d238b9ed2d92"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_mailbox.rs",
+      "sha256": "0f491b8762fd370cbf41e1e0d1df38b652361ddbad53ef20734f3ea7a6fcc9df"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_own_device_automation.rs",
+      "sha256": "dade04809e727ec01620fb8c386a2cbae2c4e0364e38df565aaa03a6290a7a8b"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_own_device_discovery.rs",
+      "sha256": "e514fd8e36b894eb46e168dd61cea60cfc23508ba15dfbb41699deaafd30f3e1"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_own_device_roster.rs",
+      "sha256": "dffd8122f819a17b7d8d8d78377091054ad0d3aaee17948309cab7b303b183d8"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_publication_conflict.rs",
+      "sha256": "ff2516b5311ef926de790f662f72a5ee5d7e588c4462be494e323946902d660e"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_publication_resolution.rs",
+      "sha256": "3528ae70dc468b7a76d35ca4f1cb0f16f620eedd0ff76946f17e3622f093eb78"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_publication.rs",
+      "sha256": "785fc888fc9a08cefd51d2b4e79a11ddcb16fe8c1dee00c4c35fc68103425e77"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_queue.rs",
+      "sha256": "f307086d7418986223334fb040160589eb6fe706911562ec2bd55a6e89e78146"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_ticket_automation.rs",
+      "sha256": "e50e1576d495d856543b5882b14c84031f527168702f4aca308003e30fdfff06"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_ticket_checkpoint.rs",
+      "sha256": "26b6085271cdde555996bf597be2dbb762999f6a72477d08e1ca74a44efce5c6"
+    },
+    {
+      "path": "apps/kilogram-offline/Cargo.toml",
+      "sha256": "4623c1c44610a16045bfa59b0773f56edd6cf2b2477c9b52546c1d5f035bd57a"
+    },
+    {
+      "path": "apps/kilogram-offline/PACKAGE-README.txt",
+      "sha256": "c4c9f55fe2363ffb9214d3f74fd2322172553558f817230b42130585bd19456a"
+    },
+    {
+      "path": "apps/kilogram-offline/src/lib.rs",
+      "sha256": "16255b06a7a9265b7287c19a51794884e8da4ec7f8b9ac4fdd678de33983182b"
+    },
+    {
+      "path": "apps/kilogram-offline/src/main.rs",
+      "sha256": "ef1681803396deace5e89897878870ef011aed6c1020d3156559e6acc7127894"
+    },
+    {
+      "path": "apps/kilogram-ticket-store/Cargo.toml",
+      "sha256": "a8e2db78049d5a9d797c48f1c4b1ebe215709a170390eeff2500f3c462997719"
+    },
+    {
+      "path": "apps/kilogram-ticket-store/src/lib.rs",
+      "sha256": "11f70e824681508f838b1401f766e1a37099796db80d576d69ecb85d254297a1"
+    },
+    {
+      "path": "apps/kilogram-ticket-store/src/main.rs",
+      "sha256": "e03bd16eb8490e8f2cc34d93e62acbf47bec4067a37027699e70b80c3c848029"
+    },
+    {
+      "path": "apps/kilogram-windows/Cargo.toml",
+      "sha256": "30c086ff7dd278307ccc54be9b6afc770e8b5addd5c122a49ad4cb2566cda52b"
+    },
+    {
+      "path": "apps/kilogram-windows/src/activation.rs",
+      "sha256": "808e071f91d71ada2c9b189490e3c83a7d98421a7dddf1adfa0f5c5d832ab636"
+    },
+    {
+      "path": "apps/kilogram-windows/src/lib.rs",
+      "sha256": "74c4080c0f6d6a8f7224a2da304a1b6b19fe294f4cdcc375587c4ddb4ea91fc9"
+    },
+    {
+      "path": "apps/kilogram-windows/src/main.rs",
+      "sha256": "c3245b7f08fd802b6e339e67c6f48304e450b507eec87dba901c2d2268b37347"
+    },
+    {
+      "path": "apps/kilogram-windows/src/peer_reenrollment.rs",
+      "sha256": "d7925681a23854e0f22664d7bf6db268e753580ad07d13b62ca2cfb1e702c495"
+    },
+    {
+      "path": "apps/kilogram-windows/src/rollout_operator.rs",
+      "sha256": "f33f0f30e388f159791abf6168c1ecbff8aabbefd0bee3f70d2a965b37d88c30"
+    },
+    {
+      "path": "apps/kilogram-windows/src/wizard.rs",
+      "sha256": "45c2a6f51a87d3d8446de4fc213988c4dbfa2a2c092b0830e5bf976072254c52"
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "d978b4c7380c476a0af67e705452349bc372c6cc78f2747d8b5c181634b93a71"
+    },
+    {
+      "path": "Cargo.toml",
+      "sha256": "f0aed55d818a4926c449c215af586d253f5c05be918a4937b68c542ee6307d8c"
+    },
+    {
+      "path": "crates/kilogram-bootstrap-contract/Cargo.toml",
+      "sha256": "39dee13c44d7175cd5736bf9b3e77e3e61389a6977b447581c0cf4dd965a65ad"
+    },
+    {
+      "path": "crates/kilogram-bootstrap-contract/src/lib.rs",
+      "sha256": "e358c414451e6d6ca41a288af13d0fb90a4d62891c9df43b2de902256391d535"
+    },
+    {
+      "path": "crates/kilogram-crypto/Cargo.toml",
+      "sha256": "8fa6002486636c19e83c4e591a15c93be06d06adf9264cccacae81c0d12effbb"
+    },
+    {
+      "path": "crates/kilogram-crypto/src/lib.rs",
+      "sha256": "f47912b550461f4c9e39d81598c14f422370908beeaf1ffb20fc6f951cedc004"
+    },
+    {
+      "path": "crates/kilogram-identity/Cargo.toml",
+      "sha256": "a9b175e3059723c1d5390bd4b8211d4d968608aab0cb359aae9d81e4a9939fe3"
+    },
+    {
+      "path": "crates/kilogram-identity/src/account.rs",
+      "sha256": "9603fa5f7f1094875d57fa3e1537a6097018d80a4edd3bc2e139a16a6100e63e"
+    },
+    {
+      "path": "crates/kilogram-identity/src/lib.rs",
+      "sha256": "04d901b9f96c6b354b454fd311d3652b0f35ffd06e988075988c57a70fc89bce"
+    },
+    {
+      "path": "crates/kilogram-identity/src/recovery_policy.rs",
+      "sha256": "58e1aaee59efa2d2147daffd723c99669e1ac16fbf88d8ea95a4f1668df98338"
+    },
+    {
+      "path": "crates/kilogram-identity/src/recovery_quorum.rs",
+      "sha256": "2424f216bd7adbea258d9e5b3fb7358c006d8b42793f18d04f8bbd73359d130c"
+    },
+    {
+      "path": "crates/kilogram-mailbox-client/Cargo.toml",
+      "sha256": "546374641dfdc20eefabfb12d0700734fac093c2f9f50cc0c669a0d5d97538ac"
+    },
+    {
+      "path": "crates/kilogram-mailbox-client/src/http.rs",
+      "sha256": "e22d0b8fb6f1ef2a2913e1712dfbaab1e6661788a89ba06c3b75f6e1f422d1f3"
+    },
+    {
+      "path": "crates/kilogram-mailbox-client/src/ledger.rs",
+      "sha256": "061e588f2626d4c9a856ae418fc8930602d7858e5bda4b1ff695fd5567c0d750"
+    },
+    {
+      "path": "crates/kilogram-mailbox-client/src/lib.rs",
+      "sha256": "410b3a807adf0438b21dbc76e390cadda5f535f7b10f29342727063f4d2c90e0"
+    },
+    {
+      "path": "crates/kilogram-mailbox-client/src/provider.rs",
+      "sha256": "ab0940b5e80d95149fa0936aa05c54252e8f11da0b222965f59bd1be66c079ad"
+    },
+    {
+      "path": "crates/kilogram-mailbox-client/src/replication.rs",
+      "sha256": "afb8cf21a1e490825d432016a71f38a2f1c7484b5a38691959528754905f9cb5"
+    },
+    {
+      "path": "crates/kilogram-mailbox-provisioning/Cargo.toml",
+      "sha256": "177de6acc2ee54ff2c4b7d51df3521a280b698142e4cbde7fe7917bce29e3f78"
+    },
+    {
+      "path": "crates/kilogram-mailbox-provisioning/src/lib.rs",
+      "sha256": "cbfeb75935f00a0ca039ed244785276c972ee2e916c4463b87e4d3c71a331920"
+    },
+    {
+      "path": "crates/kilogram-mailbox/Cargo.toml",
+      "sha256": "78f17648eb55da3951e3863672ba1793dd064cac7fdd16328c4b3a44065da7aa"
+    },
+    {
+      "path": "crates/kilogram-mailbox/src/lib.rs",
+      "sha256": "5e099b01ccf9ccec20f75f0aea945b195e6e324ab2f02cfa539afd593dfb47a0"
+    },
+    {
+      "path": "crates/kilogram-mailbox/src/store.rs",
+      "sha256": "47feb29b4c690a995825bdf39ecb94196ee5ce8f0c64fa7c7d0c4814756e3749"
+    },
+    {
+      "path": "crates/kilogram-mailbox/src/wire.rs",
+      "sha256": "711f982aaed1e473bf34c23c4045a760374e133e5f6f9238fb505563d13fe046"
+    },
+    {
+      "path": "crates/kilogram-peer-capability-store/Cargo.toml",
+      "sha256": "5cffe767d206f66fc8ddbfa4220e35e6f3c552bcbb463d53b1b1b8effcac4721"
+    },
+    {
+      "path": "crates/kilogram-peer-capability-store/src/lib.rs",
+      "sha256": "89f8b24f90160c47f3a8ada2ca5bf9001c9a7dcfc7e64caad4215448b4aadadb"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-consent/Cargo.toml",
+      "sha256": "d430870cca341f2d70bf2d7f9f0d444fbc08be302a8294f75a3164405a7b6900"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-consent/src/lib.rs",
+      "sha256": "05784ff02c71aaed97643f822c5abb7b9319dd735293b2798dd0d0fb03f100f0"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/Cargo.toml",
+      "sha256": "45919926779e9340e9301a9ac85c022b9f3d8a75d98040e6ac264c01ccc7e94c"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/src/coordinator.rs",
+      "sha256": "78bf9c87f090a4f8a1b17316bf6a6eb68877e4d71ca7e7bce75751a58506628a"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/src/import.rs",
+      "sha256": "501a9e66c57594bfc1335e1f4a3437ff504f24765f1620b1aac7d04a2455a181"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/src/lib.rs",
+      "sha256": "1b2db67725f34f6c086a8fe6ab570d0bed18111d4e89ce0305aa20d7e633778f"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/src/recipient_import_round_executor.rs",
+      "sha256": "137e6e1f23480833a4f1b788721dec60a05812b3acac1d4cfe8d4cb7878afbd9"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/src/recipient_import_round_intent.rs",
+      "sha256": "8e0e7e83c980c27b7c6a1732749d8595371448f35c2b79e1f5528de315f6cd88"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/src/recipient_import_round.rs",
+      "sha256": "d9807bfc4ca32ca9bcc3a3f83012d2162b869180c8f013cf55952fef48bcb99f"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/src/recipient_import.rs",
+      "sha256": "614751fa16c03e6f51fb9bd5548cdbc2077963c776c0ae8c7a9c46d4b84d7fd6"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/src/transfer.rs",
+      "sha256": "60b5f14de03a9d9d1cceca0ba506141e1d219622756eead29a87c1c6575eaeed"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/Cargo.toml",
+      "sha256": "3a2112578a22c3174eb34b71524323dfa0f42da8436f5682ee424e2b6bf7786d"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/lib.rs",
+      "sha256": "610dbe110b3ae0a11fcb8813b56279845351beb01b3d88c5035ca18e5865d151"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_confirmation.rs",
+      "sha256": "ef961b5f0c19670578a960d969c7c4870cf2576003c0e450cb53718f0b8d398e"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_authorization.rs",
+      "sha256": "88df251987325985311d10ba903cdb0387f13e160724f5c5c0eff8d3e9acd48a"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_mutation_adapter.rs",
+      "sha256": "af50af10bbb77004f1a425a88ca5eb49c14aeeb68cc48df1731e4cc82d1f6811"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_read_adapter.rs",
+      "sha256": "be0311be8de1e4ba3e8a14c152ad703d3f2e131aafa0c2b15d2360ea15dd22d2"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_response_dispatcher.rs",
+      "sha256": "6a24ad54758ad7dbd072a39259119f8853c5990cf3e90e38c451c79ff6dc39ea"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_runtime_attachment.rs",
+      "sha256": "b81bb2e78b16f9af8710378cedcd35334805d26b2e704bb8e78ca05107d5f268"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_runtime_service.rs",
+      "sha256": "b0ffce46bd8f7c9e0ee54a285b273e6737c07db2aa177731aad1a23679b9fe52"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_session_cache.rs",
+      "sha256": "bc77e3ca7b56e0f13feadfdc4759db65b7683afe422939b1a54d3bfe3d27e039"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_guided_recovery_host.rs",
+      "sha256": "250daa179abd0684ee9b0030a107e6eca1c8d7781e94591024bc6a48dc5f58c4"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_guided_recovery_launch_authorization.rs",
+      "sha256": "cb0b5701e463c1437c41e4b65c94b74ebf85b461286e19ca403b3e378d3d2c8f"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_guided_recovery_launch_service.rs",
+      "sha256": "d75953d2319bad847107b1ad632a683ebd279dc6fbcf3682d7973d3b3e021511"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_guided_recovery_launch_slot.rs",
+      "sha256": "ff4551f3c3a78e2545f653a288fa21be85d12304cd3b9201d43351ef399977c2"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_guided_session_controller.rs",
+      "sha256": "9dfc6102f9ddd96c047c1f4da820265971af8f44806429fc47398f8bc77ee65c"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_guided_session_local_ux.rs",
+      "sha256": "b1b517c2ae6a00532ae9d1396bd8895a69b561ce19202b9e29aed9cfe3e8cc62"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_guided_session_start_producer.rs",
+      "sha256": "f9a737b3e2d18afbdda339fae32cba49b658c700227b3d936748a6080aee9e2b"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_mutation_adapter.rs",
+      "sha256": "e1f9756859e7ac94899b0d09e8ed1938852896b61ab72eb299250d20b8de5138"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_read_adapter.rs",
+      "sha256": "ab2372b569db7c68675ea73cdc881340f90e0c40dae184060a721ab517ab8117"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-transport/Cargo.toml",
+      "sha256": "87edd11076ffc685477ba2fa73c3009f36d3bc3bca1f125971ef61b94e34a197"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-transport/src/acceptor.rs",
+      "sha256": "44ab4bd32e728992eee09b8c1d2fe89d8949f4fa6090474ef4004a6556def762"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-transport/src/executor.rs",
+      "sha256": "5675e98daa16bbbcec0d6f6c7f2cbb669fe173f9b15a1136dec8c499c30e8837"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-transport/src/lib.rs",
+      "sha256": "f59e29499ca88d17d470796d71540fe7bf6bf0777cb24f2a1f6cafaaaa737222"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-transport/src/outbox.rs",
+      "sha256": "c61885344d26de79fae2968afa61764ab35f1c932e7c00db1157900a35a7b52b"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-transport/src/scheduler.rs",
+      "sha256": "dde5c5590b50665dcc3e79dccc4a7f41eeefb159162001d49d1bcd4abf59c447"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-transport/tests/fixtures/m1222-transfer-envelope.b64",
+      "sha256": "b2574d25b5e0d71a4bad10a0605f7c3a724f3ea7af33f7bb95bb39c099668b0b"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery/Cargo.toml",
+      "sha256": "5e477a52745e6f41d6f9c43c48335ec003aaee9df6a0e946a26b15e8559c3a36"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery/src/lib.rs",
+      "sha256": "4146e50c6f12e36f371c9de89e05375ef8ba44f95c13d6d7844da90559dc8276"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment-acceptance/Cargo.toml",
+      "sha256": "f8686b275bdecad330bf0d41a440bf1f2df1529a70addbee694fe975023ad05a"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment-acceptance/src/lib.rs",
+      "sha256": "7b3df00b288ac9d4996df02923b0ed716d47cd4642cc367bd499f0f079e1b76d"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment-runtime/Cargo.toml",
+      "sha256": "644d22030263b11ea2841bd2eec51242440589aee77a766db76b8b2109596297"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment-runtime/src/ceremony.rs",
+      "sha256": "6cc351054a7000b851f25d3f084828237a4fda7281ccefcadf35baad09d06fcd"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment-runtime/src/lib.rs",
+      "sha256": "ad001e6117ac4d74a672f9762ec05663248a6888f0d2f981ff97f01f670946f7"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment-staging/Cargo.toml",
+      "sha256": "999af708abafa3f3ef7fb66ad182f1ade385c5ab436f232bbbb86b4abb929fae"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment-staging/src/lib.rs",
+      "sha256": "9de35901662c8abf7a83cc25c947aa7758c3b2808cdaa818441a1b94cd5139d2"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment/Cargo.toml",
+      "sha256": "fd9b05cbf011d8abb686160ef8f588fddc778befb43f3988b5883299d6f0c029"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment/src/lib.rs",
+      "sha256": "a099823929119026fbb1fe61b9e3696a0aa7bd2dd9c869eca2df53c43ad52651"
+    },
+    {
+      "path": "crates/kilogram-protocol/Cargo.toml",
+      "sha256": "331368033aee520006332ac0835a298d6ce433eeec8d11694924ebb10dd1b0ec"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_account_recovery_policy_v1.rs",
+      "sha256": "9e4d241417f77eb2426d99f27503ca33befb2ed70c06296c9ffb3141d3814bf9"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_account_recovery_v1.rs",
+      "sha256": "d2cf6b6ebc329d4b684bff56c0a0996c01384ed7a3b99f0dc83494b19d16af09"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_account_v1.rs",
+      "sha256": "894579f278eab1a6b9696f87061f275c3f3654bec8599f8cba85ee5892f96939"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_authority_v1.rs",
+      "sha256": "ddd82753143201ae2b1877d449579b8d3363fc2238b78e0c76b09cee3e50b33d"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_device_link_v1.rs",
+      "sha256": "076cdad0acfb4d9a5ab512dd21ca7e6c88229a0427a89005c3c9ab14e53c9c69"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_endpoint_announcement_transport_v1.rs",
+      "sha256": "8ea865be3baf6eff108c6642eb5ef96a24014ef4ed342b0a694fbb220d40a918"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_endpoint_announcement_v1.rs",
+      "sha256": "745fe4b8905d33e91b54001b96dd1f539b95ee29cf18d9224f2727d735f40366"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_event_v1.rs",
+      "sha256": "dd415029fc4eecb592a0b835f2c2d90f909daf12ee9f219efd10ea7b108550e5"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_mailbox_gossip_v1.rs",
+      "sha256": "370f3b60aeef6d946db25b31c94446712c1e79f2cedd8dd47fc96b33d73d8b95"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_mailbox_provisioning_v1.rs",
+      "sha256": "610165db286438195b509b8f060277514995f869c46c63a8616f3cc95c9313b7"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_mailbox_transport_v1.rs",
+      "sha256": "64bf051aa4cb313f64d8c21243ac00878918c9594717e617ef910e682f5d932b"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_mailbox_v1.rs",
+      "sha256": "4eea019bdea8bf527311b10008c4c0936a7d620f1ab53f2834495ae62e2fc52e"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_prekey_selection_v1.rs",
+      "sha256": "d457a5f42be22b3e5f349ade3c8e735e1718faaa697151b61d88f581fcaed0b8"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_publication_conflict_v1.rs",
+      "sha256": "c7f1e7fd76f3d7be6cf7d88a276541db820790f7c72650cacc7a212f9a2fcd75"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_publication_resolution_v1.rs",
+      "sha256": "3c840af34a02e145ff3ed5629c3c439dd19c2e6e49afa4cbb3f1d6fd0d185189"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_ratchet_v1.rs",
+      "sha256": "98f67e70dfa286dc905d60e80a70b5f5bb63eb652213c7f6309baf5cde11d411"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_recovery_exchange_v1.rs",
+      "sha256": "ef066c25d876ff5312c19041f9b45513934b023086f0843f0fd8f5fe6010b09d"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_recovery_v1.rs",
+      "sha256": "4b78d99ae1f956b14c3ce126de18416cd4d0b6cd00ed566f7f1dee270cc36c5d"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_rewrap_v1.rs",
+      "sha256": "ae21f46dd4cb737090bd0ade45394cc9a02cba91d8cb1f0f79368fce66d63c57"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_contact_v1.rs",
+      "sha256": "638fe9f8bcc2b01ce8ebe86b837ee50d891a8325951f2a948226d5b4e50843bf"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_directory_v1.rs",
+      "sha256": "bafbc070518bee8d00d28be0b019ee517b5756a27f8878331b3b508abda54e2a"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_mailbox_mutation_v1.rs",
+      "sha256": "ac5b0cbfb966d0b2ac92e28d628b585400c7465b99c6ccc0ffe5ab2ae919341c"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_mailbox_status_v1.rs",
+      "sha256": "3efa0a1df577f0df2ef7772acef8201e1b5610d619ff4033c6be0f009d6b898d"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_outbox_v1.rs",
+      "sha256": "c361de204a967cc32377ae77b8730457aa81c376440d38e8a55014dcd02e6f6c"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_own_device_announcement_v1.rs",
+      "sha256": "cc02a8a8ea27d353fbf390b5105f412dc466ae77ef743fc205e2ccce3a426b05"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_own_device_discovery_v1.rs",
+      "sha256": "f430112f63294b0bc223eafbc558319c87eea07cfec3284a9dfb8cc4ce3a8816"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_own_device_roster_v1.rs",
+      "sha256": "fa88b2ba9bbcc096c2f53b7d8af8223fb95068b06c4d18c46e50a55832f4e331"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_provider_v1.rs",
+      "sha256": "c6359c9078416afd20d1d1806ea6282062c6339dade9ea7c5efb57299b5d801f"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_publication_conflict_v1.rs",
+      "sha256": "f155663164434a4c7e7c5faae7d56b486da0439773acb55f88d3a6fb52f765f5"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_publication_network_v1.rs",
+      "sha256": "ed1cf8b939ba3cbd42f28f82d1058da08a97f7284a148d4db652110462570fdc"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_publication_v1.rs",
+      "sha256": "840285b7baa3cc66a02461f0fdc57c41119f46efa7ececfd39971dae351e32ce"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_queue_v1.rs",
+      "sha256": "fd3ae9cb893284ba6c831cc749e8736c62c877ff95cbd71c6a6e3b6f25185c02"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_read_v1.rs",
+      "sha256": "9d374536958a134ee62ab434c2fec7aec24e7afe03def0809390bcc4268c8055"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_recovery_execution_v1.rs",
+      "sha256": "d840333cd573f751ffd595e8f08cc8564f51e0df3ffe7e13f7ed1fb8c1b7c077"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_recovery_plan_v1.rs",
+      "sha256": "60ea76f919eee6f6c5e5a25bb3b1bc265a20c5f1890aa6081a5dd14d5887c250"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_ticket_automation_v1.rs",
+      "sha256": "3be0724935bb684e98b213017598d3b734f7f2f2efb5f0dbb58e8c3afddd925c"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_v1.rs",
+      "sha256": "50445dd3136f1be6b82f9312bd2c5a36d9906b4b6057c0e435ef0549de0e2c92"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_mailbox_v1.rs",
+      "sha256": "a7d7208f3d895b14aafe2ce0f96e9224e48cb431380d464d4377e1b28693dd9c"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_history_v2.rs",
+      "sha256": "1c8fefebd4cbf1512440d21306b92b4959be785dfe46e8f6fd53f3f85b59af97"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_legacy_event_v1.rs",
+      "sha256": "9d4815ca353eeeab6b9663c71402e9a1c7aa33354e33414200af42994dcb4adc"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_responder_session_v2.rs",
+      "sha256": "47514b336cd95c30aa5a6f9a2c21cbb98693c1b3cc14a72d0613a7bec2d695a2"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_session_v1.rs",
+      "sha256": "f6aaeea3fae4355b628bb49679ebe3786ca00d5d09bb78a858bc87c202d8557c"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_session_v2.rs",
+      "sha256": "39ca4322f24b461fb1ad2f12e58150182c966e4caf06bd41aed9b8a00a2080f2"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_v1.rs",
+      "sha256": "61b9aa7af924a873cab0c9b8232fa6db472fc34e120b8f8add002fbf54ca1a87"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_v2.rs",
+      "sha256": "a44f776e2814e7ba3cd3ade8f1c99f461fc13ccd34b88a460f87331ce1911e7d"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_ticket_publication_v1.rs",
+      "sha256": "2b45c306a6f864d9b56299e4b6c0973929a3d11b6840345f746ab63885871eac"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_v1.rs",
+      "sha256": "fa986ece87d74f4c3d6e79e8a26151cc1c6df2a6a311326047fc63d0385fc47f"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/decoder_fuzzing.rs",
+      "sha256": "e7fa9bc6927636388c79dbc924cfeef491aad95d7e3537c820f7380c430e4518"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/lib.rs",
+      "sha256": "f637f5a16a8bd1d70178c497cea5bb80e4811b649bd569c0ebec601ea37afef3"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v1.rs",
+      "sha256": "9f3253aa552a825c1f2522a9c05c72aba1ccfa70adc71b1d2c8ca2caca8d90bb"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/recovery.rs",
+      "sha256": "04223d8ad898b977a04ef04b9283f719328e8eb9f4b4646baf203f9a6b6c7ed9"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/rewrap.rs",
+      "sha256": "b81c6dc04deed527e1e784679c9bda2d20967edaf1c217301cb2155d3ba96b0e"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/wire.rs",
+      "sha256": "6e60197dabf363a698517246fd155d2df65ce253b96fa2818d455d23bfe2a345"
+    },
+    {
+      "path": "crates/kilogram-protocol/tests/canonical_decoder_mutations.rs",
+      "sha256": "d65c3ef1e980ebe0db7df3ac132c0c705db286629ffca86baf27026649846295"
+    },
+    {
+      "path": "crates/kilogram-protocol/tests/canonical_sync_v2_decoder_mutations.rs",
+      "sha256": "bf9b9605ef969ab420620d5df126012ea1ec2492e95c1b285749b5ad5d50bef1"
+    },
+    {
+      "path": "crates/kilogram-protocol/tests/canonical_sync_v2_fuzz_seeds.rs",
+      "sha256": "c5a79ddeae5d6bd994020f9a56c6945ebf8c05d57951c8f3b1b079b130fff049"
+    },
+    {
+      "path": "crates/kilogram-protocol/tests/ordered_dialog_bounds.rs",
+      "sha256": "9c4f1b9820000cae0fbf43da0fb974a731ee2bd7f9295171eb261b44f6cb18ed"
+    },
+    {
+      "path": "crates/kilogram-publication-conflict/Cargo.toml",
+      "sha256": "06e3596a4dae11c64229c35fd973f4b40f9290264be5005abb5417872d1e8d3c"
+    },
+    {
+      "path": "crates/kilogram-publication-conflict/src/lib.rs",
+      "sha256": "fce3b3fb7a8c2f37c63762a05230313d8929f1505bc0aa95ca716c7d86f0de44"
+    },
+    {
+      "path": "crates/kilogram-ratchet/Cargo.toml",
+      "sha256": "e1c9ec6d09a4618f5df5ff96de72b6867380ed88b4c677307489effe3bc82729"
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/lib.rs",
+      "sha256": "1fb4e169eee780d37ffc5a55daef23cc65e088a21fddbe6b4367e67eabf114dd"
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/ordered.rs",
+      "sha256": "8b40547a9f622410ca8af7915358ec58f1e05f526f5c83b806b11c8e9c2fad9b"
+    },
+    {
+      "path": "crates/kilogram-rollout/Cargo.toml",
+      "sha256": "02b77b4270a4e5452363dab4bab8d2bea0e7862327df9d62eb7889d651a650bd"
+    },
+    {
+      "path": "crates/kilogram-rollout/src/containment_recovery.rs",
+      "sha256": "e10753a237b7de61af77bb75763fdc32a4d6652fd6ae1e844ba3db2bdd4643a1"
+    },
+    {
+      "path": "crates/kilogram-rollout/src/end_to_end_rehearsal.rs",
+      "sha256": "473dadbb8c8b1dd964a88ae0534907fd06edc1e6ea7a70a47609247b34c04573"
+    },
+    {
+      "path": "crates/kilogram-rollout/src/lib.rs",
+      "sha256": "736069e5a01cbbb85db745ca3997ea1aa1c5bf0016ef26d4b4c4ba36fb35acd2"
+    },
+    {
+      "path": "crates/kilogram-rollout/src/rollout_approval.rs",
+      "sha256": "9c13824a083b74fad11935e8ee530d5759cff80ab2a8292d16c8d26737ea0d0f"
+    },
+    {
+      "path": "crates/kilogram-rollout/src/trust.rs",
+      "sha256": "e88c1385493bb18ac8d61d67f64c3dd51528538c932a90b0c6b4644eacd2a200"
+    },
+    {
+      "path": "crates/kilogram-rollout/src/trusted_health_store.rs",
+      "sha256": "12e4ddac1655f22b0547094ef5acab5d0d91f66c4441fc177aedb717f14659df"
+    },
+    {
+      "path": "crates/kilogram-rollout/src/trusted_policy_store.rs",
+      "sha256": "1711f07736e13945740a3133a73aee289ed64ad0b42589e7be8a3daffd88c209"
+    },
+    {
+      "path": "crates/kilogram-rollout/src/trusted_policy.rs",
+      "sha256": "e95a079ab09a6e7678cae09b30007cfae38591d8415de63ea2dc911ce55ae681"
+    },
+    {
+      "path": "crates/kilogram-runtime-ipc/Cargo.toml",
+      "sha256": "7c38c1e09f67c7772f5c09eb6818f09b28f72c51561de02901d1c2adf6e4e18d"
+    },
+    {
+      "path": "crates/kilogram-runtime-ipc/src/lib.rs",
+      "sha256": "cf2e9989ea48e9aa4ccc9533ad6efe161eb01deb234f6218073c3fdde68851a1"
+    },
+    {
+      "path": "crates/kilogram-runtime-ipc/src/peer_reenrollment_contract.rs",
+      "sha256": "cdbe139d86c3e614a1efd0a941de444a320ad363435af3786d2fd10241e7bc96"
+    },
+    {
+      "path": "crates/kilogram-runtime-ipc/src/recipient_import_consumption_contract.rs",
+      "sha256": "4b5f16369a229f71586f13c45d3bbd32298d25fe7d8a345c177bc160e5d43025"
+    },
+    {
+      "path": "crates/kilogram-runtime-ipc/src/recipient_import_execution_contract.rs",
+      "sha256": "6c1e9d096b8802063674bc2421848862d6493504f8cca950fb4be86414a0b03c"
+    },
+    {
+      "path": "crates/kilogram-session/Cargo.toml",
+      "sha256": "feddd72e4362ddd8f4e8b31d4133f48a2b86802d018792ad0be9d1c36b9a0c09"
+    },
+    {
+      "path": "crates/kilogram-session/src/canonical_sync_v2_activation.rs",
+      "sha256": "0d832f903517f40ebbf7f1ea63028a0730c2b67320c551f69bd2f6ebed22defe"
+    },
+    {
+      "path": "crates/kilogram-session/src/canonical_sync_v2_adapter.rs",
+      "sha256": "5d3aa7ab694910fdeebddf7d3a9ab7e7700465a7c41aa3b277fba5d16b80c91d"
+    },
+    {
+      "path": "crates/kilogram-session/src/lib.rs",
+      "sha256": "1d13241394edbecbe0c5036ca51d06efdaf767d3073fc47738b7c71ff42f09a2"
+    },
+    {
+      "path": "crates/kilogram-state/Cargo.toml",
+      "sha256": "5c563908540bd5ed8d68d490510f07cbcc565d973c83a96ecce0fb1834fb8ef3"
+    },
+    {
+      "path": "crates/kilogram-state/src/key_provider.rs",
+      "sha256": "0681bd0919eb07c3b175e6e54f72d7a112817aeb4250915eb2153a5d8c082f4b"
+    },
+    {
+      "path": "crates/kilogram-state/src/key_recovery.rs",
+      "sha256": "8f85c160ef00bb7cfa888d4b2e8654a844afbf636abc0d325f28a9dc170eea1b"
+    },
+    {
+      "path": "crates/kilogram-state/src/lib.rs",
+      "sha256": "1704b1463db3e3d77ba528bca86dc9d9165636bff85f7089181aea22379b69c3"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault.rs",
+      "sha256": "a9eef4e6931bc38e90ec40b1a54fb9502261b9c3e6d0f8f28e8d71fcffc78bb2"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/ordered.rs",
+      "sha256": "e265629d6c238b0ce5337e5f10693950b53004d09b55d9ec3fdca52538163ad6"
+    },
+    {
+      "path": "crates/kilogram-store/Cargo.toml",
+      "sha256": "2d8c07aa88efbf67899437535e29952510f597a0e1f0440d0e2c67e5935bd391"
+    },
+    {
+      "path": "crates/kilogram-store/src/canonical_sync_v2_responder_store.rs",
+      "sha256": "2f4f6e134582a816cf8cf4e27705856be5be3b64f6020b59842664955337beca"
+    },
+    {
+      "path": "crates/kilogram-store/src/lib.rs",
+      "sha256": "5611940e3ce82e5a0b60ecc435dcb2778c79c9ae3a2bdfbb6d85cbe2a680b7c9"
+    },
+    {
+      "path": "crates/kilogram-sync-capability/Cargo.toml",
+      "sha256": "fc988074be6a1cce33a6437ca59f112dcdaa9ea6d64cb26c38ef41bf698aa38e"
+    },
+    {
+      "path": "crates/kilogram-sync-capability/src/lib.rs",
+      "sha256": "f7729f314f9f344000cd3941fe33bea01b5afc30598431596c3c46a223be696d"
+    },
+    {
+      "path": "crates/kilogram-ticket-publication/Cargo.toml",
+      "sha256": "a69d451a607b82016928bcc31ed869c9346b4c36c8de1235f9628b221aa21c88"
+    },
+    {
+      "path": "crates/kilogram-ticket-publication/src/lib.rs",
+      "sha256": "b9de06228c1cd991db16a8294ee910e4d330e74192fe1e00466f2a1cfc249192"
+    },
+    {
+      "path": "crates/kilogram-transport-iroh/Cargo.toml",
+      "sha256": "d624b409658998e2f552cab8256734fa7cf5b3215d5ab8bf7d1e98acaf499c14"
+    },
+    {
+      "path": "crates/kilogram-transport-iroh/src/lib.rs",
+      "sha256": "8ea63dc9bed9ffb397102d247ae3828190a816c01391dc87a275276a0b5057dd"
+    },
+    {
+      "path": "crates/kilogram-transport-iroh/src/ordered.rs",
+      "sha256": "5c5c5cb2d6a806edc693bf608bd55305001afbce5427e9d5667f627ed65d4dae"
+    },
+    {
+      "path": "scripts/build-kilogram-offline-reproducible.ps1",
+      "sha256": "39e1e0cec6ee07b5501de1d4e86b058f3be213f81122ffde3a99382931cd409d"
+    },
+    {
+      "path": "scripts/capture-kilogram-mailbox-field-status.ps1",
+      "sha256": "673e97086bbdbd84316bd55094e7bdf4fa3bdb3a65c6154f7b3672da68a088e4"
+    },
+    {
+      "path": "scripts/capture-kilogram-volunteer-field-history.ps1",
+      "sha256": "2c1c34e5b62140bb478dbdbf695ca9961b0cd75b2c867d51f24893fe86661e6b"
+    },
+    {
+      "path": "scripts/cargo-cache-maintenance.ps1",
+      "sha256": "a15143626cb4c0210c1a6fb10a2260bdcc70b449cd779ab6622d8d6cb24a166c"
+    },
+    {
+      "path": "scripts/cargo-resource-policy.ps1",
+      "sha256": "2485a0b0ae5b07d6625f218e4c02a8f6927b78c26f10b5506f157066abba676e"
+    },
+    {
+      "path": "scripts/confirm-kilogram-volunteer-field-sender-offline.ps1",
+      "sha256": "70de979b4952a5eea6abced39a260aefba70cf36bfe1e52a769c2ac3d64ac3be"
+    },
+    {
+      "path": "scripts/export-kilogram-volunteer-field-offer.ps1",
+      "sha256": "61f2cb73d62ea50474696a443637f809d8ae1095cff15916f2e541efecff6859"
+    },
+    {
+      "path": "scripts/import-kilogram-volunteer-field-providers.ps1",
+      "sha256": "0005d16d06eff4181c821cc2c30f53aec79beb37166c9a992218d50b96bdb265"
+    },
+    {
+      "path": "scripts/invoke-cargo-friendly.ps1",
+      "sha256": "14abfe0cd8fcec63b956aa915b1f35430949b723d9b0e559aa8aef67d43fd803"
+    },
+    {
+      "path": "scripts/invoke-kilogram-canonical-sync-v2-dark-launch-local.ps1",
+      "sha256": "26267328757876f446fdc5e02dd658b54d5935dc1aa48f9f73b3450581a31d63"
+    },
+    {
+      "path": "scripts/invoke-kilogram-canonical-sync-v2-dark-launch-two-host.ps1",
+      "sha256": "72ae2803392a5c3da86b7e207a3bd3974f166b7f5bc366b56d199e50e9093b63"
+    },
+    {
+      "path": "scripts/invoke-kilogram-canonical-sync-v2-fuzz.ps1",
+      "sha256": "26f109cd3091a418106b4478e9c5ddaf6c04d1ddd539544907af79594882d175"
+    },
+    {
+      "path": "scripts/invoke-kilogram-canonical-sync-v2-n-minus-one-two-host.ps1",
+      "sha256": "9e7d11733339d435f793d18fe662dc33bd08504b1780a7f954caeb726d31f7bf"
+    },
+    {
+      "path": "scripts/invoke-kilogram-m1-acceptance-step.ps1",
+      "sha256": "dd852dd06aadcf145d715385e609d1828361695e7480dd684669656a88798e56"
+    },
+    {
+      "path": "scripts/invoke-kilogram-mailbox-field-runtime.ps1",
+      "sha256": "b545db5605efa7b1cdf829ac4b790103c4d6cb8980f1fee3ec9849b314630f0a"
+    },
+    {
+      "path": "scripts/invoke-kilogram-peer-capability-two-host-rehearsal.ps1",
+      "sha256": "b4736f25b175b74ac84def16f2fae8e604264012c1b60dce69c162a25a38b8aa"
+    },
+    {
+      "path": "scripts/invoke-kilogram-peer-reenrollment-two-host-rehearsal.ps1",
+      "sha256": "fbd6dad57020b14aae755c886390a3742c8aa9e0341fc66ed34b3e9fb6e594b6"
+    },
+    {
+      "path": "scripts/invoke-kilogram-rollout-two-host-portability.ps1",
+      "sha256": "1b28629b265f461338aba07d3877ecdae7492fea8354f010ac55b40c1573007e"
+    },
+    {
+      "path": "scripts/invoke-kilogram-sync-v2-hosted-evidence.ps1",
+      "sha256": "251fafc3788d9025addad65a5b08e9489b339c814cd14b30fbd464a80385ebaf"
+    },
+    {
+      "path": "scripts/invoke-kilogram-volunteer-field-runtime.ps1",
+      "sha256": "64f0cc210979fe00228b4bd927edbfeb13de1276de9feb326216c85f4e25b3b3"
+    },
+    {
+      "path": "scripts/kilogram-reproducible-linker.ps1",
+      "sha256": "3f90fd033c8bbc6dcca5d4f233a245746b86f35e7a5f59a508bdf28a4557ef4e"
+    },
+    {
+      "path": "scripts/lib/blake3-reference.mjs",
+      "sha256": "1060a58133842b8dde7354cbdabab9084b7016538a42b7b4e460365e3d9370dc"
+    },
+    {
+      "path": "scripts/m0967-simple/1/01_PREPARE_ALICE.ps1",
+      "sha256": "1d62463060ecf727425e737439cb641aff09a9db6c401f1c3d7fc9d794ffe81b"
+    },
+    {
+      "path": "scripts/m0967-simple/1/02_SEND_ALICE.ps1",
+      "sha256": "4226d7f0d315648a4d9e180f4b36bfde9d738a462ff91f50ddd19a7dcb923f7f"
+    },
+    {
+      "path": "scripts/m0967-simple/1/03_VERIFY.ps1",
+      "sha256": "51535597d90b8bfee0842613768645b737fa933c3f8bd40a44c6f703f93178d4"
+    },
+    {
+      "path": "scripts/m0967-simple/2/01_START_PROVIDERS.ps1",
+      "sha256": "eeb5a2f91059456f97d13ea60f1c8208e830defe74ef59ecae1dbf5d738b9f6e"
+    },
+    {
+      "path": "scripts/m0967-simple/2/02_RESTART_PROVIDERS_AFTER_FIX.ps1",
+      "sha256": "9a3ac69a56b5af2e5b0a47b40f6d6dc28957a08cee9c80c5eafb0b751b49e2d3"
+    },
+    {
+      "path": "scripts/m0967-simple/2/03_PUBLISH_OFFERS_FOR_CURRENT_RUN.ps1",
+      "sha256": "a8534bed3d8d9edb6af3307064163950c6db8ae094d7580c86b269d944e9c8da"
+    },
+    {
+      "path": "scripts/m0967-simple/3/01_PREPARE_BOB.ps1",
+      "sha256": "815a9ccf33f94005337eaedcb5bfeef255bed5e744ce8813dbb8128c1cc82c9d"
+    },
+    {
+      "path": "scripts/m0967-simple/3/02_RECEIVE_BOB.ps1",
+      "sha256": "e463bd95566885936c73062812b03c2dcd602322d96ff53c3bd34ab0d8a99ed7"
+    },
+    {
+      "path": "scripts/m0967-simple/3/03_RETRY_BOB_AFTER_OFFER_SYNC_FIX.ps1",
+      "sha256": "36a425e3a4ebd6096fbe1cb5f2eea1d71703c2139a0f5d6cbf62653ba395f5cf"
+    },
+    {
+      "path": "scripts/m0967-simple/3/04_RETRY_BOB_EXACT_VERSION.ps1",
+      "sha256": "ae33562a8772e90e198c11545e68f7125eaac874239bbcbac5aa0337fbed95cd"
+    },
+    {
+      "path": "scripts/m0967-simple/3/05_RETRY_BOB_FRESH_OFFERS.ps1",
+      "sha256": "939b96eac916cd799e3b7a612a7139401c7f918566cec24ffe798c67e0cadf58"
+    },
+    {
+      "path": "scripts/m0967-simple/3/06_RESUME_BOB_AFTER_POST_COMMIT_FIX.ps1",
+      "sha256": "7a8b6011f24631e227fc135d77d8bc20e3e7f9a1f239faec0d17e3e8e713edb9"
+    },
+    {
+      "path": "scripts/m0967-simple/common.ps1",
+      "sha256": "81d788155b4d59ec5fa24dcc17dee49dd1e242f244bee40b04c3532460636d08"
+    },
+    {
+      "path": "scripts/m0969-exact/1/01_PREPARE_ALICE.ps1",
+      "sha256": "020afaefa189ad0f56cf1976d8410a976f0220f791029644d85677ee377b6bcd"
+    },
+    {
+      "path": "scripts/m0969-exact/1/02_SEND_ALICE.ps1",
+      "sha256": "f8eea3d1896f1f16b694babc83bdcdab71fa108c6a490370e12e4bb5d59b47e4"
+    },
+    {
+      "path": "scripts/m0969-exact/1/03_VERIFY.ps1",
+      "sha256": "6f0115fcba3f36820d38b26200bd6ae6588d25c76e33dfddf8acb29427e1a591"
+    },
+    {
+      "path": "scripts/m0969-exact/2/01_START_PROVIDERS.ps1",
+      "sha256": "07a5e4c973a005bd9867ddc40fe3f26e1fd9b8320587770fd1efe0606e933820"
+    },
+    {
+      "path": "scripts/m0969-exact/3/01_PREPARE_BOB.ps1",
+      "sha256": "635106a2e8e36239c56d14c446e9aa54e1cba3eb9050a4082d4d879777923a1f"
+    },
+    {
+      "path": "scripts/m0969-exact/3/02_RECEIVE_BOB.ps1",
+      "sha256": "4f9766d5d1cbcd6df5c29a9930efeda2553a1b98ab8391dd382838141b2a78eb"
+    },
+    {
+      "path": "scripts/m0969-exact/common.ps1",
+      "sha256": "4d908092d2bd157c844e992cbb702196a9c07dafa868c2c22d49388c30f3b948"
+    },
+    {
+      "path": "scripts/m0987-independent/2/01_START_PROVIDER1.ps1",
+      "sha256": "6e07537aefbf6edbe0f62cd1c0e36329abbf00c809980cffa817260bebd73eb7"
+    },
+    {
+      "path": "scripts/m0987-independent/3/01_START_PROVIDER2.ps1",
+      "sha256": "d5a3a1b885ee2655bb0af8a87721fa94b536f12385dc305b28c5221ec9bdcd3d"
+    },
+    {
+      "path": "scripts/new-kilogram-m0967-simple-kit.ps1",
+      "sha256": "fef67d82be34a0effdb562c975c6879ddfaea71a6f2d35de17583cd6deef32ef"
+    },
+    {
+      "path": "scripts/new-kilogram-m0967-volunteer-field-kit.ps1",
+      "sha256": "e24e2e7a4fbab42d156314a6a950b0624cbf81493da04cf6c06b2b728b2c1058"
+    },
+    {
+      "path": "scripts/new-kilogram-m0969-exact-locator-kit.ps1",
+      "sha256": "959df678e14fd8c033bf9c0ce2a3a4f776b4308a6a7e0361497760e420c1c337"
+    },
+    {
+      "path": "scripts/new-kilogram-m0972-no-https-kit.ps1",
+      "sha256": "11529ace26d622a6fc5329ab885c914ae5f96d538fb4f9ef267ebcf9b98b9185"
+    },
+    {
+      "path": "scripts/new-kilogram-m0973-no-https-kit.ps1",
+      "sha256": "cd846f035c392ae86a7b850d62d8863d6e9c6d375a0c6dfb09604c0639334ef8"
+    },
+    {
+      "path": "scripts/new-kilogram-m0974-no-https-kit.ps1",
+      "sha256": "478c80c771792dcaa2abce3a8d1abf12b805283a13cbe28c884e9b9a2937b77e"
+    },
+    {
+      "path": "scripts/new-kilogram-m0976-service-free-v2-kit.ps1",
+      "sha256": "83d8d470496c558cfd5429329c451450cf44f37f2ee593ab5c4fc9806248e629"
+    },
+    {
+      "path": "scripts/new-kilogram-m0987-independent-provider-kit.ps1",
+      "sha256": "75ef58b3e05b2e479c410571a6f8ae66156e5bf38fd8032752d4071f5c2b18d5"
+    },
+    {
+      "path": "scripts/new-kilogram-m1-acceptance-kit.ps1",
+      "sha256": "9f02be3aa2e667bbae0b5c05b24dd5a37460f663e5aa6f71c632751787870df5"
+    },
+    {
+      "path": "scripts/new-kilogram-volunteer-field-provider.ps1",
+      "sha256": "6a35f8a7eac32c18df8dd0bf7ec8398928f74b8f4c0cd4835ad3e2c6d92fb33c"
+    },
+    {
+      "path": "scripts/package-kilogram-offline.ps1",
+      "sha256": "b8fdde1cf44d4dcedad0cea7da9647b9de03bf495d959a6e9e3c300897c687ef"
+    },
+    {
+      "path": "scripts/prepare-kilogram-canonical-sync-v2-fuzz-corpus.ps1",
+      "sha256": "1fa9f891a9e0b31fc408fa4d3232af3090a56fa7e51a1f565a5c90c6ebe71e6a"
+    },
+    {
+      "path": "scripts/queue-kilogram-volunteer-field-message.ps1",
+      "sha256": "377f70e82ebedb3e5e3a7aa31706b1bf4640f5ba746955ae710d8b54ce26492d"
+    },
+    {
+      "path": "scripts/run-cargo-tests-stable.ps1",
+      "sha256": "4551740d0823f974d5708d6e291682c9d526b65681ec6cf03a86cd81f8b6e94b"
+    },
+    {
+      "path": "scripts/test-kilogram-mailbox-store-preflight.ps1",
+      "sha256": "09242dbd165cc5560cae960500c82a3078e0d5ddae15e58cc6c20eae9c783256"
+    },
+    {
+      "path": "scripts/test-ordered-dialog-fences.ps1",
+      "sha256": "9a9c97c442174dc08c9dc468f4d939dc16b792f27881ecc78d5cf5d1a6b711e2"
+    },
+    {
+      "path": "scripts/test-ordered-dialog-process.ps1",
+      "sha256": "ca2c360d4117c96675685965d431d860f148f2a08376e838b4c27906f8c446a2"
+    },
+    {
+      "path": "scripts/test-ordered-dialog-reopen.ps1",
+      "sha256": "8e8681fa4215991ac7afcb9faba4ee67ae3c21c61cd98513c29882e73b395e1e"
+    },
+    {
+      "path": "scripts/verify-kilogram-blake3-conformance.mjs",
+      "sha256": "99a26e6218919d21770b290dc938087a93b63ceab52132367468864c0e9109b3"
+    },
+    {
+      "path": "scripts/verify-kilogram-bootstrap-safe-provider-selection-boundary.ps1",
+      "sha256": "d3517952a621d251ad2e2d28fcd647af2e140ba0cf9870b5ed38930bf15f25b3"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-account-boundary.ps1",
+      "sha256": "3ccd2ab52a0602842d79285d1b2af29774d3a1b42b1d8d5ef045564b08bd3c13"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-account-recovery-boundary.ps1",
+      "sha256": "f7bd905b7be08678b1416d04ccaad48e54464db95157a5bf83375303e3780793"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-account-recovery-policy-boundary.ps1",
+      "sha256": "7c4345dbda263e7117a669c89f3118894f16265de1e90c9b4aef4fd852478825"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-account-recovery-policy-reference.mjs",
+      "sha256": "f76b736b1af813f799d09f56cd1cfaad4d3e02e1f1ba7f584c7e351a7c2cbd8b"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-account-recovery-reference.mjs",
+      "sha256": "d55e7d268e8cfaddc619dbb61eae613faf6dd18dc34bf079fe2673bdf96cbf8a"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-account-reference.mjs",
+      "sha256": "9cf0b2eedc7cf5ce9c8ef2c2acaa8bbaf394449502515ba5ea407a7505f51caa"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-authority-boundary.ps1",
+      "sha256": "66b53dc0b777c69e58c8724d8457ec28c0eb803daa882aea0a3c496e73fc3d98"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-authority-reference.mjs",
+      "sha256": "309107a8fa10b531b2e678f81ed4b61818d9257386fd645e49b9f0a1cc0a2669"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-conformance-boundary.ps1",
+      "sha256": "475e27a63357105b15f9e424226e8930af5554aeaf2321cac5302334809c5582"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-coverage-boundary.ps1",
+      "sha256": "653d202c44bc1f5454b038f097a43481dc87c614d5867f97380c424b89097db4"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-device-link-boundary.ps1",
+      "sha256": "bc06c2df7160c01c3bae0b28b381b230c0ebd031882b17ee20302d5fc5d0cd35"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-device-link-reference.mjs",
+      "sha256": "ff98cae814a37dfa68e9d7f1e446d8f3679623aafa65586ebdb2067b9e4df150"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-endpoint-announcement-boundary.ps1",
+      "sha256": "fc9a54396c08876b230ed470f14f474a27fb5a54ea97c170bb1730c1ab240361"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-endpoint-announcement-reference.mjs",
+      "sha256": "8674119eb4fcfa80e5650502384de98d8df8308be77e3655a61312e831f5aad5"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-endpoint-announcement-transport-boundary.ps1",
+      "sha256": "b9cba55a3f382ae368bfa9ac680131efea9ada5a55e909f8b32aea80344a7781"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-endpoint-announcement-transport-reference.mjs",
+      "sha256": "ec344f4d995efb1a490a340cbedbe701f76e860158f5c2827ca7de0d4bc9e6b8"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-event-boundary.ps1",
+      "sha256": "272a3c1672238fe1cd66b2a5347c0553787348574990ffe0985db255df190bd9"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-event-reference.mjs",
+      "sha256": "9e180e8194709f7a0a4cbf354a6e1ebf34336944d26de9c6b53fd668c8742683"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-mailbox-boundary.ps1",
+      "sha256": "a27f7fab2505cff5873bc50b90116b41b52cebc910dd477a0a85c7b383c06284"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-mailbox-gossip-boundary.ps1",
+      "sha256": "96d1884179e23762af5cc2e8deb33b221d8acafa0c1f1c0afb1d9dc63c142f77"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-mailbox-gossip-reference.mjs",
+      "sha256": "d97f5d0509ff945276b08c27105d775ca17fb2d37ac37fa8f6486d4ba678dd3b"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-mailbox-provisioning-boundary.ps1",
+      "sha256": "12566fe805e09c867ecf0e626bfe4cbee6211a17ba642c412cb46cf1e9ce2ca1"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-mailbox-provisioning-reference.mjs",
+      "sha256": "029c6c6d0c726206f2e471b6ff4d89734804f92bbe3a5faa3f80b769b9945cc1"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-mailbox-reference.mjs",
+      "sha256": "afe374117d284196ea96d021ed8c35b192c7aa81929097f716dbe7f6b9b14e68"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-mailbox-transport-boundary.ps1",
+      "sha256": "1cac8e9ee47aec7c3c6d14d7c9c8b680b44145b68b682d0fa8537f79baa352d3"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-mailbox-transport-reference.mjs",
+      "sha256": "607977374d0179a546fee706747e7673b832dc83acab243df087144ba24c45fb"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-migration-boundary.ps1",
+      "sha256": "52ce3a817cd0c7efb2962850e9ea9eea75225c01df089264d44534bcf074c146"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-prekey-selection-boundary.ps1",
+      "sha256": "ad2c22f9e4241854cb1a6b0075d3d8500d82a14035718f053c6418dcdb2ecf7e"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-prekey-selection-reference.mjs",
+      "sha256": "f8ee917a9a7deea3135babc09769b48d630026d74e01a887b7e1ac1734d1fdec"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-publication-conflict-boundary.ps1",
+      "sha256": "d1f2631551f5272019d2d9972693cdbde0bfe40b87c768ab39792501a7b2efd1"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-publication-conflict-reference.mjs",
+      "sha256": "d6f81ab6dba11db6e6eb942c76ceb55b165c278c458cf80d617bab6ea6f55e6e"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-ratchet-boundary.ps1",
+      "sha256": "680188190f5dd09850793ca94ca27739c28df3ed87ac2c71d3b22d9a14f3029a"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-ratchet-reference.mjs",
+      "sha256": "5285d29c632d89db113e38b78a47920a4e018c713d7c997f11b00873e687817e"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-confirmation-ledger-boundary.ps1",
+      "sha256": "7412513e872929607b1351301f336c36bba8f12c6a48ce37d6bd8bd64bfe8f9a"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-authorization-ledger-boundary.ps1",
+      "sha256": "4de17b74c81268ef2e92d8bfa9b11af70ba3e78a160ea5a68ade9bc466c50d89"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-contract-boundary.ps1",
+      "sha256": "422ea02052f60d9237ed68e05456e8556b1765e6353839c396af7d1b2e424014"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-guided-producer-boundary.ps1",
+      "sha256": "08199e66bf395f99fabbb37f485d2420f47aaaf21d500e0db84451a08ffac02d"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-mutation-adapter-boundary.ps1",
+      "sha256": "b7592cb1f76f4c9f9a031c7ef790a11237fa6998dcfc4d96cba30bd439726500"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-plan-session-cache-boundary.ps1",
+      "sha256": "16fcbff6981733ee8bb2f1b36aec2d9b466c6f5f4d9b256ac6dac36de2c1d72e"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-read-adapter-boundary.ps1",
+      "sha256": "163d032d8f9262c815f8293eb4353aefb6cfc8bbb33a55eaea351a356f9aba39"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-response-dispatcher-boundary.ps1",
+      "sha256": "37e54cf68991a50be45188fc20b11a6b7c30007008426f610633aad95a5305cb"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-runtime-attachment-boundary.ps1",
+      "sha256": "1b0733586e21ec2b6dcc227e52813c7b8d5036a26de4d42d886a306cfefc8b9a"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-runtime-service-boundary.ps1",
+      "sha256": "864099a65ec31219fef8a62ccb9a34131752f4470f2b49fd2b2d7fb7d8acb535"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-mutation-adapter-boundary.ps1",
+      "sha256": "211bb2ef3384592c367d1d9ec4970de9afe7debd50b445b7cc2562464914ff02"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-read-adapter-boundary.ps1",
+      "sha256": "f59f868473fd2497d06612f2ac20e0afdb102b0218a637e76fc1c18fea306442"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recovery-boundary.ps1",
+      "sha256": "5e5928ecf33571b44437f1d22dcfbb5db273b789942bae60f676b65c0028be74"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recovery-exchange-boundary.ps1",
+      "sha256": "e00d3a2a75724d381653d180054250c6892dd7907731620687fe365f482762d4"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recovery-exchange-reference.mjs",
+      "sha256": "1485ca8f9da858b1120ef01e539a76579d6253ed7cd62ca67c8f2a5a046d301f"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recovery-reference.mjs",
+      "sha256": "6e6def9f715e5d50801c4ee3910392f961a266c3afaa8c41ebcab8d7dcc907ac"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-rewrap-boundary.ps1",
+      "sha256": "99e61073dcd4d46cef47e9fd8d28aee7815e2d7aa2bd339b7ee3f982e6bbe618"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-rewrap-reference.mjs",
+      "sha256": "1cd2215cf5ea8ce85dcaa81366b3a0c0f94e87c44cc4d5769863fb0af5e7762f"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-boundary.ps1",
+      "sha256": "5a91d23bae64fef420e7848b7235440fe341405b2814c3c3f8e1ad6bc10b73cf"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-contact-boundary.ps1",
+      "sha256": "0a301ec012833fe1ccd8685c9c8042db9790c23f3a5951029bc0c80d19b26a27"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-contact-reference.mjs",
+      "sha256": "83af23645cf399ee59939be82eabe74ebfb7b93ec377c93ed7121426cf220d74"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-directory-boundary.ps1",
+      "sha256": "9a8d451a31642f3b37735d4c251efea14672cb8c11eee89205135445c973c802"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-directory-reference.mjs",
+      "sha256": "291619eba2b58ebdb72a81a06905ccfedb20d64a98fdf701d0c0637e6e32e1f4"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-mailbox-mutation-boundary.ps1",
+      "sha256": "6e98f915df1416e90c8b0b044cc33d2f81f9608d2d0c987840b40dd12f08d839"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-mailbox-mutation-reference.mjs",
+      "sha256": "d0707d3c3a0c5d366e4ae1f81f724fc2a33ef98404d76e2d743c440442d79a91"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-mailbox-status-boundary.ps1",
+      "sha256": "c2a9262fac9333891f37cc530096451e5e6fbd9567d55c004f3c345f9640607c"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-mailbox-status-reference.mjs",
+      "sha256": "1067cb13b251e8cb69e20583e4fbb708cd5b137d3ff4f96d5240fd65a977a9aa"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-outbox-boundary.ps1",
+      "sha256": "2752aa8dc4114110d859f1e21d00e65b7dd275a7958f6bc29f02ebcc6f8525f3"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-outbox-reference.mjs",
+      "sha256": "da286054047774c2c99c67912b09000a364eec5d7f8b8ad18d1a2cb4b60fe0c1"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-own-device-announcement-boundary.ps1",
+      "sha256": "b27a67829efcb11810e380b9bb8a658ad63417e034c5d273c40bdec974aee1b6"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-own-device-announcement-reference.mjs",
+      "sha256": "13b71976b1a467ac5ad1698fb7614d3422d8e93b6de8e77f2ee5727d6ad8d5d9"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-own-device-discovery-boundary.ps1",
+      "sha256": "324fe912117db2183b98834799f471e6224ee947115c9736b5ba92c6c506e523"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-own-device-discovery-reference.mjs",
+      "sha256": "d0e1bb5fb97922a3dae52e628006aa28382fdf249e6ac2c404ad78dfbd828df2"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-own-device-roster-boundary.ps1",
+      "sha256": "e26c9e81c81af596d9b2710814c6a36938f265241750932feae4c60dcadc7df0"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-own-device-roster-reference.mjs",
+      "sha256": "3ad53e40b5ee0ae1e4ca8b76fea5bcb0bddb080ccc53ecb3e01e34dd630dbefe"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-peer-reenrollment-contract-boundary.ps1",
+      "sha256": "d48c4c137467ab3b577672ad120a9cf094819fb32f5cb27ecb974d8ebed6d3a9"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-peer-reenrollment-desktop-ceremony-boundary.ps1",
+      "sha256": "fd7e75ee63d708f8d50474d41b0b3df829e3ed91d35eeb56eef602e8b6126c48"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-peer-reenrollment-mutation-adapter-boundary.ps1",
+      "sha256": "c19bad659288f8da2e882ddbdc7a2da34b0258c725446bb3018455d230a5e783"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-peer-reenrollment-read-adapter-boundary.ps1",
+      "sha256": "66208589a1938584050392ec075d9dcf03de3304779d5f6fdbdb72e4733617fb"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-provider-boundary.ps1",
+      "sha256": "ca517bb6d8aba430e062cc6d9b7e653998d6feb91e64ba48710f4cee313f59b7"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-provider-reference.mjs",
+      "sha256": "4ef9bde795d07a9c13c508b5ae765d0063da9016a7e6280bcc424b051032e7c8"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-publication-boundary.ps1",
+      "sha256": "7c6ceb48d765a63951734c56cd7f584068bcdc8444cf6c37973b658de029c9b2"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-publication-conflict-boundary.ps1",
+      "sha256": "601417c04d673ef985278649fd1e112d9c3ec647840e09b45d00a6b949cc0c23"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-publication-conflict-reference.mjs",
+      "sha256": "445027a19978ad1f77cacfc86bb397563836b6037f1def3214e74914cfdaf3e6"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-publication-network-boundary.ps1",
+      "sha256": "75914d45db37cefbc030c6f7830c19d700b850691d138bc468395e2dec481c0a"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-publication-network-reference.mjs",
+      "sha256": "f44b269c9fbf6c82c15efd3e618bae0bf9a2f6af4a8c1305dea524c756d601e3"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-publication-reference.mjs",
+      "sha256": "9fb1af55975495bd5a2a030a73688612a5fd5af5c360a9f87ee38986fa009f9c"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-queue-boundary.ps1",
+      "sha256": "146b8cfcd101c26fe5e72aad4a79bdfcb64995ac93b9c16ec7712bd27a1401fa"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-queue-reference.mjs",
+      "sha256": "6a2b9999696db150e2c2811bbc12cb3b3d0b1936662350c375abf1bf603d5ee7"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-read-boundary.ps1",
+      "sha256": "f052c107f4d5fc5f32bab459d1d98e0cdba7932654bf90d2aa97ee36c53b82aa"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-read-reference.mjs",
+      "sha256": "b36a07bbdaf4c8f8a78e1de4bf400a6e3b49e9a98c40f4ab5ef5799864a3ed2e"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-recipient-import-execution-contract-boundary.ps1",
+      "sha256": "aae79027c03d4a3ba671e464580e1f44b75a1cf344712fb707e8227c5513d1b8"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-recovery-execution-boundary.ps1",
+      "sha256": "207157b13b495c76442dc712f032813204d232cd9d5c9b9f7496a7ff00291b0e"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-recovery-execution-reference.mjs",
+      "sha256": "2bd71a601e9962d42a855762687fdef545c1d5dcb99c0559b73a3960c12993b3"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-recovery-plan-boundary.ps1",
+      "sha256": "0b049dffcc8511a5d2d6aa2e6fee0907e212c889d01633f1924449d8bdfe00ba"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-recovery-plan-reference.mjs",
+      "sha256": "8976e33b286abe52f434136a94df7aa4045f46af72447c95dcf5932c8d769d82"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-reference.mjs",
+      "sha256": "3e69311d5106500da6fc16c7f13ab17814d223a73eb7c1a3285e1145d3ce2995"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-ticket-automation-boundary.ps1",
+      "sha256": "00b0132bfdb4046c8f870884723013ee678ba7b4da2feec9631b8f1e8e007210"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-ticket-automation-reference.mjs",
+      "sha256": "41a56e1ede343af8c22cff840c1d105cc5ea6532010da830635722079d37ae08"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-mailbox-boundary.ps1",
+      "sha256": "c555e9afb72c61a555ae5fc2539bb5ed7a0eee32dae5f84a60c0380ebd062845"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-mailbox-reference.mjs",
+      "sha256": "a28537733a1d111952a31974891bb98621d75c09f35c0fa9aa1da727a225337e"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-boundary.ps1",
+      "sha256": "6c09795ca742502ec81823e1cd9711c0dc24e1ebabf603ecb3e2e4d066b863e3"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-history-v2-boundary.ps1",
+      "sha256": "e0ba0bde27566c6607eb43ba10601b03a95d305a66430548755464b2fbff55ab"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-history-v2-reference.mjs",
+      "sha256": "f6054e1f657279555a32ca0c43868abc6e5f7d830b37b049ee91d2ce146b1ccd"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-legacy-event-boundary.ps1",
+      "sha256": "a07c7637b765c7bda9af0de98fa56d9198791fce2e1256fcfbfa17ebfd26a46b"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-legacy-event-reference.mjs",
+      "sha256": "afeffe0ba1d4e62afb3ba9bfc6d8be96924978939925cb2efaf5b1f4a6051bea"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-reference.mjs",
+      "sha256": "138d008e01e7ae2ea25d262a7725dd9db0190e7f1f0f3ec2d5a6a0faaf26085a"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-session-boundary.ps1",
+      "sha256": "4a90d1572001ea47dfa16314845503605e8951e8c768ccc84c64aef91d80f2df"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-session-reference.mjs",
+      "sha256": "456a8a5d7557549e90e05b116e9bd9bd08e42ff0e1d19feea3051a881104082a"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-session-v2-boundary.ps1",
+      "sha256": "bcd947230b43f693ffff5cd6262723be20b46af14d1490648b00645501942a5b"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-session-v2-reference.mjs",
+      "sha256": "c6cc941fa4a9fc543b1a94aeda1d711d75a30388299fdb8a939c84b172b916d4"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-activation-authority-boundary.ps1",
+      "sha256": "412b86d29a69709f00a6cec42137f1e0c04c297301d84589184996a70cdc8108"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-activation-policy-boundary.ps1",
+      "sha256": "b09122bedd6331d6ce7e0d9173854ddc122a034112fe79b8e6a5a6cc9b8d48f2"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-adapter-boundary.ps1",
+      "sha256": "9f2fdc7ae7fd9139ed4bfe73c88c237a7798659a30c0e05e8b4497bebb2c339f"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-atomic-runtime-transition-boundary.ps1",
+      "sha256": "137e9c98da3e693572f597f8ec96183be9dafae5c75ee2cb552af6d2bc93ca6e"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-automated-runtime-enforcement-boundary.ps1",
+      "sha256": "daef669526918f47d9ce383c52efe4e5367b46b2601f2374cec95c1227134903"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-boundary.ps1",
+      "sha256": "a3fd70c807abda7e47672a1cb283c501cc3b7141a678d1bbf92f94f7e6c4062f"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-containment-recovery-boundary.ps1",
+      "sha256": "6f2c8e14b9d9765765819c986d134818e9b7b0302900ca8c15461e67b920ffd9"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-current-peer-invitation-boundary.ps1",
+      "sha256": "ad5ab12eb5c1697d93e83e156e60fc00dcb821d5fe7d227da934423b4da6016e"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-decoder-mutations-boundary.ps1",
+      "sha256": "7a532b0ba66976d9c8f2db7e74eb2772690789baec0325b68887fd2eb075c841"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-desktop-activation-boundary.ps1",
+      "sha256": "c0f1b82fb11e14b35e86cc837fac697dbb1d298d9f1ed58e0f11317ef15f61a2"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-device-rollout-approval-boundary.ps1",
+      "sha256": "2bc90972ae2e32db70dcfc6333b05b9e0c416f5bfd445b2d59b01b9941aceb61"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-dormant-rollout-controller-boundary.ps1",
+      "sha256": "2c2c43381c1c486ca3e536f2ec6b9a157d5dc33a4cc46f31bf4d9025263a8e25"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-dual-reader-runtime-boundary.ps1",
+      "sha256": "45df9eea34f5b0dc0a7e092d77df5fa47823817cddbc9cc0d11f69a00d9ec6ba"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-durable-client-adapter-boundary.ps1",
+      "sha256": "9646e78a89232c05f6a94e959fc98f4164c122cf8785717562ad85404c966c6c"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-durable-responder-adapter-boundary.ps1",
+      "sha256": "d44169dc125b7274c4a128e85cdf56fd7e7ae86d78b94458fad283c5cb67aafc"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-fuzz-harness-boundary.ps1",
+      "sha256": "12b50ab8dbeb1f5da516638532915a72df7fc8627305e3d3c4125dde91c5a0bc"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-fuzz-smoke-boundary.ps1",
+      "sha256": "60c47f28bda44856d98fbd202b6cf8b1ff997bc38e5ee5ec7410bac415123a66"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-fuzz-sustained-boundary.ps1",
+      "sha256": "e381fb16353e01cfc3caf76664fbfb863a9e94d371e05641a0a75fa61fd8fb9f"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-guided-restart-boundary.ps1",
+      "sha256": "cd285fd399eb6a400d3f36b510f974b9ae379acbb5ada4419ee56ca768826c81"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-import-checkpoint-boundary.ps1",
+      "sha256": "405cd306d4afa6cce6df9af416e471c5f5d4d3b5e40288df3f5a6c1b188b0797"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-legacy-import-boundary.ps1",
+      "sha256": "327ef143c6de6794fc893fd7149d51fc219cac29f49255a2cabe124c95d3b398"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-membership-policy-boundary.ps1",
+      "sha256": "40d4ae7200eddaf32fb7be4ed84b1f834e74c6d97ed81dee0632bdd1cc6068d6"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-mixed-version-downgrade-boundary.ps1",
+      "sha256": "ac8a473c30edd21b3483af4737c1a1cb8b4ae393f2772a53a08b94fa6724c54f"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-mutual-candidate-selection-boundary.ps1",
+      "sha256": "73a354dbc02a591507d018663a6bc430c46d127b5913152f708df1d6a8f92685"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-n-minus-one-interop-boundary.ps1",
+      "sha256": "4e4c369a66408095d05f663650306d0ccbe694265b525466880244dad1163119"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-opt-in-dark-launch-boundary.ps1",
+      "sha256": "a7f9d8812fd09409ca8cc0029b20a03f647e3ce876fbb16cbc41080f455138db"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-peer-capability-floor-boundary.ps1",
+      "sha256": "0ead0be4f47a6a8c64f791fedc61e992ff7966bc822a70616fe724ee441c69df"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-peer-capability-store-boundary.ps1",
+      "sha256": "b45964ae306bdcc92d54deba5f78ae79dac59fc19c50c414a39dc3ccd4e682ad"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-peer-capability-transport-enforcement-boundary.ps1",
+      "sha256": "fcd60b8806b30ebfd3092d0ddc0da577020e5025dfd6b9443b63241cb83dfbd8"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-peer-capability-two-host-rehearsal-boundary.ps1",
+      "sha256": "e884a9fb687ec1d9f08a59396374beabd1c6d23e9f32aa8e40fc9ab120c1a63c"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-peer-reenrollment-acceptance-boundary.ps1",
+      "sha256": "e89be191ac9daa699b5c1632c0a84350bf0839d0a330b3db045bad8c1b441d2e"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-peer-reenrollment-plan-boundary.ps1",
+      "sha256": "f985ca438fcf85b472ab8c1e0fa3fd67e6834ddec28299d30aa4cecc166b128b"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-peer-reenrollment-runtime-consumption-boundary.ps1",
+      "sha256": "435a6c58c1d3dbd5c98cf5efbd211b5c871eaa0487fb089c9ddf0b01bb95acf1"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-peer-reenrollment-two-host-rehearsal-boundary.ps1",
+      "sha256": "516cbfae1c55f180edf25d6eae50380ad3e959deaa900fee5db4280bffb163ff"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-production-dark-launch-boundary.ps1",
+      "sha256": "dac87a0f8282ebbaea5424088ebc2a82d6181e5394e730e8b04afbb1a8856c8d"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-public-rollout-decision-boundary.ps1",
+      "sha256": "fbc786a655f877b46b510035e7bb34c1b60e5368c700f12e47308820c4b8cbba"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-reference.mjs",
+      "sha256": "e99ada9c0f974f9b16ed2d7dfb230cf5a64024e4d2986ce0799cae7a78606658"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-release-keyring-boundary.ps1",
+      "sha256": "dac9bc592f8d1bc9542a88e98886753a24756ce86114edf63db10ceced893417"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-rollback-drill-boundary.ps1",
+      "sha256": "6775bbae5a5afa64575741f19754626b6c1c75ed58c46105bd220c2823e68158"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-rollout-containment-rehearsal-boundary.ps1",
+      "sha256": "71ed3fe1381f332f756f33997c1bc2a3efa847fcaa4c95bcd15f55ee9c081b77"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-rollout-controller-observer-boundary.ps1",
+      "sha256": "79f36bb79d8f467589fcd02dd562c595c8d62e61cee64a4988073d71ff9a4775"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-rollout-end-to-end-rehearsal-boundary.ps1",
+      "sha256": "6b7cf3afaecce50dd6cabc9805e84a8ba121e5028ba925f028787884a4104805"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-rollout-local-authority-boundary.ps1",
+      "sha256": "f3e03f29a6c8b7663826daed4e93651874963df2640b5c384cf7fa29af418dd1"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-rollout-operator-ux-boundary.ps1",
+      "sha256": "7a0784cdb7acb216f3558fb0bc74942d544fdf9c5cac6fcb46bf2baf8bf08651"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-runtime-observability-boundary.ps1",
+      "sha256": "6db309ac394b79007b56794cb3b129d5bd6a83e039fb282a5e860ad277cf176f"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-runtime-quarantine-observability-boundary.ps1",
+      "sha256": "3a97ece78006d058dc1d08105cbf5df04e06ca64cd86acb142f50421932e23c2"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-session-bootstrap-boundary.ps1",
+      "sha256": "d3d35cecd63b14c1d1417dc039139a5347925eb30272c88b03d18ee9c256ea35"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-session-runtime-frame-boundary.ps1",
+      "sha256": "b881f46fd8cac3c409d7e54eeac711ea34ed179037e24b7b6940e5d2c82e99ce"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-session-successor-store-boundary.ps1",
+      "sha256": "c85289d3b370a04f9b8a69148fa6761965a0d6552b5598d249ded1d4dbf46751"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-trusted-policy-bundle-boundary.ps1",
+      "sha256": "6bf0d1b69dba777f10a8d88c98d02649e3dd9178317318149fea3c86987b0b35"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-trusted-policy-inbox-boundary.ps1",
+      "sha256": "150640897c4831ff0cb8b565803fd5c2ba9cc1683a90b64efafe94afae209890"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-typed-store-boundary.ps1",
+      "sha256": "5aa5568bec397a6a25f5906136be74389cdb11f3b05037684f903946e90e1bc9"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-ticket-publication-boundary.ps1",
+      "sha256": "603c25522790572e7ec40bfc1a0a02feaf03ad86f5a7229ca2d04ae9e40c884d"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-ticket-publication-reference.mjs",
+      "sha256": "e8ca78d5baab00a19d0e126cf9e38cec699628802ef765c9cbdcf1585563bfa6"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-transport-sync-alpn-boundary.ps1",
+      "sha256": "f5b54676635e228693c5c5e7536f933344a930d450b54d01f41ac69d8a2f7c20"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-wire-boundary.ps1",
+      "sha256": "ee50de9a730607702b1715deaff376f613d0d950c975cab5d47b422f20cbdfba"
+    },
+    {
+      "path": "scripts/verify-kilogram-connection-ticket-sync-capability-migration-boundary.ps1",
+      "sha256": "e5f4b9ceee062c8f27f1d1b5b161f667109708dee1e56d7afdc0c4ea7081f853"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-iroh-session-boundary.ps1",
+      "sha256": "ab6055737931e1a41a5b5e63c0da3e1fdb6cfc127ef71ac204177c63f01ea917"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-multi-source-scheduler-boundary.ps1",
+      "sha256": "97079984776ed9beadcc1a543b5e4465b30b7a7c85a32d5b4eea45730ebfae91"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-recipient-acceptor-boundary.ps1",
+      "sha256": "3ae22e4394b54d43507a555e3984695f27ce4adbd9dd502fdb701e7fc4721027"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-recipient-coordinator-boundary.ps1",
+      "sha256": "827925d48ac08d2ee0ee701e864fdba16d69986aef706402653a6675d2a7ab91"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-recipient-import-plan-boundary.ps1",
+      "sha256": "f4cfcd1d9e536862c41b4460dffd85009cbc2b101cce07e63b72a257d891e5ef"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-recipient-import-round-boundary.ps1",
+      "sha256": "5549cfcf7185c4f641d4888e4eba356b099385e38bcba3090e94360d7f67a599"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-recipient-import-round-executor-boundary.ps1",
+      "sha256": "cb524163285bc7e66f1adb0de9408be373a82329f95d185770c92f87ff36b392"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-recipient-import-round-intent-boundary.ps1",
+      "sha256": "6245f31dd5267ebac4846364c4b6c19c3b06ad27fd5581cec355b61eafd45f77"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-transfer-executor-boundary.ps1",
+      "sha256": "198c489fe8d6430a22a01fe8aa4885e2e56f49e68625b717a8941f1d72a7939b"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-transfer-inbox-boundary.ps1",
+      "sha256": "5a98c376761b4bd1e44beb36c7de25743d944f80f9872e6224063f2d822e3f80"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-transfer-outbox-boundary.ps1",
+      "sha256": "1e016c8b571e4f0602b7c46374f396d63d0fe0fe7ba842b53829be63f7471c8c"
+    },
+    {
+      "path": "scripts/verify-kilogram-independent-builder-boundary.ps1",
+      "sha256": "180c60633b616dfa92f5be2a2933a4dc2998737064233746235144a9b47c2fa7"
+    },
+    {
+      "path": "scripts/verify-kilogram-independent-builder.ps1",
+      "sha256": "7ffb9745aff134597a6fb2ca5f31eb6f683c441a08cd772f32365f912ce76fcb"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0967-simple-kit-boundary.ps1",
+      "sha256": "d4fbbeca373d143b9c2d6d24a339dbb73ebf25be2db12cb577078fc8a28f06b7"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0969-exact-locator-evidence.ps1",
+      "sha256": "0883d991300ee1b252df4726fd42ca040227d5bcdd4b942e19922475e7fc2e29"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0969-exact-locator-kit-boundary.ps1",
+      "sha256": "bc46ca9f9aa9f4a151cce365a1a3b376ed0c7e40219b73d3f0a423c7cd687e95"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0972-no-https-evidence.ps1",
+      "sha256": "69f0da13bdf84f1c6f48e689797e490942021529263da7d2da2c1928c199a6a8"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0972-no-https-kit-boundary.ps1",
+      "sha256": "2061b5b692f79711fdfc9a87c962d3c7270d8a5a2d92b716153056a7fd656817"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0973-no-https-kit-boundary.ps1",
+      "sha256": "2c37f0e32aeb0f4ae4905b0f7e280122b266e0a38de4544df391c2c59511055a"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0974-no-https-kit-boundary.ps1",
+      "sha256": "4ab8626fb7c9a9ef81fb61e9fa8aa0dacaf4912fca903278276844cf00071c64"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0976-service-free-v2-evidence.ps1",
+      "sha256": "92a21a517d8fadc5bfc598ca4ad5d2d441ba56eb8e1729c470671eecf5d15a2c"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0976-service-free-v2-kit-boundary.ps1",
+      "sha256": "74c0d8c10d33cee98db661b0ee3615cb2ce6de4fcf9aa80597c8ba29c412b5ed"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0987-independent-provider-evidence.ps1",
+      "sha256": "853becef95421cfa150c18047c9e92f0dbc32244d6d1b261820972e163190877"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0987-independent-provider-kit-boundary.ps1",
+      "sha256": "8d488ed27a5605088f466131e1020937d2166537b3148a84c1714ef94227150e"
+    },
+    {
+      "path": "scripts/verify-kilogram-m1-acceptance-kit-boundary.ps1",
+      "sha256": "56b0516995fe4b46c26f08b7d9eaa0274185851b7a3a5cfed670a32a16fbb2cc"
+    },
+    {
+      "path": "scripts/verify-kilogram-m1-candidate-boundary.ps1",
+      "sha256": "ad1afe65816534538b21a9fcfe8b2b8706ec0e313cc1856bd81d2e9024b9b1f9"
+    },
+    {
+      "path": "scripts/verify-kilogram-m1-candidate.ps1",
+      "sha256": "d2958efd1172353d108987ad608c433c46b2d6be9e38cbfa8d635091711a1f78"
+    },
+    {
+      "path": "scripts/verify-kilogram-m1-readiness-boundary.ps1",
+      "sha256": "6d17a25e792f7657ce5226a1e2d347458eaa7178ca9df457226f5e112f3a4025"
+    },
+    {
+      "path": "scripts/verify-kilogram-m1-readiness.ps1",
+      "sha256": "7d8e10c3c2aa5d0fb223833a80757efe50edcc4ee58284324b990a4cea87003f"
+    },
+    {
+      "path": "scripts/verify-kilogram-m1-tag-acceptance.ps1",
+      "sha256": "3895a6fc8af861ea91119169d2efb232f2a934c8e024c96b6b80af49bb5b3d69"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-boundary.ps1",
+      "sha256": "a44a9710d30c6ec20c35e6566604de29779df1e3373040c978a59f72eaaa72da"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-capability-convergence.ps1",
+      "sha256": "0d45a69b328b970b8647741e4183a2c57b13d14c44dd3598e45bcc889b8217cd"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-capability-lifecycle.ps1",
+      "sha256": "833818c8de45a6caa80d767cc47719fd00e3eea19502c1c78187aed3025f0506"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-client-boundary.ps1",
+      "sha256": "26776d2179b83c4a948a7c3d9aaa5f7e1c395c783f3e84a4336f227714db16ea"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-desktop-control.ps1",
+      "sha256": "be839d1fd0ec876537a7a34747e6df526d620c4cd8adc1770a1a842bbc80f5e3"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-field-evidence.ps1",
+      "sha256": "2075963f3b2bbe1ab26803c531c52f649c2eb719e0436ec72798eb622c37bd27"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-field-test-boundary.ps1",
+      "sha256": "dca3493ed2b361e660eab29b9e890790d29dd64935aa0ea01c7e991866febce5"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-https-retirement-boundary.ps1",
+      "sha256": "493d023cc279934463d3c13dc1dec6784c36584052638bd97808bde3728b9593"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-legacy-upgrade-boundary.ps1",
+      "sha256": "1c72495d2fa823040c2841278f2163a01d0855bf3d8fdd45d1c26a4915c606fb"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-provisioning-boundary.ps1",
+      "sha256": "9f1e902b9235bc34ebffae2e1a25b304c78abe3ca020f364ac3fd7d2b6d0494a"
+    },
+    {
+      "path": "scripts/verify-kilogram-offline-boundary.ps1",
+      "sha256": "2e5f3408e4ae40d9d6920e042b8518b286d01d1ddeff676393aebf4597ebf7af"
+    },
+    {
+      "path": "scripts/verify-kilogram-offline-reproducibility-record.ps1",
+      "sha256": "bcf501debf7963f256783199cc8fa3ba4891772855e7f7e2417978f00f4890f4"
+    },
+    {
+      "path": "scripts/verify-kilogram-old-history-recovery-consent-store-boundary.ps1",
+      "sha256": "11cd12a0e0a075be8718a3115c0c2dbf3df5fe5336eec73fd9959151d6215e10"
+    },
+    {
+      "path": "scripts/verify-kilogram-old-history-recovery-execution-boundary.ps1",
+      "sha256": "7b0ca7756cc080931da17e18fbf6aefaa8acf518753a1e88fce64942a91b9198"
+    },
+    {
+      "path": "scripts/verify-kilogram-peer-reenrollment-old-history-recovery-plan-boundary.ps1",
+      "sha256": "7507f0d5ed3b17b18c10a7f5c58f5951c5625869ed92142b4a1930222ea1c0eb"
+    },
+    {
+      "path": "scripts/verify-kilogram-protocol-compatibility-boundary.ps1",
+      "sha256": "517a213fb4d2cb73f9c7f8e99fa18a2e12ad317b474afd5b112260356d98de11"
+    },
+    {
+      "path": "scripts/verify-kilogram-provider-admission-work-boundary.ps1",
+      "sha256": "4c24f7ad0568e2fb0c26847e01d4385b6755ff66390f6b07806a006f07fdb12b"
+    },
+    {
+      "path": "scripts/verify-kilogram-provider-colocation-avoidance-boundary.ps1",
+      "sha256": "b578c9fe41f3ba3c00b002f34cd75b0230c0c68c6542f8316d3886f9dc530508"
+    },
+    {
+      "path": "scripts/verify-kilogram-provider-observation-boundary.ps1",
+      "sha256": "0e45f0d871c53c5bad4eac5067f98f593feeae65866cb4fe7e1494675f8360ed"
+    },
+    {
+      "path": "scripts/verify-kilogram-provider-path-domain-boundary.ps1",
+      "sha256": "c9738acd634cce07caec52cbd7b7ac603da168aab2a98e5da508859fd9abd0ee"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-history-import-boundary.ps1",
+      "sha256": "c76513c2e0a2a7346b20466c24a497f545ea805ac409d42d3d68d4c7ab8fd839"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-assembly-issuer-boundary.ps1",
+      "sha256": "f42a233029b7bc7f8465254d05ac5a61fe2e390e7504edc6206ad9736f27af53"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-assembly-to-slot-staging-boundary.ps1",
+      "sha256": "03763d7635d3624425871436b0a85eba57163f8aa75a495a9bceab309b472b58"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-host-boundary.ps1",
+      "sha256": "2aa940ebebb43af148a8113b7cf1d2ee952655662fe963275ebcb21444ef47d3"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-host-command-router-boundary.ps1",
+      "sha256": "e9dedeef3e08bd347318fe99ad0ee6ff0ce4691b0328045f2cce10cda119d6c4"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-host-installation-owner-boundary.ps1",
+      "sha256": "62516a250e799a7e58e7ee2bcf59a76df6ea5e934791023c6632bf2e48ca12ed"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-installation-owner-retirement-boundary.ps1",
+      "sha256": "00519ffe352890019685c894318dbf6049598dad2a95eab92524786c2f705781"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-issuer-to-slot-staging-boundary.ps1",
+      "sha256": "a45823fe9be84ec36ea09024796f1308966c442e21df3603bd648c00c7533bf8"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-launch-authorization-boundary.ps1",
+      "sha256": "a312c8813a8a6dbff6d679db03efdbeca0d4e865fc5f4602ecf85e393d8b1fa1"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-launch-service-boundary.ps1",
+      "sha256": "d9739878af94a52a47dab4e6b8da61e08ee5b4e88a5eb1993dd459dd96026ac2"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-launch-slot-boundary.ps1",
+      "sha256": "557d9f60e44e4fd2fb381df86ba48726fefe4712c58e37e05653acab3b656e3f"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-raw-host-retirement-boundary.ps1",
+      "sha256": "417a3a919e484d97f69d7eee304ccb9cfc28ab1276c29323dff84dd8bb154a9c"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-raw-launch-slot-retirement-boundary.ps1",
+      "sha256": "1fdc1f3c82a14fb3b9463441997a772d32b4ffb9e946e0a84614851442de0e63"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-session-controller-boundary.ps1",
+      "sha256": "008bc2c0d791f6d007cd8aa87abeab6452f50bf6545918d5a7bea327c6410bd6"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-session-local-ux-boundary.ps1",
+      "sha256": "566347bef0a9a8ede98df4d3ed908b735cde4a8e97f442f56b9ed8c27547c789"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-session-start-producer-boundary.ps1",
+      "sha256": "f4a4e06a232e680b7178c04cf9e8660a534e1943e5319a036385b9f807642f01"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-cooperative-scheduling.ps1",
+      "sha256": "517683ab9dfc808c18f3f14dc2b672b6cee00b3b1324f9b300f2fff7c802fe0f"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-ipc-completion-inventory-boundary.ps1",
+      "sha256": "a2822ee65a14dd77cdfd4ab28f130e454a263362889fcd7121aae4a02246bec5"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-ipc-conversation-pagination-migration-boundary.ps1",
+      "sha256": "c490a6cedfdb68f4c16909e59e312938be933458074d82d2a7a2f98e0c579762"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-ipc-endpoint-bootstrap-retirement-boundary.ps1",
+      "sha256": "3036a42a5fe38b2b5079190b82c183cce78e90865370c31c1d69832cfb9dfb71"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-ipc-legacy-mailbox-retirement-boundary.ps1",
+      "sha256": "ed0da31d1e127010a795a03d2c71818f4fd44d035b5bcac0821501f34f05c534"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-ipc-recipient-import-consumption-envelope-boundary.ps1",
+      "sha256": "c862de09937bb5e721ca9a541ee4584204b29a8cc3ddb0b64497cdadc9d1aac1"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-ipc-recipient-import-consumption-migration-preflight-boundary.ps1",
+      "sha256": "acfd02c4232b2d93fc1de5e02dd45c834a9c431fec5246314e1b7ec3cad47480"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-mailbox-flow.ps1",
+      "sha256": "3a7c9dd978d4bf4d4c38a9f6be1c62b799422ed98665742fb18ca84f7a780f47"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-mailbox-replication-recovery.ps1",
+      "sha256": "daaa9c2913293734500fac8c03c16089b89bc298bea9c06def7e52ee4b9c960f"
+    },
+    {
+      "path": "scripts/verify-kilogram-service-free-mailbox-capability-v2.ps1",
+      "sha256": "df53a8e68c29ad46982ebe0cb676c973f97110c72111882b8b033933510c00df"
+    },
+    {
+      "path": "scripts/verify-kilogram-sync-v2-evidence-boundary.ps1",
+      "sha256": "cb1aa910318fc5d4e28281d307f0f3022b34428d125de43e07d842ef0015aaac"
+    },
+    {
+      "path": "scripts/verify-kilogram-sync-v2-network-evidence.ps1",
+      "sha256": "94a37dd8e205f2b165c6cc28afe9ef6e62b1f2446a36920a7e1482d40af23bfd"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-field-evidence.ps1",
+      "sha256": "f00a76418c99051b41cdd9d69bb9409d6c4af374d9593c1cadc50b4c489ecd95"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-field-kit-boundary.ps1",
+      "sha256": "f029a0a3ece77d360605a5904632bd4f23529597243f9bdaba8ba6a5508b32fe"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-iroh-boundary.ps1",
+      "sha256": "2754a80e89f27762eac24d22995232f4cc63a99eae1937b4b12aa9627ee10702"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-provider-gossip-boundary.ps1",
+      "sha256": "904b0e796a8c4f2db6d797f5b993efc2c93c060a391349467ff2372bbc3a4b3c"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-provider-selection-boundary.ps1",
+      "sha256": "c1aedad3c25be8eac4cebe3ccb8a43a07321e2a251f45916b158e51e7c539da3"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-replica-locator-boundary.ps1",
+      "sha256": "bd5b9de285bbd344f0c466ae12d1b33fce0bd76ca8bae2a1e6e47fd682022f2c"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-replication-boundary.ps1",
+      "sha256": "e8908b05d5ec321d773d71229708099b93f64a2f1e1da9aac442811a085baeeb"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-retrieval-boundary.ps1",
+      "sha256": "5012d20be00c37f0a73d7206ef5af824806fe6d6e4971ecd6ce257fa06d0ae89"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-storage-boundary.ps1",
+      "sha256": "36c9321eb3dbfc38876b736bdb8b428f469db04a8038c45f77906539d984a3d8"
+    },
+    {
+      "path": "scripts/verify-kilogram-windows-ci-boundary.ps1",
+      "sha256": "976b341847302f89e53bc712ae3a88444033778acde31605b9cb57adfa392c66"
+    },
+    {
+      "path": "scripts/verify-publication-conflict-boundary.ps1",
+      "sha256": "11ac4c276f59dd05ccdb5723281f1a1eaef32a663eb14b85171c5f684a0f588b"
+    },
+    {
+      "path": "scripts/windows-ci-isolated-tests.json",
+      "sha256": "7d34bb5e63c20971d7337e572da28bb4f7dbd9f9c6bdec2e53a24eef9bf12d18"
+    }
+  ],
+  "review_iteration": 2,
+  "review_input_executable_sha256": "532a5a76e836faacca63a71306ba10f1129718e7b0aa157e363f58bf7642ce93"
+}

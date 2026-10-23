@@ -1,0 +1,195 @@
+{
+  "iteration2_duplex64": {
+    "status": "PASS",
+    "scope": "real CLI/runtime TLS Duplex; scheduler delays only committed serialized records",
+    "exe": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\field-tests\\ordered-dialog\\kilogram-cli.exe",
+    "exe_sha256": "3f42245b899e678c423b3137b5d99dc225cb0c2bc36d99b5bfa99daf506a6626",
+    "pids": [
+      50976,
+      52180
+    ],
+    "context": "ff4f7f4b5ee5466fa47f50baa14287cdd3b3d8e255434383e3d633fa53a47fd8",
+    "elected_a": {
+      "side": "two",
+      "account": "73342e19a88315768b5a33b4442d9a0ddb3139ed367a67ab89c10dd4a0e486a3",
+      "device": "3a7164cc073eb1abc613e580a720c797a147e1ed5cf612e08ac44efb6470e2ec"
+    },
+    "elected_b": {
+      "side": "one",
+      "account": "94e51f1014efecc466a6db737288f354e5d908ae46324b81341586fc8617b473",
+      "device": "8c0e7f9e44fa51f789b591e2fbeb247d5ad9fe2a0ff6d5fa3118add1290a0e36"
+    },
+    "text_count": 64,
+    "setup_seconds": 5.6417859,
+    "total_seconds": 69.1054088,
+    "exchange_seconds": 59.538053399999995,
+    "history_seconds": 3.9255561000000085,
+    "vault_commits": {
+      "count": 317,
+      "p95_ms": 99.486,
+      "delta_total_bytes": 26063275.0,
+      "p50_ms": 46.656,
+      "native_count": 85,
+      "delta_max_bytes": 180845.0
+    },
+    "vault_file_bytes": [
+      1126400,
+      823296
+    ],
+    "crash_point": "",
+    "immutable_reopen_records_checked": 0,
+    "queue_p50_ms": 198.92629999999917,
+    "queue_p95_ms": 280.88179999999556,
+    "final_one": {
+      "commits": 158,
+      "contexts": [
+        {
+          "context": "ff4f7f4b5ee5466fa47f50baa14287cdd3b3d8e255434383e3d633fa53a47fd8",
+          "head_credit_bytes": 65536,
+          "head_used": 0,
+          "native_generation": 42,
+          "ordinary_pending": 0,
+          "ordinary_pending_bytes": 0,
+          "own_generation": 8,
+          "peer_generation": 8,
+          "pending": 0,
+          "phase": 3,
+          "receive_next": 33,
+          "send_next": 33,
+          "session_id": "ImNq2amJ9ognOQYg32PybRKM2WJAYPqvAuBWRfH2/C0",
+          "status": "Active",
+          "unacked": 0
+        }
+      ],
+      "profile_mode": "ordered-dialog-v1"
+    },
+    "final_two": {
+      "commits": 159,
+      "contexts": [
+        {
+          "context": "ff4f7f4b5ee5466fa47f50baa14287cdd3b3d8e255434383e3d633fa53a47fd8",
+          "head_credit_bytes": 65536,
+          "head_used": 0,
+          "native_generation": 43,
+          "ordinary_pending": 0,
+          "ordinary_pending_bytes": 0,
+          "own_generation": 8,
+          "peer_generation": 8,
+          "pending": 0,
+          "phase": 3,
+          "receive_next": 33,
+          "send_next": 33,
+          "session_id": "ImNq2amJ9ognOQYg32PybRKM2WJAYPqvAuBWRfH2/C0",
+          "status": "Active",
+          "unacked": 0
+        }
+      ],
+      "profile_mode": "ordered-dialog-v1"
+    }
+  },
+  "iteration2_reopen64": {
+    "status": "PASS",
+    "text_count": 64,
+    "source_exe_sha256": "3f42245b899e678c423b3137b5d99dc225cb0c2bc36d99b5bfa99daf506a6626",
+    "reader_exe_sha256": "3f42245b899e678c423b3137b5d99dc225cb0c2bc36d99b5bfa99daf506a6626",
+    "reopen_seconds": 0.876693,
+    "history_and_reauth_seconds": 3.8751934,
+    "total_seconds": 4.7518915,
+    "history_page_p50_ms": 124.83619999999974,
+    "history_page_p95_ms": 644.6655000000001,
+    "pids": [
+      46444,
+      9516
+    ],
+    "immutable_records_verified": 272
+  },
+  "iteration1_duplex256": {
+    "status": "PASS",
+    "scope": "real CLI/runtime TLS Duplex; scheduler delays only committed serialized records",
+    "exe": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\field-tests\\ordered-dialog\\kilogram-cli.exe",
+    "exe_sha256": "532a5a76e836faacca63a71306ba10f1129718e7b0aa157e363f58bf7642ce93",
+    "pids": [
+      51444,
+      57872
+    ],
+    "context": "4b54016d0406ce7b26c61919a41df9f7705570355faaf8e996cfdfbe69cb618a",
+    "elected_a": {
+      "side": "one",
+      "account": "1f3307106c24d402413e5bba395b2eed999fe35494ec0da54c836c851861f54a",
+      "device": "200dbcbbc4d405962a8ef576098a5c4306cc71b778ce09a9bef83cbe542fa9a5"
+    },
+    "elected_b": {
+      "side": "two",
+      "account": "508ab2e8a193a8c0d614472442801a29a297ecddd935875c915d6ed16c194979",
+      "device": "abe2785ee93f49937865a3dd2026d050097e823d55321621706bba3189739801"
+    },
+    "text_count": 256,
+    "setup_seconds": 4.8426209,
+    "total_seconds": 226.2787456,
+    "exchange_seconds": 207.4921796,
+    "history_seconds": 13.94377,
+    "vault_commits": {
+      "p50_ms": 79.392,
+      "p95_ms": 138.911,
+      "native_count": 293,
+      "delta_total_bytes": 317511379.0,
+      "delta_max_bytes": 601479.0,
+      "count": 1133
+    },
+    "vault_file_bytes": [
+      4902912,
+      4493312
+    ],
+    "crash_point": "",
+    "immutable_reopen_records_checked": 0,
+    "queue_p50_ms": 212.88980000000447,
+    "queue_p95_ms": 349.82220000002417,
+    "final_one": {
+      "commits": 567,
+      "contexts": [
+        {
+          "context": "4b54016d0406ce7b26c61919a41df9f7705570355faaf8e996cfdfbe69cb618a",
+          "head_credit_bytes": 65536,
+          "head_used": 0,
+          "native_generation": 147,
+          "ordinary_pending": 0,
+          "ordinary_pending_bytes": 0,
+          "own_generation": 16,
+          "peer_generation": 16,
+          "pending": 0,
+          "phase": 3,
+          "receive_next": 129,
+          "send_next": 129,
+          "session_id": "Vp/hAgMDo6eP9odo5NQNJn46MMGhci1QwC3vpPfDbH4",
+          "status": "Active",
+          "unacked": 0
+        }
+      ],
+      "profile_mode": "ordered-dialog-v1"
+    },
+    "final_two": {
+      "commits": 566,
+      "contexts": [
+        {
+          "context": "4b54016d0406ce7b26c61919a41df9f7705570355faaf8e996cfdfbe69cb618a",
+          "head_credit_bytes": 65536,
+          "head_used": 0,
+          "native_generation": 146,
+          "ordinary_pending": 0,
+          "ordinary_pending_bytes": 0,
+          "own_generation": 16,
+          "peer_generation": 16,
+          "pending": 0,
+          "phase": 3,
+          "receive_next": 129,
+          "send_next": 129,
+          "session_id": "Vp/hAgMDo6eP9odo5NQNJn46MMGhci1QwC3vpPfDbH4",
+          "status": "Active",
+          "unacked": 0
+        }
+      ],
+      "profile_mode": "ordered-dialog-v1"
+    }
+  },
+  "note": "Compact64 gate ran concurrently with the R3 native engine regression; timings are observations, not a controlled performance comparison. Original full performance evidence is preserved in iteration1-review-input/performance.json."
+}

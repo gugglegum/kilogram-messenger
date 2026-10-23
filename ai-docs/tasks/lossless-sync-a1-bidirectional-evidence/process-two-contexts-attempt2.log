@@ -1,0 +1,109 @@
+{
+  "status": "PASS",
+  "scope": "real CLI/runtime TLS TwoContexts; scheduler delays only committed serialized records",
+  "exe": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\field-tests\\ordered-dialog\\kilogram-cli.exe",
+  "exe_sha256": "86ad30d3480a3ccf9176d383a49cee171d1dff198a66f51c1d6c28a93fa09797",
+  "pids": [
+    48200,
+    57224
+  ],
+  "context": "dc7bf9f19ed5f1cc4206b32f0f53ddfcf3525edf8a23f6627054206d2a59082a",
+  "elected_a": {
+    "side": "two",
+    "account": "99524d7bcc52423a9d9014b7f71d25f2d133512aef1e7a2924622924fc4172a6",
+    "device": "82c2262408ce861d5aa6e859d48cf9e2d59b9c98a46d4d53906a2d0e7f690333"
+  },
+  "elected_b": {
+    "side": "one",
+    "account": "ae952765e986d70a7bf53261fd5a12e0dcbdac2e7cf79441a77e055745a2a857",
+    "device": "b37ab2aa27c129069227f2e2ba72d310d26a31a704ee448dba4ac27994420f91"
+  },
+  "text_count": 3,
+  "setup_seconds": 9.7808771,
+  "total_seconds": 20.4599441,
+  "crash_point": "",
+  "immutable_reopen_records_checked": 0,
+  "queue_p50_ms": 128.45859999999993,
+  "queue_p95_ms": 207.66920000000027,
+  "final_one": {
+    "commits": 28,
+    "contexts": [
+      {
+        "context": "dc7bf9f19ed5f1cc4206b32f0f53ddfcf3525edf8a23f6627054206d2a59082a",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 4,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 0,
+        "peer_generation": 1,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 4,
+        "send_next": 1,
+        "session_id": "hp/0+zbNMxNGLJAOIEhgicsU8JWhYl7YRmuJ0jUseRo",
+        "status": "Active",
+        "unacked": 0
+      },
+      {
+        "context": "2baabf4d5343c61023f108f8bc0c6a38d7c2473c9b6879f6defe32ff1c92e6c9",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 4,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 0,
+        "peer_generation": 1,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 2,
+        "send_next": 2,
+        "session_id": "/z6raevMyJ0BvKJqxA9/NVaXzl3NfhIw17MjtXhGhfQ",
+        "status": "Active",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  },
+  "final_two": {
+    "commits": 30,
+    "contexts": [
+      {
+        "context": "dc7bf9f19ed5f1cc4206b32f0f53ddfcf3525edf8a23f6627054206d2a59082a",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 6,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 1,
+        "peer_generation": 0,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 1,
+        "send_next": 4,
+        "session_id": "hp/0+zbNMxNGLJAOIEhgicsU8JWhYl7YRmuJ0jUseRo",
+        "status": "Active",
+        "unacked": 0
+      },
+      {
+        "context": "2baabf4d5343c61023f108f8bc0c6a38d7c2473c9b6879f6defe32ff1c92e6c9",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 5,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 1,
+        "peer_generation": 0,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 2,
+        "send_next": 2,
+        "session_id": "/z6raevMyJ0BvKJqxA9/NVaXzl3NfhIw17MjtXhGhfQ",
+        "status": "Active",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  }
+}
+process_evidence_directory=E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\004c2fffa09c47a28efa1a521b7e01cb

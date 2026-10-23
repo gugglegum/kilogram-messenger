@@ -1,0 +1,284 @@
+[
+  {
+    "name": "accepted-candidate-duplex",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\0aafb6b6f4cc488fa08c4998e8073cc9",
+    "status": "PASS",
+    "executable_sha256": "532a5a76e836faacca63a71306ba10f1129718e7b0aa157e363f58bf7642ce93"
+  },
+  {
+    "name": "accepted-candidate-partial",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\78861677a14b46689ec3c1fd1540e3e1",
+    "status": "PASS",
+    "executable_sha256": "532a5a76e836faacca63a71306ba10f1129718e7b0aa157e363f58bf7642ce93"
+  },
+  {
+    "name": "accepted-candidate-reopen-attempt2",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\0aafb6b6f4cc488fa08c4998e8073cc9\\reopen-attempt2",
+    "status": "PASS",
+    "executable_sha256": "532a5a76e836faacca63a71306ba10f1129718e7b0aa157e363f58bf7642ce93"
+  },
+  {
+    "name": "final-b-only",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\3e414bb943ec45cd921ff4a7b3b2bffb",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-consent-expiry",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\e86614a4d9ea4f36b417d783bdcef5c6",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-control-fork",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\762af25aad1e4c96a05d30a7c94b3807",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-crash-after-confirm-commit",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\9b388f6e2fda45ac8a681cc6c97e6485",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-crash-after-grant",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\c15e749b43f54af6b075ee7b70c6b980",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-crash-after-init-commit",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\bae1e4f340b8468dbb8f387b85dbf531",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-crash-after-materialization",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\789801f0575d4f9fa075283f1e8ef753",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-crash-after-offer",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\5ec3fa5eb229451bbe0e54d4d9e8d653",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-crash-after-pending",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\e1be0b6f30294c0b85de0c674f2e4367",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-crash-after-queue",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\ee0886ed48be4526a6f954e00ebc9d03",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-crash-after-readable-commit",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\aadc38f2ee114358a15dd4b6a90da45e",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-crash-after-ready",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\a84cfd3a4796450f8fe78c88871252bb",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-crash-after-receive-confirm",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\1a4c1be609ea427fac49585afe8d0879",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-crash-before-confirm-commit",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\abc4a9155d8947cabb7e6642a766e587",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-crash-before-init-commit",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\9f99a1de43ab43f2a5a2679b5581b05e",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-crash-before-readable-commit",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\a5f29ab180fb46c7a3141464b27e38a2",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-crash-readable-primary",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\e9386a6a998b4ef19a00371df319619b",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-cross-context-ciphertext",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\f6e4af558f7d4867a01548418d7526d3",
+    "status": "PASS",
+    "executable_sha256": "532a5a76e836faacca63a71306ba10f1129718e7b0aa157e363f58bf7642ce93"
+  },
+  {
+    "name": "final-current-binary-256-reopen",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\a972a2153a04454ba504d51f63c77979\\reopen",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-duplex-after-history-cache",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\a972a2153a04454ba504d51f63c77979",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-gap-current-binary",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\39baed7d5c754b7b88f9713ce1a3baf2",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-lease-locator-revocation",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\121064f02c7940f2a8690e59ca24852b",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-missing-author-credential",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\36b61d04a9f14f0db7dd9056e69c401d",
+    "status": "PASS",
+    "executable_sha256": "532a5a76e836faacca63a71306ba10f1129718e7b0aa157e363f58bf7642ce93"
+  },
+  {
+    "name": "final-old-binary-fences",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\e3b8230e1b8a46f7ad501436727057af\\fences",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-partial-after-history-cache",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\4be4688e6ac444e1959b06e7ceca8aeb",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-primary-crash-after-history-cache",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\c8d171a7176143f78b2dea5873356c5d",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-two-contexts-current-binary",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\7b57a00bf108472192982fb62e56d105",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "final-unsupported-suite",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\15ea8e9d3380410bb4091e28a7cd1066",
+    "status": "PASS",
+    "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+  },
+  {
+    "name": "process-b-only-attempt1",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\e3b8230e1b8a46f7ad501436727057af",
+    "status": "PASS",
+    "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483"
+  },
+  {
+    "name": "process-crash-after-confirm-commit-attempt1",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\bfc5b2e1aa114bc6bb09638258397f3a",
+    "status": "PASS",
+    "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483"
+  },
+  {
+    "name": "process-crash-after-grant-attempt1",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\b8b12fe9dffc4af98227fb9d98e08bab",
+    "status": "PASS",
+    "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483"
+  },
+  {
+    "name": "process-crash-after-init-commit-attempt1",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\6522aa1298ad4f5286b8c27ad0506687",
+    "status": "PASS",
+    "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483"
+  },
+  {
+    "name": "process-crash-after-materialization-attempt1",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\37391d63e1014e83a86c6b5b7f6e7498",
+    "status": "PASS",
+    "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483"
+  },
+  {
+    "name": "process-crash-after-offer-attempt1",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\8b0e99aa794a49d487940a189e26e0d7",
+    "status": "PASS",
+    "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483"
+  },
+  {
+    "name": "process-crash-after-pending-attempt1",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\5f75bfef75bd460a92ca34fa3c5ad583",
+    "status": "PASS",
+    "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483"
+  },
+  {
+    "name": "process-crash-after-queue-attempt1",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\7f05334bf7444fc78cb89ab3cac72bae",
+    "status": "PASS",
+    "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483"
+  },
+  {
+    "name": "process-crash-after-readable-commit-attempt1",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\340d90bbb2b14c17b38fbe5588275600",
+    "status": "PASS",
+    "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483"
+  },
+  {
+    "name": "process-crash-after-ready-attempt1",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\203e95e1c68a4cd5b037cb0542fa7037",
+    "status": "PASS",
+    "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483"
+  },
+  {
+    "name": "process-crash-after-receive-confirm-attempt1",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\724d8931ef674210ab76d455f7929bfc",
+    "status": "PASS",
+    "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483"
+  },
+  {
+    "name": "process-crash-before-confirm-commit-attempt1",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\10e7c2bd6e6c4f3989113c0efdc0f216",
+    "status": "PASS",
+    "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483"
+  },
+  {
+    "name": "process-crash-before-init-commit-attempt1",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\e950de04572443f69811fb155a8c2088",
+    "status": "PASS",
+    "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483"
+  },
+  {
+    "name": "process-crash-before-readable-commit-attempt1",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\3837621da43f4789bdb89f1d874927b0",
+    "status": "PASS",
+    "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483"
+  },
+  {
+    "name": "process-crash-readable-primary-attempt1",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\34691d16250044159d3c4727dc48266f",
+    "status": "PASS",
+    "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483"
+  },
+  {
+    "name": "process-expiry-attempt1",
+    "source_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\ordered-dialog-process\\293398f0cddf42219a42074179ea2e76",
+    "status": "PASS",
+    "executable_sha256": "86ad30d3480a3ccf9176d383a49cee171d1dff198a66f51c1d6c28a93fa09797"
+  }
+]

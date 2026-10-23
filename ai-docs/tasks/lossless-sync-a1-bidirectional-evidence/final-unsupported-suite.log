@@ -1,0 +1,11 @@
+{
+  "status": "PASS",
+  "scope": "actual TLS and Device-signed unsupported suite; no Offer/Grant/native state",
+  "context": "0fbc1c15e538326037fa6cdb3fab669ad6ec4a7325b4d76972825a08a392e38d",
+  "pids": [
+    5096,
+    23124
+  ],
+  "exe_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c"
+}
+process_evidence_directory=E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\15ea8e9d3380410bb4091e28a7cd1066

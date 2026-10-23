@@ -1,0 +1,5 @@
+Read-only git ls-remote origin refs/heads/master under sandbox exited128.
+Git for Windows ssh.exe failed before connecting:
+NtCreateDirectoryObject(\BaseNamedObjects\msys-2.0S5-1888ae32e00d56aa): 0xC0000022.
+This is local sandbox/MSYS initialization failure, not evidence of a remote revision or SSH/network outage.
+Full diagnostic was returned in the executor tool output; retry uses native user token.

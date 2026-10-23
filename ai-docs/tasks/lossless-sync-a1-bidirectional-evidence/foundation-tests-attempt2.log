@@ -1,0 +1,55 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+   Compiling kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 20.03s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-lib-kilogram_protocol-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_decoder_mutations-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_sync_v2_decoder_mutations-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_sync_v2_fuzz_seeds-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-ratchet-lib-kilogram_ratchet-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-lib-kilogram_protocol-tests.exe
+
+running 2 tests
+test ordered_dialog_v1::tests::frame_is_bound_to_exporter_and_schema ... ok
+test ordered_dialog_v1::tests::rejects_noncanonical_and_allocation_bombs_and_domain_confusion ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 171 filtered out; finished in 0.02s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_decoder_mutations-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_sync_v2_decoder_mutations-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_sync_v2_fuzz_seeds-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-ratchet-lib-kilogram_ratchet-tests.exe
+
+running 3 tests
+test ordered::tests::accounts_reopen_before_session_and_binary_duplex_survives_eight_dh_changes ... ok
+test tests::ordered_ingress_i1_error_classification_is_typed_and_unknown_is_operational ... ok
+Error: Io(Os { code: 5, kind: PermissionDenied, message: "Отказано в доступе." })
+test tests::ordered_ingress_i2_allowed_save_uses_loaded_format_when_disk_tag_is_unreadable ... FAILED
+
+failures:
+
+failures:
+    tests::ordered_ingress_i2_allowed_save_uses_loaded_format_when_disk_tag_is_unreadable
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.05s
+

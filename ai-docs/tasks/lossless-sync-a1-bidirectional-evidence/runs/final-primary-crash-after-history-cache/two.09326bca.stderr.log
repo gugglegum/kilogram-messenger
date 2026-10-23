@@ -1,0 +1,9 @@
+od1_commit context=dec70aa2329f56eb007574bf22a9ff4e7ecd8936f04e127ffcd580d195ea2299 generation=4 delta_bytes=7817 microseconds=32001 native=false
+od1_commit context=dec70aa2329f56eb007574bf22a9ff4e7ecd8936f04e127ffcd580d195ea2299 generation=5 delta_bytes=8084 microseconds=32092 native=false
+od1_commit context=dec70aa2329f56eb007574bf22a9ff4e7ecd8936f04e127ffcd580d195ea2299 generation=6 delta_bytes=10295 microseconds=22576 native=false
+od1_commit context=dec70aa2329f56eb007574bf22a9ff4e7ecd8936f04e127ffcd580d195ea2299 generation=7 delta_bytes=14467 microseconds=34714 native=true
+od1_commit context=dec70aa2329f56eb007574bf22a9ff4e7ecd8936f04e127ffcd580d195ea2299 generation=8 delta_bytes=23158 microseconds=87974 native=true
+od1_commit context=dec70aa2329f56eb007574bf22a9ff4e7ecd8936f04e127ffcd580d195ea2299 generation=9 delta_bytes=12804 microseconds=25123 native=false
+od1_commit context=dec70aa2329f56eb007574bf22a9ff4e7ecd8936f04e127ffcd580d195ea2299 generation=10 delta_bytes=15961 microseconds=25262 native=false
+od1_round_error=state transaction I/O failed at E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\c8d171a7176143f78b2dea5873356c5d\two.primary-hit: Отказано в доступе. (os error 5): Отказано в доступе. (os error 5)
+od1_listener=invalid OD1 state operation: recovery required

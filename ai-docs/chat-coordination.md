@@ -184,3 +184,47 @@ Iteration2 получена автоматически, входной hash
 документов, затем реализация по T1–T12 без нового согласования у пользователя.
 Code diff сдаётся на review до своего commit/push; callback содержит также SHA
 предварительно сохранённого documentation baseline. Пустые подтверждения не нужны.
+
+Документы сохранены и отправлены в `47d19c41be449deea9c1af003f7a27cb6992710c`;
+remote SHA проверен независимо. [Отчёт реализации](tasks/lossless-sync-a1-bidirectional-implementation.md)
+и frozen source/EXE/process evidence подготовлены для code review.
+Продуктовый diff остаётся незакоммиченным; чужой development-environment.md сохранён.
+После содержательного callback исполнитель останавливается до решения архитектора.
+
+Первое implementation review завершено: source/artifact hashes совпали, независимые
+3 components и full64/DH/process-kill/reopen прошли на EXE `532a5a76…`.
+[Review 1](tasks/lossless-sync-a1-bidirectional-implementation-review-1.md) требует
+R1 consent renewal до Offer, R2 ambiguous fence-only creation, R3 явного UpgradeRequired;
+R4 уточняет genesis metadata. Приёмки кода пока нет. Исполнителю поручается адресный
+repair, сохранение iteration1 evidence, новый frozen candidate и содержательный callback.
+Это тот же разрешённый userMessage `01a1661b-1561-7ec0-9380-b2835fd35738`; нового
+пользовательского разрешения не требуется. Commit/push после повторной приёмки.
+
+## OD1 implementation repair 1
+
+[Review R1–R4](tasks/lossless-sync-a1-bidirectional-implementation-review-1.md) потребовал
+адресных исправлений без commit/push. Точный вход iteration1 сохранён неизменяемым
+(report/patch/source manifest/final checks); существующий HEAD остаётся47d19c4.
+[Обновлённый отчёт](tasks/lossless-sync-a1-bidirectional-implementation.md):
+repair затрагивает5 продуктовых modules и2 test files; wire/schema без изменений.
+Baseline regressions0/4, fixed4/4; настоящий engine/IPC511 Text/lane, capacity/reopen/
+old accepted queue/idempotency/opposite receive/repair; final fast CLI6/6, storage3/3,
+strict Clippy, real duplex64 с8 DH transitions/сторону, reopen272 hashes и old/live fences PASS.
+Candidate EXE3f42245b899e678c423b3137b5d99dc225cb0c2bc36d99b5bfa99daf506a6626;
+source manifest545 files, адресный repair/full code patches и fingerprints опубликованы.
+Продуктовый код не принят и не закоммичен, index пуст; чужой development-environment.md
+сохранён с прежним hash330ad3c4…. После одного содержательного callback исполнитель
+останавливается до повторного review. A2/external-use gate и L1 остаются прежними.
+
+## OD1: приёмка реализации
+
+[Повторное review](tasks/lossless-sync-a1-bidirectional-implementation-review-2.md)
+приняло полный30-file candidate после R1–R4. Source545/artifacts30/process-results50
+сверены без drift, reverse patches и diff-check PASS. Независимый stable-runner
+повтор финальных6 components PASS40.32s; тяжёлый R3 принят по проверенным evidence
+и test-only lint delta. Code EXE3f42245b…; historical process fingerprints не смешаны.
+Исполнителю поручается commit/push только принятого allowlist (30 source плюс docs/
+public evidence), проверить staged blobs и вернуть SHA/remote. Source/evidence
+перед commit не переписывать; development-environment.md исключён. Это выполнение
+постоянного указания пользователя, а не новый запрос разрешения. После callback
+оркестратор сверяет committed tree с allowlist и remote master. Нового этапа нет.

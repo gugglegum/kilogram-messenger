@@ -1,0 +1,34 @@
+diff --git a/apps/kilogram-cli/src/ordered_dialog/repair_tests.rs b/apps/kilogram-cli/src/ordered_dialog/repair_tests.rs
+index 00627f5..bda97e7 100644
+--- a/apps/kilogram-cli/src/ordered_dialog/repair_tests.rs
++++ b/apps/kilogram-cli/src/ordered_dialog/repair_tests.rs
+@@ -38,14 +38,12 @@ impl Pair {
+             AccountRootState::create(&owner)?;
+             let root = tmp.path().join(format!("device{i}"));
+             admin::enroll(StateDirectoryLock::acquire(&root)?, &owner, None)?;
+-            stores.push((
+-                owner,
+-                OrderedVault::open(StateDirectoryLock::acquire(root)?)?,
+-            ));
++            let store = OrderedVault::open(StateDirectoryLock::acquire(root)?)?;
++            stores.push((admin::credentials(&store)?.cert.device_id(), owner, store));
+         }
+-        stores.sort_by_key(|(_, s)| admin::credentials(s).unwrap().cert.device_id());
+-        let (owner_b, mut sb) = stores.pop().context("B")?;
+-        let (owner_a, mut sa) = stores.pop().context("A")?;
++        stores.sort_by_key(|(id, _, _)| *id);
++        let (_, owner_b, mut sb) = stores.pop().context("B")?;
++        let (_, owner_a, mut sa) = stores.pop().context("A")?;
+         let ca = admin::credentials(&sa)?;
+         let cb = admin::credentials(&sb)?;
+         let now = engine::now()?;
+@@ -336,7 +334,8 @@ fn review_r2_fence_only_refused_and_durable_claim_resumes_same_keys() -> Result<
+     drop(store);
+     assert!(
+         admin::enroll(StateDirectoryLock::acquire(&root)?, &owners[1], None)
+-            .unwrap_err()
++            .err()
++            .context("different owner accepted durable claim")?
+             .to_string()
+             .contains("different owner")
+     );

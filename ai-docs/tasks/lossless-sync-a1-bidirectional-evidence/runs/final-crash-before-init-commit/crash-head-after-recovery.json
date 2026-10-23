@@ -1,0 +1,15 @@
+{
+  "contexts": [
+    {
+      "context": "6dbc473c5a6f4a244d7f52a835595dab179fea8b2a949c57b43fd62af291bc61",
+      "d": null,
+      "e": null,
+      "grant": null,
+      "native_generation": 1,
+      "offer": "0372b38778b1dfa13e14c7642e83548919c3ca196b23300d4d5bad935847fcc9",
+      "phase": 1,
+      "sid": null
+    }
+  ],
+  "profile_mode": "ordered-dialog-v1"
+}

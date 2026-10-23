@@ -1,0 +1,5 @@
+od1_commit context=5719188197a2431c7886f1a6b9f7af9d43ba8cec56f8338d71585c192fb2aa98 generation=4 delta_bytes=8049 microseconds=30634
+od1_commit context=5719188197a2431c7886f1a6b9f7af9d43ba8cec56f8338d71585c192fb2aa98 generation=5 delta_bytes=8316 microseconds=48229
+od1_commit context=5719188197a2431c7886f1a6b9f7af9d43ba8cec56f8338d71585c192fb2aa98 generation=6 delta_bytes=10527 microseconds=31114
+od1_commit context=5719188197a2431c7886f1a6b9f7af9d43ba8cec56f8338d71585c192fb2aa98 generation=7 delta_bytes=14678 microseconds=37019
+od1_round_error=Отказано в доступе. (os error 5)

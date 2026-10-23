@@ -1,0 +1,5 @@
+{
+  "test_source_sha256": "0fdbca95d836d022a715c0bd5239e213e8e7937f8d902e709ff6217c3307df4b",
+  "harness_sha256": "5fc005bfa79ee31f60b1943ea92da8168b765837c9404312950b05b060710114",
+  "note": "R3 full native boundary run; subsequent edit removes only unwrap/unwrap_err from fixture setup error handling. Production source remains unchanged."
+}

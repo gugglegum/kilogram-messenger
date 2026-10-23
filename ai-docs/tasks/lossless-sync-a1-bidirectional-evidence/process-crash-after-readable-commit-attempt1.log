@@ -1,0 +1,67 @@
+{
+  "status": "PASS",
+  "scope": "real CLI/runtime TLS Crash; scheduler delays only committed serialized records",
+  "exe": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\field-tests\\ordered-dialog\\kilogram-cli.exe",
+  "exe_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+  "pids": [
+    54900,
+    55548
+  ],
+  "context": "cd471d5deaff6a32a597316caf09483f7dd57fd8b5483cf76fb3a22d96c8b63d",
+  "elected_a": {
+    "side": "two",
+    "account": "67db7b15ff589b70232e127c7ae143067eaabcdb3677b13338622a6636c2816a",
+    "device": "0c80fd79fbb1012fc9679c90a45c0f1dd484004eba38a43528d847f69942edb8"
+  },
+  "elected_b": {
+    "side": "one",
+    "account": "1d8617a8a78d48f4fcf35ad0100927a062fe0aeadf2977c73c2676f4818c88a2",
+    "device": "16ef5580372c125d1c3d9d272a16603501e8497406adf784ab29c0ee4f65c814"
+  },
+  "text_count": 1,
+  "setup_seconds": 5.0923057,
+  "total_seconds": 23.1057335,
+  "crash_point": "after-readable-commit",
+  "immutable_reopen_records_checked": 9,
+  "queue_p50_ms": 64.45710000000054,
+  "queue_p95_ms": 64.45710000000054,
+  "final_one": {
+    "commits": 4,
+    "contexts": [
+      {
+        "context": "cd471d5deaff6a32a597316caf09483f7dd57fd8b5483cf76fb3a22d96c8b63d",
+        "native_generation": 3,
+        "own_generation": 0,
+        "peer_generation": 1,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 2,
+        "send_next": 1,
+        "session_id": "1LKptfBt096MpBshPWKGbHF3GaDC9fSX9/F7xbsXqEw",
+        "status": "Active",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  },
+  "final_two": {
+    "commits": 12,
+    "contexts": [
+      {
+        "context": "cd471d5deaff6a32a597316caf09483f7dd57fd8b5483cf76fb3a22d96c8b63d",
+        "native_generation": 4,
+        "own_generation": 1,
+        "peer_generation": 0,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 1,
+        "send_next": 2,
+        "session_id": "1LKptfBt096MpBshPWKGbHF3GaDC9fSX9/F7xbsXqEw",
+        "status": "Active",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  }
+}
+process_evidence_directory=E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\340d90bbb2b14c17b38fbe5588275600

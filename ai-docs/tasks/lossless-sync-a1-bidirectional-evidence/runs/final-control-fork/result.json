@@ -1,0 +1,88 @@
+{
+  "status": "PASS",
+  "scope": "real CLI/runtime TLS Conflict; scheduler delays only committed serialized records",
+  "exe": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\field-tests\\ordered-dialog\\kilogram-cli.exe",
+  "exe_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+  "pids": [
+    12076,
+    26860
+  ],
+  "context": "ec861d190100dbfb59c203b01901181e383312f4acfd77794e4224c448bfce80",
+  "elected_a": {
+    "side": "two",
+    "account": "5462603b58996537d1155fc29c668e91f2d15fd558b2a6d0694bf88728296203",
+    "device": "21ec6c72e77a379043c29588ba6f367a84301a6c3dec57c443623f53154f60a7"
+  },
+  "elected_b": {
+    "side": "one",
+    "account": "7dae9ce861296ace526853c42ac9ee37822673611c842a81e0662ede4f6f46e5",
+    "device": "9a1d50e6e69cb304665f3b230c29d4697e6e682555b6c8552005d4ebd2053bce"
+  },
+  "text_count": 1,
+  "setup_seconds": 4.8382367,
+  "total_seconds": 9.4805513,
+  "exchange_seconds": 4.3465172,
+  "history_seconds": 0.2957950999999994,
+  "vault_commits": {
+    "delta_total_bytes": 409940.0,
+    "p95_ms": 55.417,
+    "native_count": 7,
+    "count": 27,
+    "p50_ms": 28.931,
+    "delta_max_bytes": 28505.0
+  },
+  "vault_file_bytes": [
+    565248,
+    208896
+  ],
+  "crash_point": "",
+  "immutable_reopen_records_checked": 9,
+  "queue_p50_ms": 110.85180000000037,
+  "queue_p95_ms": 110.85180000000037,
+  "final_one": {
+    "commits": 1,
+    "contexts": [
+      {
+        "context": "ec861d190100dbfb59c203b01901181e383312f4acfd77794e4224c448bfce80",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 3,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 0,
+        "peer_generation": 1,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 2,
+        "send_next": 1,
+        "session_id": "IgKZ1GVYm5t2STbYnY6I264Q49hNT+yC0ik43gApv10",
+        "status": "Negotiating",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  },
+  "final_two": {
+    "commits": 13,
+    "contexts": [
+      {
+        "context": "ec861d190100dbfb59c203b01901181e383312f4acfd77794e4224c448bfce80",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 4,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 1,
+        "peer_generation": 0,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 1,
+        "send_next": 2,
+        "session_id": "IgKZ1GVYm5t2STbYnY6I264Q49hNT+yC0ik43gApv10",
+        "status": "ConnectionBackoff: connection lost: closed by peer: 0",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  }
+}

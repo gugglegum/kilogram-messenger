@@ -1,0 +1,453 @@
+{
+  "status": "PASS",
+  "review_iteration": 2,
+  "checked_at_utc": "2026-10-23T16:28:43.5777553Z",
+  "baseline_commit": "47d19c41be449deea9c1af003f7a27cb6992710c",
+  "remote_master": "47d19c41be449deea9c1af003f7a27cb6992710c",
+  "product_commit_created": false,
+  "source_files_hashed": 545,
+  "source_hash_drifts": 0,
+  "full_patch_reverse_check": "PASS",
+  "repair_patch_reverse_check": "PASS",
+  "staged_path_count": 0,
+  "unchanged_iteration1_input_hashes": "PASS",
+  "unchanged_iteration1_results": 47,
+  "unexpected_evidence_artifact_types": 0,
+  "sensitive_value_pattern_files": 0,
+  "tests": {
+    "baseline_regressions": "0 passed,4 expected failures,816.71s",
+    "fixed_regressions": "4 passed,0 failed,828.80s",
+    "final_fast_components": "6 passed,0 failed,40.52s",
+    "ordered_storage": "3 passed,0 failed,0.37s",
+    "strict_clippy": "PASS,7 changed crates/all targets/locked/offline/CargoJobs2",
+    "duplex64": "PASS,actual TLS/native,8 DH transitions each",
+    "reopen64": "PASS,272 immutable/native hashes",
+    "old_live_fences": "PASS",
+    "rustfmt_and_whitespace": "PASS"
+  },
+  "artifact_hashes": [
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-implementation.md",
+      "sha256": "aca3886b99fed0f005777a65c7b753be04320a793e2824e091aa8bd9090a2eee"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-implementation-review-1.md",
+      "sha256": "ce164280e9338d045510b48243b708b96268f3b605838835878dbb4587209366"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/frozen-source-manifest.json",
+      "sha256": "602b4982ef739ba68315a0e17ef480611f12d4218e4743efe075987d6aa8d4af"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/review-code.patch",
+      "sha256": "c6c7d6b42e421bb7ca86860274defa914d611d8c705032c4a7e82209e76fa13a"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/repair1-code.patch",
+      "sha256": "2bdf56c2b3858ad3c9dfbf376dce2635e0d0f981224616bea233dc5b5d4b997c"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/repair1-test-lint-only.patch",
+      "sha256": "429374c75e4d8077d7ae36a85876dd28b05f3e19dc6d8b898ab9ef9ef4af5df4"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/repair1-regression-baseline-tests.patch",
+      "sha256": "c555ec717eb10772b210e986ff5754e2cf4aa716c099f470fac7c472669d664f"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/repair1-regression-baseline-provenance.json",
+      "sha256": "f085d8a79f68515e24376647fe3948ce6bcf6a7412d72d1d5ee6221ef526e444"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/repair1-fixed-component-provenance.json",
+      "sha256": "d8885c7e3f4d29701a42e633eceddec07d17738576f5d804f93d82be7b4dca73"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/repair1-regression-baseline.log",
+      "sha256": "082fad95690257ea9566ff26fdb5f4132b7cb8f1e8f889ac3686f7b3b294fb3a"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/repair1-regressions-fixed-attempt1.log",
+      "sha256": "ad66eddbcb136b9f2899fe961b8d299ddd6f0da22447b68b09e57cdb62ca6fdf"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/repair1-final-fast-components.log",
+      "sha256": "f704dfedebd659e41258e2e824004163d19ec85588e34fbbce43602944c1e1d5"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/repair1-storage.log",
+      "sha256": "6c25c08412011663ba1264715223e957f6db4e26ed98d2b054bf71a257e390a6"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/repair1-clippy.log",
+      "sha256": "10719110b744e5b6b450fcb01cc6e85e3904f39dcb4c110cbbd5144918309a25"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/repair1-build-confirmation.log",
+      "sha256": "72f9a070761b9fc5a4872380657d0923c9059b8854dad03d99a54b6958f287e9"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/repair1-remote-verification.log",
+      "sha256": "9f37ca5dd6669e4b21e9b33071a7c07dbe1e49bf030c2ce17bf06e2d75aa0a86"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/process-run-index.json",
+      "sha256": "ee6156278328be0c1e398dbbefb16bc5a3ce4b185a6811fea9faf36774019350"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/performance.json",
+      "sha256": "d077e7fe528bbd82d3e69df49902698536fbdca2e305ea4b157c19c89ecc7d78"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/iteration1-review-input/implementation.md",
+      "sha256": "f7c8f6d5cee91f23eafaf3e2deef72f339190d47196fc1460ef394aeb39699db"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/iteration1-review-input/review-code.patch",
+      "sha256": "a392d15d9102774799d22793845fb224105e7b931058ab1b034cb0f5ea4ce697"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/iteration1-review-input/frozen-source-manifest.json",
+      "sha256": "eb15e80cc799fb112777d91d309302141ac634685e2195a99750cb8349df099d"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-evidence/iteration1-review-input/final-review-checks.json",
+      "sha256": "ab72312d5cb8ab60c83b26af137d056371f0c74cb43438060943a8ab20ec637a"
+    },
+    {
+      "path": "ai-docs/development-environment.md",
+      "sha256": "330ad3c4d1941b213e7e5bef958416a6847d3defb8e368f79d6d21c944efe798"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-contract.md",
+      "sha256": "587cf786cff1cb4e946a68d37ea508f82141b27e4909e80b2b95236485f54b18"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-bidirectional-contract-iteration1.md",
+      "sha256": "77c0c69babc7363353bcc422d144c057c374382a993560192415bdfca37686ab"
+    },
+    {
+      "path": "target/field-tests/ordered-dialog/kilogram-cli.exe",
+      "sha256": "3f42245b899e678c423b3137b5d99dc225cb0c2bc36d99b5bfa99daf506a6626"
+    },
+    {
+      "path": "target/verification/kilogram-cli.exe",
+      "sha256": "3f42245b899e678c423b3137b5d99dc225cb0c2bc36d99b5bfa99daf506a6626"
+    },
+    {
+      "path": "target/verification/deps/kilogram-cli-lib-kilogram_cli-tests.exe",
+      "sha256": "71cba39751729de597809fa3d725fbe8a3bed948d2a7b525d4625bd8735e306c"
+    },
+    {
+      "path": "target/compatibility/ordered-dialog-review1/kilogram-cli.exe",
+      "sha256": "532a5a76e836faacca63a71306ba10f1129718e7b0aa157e363f58bf7642ce93"
+    },
+    {
+      "path": "target/compatibility/ordered-dialog-baseline/kilogram-cli.exe",
+      "sha256": "df4ae0d4760c85eb41ab833655061875472e4054295844d452137859f7d4c58c"
+    }
+  ],
+  "archived_process_runs": [
+    {
+      "name": "accepted-candidate-duplex",
+      "status": "PASS",
+      "executable_sha256": "532a5a76e836faacca63a71306ba10f1129718e7b0aa157e363f58bf7642ce93",
+      "result_sha256": "6c4d6e4116787e230915caa195d57dfd3b3fad5fc96473e77303851de87956d6"
+    },
+    {
+      "name": "accepted-candidate-partial",
+      "status": "PASS",
+      "executable_sha256": "532a5a76e836faacca63a71306ba10f1129718e7b0aa157e363f58bf7642ce93",
+      "result_sha256": "00518524f7ef7feed2a4a0e8aab8f84691648a77d6063b78fd2f1e0a53a2c461"
+    },
+    {
+      "name": "accepted-candidate-reopen-attempt2",
+      "status": "PASS",
+      "executable_sha256": "532a5a76e836faacca63a71306ba10f1129718e7b0aa157e363f58bf7642ce93",
+      "result_sha256": "4ea7e76cbd490480ff50884e0cffe66e06823e932fd81e16d11d42da7df2f923"
+    },
+    {
+      "name": "final-b-only",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "a9f89280080367a3449582a8ee361afebf608cde6cbdcec88de04067d5a973af"
+    },
+    {
+      "name": "final-consent-expiry",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "29a4a434c86298eb5cf42ae7dc718f75937a70e3e41bbaf662e105f60fbd508b"
+    },
+    {
+      "name": "final-control-fork",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "55a9c8a30d67385d591f28bbd1b3b46dce6ff4ec684afd5646e84b1024fad5cf"
+    },
+    {
+      "name": "final-crash-after-confirm-commit",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "8c5dc9a3ad8e42045008dbfae43e8111afe007e80acd81b2a4951f95a12b7528"
+    },
+    {
+      "name": "final-crash-after-grant",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "a1b1828b0a1bdfc3038dde38c102b4b3ca34fd49cab71f3baa7601f15e2b0b89"
+    },
+    {
+      "name": "final-crash-after-init-commit",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "74b897275f3dc68e3c121cd14051d3b1cfbe311ce962d4e75944bc01667d1049"
+    },
+    {
+      "name": "final-crash-after-materialization",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "9b301e03d2bdb0e121a197b28781fc5e1fc54e1d035e838275c9c5a8174badc6"
+    },
+    {
+      "name": "final-crash-after-offer",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "f8dbd0d1ad4c6497a78448b73add9e7ec76a5c6e06edd0d509e411a4142dbdfa"
+    },
+    {
+      "name": "final-crash-after-pending",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "f2edc28cf6a058900d6052a8e6617d36d204e120dc8d7c0ffe2e8db5400f77d5"
+    },
+    {
+      "name": "final-crash-after-queue",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "4495997adf86dcbda7233bd96345a244a82286448cbe0ff38353b197c94a61b9"
+    },
+    {
+      "name": "final-crash-after-readable-commit",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "f8bf249363b27e576d0c93e68907ee33a007d88141b2d4295e45539ab09ffbb5"
+    },
+    {
+      "name": "final-crash-after-ready",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "1de7774ab8e7cbe81f444753bd6a93ddf10cd4fc1d4a2a705a486306bafcff06"
+    },
+    {
+      "name": "final-crash-after-receive-confirm",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "3b38a4e1b9afd252f9a7939e8a4ee2c1ee71f9de1c388121c53b594d60ddd4c5"
+    },
+    {
+      "name": "final-crash-before-confirm-commit",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "ee625783675b0bcd03886cfca50e960b6b81ea273cf8be55facc16e34f040b54"
+    },
+    {
+      "name": "final-crash-before-init-commit",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "db2ee9ba6548705df605daeb523e474536593f8ba7364c0f598e9c0c7baa9d0b"
+    },
+    {
+      "name": "final-crash-before-readable-commit",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "6a2408cc6f135d065d8119e27993ea76907c2dab79708ea3872cad2e60a6208b"
+    },
+    {
+      "name": "final-crash-readable-primary",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "199c870f84013407eccbc1217d11ef86a63f0754bfc0b3bb284f1dfa75800c93"
+    },
+    {
+      "name": "final-cross-context-ciphertext",
+      "status": "PASS",
+      "executable_sha256": "532a5a76e836faacca63a71306ba10f1129718e7b0aa157e363f58bf7642ce93",
+      "result_sha256": "6ad6b4072107e4a7706674cb2544697c2d3d632fef223998c5498da970d923bd"
+    },
+    {
+      "name": "final-current-binary-256-reopen",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "79a50084112b0d8f6f136b63662e633b34acfcb435e9bb830c35849506cc3dba"
+    },
+    {
+      "name": "final-duplex-after-history-cache",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "11c1274d72b5bb8a344f9a98bcabfe73e747c7d59bbacacb7b2002dd8b45b752"
+    },
+    {
+      "name": "final-gap-current-binary",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "e6443be4761d97e7677783bb0060af2adf83a10b5045bb8d94766a036be68083"
+    },
+    {
+      "name": "final-lease-locator-revocation",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "992e285c57d5b19cdf6ca85fd87c8293a698fea6ff154d3188b57b025fd81171"
+    },
+    {
+      "name": "final-missing-author-credential",
+      "status": "PASS",
+      "executable_sha256": "532a5a76e836faacca63a71306ba10f1129718e7b0aa157e363f58bf7642ce93",
+      "result_sha256": "b3a94e6fabd1d9ae70f081d32d3767e10da0f4627d0109d7f636885c29462f5a"
+    },
+    {
+      "name": "final-old-binary-fences",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "1b724990d3835645b742c39c547d547310f4e29b5e6eee93f06f4334ee4e3e76"
+    },
+    {
+      "name": "final-partial-after-history-cache",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "b645b94c1d3bb7f045b30f5fc9ecf2292a7649f94bccdcaed81ebb4f13dad5c9"
+    },
+    {
+      "name": "final-primary-crash-after-history-cache",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "879d9fc90bea9b7e2fba04db9bb4f61044b1546dc14e84bd81326e02c6858501"
+    },
+    {
+      "name": "final-two-contexts-current-binary",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "ec275b9b8e094cbc0cc712c2005662c5ddb078d7d7300ed1cf4070e9a5fdc09d"
+    },
+    {
+      "name": "final-unsupported-suite",
+      "status": "PASS",
+      "executable_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+      "result_sha256": "8b5e3374411a6d3154cd9b2fe9a8f7c8721200d1889cf483f8c9a541d3ef06ad"
+    },
+    {
+      "name": "process-b-only-attempt1",
+      "status": "PASS",
+      "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+      "result_sha256": "66e24cfbef7622d5dfd619bf6dac05a14d58718bd8c5c66d5ccf2cc7e1094b01"
+    },
+    {
+      "name": "process-crash-after-confirm-commit-attempt1",
+      "status": "PASS",
+      "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+      "result_sha256": "f1ed9b177d86fcbde7756279dc8f256329da0638c91c5a1d23506527a89e77fd"
+    },
+    {
+      "name": "process-crash-after-grant-attempt1",
+      "status": "PASS",
+      "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+      "result_sha256": "733cf536882646d88a54e284be6299109b31b9c682593a322743117446112764"
+    },
+    {
+      "name": "process-crash-after-init-commit-attempt1",
+      "status": "PASS",
+      "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+      "result_sha256": "e4015cfed68e1eba643caf4b9e5b334f88c575e75bf2d9a364d8e6288738959d"
+    },
+    {
+      "name": "process-crash-after-materialization-attempt1",
+      "status": "PASS",
+      "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+      "result_sha256": "b1854b30764a58890a5d3c9c013b37bbcf977d62670a4f0aac997120834d5ffd"
+    },
+    {
+      "name": "process-crash-after-offer-attempt1",
+      "status": "PASS",
+      "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+      "result_sha256": "edd6a86808f8c605bea42441eb1529f12fcb5b2c528c1fa282f4f7379fca5aac"
+    },
+    {
+      "name": "process-crash-after-pending-attempt1",
+      "status": "PASS",
+      "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+      "result_sha256": "45a9d54f3e4caff5a409fc3498feb68bf4e5289896bb5d8a9e20a0ccd7a5b4f7"
+    },
+    {
+      "name": "process-crash-after-queue-attempt1",
+      "status": "PASS",
+      "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+      "result_sha256": "43a04f3be9d55982f6dd13b076a02dc437dfc8986e95713ecb21a7d5cb15086b"
+    },
+    {
+      "name": "process-crash-after-readable-commit-attempt1",
+      "status": "PASS",
+      "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+      "result_sha256": "971246e4adb73aa20c68c485ff3a5964c56aef546804cc1128f9a29d558f7ad5"
+    },
+    {
+      "name": "process-crash-after-ready-attempt1",
+      "status": "PASS",
+      "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+      "result_sha256": "89b09bb082dda234e15cb244f0a232640dc5a05e27dcf729740b7bb0c31b7b4f"
+    },
+    {
+      "name": "process-crash-after-receive-confirm-attempt1",
+      "status": "PASS",
+      "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+      "result_sha256": "8590e075a95797128a50f55a2594b4674d4655ccb482282957b6b5c7f0595a52"
+    },
+    {
+      "name": "process-crash-before-confirm-commit-attempt1",
+      "status": "PASS",
+      "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+      "result_sha256": "9e62e9e3b551c4b36a072857637867c665fc3eb05bbc6fe6cbb74bf6c8fc6e3a"
+    },
+    {
+      "name": "process-crash-before-init-commit-attempt1",
+      "status": "PASS",
+      "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+      "result_sha256": "003c21418336bc65dd262ea8a2d17b82aa052ba769410573bb6c01dca79daf08"
+    },
+    {
+      "name": "process-crash-before-readable-commit-attempt1",
+      "status": "PASS",
+      "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+      "result_sha256": "0d8aae9df1ce492d13425a1c18d911e4612f900c5f14b73396af406396cbd7a1"
+    },
+    {
+      "name": "process-crash-readable-primary-attempt1",
+      "status": "PASS",
+      "executable_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+      "result_sha256": "b1b909949df9d9d626f5208d18a0f827978a6f5dfae1a6e877bc10385fa0663c"
+    },
+    {
+      "name": "process-expiry-attempt1",
+      "status": "PASS",
+      "executable_sha256": "86ad30d3480a3ccf9176d383a49cee171d1dff198a66f51c1d6c28a93fa09797",
+      "result_sha256": "bfc782fca25e46770c037079c817132b6f76fa6d36fdc943b08cbedc2c631658"
+    },
+    {
+      "name": "repair1-duplex64",
+      "status": "PASS",
+      "executable_sha256": "3f42245b899e678c423b3137b5d99dc225cb0c2bc36d99b5bfa99daf506a6626",
+      "result_sha256": "3174fcdaf659a8681105a01a6f2c1e3b025bceccf9c134ccd72904927d532933"
+    },
+    {
+      "name": "repair1-fences",
+      "status": "PASS",
+      "executable_sha256": "3f42245b899e678c423b3137b5d99dc225cb0c2bc36d99b5bfa99daf506a6626",
+      "result_sha256": "b515fc08ab9b8040eb222acaebfd262488883b268f286bce12c1613db7f4bf96"
+    },
+    {
+      "name": "repair1-reopen64",
+      "status": "PASS",
+      "executable_sha256": "3f42245b899e678c423b3137b5d99dc225cb0c2bc36d99b5bfa99daf506a6626",
+      "result_sha256": "5b73d7b4c83efef82bfdc3fd0b99cf459ae290d32c9baebe2d08222553944967"
+    }
+  ],
+  "note": "Full R3 ran on the final product source before two test-helper lint edits; exact test-only patch and harness provenance are retained. Final6 reruns helpers and other actors. Historical process fingerprints are explicit, not one final-EXE corpus. Pattern check is not a full secret audit. A2 remains mandatory before external use."
+}

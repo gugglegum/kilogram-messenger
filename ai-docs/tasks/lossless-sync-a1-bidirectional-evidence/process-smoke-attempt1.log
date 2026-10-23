@@ -1,0 +1,63 @@
+{
+  "status": "PASS",
+  "scope": "real CLI/runtime direct TLS duplex; no fault injection",
+  "exe": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\field-tests\\ordered-dialog\\kilogram-cli.exe",
+  "exe_sha256": "c4d6c94714ad7e066e69cbfcb87770a78420d7be0dc2ccda4b1061b3b7c59ee6",
+  "pids": [
+    16096,
+    54696
+  ],
+  "context": "e46b2c4bdca4c7d9c76b40fbebb97f2be9a14b5d9f9c16f2842d265687c0a9a7",
+  "elected_a": {
+    "side": "one",
+    "account": "963975dfb8e75c47eb6b6e7dcecaae8cb57de93d3cfdc41deb0ac01edc0e3565",
+    "device": "6b6f06e950035d38f44d3b0e5c27c77ac430c1f3d7d11e12e396fb7d290d9b5c"
+  },
+  "elected_b": {
+    "side": "two",
+    "account": "3b812561759f8afad9fe5735784a36aac252e16758ce7ba9e48705dfb3a0792d",
+    "device": "ed16b08118c053c894b5faad012405780fa8a7495c40dd063570c42a8bdcce7d"
+  },
+  "text_count": 4,
+  "setup_seconds": 7.0687053,
+  "total_seconds": 23.9004505,
+  "queue_p50_ms": 172.85949999999957,
+  "queue_p95_ms": 173.52599999999802,
+  "final_one": {
+    "commits": 21,
+    "contexts": [
+      {
+        "context": "e46b2c4bdca4c7d9c76b40fbebb97f2be9a14b5d9f9c16f2842d265687c0a9a7",
+        "native_generation": 7,
+        "own_generation": 2,
+        "peer_generation": 2,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 3,
+        "send_next": 3,
+        "session_id": "7XBHn6Hfd31zEnoctsNd1dS43vJAMK0us1kkObRodJQ",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  },
+  "final_two": {
+    "commits": 20,
+    "contexts": [
+      {
+        "context": "e46b2c4bdca4c7d9c76b40fbebb97f2be9a14b5d9f9c16f2842d265687c0a9a7",
+        "native_generation": 6,
+        "own_generation": 2,
+        "peer_generation": 2,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 3,
+        "send_next": 3,
+        "session_id": "7XBHn6Hfd31zEnoctsNd1dS43vJAMK0us1kkObRodJQ",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  }
+}
+process_evidence_directory=E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\a2ce7952147b4ace88aa8de6371661e4

@@ -1,0 +1,55 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+   Compiling kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+   Compiling kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+   Compiling kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 45.15s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 10 tests
+test ordered_ingress::tests::ordered_ingress_256_signed_hash_pages_process_restart_history ... vault_key_file_format=protected-envelope-v1
+vault_key_protection=windows-dpapi-current-user
+vault_key_load=already-current
+vault_device_identity_shadow=already-retired
+vault_dual_write_intent=prepared
+vault_dual_write_base_generation=1
+vault_device_identity_read_source=db-primary
+vault_device_identity_read_generation=1
+vault_device_identity_record_count=2
+vault_mutable_read_kind=ratchet
+vault_mutable_read_source=db-primary
+vault_mutable_read_generation=1
+vault_mutable_read_record_count=3
+vault_ratchet_workspace=prepared
+vault_primary_write_mode=typed-registered-delta
+vault_ratchet_workspace_committed=true
+vault_trust_workspace_committed=false
+vault_append_write_set_count=0
+vault_repository_write_receipt_path_count=0
+vault_manifest_index_mode=incremental
+vault_payload_records_loaded=0
+vault_primary_write=committed
+vault_primary_write_upserted_records=2
+vault_primary_write_removed_records=0
+vault_primary_write_unchanged_records=9
+vault_primary_write_generation=2
+vault_primary_shadow=confirmed
+vault_dual_write=already-current
+vault_delta_upserted_records=0
+vault_delta_removed_records=0
+vault_delta_unchanged_records=11
+vault_schema_version=3
+vault_mirror_generation=2
+vault_record_count=11
+vault_plaintext_bytes=3923
+vault_snapshot_id=849808ee2f75a1190c06233ba846f1c662f673c1dfcb4d8566c6cc5356c4cccb

@@ -1,0 +1,42 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+   Compiling kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+error[E0282]: type annotations needed
+   --> crates\kilogram-protocol\src\ordered_dialog_v1.rs:134:63
+    |
+134 | ...|v| { let t=v.fields(4)?; Ok(ClosedTail {g:t[0].uint()?,key:t[1].fixed()?,index:t[2].uint()?,last:t[3].fixed()?}) }).transpose()?;
+    |                              ^^ cannot infer type of the type parameter `E` declared on the enum `Result`
+    |
+help: consider specifying the generic arguments
+    |
+134 |         let tail=f[3].option()?.map(|v| { let t=v.fields(4)?; Ok::<ClosedTail, E>(ClosedTail {g:t[0].uint()?,key:t[1].fixed()?,index:t[2].uint()?,last:t[3].fixed()?}) }).transpose()?;
+    |                                                                 +++++++++++++++++
+
+error[E0283]: type annotations needed
+   --> crates\kilogram-protocol\src\ordered_dialog_v1.rs:134:63
+    |
+134 | ...lds(4)?; Ok(ClosedTail {g:t[0].uint()?,key:t[1].fixed()?,index:t[2].uint()?,last:t[3].fixed()?}) }).transpose()?;
+    |             ^^ cannot infer type of the type parameter `E` declared on the enum `Result`                          - type must be known at this point
+    |
+note: multiple `impl`s satisfying `ordered_dialog_v1::Error: From<_>` found
+   --> crates\kilogram-protocol\src\ordered_dialog_v1.rs:22:17
+    |
+ 22 |     Canonical(#[from] CanonicalWireError),
+    |                 ^^^^
+ 23 |     #[error(transparent)]
+ 24 |     Identity(#[from] kilogram_identity::IdentityError),
+    |                ^^^^
+    = note: and another `impl` found in the `core` crate: `impl<T> From<T> for T;`
+help: consider specifying the generic arguments
+    |
+134 |         let tail=f[3].option()?.map(|v| { let t=v.fields(4)?; Ok::<ClosedTail, E>(ClosedTail {g:t[0].uint()?,key:t[1].fixed()?,index:t[2].uint()?,last:t[3].fixed()?}) }).transpose()?;
+    |                                                                 +++++++++++++++++
+
+Some errors have detailed explanations: E0282, E0283.
+For more information about an error, try `rustc --explain E0282`.
+error: could not compile `kilogram-protocol` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `kilogram-protocol` (lib test) due to 2 previous errors

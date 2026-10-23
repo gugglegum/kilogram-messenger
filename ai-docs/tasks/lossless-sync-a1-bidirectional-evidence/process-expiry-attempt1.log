@@ -1,0 +1,75 @@
+{
+  "status": "PASS",
+  "scope": "real CLI/runtime TLS Expiry; scheduler delays only committed serialized records",
+  "exe": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\field-tests\\ordered-dialog\\kilogram-cli.exe",
+  "exe_sha256": "86ad30d3480a3ccf9176d383a49cee171d1dff198a66f51c1d6c28a93fa09797",
+  "pids": [
+    55652,
+    54528
+  ],
+  "context": "bde790c5eb85786a4917705012b249c513619df4cce44b22df0bdd50a48902f2",
+  "elected_a": {
+    "side": "two",
+    "account": "b04ad21ff3aebe25c455ee3273c9342e0bfacd786b8b57725cdf767c8f162fad",
+    "device": "8c48ecf1d82b02bb2308cdcadae3a56170e1e8ce9847bb5c7f29361b08d50528"
+  },
+  "elected_b": {
+    "side": "one",
+    "account": "af6453ac91645b9f69b7b4cbdb137272dc8059005c1af685c6526626f76aeade",
+    "device": "d1587b1940ff10a255d104f32f3664a0445245771a536e462ca4fbda33b7d258"
+  },
+  "text_count": 2,
+  "setup_seconds": 5.3017133,
+  "total_seconds": 13.7299077,
+  "crash_point": "",
+  "immutable_reopen_records_checked": 0,
+  "queue_p50_ms": 126.2450000000008,
+  "queue_p95_ms": 126.2450000000008,
+  "final_one": {
+    "commits": 17,
+    "contexts": [
+      {
+        "context": "bde790c5eb85786a4917705012b249c513619df4cce44b22df0bdd50a48902f2",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 4,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 0,
+        "peer_generation": 0,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 1,
+        "send_next": 3,
+        "session_id": "8u5XiGUyoADdOUKrIGoH9sJC4kQCSIBYEgQiSo9t2HY",
+        "status": "Active",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  },
+  "final_two": {
+    "commits": 20,
+    "contexts": [
+      {
+        "context": "bde790c5eb85786a4917705012b249c513619df4cce44b22df0bdd50a48902f2",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 5,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 0,
+        "peer_generation": 0,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 3,
+        "send_next": 1,
+        "session_id": "8u5XiGUyoADdOUKrIGoH9sJC4kQCSIBYEgQiSo9t2HY",
+        "status": "ConnectionBackoff: AuthBlocked: current pinned authority: device d1587b1940ff10a255d104f32f3664a0445245771a536e462ca4fbda33b7d258 has been permanently revoked by its account root",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  }
+}
+process_evidence_directory=E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\293398f0cddf42219a42074179ea2e76

@@ -1,0 +1,84 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 42.27s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+WARNING: Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 4 tests
+test ordered_dialog::repair_tests::review_r1_renewal_before_offer_and_historical_selection ... account_id=8c7c4ce2b4b2ee2d51c55ef25ff5164da4efe72444a175a0bbcd74d748e4d389
+device_id=1030e9e925125d7321cb208545566bd2bc25c46d4b17901b29b92ca740e8ec5f
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=448555137c945385f2176648383eb8beb6e1cac2f9fc5995a1cb7d60c582d45e
+device_id=468930489e0c588edcdb2a7a52ec6c075a89c448d6f1701cdb3c82df12e98192
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+Error: initial Hello scope/role
+FAILED
+test ordered_dialog::repair_tests::review_r2_fence_only_refused_and_durable_claim_resumes_same_keys ... account_id=53ed3da4ed52329cd27620f4a05884c0d526b936f47e54a647b8a0eaf85327e9
+device_id=d586e6a2a94727f343c622e39491d13d6e538f264a30e10427b78ac2af2f0bf4
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=53ed3da4ed52329cd27620f4a05884c0d526b936f47e54a647b8a0eaf85327e9
+device_id=db33ccf2707367b5f63cae0011782871ed5bd5122e70253e253e6450afd8c822
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+
+thread 'ordered_dialog::repair_tests::review_r2_fence_only_refused_and_durable_claim_resumes_same_keys' (51860) panicked at apps\kilogram-cli\src\ordered_dialog\repair_tests.rs:147:5:
+assertion `left == right` failed: ambiguous fence-only adoption
+  left: [false, true]
+ right: [true, true]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+test ordered_dialog::repair_tests::review_r3_engine_ipc_lifetime_capacity_reopen_receive_and_repair ... account_id=0045038ba5f55b1197bf5fc3ff398fa00a12e7365488daf94a16c456e4916971
+device_id=a3cfb4c17378a90d3f0aabdc94f474fe4b81b2d424fbdb79b2d8b697e1fe2bd3
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=5742e00e8a91d62c5e96ba2bdef99c0cd4a267429dd784a1b46f3529a11ebf51
+device_id=fcb2bcd49020429702e66febbd45a1b1765fdeb6da31b78672c8e013a7c2bd4f
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+review_r3 real_text511 own_next512 new_request_upgrade=false status=Negotiating reopened=Negotiating opposite_readable=PASS history_exact_retry=PASS
+
+thread 'ordered_dialog::repair_tests::review_r3_engine_ipc_lifetime_capacity_reopen_receive_and_repair' (47604) panicked at apps\kilogram-cli\src\ordered_dialog\repair_tests.rs:276:5:
+new request beyond lifetime accepted
+FAILED
+test ordered_dialog::repair_tests::review_r4_self_consistent_genesis_request_and_user_parents_refused ... account_id=eb991eda877bc59c43793d29914566fb8f4b6a5eb18312d96a65670f2d9054eb
+device_id=94596cb6fe95f68c5c76c70de47182406d28b025a1b546cfe275a0962f7f162c
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=924f04648012a88a99d9249ad85e3c6b0fce3adc1694422de9761dd166d812c2
+device_id=31c9d4336e924773c6e87ac69d7ba7355365718c15a9a8a6123b661e546ce070
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+Error: bad Init accepted
+FAILED
+
+failures:
+
+failures:
+    ordered_dialog::repair_tests::review_r1_renewal_before_offer_and_historical_selection
+    ordered_dialog::repair_tests::review_r2_fence_only_refused_and_durable_claim_resumes_same_keys
+    ordered_dialog::repair_tests::review_r3_engine_ipc_lifetime_capacity_reopen_receive_and_repair
+    ordered_dialog::repair_tests::review_r4_self_consistent_genesis_request_and_user_parents_refused
+
+test result: FAILED. 0 passed; 4 failed; 0 ignored; 0 measured; 4 filtered out; finished in 816.71s
+
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:278
+Line |
+ 278 |              throw "Stable test executable failed with exit code ${tes …
+     |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Stable test executable failed with exit code 101:
+     | E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe

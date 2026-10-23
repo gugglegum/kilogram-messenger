@@ -1,0 +1,18 @@
+[
+  {
+    "author_sequence": 1,
+    "event_id": "aaa2c414b6f81fed6461727edf468df0b47238a46efbd3c5bf2a7aaa463e8c36",
+    "ordinal": 1,
+    "request_id": "00000000000000010000000000000001",
+    "role": 1,
+    "text": "OD1/two/1/Привет"
+  },
+  {
+    "author_sequence": 1,
+    "event_id": "ed3b73864cde83bf09a60225d65734b779d9973d92806eb8838a90c26c436159",
+    "ordinal": 1,
+    "request_id": "00000000000000020000000000000001",
+    "role": 0,
+    "text": "OD1/one/1/Привет"
+  }
+]

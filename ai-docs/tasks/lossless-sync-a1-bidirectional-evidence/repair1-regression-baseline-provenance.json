@@ -1,0 +1,9 @@
+{
+  "production_manifest": "iteration1-review-input/frozen-source-manifest.json",
+  "production_patch_sha256": "a392d15d9102774799d22793845fb224105e7b931058ab1b034cb0f5ea4ce697",
+  "test_source_sha256": "0cc7849cc279c64f693d2ff517d02fbb9cb23d101c8c3ada3708adcd4356d567",
+  "test_addition": "mod.rs cfg(test) repair_tests + new repair_tests.rs only before harness compilation",
+  "note": "Product fixes were edited after the baseline harness finished compilation and started executing; its loaded stable executable was not replaced.",
+  "stable_harness_sha256": "79887f16e79cf4b5472f1c3d36d313e450495a9556bb79e9b82420cda6afb267",
+  "test_patch_sha256": "c555ec717eb10772b210e986ff5754e2cf4aa716c099f470fac7c472669d664f"
+}

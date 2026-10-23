@@ -1,0 +1,129 @@
+{
+  "duplex": {
+    "status": "PASS",
+    "scope": "real CLI/runtime TLS Duplex; scheduler delays only committed serialized records",
+    "exe": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\field-tests\\ordered-dialog\\kilogram-cli.exe",
+    "exe_sha256": "532a5a76e836faacca63a71306ba10f1129718e7b0aa157e363f58bf7642ce93",
+    "pids": [
+      51444,
+      57872
+    ],
+    "context": "4b54016d0406ce7b26c61919a41df9f7705570355faaf8e996cfdfbe69cb618a",
+    "elected_a": {
+      "side": "one",
+      "account": "1f3307106c24d402413e5bba395b2eed999fe35494ec0da54c836c851861f54a",
+      "device": "200dbcbbc4d405962a8ef576098a5c4306cc71b778ce09a9bef83cbe542fa9a5"
+    },
+    "elected_b": {
+      "side": "two",
+      "account": "508ab2e8a193a8c0d614472442801a29a297ecddd935875c915d6ed16c194979",
+      "device": "abe2785ee93f49937865a3dd2026d050097e823d55321621706bba3189739801"
+    },
+    "text_count": 256,
+    "setup_seconds": 4.8426209,
+    "total_seconds": 226.2787456,
+    "exchange_seconds": 207.4921796,
+    "history_seconds": 13.94377,
+    "vault_commits": {
+      "p50_ms": 79.392,
+      "p95_ms": 138.911,
+      "native_count": 293,
+      "delta_total_bytes": 317511379.0,
+      "delta_max_bytes": 601479.0,
+      "count": 1133
+    },
+    "vault_file_bytes": [
+      4902912,
+      4493312
+    ],
+    "crash_point": "",
+    "immutable_reopen_records_checked": 0,
+    "queue_p50_ms": 212.88980000000447,
+    "queue_p95_ms": 349.82220000002417,
+    "final_one": {
+      "commits": 567,
+      "contexts": [
+        {
+          "context": "4b54016d0406ce7b26c61919a41df9f7705570355faaf8e996cfdfbe69cb618a",
+          "head_credit_bytes": 65536,
+          "head_used": 0,
+          "native_generation": 147,
+          "ordinary_pending": 0,
+          "ordinary_pending_bytes": 0,
+          "own_generation": 16,
+          "peer_generation": 16,
+          "pending": 0,
+          "phase": 3,
+          "receive_next": 129,
+          "send_next": 129,
+          "session_id": "Vp/hAgMDo6eP9odo5NQNJn46MMGhci1QwC3vpPfDbH4",
+          "status": "Active",
+          "unacked": 0
+        }
+      ],
+      "profile_mode": "ordered-dialog-v1"
+    },
+    "final_two": {
+      "commits": 566,
+      "contexts": [
+        {
+          "context": "4b54016d0406ce7b26c61919a41df9f7705570355faaf8e996cfdfbe69cb618a",
+          "head_credit_bytes": 65536,
+          "head_used": 0,
+          "native_generation": 146,
+          "ordinary_pending": 0,
+          "ordinary_pending_bytes": 0,
+          "own_generation": 16,
+          "peer_generation": 16,
+          "pending": 0,
+          "phase": 3,
+          "receive_next": 129,
+          "send_next": 129,
+          "session_id": "Vp/hAgMDo6eP9odo5NQNJn46MMGhci1QwC3vpPfDbH4",
+          "status": "Active",
+          "unacked": 0
+        }
+      ],
+      "profile_mode": "ordered-dialog-v1"
+    }
+  },
+  "delivery_observation_upper_bound": {
+    "samples": 256,
+    "definition": "Queue CLI return to first sampled sender status with all earlier messages Delivered; polling/burst upper bound, not pure RTT",
+    "p50_ms": 5469.999999999999,
+    "p95_ms": 7188.000000000016,
+    "max_ms": 7919.000000000011
+  },
+  "fault_trace_rpc": [
+    {
+      "kind": "10",
+      "samples": 12,
+      "p50_ms": 1293,
+      "p95_ms": 1419,
+      "definition": "Actual RPC including responder work; prefix RPC excludes subsequent caller decrypt/drain; not pure network RTT"
+    },
+    {
+      "kind": "11",
+      "samples": 1,
+      "p50_ms": 158,
+      "p95_ms": 158,
+      "definition": "Actual RPC including responder work; prefix RPC excludes subsequent caller decrypt/drain; not pure network RTT"
+    }
+  ],
+  "reopen": {
+    "status": "PASS",
+    "text_count": 256,
+    "source_exe_sha256": "532a5a76e836faacca63a71306ba10f1129718e7b0aa157e363f58bf7642ce93",
+    "reader_exe_sha256": "532a5a76e836faacca63a71306ba10f1129718e7b0aa157e363f58bf7642ce93",
+    "reopen_seconds": 1.9241923,
+    "history_and_reauth_seconds": 13.0778199,
+    "total_seconds": 15.0020165,
+    "history_page_p50_ms": 124.61009999999987,
+    "history_page_p95_ms": 134.5764999999992,
+    "pids": [
+      54184,
+      33508
+    ],
+    "immutable_records_verified": 1040
+  }
+}

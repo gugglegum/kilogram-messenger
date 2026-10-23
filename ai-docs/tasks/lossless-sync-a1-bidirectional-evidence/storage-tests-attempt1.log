@@ -1,0 +1,171 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling typenum v1.20.1
+   Compiling getrandom v0.2.17
+   Compiling rand_core v0.6.4
+   Compiling subtle v2.6.1
+   Compiling getrandom v0.4.3
+   Compiling generic-array v0.14.7
+   Compiling base64ct v1.8.3
+   Compiling crypto-common v0.1.7
+   Compiling inout v0.1.4
+   Compiling block-buffer v0.10.4
+   Compiling cipher v0.4.4
+   Compiling digest v0.10.7
+   Compiling universal-hash v0.5.1
+   Compiling poly1305 v0.8.0
+   Compiling blake2 v0.10.6
+   Compiling chacha20 v0.9.1
+   Compiling password-hash v0.5.0
+   Compiling aead v0.5.2
+   Compiling arrayvec v0.7.8
+   Compiling tempfile v3.27.0
+   Compiling blake3 v1.8.7
+   Compiling chacha20poly1305 v0.10.1
+   Compiling argon2 v0.5.3
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+error[E0425]: cannot find value `schema_version` in this scope
+    --> crates\kilogram-state\src\vault.rs:1906:12
+     |
+1906 |         if schema_version == ORDERED_VAULT_SCHEMA_VERSION {
+     |            ^^^^^^^^^^^^^^ not found in this scope
+
+error[E0624]: method `reject_ordered_writer` is private
+   --> crates\kilogram-state\src\vault.rs:574:14
+    |
+574 |         self.reject_ordered_writer()?;
+    |              ^^^^^^^^^^^^^^^^^^^^^ private method
+    |
+   ::: crates\kilogram-state\src\vault\ordered.rs:73:5
+    |
+ 73 |     fn reject_ordered_writer(&self) -> Result<(), StateError> {
+    |     --------------------------------------------------------- private method defined here
+
+error[E0624]: method `reject_ordered_writer` is private
+   --> crates\kilogram-state\src\vault.rs:638:19
+    |
+638 |         candidate.reject_ordered_writer()?;
+    |                   ^^^^^^^^^^^^^^^^^^^^^ private method
+    |
+   ::: crates\kilogram-state\src\vault\ordered.rs:73:5
+    |
+ 73 |     fn reject_ordered_writer(&self) -> Result<(), StateError> {
+    |     --------------------------------------------------------- private method defined here
+
+error[E0624]: method `reject_ordered_writer` is private
+   --> crates\kilogram-state\src\vault.rs:670:14
+    |
+670 |         self.reject_ordered_writer()?;
+    |              ^^^^^^^^^^^^^^^^^^^^^ private method
+    |
+   ::: crates\kilogram-state\src\vault\ordered.rs:73:5
+    |
+ 73 |     fn reject_ordered_writer(&self) -> Result<(), StateError> {
+    |     --------------------------------------------------------- private method defined here
+
+error[E0624]: method `reject_ordered_writer` is private
+   --> crates\kilogram-state\src\vault.rs:698:14
+    |
+698 |         self.reject_ordered_writer()?;
+    |              ^^^^^^^^^^^^^^^^^^^^^ private method
+    |
+   ::: crates\kilogram-state\src\vault\ordered.rs:73:5
+    |
+ 73 |     fn reject_ordered_writer(&self) -> Result<(), StateError> {
+    |     --------------------------------------------------------- private method defined here
+
+error[E0624]: method `reject_ordered_writer` is private
+   --> crates\kilogram-state\src\vault.rs:925:14
+    |
+925 |         self.reject_ordered_writer()?;
+    |              ^^^^^^^^^^^^^^^^^^^^^ private method
+    |
+   ::: crates\kilogram-state\src\vault\ordered.rs:73:5
+    |
+ 73 |     fn reject_ordered_writer(&self) -> Result<(), StateError> {
+    |     --------------------------------------------------------- private method defined here
+
+error[E0624]: method `reject_ordered_writer` is private
+    --> crates\kilogram-state\src\vault.rs:2117:14
+     |
+2117 |         self.reject_ordered_writer()?;
+     |              ^^^^^^^^^^^^^^^^^^^^^ private method
+     |
+    ::: crates\kilogram-state\src\vault\ordered.rs:73:5
+     |
+  73 |     fn reject_ordered_writer(&self) -> Result<(), StateError> {
+     |     --------------------------------------------------------- private method defined here
+
+error[E0624]: method `reject_ordered_writer` is private
+    --> crates\kilogram-state\src\vault.rs:2125:14
+     |
+2125 |         self.reject_ordered_writer()?;
+     |              ^^^^^^^^^^^^^^^^^^^^^ private method
+     |
+    ::: crates\kilogram-state\src\vault\ordered.rs:73:5
+     |
+  73 |     fn reject_ordered_writer(&self) -> Result<(), StateError> {
+     |     --------------------------------------------------------- private method defined here
+
+error[E0624]: method `reject_ordered_writer` is private
+    --> crates\kilogram-state\src\vault.rs:2130:14
+     |
+2130 |         self.reject_ordered_writer()?;
+     |              ^^^^^^^^^^^^^^^^^^^^^ private method
+     |
+    ::: crates\kilogram-state\src\vault\ordered.rs:73:5
+     |
+  73 |     fn reject_ordered_writer(&self) -> Result<(), StateError> {
+     |     --------------------------------------------------------- private method defined here
+
+error[E0624]: method `reject_ordered_writer` is private
+    --> crates\kilogram-state\src\vault.rs:2140:14
+     |
+2140 |         self.reject_ordered_writer()?;
+     |              ^^^^^^^^^^^^^^^^^^^^^ private method
+     |
+    ::: crates\kilogram-state\src\vault\ordered.rs:73:5
+     |
+  73 |     fn reject_ordered_writer(&self) -> Result<(), StateError> {
+     |     --------------------------------------------------------- private method defined here
+
+error[E0624]: method `reject_ordered_writer` is private
+    --> crates\kilogram-state\src\vault.rs:2148:14
+     |
+2148 |         self.reject_ordered_writer()?;
+     |              ^^^^^^^^^^^^^^^^^^^^^ private method
+     |
+    ::: crates\kilogram-state\src\vault\ordered.rs:73:5
+     |
+  73 |     fn reject_ordered_writer(&self) -> Result<(), StateError> {
+     |     --------------------------------------------------------- private method defined here
+
+error[E0624]: method `reject_ordered_writer` is private
+    --> crates\kilogram-state\src\vault.rs:2153:14
+     |
+2153 |         self.reject_ordered_writer()?;
+     |              ^^^^^^^^^^^^^^^^^^^^^ private method
+     |
+    ::: crates\kilogram-state\src\vault\ordered.rs:73:5
+     |
+  73 |     fn reject_ordered_writer(&self) -> Result<(), StateError> {
+     |     --------------------------------------------------------- private method defined here
+
+error[E0624]: method `reject_ordered_writer` is private
+    --> crates\kilogram-state\src\vault.rs:2158:14
+     |
+2158 |         self.reject_ordered_writer()?;
+     |              ^^^^^^^^^^^^^^^^^^^^^ private method
+     |
+    ::: crates\kilogram-state\src\vault\ordered.rs:73:5
+     |
+  73 |     fn reject_ordered_writer(&self) -> Result<(), StateError> {
+     |     --------------------------------------------------------- private method defined here
+
+Some errors have detailed explanations: E0425, E0624.
+For more information about an error, try `rustc --explain E0425`.
+error: could not compile `kilogram-state` (lib) due to 13 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `kilogram-state` (lib test) due to 13 previous errors

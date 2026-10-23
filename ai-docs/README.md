@@ -34,9 +34,15 @@ Implementation baseline — `3e82e63`; [реализация после repair i
 Разрешение пользователя распространяется на этот этап; M1.2.63 не запускается.
 [Контракт OD1](tasks/lossless-sync-a1-bidirectional-contract.md) после исправлений
 C1–C3 [принят повторным review](tasks/lossless-sync-a1-bidirectional-contract-review-2.md).
-После commit/push принятого контракта разрешена реализация двустороннего этапа
-по его T1–T12. Приёмки нового runtime-кода ещё нет; fresh-only/L1 и ручной обмен
-locator остаются явными ограничениями этого этапа, не готовностью daily MVP.
+[Реализация и evidence T1–T12](tasks/lossless-sync-a1-bidirectional-implementation.md)
+подготовлены на documentation baseline `47d19c4` и
+[приняты после repair/review2](tasks/lossless-sync-a1-bidirectional-implementation-review-2.md).
+R1–R4 закрыты: consent renewal, interrupted creation, lifetime exhaustion и genesis
+metadata. Независимые финальные components6/6 прошли; prior full64/DH/kill/reopen
+и новые duplex64/reopen подтверждены с явными fingerprints. Следующий шаг —
+commit/push принятого diff тем же исполнителем и сверка оркестратором.
+Fresh-only/L1, loopback two-process и ручной обмен locator остаются ограничениями;
+внешний/daily MVP и весь A1 ещё не готовы, A2 gate сохраняется.
 
 Независимый обзор архитектуры и пути до пользовательского MVP на ревизии
 `3e82e63`: [аудит 2026-10-22](reviews/2026-10-22-architecture-mvp-audit.md).

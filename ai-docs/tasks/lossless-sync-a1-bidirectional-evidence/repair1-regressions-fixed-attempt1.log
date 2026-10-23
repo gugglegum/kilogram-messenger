@@ -1,0 +1,127 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+   Compiling kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+   Compiling kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 39.85s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+WARNING: Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 4 tests
+test ordered_dialog::repair_tests::review_r1_renewal_before_offer_and_historical_selection ... account_id=0bafcfc495308b7350792e340f7fc5a7c1b1d342fc30c2c3468b71f6534de701
+device_id=91c9c24fc7f8a480cf9a104900284e33f9efe90a8222e8f3bc891dacc5d19701
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=113a473c49978a98cb7031fd83f25c13b80720b39295f2ae3ea3facbd7d8f411
+device_id=481ebb4856e139045ad85facff9fdb53097ef90c9277de5a9de3042802905ae5
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+review_r1 selected_at=0 renewal_restart=PASS
+account_id=6e22450b1f51dfefb6b32f48913977efadea1cd1842d01bb79fbdf41bca6044e
+device_id=1c02db32ff4531f5ed628958d27dd089aee14bda2a6ac0d00131f4452312ae8f
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=a56588ffad6ac0ea594ebbb512d5474ea397ee96b7cc4beb61b0784f0983f14e
+device_id=087bc8089002f39cb728ae773a492ebc17c96c858e47c8edf9008a50b6bb4671
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+review_r1 selected_at=1 renewal_restart=PASS
+account_id=62d23dbbc2716a331de1484d37f7defb604e3850d588ee94b999cabd32f1af62
+device_id=de626e71ba10f976bf488626fc9292bc15f96ef21f84c93ce33e642dcbb63576
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=0a41ab7b77a8f425f3543fa0aaa92d123ec7106d0bc96adb1e1c9bac3cc9507a
+device_id=07f2dd0e153a5bb597d519d30713a925092e68cc2b3bf9af95c17a714114c0a5
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+review_r1 selected_at=2 renewal_restart=PASS
+account_id=ce8ada1620049b178f3b7ec305f93734c67ad44d5e1b9c68e2fda6e463fc8901
+device_id=7b0eef80214f53d5b9c041e0111f5aebb4a3261c2041bc54bb2a1770a594c13d
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=078300cb863d7975fe5c9622ad99fb31d9dfeaf17ae6e505555031a83c855bb9
+device_id=6182d1c9a7534977b071b54e26ba6c49793372b45f2258c96b1dd71cbec6bc32
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+review_r1 selected_at=3 renewal_restart=PASS
+account_id=0d26f186003e44a5213032e94e5f858fe19cd46ded10e0b00c2d7c4ed7adb6da
+device_id=e2bce73fa663dba13ce232ac435c9b03513060e561038cade2039bd06a4f75c4
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=79c7fad455d99d3d063472f272c387d47453ffc3ebe91d2f4f676999d7b652cb
+device_id=949b26e7c5254ede79ea2eb33614d51dff7a81b94d7b4e54e6fcefb24d027739
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+ok
+test ordered_dialog::repair_tests::review_r2_fence_only_refused_and_durable_claim_resumes_same_keys ... account_id=4f196a810ddb859728ec5f83d30e55de366f92d11f9b03b6a71773f15386a685
+device_id=64d763e2b32a8f0240cfa719d04c1e45f271db2b06e8420502fa23edc83f4995
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=4f196a810ddb859728ec5f83d30e55de366f92d11f9b03b6a71773f15386a685
+device_id=1b805fa555431b2834a38e016ab2101945f935a5e1530c24bfed219d28213aee
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+review_r2 fence_only_same_different=CreationConflict durable_resume_same_keys=PASS normal_reopen=PASS
+ok
+test ordered_dialog::repair_tests::review_r3_engine_ipc_lifetime_capacity_reopen_receive_and_repair ... account_id=243ac0066640912d0de82b748ceb9d02da6e449b344be415a3d71714895ccb33
+device_id=439fb9ebf5ebd52234f125f9da25aa73007b861d1654bec3adedaa95126ccc7d
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=ef21083c435f18829aad3306f6a499c7c6cd1d8d6a9f6d4e427955b3d12104d7
+device_id=596e9f0cf744beef17f5fefbb9a6da78a36aac8f161b8313beec3bdab1054b97
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+review_r3 real_native_texts=128
+review_r3 real_native_texts=256
+review_r3 real_native_texts=384
+review_r3 real_text511 own_next512 new_request_upgrade=true status=UpgradeRequired reopened=UpgradeRequired opposite_readable=PASS history_exact_retry=PASS
+ok
+test ordered_dialog::repair_tests::review_r4_self_consistent_genesis_request_and_user_parents_refused ... account_id=b5d048cef06f82a725c5a30deb76cd8f82ca453a9e25294378814ea2f71c38fb
+device_id=7531d64f4587d9d2b613538b131563a1569eed89c044e6774157d32b0d4376ab
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=409a23a8614890283b8de8934b3dfc1bd18f4164e5d00c0fdb25d651a786c133
+device_id=2c0b461bbfd7a20b167d2acdb51f0c6e33380e266f1122f36fd61ab5bc4d1d5d
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+review_r4 real_native_inner_outer wrong_request_and_parents_init_confirm=refused original_after_reject=PASS
+ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 828.80s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification       9216  5.06
+release            5111  1.74
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=53390
+target_gib=59.47
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

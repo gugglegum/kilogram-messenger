@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "text_count": 256,
+  "source_exe_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+  "reader_exe_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+  "reopen_seconds": 1.8820128,
+  "history_and_reauth_seconds": 13.6479827,
+  "total_seconds": 15.5300005,
+  "history_page_p50_ms": 128.6885000000002,
+  "history_page_p95_ms": 138.92809999999918,
+  "pids": [
+    51680,
+    28224
+  ],
+  "immutable_records_verified": 1040
+}
+reopen_evidence_directory=E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\a972a2153a04454ba504d51f63c77979\reopen

@@ -1,0 +1,23 @@
+{
+  "commits": 77,
+  "contexts": [
+    {
+      "context": "4a3d045bce3655365e223fb3ab0b2a00b780568f43e457e19365bfab2afbfb42",
+      "head_credit_bytes": 65536,
+      "head_used": 0,
+      "native_generation": 4,
+      "ordinary_pending": 64,
+      "ordinary_pending_bytes": 153282,
+      "own_generation": 1,
+      "peer_generation": 1,
+      "pending": 64,
+      "phase": 3,
+      "receive_next": 2,
+      "send_next": 2,
+      "session_id": "/k4iTFpapETaeqCbV+9rJq/kwSgFuLUSXOg01TOTGbw",
+      "status": "WaitingPrefix(2)",
+      "unacked": 0
+    }
+  ],
+  "profile_mode": "ordered-dialog-v1"
+}

@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "old_executable": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\ordered-dialog-baseline\\kilogram-cli.exe",
+  "old_sha256": "df4ae0d4760c85eb41ab833655061875472e4054295844d452137859f7d4c58c",
+  "new_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+  "old_live_pid": 58764,
+  "od1_offline_roots": 2,
+  "protected_records_unchanged": true,
+  "scope": "old CLI offline/live owner, unsupported new writers, fresh-only refusal; no migration"
+}

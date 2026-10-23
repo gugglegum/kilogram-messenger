@@ -1,0 +1,15 @@
+{
+  "contexts": [
+    {
+      "context": "5136e31f7f5c11e2ae886f01e448a91bd6b00fb110996b86360244a2a5926388",
+      "d": "155e8d6cc9d8e4ebbbec38931b32b25318611fc98b651d494de7d89586af7031",
+      "e": "8a3beaeb0cbc687c5f5ec989ce571da1ce636b54b083faaa4504f9cc8dd1befc",
+      "grant": "7c81ddff69cd2d16660b3cfafc13de82f8ff33ebc09fa24b66b539deed7ee8c3",
+      "native_generation": 2,
+      "offer": "9e1f24f084e9e34f15d61df88e1dc7d755d85819e1e0249d2d8199fc2b0fb9bb",
+      "phase": 3,
+      "sid": "GsCmuJyC0M/K6G62iyfuxofMurmP3BU4SIN6H4yN9gQ"
+    }
+  ],
+  "profile_mode": "ordered-dialog-v1"
+}

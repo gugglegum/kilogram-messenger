@@ -1,0 +1,25 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 5.23s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 2 tests
+Error: Io { path: "\\\\?\\C:\\Users\\Paul\\AppData\\Local\\Packages\\sandbox.{db9f484d-90e3-42e1-8650-c2fa724c202b}\\AC\\Temp\\.tmpJ9DVTz\\profile\\ratchet\\account.pickle", source: Os { code: 5, kind: PermissionDenied, message: "Отказано в доступе." } }
+test vault::ordered::tests::ordered_primary_is_atomic_fenced_and_reopens_after_failed_trial ... FAILED
+Error: Io { path: "\\\\?\\C:\\Users\\Paul\\AppData\\Local\\Packages\\sandbox.{db9f484d-90e3-42e1-8650-c2fa724c202b}\\AC\\Temp\\.tmph9j4Qa\\profile\\ratchet\\account.pickle", source: Os { code: 5, kind: PermissionDenied, message: "Отказано в доступе." } }
+test vault::ordered::tests::ordered_schema_cannot_be_relabelled_as_legacy ... FAILED
+
+failures:
+
+failures:
+    vault::ordered::tests::ordered_primary_is_atomic_fenced_and_reopens_after_failed_trial
+    vault::ordered::tests::ordered_schema_cannot_be_relabelled_as_legacy
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 23 filtered out; finished in 0.02s
+

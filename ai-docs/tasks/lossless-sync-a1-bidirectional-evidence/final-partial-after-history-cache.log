@@ -1,0 +1,89 @@
+{
+  "status": "PASS",
+  "scope": "real CLI/runtime TLS Partial; scheduler delays only committed serialized records",
+  "exe": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\field-tests\\ordered-dialog\\kilogram-cli.exe",
+  "exe_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+  "pids": [
+    30556,
+    58956
+  ],
+  "context": "8185e4c427ab9ec042fb7d1bcdd31e6176fc41bddb7be451f9dd62f05b3ed21b",
+  "elected_a": {
+    "side": "one",
+    "account": "56f8130aedbc85dcffdf4968ebd7140ce48001d2b74f2cf83ab2e1d9d8659465",
+    "device": "29720b515f51968fed0d0319a41bac2d618d696ad6501830b1e81453e7b0b626"
+  },
+  "elected_b": {
+    "side": "two",
+    "account": "ea00613b2ede250d6973d7e8de3fd74e226933c1a66c64ff780b6dfb00d3ecfd",
+    "device": "64fbcc77608a27baf3228c72e8b4cff3088c403e33947a9faf2cfcbc209b678d"
+  },
+  "text_count": 81,
+  "setup_seconds": 4.9357981,
+  "total_seconds": 87.6761898,
+  "exchange_seconds": 78.0254094,
+  "history_seconds": 4.714981899999998,
+  "vault_commits": {
+    "delta_total_bytes": 38723214.0,
+    "native_count": 98,
+    "count": 369,
+    "delta_max_bytes": 216441.0,
+    "p95_ms": 100.545,
+    "p50_ms": 51.731
+  },
+  "vault_file_bytes": [
+    1249280,
+    1126400
+  ],
+  "crash_point": "",
+  "immutable_reopen_records_checked": 9,
+  "queue_p50_ms": 157.34630000000016,
+  "queue_p95_ms": 290.4401999999973,
+  "final_one": {
+    "commits": 252,
+    "contexts": [
+      {
+        "context": "8185e4c427ab9ec042fb7d1bcdd31e6176fc41bddb7be451f9dd62f05b3ed21b",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 84,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 1,
+        "peer_generation": 0,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 1,
+        "send_next": 82,
+        "session_id": "uznTUC1T7G1Tj+UxSvE4cU/wsmZUG1uv7jgWkKEFp/c",
+        "status": "Active",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  },
+  "final_two": {
+    "commits": 43,
+    "contexts": [
+      {
+        "context": "8185e4c427ab9ec042fb7d1bcdd31e6176fc41bddb7be451f9dd62f05b3ed21b",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 14,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 0,
+        "peer_generation": 1,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 82,
+        "send_next": 1,
+        "session_id": "uznTUC1T7G1Tj+UxSvE4cU/wsmZUG1uv7jgWkKEFp/c",
+        "status": "Active",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  }
+}
+process_evidence_directory=E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\4be4688e6ac444e1959b06e7ceca8aeb

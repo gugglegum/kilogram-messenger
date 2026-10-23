@@ -1,0 +1,66 @@
+{
+  "status": "PASS",
+  "scope": "real CLI/runtime TLS Crash; scheduler delays only committed serialized records",
+  "exe": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\field-tests\\ordered-dialog\\kilogram-cli.exe",
+  "exe_sha256": "abb41a9f48a5541eebd22ea128b62c342b111ec5e3663733709db37afd5cb483",
+  "pids": [
+    52676,
+    41024
+  ],
+  "context": "e25da828d426c136f8e4c233c94a0f1a2366773b6df97061443b0a1219015f6e",
+  "elected_a": {
+    "side": "two",
+    "account": "8aaaf55ffac95b71131babf96b93f75eba05f9cdbd4653b4b779236ea94d9c90",
+    "device": "6b4de59ceb8a31e40c1888bfbc0b9952ddcb60564b67732e8c26aca85b8f29a3"
+  },
+  "elected_b": {
+    "side": "one",
+    "account": "3f7d64ca99b2e8c6ba0673f10593ab30fb9becc474cb0898ad3acb0c1f3e1c53",
+    "device": "a81cfd6f6ae4111dd7e5e275437b9673398361b7f16cffc488ce251e2a2ac20a"
+  },
+  "text_count": 1,
+  "setup_seconds": 5.1730924,
+  "total_seconds": 39.2301167,
+  "crash_point": "after-pending",
+  "immutable_reopen_records_checked": 7,
+  "queue_p50_ms": 58.1860999999999,
+  "queue_p95_ms": 58.1860999999999,
+  "final_one": {
+    "commits": 5,
+    "contexts": [
+      {
+        "context": "e25da828d426c136f8e4c233c94a0f1a2366773b6df97061443b0a1219015f6e",
+        "native_generation": 3,
+        "own_generation": 0,
+        "peer_generation": 1,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 2,
+        "send_next": 1,
+        "session_id": "xCKZ/jVtOOZQ2zTGH5Lpc9cSgIwlbhDaw98RmpMlmAI",
+        "status": "Active",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  },
+  "final_two": {
+    "commits": 12,
+    "contexts": [
+      {
+        "context": "e25da828d426c136f8e4c233c94a0f1a2366773b6df97061443b0a1219015f6e",
+        "native_generation": 4,
+        "own_generation": 1,
+        "peer_generation": 0,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 1,
+        "send_next": 2,
+        "session_id": "xCKZ/jVtOOZQ2zTGH5Lpc9cSgIwlbhDaw98RmpMlmAI",
+        "status": "Active",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  }
+}

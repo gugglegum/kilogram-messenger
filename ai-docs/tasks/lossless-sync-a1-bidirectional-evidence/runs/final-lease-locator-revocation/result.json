@@ -1,0 +1,88 @@
+{
+  "status": "PASS",
+  "scope": "real CLI/runtime TLS Expiry; scheduler delays only committed serialized records",
+  "exe": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\field-tests\\ordered-dialog\\kilogram-cli.exe",
+  "exe_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+  "pids": [
+    44860,
+    35372
+  ],
+  "context": "7be1140194d6e6647dee11a42a188adeb4612ebd48d3c0651ae5f67da835ddb6",
+  "elected_a": {
+    "side": "two",
+    "account": "f0b6eba5a15d252b32759c22a7cf2ad48afc0ba611c8e97afbdfdc79aa51bd52",
+    "device": "1c305d2f75e81fbaa76337a545e02f2f2b8413150185291f33927c13608b362c"
+  },
+  "elected_b": {
+    "side": "one",
+    "account": "790146fc5a0c45b96d69b8d5658f1fd7616179430bd214f0606a019c07b49a3a",
+    "device": "73aaee013c1ad4a657502535bd2fe06b15e1b50c16a12bb03a6a940d099dfc96"
+  },
+  "text_count": 2,
+  "setup_seconds": 4.8928941,
+  "total_seconds": 13.5052539,
+  "exchange_seconds": 8.293561,
+  "history_seconds": 0.3187964999999995,
+  "vault_commits": {
+    "native_count": 9,
+    "delta_max_bytes": 29241.0,
+    "p95_ms": 68.721,
+    "p50_ms": 30.864,
+    "delta_total_bytes": 575617.0,
+    "count": 35
+  },
+  "vault_file_bytes": [
+    565248,
+    208896
+  ],
+  "crash_point": "",
+  "immutable_reopen_records_checked": 0,
+  "queue_p50_ms": 125.18170000000009,
+  "queue_p95_ms": 125.18170000000009,
+  "final_one": {
+    "commits": 17,
+    "contexts": [
+      {
+        "context": "7be1140194d6e6647dee11a42a188adeb4612ebd48d3c0651ae5f67da835ddb6",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 4,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 0,
+        "peer_generation": 0,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 1,
+        "send_next": 3,
+        "session_id": "9bVkQbI+J1zj9xVFFY+IONBP8ZfuRN0PcqmK5vf81OI",
+        "status": "Active",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  },
+  "final_two": {
+    "commits": 20,
+    "contexts": [
+      {
+        "context": "7be1140194d6e6647dee11a42a188adeb4612ebd48d3c0651ae5f67da835ddb6",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 5,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 0,
+        "peer_generation": 0,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 3,
+        "send_next": 1,
+        "session_id": "9bVkQbI+J1zj9xVFFY+IONBP8ZfuRN0PcqmK5vf81OI",
+        "status": "ConnectionBackoff: AuthBlocked: current pinned authority: device 73aaee013c1ad4a657502535bd2fe06b15e1b50c16a12bb03a6a940d099dfc96 has been permanently revoked by its account root",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  }
+}

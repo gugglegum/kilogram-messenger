@@ -1,0 +1,88 @@
+{
+  "status": "PASS",
+  "scope": "real CLI/runtime TLS Crash; scheduler delays only committed serialized records",
+  "exe": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\field-tests\\ordered-dialog\\kilogram-cli.exe",
+  "exe_sha256": "f32c665036cbcce82f6afdab6efaa7b61603007b6cf940ed405a0c6b8284b44c",
+  "pids": [
+    46984,
+    11320
+  ],
+  "context": "239d9a6e2fa6c2f02e147194e7b75447010294f732311a1ffe30a9a5096c9905",
+  "elected_a": {
+    "side": "one",
+    "account": "224e6515305a0f0f14680c8391ab75c1747ceb87137e3e5ff0be3b9de5712e7a",
+    "device": "34ee39352242e0f5e5645f68d25c4f4609bee5d38c5d7b2c92d85999f3e81880"
+  },
+  "elected_b": {
+    "side": "two",
+    "account": "338f874fd86b52bb32bf7d90572bad2995b1bd17c8a473acee41fb3581d96c59",
+    "device": "64c2f8f6a2fdb3594b0b23d0ca96a58d2df7bd342fc1fa499a7b6c59d0f3e6f9"
+  },
+  "text_count": 1,
+  "setup_seconds": 4.7399917,
+  "total_seconds": 39.0512055,
+  "exchange_seconds": 33.9083154,
+  "history_seconds": 0.4028968999999947,
+  "vault_commits": {
+    "native_count": 7,
+    "delta_max_bytes": 28505.0,
+    "p95_ms": 58.357,
+    "p50_ms": 33.291,
+    "delta_total_bytes": 361285.0,
+    "count": 24
+  },
+  "vault_file_bytes": [
+    159744,
+    565248
+  ],
+  "crash_point": "after-pending",
+  "immutable_reopen_records_checked": 7,
+  "queue_p50_ms": 61.13199999999961,
+  "queue_p95_ms": 61.13199999999961,
+  "final_one": {
+    "commits": 12,
+    "contexts": [
+      {
+        "context": "239d9a6e2fa6c2f02e147194e7b75447010294f732311a1ffe30a9a5096c9905",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 4,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 1,
+        "peer_generation": 0,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 1,
+        "send_next": 2,
+        "session_id": "KZMfAR+hVkps+1mTnhX+3BGKIvrVqhkefNU/yG7zPJI",
+        "status": "Active",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  },
+  "final_two": {
+    "commits": 5,
+    "contexts": [
+      {
+        "context": "239d9a6e2fa6c2f02e147194e7b75447010294f732311a1ffe30a9a5096c9905",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 3,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 0,
+        "peer_generation": 1,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 2,
+        "send_next": 1,
+        "session_id": "KZMfAR+hVkps+1mTnhX+3BGKIvrVqhkefNU/yG7zPJI",
+        "status": "Active",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  }
+}

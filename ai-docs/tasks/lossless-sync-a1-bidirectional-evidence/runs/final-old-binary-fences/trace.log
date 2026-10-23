@@ -1,0 +1,100 @@
+exit=1 binary=E:\AI-Projects\kilogram-p2p-messenger\target\compatibility\ordered-dialog-baseline\kilogram-cli.exe state-vault-migrate --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\one.state
+Error: lock state directory and recover interrupted local transaction
+
+Caused by:
+    state directory \\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\one.state is already locked by another Kilogram process
+exit=1 binary=E:\AI-Projects\kilogram-p2p-messenger\target\field-tests\ordered-dialog\kilogram-cli.exe identity --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\one.state
+Error: lock state directory and recover interrupted local transaction
+
+Caused by:
+    state directory \\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\one.state is already locked by another Kilogram process
+exit=1 binary=E:\AI-Projects\kilogram-p2p-messenger\target\compatibility\ordered-dialog-baseline\kilogram-cli.exe state-vault-migrate --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\two.state
+Error: lock state directory and recover interrupted local transaction
+
+Caused by:
+    state directory \\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\two.state is already locked by another Kilogram process
+exit=1 binary=E:\AI-Projects\kilogram-p2p-messenger\target\field-tests\ordered-dialog\kilogram-cli.exe identity --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\two.state
+Error: lock state directory and recover interrupted local transaction
+
+Caused by:
+    state directory \\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\two.state is already locked by another Kilogram process
+exit=1 binary=E:\AI-Projects\kilogram-p2p-messenger\target\compatibility\ordered-dialog-baseline\kilogram-cli.exe state-vault-migrate --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\one.state
+Error: atomically migrate legacy device state into encrypted vault
+
+Caused by:
+    unsupported state vault schema version 4
+exit=1 binary=E:\AI-Projects\kilogram-p2p-messenger\target\compatibility\ordered-dialog-baseline\kilogram-cli.exe identity --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\one.state
+vault_key_file_format=protected-envelope-v1
+vault_key_protection=windows-dpapi-current-user
+vault_key_load=already-current
+Error: retire plaintext device identity compatibility shadow
+
+Caused by:
+    unsupported state vault schema version 4
+exit=1 binary=E:\AI-Projects\kilogram-p2p-messenger\target\compatibility\ordered-dialog-baseline\kilogram-cli.exe runtime-from-profile --profile-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\one.profile
+Error: decode runtime launch profile
+
+Caused by:
+    unknown field `profile_mode`, expected `version` or `settings` at line 3 column 16
+exit=1 binary=E:\AI-Projects\kilogram-p2p-messenger\target\field-tests\ordered-dialog\kilogram-cli.exe state-vault-migrate --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\one.state
+Error: UnsupportedProfile: ordered-dialog-v1 requires an explicit ordered writer
+exit=1 binary=E:\AI-Projects\kilogram-p2p-messenger\target\field-tests\ordered-dialog\kilogram-cli.exe device-enroll --account-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\one.account --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\one.state
+Error: UnsupportedProfile: ordered-dialog-v1 requires an explicit ordered writer
+exit=0 binary=E:\AI-Projects\kilogram-p2p-messenger\target\field-tests\ordered-dialog\kilogram-cli.exe ordered inspect --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\one.state
+{"contexts":[{"context":"d9e6d77022b185ac82917a277078d7746a24ddd10d9c58088fa4c09d6b7cafdd","d":"92d76e15eea1fdc1d37011c528c03ffed59b5472fc835ef93228904e2658f4e3","e":"4aaa2a5aa72f0368d58b1be50852e61534276cb6f2497a06a6af7cd53f695c1c","grant":"4d42b32d5b777ca049c94339321da8de7e6bff225bf249e402dfe28e7a5031ea","native_generation":5,"offer":"39227768a5a0b2c9022bcd29224ecdbcc0aab383f289faf2ac1d20cb7d3e5c16","phase":3,"sid":"0srRtmAZh1kQvhFds20JhVZLHphc11NjF8dMIWUoCnY"}],"profile_mode":"ordered-dialog-v1"}
+exit=1 binary=E:\AI-Projects\kilogram-p2p-messenger\target\compatibility\ordered-dialog-baseline\kilogram-cli.exe state-vault-migrate --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\two.state
+Error: atomically migrate legacy device state into encrypted vault
+
+Caused by:
+    unsupported state vault schema version 4
+exit=1 binary=E:\AI-Projects\kilogram-p2p-messenger\target\compatibility\ordered-dialog-baseline\kilogram-cli.exe identity --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\two.state
+vault_key_file_format=protected-envelope-v1
+vault_key_protection=windows-dpapi-current-user
+vault_key_load=already-current
+Error: retire plaintext device identity compatibility shadow
+
+Caused by:
+    unsupported state vault schema version 4
+exit=1 binary=E:\AI-Projects\kilogram-p2p-messenger\target\compatibility\ordered-dialog-baseline\kilogram-cli.exe runtime-from-profile --profile-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\two.profile
+Error: decode runtime launch profile
+
+Caused by:
+    unknown field `profile_mode`, expected `version` or `settings` at line 3 column 16
+exit=1 binary=E:\AI-Projects\kilogram-p2p-messenger\target\field-tests\ordered-dialog\kilogram-cli.exe state-vault-migrate --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\two.state
+Error: UnsupportedProfile: ordered-dialog-v1 requires an explicit ordered writer
+exit=1 binary=E:\AI-Projects\kilogram-p2p-messenger\target\field-tests\ordered-dialog\kilogram-cli.exe device-enroll --account-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\two.account --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\two.state
+Error: UnsupportedProfile: ordered-dialog-v1 requires an explicit ordered writer
+exit=0 binary=E:\AI-Projects\kilogram-p2p-messenger\target\field-tests\ordered-dialog\kilogram-cli.exe ordered inspect --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\two.state
+{"contexts":[{"context":"d9e6d77022b185ac82917a277078d7746a24ddd10d9c58088fa4c09d6b7cafdd","d":"92d76e15eea1fdc1d37011c528c03ffed59b5472fc835ef93228904e2658f4e3","e":"4aaa2a5aa72f0368d58b1be50852e61534276cb6f2497a06a6af7cd53f695c1c","grant":"4d42b32d5b777ca049c94339321da8de7e6bff225bf249e402dfe28e7a5031ea","native_generation":4,"offer":"39227768a5a0b2c9022bcd29224ecdbcc0aab383f289faf2ac1d20cb7d3e5c16","phase":3,"sid":"0srRtmAZh1kQvhFds20JhVZLHphc11NjF8dMIWUoCnY"}],"profile_mode":"ordered-dialog-v1"}
+exit=0 binary=E:\AI-Projects\kilogram-p2p-messenger\target\compatibility\ordered-dialog-baseline\kilogram-cli.exe account-create --account-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.account
+account_id=bab1b6918f16b5605397633f8df956afacb3bc2e344c9775a5a4cab5ecd47a98
+account_root_dir=E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.account
+root_key_protection=windows-dpapi-current-user
+root_key_load=created
+status=account-created
+exit=0 binary=E:\AI-Projects\kilogram-p2p-messenger\target\compatibility\ordered-dialog-baseline\kilogram-cli.exe device-enroll --account-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.account --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.state --certificate-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.cert
+device_identity_read_source=filesystem
+certificate_file=E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.cert
+account_id=bab1b6918f16b5605397633f8df956afacb3bc2e344c9775a5a4cab5ecd47a98
+device_id=65a1d78d0a889125de5c7638f5aa1a6d92f0719f84d8c9aadc5179a93c1c0749
+device_encryption_public_key=7e3a8def2f85882dfdebc2179ead257407f768ebe09b16caf789b7c8c666a766
+certificate_authority_sequence=0
+device_capabilities=sign-events,sync-history
+authority_revision=1
+authority_snapshot_store=Installed
+certificate=ArqxtpGPFrVgU5djP435Vq-ss7wuNEyXdaWkyrXs1HqYZaHXjQqIkSXeXHY49aoabZLwcZ-E2Mmq3FF5qTwcB0l-Oo3vL4WILf3rwheerSV0B_do6-CbFsr3ibfIxmanZgACAAFA2N2SQpgZgK1RpBZZD75Z-XrAUMfvsd2mMEKwtuwBj1fg5na43ggSRxTq2OpumbFykAvdDepJJzaK43GiFXHZCg
+status=device-enrolled
+exit=0 binary=E:\AI-Projects\kilogram-p2p-messenger\target\compatibility\ordered-dialog-baseline\kilogram-cli.exe account-device-list --account-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.account --device-certificate-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.cert --device-list-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.devices
+account_id=bab1b6918f16b5605397633f8df956afacb3bc2e344c9775a5a4cab5ecd47a98
+authority_revision=1
+device_count=1
+device_id=65a1d78d0a889125de5c7638f5aa1a6d92f0719f84d8c9aadc5179a93c1c0749
+device_list_file=E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.devices
+status=account-device-list-published
+exit=0 binary=E:\AI-Projects\kilogram-p2p-messenger\target\compatibility\ordered-dialog-baseline\kilogram-cli.exe runtime-profile-create --profile-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.profile --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.state --allow-account bab1b6918f16b5605397633f8df956afacb3bc2e344c9775a5a4cab5ecd47a98 --device-list-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.devices --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.ipc --relay-wait-seconds 0 --route-policy direct-only --disable-volunteer-storage
+runtime_profile_file=E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.profile
+runtime_ipc_file=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.ipc
+runtime_profile_contains_secrets=false
+status=runtime-profile-ready
+exit=1 binary=E:\AI-Projects\kilogram-p2p-messenger\target\field-tests\ordered-dialog\kilogram-cli.exe device-enroll --profile-mode ordered-dialog-v1 --account-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.account --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\e3b8230e1b8a46f7ad501436727057af\fences\legacy.state
+Error: invalid OD1 state operation: CreationConflict: existing profile

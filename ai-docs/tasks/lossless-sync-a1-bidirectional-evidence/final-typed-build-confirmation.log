@@ -1,0 +1,4 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1.96s

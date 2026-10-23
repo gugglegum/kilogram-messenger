@@ -1,0 +1,99 @@
+scheduler side=one {}
+0.045s exit=0 account-create --account-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.account
+account_id=2af1a6f7074bf65bbc8e06111ef8267e30db32c1f83225570448d51137932b94
+account_root_dir=E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.account
+root_key_protection=windows-dpapi-current-user
+root_key_load=created
+status=account-created
+0.295s exit=0 device-enroll --profile-mode ordered-dialog-v1 --account-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.account --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.state
+account_id=2af1a6f7074bf65bbc8e06111ef8267e30db32c1f83225570448d51137932b94
+device_id=dff0df5c523ff63f2b8286fe2a68e687342a23f7a740189dd9dec048f43106fb
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+0.449s exit=0 ordered credentials-export --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.state --output-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.credentials
+status=credentials-exported
+scheduler side=two {}
+0.501s exit=0 account-create --account-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.account
+account_id=638a33cf567639512eac3af735e42e1a3a0c66ecebd6971be731f3133918bcb8
+account_root_dir=E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.account
+root_key_protection=windows-dpapi-current-user
+root_key_load=created
+status=account-created
+0.718s exit=0 device-enroll --profile-mode ordered-dialog-v1 --account-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.account --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.state
+account_id=638a33cf567639512eac3af735e42e1a3a0c66ecebd6971be731f3133918bcb8
+device_id=31385207ed306e3ea56f8564f14ec342727dc067a51a6d96773266bcea9c0728
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+0.867s exit=0 ordered credentials-export --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.state --output-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.credentials
+status=credentials-exported
+scheduler side=two {"pause_point":"after-init-commit"}
+1.131s exit=0 ordered context-create --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.state --account-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.account --peer-credentials-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.credentials --expect-account 2af1a6f7074bf65bbc8e06111ef8267e30db32c1f83225570448d51137932b94 --output-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\invitation
+context=d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6
+1.564s exit=0 ordered context-import --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.state --account-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.account --invitation-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\invitation --expect-account 638a33cf567639512eac3af735e42e1a3a0c66ecebd6971be731f3133918bcb8 --output-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\countersigned
+context=d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6
+status=context-imported
+1.983s exit=0 ordered context-import --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.state --invitation-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\countersigned --expect-account 2af1a6f7074bf65bbc8e06111ef8267e30db32c1f83225570448d51137932b94
+context=d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6
+status=context-imported
+2.030s exit=0 runtime-profile-create --profile-mode ordered-dialog-v1 --profile-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.profile --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.state --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.ipc --locator-directory E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.locators --ordered-context d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6
+
+runtime_start side=one pid=33328 log_suffix=d6e6f38d
+2.097s exit=0 runtime-profile-create --profile-mode ordered-dialog-v1 --profile-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.profile --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.state --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.ipc --locator-directory E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.locators --ordered-context d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6
+
+runtime_start side=two pid=54156 log_suffix=5b0b4644
+2.701s exit=0 ordered locator-import --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.ipc --context d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6 --locator-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.locators\d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6.locator
+[1]
+2.859s exit=0 ordered locator-import --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.ipc --context d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6 --locator-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.locators\d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6.locator
+[1]
+crash_point=after-init-commit marker=E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.schedule.hit real_pid=54156
+real_child_kill side=two pid=54156
+scheduler side=two {}
+4.742s exit=0 ordered inspect --state-dir E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.state
+{"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","d":"af1dc10197ffa33cd079cba9c495c625f00348dfc507bf94c8d3dc9b6181e27a","e":"7bafb7c8cf8cf56608da6189f91592b8d28ca368d682639a21af4a27b6213843","grant":"c2711191a70197675fcec25057d6b4dab1fee83341386ba0f9f349810fa31641","native_generation":2,"offer":"3ea96729cac3b24e955817366f87dcafb1930dfcf46f96acbc4a18797b9facac","phase":3,"sid":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs"}],"profile_mode":"ordered-dialog-v1"}
+runtime_start side=two pid=20284 log_suffix=92584cd8
+5.462s exit=0 ordered locator-import --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.ipc --context d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6 --locator-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.locators\d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6.locator
+[1]
+5.571s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.ipc
+{"commits":1,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":2,"own_generation":0,"peer_generation":0,"pending":0,"phase":3,"receive_next":0,"send_next":1,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Negotiating","unacked":0}],"profile_mode":"ordered-dialog-v1"}
+5.898s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.ipc
+{"commits":1,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":2,"own_generation":0,"peer_generation":0,"pending":0,"phase":3,"receive_next":0,"send_next":1,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Negotiating","unacked":0}],"profile_mode":"ordered-dialog-v1"}
+6.113s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.ipc
+{"commits":2,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":2,"own_generation":0,"peer_generation":0,"pending":0,"phase":3,"receive_next":0,"send_next":1,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Negotiating","unacked":0}],"profile_mode":"ordered-dialog-v1"}
+6.363s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.ipc
+{"commits":2,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":2,"own_generation":0,"peer_generation":0,"pending":0,"phase":3,"receive_next":0,"send_next":1,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Negotiating","unacked":0}],"profile_mode":"ordered-dialog-v1"}
+6.577s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.ipc
+{"commits":2,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":2,"own_generation":0,"peer_generation":0,"pending":0,"phase":3,"receive_next":0,"send_next":1,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Negotiating","unacked":0}],"profile_mode":"ordered-dialog-v1"}
+6.873s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.ipc
+{"commits":3,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":3,"own_generation":0,"peer_generation":0,"pending":0,"phase":3,"receive_next":1,"send_next":1,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Negotiating","unacked":0}],"profile_mode":"ordered-dialog-v1"}
+7.027s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.ipc
+{"commits":8,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":2,"own_generation":0,"peer_generation":0,"pending":0,"phase":3,"receive_next":1,"send_next":1,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Negotiating","unacked":0}],"profile_mode":"ordered-dialog-v1"}
+7.185s exit=0 ordered queue --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.ipc --context d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6 --request-id 00000000000000020000000000000001 --text OD1/two/1/Привет
+[1,1]
+7.287s exit=0 ordered queue --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.ipc --context d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6 --request-id 00000000000000010000000000000001 --text OD1/one/1/Привет
+[1,1]
+7.426s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.ipc
+{"commits":9,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":2,"own_generation":0,"peer_generation":0,"pending":0,"phase":3,"receive_next":1,"send_next":1,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Negotiating","unacked":0}],"profile_mode":"ordered-dialog-v1"}
+7.670s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.ipc
+{"commits":10,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":3,"own_generation":0,"peer_generation":0,"pending":0,"phase":3,"receive_next":1,"send_next":2,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Negotiating","unacked":1}],"profile_mode":"ordered-dialog-v1"}
+8.131s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.ipc
+{"commits":12,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":4,"own_generation":0,"peer_generation":1,"pending":0,"phase":3,"receive_next":2,"send_next":2,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Negotiating","unacked":1}],"profile_mode":"ordered-dialog-v1"}
+8.359s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.ipc
+{"commits":14,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":4,"own_generation":0,"peer_generation":1,"pending":0,"phase":3,"receive_next":2,"send_next":2,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Negotiating","unacked":1}],"profile_mode":"ordered-dialog-v1"}
+8.596s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.ipc
+{"commits":14,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":4,"own_generation":0,"peer_generation":1,"pending":0,"phase":3,"receive_next":2,"send_next":2,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Negotiating","unacked":1}],"profile_mode":"ordered-dialog-v1"}
+8.825s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.ipc
+{"commits":14,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":4,"own_generation":0,"peer_generation":1,"pending":0,"phase":3,"receive_next":2,"send_next":2,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Active","unacked":1}],"profile_mode":"ordered-dialog-v1"}
+9.057s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.ipc
+{"commits":14,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":4,"own_generation":0,"peer_generation":1,"pending":0,"phase":3,"receive_next":2,"send_next":2,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Active","unacked":1}],"profile_mode":"ordered-dialog-v1"}
+9.364s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.ipc
+{"commits":15,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":4,"own_generation":0,"peer_generation":1,"pending":0,"phase":3,"receive_next":2,"send_next":2,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Active","unacked":0}],"profile_mode":"ordered-dialog-v1"}
+9.493s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.ipc
+{"commits":11,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":5,"own_generation":1,"peer_generation":0,"pending":0,"phase":3,"receive_next":2,"send_next":2,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Active","unacked":0}],"profile_mode":"ordered-dialog-v1"}
+9.680s exit=0 ordered history --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.ipc --context d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6 --offset 0 --limit 8
+{"items":[{"author_sequence":1,"event_id":"4d2dc855e688de1f751ff94cd18e73a6037fcf876aa6f8273b4ef3e5c1528c02","ordinal":1,"request_id":"00000000000000020000000000000001","role":0,"text":"OD1/two/1/Привет"},{"author_sequence":1,"event_id":"fafb42004d92276de98b14c845ca1bc33ae6b230a54ad35f57ebc866e656ce2d","ordinal":1,"request_id":"00000000000000010000000000000001","role":1,"text":"OD1/one/1/Привет"}],"offset":0,"profile_mode":"ordered-dialog-v1","total":2}
+9.791s exit=0 ordered history --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.ipc --context d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6 --offset 0 --limit 8
+{"items":[{"author_sequence":1,"event_id":"4d2dc855e688de1f751ff94cd18e73a6037fcf876aa6f8273b4ef3e5c1528c02","ordinal":1,"request_id":"00000000000000020000000000000001","role":0,"text":"OD1/two/1/Привет"},{"author_sequence":1,"event_id":"fafb42004d92276de98b14c845ca1bc33ae6b230a54ad35f57ebc866e656ce2d","ordinal":1,"request_id":"00000000000000010000000000000001","role":1,"text":"OD1/one/1/Привет"}],"offset":0,"profile_mode":"ordered-dialog-v1","total":2}
+10.095s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\one.ipc
+{"commits":15,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":4,"own_generation":0,"peer_generation":1,"pending":0,"phase":3,"receive_next":2,"send_next":2,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Active","unacked":0}],"profile_mode":"ordered-dialog-v1"}
+10.279s exit=0 ordered status --ipc-file E:\AI-Projects\kilogram-p2p-messenger\.tmp\ordered-dialog-process\6522aa1298ad4f5286b8c27ad0506687\two.ipc
+{"commits":11,"contexts":[{"context":"d2159ccb427f3bf539d1d862b882d76257f8281cb4007321e350d09607cc22c6","native_generation":5,"own_generation":1,"peer_generation":0,"pending":0,"phase":3,"receive_next":2,"send_next":2,"session_id":"WlrsesDlrRiOfcer2ogqulP+NXTmLslXIXCKcFu6dHs","status":"Active","unacked":0}],"profile_mode":"ordered-dialog-v1"}
