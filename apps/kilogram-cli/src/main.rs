@@ -215,6 +215,7 @@ use tokio::{
 };
 use zeroize::Zeroizing;
 
+mod ordered_cli;
 mod ordered_ingress;
 mod publication_conflict_ceremony;
 mod recovery_discovery;
@@ -482,6 +483,11 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Explicit administration and authenticated IPC for fresh OD1 profiles.
+    Ordered {
+        #[command(subcommand)]
+        command: ordered_cli::Command,
+    },
     /// Handle one delivery or synchronization connection, then exit.
     Listen {
         /// Directory containing this application's persistent development device identity.
@@ -629,6 +635,16 @@ enum Command {
 
     /// Write a no-clobber, secret-free profile that the desktop client can launch.
     RuntimeProfileCreate {
+        /// Opt in to the separate fresh-profile ordered protocol.
+        #[arg(long, value_parser = ["ordered-dialog-v1"])]
+        profile_mode: Option<String>,
+        /// Contexts enabled by the OD1 owner; repeat at most twice.
+        #[arg(long = "ordered-context")]
+        ordered_contexts: Vec<String>,
+        #[arg(long)]
+        locator_directory: Option<PathBuf>,
+        #[arg(long, default_value = "127.0.0.1:0")]
+        ordered_bind: String,
         /// New machine-local runtime launch profile.
         #[arg(long)]
         profile_file: PathBuf,
@@ -639,11 +655,11 @@ enum Command {
 
         /// Account ID allowed to authenticate a certified requester device.
         #[arg(long)]
-        allow_account: AccountId,
+        allow_account: Option<AccountId>,
 
         /// Root-signed complete device list for this runtime account.
         #[arg(long)]
-        device_list_file: PathBuf,
+        device_list_file: Option<PathBuf>,
 
         /// Signed current prekey pool for another device in this account. Repeat for every peer device.
         #[arg(long = "peer-prekey-pool-file")]
@@ -2575,6 +2591,8 @@ enum Command {
 
     /// Root-sign and install a messaging certificate for one device state.
     DeviceEnroll {
+        #[arg(long, value_parser = ["ordered-dialog-v1"])]
+        profile_mode: Option<String>,
         /// Directory containing an existing development Account Root authority.
         #[arg(long)]
         account_dir: PathBuf,
@@ -2698,6 +2716,7 @@ enum Command {
 impl Command {
     fn state_directory(&self) -> Option<&Path> {
         match self {
+            Self::Ordered { command } => command.state_directory(),
             Self::Listen { state_dir, .. }
             | Self::Runtime { state_dir, .. }
             | Self::RuntimeContactAdd { state_dir, .. }
@@ -3656,6 +3675,27 @@ async fn async_main() -> Result<()> {
         .map(StateDirectoryLock::acquire)
         .transpose()
         .context("lock state directory and recover interrupted local transaction")?;
+    if let Command::DeviceEnroll {
+        profile_mode: Some(_),
+        account_dir,
+        certificate_file,
+        ..
+    } = &command
+    {
+        return kilogram_cli::ordered_dialog::admin::enroll(
+            _state_lock
+                .take()
+                .context("OD1 enrollment requires root lease")?,
+            account_dir,
+            certificate_file.as_deref(),
+        );
+    }
+    if let Command::Ordered { command } = command {
+        return ordered_cli::run(command, _state_lock.take()).await;
+    }
+    if let Some(root) = state_directory.as_deref() {
+        ordered_cli::reject_legacy(root)?;
+    }
     if let Some(root) = state_directory.as_deref()
         && RatchetState::is_ordered_ingress(root)?
     {
@@ -3900,6 +3940,10 @@ async fn run_command(command: Command) -> Result<()> {
             .await
         }
         Command::RuntimeProfileCreate {
+            profile_mode,
+            ordered_contexts,
+            locator_directory,
+            ordered_bind,
             profile_file,
             state_dir,
             allow_account,
@@ -3922,48 +3966,89 @@ async fn run_command(command: Command) -> Result<()> {
             volunteer_wifi_transfer_mib,
             volunteer_mobile_transfer_mib,
             volunteer_unknown_transfer_mib,
-        } => create_runtime_launch_profile(
-            profile_file,
-            RuntimeLaunchSettings {
-                volunteer_storage: if disable_volunteer_storage {
-                    None
-                } else {
-                    let data_dir = match volunteer_storage_data_dir {
-                        Some(path) => path,
-                        None => default_runtime_volunteer_storage_directory(&state_dir)?,
-                    };
-                    Some(RuntimeVolunteerStorageSettings::with_limits(
-                        data_dir,
-                        volunteer_storage_listen_port,
-                        mib_to_bytes(volunteer_storage_mib, "volunteer storage")?,
-                        mib_to_bytes(
-                            volunteer_ethernet_transfer_mib,
-                            "volunteer Ethernet transfer",
-                        )?,
-                        mib_to_bytes(volunteer_wifi_transfer_mib, "volunteer Wi-Fi transfer")?,
-                        mib_to_bytes(volunteer_mobile_transfer_mib, "volunteer mobile transfer")?,
-                        mib_to_bytes(
-                            volunteer_unknown_transfer_mib,
-                            "volunteer unknown-network transfer",
-                        )?,
-                    ))
+        } => {
+            if profile_mode.is_some() {
+                anyhow::ensure!(
+                    allow_account.is_none()
+                        && device_list_file.is_none()
+                        && peer_prekey_pool_files.is_empty(),
+                    "OD1 profile cannot use legacy admission fields"
+                );
+                let profile = kilogram_cli::ordered_dialog::runtime::Profile {
+                    version: 1,
+                    profile_mode: "ordered-dialog-v1".to_owned(),
+                    state_dir,
+                    ipc_file,
+                    enabled_contexts: ordered_contexts,
+                    locator_directory: locator_directory
+                        .context("--locator-directory is required for OD1")?,
+                    bind: ordered_bind,
+                };
+                profile.validate()?;
+                return kilogram_cli::ordered_dialog::admin::write_public(
+                    &profile_file,
+                    &serde_json::to_vec_pretty(&profile)?,
+                    &profile.state_dir,
+                );
+            }
+            anyhow::ensure!(
+                ordered_contexts.is_empty() && locator_directory.is_none(),
+                "OD1 arguments require --profile-mode ordered-dialog-v1"
+            );
+            create_runtime_launch_profile(
+                profile_file,
+                RuntimeLaunchSettings {
+                    volunteer_storage: if disable_volunteer_storage {
+                        None
+                    } else {
+                        let data_dir = match volunteer_storage_data_dir {
+                            Some(path) => path,
+                            None => default_runtime_volunteer_storage_directory(&state_dir)?,
+                        };
+                        Some(RuntimeVolunteerStorageSettings::with_limits(
+                            data_dir,
+                            volunteer_storage_listen_port,
+                            mib_to_bytes(volunteer_storage_mib, "volunteer storage")?,
+                            mib_to_bytes(
+                                volunteer_ethernet_transfer_mib,
+                                "volunteer Ethernet transfer",
+                            )?,
+                            mib_to_bytes(volunteer_wifi_transfer_mib, "volunteer Wi-Fi transfer")?,
+                            mib_to_bytes(
+                                volunteer_mobile_transfer_mib,
+                                "volunteer mobile transfer",
+                            )?,
+                            mib_to_bytes(
+                                volunteer_unknown_transfer_mib,
+                                "volunteer unknown-network transfer",
+                            )?,
+                        ))
+                    },
+                    state_dir,
+                    allowed_requester_account_id: allow_account
+                        .context("--allow-account is required for legacy runtime")?,
+                    device_list_file: device_list_file
+                        .context("--device-list-file is required for legacy runtime")?,
+                    peer_prekey_pool_files,
+                    ticket_file,
+                    relay_wait_seconds,
+                    route_policy: runtime_ipc_route_policy(route_policy.into()),
+                    relay_url: relay_url.map(|url| url.to_string()),
+                    poll_milliseconds,
+                    retry_base_seconds,
+                    retry_max_seconds,
+                    auto_sync_seconds,
+                    ipc_file,
                 },
-                state_dir,
-                allowed_requester_account_id: allow_account,
-                device_list_file,
-                peer_prekey_pool_files,
-                ticket_file,
-                relay_wait_seconds,
-                route_policy: runtime_ipc_route_policy(route_policy.into()),
-                relay_url: relay_url.map(|url| url.to_string()),
-                poll_milliseconds,
-                retry_base_seconds,
-                retry_max_seconds,
-                auto_sync_seconds,
-                ipc_file,
-            },
-        ),
+            )
+        }
         Command::RuntimeFromProfile { profile_file } => {
+            if ordered_cli::is_ordered_launch(&profile_file)? {
+                return kilogram_cli::ordered_dialog::runtime::run(
+                    kilogram_cli::ordered_dialog::runtime::Profile::load(&profile_file)?,
+                )
+                .await;
+            }
             runtime(runtime_options_from_profile(&profile_file)?).await
         }
         Command::RuntimeContactAdd {
@@ -4929,10 +5014,14 @@ async fn run_command(command: Command) -> Result<()> {
             membership_file,
         } => install_conversation_membership(state_dir, membership_file),
         Command::DeviceEnroll {
+            profile_mode: _,
             account_dir,
             state_dir,
             certificate_file,
         } => enroll_device(account_dir, state_dir, certificate_file),
+        Command::Ordered { .. } => {
+            unreachable!("OD1 commands are dispatched before legacy repositories")
+        }
         Command::DeviceAuthorityUpdate {
             state_dir,
             snapshot_file,
@@ -17029,6 +17118,9 @@ async fn handle_runtime_ipc_work(
     let account_id = ticket.listener_account_id();
     let device_id = ticket.listener_device_id();
     let response = match command {
+        RuntimeIpcCommand::OrderedDialog { .. } => RuntimeIpcResponse::Error {
+            message: "OD1 command requires an explicitly enabled ordered-dialog profile".to_owned(),
+        },
         RuntimeIpcCommand::Ping => RuntimeIpcResponse::Pong {
             account_id,
             device_id,
@@ -21066,6 +21158,7 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
     ) = with_locked_state(&state_dir, || {
         // RuntimeFromProfile resolves its root inside runtime. Check under the
         // existing lock, after vault/shadow recovery and before any trust writer.
+        ordered_cli::reject_legacy(&state_dir)?;
         ensure!(
             !RatchetState::is_ordered_ingress(&state_dir)?,
             "internal ordered profile forbids runtime preparation"

@@ -12,6 +12,7 @@ use kilogram_mailbox::{
 use kilogram_protocol::{ClientRequest, ServerResponse};
 use serde::{Deserialize, Serialize};
 use tokio::time::{Instant, sleep, timeout};
+pub mod ordered;
 
 pub const ALPN: &[u8] = b"kilogram/m0/sync/8";
 pub const CANONICAL_SYNC_ALPN_V1: &[u8] = b"kilogram/m1/sync/cbor/1";

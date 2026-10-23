@@ -27,6 +27,10 @@ use serde::{Deserialize, Serialize};
 use tempfile::{NamedTempFile, TempDir};
 use zeroize::{ZeroizeOnDrop, Zeroizing};
 
+mod ordered;
+pub use ordered::{ORDERED_ACCOUNT_FENCE, OrderedCommit, OrderedMutation, OrderedVault};
+pub(crate) use ordered::{has_ordered_fence, recover_ordered_journal};
+
 pub const STATE_VAULT_FILE: &str = "state-vault.redb";
 pub const STATE_VAULT_KEY_FILE: &str = "state-vault.key";
 
@@ -34,6 +38,7 @@ const DEVICE_SECRET_PATH: &str = "device-secret.key";
 const DEVICE_ENCRYPTION_SECRET_PATH: &str = "device-encryption-secret.key";
 const DEVICE_IDENTITY_SECRET_BYTES: usize = 32;
 const VAULT_SCHEMA_VERSION: u64 = 3;
+const ORDERED_VAULT_SCHEMA_VERSION: u64 = 4;
 const INDEXED_VAULT_SCHEMA_VERSION: u64 = 2;
 const LEGACY_VAULT_SCHEMA_VERSION: u64 = 1;
 const VAULT_RECORD_VERSION: u8 = 1;
@@ -566,6 +571,7 @@ impl EncryptedStateVault {
         output: impl AsRef<Path>,
         passphrase: &[u8],
     ) -> Result<VaultKeyRecoveryExport, StateError> {
+        self.reject_ordered_writer()?;
         self.ensure_no_pending_mirror()?;
         let report = self.verify()?;
         let requested_output = absolute_path(output.as_ref())?;
@@ -629,6 +635,7 @@ impl EncryptedStateVault {
             key_protection: crate::VaultKeyProtection::PlaintextDevelopment,
             key_load_outcome: crate::VaultKeyLoadOutcome::AlreadyCurrent,
         };
+        candidate.reject_ordered_writer()?;
         let current = candidate.verify()?;
         if current.mirror_generation() < opened.witness.mirror_generation() {
             return Err(StateError::VaultRecoveryRollback {
@@ -660,6 +667,7 @@ impl EncryptedStateVault {
     pub fn migrate_legacy_snapshot(
         &self,
     ) -> Result<(VaultMigrationOutcome, VaultReport), StateError> {
+        self.reject_ordered_writer()?;
         self.ensure_no_pending_mirror()?;
         if self.load_manifest()?.is_some() {
             let active = self.verify()?;
@@ -687,6 +695,7 @@ impl EncryptedStateVault {
     pub fn retire_device_identity_shadow(
         &self,
     ) -> Result<(VaultIdentityShadowOutcome, VaultReport), StateError> {
+        self.reject_ordered_writer()?;
         self.ensure_no_pending_mirror()?;
         self.retire_device_identity_shadow_internal()
     }
@@ -913,6 +922,7 @@ impl EncryptedStateVault {
         &self,
         destination: impl AsRef<Path>,
     ) -> Result<VaultReport, StateError> {
+        self.reject_ordered_writer()?;
         self.ensure_no_pending_mirror()?;
         let report = self.verify()?;
         let requested_destination = absolute_path(destination.as_ref())?;
@@ -1948,6 +1958,11 @@ impl EncryptedStateVault {
         )?;
         let snapshot_key = blake3::derive_key(INDEX_SNAPSHOT_KEY_DOMAIN, &self.master_key.0);
         let mut hasher = blake3::Hasher::new_keyed(&snapshot_key);
+        // The mandatory OD1 feature is authenticated with the indexed snapshot.
+        if schema_version == ORDERED_VAULT_SCHEMA_VERSION {
+            hasher.update(b"kg:od1:vault-required-feature\0");
+            hasher.update(&ORDERED_VAULT_SCHEMA_VERSION.to_be_bytes());
+        }
         hasher.update(&[index.version]);
         for entry in &index.entries {
             let path = entry.relative_path.as_bytes();
@@ -2098,6 +2113,7 @@ impl EncryptedStateVault {
 
 impl StateMirrorRepository for EncryptedStateVault {
     fn begin_dual_write(&self) -> Result<VaultReport, StateError> {
+        self.reject_ordered_writer()?;
         self.ensure_no_pending_mirror()?;
         let report = self.verify_current_against_legacy()?;
         self.write_mirror_intent(&report)?;
@@ -2105,10 +2121,12 @@ impl StateMirrorRepository for EncryptedStateVault {
     }
 
     fn finish_dual_write(&self) -> Result<VaultMirrorCommit, StateError> {
+        self.reject_ordered_writer()?;
         self.finish_dual_write_internal(None)
     }
 
     fn recover_pending_dual_write(&self) -> Result<Option<VaultMirrorCommit>, StateError> {
+        self.reject_ordered_writer()?;
         if self.load_mirror_intent()?.is_none() && self.load_primary_shadow_intent()?.is_none() {
             return Ok(None);
         }
@@ -2118,6 +2136,7 @@ impl StateMirrorRepository for EncryptedStateVault {
 
 impl VaultPrimaryWriteRepository for EncryptedStateVault {
     fn commit_primary_checkpoint(&self) -> Result<VaultMirrorCommit, StateError> {
+        self.reject_ordered_writer()?;
         self.commit_primary_checkpoint_internal(None)
     }
 
@@ -2125,14 +2144,17 @@ impl VaultPrimaryWriteRepository for EncryptedStateVault {
         &self,
         transaction: &StateTransaction,
     ) -> Result<VaultMirrorCommit, StateError> {
+        self.reject_ordered_writer()?;
         self.commit_primary_transaction_internal(transaction, None)
     }
 
     fn confirm_primary_shadow(&self) -> Result<VaultReport, StateError> {
+        self.reject_ordered_writer()?;
         self.confirm_primary_shadow_internal()
     }
 
     fn recover_primary_shadow(&self) -> Result<Option<VaultReport>, StateError> {
+        self.reject_ordered_writer()?;
         self.recover_primary_shadow_internal()
     }
 }
@@ -2479,7 +2501,7 @@ fn classify_record_kind(relative_path: &str) -> StateRecordKind {
 fn is_indexed_vault_schema(schema_version: u64) -> bool {
     matches!(
         schema_version,
-        INDEXED_VAULT_SCHEMA_VERSION | VAULT_SCHEMA_VERSION
+        INDEXED_VAULT_SCHEMA_VERSION | VAULT_SCHEMA_VERSION | ORDERED_VAULT_SCHEMA_VERSION
     )
 }
 
@@ -2574,7 +2596,10 @@ fn manifest_index_entry_for_record(
 fn validate_manifest(manifest: &VaultManifest) -> Result<(), StateError> {
     if !matches!(
         manifest.schema_version,
-        LEGACY_VAULT_SCHEMA_VERSION | INDEXED_VAULT_SCHEMA_VERSION | VAULT_SCHEMA_VERSION
+        LEGACY_VAULT_SCHEMA_VERSION
+            | INDEXED_VAULT_SCHEMA_VERSION
+            | VAULT_SCHEMA_VERSION
+            | ORDERED_VAULT_SCHEMA_VERSION
     ) {
         return Err(StateError::UnsupportedVaultSchemaVersion(
             manifest.schema_version,

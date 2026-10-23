@@ -23,6 +23,7 @@ pub use vault::{
     VaultMirrorOutcome, VaultMutableRead, VaultPrimaryRead, VaultPrimaryRecord,
     VaultPrimaryWriteRepository, VaultReport,
 };
+pub use vault::{ORDERED_ACCOUNT_FENCE, OrderedCommit, OrderedMutation, OrderedVault};
 
 const LOCK_FILE: &str = ".kilogram-state.lock";
 const TRANSACTION_DIRECTORY: &str = ".kilogram-transactions";
@@ -55,6 +56,12 @@ const MANIFEST_VERSION: u8 = 1;
 
 #[derive(Debug, Error)]
 pub enum StateError {
+    #[error("OD1 profile requires its scoped writer; legacy writer is forbidden")]
+    OrderedWriterRequired,
+
+    #[error("invalid OD1 state operation: {0}")]
+    OrderedState(&'static str),
+
     #[error("state directory {path} is already locked by another Kilogram process")]
     AlreadyLocked { path: PathBuf },
 
@@ -427,6 +434,9 @@ impl StateTransaction {
         let requested = state_directory.as_ref();
         io_at(requested, fs::create_dir_all(requested))?;
         let root = io_at(requested, fs::canonicalize(requested))?;
+        if vault::has_ordered_fence(&root)? {
+            return Err(StateError::OrderedWriterRequired);
+        }
         let active = active_directory(&root);
         if path_exists(&active)? {
             return Err(StateError::TransactionAlreadyActive { path: active });
@@ -945,6 +955,17 @@ fn recover(root: &Path) -> Result<(), StateError> {
         || path_exists(&active.join(COMMITTED_MARKER))?
         || path_exists(&active.join(ROLLED_BACK_MARKER))?
     {
+        return remove_tree_if_present(&active);
+    }
+    let manifest_path = active.join(MANIFEST_FILE);
+    let raw = io_at(&manifest_path, fs::read(&manifest_path))?;
+    let manifest: TransactionManifest =
+        serde_json::from_slice(&raw).map_err(|source| StateError::InvalidManifest {
+            path: manifest_path,
+            source,
+        })?;
+    if manifest.version == 2 {
+        vault::recover_ordered_journal(root)?;
         return remove_tree_if_present(&active);
     }
     rollback_active(root, &active)

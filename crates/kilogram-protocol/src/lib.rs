@@ -61,6 +61,7 @@ pub mod canonical_ticket_publication_v1;
 pub mod canonical_v1;
 #[cfg(feature = "decoder-fuzzing")]
 pub mod decoder_fuzzing;
+pub mod ordered_dialog_v1;
 mod recovery;
 mod rewrap;
 mod wire;

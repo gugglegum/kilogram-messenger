@@ -82,6 +82,17 @@ impl AccountId {
             .map_err(IdentityError::InvalidSignature)
     }
 
+    /// Verifies offline owner consent for a single OD1 context.
+    pub fn verify_ordered_context_consent(
+        &self,
+        payload: &[u8],
+        signature: &[u8],
+    ) -> Result<(), IdentityError> {
+        let mut message = b"kg:od1:consent\0".to_vec();
+        message.extend_from_slice(payload);
+        self.verify(&message, signature)
+    }
+
     /// Verifies an Account Root signature over a canonical device-link
     /// authorization payload. The fixed domain prevents this narrow API from
     /// becoming a generic Root signature oracle.
@@ -895,6 +906,14 @@ impl AccountRootState {
         let mut message =
             Vec::with_capacity(DEVICE_LINK_AUTHORIZATION_SIGNATURE_DOMAIN.len() + payload.len());
         message.extend_from_slice(DEVICE_LINK_AUTHORIZATION_SIGNATURE_DOMAIN);
+        message.extend_from_slice(payload);
+        self.identity.sign(&message).to_vec()
+    }
+
+    /// Offline owner consent for one explicitly selected OD1 context. The
+    /// runtime never loads this administrative key or obtains a generic signer.
+    pub fn sign_ordered_context_consent(&self, payload: &[u8]) -> Vec<u8> {
+        let mut message = b"kg:od1:consent\0".to_vec();
         message.extend_from_slice(payload);
         self.identity.sign(&message).to_vec()
     }

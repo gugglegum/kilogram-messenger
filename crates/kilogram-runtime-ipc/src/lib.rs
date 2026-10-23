@@ -717,6 +717,11 @@ pub enum RuntimeIpcCommand {
     RecipientImportConsumption {
         request: Vec<u8>,
     },
+    /// Explicit OD1 operations. The nested canonical codec is mode-specific;
+    /// ordinary runtimes reject it before entering an OD1 writer.
+    OrderedDialog {
+        request: Vec<u8>,
+    },
 }
 
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -1940,6 +1945,9 @@ pub enum RuntimeIpcResponse {
     /// Current-Device-signed response to a recipient import-consumption request.
     RecipientImportConsumption {
         signed_response: Vec<u8>,
+    },
+    OrderedDialog {
+        response: Vec<u8>,
     },
 }
 

@@ -21,6 +21,7 @@ use kilogram_identity::{
 use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use thiserror::Error;
+pub mod ordered;
 use vodozemac::{
     Curve25519PublicKey, DecodeError, PickleError,
     olm::{
