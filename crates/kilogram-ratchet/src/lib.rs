@@ -34,6 +34,8 @@ const STATE_DIRECTORY: &str = "ratchet";
 const SESSIONS_DIRECTORY: &str = "sessions";
 const PICKLE_SECRET_FILE: &str = "pickle-secret.key";
 const ACCOUNT_FILE: &str = "account.pickle";
+// Internal disposable single-chain profiles. Old account loaders reject this prefix.
+const ORDERED_ACCOUNT_PREFIX: &str = "kilogram:internal-ordered-ingress:v1\n";
 const PREKEY_BUNDLE_FILE: &str = "prekey-bundle.bin";
 const PREKEY_POOL_FILE: &str = "prekey-pool.bin";
 const PEER_PREKEY_POOLS_DIRECTORY: &str = "peer-prekey-pools";
@@ -533,7 +535,33 @@ pub struct RatchetCiphertext {
     ciphertext: Vec<u8>,
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct RatchetOrderingHeader {
+    pub ratchet_key: [u8; 32],
+    pub index: u64,
+    pub prekey_session_id: Option<String>,
+}
+
+pub struct SingleChainReceiveGuard {
+    pub peer_device_id: DeviceId,
+    pub session_id: String,
+    pub ratchet_key: [u8; 32],
+    pub next_index: u64,
+}
+
 impl RatchetCiphertext {
+    pub fn ordering_header(&self) -> Result<RatchetOrderingHeader, RatchetError> {
+        let message = self.to_olm()?;
+        let (message, prekey_session_id) = match &message {
+            OlmMessage::Normal(message) => (message, None),
+            OlmMessage::PreKey(message) => (message.message(), Some(message.session_id())),
+        };
+        Ok(RatchetOrderingHeader {
+            ratchet_key: message.ratchet_key().to_bytes(),
+            index: message.chain_index(),
+            prekey_session_id,
+        })
+    }
     fn from_olm(message: &OlmMessage) -> Result<Self, RatchetError> {
         let (message_type, ciphertext) = message.to_parts();
         let message_type = u8::try_from(message_type)
@@ -685,11 +713,35 @@ pub struct RatchetState {
     account: Account,
     current_bundle: Option<SignedPrekeyBundle>,
     current_pool: Option<SignedPrekeyPool>,
+    ordered_access: bool,
 }
 
 impl RatchetState {
     pub fn load_or_create(state_directory: impl AsRef<Path>) -> Result<Self, RatchetError> {
-        let directory = state_directory.as_ref().join(STATE_DIRECTORY);
+        Self::load_inner(state_directory.as_ref(), false)
+    }
+
+    /// Internal single-chain ingress only; ordinary encrypt/decrypt remain forbidden.
+    pub fn load_for_ordered_ingress(
+        state_directory: impl AsRef<Path>,
+    ) -> Result<Self, RatchetError> {
+        Self::load_inner(state_directory.as_ref(), true)
+    }
+
+    pub fn is_ordered_ingress(state_directory: impl AsRef<Path>) -> Result<bool, RatchetError> {
+        let path = state_directory
+            .as_ref()
+            .join(STATE_DIRECTORY)
+            .join(ACCOUNT_FILE);
+        match fs::read_to_string(path) {
+            Ok(bytes) => Ok(bytes.starts_with(ORDERED_ACCOUNT_PREFIX)),
+            Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
+            Err(error) => Err(error.into()),
+        }
+    }
+
+    fn load_inner(state_directory: &Path, ordered_access: bool) -> Result<Self, RatchetError> {
+        let directory = state_directory.join(STATE_DIRECTORY);
         let sessions_directory = directory.join(SESSIONS_DIRECTORY);
         let peer_prekey_pools_directory = directory.join(PEER_PREKEY_POOLS_DIRECTORY);
         fs::create_dir_all(&sessions_directory)?;
@@ -698,13 +750,29 @@ impl RatchetState {
             Zeroizing::new(load_or_create_secret(&directory.join(PICKLE_SECRET_FILE))?);
         let account_path = directory.join(ACCOUNT_FILE);
         let account = match fs::read_to_string(&account_path) {
-            Ok(ciphertext) => Account::from_pickle(AccountPickle::from_encrypted(
-                ciphertext.trim(),
-                &pickle_secret,
-            )?),
+            Ok(ciphertext) => {
+                let fenced = ciphertext.starts_with(ORDERED_ACCOUNT_PREFIX);
+                if fenced != ordered_access {
+                    return Err(RatchetError::OrderedIngressViolation(
+                        "account access fence",
+                    ));
+                }
+                let ciphertext = ciphertext
+                    .strip_prefix(ORDERED_ACCOUNT_PREFIX)
+                    .unwrap_or(&ciphertext);
+                Account::from_pickle(AccountPickle::from_encrypted(
+                    ciphertext.trim(),
+                    &pickle_secret,
+                )?)
+            }
             Err(error) if error.kind() == io::ErrorKind::NotFound => {
+                if ordered_access {
+                    return Err(RatchetError::OrderedIngressViolation(
+                        "missing protected account",
+                    ));
+                }
                 let account = Account::new();
-                persist_account(&account_path, &account, &pickle_secret)?;
+                persist_account(&account_path, &account, &pickle_secret, false)?;
                 account
             }
             Err(error) => return Err(error.into()),
@@ -736,7 +804,36 @@ impl RatchetState {
             account,
             current_bundle,
             current_pool,
+            ordered_access,
         })
+    }
+
+    /// Only for a newly created disposable profile, before any session exists.
+    pub fn protect_for_ordered_ingress(&mut self) -> Result<(), RatchetError> {
+        if self.ordered_access || fs::read_dir(&self.sessions_directory)?.next().is_some() {
+            return Err(RatchetError::OrderedIngressViolation(
+                "profile already has sessions",
+            ));
+        }
+        let native = self.account.pickle().encrypt(&self.pickle_secret);
+        atomic_write(
+            &self.directory.join(ACCOUNT_FILE),
+            format!("{ORDERED_ACCOUNT_PREFIX}{native}").as_bytes(),
+        )?;
+        self.ordered_access = true;
+        Ok(())
+    }
+
+    fn ensure_legacy_access(&self) -> Result<(), RatchetError> {
+        if self.ordered_access
+            || fs::read_to_string(self.directory.join(ACCOUNT_FILE))?
+                .starts_with(ORDERED_ACCOUNT_PREFIX)
+        {
+            return Err(RatchetError::OrderedIngressViolation(
+                "legacy writer/decrypt forbidden",
+            ));
+        }
+        Ok(())
     }
 
     pub fn signed_identity(
@@ -750,6 +847,7 @@ impl RatchetState {
         &mut self,
         identity: &DeviceIdentity,
     ) -> Result<SignedPrekeyBundle, RatchetError> {
+        self.ensure_legacy_access()?;
         if let Some(bundle) = &self.current_bundle {
             if identity.device_id() != bundle.device_id() {
                 return Err(RatchetError::PrekeyBundleDeviceMismatch {
@@ -774,6 +872,7 @@ impl RatchetState {
         now_unix_seconds: u64,
         validity_seconds: u64,
     ) -> Result<SignedPrekeyPool, RatchetError> {
+        self.ensure_legacy_access()?;
         validate_prekey_pool_request(count, validity_seconds)?;
         if let Some(pool) = &self.current_pool {
             if identity.device_id() != pool.device_id() {
@@ -800,6 +899,7 @@ impl RatchetState {
         now_unix_seconds: u64,
         validity_seconds: u64,
     ) -> Result<SignedPrekeyPool, RatchetError> {
+        self.ensure_legacy_access()?;
         validate_prekey_pool_request(count, validity_seconds)?;
         self.create_new_prekey_pool(identity, count, now_unix_seconds, validity_seconds)
     }
@@ -812,6 +912,7 @@ impl RatchetState {
         &self,
         peer_device_id: DeviceId,
     ) -> Result<RatchetRetirement, RatchetError> {
+        self.ensure_legacy_access()?;
         Ok(RatchetRetirement {
             session_removed: remove_file_if_present(&self.session_path(peer_device_id))?,
             prekey_observation_removed: remove_file_if_present(
@@ -846,6 +947,7 @@ impl RatchetState {
         peer_pool: &SignedPrekeyPool,
         now_unix_seconds: u64,
     ) -> Result<(), RatchetError> {
+        self.ensure_legacy_access()?;
         peer_pool.verify_at(now_unix_seconds)?;
         self.observe_peer_prekey_pool(peer_pool)
     }
@@ -855,6 +957,7 @@ impl RatchetState {
         directory: &AccountPrekeyDirectory,
         now_unix_seconds: u64,
     ) -> Result<(), RatchetError> {
+        self.ensure_legacy_access()?;
         directory.verify_at(now_unix_seconds)?;
         for pool in directory.pools() {
             self.observe_peer_prekey_pool(pool)?;
@@ -868,6 +971,7 @@ impl RatchetState {
         peer_bundle: &SignedPrekeyBundle,
         plaintext: &str,
     ) -> Result<(SignedRatchetIdentity, RatchetCiphertext, RatchetOperation), RatchetError> {
+        self.ensure_legacy_access()?;
         peer_bundle.verify()?;
         validate_plaintext(plaintext)?;
         let peer_device_id = peer_bundle.device_id();
@@ -922,6 +1026,59 @@ impl RatchetState {
     }
 
     pub fn decrypt(
+        &mut self,
+        identity: &DeviceIdentity,
+        sender_identity: &SignedRatchetIdentity,
+        ciphertext: &RatchetCiphertext,
+    ) -> Result<(DecryptedMessage, RatchetOperation), RatchetError> {
+        self.ensure_legacy_access()?;
+        self.decrypt_inner(identity, sender_identity, ciphertext)
+    }
+
+    /// Decrypt exactly one pinned receiving chain. No skipped keys, DH transition,
+    /// concurrent candidate selection, or caller-provided session replacement.
+    pub fn decrypt_ordered_single_chain(
+        &mut self,
+        identity: &DeviceIdentity,
+        sender_identity: &SignedRatchetIdentity,
+        ciphertext: &RatchetCiphertext,
+        guard: &SingleChainReceiveGuard,
+    ) -> Result<(DecryptedMessage, RatchetOperation), RatchetError> {
+        if !self.ordered_access || sender_identity.device_id() != guard.peer_device_id {
+            return Err(RatchetError::OrderedIngressViolation(
+                "selected peer/access",
+            ));
+        }
+        let header = ciphertext.ordering_header()?;
+        if header.ratchet_key != guard.ratchet_key || header.index != guard.next_index {
+            return Err(RatchetError::OrderedIngressViolation(
+                "unknown DH tail or noncontiguous index",
+            ));
+        }
+        if header
+            .prekey_session_id
+            .as_ref()
+            .is_some_and(|id| id != &guard.session_id)
+        {
+            return Err(RatchetError::OrderedIngressViolation(
+                "different prekey session",
+            ));
+        }
+        match self.load_session_set(guard.peer_device_id)? {
+            Some(set) if set.candidates.len() == 1 && set.active_session_id == guard.session_id => {
+            }
+            None if guard.next_index == 0
+                && header.prekey_session_id.as_ref() == Some(&guard.session_id) => {}
+            _ => {
+                return Err(RatchetError::OrderedIngressViolation(
+                    "selected session/genesis",
+                ));
+            }
+        }
+        self.decrypt_inner(identity, sender_identity, ciphertext)
+    }
+
+    fn decrypt_inner(
         &mut self,
         identity: &DeviceIdentity,
         sender_identity: &SignedRatchetIdentity,
@@ -1038,6 +1195,7 @@ impl RatchetState {
                 &self.directory.join(ACCOUNT_FILE),
                 &self.account,
                 &self.pickle_secret,
+                self.ordered_access,
             )?;
             if let Some(pool) = &self.current_pool {
                 let count = pool.bundles().len();
@@ -1081,6 +1239,7 @@ impl RatchetState {
             &self.directory.join(ACCOUNT_FILE),
             &self.account,
             &self.pickle_secret,
+            self.ordered_access,
         )?;
         atomic_write(&self.directory.join(PREKEY_BUNDLE_FILE), &bundle.encode()?)?;
         self.current_bundle = Some(bundle.clone());
@@ -1159,6 +1318,7 @@ impl RatchetState {
             &self.directory.join(ACCOUNT_FILE),
             &self.account,
             &self.pickle_secret,
+            self.ordered_access,
         )?;
         atomic_write(&self.directory.join(PREKEY_POOL_FILE), &pool.encode()?)?;
         self.current_pool = Some(pool.clone());
@@ -1573,8 +1733,17 @@ fn persist_account(
     path: &Path,
     account: &Account,
     pickle_secret: &[u8; PICKLE_SECRET_BYTES],
+    ordered_access: bool,
 ) -> Result<(), RatchetError> {
-    atomic_write(path, account.pickle().encrypt(pickle_secret).as_bytes())
+    let native = account.pickle().encrypt(pickle_secret);
+    // The format is fixed by the successful loader/protection transition. A
+    // failed or stale disk read must never downgrade this account to legacy.
+    let bytes = if ordered_access {
+        format!("{ORDERED_ACCOUNT_PREFIX}{native}")
+    } else {
+        native
+    };
+    atomic_write(path, bytes.as_bytes())
 }
 
 fn atomic_write(path: &Path, bytes: &[u8]) -> Result<(), RatchetError> {
@@ -1601,6 +1770,8 @@ fn remove_file_if_present(path: &Path) -> Result<bool, RatchetError> {
 
 #[derive(Debug, Error)]
 pub enum RatchetError {
+    #[error("internal ordered ingress: {0}")]
+    OrderedIngressViolation(&'static str),
     #[error("ratchet state I/O failed")]
     Io(#[from] io::Error),
 
@@ -1804,6 +1975,36 @@ pub enum RatchetError {
 
     #[error("system clock is before the Unix epoch")]
     SystemTimeBeforeUnixEpoch,
+}
+
+impl RatchetError {
+    /// Only deterministic failures of incoming bytes may be quarantined. Missing
+    /// keys, local pickle/record failures, I/O and maintenance errors require
+    /// rollback of the caller's transaction, including any earlier native writes.
+    pub fn is_invalid_ordered_input(&self) -> bool {
+        match self {
+            Self::Decryption(error)
+            | Self::SessionCreation(SessionCreationError::Decryption(error)) => matches!(
+                error,
+                DecryptionError::InvalidMAC(_)
+                    | DecryptionError::InvalidMACLength(_, _)
+                    | DecryptionError::InvalidPadding(_)
+                    | DecryptionError::NonContributoryKey
+            ),
+            Self::SessionCreation(
+                SessionCreationError::MismatchedIdentityKey(_, _)
+                | SessionCreationError::MismatchedSessionConfig { .. }
+                | SessionCreationError::NonContributoryKey,
+            )
+            | Self::MessageDecode(_)
+            | Self::InvalidUtf8(_)
+            | Self::InvalidPlaintextLength(_)
+            | Self::UnsupportedCiphertextVersion(_)
+            | Self::InvalidMessageType(_)
+            | Self::InvalidCiphertextLength(_) => true,
+            _ => false,
+        }
+    }
 }
 
 #[cfg(test)]
@@ -2217,6 +2418,104 @@ mod tests {
         assert_eq!(
             state.retire_peer_device(peer.device_id())?,
             RatchetRetirement::default()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn ordered_ingress_i1_error_classification_is_typed_and_unknown_is_operational() {
+        assert!(
+            RatchetError::Decryption(DecryptionError::InvalidMACLength(8, 0))
+                .is_invalid_ordered_input()
+        );
+        assert!(!RatchetError::Io(io::Error::other("invalid MAC")).is_invalid_ordered_input());
+        assert!(!RatchetError::UnsupportedSessionRecordVersion(99).is_invalid_ordered_input());
+        assert!(
+            !RatchetError::Decryption(DecryptionError::MissingMessageKey(0))
+                .is_invalid_ordered_input()
+        );
+        assert!(
+            !RatchetError::SessionCreation(SessionCreationError::MissingOneTimeKey(
+                Curve25519PublicKey::from_bytes([1; 32])
+            ))
+            .is_invalid_ordered_input()
+        );
+        assert!(!RatchetError::PrekeySequenceExhausted.is_invalid_ordered_input());
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn ordered_ingress_i2_allowed_save_uses_loaded_format_when_disk_tag_is_unreadable()
+    -> Result<(), Box<dyn std::error::Error>> {
+        use std::os::windows::fs::OpenOptionsExt;
+        let directory = tempdir()?;
+        let alice_dir = directory.path().join("alice");
+        let bob_dir = directory.path().join("bob");
+        let alice_identity = DeviceIdentity::generate()?;
+        let bob_identity = DeviceIdentity::generate()?;
+        let mut bob = RatchetState::load_or_create(&bob_dir)?;
+        let bob_bundle = bob.prekey_bundle(&bob_identity)?;
+        let mut stale_legacy = RatchetState::load_or_create(&bob_dir)?;
+        bob.protect_for_ordered_ingress()?;
+        let mut alice = RatchetState::load_or_create(&alice_dir)?;
+        let (sender, ciphertext, operation) =
+            alice.encrypt(&alice_identity, &bob_bundle, "exact")?;
+        let alice_bundle = alice.prekey_bundle(&alice_identity)?;
+        let guard = SingleChainReceiveGuard {
+            peer_device_id: alice_identity.device_id(),
+            session_id: operation.session_id,
+            ratchet_key: ciphertext.ordering_header()?.ratchet_key,
+            next_index: 0,
+        };
+        let account = bob_dir.join("ratchet/account.pickle");
+        // FILE_SHARE_WRITE | FILE_SHARE_DELETE: subsequent reads are denied,
+        // but the already loaded account can still be atomically replaced.
+        let blocker = OpenOptions::new()
+            .read(true)
+            .share_mode(0x2 | 0x4)
+            .open(&account)?;
+        let read_error = fs::read_to_string(&account)
+            .err()
+            .ok_or("account read was not denied")?;
+        assert_eq!(read_error.raw_os_error(), Some(32));
+        drop(blocker);
+        // MoveFileEx replacement of an open target can itself fail on Windows.
+        // For the permitted-write case, make the disk tag unreadable as UTF-8
+        // while retaining the previously loaded, authenticated account in memory.
+        fs::write(&account, [0xff])?;
+        let invalid_tag = fs::read_to_string(&account).err().ok_or("tag decoded")?;
+        assert_eq!(invalid_tag.kind(), io::ErrorKind::InvalidData);
+        let (plaintext, _) =
+            bob.decrypt_ordered_single_chain(&bob_identity, &sender, &ciphertext, &guard)?;
+        assert_eq!(plaintext.as_str(), "exact");
+        let fenced = fs::read_to_string(&account)?.starts_with(ORDERED_ACCOUNT_PREFIX);
+        println!(
+            "ordered_i2_actual_sharing_violation=32; permitted_write_tag_read=InvalidData; allowed_write_succeeded=true; fence_retained={fenced}"
+        );
+        assert!(
+            fenced,
+            "a permitted save silently removed the account fence"
+        );
+        drop(bob);
+        assert!(matches!(
+            RatchetState::load_or_create(&bob_dir),
+            Err(RatchetError::OrderedIngressViolation(_))
+        ));
+        let mut reopened = RatchetState::load_for_ordered_ingress(&bob_dir)?;
+        assert!(matches!(
+            reopened.decrypt(&bob_identity, &sender, &ciphertext),
+            Err(RatchetError::OrderedIngressViolation(_))
+        ));
+        assert!(matches!(
+            stale_legacy.decrypt(&bob_identity, &sender, &ciphertext),
+            Err(RatchetError::OrderedIngressViolation(_))
+        ));
+        assert!(matches!(
+            stale_legacy.encrypt(&bob_identity, &alice_bundle, "forbidden"),
+            Err(RatchetError::OrderedIngressViolation(_))
+        ));
+        println!(
+            "ordered_i2=passed; explicit_fenced_save=true; reopen_legacy_encrypt_decrypt=refused"
         );
         Ok(())
     }

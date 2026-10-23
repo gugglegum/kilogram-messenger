@@ -215,6 +215,7 @@ use tokio::{
 };
 use zeroize::Zeroizing;
 
+mod ordered_ingress;
 mod publication_conflict_ceremony;
 mod recovery_discovery;
 mod recovery_link;
@@ -3648,13 +3649,21 @@ async fn async_main() -> Result<()> {
     let command = cli.command;
     let state_directory = command.state_directory().map(Path::to_path_buf);
     let uses_state_vault_dual_write = command.uses_state_vault_dual_write();
-    let _state_lock = command
+    let mut _state_lock = command
         .uses_outer_state_lock()
         .then(|| command.state_directory())
         .flatten()
         .map(StateDirectoryLock::acquire)
         .transpose()
         .context("lock state directory and recover interrupted local transaction")?;
+    if let Some(root) = state_directory.as_deref()
+        && RatchetState::is_ordered_ingress(root)?
+    {
+        let lock = _state_lock
+            .take()
+            .context("internal ordered profile forbids this unlocked runtime/worker path")?;
+        return ordered_ingress::run_command(command, lock).await;
+    }
     let vault_guard = if uses_state_vault_dual_write {
         state_directory
             .as_deref()
@@ -3664,6 +3673,22 @@ async fn async_main() -> Result<()> {
     } else {
         None
     };
+    // Recovery may have restored a protected account after the initial tag check.
+    // Never execute a generic writer against that newly recovered internal profile.
+    if let Some(root) = state_directory.as_deref()
+        && RatchetState::is_ordered_ingress(root)?
+    {
+        let mirror = match vault_guard {
+            Some(guard) => guard.finish(),
+            None => Ok(()),
+        };
+        return combine_operation_and_mirror(
+            Err(anyhow::anyhow!(
+                "recovered internal ordered profile; retry through ordered Sync or History"
+            )),
+            mirror,
+        );
+    }
     let command_result = Box::pin(run_command(command)).await;
     let mirror_result = match vault_guard {
         Some(guard) => guard.finish(),
@@ -5279,6 +5304,12 @@ impl<'a> CommandTransactionContext<'a> {
     }
 
     fn load_ratchet_state(&mut self) -> Result<RatchetState> {
+        self.prepare_ratchet_workspace()?;
+        RatchetState::load_or_create(self.state_directory)
+            .context("load persistent ratchet state from the transaction workspace")
+    }
+
+    fn prepare_ratchet_workspace(&mut self) -> Result<()> {
         if !self.ratchet_workspace_prepared {
             if EncryptedStateVault::is_initialized(self.state_directory)
                 .context("inspect state vault before mutable ratchet read")?
@@ -5299,8 +5330,7 @@ impl<'a> CommandTransactionContext<'a> {
             }
             self.ratchet_workspace_prepared = true;
         }
-        RatchetState::load_or_create(self.state_directory)
-            .context("load persistent ratchet state from the transaction workspace")
+        Ok(())
     }
 
     fn load_ratchet_state_for_store(&mut self) -> Result<RatchetState, StoreError> {
@@ -21029,20 +21059,30 @@ async fn runtime(options: RuntimeOptions) -> Result<()> {
         volunteer_storage,
     } = options;
     let mut runtime_test_faults = RuntimeSessionTestFaults::from_environment()?;
-    let endpoint_announcement_descriptor_directory =
-        resolve_runtime_received_endpoint_descriptor_directory(
+    let (
+        prepared,
+        endpoint_announcement_descriptor_directory,
+        own_device_discovery_ticket_directory,
+    ) = with_locked_state(&state_dir, || {
+        // RuntimeFromProfile resolves its root inside runtime. Check under the
+        // existing lock, after vault/shadow recovery and before any trust writer.
+        ensure!(
+            !RatchetState::is_ordered_ingress(&state_dir)?,
+            "internal ordered profile forbids runtime preparation"
+        );
+        let endpoint_descriptors = resolve_runtime_received_endpoint_descriptor_directory(
             &state_dir,
             ipc_file.as_deref(),
             ticket_file.as_deref(),
         )?;
-    let own_device_discovery_ticket_directory =
-        resolve_runtime_own_device_discovery_ticket_directory(
+        let own_discovery = resolve_runtime_own_device_discovery_ticket_directory(
             &state_dir,
             ipc_file.as_deref(),
             ticket_file.as_deref(),
         )?;
-    let prepared = with_locked_state(&state_dir, || {
-        prepare_runtime_listener(&state_dir, &device_list_file, &peer_prekey_pool_files)
+        let prepared =
+            prepare_runtime_listener(&state_dir, &device_list_file, &peer_prekey_pool_files)?;
+        Ok((prepared, endpoint_descriptors, own_discovery))
     })?;
     let peer_reenrollment_startup = with_locked_state(&state_dir, || {
         consume_peer_reenrollment_transitions_at_runtime_start(
@@ -28273,6 +28313,27 @@ async fn sync(
     max_rounds: usize,
     expected_listener_account_id: AccountId,
 ) -> Result<RuntimeSyncPathObservationDraft> {
+    sync_with_ordered_lease(
+        state_dir,
+        ticket,
+        ticket_file,
+        conversation,
+        max_rounds,
+        expected_listener_account_id,
+        None,
+    )
+    .await
+}
+
+async fn sync_with_ordered_lease(
+    state_dir: PathBuf,
+    ticket: Option<String>,
+    ticket_file: Option<PathBuf>,
+    conversation: String,
+    max_rounds: usize,
+    expected_listener_account_id: AccountId,
+    ordered_lease: Option<&ordered_ingress::Lease>,
+) -> Result<RuntimeSyncPathObservationDraft> {
     ensure!(
         (1..=MAX_SYNC_ROUNDS).contains(&max_rounds),
         "--max-rounds must be between 1 and {MAX_SYNC_ROUNDS}"
@@ -28282,6 +28343,14 @@ async fn sync(
     let device_state = load_command_device_state(&state_dir)?;
     let canonical_sync_v2_policy =
         load_canonical_sync_v2_runtime_policy(&state_dir, device_state.identity().device_id())?;
+    if ordered_lease.is_some() {
+        ensure!(
+            !canonical_sync_v2_policy
+                .permissions
+                .publish_canonical_capability(),
+            "internal ordered profile requires legacy-only sync"
+        );
+    }
     let trust = CommandTrustReadRepository::open(&state_dir, &device_state)?;
     let requester_certificate = trust
         .load_certificate()
@@ -28295,12 +28364,14 @@ async fn sync(
     let local_message_store = open_local_message_store(&state_dir)?;
     let ticket = load_connection_ticket(ticket, ticket_file).await?;
     ticket.verify_listener_account(expected_listener_account_id)?;
-    run_state_transaction(&state_dir, |transaction| {
-        let ratchet_state = transaction.load_ratchet_state()?;
-        ratchet_state
-            .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)
-            .context("observe listener prekey directory and reject rollback")
-    })?;
+    if ordered_lease.is_none() {
+        run_state_transaction(&state_dir, |transaction| {
+            let ratchet_state = transaction.load_ratchet_state()?;
+            ratchet_state
+                .observe_prekey_directory(ticket.listener_directory(), unix_time_now()?)
+                .context("observe listener prekey directory and reject rollback")
+        })?;
+    }
     let listener_snapshot_store = pin_peer_authority_primary(
         &state_dir,
         &device_state,
@@ -28338,11 +28409,18 @@ async fn sync(
         expected_listener_device_id,
         &ticket,
     )?;
+    if ordered_lease.is_some() {
+        ordered_ingress::verify_selected_peer(&state_dir, expected_listener_device_id)?;
+        ensure!(
+            peer_capability_context.canonical_selection.is_none(),
+            "internal ordered profile forbids canonical activation"
+        );
+    }
     let mut canonical_selection = peer_capability_context.canonical_selection;
     let peer_capability_authorization = peer_capability_context.authorization;
     print_peer_capability_transport_authorization(peer_capability_authorization);
     print_immutable_read_diagnostics("sync", &immutable_reads);
-    let decrypting_store = DecryptingSessionStore::new(
+    let mut decrypting_store = DecryptingSessionStore::new(
         &state_dir,
         &event_store,
         &local_message_store,
@@ -28350,6 +28428,7 @@ async fn sync(
         requester_certificate.account_id(),
         immutable_reads,
     );
+    decrypting_store.ordered_lease = ordered_lease;
     let client = SyncClient::new(
         device_state.identity(),
         &decrypting_store,
@@ -28715,6 +28794,9 @@ async fn sync(
         );
 
         if !stats.more_available {
+            if ordered_lease.is_some() {
+                ordered_ingress::require_readable_convergence(&state_dir)?;
+            }
             println!("sync_rounds_completed={round_number}");
             println!("sync_received_events={total_received_events}");
             println!("sync_sent_events={total_sent_events}");
@@ -35223,6 +35305,7 @@ fn ensure_received_local_text_projection(
 }
 
 struct DecryptingSessionStore<'a> {
+    ordered_lease: Option<&'a ordered_ingress::Lease>,
     state_directory: PathBuf,
     event_writes: &'a EventStore,
     local_message_writes: &'a LocalMessageStore,
@@ -35247,6 +35330,7 @@ impl<'a> DecryptingSessionStore<'a> {
             ..
         } = read_repositories;
         Self {
+            ordered_lease: None,
             state_directory: state_directory.as_ref().to_path_buf(),
             event_writes: store,
             local_message_writes: local_messages,
@@ -35255,6 +35339,19 @@ impl<'a> DecryptingSessionStore<'a> {
             device_state,
             local_account_id,
         }
+    }
+
+    fn protected_lease(&self) -> Result<Option<&ordered_ingress::Lease>, StoreError> {
+        if !RatchetState::is_ordered_ingress(&self.state_directory)
+            .map_err(kilogram_protocol::ProtocolError::from)?
+        {
+            return Ok(None);
+        }
+        self.ordered_lease.map(Some).ok_or_else(|| {
+            StoreError::from(io::Error::other(
+                "protected single-chain profile requires an exclusive ordered-ingress lease",
+            ))
+        })
     }
 
     fn ensure_local_projections(
@@ -35357,6 +35454,15 @@ impl SessionStore for DecryptingSessionStore<'_> {
         conversation_id: ConversationId,
         membership: &ConversationMembershipSnapshot,
     ) -> Result<Vec<kilogram_protocol::EventId>, StoreError> {
+        if self.protected_lease()?.is_some() {
+            return ordered_ingress::inventory(
+                &self.state_directory,
+                self.device_state.identity().device_id(),
+                conversation_id,
+                membership,
+            )
+            .map_err(|error| StoreError::from(io::Error::other(format!("{error:#}"))));
+        }
         self.event_reads
             .authorized_inventory(conversation_id, membership)
     }
@@ -35367,6 +35473,16 @@ impl SessionStore for DecryptingSessionStore<'_> {
         event_ids: &[kilogram_protocol::EventId],
         membership: &ConversationMembershipSnapshot,
     ) -> Result<Vec<AuthorizedEvent>, StoreError> {
+        if self.protected_lease()?.is_some() {
+            return ordered_ingress::events(
+                &self.state_directory,
+                self.device_state.identity().device_id(),
+                conversation_id,
+                event_ids,
+                membership,
+            )
+            .map_err(|error| StoreError::from(io::Error::other(format!("{error:#}"))));
+        }
         let events =
             self.event_reads
                 .authorized_events_by_id(conversation_id, event_ids, membership)?;
@@ -35385,6 +35501,10 @@ impl SessionStore for DecryptingSessionStore<'_> {
         events: &[AuthorizedEvent],
         membership: &ConversationMembershipSnapshot,
     ) -> Result<(), StoreError> {
+        if let Some(lease) = self.protected_lease()? {
+            return ordered_ingress::put_for_session(self, lease, events, membership)
+                .map_err(|error| StoreError::from(io::Error::other(format!("{error:#}"))));
+        }
         let staged_events = self.event_reads.stage_committed(events, membership)?;
         let staged_projections = run_store_transaction(&self.state_directory, |transaction| {
             for event in events {
