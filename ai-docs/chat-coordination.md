@@ -294,3 +294,53 @@ security regression, strict gate warnings и external-use ограничения
 Следующее поручение исполнителю — commit/push точного accepted-files allowlist без
 source/evidence drift, исключая development-environment.md. После callback root
 проверит Git blobs, parent и remote. Новый этап/heartbeat не запускать.
+
+Supporting A2 сохранён в `860b351fb747562e1fe12d469b1ad053217a7c0f`, parent bc86cd2.
+Root независимо сверил82 committed blobs/точный path set, manifest, единственный parent
+и фактический refs/heads/master. Индекс пуст; только чужой development-environment.md
+остаётся dirty с прежним SHA. Все прежние A2 ограничения сохранены.
+
+## Долговечный OD1 и большая история: следующий разрешённый этап
+
+2026-10-24 human userMessage `01a16bf9-89cd-7cb3-8661-36eef244e0fc` в root прямо
+поручил передать выбранный этап прежнему OD1 исполнителю на GPT-6.1 Sol Max без Fast,
+проверить сначала контракт, затем реализацию, вести repair cycles и после приёмки
+commit/push. [Task](tasks/long-lived-dialog-a3-task.md) фиксирует исходный860b351,
+границы continuation/history/ресурсов/OD1 upgrade и конечную acceptance matrix.
+Первое поручение — только контракт; реализация после root review. Executor:
+`01a1653c-0154-7611-8e8c-044fbe1e4d7a`, host local, «Подготовить baseline lossless sync».
+На момент выбора прежний turn completed, незавершённой работы там нет. Config default,
+последний model/effort gpt-6.1-sol/max; при новом запуске параметры проверяются повторно.
+Один substantive callback на каждую сдачу, затем остановка до root review; без heartbeat,
+пустых ACK, дополнительных исполнителей и самостоятельного запуска adjacent milestones.
+
+Поручение успешно отправлено с явными model=gpt-6.1-sol/thinking=max. `wait_threads`
+подтвердил active turn `01a16bfd-56cd-7d91-a82c-778cf05bef3e`; исполнитель начал проверку
+настроек перед подготовкой контракта. Root независимо прочитал новый turn_context:
+gpt-6.1-sol/max, отдельного service_tier нет; config.toml сохраняет default.
+Fast не включался. Следующее действие root после substantive callback — review
+контракта, а не автоматическая приёмка или начало продуктовой реализации.
+
+Первая сдача контракта получена автоматически; SHA-256
+`88ee043195d824b86c448b13a7669877b08c42429fb033a09aa163427044aa7d`.
+[Root review1](tasks/long-lived-dialog-a3-contract-review-1.md) поддержало основные
+решения, но не приняло контракт: physical growth64MiB конфликтует с production
+redb allocator; fresh mode reference/activation и native counter preflight требуют
+точного общего определения. Следующее поручение прежнему исполнителю — только
+адресные R1–R3 contract repairs, затем callback и повторное review. Product/commit/push
+до приёмки не начинать; модель/бюджет/чужая правка и A2 ограничения прежние.
+
+R1–R3 поручение успешно отправлено прежнему чату с явными gpt-6.1-sol/max;
+config service_tier=default перепроверен. Compact wait подтвердил active turn
+`01a16c55-f7a1-77c1-98f4-65f5469bbf7d`, исполнитель подтвердил contract-only scope.
+Последний cursor `b945b76a-eaaa-4ff8-8894-3dc54143a9d9:29`.
+
+Повторная сдача contract-only получена, submitted SHA-256
+`66f70540a180804585f6ab9b870c2bcf1d616c24943c6ec946e6d945d7ecc25f`.
+[Review2](tasks/long-lived-dialog-a3-contract-review-2.md) независимо сверило pinned
+sources и арифметику и приняло контракт. R1–R3 закрыты на архитектурном уровне;
+runtime/fault/scale evidence ещё предстоит. Root изменил только статус самого
+контракта; final hashes входят в contract accepted-files manifest.
+Следующий dispatch — commit/push точной принятой документации тем же исполнителем;
+после root remote/tree verification — первый implementation slice storage/integrity
+с отдельными review/repair/commit/push. Product edits до этой сверки не начинать.

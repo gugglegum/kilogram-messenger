@@ -54,7 +54,21 @@ Iroh stack1.1.0, совместимые security patches,94 адресных tes
 показывает0 vulnerability records и7 предупреждений, оставаясь FAIL. Конкретная
 security runtime regression отложена после safeguard: **весь A2 не закрыт**.
 Root повторил11 transport tests, mixed old/new duplex64 и reopen272 hashes.
-Следующий шаг — commit/push принятой поддерживающей части и сверка committed tree.
+Поддерживающая часть сохранена в `860b351fb747562e1fe12d469b1ad053217a7c0f`;
+root независимо сверил82 committed blobs и remote master. A2 остаётся открытым.
+
+Текущий разрешённый этап — [долговечная переписка и большая история](tasks/long-lived-dialog-a3-task.md):
+продолжение OD1 за511 Text/направление, ограниченные ресурсы операций, paged history,
+offline catch-up и поведение существующих L1 profiles. Пользователь поручил прежнему
+исполнителю OD1 на GPT-6.1 Sol Max без Fast. Сначала контракт и root review/repair,
+затем реализация и review/repair; commit/push каждой принятой части. Сейчас разрешена
+подготовка контракта, продуктовая реализация ещё не начата.
+[Первое review контракта](tasks/long-lived-dialog-a3-contract-review-1.md) поддержало
+направление, offline authorization и forward-only переход; перед приёмкой нужны
+R1–R3: production redb growth bounds, единый fresh/existing mode reference и точный
+preflight внутренних native counters. Исправления [проверены и контракт принят](tasks/long-lived-dialog-a3-contract-review-2.md).
+Сначала публикация принятой документации и независимая сверка root; затем первая
+часть реализации — indexed storage/integrity/ресурсы. Runtime A3 ещё не реализован.
 
 Независимый обзор архитектуры и пути до пользовательского MVP на ревизии
 `3e82e63`: [аудит 2026-10-22](reviews/2026-10-22-architecture-mvp-audit.md).

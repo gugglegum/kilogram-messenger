@@ -1,0 +1,48 @@
+{
+  "format_version": 1,
+  "accepted_date": "2026-10-24",
+  "baseline_head": "860b351fb747562e1fe12d469b1ad053217a7c0f",
+  "decision": "A3 contract accepted after R1-R3; publication of documentation only",
+  "review": "ai-docs/tasks/long-lived-dialog-a3-contract-review-2.md",
+  "excluded_foreign_file": "ai-docs/development-environment.md",
+  "excluded_sha256": "330ad3c4d1941b213e7e5bef958416a6847d3defb8e368f79d6d21c944efe798",
+  "self_note": "Commit this manifest too; its SHA256 and Git blob are pinned in root dispatch",
+  "files": [
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "sha256": "aaaf8c3ba043c8eea80a29a7a981b658503d69fd7aaf1f2df49b78c4afe5e587",
+      "bytes": 33452,
+      "git_blob": "2c0244d068392323bfead4c2ee4ebf13771c7c75"
+    },
+    {
+      "path": "ai-docs/README.md",
+      "sha256": "6b28c41cf68e50be83fb0e7cfb264714ef76f7862e7cb4a12b8f375aca30137f",
+      "bytes": 146065,
+      "git_blob": "18610734c4606314e58778134601cc33258b17e2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-contract-review-1.md",
+      "sha256": "9e343a2712fc63b6f42b17a0863ea1033e4765c98876742cd5e414849ed517c3",
+      "bytes": 12362,
+      "git_blob": "c0030f682d45659a7aacfb9aebf498bef45b0f2f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-contract-review-2.md",
+      "sha256": "4ba146294cfe3c607c0bd76ec98328445f59992b031a63f79de56d5c51955b8f",
+      "bytes": 8358,
+      "git_blob": "18ed78c7be4fc480b35659bcf1cb44a4b66cdbfc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-contract.md",
+      "sha256": "70af8abcbbf12d553a8a4ae0751292d8780eea94b0dea350e1d17d68f54b8941",
+      "bytes": 67816,
+      "git_blob": "803cb752a6a0488f80c79ed9d6026225b36d0399"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-task.md",
+      "sha256": "33f79115ec74f0b1e6a170b3cdc90659d2725b82fdf2d6ea73ab41cd0796d0b3",
+      "bytes": 16120,
+      "git_blob": "7200d71f513388bfe71a069af5915f9fc958e8a4"
+    }
+  ]
+}
