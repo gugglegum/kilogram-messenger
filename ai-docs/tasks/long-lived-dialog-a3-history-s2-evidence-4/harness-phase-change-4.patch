@@ -1,0 +1,245 @@
+diff --git "a/ai-docs\\tasks\\long-lived-dialog-a3-history-s2-evidence-4\\history_scale_before.rs" b/crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs
+index de03f06..d178750 100644
+--- "a/ai-docs\\tasks\\long-lived-dialog-a3-history-s2-evidence-4\\history_scale_before.rs"
++++ b/crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs
+@@ -272,11 +272,30 @@ struct Checkpoint {
+     index: u64,
+ }
+ 
++// Fixed-size phase metrics only. Print immediately; never retain another history vector.
++fn completed_phase(profile: &str, target: u64, name: &str, overall: Instant, metrics: Value) {
++    println!(
++        "A3_S2_PHASE {}",
++        json!({"profile":profile,"debug_assertions":cfg!(debug_assertions),"target_records":target,
++            "phase":name,"status":"COMPLETE","scenario_seconds":overall.elapsed().as_secs_f64(),"metrics":metrics})
++    );
++}
++
+ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+     let overall = Instant::now();
++    let executable = std::env::current_exe()?;
++    let profile = executable
++        .parent()
++        .and_then(|p| p.parent())
++        .and_then(|p| p.file_name())
++        .and_then(|p| p.to_str())
++        .ok_or("stable profile path")?;
++    if full && (!cfg!(debug_assertions) || profile != "verification-scale") {
++        return Err("normative S2 scale requires verification-scale with debug assertions".into());
++    }
+     println!(
+         "A3_S2_SCENARIO_START {}",
+-        json!({"full":full,"fixture":root,"budget_seconds":SCENARIO_BUDGET_SECONDS,"timer_boundary":"before fixture existence check through final store drop; final summary encoding excluded","profiling_enabled":false})
++        json!({"full":full,"fixture":root,"profile":profile,"debug_assertions":cfg!(debug_assertions),"budget_seconds":SCENARIO_BUDGET_SECONDS,"timer_boundary":"before profile/fixture checks through final store drop; final summary encoding excluded","profiling_enabled":false})
+     );
+     let exists = root.join(STATE_VAULT_FILE).exists();
+     if exists {
+@@ -343,14 +362,34 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+         }
+         let fill_seconds = fill_start.elapsed().as_secs_f64();
+         let after_fill = store.backend_stats()?;
++        completed_phase(
++            profile,
++            target,
++            "fill",
++            overall,
++            json!({
++            "phase_seconds":fill_seconds,"existing_user_rows":existing,"user_rows":count(&heads),
++            "fill_transactions":fill_transactions-fill_transactions_before,"cumulative_fill_transactions":fill_transactions,
++            "max_bulk_plan_bytes":max_bulk_plan,"max_app_buffer_bound_bytes":max_app,"io_before":before_fill,"io_after":after_fill}),
++        );
+         let memory_fill = memory(&store, "after_fill", target, max_app)?;
+         let counts = store.record_counts()?;
++        let fill_close_start = Instant::now();
+         drop(store);
++        let fill_close_seconds = fill_close_start.elapsed().as_secs_f64();
+         let reopened = Instant::now();
+         store =
+             IndexedDialogVault::open(StateDirectoryLock::acquire(&root)?, f::owner(), config())?;
+         let reopen_ms = reopened.elapsed().as_secs_f64() * 1000.0;
+         let after_open = store.backend_stats()?;
++        completed_phase(
++            profile,
++            target,
++            "reopen_after_fill",
++            overall,
++            json!({
++            "phase_seconds":reopen_ms/1000.0,"prior_close_seconds":fill_close_seconds,"open_backend":after_open}),
++        );
+         let memory_open = memory(&store, "after_reopen", target, 0)?;
+         let mut point_ms = Vec::new();
+         let point_start = Instant::now();
+@@ -373,6 +412,16 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+         }
+         let point_io_end = store.backend_stats()?;
+         let point_phase_ms = point_start.elapsed().as_secs_f64() * 1000.0;
++        let point_p95_ms = p95(&mut point_ms);
++        completed_phase(
++            profile,
++            target,
++            "point",
++            overall,
++            json!({
++            "phase_seconds":point_phase_ms/1000.0,"point_p95_ms":point_p95_ms,"sample_count":point_ms.len(),
++            "io_before":point_io_start,"io_after":point_io_end}),
++        );
+         let range_start = Instant::now();
+         let first_start = Instant::now();
+         let mut page = store.history_first(0, 32)?;
+@@ -426,6 +475,18 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+         drop(page);
+         let range_seconds = range_start.elapsed().as_secs_f64();
+         let after_reads = store.backend_stats()?;
++        let page_p95_ms = p95(&mut latencies);
++        completed_phase(
++            profile,
++            target,
++            "range",
++            overall,
++            json!({
++            "phase_seconds":range_seconds,"includes_streamed_oracle":true,"exact_streamed_rows":seen,
++            "page32_p95_ms":page_p95_ms,"full_page_latency_samples":latencies.len(),"page_record_limit":32,
++            "max_page_point_gets":max_gets,"max_candidates":max_candidates,"max_app_buffer_bound_bytes":max_app,
++            "checkpoint_count":checkpoints.len(),"io_before":point_io_end,"io_after":after_reads}),
++        );
+         let memory_warm = memory(&store, "after_warm_range", target, max_app)?;
+         let mut appends = Vec::new();
+         let ordinary_start = Instant::now();
+@@ -470,12 +531,26 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+         }
+         let after_append = store.backend_stats()?;
+         let ordinary_phase_seconds = ordinary_start.elapsed().as_secs_f64();
++        let append_p95_ms = p95(&mut appends);
++        completed_phase(
++            profile,
++            target,
++            "ordinary_append",
++            overall,
++            json!({
++            "phase_seconds":ordinary_phase_seconds,"append_p95_ms":append_p95_ms,"append_count":APPEND_COUNT,
++            "ordinary_transactions":APPEND_COUNT*2,"cumulative_ordinary_transactions":ordinary_transactions,
++            "cumulative_measured_transactions":fill_transactions+ordinary_transactions,
++            "ordinary_max_node_reads":max_append_nodes,"ordinary_max_plan_bytes":max_append_plan,
++            "max_app_buffer_bound_bytes":max_app,"io_before":after_reads,"io_after":after_append}),
++        );
+         let memory_append = memory(
+             &store,
+             "after_ordinary_append",
+             target + APPEND_COUNT,
+             max_app,
+         )?;
++        let visibility_start = Instant::now();
+         assert_eq!(store.history_first(0, 1)?.frontiers, heads.frontiers);
+         assert!(
+             store
+@@ -488,12 +563,23 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+                 .items
+                 .is_empty()
+         );
++        completed_phase(
++            profile,
++            target,
++            "post_append_visibility",
++            overall,
++            json!({
++            "phase_seconds":visibility_start.elapsed().as_secs_f64(),"new_first_frontiers":true,
++            "new_last_point":true,"old_finished_cursor_empty":true}),
++        );
++        let checkpoint_phase_start = Instant::now();
+         drop(store);
+         let resume_open = Instant::now();
+         store =
+             IndexedDialogVault::open(StateDirectoryLock::acquire(&root)?, f::owner(), config())?;
+         let resume_reopen_ms = resume_open.elapsed().as_secs_f64() * 1000.0;
+         let resume_start = Instant::now();
++        let checkpoint_io_before = store.backend_stats()?;
+         let mut resume_pages = 0;
+         for checkpoint in &checkpoints {
+             let page = store.history_page(0, &checkpoint.cursor, 32)?;
+@@ -506,10 +592,22 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+                 [heads.frontiers[0] - 1, heads.frontiers[1] - 15]
+             );
+         }
++        let checkpoint_io_after = store.backend_stats()?;
++        completed_phase(
++            profile,
++            target,
++            "reopen_checkpoints",
++            overall,
++            json!({
++            "phase_seconds":checkpoint_phase_start.elapsed().as_secs_f64(),"resume_reopen_ms":resume_reopen_ms,
++            "same_process_drop_open":true,"old_snapshot_checkpoints_passed":checkpoints.len(),
++            "io_before_checkpoints":checkpoint_io_before,"io_after_checkpoints":checkpoint_io_after}),
++        );
+         let checkpoint = checkpoints.get(1).ok_or("midpoint cursor")?;
+         let mut expected = checkpoint.expected.clone();
+         let mut index = checkpoint.index;
+         let mut cursor = checkpoint.cursor.clone();
++        let suffix_start = Instant::now();
+         loop {
+             budget(overall)?;
+             let page = store.history_page(0, &cursor, 32)?;
+@@ -522,6 +620,18 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+         }
+         assert_eq!(index, target);
+         let resume_ms = resume_start.elapsed().as_secs_f64() * 1000.0;
++        let suffix_seconds = suffix_start.elapsed().as_secs_f64();
++        let suffix_io_after = store.backend_stats()?;
++        completed_phase(
++            profile,
++            target,
++            "suffix",
++            overall,
++            json!({
++            "phase_seconds":suffix_seconds,"resume_including_checkpoints_ms":resume_ms,
++            "resume_pages":resume_pages,"start_index":checkpoint.index,"final_index":index,"old_snapshot_suffix_complete":true,
++            "io_before":checkpoint_io_after,"io_after":suffix_io_after}),
++        );
+         let memory_resume = memory(
+             &store,
+             "after_resume_reopen",
+@@ -530,6 +640,13 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+         )?;
+         assert_eq!(store.root.roots[24..48], c2_roots);
+         assert!(store.root.ledger[1] == c2_ledger);
++        completed_phase(
++            profile,
++            target,
++            "isolation",
++            overall,
++            json!({"c2_roots_and_ledger_unchanged":true}),
++        );
+         let sample_bytes = latencies.capacity() * std::mem::size_of::<f64>();
+         let mut stage = json!({"target_records":target,"source_records_c0":target+2,"records_after_append":target+APPEND_COUNT,
+             "all_context_record_counts_before_append":counts,"native_e2e_messages":0,"synthetic_trusted_dto":true,
+@@ -540,13 +657,13 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+             "setup_transactions_excluded":true,"fill_read_bytes":after_fill.read_bytes-before_fill.read_bytes,
+             "fill_write_bytes":after_fill.write_bytes-before_fill.write_bytes,"fill_growth_bytes":after_fill.growth_bytes-before_fill.growth_bytes,
+             "fill_syncs":after_fill.sync_calls-before_fill.sync_calls,"max_bulk_plan_bytes":max_bulk_plan,
+-            "cold_reopen_ms":reopen_ms,"open_backend":after_open,"point_p95_ms":p95(&mut point_ms)});
++            "cold_reopen_ms":reopen_ms,"open_backend":after_open,"point_p95_ms":point_p95_ms});
+         let details = json!({
+             "stage_elapsed_seconds":stage_start.elapsed().as_secs_f64(),"point_phase_ms":point_phase_ms,"ordinary_phase_seconds":ordinary_phase_seconds,
+             "point_backend_read_bytes":point_io_end.read_bytes-point_io_start.read_bytes,
+-            "page32_p95_ms":p95(&mut latencies),"full_range_seconds":range_seconds,"page_backend_read_bytes":after_reads.read_bytes-point_io_end.read_bytes,
++            "page32_p95_ms":page_p95_ms,"full_range_seconds":range_seconds,"page_backend_read_bytes":after_reads.read_bytes-point_io_end.read_bytes,
+             "page_record_limit":32,"max_page_point_gets":max_gets,"max_candidates":max_candidates,
+-            "append_p95_ms":p95(&mut appends),"ordinary_append_count":APPEND_COUNT,
++            "append_p95_ms":append_p95_ms,"ordinary_append_count":APPEND_COUNT,
+             "ordinary_max_node_reads":max_append_nodes,"ordinary_max_plan_bytes":max_append_plan,
+             "append_read_bytes":after_append.read_bytes-after_reads.read_bytes,"append_write_bytes":after_append.write_bytes-after_reads.write_bytes,
+             "append_growth_bytes":after_append.growth_bytes-after_reads.growth_bytes,"append_syncs":after_append.sync_calls-after_reads.sync_calls,
+@@ -570,9 +687,11 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+     let gates = limits(&stages, full, overall.elapsed().as_secs_f64());
+     println!(
+         "A3_S2_SCALE_FINAL {}",
+-        serde_json::to_string(&json!({"stages":stages,"gates":gates,"fixture":root,
++        serde_json::to_string(
++            &json!({"stages":stages,"gates":gates,"fixture":root,"profile":profile,"debug_assertions":cfg!(debug_assertions),
+                 "scenario_before_final_close_seconds":scenario_before_final_close_seconds,"final_close_seconds":final_close_seconds,"scenario_includes_final_close":true,
+-                "transactions":{"fill":fill_transactions,"ordinary":ordinary_transactions,"measured_total":fill_transactions+ordinary_transactions,"setup_excluded":true},"native_e2e_messages":0}))?
++                "transactions":{"fill":fill_transactions,"ordinary":ordinary_transactions,"measured_total":fill_transactions+ordinary_transactions,"setup_excluded":true},"native_e2e_messages":0})
++        )?
+     );
+     if !matches!(
+         gates["status"].as_str(),

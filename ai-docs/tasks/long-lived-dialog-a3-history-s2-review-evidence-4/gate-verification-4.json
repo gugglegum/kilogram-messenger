@@ -1,0 +1,39 @@
+{
+  "raw_final_matches": true,
+  "raw_27_phases_match": true,
+  "phase_metric_matches": true,
+  "effective_compiler_profiles_verified": 3,
+  "page_ratio": 2.0421644533319663,
+  "append_ratio": 1.4302976946390036,
+  "memory_comparisons": [
+    {
+      "phase": "after_warm_range",
+      "raw_growth_bytes": 89948160,
+      "residual_growth_bytes": 29995328,
+      "residual_headroom_bytes": 3559104
+    },
+    {
+      "phase": "after_ordinary_append",
+      "raw_growth_bytes": 89690112,
+      "residual_growth_bytes": 30654464,
+      "residual_headroom_bytes": 2899968
+    }
+  ],
+  "scenario_seconds": 401.9873352,
+  "stage_sizes": [
+    1000,
+    10000,
+    100000
+  ],
+  "memory_sample_count": 21,
+  "memory_pids": [
+    41048
+  ],
+  "final_gate": "PASS",
+  "final_failures": [],
+  "final_unavailable": [],
+  "range100k_seconds": 35.1774333,
+  "page100k_p95_ms": 11.948500000000001,
+  "point100k_p95_ms": 1.2751,
+  "append100k_p95_ms": 18.3583
+}

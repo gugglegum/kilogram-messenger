@@ -1,0 +1,270 @@
+{
+  "api_encodings_included_in_api_and_phase_timings": true,
+  "backend_read_bytes": 5038080,
+  "backend_sync_ms": 0.0,
+  "backend_write_bytes": 0,
+  "cursor_seeding": "private known synthetic chain cuts, no prefix traversal",
+  "cuts": [
+    0,
+    32,
+    512,
+    1024,
+    2048,
+    4096,
+    4992,
+    6144,
+    7168,
+    8192,
+    9216,
+    9952
+  ],
+  "external_cbor_ms_excluded": 0.1724,
+  "external_json_ms_excluded": 9.482,
+  "instrumented": true,
+  "kind": "bounded_read_replay",
+  "max_candidates": 2,
+  "max_point_gets": 274,
+  "oracle_ms_excluded": 48.5525,
+  "page_api_ms": [
+    146.33180000000002,
+    145.9096,
+    143.589,
+    140.74960000000002,
+    139.933,
+    142.78660000000002,
+    140.6225,
+    148.37429999999998,
+    135.7473,
+    138.57510000000002,
+    133.0366,
+    142.5984
+  ],
+  "point_api_ms": [
+    7.2819,
+    13.325099999999999,
+    12.9503,
+    12.7338,
+    13.0957,
+    13.0329,
+    12.0479,
+    12.7289,
+    12.6891,
+    11.9092,
+    12.2399,
+    12.246699999999999
+  ],
+  "profile": {
+    "cache_hits": 2011,
+    "inclusive_timings": {
+      "binding_decode": {
+        "calls": 1267,
+        "ms": 2.2701
+      },
+      "cbor": {
+        "calls": 12,
+        "ms": 0.1976
+      },
+      "commit_write": {
+        "calls": 0,
+        "ms": 0.0
+      },
+      "common": {
+        "calls": 0,
+        "ms": 0.0
+      },
+      "history_apply": {
+        "calls": 0,
+        "ms": 0.0
+      },
+      "identity_heads_decode": {
+        "calls": 48,
+        "ms": 0.1225
+      },
+      "json": {
+        "calls": 12,
+        "ms": 9.779
+      },
+      "node_open": {
+        "calls": 10746,
+        "ms": 1088.2756
+      },
+      "node_proof": {
+        "calls": 10746,
+        "ms": 123.0155
+      },
+      "node_seal": {
+        "calls": 0,
+        "ms": 0.0
+      },
+      "prefix": {
+        "calls": 40983,
+        "ms": 78.305
+      },
+      "projection_decode": {
+        "calls": 1267,
+        "ms": 1.1841
+      },
+      "source_check": {
+        "calls": 420,
+        "ms": 2.6915
+      },
+      "tree_find": {
+        "calls": 1399,
+        "ms": 1516.7426
+      },
+      "value_check": {
+        "calls": 1399,
+        "ms": 6.2772
+      },
+      "value_get": {
+        "calls": 3410,
+        "ms": 1794.6904
+      },
+      "value_open": {
+        "calls": 1399,
+        "ms": 248.6223
+      },
+      "value_seal": {
+        "calls": 0,
+        "ms": 0.0
+      },
+      "writer_validation": {
+        "calls": 0,
+        "ms": 0.0
+      }
+    },
+    "key_tracking_cap": 4096,
+    "key_tracking_truncated": false,
+    "namespaces": [
+      {
+        "cipher_bytes": 447300,
+        "gets": 420,
+        "opens": 420,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 5256,
+        "gets": 514,
+        "opens": 72,
+        "repeated_gets": 442
+      },
+      {
+        "cipher_bytes": 28835,
+        "gets": 1161,
+        "opens": 395,
+        "repeated_gets": 766
+      },
+      {
+        "cipher_bytes": 614595,
+        "gets": 1267,
+        "opens": 464,
+        "repeated_gets": 803
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 5232,
+        "gets": 24,
+        "opens": 24,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 3816,
+        "gets": 24,
+        "opens": 24,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      }
+    ],
+    "negative_cache_hits": 0,
+    "works": 24
+  },
+  "user_rows": 10016
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "path": ".tmp/a3-s2/profile-value-read-2",
+    "initial_db_sha256": "df9d8293753daff382603baa2dcc4670705407e29155325007577c10644b0841",
+    "expected_user_rows": 10016,
+    "synthetic": true
+  },
+  {
+    "path": ".tmp/a3-s2/profile-value-write-2",
+    "initial_db_sha256": "df9d8293753daff382603baa2dcc4670705407e29155325007577c10644b0841",
+    "expected_user_rows": 10016,
+    "synthetic": true
+  }
+]

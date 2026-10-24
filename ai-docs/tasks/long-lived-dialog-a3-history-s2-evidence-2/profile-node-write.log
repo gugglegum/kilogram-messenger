@@ -1,0 +1,54 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 0.87s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 1 test
+test vault::indexed_dialog::history::profiling::history_scale_profile_saved_fixture ... A3_S2_PROFILE {"actual_plan_bytes":1457498,"app_buffer_bound":28985286,"fill128_ms":1453.8234,"fill_oracle_ms_excluded":2.8611999999999997,"fill_profile":{"cache_hits":3952,"inclusive_timings":{"binding_decode":{"calls":384,"ms":0.6211},"cbor":{"calls":0,"ms":0.0},"commit_write":{"calls":9,"ms":426.2919},"common":{"calls":5570,"ms":4.8492},"history_apply":{"calls":8,"ms":20.907},"identity_heads_decode":{"calls":1058,"ms":2.4005},"json":{"calls":0,"ms":0.0},"node_open":{"calls":1942,"ms":199.5233},"node_proof":{"calls":1942,"ms":22.1683},"node_seal":{"calls":2935,"ms":287.558},"prefix":{"calls":17913,"ms":32.5498},"projection_decode":{"calls":520,"ms":0.4557},"source_check":{"calls":128,"ms":0.7016},"tree_find":{"calls":2164,"ms":328.0864},"value_check":{"calls":88,"ms":0.3414},"value_get":{"calls":4690,"ms":322.2403},"value_open":{"calls":88,"ms":11.6044},"value_seal":{"calls":912,"ms":133.6017},"writer_validation":{"calls":256,"ms":263.7657}},"key_tracking_cap":4096,"key_tracking_truncated":false,"namespaces":[{"cipher_bytes":1065,"gets":504,"opens":1,"repeated_gets":376},{"cipher_bytes":438,"gets":152,"opens":6,"repeated_gets":143},{"cipher_bytes":146,"gets":488,"opens":2,"repeated_gets":367},{"cipher_bytes":10600,"gets":648,"opens":8,"repeated_gets":518},{"cipher_bytes":1080,"gets":40,"opens":8,"repeated_gets":24},{"cipher_bytes":8944,"gets":56,"opens":8,"repeated_gets":40},{"cipher_bytes":0,"gets":16,"opens":0,"repeated_gets":8},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":240,"opens":0,"repeated_gets":120},{"cipher_bytes":5590,"gets":720,"opens":5,"repeated_gets":600},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":4796,"gets":529,"opens":22,"repeated_gets":512},{"cipher_bytes":3498,"gets":785,"opens":22,"repeated_gets":768},{"cipher_bytes":1782,"gets":512,"opens":6,"repeated_gets":511},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0}],"negative_cache_hits":534,"works":17},"fill_sync_ms":131.1632,"fill_write_bytes":15252288,"final_changed_nodes":2831,"final_user_rows":10160,"initial_user_rows":10016,"instrumented":true,"kind":"synthetic_copy_write","ordinary16_ms":875.4380000000001,"ordinary_oracle_ms_excluded":0.3824,"ordinary_profile":{"cache_hits":356,"inclusive_timings":{"binding_decode":{"calls":48,"ms":0.148},"cbor":{"calls":0,"ms":0.0},"commit_write":{"calls":32,"ms":389.5665},"common":{"calls":703,"ms":0.6985},"history_apply":{"calls":32,"ms":251.3733},"identity_heads_decode":{"calls":224,"ms":0.655},"json":{"calls":0,"ms":0.0},"node_open":{"calls":1328,"ms":146.4875},"node_proof":{"calls":1328,"ms":17.7253},"node_seal":{"calls":849,"ms":93.3306},"prefix":{"calls":5010,"ms":9.9351},"projection_decode":{"calls":65,"ms":0.1185},"source_check":{"calls":16,"ms":0.102},"tree_find":{"calls":485,"ms":201.107},"value_check":{"calls":241,"ms":1.1265},"value_get":{"calls":678,"ms":235.1434},"value_open":{"calls":241,"ms":32.2455},"value_seal":{"calls":114,"ms":18.2744},"writer_validation":{"calls":32,"ms":64.2166}},"key_tracking_cap":4096,"key_tracking_truncated":false,"namespaces":[{"cipher_bytes":0,"gets":63,"opens":0,"repeated_gets":47},{"cipher_bytes":1168,"gets":19,"opens":16,"repeated_gets":2},{"cipher_bytes":1168,"gets":61,"opens":16,"repeated_gets":30},{"cipher_bytes":42400,"gets":81,"opens":32,"repeated_gets":33},{"cipher_bytes":135,"gets":5,"opens":1,"repeated_gets":3},{"cipher_bytes":1118,"gets":7,"opens":1,"repeated_gets":5},{"cipher_bytes":0,"gets":2,"opens":0,"repeated_gets":1},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":30,"opens":0,"repeated_gets":15},{"cipher_bytes":16770,"gets":90,"opens":15,"repeated_gets":60},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":13952,"gets":112,"opens":64,"repeated_gets":48},{"cipher_bytes":10176,"gets":144,"opens":64,"repeated_gets":80},{"cipher_bytes":9504,"gets":64,"opens":32,"repeated_gets":32},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0}],"negative_cache_hits":67,"works":80},"ordinary_sync_ms":178.886,"ordinary_write_bytes":9512960}
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 70 filtered out; finished in 3.69s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      15107  9.78
+release            5747  1.86
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=59919
+target_gib=64.43
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

@@ -1,0 +1,112 @@
+{
+  "workspace": "E:\\AI-Projects\\kilogram-p2p-messenger",
+  "common_environment": "TEMP=TMP=<workspace>/.tmp/a3-s2/tmp; CARGO_NET_OFFLINE=true; KILOGRAM_CARGO_JOBS=2",
+  "profile": "verification",
+  "jobs": 2,
+  "priority": "BelowNormal",
+  "test_execution": "Stable runner compiles cargo test --locked --no-run then executes only permanent-path EXE with test-threads1",
+  "profile_variable_names": "KILOGRAM_S2_PROFILE_KIND/COPY/PROVENANCE",
+  "model": "gpt-6.1-sol/max",
+  "config_service_tier": "default",
+  "fast_requested": false,
+  "turn_id": "01a16e2a-b7cd-7131-9b23-3760839c4a66",
+  "commands": [
+    {
+      "id": "before-profile",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'history_scale_profile_saved_fixture'",
+      "environment": "KILOGRAM_S2_PROFILE_KIND=read|write; COPY=<workspace>/.tmp/a3-s2/profile-before-{read|write}-2; PROVENANCE=<evidence2>/fixture-copies-before.json",
+      "logs": [
+        "profile-before-read.log",
+        "profile-before-read-2.log",
+        "profile-before-read-3.log",
+        "profile-before-write-3.log"
+      ],
+      "result": "First two read attempts failed before open: child PS Get-FileHash absent; fixed.NET SHA256 helper. Final read/write PASS"
+    },
+    {
+      "id": "value-only-small",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'history::' -SkipTest @('history_scale_')",
+      "log": "cache-small-1.log",
+      "result": "17 PASS"
+    },
+    {
+      "id": "value-only-profile",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'history_scale_profile_saved_fixture'",
+      "environment": "KILOGRAM_S2_PROFILE_KIND=read|write; COPY=<workspace>/.tmp/a3-s2/profile-value-{read|write}-2; PROVENANCE=<evidence2>/fixture-copies-value.json",
+      "logs": [
+        "profile-value-read.log",
+        "profile-value-write.log"
+      ],
+      "result": "read/write PASS"
+    },
+    {
+      "id": "node-small",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'history::' -SkipTest @('history_scale_')",
+      "log": "node-small-1.log",
+      "result": "19 PASS8.74s"
+    },
+    {
+      "id": "node-profile",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'history_scale_profile_saved_fixture'",
+      "environment": "KILOGRAM_S2_PROFILE_KIND=read|write; COPY=<workspace>/.tmp/a3-s2/profile-node-{read|write}-2; PROVENANCE=<evidence2>/fixture-copies-node.json",
+      "logs": [
+        "profile-node-read.log",
+        "profile-node-write.log"
+      ],
+      "result": "read/write PASS3.09s/3.69s"
+    },
+    {
+      "id": "fresh-small",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'history_scale_small_timings'",
+      "environment": "KILOGRAM_S2_SCALE_MODE=small; KILOGRAM_S2_SCALE_DIR=<workspace>/.tmp/a3-s2/history-small-2",
+      "log": "history-small-2.log",
+      "result": "SMALL_TIMINGS_ONLY188.486s; STOP before100k, estimated scenario1851.9s exceeds1200s"
+    },
+    {
+      "id": "root-process",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'a3_s2_review_cursor_survives_new_process_and_append'",
+      "log": "root-process-2.log",
+      "result": "parent PASS0.61s, owned child PASS0.03s PID31668"
+    },
+    {
+      "id": "s1-affected",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'indexed_component_' -SkipTest @('indexed_component_production_growth_single_append','indexed_component_real_owned_child_kills')",
+      "log": "s1-components-2.log",
+      "result": "14 PASS18.45s; 2 tests explicitly skipped, no new PASS claimed for them"
+    },
+    {
+      "id": "s1-root",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'a3_s1_review_'",
+      "log": "s1-root-2.log",
+      "result": "5 PASS17.93s"
+    },
+    {
+      "id": "clippy",
+      "command": "./scripts/invoke-cargo-friendly.ps1 -CargoCommand clippy -CargoJobs 2 -CargoArguments @('--locked','--offline','--profile','verification','-p','kilogram-state','--all-targets','--features','redb/cache_metrics','--','-D','warnings')",
+      "logs": [
+        "clippy-2-1.log",
+        "clippy-2-2.log"
+      ],
+      "result": "First FAIL only derivable_impls test-only Stats; derive fix then strict PASS"
+    },
+    {
+      "id": "final-small",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'history::' -SkipTest @('history_scale_')",
+      "log": "final-small-2.log",
+      "result": "19 PASS8.60s on final source"
+    },
+    {
+      "id": "final-reuse",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'history_scale_profile_saved_fixture'",
+      "environment": "KILOGRAM_S2_PROFILE_KIND=read; KILOGRAM_S2_PROFILE_COPY=<workspace>/.tmp/a3-s2/reuse-final-read-2; KILOGRAM_S2_PROFILE_PROVENANCE=<evidence2>/fixture-copy-reuse-final.json",
+      "log": "reuse-final-read-2.log",
+      "result": "PASS3.60s on explicit copy of new10016-row fixture, no fill"
+    },
+    {
+      "id": "format-whitespace",
+      "command": "cargo fmt --all -- --check; git diff --check; source/doc trailing whitespace/conflict marker scan",
+      "log": "verification-final-2.log",
+      "result": "PASS; cargo fmt exit0, git diff --check exit0,20 source/doc whitespace/conflict scans PASS;19 source/3 EXE hashes MATCH"
+    }
+  ]
+}

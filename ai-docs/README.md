@@ -91,8 +91,66 @@ product S2 code и публикация только после соответс
 поддержало cursor/codec/bounded algorithm и потребовало H1/H2: обратного соответствия
 consuming credits новым rows, scope fence и точного fresh-init predicate. Исправления
 [проверены, контракт принят](tasks/long-lived-dialog-a3-history-s2-integration-review-2.md).
-Product S2 ещё не реализован. Сначала публикация принятой документации и сверка root,
-затем реализация history writer/pages/cursor и её отдельное review с проверками.
+Контракт опубликован в `61524df3a77203d73673f47d38decf6b817615e3`; root независимо
+сверил exact7 paths/blobs/raw hashes, parent4d1d8b1 и actual remote master. Разрешена
+реализация S2 history writer/pages/cursor с отдельным review проверок и ресурсов до
+commit/push. Product S2 ещё не принят; native/runtime и весь A3 остаются открытыми.
+Получена [partial реализация S2](tasks/long-lived-dialog-a3-history-s2-implementation.md):
+14 small и16+5 S1 regression tests PASS, actual codecs и1k/10k проверены. До100k
+остановка по performance precheck:10k full traversal132s, fill162s на8984 новых rows
+не дают обоснованно уложить100k в1200s.100k gate не выполнялся/не принят.
+[Root review1](tasks/long-lived-dialog-a3-history-s2-implementation-review-1.md)
+подтвердило14/14 и новый независимый OS-process cursor test. В проверенных сценариях
+функциональный дефект не воспроизведён; следующая итерация — измеренная performance
+оптимизация/reuse fixture и полный100k gate, без повышения limits/смены profile.
+
+[Repair2 partial report](tasks/long-lived-dialog-a3-history-s2-implementation-2.md):
+bounded Work value/node reuse и отложенный seal промежуточных nodes дали small188.49s
+вместо399.62s;19 S2 +14 affected S1 +5 root R1/R2 и отдельный OS-process cursor PASS.
+10k fill98.84s/range44.77s/resume22.57s всё ещё не дают запаса для общего1200s.
+100k build не запускался, resource gate UNAVAILABLE; новый report/evidence2 на root
+review, product commit/push не выполнены. Original10k fixture/EXE/evidence сохранены.
+
+[Root review2](tasks/long-lived-dialog-a3-history-s2-implementation-review-2.md)
+независимо подтвердило19 S2 tests,3 owned-child kill windows и OS-process cursor;
+111 evidence/19 input pairs/3 EXE pairs совпали. Для одного следующего full S2 run
+принят [явный бюджет2400s](tasks/long-lived-dialog-a3-history-s2-time-budget-amendment-1.md)
+вместо1200s, на основании измеренной оптимизации и прогноза1851.9s. Memory/latency
+ratios/integrity/profile прежние. Далее один final100k run; S2 приёмка и commit/push
+остаются открытыми. Старые reports/contracts/evidence не переписаны.
+
+[Final attempt3](tasks/long-lived-dialog-a3-history-s2-implementation-3.md) выполнен на
+заранее pinned verification EXE:100k fill/full range и16 appends завершены, но ceiling
+2400.157s прервал midpoint resume. Обе warm memory comparisons прошли с малым residual
+запасом после append240KiB; p95 ratios/final suffix не подтверждены, S2 gate не пройден.
+Fixture100016 Text сохранена. После остановки одна разрешённая instrumented matched
+pair10k: page mean141.52ms verification/10.41ms release, counts/checks совпали;
+это диагностика, не UX/100k acceptance. Report/evidence3 передаются на root review,
+product commit/push отсутствуют. Исходные fixtures/reports/evidence сохранены.
+
+[Attempt4 verification-scale](tasks/long-lived-dialog-a3-history-s2-implementation-4.md):
+по явному root amendment введён отдельный opt3 profile с debug/overflow checks=true,
+effective flags для state/redb подтверждены compiler metadata.19 small и root OS-process
+cursor PASS; bounded precheck7.49ms/page при сохранённых counters. Один fresh full
+1k/10k/100k завершился PASS401.99s: full suffix/C2/checkpoints и все memory/ratio gates,
+page p95 ratio2.042/append1.430. Старая attempt3 time FAIL и fixtures сохранены.
+Новая fixture100016 Text ea5603cf… сохранена. Report/evidence4 на root review;
+S2 приёмка/commit/push и whole A3/MVP остаются отдельными решениями.
+
+[Root review3](tasks/long-lived-dialog-a3-history-s2-implementation-review-3.md)
+подтвердило исходные метрики/hashes и оставляет S2 непринятым. Для следующего run
+принят [отдельный verification-scale profile](tasks/long-lived-dialog-a3-history-s2-verification-profile-amendment-1.md):
+opt-level3 с debug assertions/overflow checks, остальные limits и2400s прежние.
+Нужны completed-phase summaries, короткие проверки и один полный final gate.
+Старый unoptimized FAIL сохранён; product algorithms не меняются.
+
+[Root review4: S2 принят](tasks/long-lived-dialog-a3-history-s2-implementation-review-4.md).
+Final verification-scale1k/10k/100k завершён за401.987s с debug/overflow checks;
+все memory/ratio/range/suffix/cursor/reopen/C2 gates PASS. Root сверил raw metrics,
+compiler flags/hashes и независимо повторил OS-process cursor test.100k full range
+35.177s, page32 API p9511.9485ms. Публикация — exact accepted-files manifest,19
+source/config/test files и связанные docs/evidence. Это storage/library slice;
+whole A3/native/runtime/MVP и абсолютная UI latency остаются открытыми.
 
 Независимый обзор архитектуры и пути до пользовательского MVP на ревизии
 `3e82e63`: [аудит 2026-10-22](reviews/2026-10-22-architecture-mvp-audit.md).

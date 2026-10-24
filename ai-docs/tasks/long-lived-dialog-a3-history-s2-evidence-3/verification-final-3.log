@@ -1,0 +1,6 @@
+cargo_fmt_exit=0
+git_diff_check_exit=0
+new_harness_report_whitespace_conflict_scan=PASS
+read_only_source19_and_full_exe3_before_after_pairs=MATCH
+release_exe3_before_after_pairs=MATCH
+index_empty=true

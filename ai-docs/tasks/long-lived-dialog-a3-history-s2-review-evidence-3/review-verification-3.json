@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-24",
+  "baseline_head": "61524df3a77203d73673f47d38decf6b817615e3",
+  "status": "ROOT_REVIEW_CONFIRMS_NORMATIVE_TIME_FAIL_AND_MATCHED_DIAGNOSTIC",
+  "report_sha256": "538f0bf501db47fa8bade58de03df51416596bce9031df57357a9bb49ae660a1",
+  "quality_sha256": "4c12c8d787e93f331c5a1ab5070c850830b420ea71c9e2295ef510ed78f1297a",
+  "evidence_bytes_sha256_verified": 42,
+  "current_source_and_snapshot_pairs_verified": 19,
+  "harness_current_and_snapshot_pairs_verified": 6,
+  "mismatches": [],
+  "phase_call_counts_equal": true,
+  "namespace_counters_equal": true,
+  "cuts_equal": true,
+  "verification_page_mean_ms": 141.52115,
+  "release_page_mean_ms": 10.411833333333334,
+  "verification_point_mean_ms": 12.190116666666666,
+  "release_point_mean_ms": 0.476925,
+  "memory_recomputed_from_raw_logs": [
+    {
+      "phase": "after_warm_range",
+      "raw_growth_bytes": 92053504,
+      "residual_growth_bytes": 32088384,
+      "raw_pass": true,
+      "residual_pass": true,
+      "residual_headroom_bytes": 1466048,
+      "same_process": true
+    },
+    {
+      "phase": "after_ordinary_append",
+      "raw_growth_bytes": 92389376,
+      "residual_growth_bytes": 33308672,
+      "raw_pass": true,
+      "residual_pass": true,
+      "residual_headroom_bytes": 245760,
+      "same_process": true
+    }
+  ],
+  "normative_status": "FAIL2400s; final ratios/suffix/C2 unavailable",
+  "fixture_path": ".tmp/a3-s2/history-full-3/state-vault.redb",
+  "fixture_bytes": 1182797824,
+  "fixture_sha256": "bc3410a155a55b115f458f541b2fbd3ee6f9900ee33b34ccffd24358d39dbafb",
+  "fixture_opened_by_root": false,
+  "root_tests_repeated": false,
+  "rationale_no_test_repetition": "Only test budget/timers changed; current product input hashes unchanged from reviewed repair2. Root verified raw evidence/control flow.",
+  "development_environment_sha256": "53074ff3734dacd9906ee03cc5c7ded952dedd99d207581f692ff900b9a79f8f",
+  "index_paths": []
+}

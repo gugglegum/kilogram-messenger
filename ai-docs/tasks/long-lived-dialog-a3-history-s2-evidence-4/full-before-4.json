@@ -1,0 +1,18 @@
+{
+  "captured_utc": "2026-10-24T17:02:27.9104706+00:00",
+  "before_full_source19_exe3_hashes": "MATCH",
+  "pinned_source_exe_provenance": "build-provenance-before-execution-4.json",
+  "pinned_provenance_sha256": "795c0db1325039dd578fc10fd23dc0e130437ddc87508022c48504b6d1fb8325",
+  "profile": "verification-scale",
+  "debug_assertions": true,
+  "overflow_checks": true,
+  "opt_level": "3",
+  "effective_flags_artifacts": "effective-profiles-4.json",
+  "fixture_path": ".tmp/a3-s2/history-full-4",
+  "fixture_existed_before_run": false,
+  "scenario_budget_seconds": 2400,
+  "native_e2e_messages": 0,
+  "full_attempt_number": 1,
+  "precheck": "PASS",
+  "concurrent_agent_heavy_work": false
+}

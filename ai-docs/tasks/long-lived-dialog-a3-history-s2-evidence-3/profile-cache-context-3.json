@@ -1,0 +1,16 @@
+{
+  "kind": "read_only_local_primary_dependency_source",
+  "crate": "redb4.2.0",
+  "db_source": {
+    "path": "C:/Users/Paul/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/redb-4.2.0/src/db.rs",
+    "sha256": "ae0e73b1fd57f9c40ff00568dfc3869f6037d6863233868b1b3978744bc26dbc",
+    "lines": "972-1014 debug-only mark_allocated_page_for_debug visits all data/system table pages;1172-1174 invoked after load_allocator_state during clean open"
+  },
+  "page_manager_source": {
+    "path": "C:/Users/Paul/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/redb-4.2.0/src/tree_store/page_store/page_manager.rs",
+    "sha256": "b20394a7904eb8d79a6920070caf8de1a56237288501449532af47e471e2271b",
+    "lines": "506-513 debug-only allocated/open-page/reference bookkeeping"
+  },
+  "existing_s1_diagnostic": "crates/kilogram-state/src/vault/indexed_dialog/scale_tests.rs:244-247 documents debug open warming, release-only cold backend test not selected/executed by our probe",
+  "interpretation": "Explains profile-dependent open/cache state; physical backend read bytes differ despite equal logical operations. Matched pair is not a CPU-only microbenchmark. No dependency or code changes."
+}

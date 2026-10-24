@@ -468,3 +468,242 @@ parent `4d1d8b191f6e84c812c10ed3a2fa17a8dfa03629`; foreign исключён. П�
 root сверяет exact committed paths/blobs и actual remote, затем поручает S2 code
 в пределах task/accepted contract. Новые чаты/агенты/Fast не нужны. Whole A3 уже
 разрешён human01a16bf9…, повторного human approval на эту часть не требуется.
+
+S2 contract publication завершена: `61524df3a77203d73673f47d38decf6b817615e3`,
+single parent `4d1d8b191f6e84c812c10ed3a2fa17a8dfa03629`. Root независимо сверил
+exact7 committed paths/blobs, raw hashes/bytes, manifest self SHA
+`a78262ab619e9c0eeb4368f4657dc641c19c37d2da70d3980e91c57a04280aab`, actual remote
+refs/heads/master и local origin/master. Whitespace PASS, index пуст; единственная
+чужая правка development-environment.md330ad3… неизменна.73 frozen S1 hashes совпали.
+Executor publication turn01a16d86-a093-7231-a719-bf83168e5e27 completed, cursor
+`b945b76a-eaaa-4ff8-8894-3dc54143a9d9:60`.
+
+Следующее поручение — реализация S2 по принятому task/integration plan/review2:
+closed typed writer, fresh/repeat, causal pages/point и persistent MAC cursor; сначала
+small correctness/fault/encoding tests, затем одна отдельная typed history100k fixture
+с настоящими credit transitions и измерениями по amendment1. Synthetic adapter
+DTO остаётся0 native E2E. Не ослаблять limits/не добавлять runtime importer или
+переносить wire/native/migration/A2 задачи. Тот же GPT-6.1 Sol Max/default без Fast.
+Результат и evidence сдать одним содержательным callback для root code review;
+product commit/push только после приёмки. README/coordination после verified publish
+относятся к будущему implementation diff, опубликованный contract snapshot заморожен.
+
+S2 implementation поручение успешно отправлено с явными gpt-6.1-sol/max; config
+service_tier=default перепроверен. Compact wait подтвердил active turn
+`01a16d8c-8346-75e3-9217-641f7554cce1`, cursor
+`b945b76a-eaaa-4ff8-8894-3dc54143a9d9:61`. Следующее событие для root — содержательная
+сдача реализации/evidence или конкретного препятствия; после неё code review.
+
+Пользователь затем прямо разрешил удалить прежнюю незакоммиченную правку
+`ai-docs/development-environment.md`, без коммита и без её сохранения в worktree.
+Root удалил только этот diff и проверил совпадение файла с HEAD (Git blob
+`b4be1a56152bcf64e146c2c4418a4ffa439f6096`, текущий raw SHA-256
+`53074ff3734dacd9906ee03cc5c7ded952dedd99d207581f692ff900b9a79f8f`). Файл clean.
+Для текущей S2 работы прежнее требование сохранять foreign SHA330ad3… отменено
+этим прямым указанием пользователя. Удалённый блок не восстанавливать; исторические
+accepted manifests/reviews с прежними наблюдениями не переписывать.
+
+В процессе S2 исполнитель сообщил locked check failure: разрешённая direct base64
+dependency требует новой связи в lock package kilogram-state. Root независимо
+проверил manifests/lock/error и принял [узкое уточнение](tasks/long-lived-dialog-a3-history-s2-lock-clarification-1.md):
+только dependency edge `base64 0.22.1`, без изменения существующих packages,
+versions/source/checksum или других edges. Exact line edit с последующей locked/
+offline проверкой допустим; broad dependency updates не нужны. Исторический review2
+не переписывается; уточнение/evidence войдут в S2 implementation review. Остальная
+работа продолжается в прежних границах, commit/push до приёмки не поручается.
+
+S2 implementation partial result: [report](tasks/long-lived-dialog-a3-history-s2-implementation.md)
+и собственный [evidence](tasks/long-lived-dialog-a3-history-s2-evidence/). Functional
+14/14, S1 components16/16 и independent R1/R2 review5/5 PASS; locked/offline strict
+Clippy/fmt PASS. Принятая lock edge единственная,736 package identities/checksums
+неизменны. Descriptor/writer/cursor/actual codecs реализованы без runtime/native API.
+Новая typed fixture сохранена с10016 Text rows, C2 неизменен, native E2E=0.
+
+По stop rule полный100k build не запускался:10k fill161.56s для8984 rows, range132.04s,
+old suffix resume66.33s. Линейные оценки чтения1320s и fill1798s на100k превышают1200s
+каждая; это прогноз, не выполненный100k measurement. Memory/ratio gates100k остаются
+UNAVAILABLE, SMALL_TIMINGS_ONLY не является acceptance. Limits/profile/cache не
+менялись. Следующий root шаг — review partial code/performance blocker; executor
+останавливается, product commit/push не поручен. Human foreign override соблюдён,
+исторические contract/review/manifest/evidence не переписаны, index пуст/HEAD61524df… .
+
+Root [implementation review1](tasks/long-lived-dialog-a3-history-s2-implementation-review-1.md)
+проверил partial source и14 build input hashes/blobs,19 evidence files и EXE ff42d3… .
+Независимые S2 small14/14 PASS7.28s. Root добавил public integration regression
+`crates/kilogram-state/tests/a3_s2_root_review.rs`: отдельный owned OS process проверил
+serialized old/finished cursor после append, новую first, UTF8/NUL, C2 и ledger/Native.
+Parent PASS0.89s, child PASS0.04s; targeted strict Clippy/fmt/whitespace PASS.
+Исходный root compile failure сохранён, product code root не менял.
+
+S2 ещё не принят: R1 требует measured performance repair с bounded transaction-local
+reuse без ослабления integrity/quota, R2 — private fixture reuse/profiling и завершения
+реального100k gate после достаточных small timings. Native E2E=0; limits/profile прежние.
+Следующее поручение прежнему GPT-6.1 Sol Max/default без Fast; новый report/evidence2,
+сохранение baseline/fixtures/root test, один callback. Commit/push до приёмки не поручен.
+
+R1/R2 performance repair2 поручение отправлено с gpt-6.1-sol/max; compact wait
+подтвердил active turn `01a16e2a-b7cd-7131-9b23-3760839c4a66`, cursor
+`b945b76a-eaaa-4ff8-8894-3dc54143a9d9:64`. Review SHA3370ebd… и root verification
+SHAcb4737… переданы исполнителю. Следующее событие — substantive repair/evidence
+callback; до него повторные полные scale runs и периодический polling root не нужны.
+
+Repair2 подготовлен: [новый report](tasks/long-lived-dialog-a3-history-s2-implementation-2.md),
+[evidence2](tasks/long-lived-dialog-a3-history-s2-evidence-2/). Baseline14 source inputs,
+включая untracked S2 modules, tracked patch и EXE ff42d3… сохранены до оптимизации.
+На отдельных synthetic copies measured node/value AEAD/repeated loads; внедрены
+bounded Work value cache128/1MiB, read node FIFO≤512/1MiB и seal только финальных
+generated node versions до plan/write. Integrity/source/credit проверки сохранены.
+
+S2 final19/19, affected S1 components14/14, independent R1/R2 tests5/5 и root owned
+process cursor parent/child PASS; strict Clippy/fmt/whitespace PASS. Новая private
+reuse/profiling path проверяет existing scope/count/provenance/hash; fill/ordinary/
+cumulative counters разделены, old logs не менялись. Новый small scenario188.486s
+вместо399.617s:10k fill98.844s/range44.773s/resume22.567s. Это не100k acceptance.
+Линейные следующие fill/range/resume1663.4s уже превышают1200s, поэтому100k не
+запускался;100k memory/ratios UNAVAILABLE. Ordinary10k append p95 вырос49.98→59.38ms.
+
+Новая fixture10016 Text SHA7c613e31… сохранена, исходнаяdf9d829… byte-identical;
+98 frozen/preserved artifacts совпали. Foreign override clean53074ff… соблюдён.
+Final source19 inputs/3 EXE pinned; прежний node/small timing EXE отдельно не hashed,
+после timings только два cfg(test) helper/style изменения, product/scale неизменны.
+Это ограничение provenance явно указано в report. Index пуст/HEAD61524df… .
+Одна содержательная сдача root на review; S2 не принят, commit/push не поручены.
+
+Root завершил [implementation review2](tasks/long-lived-dialog-a3-history-s2-implementation-review-2.md).
+Независимо19/19 small PASS10.48s,3 owned-child crash windows PASS2.11s и новый
+OS-process cursor parent0.63s/child0.03s PASS. 111 evidence files,19 current/snapshot
+input pairs и3 stable/snapshot EXE pairs совпали. Замечаний, требующих product repair,
+в проверенных сценариях нет;100k gate остаётся UNAVAILABLE.
+
+Принят узкий [S2 time amendment1](tasks/long-lived-dialog-a3-history-s2-time-budget-amendment-1.md):
+один следующий full scenario получает2400s вместо1200s после измеренного bottleneck
+repair; остальные memory/ratio/integrity/profile gates прежние. Следующее поручение —
+только явный test-harness ceiling/provenance и один fresh100k run на pinned final EXE,
+без нового цикла оптимизации или повторного самостоятельного small benchmark.
+Прежний OD1 GPT-6.1 Sol Max/default без Fast; report/evidence3 и один callback,
+остановка до root review. Commit/push продукта ещё не поручены.
+
+Поручение review2/amendment1 отправлено; compact snapshot подтвердил active turn
+`01a16e8b-5b2f-74c3-9229-a8d3ad151ea3`, cursor
+`b945b76a-eaaa-4ff8-8894-3dc54143a9d9:66`. Review SHA15f705e5…,
+amendment SHA5f9898a9…, root verification SHA1582d23f… переданы исполнителю.
+
+Затем пользователь предложил задействовать многоядерный CPU и параллельные процессы
+для ускорения проверок. Root передал steer текущему исполнителю: сборка/Clippy до12
+jobs из24 logical CPU, как уже предусмотрено half-logical default в
+`scripts/cargo-resource-policy.ps1`; BelowNormal сохраняется, фактический jobs
+попадает в provenance. Уже начатую сборку или benchmark ради этого не перезапускать.
+Независимые проверки можно распараллеливать при отсутствии общих mutable fixtures/
+EXE и глобальных test hooks. Несколько stable runners над одним target одновременно
+не запускать: они пересобирают/копируют постоянные EXE. Нормативный history benchmark
+выполняется отдельно, с одним процессом/fixture и последовательными стадиями, без
+созданной нами параллельной тяжёлой нагрузки. Текущий этап не расширяется работой
+над runner/product concurrency. Изменены возможности подготовки, а не latency/memory
+методика или2400s бюджет; прежние frozen документы и результаты не переписаны.
+
+Пользователь отдельно поставил под сомнение скорость «100000 сообщений за31min».
+Root уточнил по actual evidence:31min — прогноз всего scenario; ожидаемый100k
+read447.7s, повторный midpoint resume225.7s и оставшийся fill990.0s плюс уже
+измеренные188.486s малых стадий. Actual10k range44.773s, page32 p95148.518ms.
+Verification log прямо сообщает unoptimized+debuginfo. После cache repair12 pages
+и12 points всё ещё требуют10746 node AEAD opens; это измеренная стоимость мелких
+проверок индекса, а не только объём текстов по1024B.
+
+Исполнителю передано дополнение: после окончания/штатной остановки текущего full
+run один matched verification/release read probe существующим instrumented helper,
+по12 bounded samples на двух отдельных одинаковых synthetic copies сохранённой10k
+fixture. Без новой генерации/full traversal, без product/helper/profile code edits,
+без параллельной нагрузки на нормативный run. Stable paths и source/EXE hashes до
+измерений, исходный store и snapshot полного EXE сохраняются. Release probe —
+дополнительная диагностика; он не заменяет ни verification gates, ни unprofiled
+пользовательский benchmark. Одна общая сдача report3/callback. Относительный ratio≤4
+и расширенный тестовый ceiling не объявляют latency готовой для MVP: реальные
+открытие чата/получение страницы требуют отдельной оценки абсолютной задержки.
+
+Attempt3 завершён: [report3](tasks/long-lived-dialog-a3-history-s2-implementation-3.md),
+[evidence3](tasks/long-lived-dialog-a3-history-s2-evidence-3/). Один fresh verification
+full1k/10k/100k, source19/EXE3 pinned до запуска (library7ce75659…); только test-only
+ceiling/timing harness изменён,18 repair2 inputs byte-identical. Clippy Jobs2 завершился
+до CPU steer, оставшаяся compilation/runners Jobs12/BelowNormal. Нормативный run не
+совмещался с тяжёлой работой и не перезапускался.
+
+Time FAIL:budget event2400.1566769s/harness2400.18s/runner wall2402.542294s.100k fill,
+exact full range и16 appends выполнены; при entry/continuation old midpoint resume
+достигнут ceiling. Обе warm raw/residual comparisons PASS по recorded samples, после
+append residual33308672B против33554432B (headroom245760B). Final100k stage/p95 ratios/
+полный suffix/C2 assertion не достигнуты; gate не пройден. Точные непечатавшиеся local
+timers/I/O/p95 не заменяются оценками. Сохранена history-full-3:100016 Text,
+DB1182797824B,SHAbc3410a155a55b115f458f541b2fbd3ee6f9900ee33b34ccffd24358d39dbafb.
+
+После остановки выполнена ровно одна instrumented bounded verification/release pair
+на новых копиях frozen10k7c613e31…: одинаковые12 cuts/pages+points; source/EXE hashes
+до обеих фаз, scope/count/hash guards PASS. Page mean141.521→10.412ms (13.59×),point
+12.190→0.477ms (25.56×);10746 node/1399 value opens/420 source checks и все counters
+совпали. Backend reads различаются5.04/21.54MB из-за profile-dependent debug open/cache;
+не CPU-only/UX/full100k proof. Release EXE022a782a… pinned,full EXE snapshot сохранён.
+
+111 evidence2/98 prior preserved artifacts/root2 raw logs3 и старые reports/fixtures
+совпали; foreign override clean53074ff… соблюдён. HEAD61524df…/index empty,no commit/push.
+Новых product/helper algorithms или performance repair после результата нет. Одна
+содержательная сдача root, затем остановка до review/следующего точного поручения.
+
+Attempt4 подготовлен: [report4](tasks/long-lived-dialog-a3-history-s2-implementation-4.md),
+[evidence4](tasks/long-lived-dialog-a3-history-s2-evidence-4/). Только workspace
+verification-scale profile (inherits verification,opt3,debug/overflow=true) и test-only
+phase reporting/guard;17 из19 inputs unchanged от attempt3. Compiler-artifact metadata
+state normal/test иredb подтверждаетopt3/debug assertions/overflow checks=true и
+line-tables-only. До исполнения19 sources/3 EXE pinned;libraryb270073d…5390336B.
+
+Новый profile:19 small PASS6.79s,root OS-process cursor parent0.50s/child0.01s PID61116,
+bounded precheck12pages+12points PASS:mean page7.488758ms vs141.52115 старогоverification,
+same calls/namespaces/backend reads5038080B/debug semantics. Один fresh unprofiled full,
+PID41048, без параллельной тяжёлой нагрузки: scenario401.9873352s, harness401.99s PASS,
+final close0.0211181s включён; runner wall418.432033s. Все27 completed phases записаны
+сразу; phase/final metrics/I/O отдельно сверены.19 inputs/EXE pairs послеrun совпали.
+
+100k fill314.349s/range35.177s/resume17.390s;page p9511.9485ms/append18.3583ms.
+Ratios2.042164/1.430298≤4. Warm raw89948160/89690112B,residual29995328/30654464B
+≤96/32MiB в обеих фазах; residual headroom3559104/2899968B. Process peak106905600B,
+private102522880B,app31604366B,cache64MiB,bulk plan1943944B,ordinary47405B,
+gets274/candidates2. Full exact range/old suffix/checkpoints/reopen/C2 PASS,NativeE2E=0.
+
+Закрытая сохранённая history-full-4:100016 Text,1182535680B,
+SHAea5603cf5f06b87b23bae03b8bf31a4c1d1ba200641ede24f18cb941b2930e1e.
+42 old evidence3/217 prior checks/6 old EXE pairs совпали; old100kbc3410… byte-exact,
+foreign clean53074ff… соблюдён. Старый FAIL не переписан. Clippy/fmt/whitespace PASS,
+новых product/helper/dependency changes нет; unchanged crash suites не повторялись.
+Одна сдача root и stop до review/точного allowlist;HEAD61524df…/index empty,
+commit/push не было. Scale PASS не подменяет будущую absolute UI/runtime/native latency.
+
+Root завершил [review3](tasks/long-lived-dialog-a3-history-s2-implementation-review-3.md):
+42 evidence/19 source pairs/6 EXE pairs совпали; raw memory и matched samples
+пересчитаны независимо. Full attempt2400s FAIL после100k range/16 appends,
+полный suffix/C2 и100k p95 ratios остаются неподтверждёнными. Memory96/32 по обеим
+фазам PASS с residual headroom240KiB после append. Matched page mean141.52→10.41ms
+и point12.19→0.477ms подтверждены; release отличается debug/open cache поведением.
+
+Для следующего шага root принял [verification-profile amendment1](tasks/long-lived-dialog-a3-history-s2-verification-profile-amendment-1.md):
+отдельный verification-scale с opt-level3, debug-assertions/overflow-checks=true,
+остальные norms/2400s прежние. Добавить early completed-phase summaries и провести
+короткие checks/precheck, затем один full run с final source/EXE pins. Старый full
+store сохраняется; старый FAIL не переименовывается. Report/evidence4 и один callback,
+без публикации до принятия результата. Product algorithms не меняются.
+
+Поручение review3/amendment1 отправлено прежнему executor с gpt-6.1-sol/max;
+compact wait подтвердил active turn `01a16ed1-9cf7-70a1-b282-42cacfc8ff77`,
+cursor `b945b76a-eaaa-4ff8-8894-3dc54143a9d9:69`. Переданы review SHAfdca062b…,
+profile amendment SHA9d9cad04… и root verification SHA9be37a9f… . Следующее событие —
+один итоговый report4/callback; root не запускает периодическое ожидание или
+параллельную тяжёлую нагрузку. После сдачи — review, затем exact publication при PASS.
+
+Root принял [S2 implementation review4](tasks/long-lived-dialog-a3-history-s2-implementation-review-4.md)
+после final gate401.987s PASS. Независимо сверены46 evidence/19 source pairs/3 EXE
+pairs,172 прежних evidence files, actual compiler artifact flags и raw27 phases/21
+memory samples; ratios/raw/residual пересчитаны. Root OS-process cursor PASS0.60s,
+child0.02s/PID26420 на том же final EXE. Product algorithms после review2 не менялись.
+Принимается только S2 library/storage history; whole A3/runtime/native/MVP остаются.
+
+Publication: один commit и обычный push origin/master с parent61524df… строго по
+`tasks/long-lived-dialog-a3-history-s2-accepted-files.json` и pinned manifest. Исходные
+bytes/evidence не менять; development-environment.md clean53074ff… исключён.
+Executor возвращает SHA/path/blob verification/push; root независимо проверяет remote.

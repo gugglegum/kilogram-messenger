@@ -1,0 +1,119 @@
+{
+  "baseline_head": "61524df3a77203d73673f47d38decf6b817615e3",
+  "implementation_turn": "01a16dd0-f077-7c82-9609-132c920aaf6c",
+  "model": "gpt-6.1-sol",
+  "effort": "max",
+  "config_service_tier": "default",
+  "turn_tier_telemetry": "not recorded",
+  "fast": false,
+  "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)\nbinary: rustc\ncommit-hash: 88d9e12ae178fab0fb5cc050a94da85685d449ea\ncommit-date: 2026-08-18\nhost: x86_64-pc-windows-msvc\nrelease: 1.98.0\nLLVM version: 22.1.8",
+  "cargo": "cargo 1.98.0 (797e8a9bc 2026-08-05)",
+  "profile": "verification",
+  "debug_assertions": true,
+  "cargo_jobs": 2,
+  "priority": "BelowNormal",
+  "locked": true,
+  "offline": true,
+  "features": [
+    "redb/cache_metrics"
+  ],
+  "test_execution": "scripts/run-cargo-tests-stable.ps1; stable paths only, --test-threads=1",
+  "sources": [
+    {
+      "path": "Cargo.lock",
+      "bytes": 194144,
+      "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126",
+      "git_blob": "e7c84d5d67474922b28507111b18234b14605a15"
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 3201,
+      "sha256": "b8a0c6695826cd38d27ddb15c6c2d6aa77ca2e67ee61009554e55a785179e3d6",
+      "git_blob": "96a2a3542e57e679a535bdfec8681d9b6cb13dd6"
+    },
+    {
+      "path": "crates/kilogram-state/Cargo.toml",
+      "bytes": 704,
+      "sha256": "593342488618212f65e02b8024fea5b66d888995536c375881af7e05561f3a6c",
+      "git_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/authenticated_index.rs",
+      "bytes": 15871,
+      "sha256": "5e0776eb7926592aad85b1151cb189063df856e8744d01709f89e7ff3644cd92",
+      "git_blob": "3a40962fc68a4d23350081b55bea2d126bad5740"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "bytes": 43813,
+      "sha256": "af5c2877d870087aba5be73e29d67bd9e10aa786ac34b10bc35e8a44b7d720c8",
+      "git_blob": "7a5b09ad9d784db89b949d9945e300d77f3d01e6"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "bytes": 24600,
+      "sha256": "2108c51b366402e06af920174f0bac6c1687388cc572f3152cb7d259b95127ec",
+      "git_blob": "54d9c245e3e25d2c6cc6eeac3227debdcb99126e"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs",
+      "bytes": 3847,
+      "sha256": "81a97de373181160377281a6b0c3386f624438439927f3587f7f232d3def922e",
+      "git_blob": "1163c83cde621a2592bcad8a086d48d9e03e28c0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_cursor.rs",
+      "bytes": 3443,
+      "sha256": "2242507628d86b14069cca038991723ba1a31ad3c88d78e08240ec01780b06b6",
+      "git_blob": "3417bbba1b5095db9d814b80888053f40881e745"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs",
+      "bytes": 23517,
+      "sha256": "c79ec0796f2c210f9f4eb65051b1de6ea11c12293c3a3685f74bc7356be28e36",
+      "git_blob": "0dd4384e2778b7711d033cf9793e6072f13f93cd"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_tests.rs",
+      "bytes": 37973,
+      "sha256": "7fc68c3d5021ee44bd23785e69ed13f7a631c5b3836cd7b79f4dc13c514abb40",
+      "git_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_types.rs",
+      "bytes": 16886,
+      "sha256": "e26ccae380b80a6934d64b0e6a421a651cc051270313fcdb0fad20d8babbdf7f",
+      "git_blob": "e3993ed7792d1b3e7b1b1de339658ea5828cba62"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "bytes": 45563,
+      "sha256": "466def1e91b8887f2ae736402dcd23acc244f0fe0dc3707a453d10a09ddec5da",
+      "git_blob": "bfb5b728bb51c21bf6201f25fa779f94add63b7a"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "bytes": 17176,
+      "sha256": "2447b7025f3e0627bb5f39d1eaf1c7e78138d00b99e2aa1932b4271add073363",
+      "git_blob": "921f7200d53cb78f021cd9775641867642105463"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "bytes": 9963,
+      "sha256": "7cdbd668c625e4cf60b5f5506775b1979d669d9929badb3df269930b4600f8bb",
+      "git_blob": "9b601fc33e8e78d37c9e2c30e3f07c281570390d"
+    }
+  ],
+  "harnesses": [
+    {
+      "path": "target/verification/deps/kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 8320000,
+      "sha256": "ff42d3932ac86816e6e29ff221fc3d8b0ed03c4a574a871a327c6fd4a3f34835"
+    },
+    {
+      "path": "target/verification/deps/kilogram-state-test-a3_s1_root_review-tests.exe",
+      "bytes": 5388288,
+      "sha256": "992a34b0bf259635f93233a6975b7fdfb0b4b732404bc399e87b902b0f8d5ac8"
+    }
+  ]
+}

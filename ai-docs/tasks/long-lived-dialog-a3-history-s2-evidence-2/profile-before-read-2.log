@@ -1,0 +1,14 @@
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 8.13s
+
+running 1 test
+Error: "fixture hash query failed:  Get-FileHash : ��� \"Get-FileHash\" �� �ᯮ����� ��� ��� ���������, �㭪樨, 䠩�� �業��� ��� �믮��塞�� �ண\u{82c}��. \r\n�\u{ba2}���� �\u{822}��쭮��� ����ᠭ�� �����, � ⠪�� ����稥 � �\u{822}��쭮��� ���, ��\u{1ae5} 祣� ������ ������.\r\n��ப�:1 ����:2\r\n+ (Get-FileHash -Algorithm SHA256 -LiteralPath 'E:\\AI-Projects\\kilogram ...\r\n+  ~~~~~~~~~~~~\r\n    + CategoryInfo          : ObjectNotFound: (Get-FileHash:String) [], CommandNotFoundException\r\n    + FullyQualifiedErrorId : CommandNotFoundException\r\n \r\n"
+test vault::indexed_dialog::history::profiling::history_scale_profile_saved_fixture ... FAILED
+
+failures:
+
+failures:
+    vault::indexed_dialog::history::profiling::history_scale_profile_saved_fixture
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 65 filtered out; finished in 0.40s
+

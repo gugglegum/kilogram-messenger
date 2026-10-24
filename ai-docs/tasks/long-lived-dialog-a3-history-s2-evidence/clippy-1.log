@@ -1,0 +1,60 @@
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+error: recursion limit reached while expanding `$crate::json_internal!`
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_scale.rs:509:21
+    |
+509 |           let stage = json!({"target_records":target,"source_records_c0":target+2,"records_after_append":target+APPEND_COUNT,
+    |  _____________________^
+510 | |             "all_context_record_counts_before_append":counts,"native_e2e_messages":0,"synthetic_trusted_dto":true,
+511 | |             "fixture_text_lanes":2,"own_row_every":16,"source_payload_bytes":1024,"text_payload_bytes":1024,
+512 | |             "fill_seconds":fill_seconds,"fill_commits":commits,"fill_read_bytes":after_fill.read_bytes-before_fill.read_bytes,
+...   |
+525 | |             "max_app_buffer_bound_bytes":max_app,"c2_unchanged":true,
+526 | |             "memory_phases":[memory_before,memory_fill,memory_open,memory_first,memory_warm,memory_append,memory_resume]});
+    | |__________________________________________________________________________________________________________________________^
+    |
+    = help: consider increasing the recursion limit by adding a `#![recursion_limit = "256"]` attribute to your crate (`kilogram_state`)
+    = note: this error originates in the macro `$crate::json_internal` which comes from the expansion of the macro `json` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+error: could not compile `kilogram-state` (lib test) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: this `if` statement can be collapsed
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_writer.rs:943:13
+    |
+943 | /             if let Some((kind, key, event)) = consumption {
+944 | |                 if p.purpose != Purpose::Text
+945 | |                     || !consumed.insert((kind, key))
+946 | |                     || !matched.insert(event)
+...   |
+950 | |             }
+    | |_____________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+    = note: `-D clippy::collapsible-if` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+    |
+943 ~             if let Some((kind, key, event)) = consumption
+944 ~                 && (p.purpose != Purpose::Text
+945 |                     || !consumed.insert((kind, key))
+946 ~                     || !matched.insert(event))
+947 |                 {
+948 |                     return Err(Error::Conflict);
+949 ~                 }
+    |
+
+error: the loop variable `role` is used to index `candidates`
+   --> crates\kilogram-state\src\vault\indexed_dialog\history.rs:170:21
+    |
+170 |         for role in 0..2 {
+    |                     ^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+    = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator and enumerate()
+    |
+170 -         for role in 0..2 {
+170 +         for (role, <item>) in candidates.iter_mut().enumerate() {
+    |
+
+error: could not compile `kilogram-state` (lib) due to 2 previous errors

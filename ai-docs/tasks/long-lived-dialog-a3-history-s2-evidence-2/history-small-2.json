@@ -1,0 +1,374 @@
+{
+  "fixture": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s2\\history-small-2",
+  "gates": {
+    "comparisons": [],
+    "failures": [],
+    "full_gate": false,
+    "seconds": 188.4863869,
+    "status": "SMALL_TIMINGS_ONLY",
+    "unavailable": []
+  },
+  "native_e2e_messages": 0,
+  "stages": [
+    {
+      "all_context_record_counts_before_append": [
+        4081,
+        8145,
+        4081
+      ],
+      "append_growth_bytes": 0,
+      "append_p95_ms": 40.5892,
+      "append_read_bytes": 0,
+      "append_syncs": 32,
+      "append_write_bytes": 6289408,
+      "c2_unchanged": true,
+      "cold_reopen_ms": 115.8935,
+      "cumulative_fill_transactions": 71,
+      "cumulative_measured_transactions": 103,
+      "cumulative_ordinary_transactions": 32,
+      "exact_streamed_domain": true,
+      "fill_growth_bytes": 17903616,
+      "fill_read_bytes": 0,
+      "fill_seconds": 7.9379278,
+      "fill_syncs": 76,
+      "fill_transactions": 71,
+      "fill_write_bytes": 31967424,
+      "fixture_text_lanes": 2,
+      "full_range_seconds": 3.7904004000000002,
+      "latency_samples_bytes": 256,
+      "max_app_buffer_bound_bytes": 26438471,
+      "max_bulk_plan_bytes": 986335,
+      "max_candidates": 2,
+      "max_page_point_gets": 274,
+      "memory_phases": [
+        {
+          "app_buffer_bound_bytes": 0,
+          "app_buffer_bound_kind": "conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution",
+          "cache_metrics_available": true,
+          "configured_cache_bytes": 67108864,
+          "phase": "before_fill",
+          "process": {
+            "peak_paged_bytes": 1789952,
+            "private_bytes": 1671168,
+            "working_set_bytes": 11780096
+          },
+          "records": 0,
+          "redb_cache_data_bytes": 82240,
+          "same_process": 59116
+        },
+        {
+          "app_buffer_bound_bytes": 26438471,
+          "app_buffer_bound_kind": "conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution",
+          "cache_metrics_available": true,
+          "configured_cache_bytes": 67108864,
+          "phase": "after_fill",
+          "process": {
+            "peak_paged_bytes": 19652608,
+            "private_bytes": 15343616,
+            "working_set_bytes": 25485312
+          },
+          "records": 1000,
+          "redb_cache_data_bytes": 7172416,
+          "same_process": 59116
+        },
+        {
+          "app_buffer_bound_bytes": 0,
+          "app_buffer_bound_kind": "conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution",
+          "cache_metrics_available": true,
+          "configured_cache_bytes": 67108864,
+          "phase": "after_reopen",
+          "process": {
+            "peak_paged_bytes": 19652608,
+            "private_bytes": 11546624,
+            "working_set_bytes": 21102592
+          },
+          "records": 1000,
+          "redb_cache_data_bytes": 7147840,
+          "same_process": 59116
+        },
+        {
+          "app_buffer_bound_bytes": 3668871,
+          "app_buffer_bound_kind": "conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution",
+          "cache_metrics_available": true,
+          "configured_cache_bytes": 67108864,
+          "phase": "first_page_live",
+          "process": {
+            "peak_paged_bytes": 19652608,
+            "private_bytes": 11943936,
+            "working_set_bytes": 21716992
+          },
+          "records": 1000,
+          "redb_cache_data_bytes": 7147840,
+          "same_process": 59116
+        },
+        {
+          "app_buffer_bound_bytes": 26438471,
+          "app_buffer_bound_kind": "conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution",
+          "cache_metrics_available": true,
+          "configured_cache_bytes": 67108864,
+          "phase": "after_warm_range",
+          "process": {
+            "peak_paged_bytes": 19652608,
+            "private_bytes": 11386880,
+            "working_set_bytes": 21594112
+          },
+          "records": 1000,
+          "redb_cache_data_bytes": 7147840,
+          "same_process": 59116
+        },
+        {
+          "app_buffer_bound_bytes": 26438471,
+          "app_buffer_bound_kind": "conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution",
+          "cache_metrics_available": true,
+          "configured_cache_bytes": 67108864,
+          "phase": "after_ordinary_append",
+          "process": {
+            "peak_paged_bytes": 19652608,
+            "private_bytes": 12165120,
+            "working_set_bytes": 22302720
+          },
+          "records": 1016,
+          "redb_cache_data_bytes": 7311680,
+          "same_process": 59116
+        },
+        {
+          "app_buffer_bound_bytes": 26438471,
+          "app_buffer_bound_kind": "conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution",
+          "cache_metrics_available": true,
+          "configured_cache_bytes": 67108864,
+          "phase": "after_resume_reopen",
+          "process": {
+            "peak_paged_bytes": 19652608,
+            "private_bytes": 11653120,
+            "working_set_bytes": 21766144
+          },
+          "records": 1016,
+          "redb_cache_data_bytes": 7299392,
+          "same_process": 59116
+        }
+      ],
+      "native_e2e_messages": 0,
+      "no_n_sized_expected_vector": true,
+      "open_backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 18485248,
+        "max_growth": 0,
+        "physical_quota": 2147483648,
+        "read_bytes": 7147849,
+        "reads": 1746,
+        "set_len_calls": 0,
+        "sync_calls": 1,
+        "sync_nanos": 901300,
+        "write_bytes": 320,
+        "writes": 1
+      },
+      "ordinary_append_count": 16,
+      "ordinary_max_node_reads": 73,
+      "ordinary_max_plan_bytes": 37170,
+      "ordinary_transactions": 32,
+      "own_row_every": 16,
+      "page32_p95_ms": 121.25800000000001,
+      "page_backend_read_bytes": 0,
+      "page_record_limit": 32,
+      "point_backend_read_bytes": 0,
+      "point_p95_ms": 12.0936,
+      "records_after_append": 1016,
+      "resume_checkpoints": 3,
+      "resume_ms": 2039.1978000000001,
+      "resume_pages": 16,
+      "resume_reopen_ms": 113.2359,
+      "setup_transactions_excluded": true,
+      "source_payload_bytes": 1024,
+      "source_records_c0": 1002,
+      "synthetic_trusted_dto": true,
+      "target_records": 1000,
+      "text_payload_bytes": 1024
+    },
+    {
+      "all_context_record_counts_before_append": [
+        40643,
+        81269,
+        40643
+      ],
+      "append_growth_bytes": 0,
+      "append_p95_ms": 59.3834,
+      "append_read_bytes": 53248,
+      "append_syncs": 32,
+      "append_write_bytes": 9246720,
+      "c2_unchanged": true,
+      "cold_reopen_ms": 684.6542,
+      "cumulative_fill_transactions": 703,
+      "cumulative_measured_transactions": 767,
+      "cumulative_ordinary_transactions": 64,
+      "exact_streamed_domain": true,
+      "fill_growth_bytes": 129282048,
+      "fill_read_bytes": 17027072,
+      "fill_seconds": 98.8439546,
+      "fill_syncs": 635,
+      "fill_transactions": 632,
+      "fill_write_bytes": 855283200,
+      "fixture_text_lanes": 2,
+      "full_range_seconds": 44.7729855,
+      "latency_samples_bytes": 4096,
+      "max_app_buffer_bound_bytes": 29212662,
+      "max_bulk_plan_bytes": 1496996,
+      "max_candidates": 2,
+      "max_page_point_gets": 274,
+      "memory_phases": [
+        {
+          "app_buffer_bound_bytes": 26438471,
+          "app_buffer_bound_kind": "conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution",
+          "cache_metrics_available": true,
+          "configured_cache_bytes": 67108864,
+          "phase": "before_fill",
+          "process": {
+            "peak_paged_bytes": 19652608,
+            "private_bytes": 11653120,
+            "working_set_bytes": 21819392
+          },
+          "records": 1016,
+          "redb_cache_data_bytes": 7299392,
+          "same_process": 59116
+        },
+        {
+          "app_buffer_bound_bytes": 29212662,
+          "app_buffer_bound_kind": "conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution",
+          "cache_metrics_available": true,
+          "configured_cache_bytes": 67108864,
+          "phase": "after_fill",
+          "process": {
+            "peak_paged_bytes": 97914880,
+            "private_bytes": 93683712,
+            "working_set_bytes": 102907904
+          },
+          "records": 10000,
+          "redb_cache_data_bytes": 55206208,
+          "same_process": 59116
+        },
+        {
+          "app_buffer_bound_bytes": 0,
+          "app_buffer_bound_kind": "conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution",
+          "cache_metrics_available": true,
+          "configured_cache_bytes": 67108864,
+          "phase": "after_reopen",
+          "process": {
+            "peak_paged_bytes": 97914880,
+            "private_bytes": 84508672,
+            "working_set_bytes": 90783744
+          },
+          "records": 10000,
+          "redb_cache_data_bytes": 67105088,
+          "same_process": 59116
+        },
+        {
+          "app_buffer_bound_bytes": 3686679,
+          "app_buffer_bound_kind": "conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution",
+          "cache_metrics_available": true,
+          "configured_cache_bytes": 67108864,
+          "phase": "first_page_live",
+          "process": {
+            "peak_paged_bytes": 97914880,
+            "private_bytes": 85245952,
+            "working_set_bytes": 91582464
+          },
+          "records": 10000,
+          "redb_cache_data_bytes": 67105088,
+          "same_process": 59116
+        },
+        {
+          "app_buffer_bound_bytes": 29212662,
+          "app_buffer_bound_kind": "conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution",
+          "cache_metrics_available": true,
+          "configured_cache_bytes": 67108864,
+          "phase": "after_warm_range",
+          "process": {
+            "peak_paged_bytes": 97914880,
+            "private_bytes": 91639808,
+            "working_set_bytes": 99483648
+          },
+          "records": 10000,
+          "redb_cache_data_bytes": 67108864,
+          "same_process": 59116
+        },
+        {
+          "app_buffer_bound_bytes": 29212662,
+          "app_buffer_bound_kind": "conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution",
+          "cache_metrics_available": true,
+          "configured_cache_bytes": 67108864,
+          "phase": "after_ordinary_append",
+          "process": {
+            "peak_paged_bytes": 97914880,
+            "private_bytes": 93614080,
+            "working_set_bytes": 101642240
+          },
+          "records": 10016,
+          "redb_cache_data_bytes": 66613568,
+          "same_process": 59116
+        },
+        {
+          "app_buffer_bound_bytes": 29212662,
+          "app_buffer_bound_kind": "conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution",
+          "cache_metrics_available": true,
+          "configured_cache_bytes": 67108864,
+          "phase": "after_resume_reopen",
+          "process": {
+            "peak_paged_bytes": 97914880,
+            "private_bytes": 89350144,
+            "working_set_bytes": 97107968
+          },
+          "records": 10016,
+          "redb_cache_data_bytes": 67105088,
+          "same_process": 59116
+        }
+      ],
+      "native_e2e_messages": 0,
+      "no_n_sized_expected_vector": true,
+      "open_backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 147755008,
+        "max_growth": 0,
+        "physical_quota": 2147483648,
+        "read_bytes": 72016201,
+        "reads": 17577,
+        "set_len_calls": 0,
+        "sync_calls": 1,
+        "sync_nanos": 4680100,
+        "write_bytes": 320,
+        "writes": 1
+      },
+      "ordinary_append_count": 16,
+      "ordinary_max_node_reads": 94,
+      "ordinary_max_plan_bytes": 39865,
+      "ordinary_transactions": 32,
+      "own_row_every": 16,
+      "page32_p95_ms": 148.518,
+      "page_backend_read_bytes": 28823552,
+      "page_record_limit": 32,
+      "point_backend_read_bytes": 262144,
+      "point_p95_ms": 13.4147,
+      "records_after_append": 10016,
+      "resume_checkpoints": 3,
+      "resume_ms": 22567.249499999998,
+      "resume_pages": 156,
+      "resume_reopen_ms": 812.6976999999999,
+      "setup_transactions_excluded": true,
+      "source_payload_bytes": 1024,
+      "source_records_c0": 10002,
+      "synthetic_trusted_dto": true,
+      "target_records": 10000,
+      "text_payload_bytes": 1024
+    }
+  ],
+  "transactions": {
+    "fill": 703,
+    "measured_total": 767,
+    "ordinary": 64,
+    "setup_excluded": true
+  }
+}

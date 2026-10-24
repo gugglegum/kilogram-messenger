@@ -1,0 +1,47 @@
+{
+  "status": "PASS_RECOMPUTED",
+  "profile": "verification-scale",
+  "debug_assertions": true,
+  "completed_phase_records": 27,
+  "memory_comparisons": [
+    {
+      "phase": "after_warm_range",
+      "pid": 41048,
+      "small_private_bytes": 12533760,
+      "large_private_bytes": 102481920,
+      "small_cache_bytes": 7156032,
+      "large_cache_bytes": 67108864,
+      "raw_growth_bytes": 89948160,
+      "raw_limit_bytes": 100663296,
+      "residual_growth_bytes": 29995328,
+      "residual_limit_bytes": 33554432,
+      "residual_headroom_bytes": 3559104,
+      "status": "PASS"
+    },
+    {
+      "phase": "after_ordinary_append",
+      "pid": 41048,
+      "small_private_bytes": 12832768,
+      "large_private_bytes": 102522880,
+      "small_cache_bytes": 7328064,
+      "large_cache_bytes": 66363712,
+      "raw_growth_bytes": 89690112,
+      "raw_limit_bytes": 100663296,
+      "residual_growth_bytes": 30654464,
+      "residual_limit_bytes": 33554432,
+      "residual_headroom_bytes": 2899968,
+      "status": "PASS"
+    }
+  ],
+  "page_p95_ratio": 2.0421644533319663,
+  "append_p95_ratio": 1.4302976946390036,
+  "ratio_limit": 4,
+  "scenario_seconds": 401.9873352,
+  "budget_seconds": 2400,
+  "harness_seconds": 401.99,
+  "final_close_seconds": 0.0211181,
+  "scenario_includes_final_close": true,
+  "all_three_stages_complete": true,
+  "full_range_old_suffix_checkpoints_c2_complete": true,
+  "native_e2e_messages": 0
+}

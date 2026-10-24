@@ -1,0 +1,14 @@
+{
+  "started_utc": "2026-10-24T15:39:00.4061679+00:00",
+  "finished_utc": "2026-10-24T16:19:02.9508370+00:00",
+  "stable_runner_success": false,
+  "runner_wall_seconds": 2402.542294,
+  "runner_wall_boundary": "Includes metadata/compile-no-run/copy,harnesses and post-run cache status; harness elapsed is separate raw test result",
+  "scenario_budget_seconds": 2400,
+  "fixture": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s2\\history-full-3",
+  "compile_jobs": 12,
+  "priority": "BelowNormal",
+  "profile": "verification",
+  "concurrent_agent_compile_or_test": false,
+  "single_full_attempt": 1
+}

@@ -1,0 +1,13 @@
+{
+  "baseline_head": "61524df3a77203d73673f47d38decf6b817615e3",
+  "baseline_lock_blob": "d44a341a81e3cb28e40a01150efb371ae30a7947",
+  "current_lock_blob": "e7c84d5d67474922b28507111b18234b14605a15",
+  "clarification": "ai-docs/tasks/long-lived-dialog-a3-history-s2-lock-clarification-1.md",
+  "exact_single_dependency_edge": true,
+  "package_entries_before": 736,
+  "package_entries_after": 736,
+  "package_name_version_source_checksum_unchanged": true,
+  "all_other_dependency_edges_unchanged": true,
+  "unlocked_cargo_run": false,
+  "added_edge": "kilogram-state -> base64 0.22.1"
+}

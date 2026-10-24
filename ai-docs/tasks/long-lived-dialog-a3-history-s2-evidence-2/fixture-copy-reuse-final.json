@@ -1,0 +1,10 @@
+[
+  {
+    "path": ".tmp/a3-s2/reuse-final-read-2",
+    "synthetic": true,
+    "initial_db_sha256": "7c613e31c74cb78733e5d459161bf83d67fbbc8096d94251c9b53c9df2e01814",
+    "expected_user_rows": 10016,
+    "source": "new preserved history-small-2; post small/ordinary/resume, never regenerate",
+    "expected_scope_context": "05 repeated32"
+  }
+]

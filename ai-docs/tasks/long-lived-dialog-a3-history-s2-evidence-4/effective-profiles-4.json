@@ -1,0 +1,113 @@
+{
+  "status": "PASS_EFFECTIVE_FLAGS",
+  "selected_profile": "verification-scale",
+  "profile_definition": "inherits verification,opt-level3,debug-assertions=true,overflow-checks=true;line-tables-only and incremental=false inherited",
+  "rustflags_and_cargo_profile_env_overrides_present": false,
+  "flags_source": "Cargo compiler-artifact.profile emitted by locked no-run compile, not inferred from directory name",
+  "artifacts": [
+    {
+      "reason": "compiler-artifact",
+      "package_id": "registry+https://github.com/rust-lang/crates.io-index#redb@4.2.0",
+      "manifest_path": "C:\\Users\\Paul\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\redb-4.2.0\\Cargo.toml",
+      "target": {
+        "kind": [
+          "lib"
+        ],
+        "crate_types": [
+          "lib"
+        ],
+        "name": "redb",
+        "src_path": "C:\\Users\\Paul\\.cargo\\registry\\src\\index.crates.io-1949cf8c6b5b557f\\redb-4.2.0\\src\\lib.rs",
+        "edition": "2024",
+        "doc": true,
+        "doctest": true,
+        "test": true
+      },
+      "profile": {
+        "opt_level": "3",
+        "debuginfo": "line-tables-only",
+        "debug_assertions": true,
+        "overflow_checks": true,
+        "test": false
+      },
+      "features": [
+        "cache_metrics",
+        "default",
+        "std"
+      ],
+      "filenames": [
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\libredb-62447641637e8148.rlib",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\libredb-62447641637e8148.rmeta"
+      ],
+      "executable": null,
+      "fresh": true
+    },
+    {
+      "reason": "compiler-artifact",
+      "package_id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-state#0.1.0",
+      "manifest_path": "E:\\AI-Projects\\kilogram-p2p-messenger\\crates\\kilogram-state\\Cargo.toml",
+      "target": {
+        "kind": [
+          "lib"
+        ],
+        "crate_types": [
+          "lib"
+        ],
+        "name": "kilogram_state",
+        "src_path": "E:\\AI-Projects\\kilogram-p2p-messenger\\crates\\kilogram-state\\src\\lib.rs",
+        "edition": "2024",
+        "doc": true,
+        "doctest": true,
+        "test": true
+      },
+      "profile": {
+        "opt_level": "3",
+        "debuginfo": "line-tables-only",
+        "debug_assertions": true,
+        "overflow_checks": true,
+        "test": false
+      },
+      "features": [],
+      "filenames": [
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\libkilogram_state-92dceec72978c3e2.rlib",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\libkilogram_state-92dceec72978c3e2.rmeta"
+      ],
+      "executable": null,
+      "fresh": true
+    },
+    {
+      "reason": "compiler-artifact",
+      "package_id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-state#0.1.0",
+      "manifest_path": "E:\\AI-Projects\\kilogram-p2p-messenger\\crates\\kilogram-state\\Cargo.toml",
+      "target": {
+        "kind": [
+          "lib"
+        ],
+        "crate_types": [
+          "lib"
+        ],
+        "name": "kilogram_state",
+        "src_path": "E:\\AI-Projects\\kilogram-p2p-messenger\\crates\\kilogram-state\\src\\lib.rs",
+        "edition": "2024",
+        "doc": true,
+        "doctest": true,
+        "test": true
+      },
+      "profile": {
+        "opt_level": "3",
+        "debuginfo": "line-tables-only",
+        "debug_assertions": true,
+        "overflow_checks": true,
+        "test": true
+      },
+      "features": [],
+      "filenames": [
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram_state-26d73b442b2c6905.exe",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram_state-26d73b442b2c6905.pdb"
+      ],
+      "executable": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram_state-26d73b442b2c6905.exe",
+      "fresh": true
+    }
+  ],
+  "compile_exit": 0
+}

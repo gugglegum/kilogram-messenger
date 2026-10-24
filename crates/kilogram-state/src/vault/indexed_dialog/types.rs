@@ -20,6 +20,9 @@ impl ProjectionValue {
         Ok(out)
     }
     pub fn decode(raw: &[u8]) -> Result<Self> {
+        profiled!(ProjectionDecode, Self::decode_fields(raw))
+    }
+    fn decode_fields(raw: &[u8]) -> Result<Self> {
         let mut r = Reader::new(raw);
         if r.byte()? != 5 {
             return Err(Error::Integrity("projection version"));
@@ -75,6 +78,14 @@ pub enum Error {
     ConfiguredCapacity { requested: u64, quota: u64 },
     #[error("reopen required before resolving commit outcome")]
     ReopenRequired,
+    #[error("HistoryUnavailable")]
+    HistoryUnavailable,
+    #[error("ExistingStateRequiresMigration")]
+    ExistingStateRequiresMigration,
+    #[error("InvalidCursor")]
+    InvalidCursor,
+    #[error("SnapshotUnavailable")]
+    SnapshotUnavailable,
 }
 pub type Result<T> = std::result::Result<T, Error>;
 pub(crate) fn db(error: impl std::fmt::Display) -> Error {
@@ -328,5 +339,7 @@ pub struct CommitReport {
     pub nodes_read: u64,
     pub values_read: u64,
     pub changed_nodes: u64,
+    /// Conservative app-owned live-buffer bound, from live overlay sizes plus input/plan budgets.
+    pub app_buffer_bound_bytes: u64,
     pub duplicate: bool,
 }

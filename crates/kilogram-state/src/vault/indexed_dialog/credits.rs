@@ -120,6 +120,13 @@ pub(super) struct Ledger {
     grant: Option<Grant>,
 }
 impl Ledger {
+    pub(super) fn is_pristine(&self) -> bool {
+        self.repair_free == REPAIR_POOL
+            && self.outstanding == 0
+            && self.pending == 0
+            && self.head.is_none()
+            && self.grant.is_none()
+    }
     pub fn new(quota: u64) -> Result<Self> {
         let ledger = Self {
             quota,
@@ -264,6 +271,13 @@ pub(super) fn pending_view(raw: &[u8]) -> Result<PendingView> {
         original_auth: t.captures.map(|v| v[0]),
         admission_auth: t.captures.map(|v| v[1]),
     })
+}
+pub(super) fn history_ticket(raw: &[u8], stage: u8) -> Result<(Id, Vec<u8>)> {
+    let t = Ticket::decode(raw)?;
+    if t.stage != stage {
+        return Err(Error::Integrity("history ticket phase"));
+    }
+    Ok((t.id, t.body))
 }
 impl Ticket {
     fn encode(&self) -> Vec<u8> {

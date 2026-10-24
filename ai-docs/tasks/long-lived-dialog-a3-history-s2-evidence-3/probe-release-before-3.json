@@ -1,0 +1,42 @@
+{
+  "captured_utc": "2026-10-24T16:23:16.6746561+00:00",
+  "measurement_started": false,
+  "diagnostic_only": true,
+  "instrumented": true,
+  "profile": "release",
+  "cargo_reported_profile": "optimized",
+  "source_provenance": "build-provenance-before-run-3.json",
+  "source19_hashes": "MATCH",
+  "fixture": ".tmp/a3-s2/probe-release-3",
+  "initial_db_sha256": "7c613e31c74cb78733e5d459161bf83d67fbbc8096d94251c9b53c9df2e01814",
+  "exe_path": "target\\release\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+  "exe_bytes": 4757504,
+  "exe_sha256": "022a782ab50f10e12fbc1dfdf7a18394f54f617bb8f335817d05db2cbd2d7d75",
+  "harnesses": [
+    {
+      "path": "target\\release\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 4757504,
+      "sha256": "022a782ab50f10e12fbc1dfdf7a18394f54f617bb8f335817d05db2cbd2d7d75",
+      "snapshot_path": ".tmp/a3-s2/probe-bin-release-3/kilogram-state-lib-kilogram_state-tests.exe"
+    },
+    {
+      "path": "target\\release\\deps\\kilogram-state-test-a3_s1_root_review-tests.exe",
+      "bytes": 2744320,
+      "sha256": "1e7a9c356feee5f7b50c317974f3aa4f2f378fdadcd7f0d998b45ba3697cf1c1",
+      "snapshot_path": ".tmp/a3-s2/probe-bin-release-3/kilogram-state-test-a3_s1_root_review-tests.exe"
+    },
+    {
+      "path": "target\\release\\deps\\kilogram-state-test-a3_s2_root_review-tests.exe",
+      "bytes": 2808832,
+      "sha256": "b62e41a478c0442df639b264d5fd3dcd811ec49c5342d2f67ce6c481c8d69cb4",
+      "snapshot_path": ".tmp/a3-s2/probe-bin-release-3/kilogram-state-test-a3_s2_root_review-tests.exe"
+    }
+  ],
+  "compile_jobs": 12,
+  "priority": "BelowNormal",
+  "locked_offline": true,
+  "mode": "one bounded read replay:12cuts/pages plus12points; no fill/full traversal",
+  "normative_full_profile_remains": "verification",
+  "rustc": "1.98.0 (88d9e12ae 2026-08-18),x86_64-pc-windows-msvc,LLVM22.1.8",
+  "cargo": "1.98.0 (797e8a9bc 2026-08-05)"
+}

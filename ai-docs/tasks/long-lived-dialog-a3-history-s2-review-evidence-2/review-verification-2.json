@@ -1,0 +1,94 @@
+{
+  "date": "2026-10-24",
+  "status": "ROOT_REPAIR2_REVIEW_SMALL_AND_CRASH_PASS_FULL_100K_UNAVAILABLE",
+  "baseline_head": "61524df3a77203d73673f47d38decf6b817615e3",
+  "implementation_report": "ai-docs/tasks/long-lived-dialog-a3-history-s2-implementation-2.md",
+  "implementation_report_sha256": "7229edbe77da5349f56f733cc2ba22057c7e38267069ff1cb226f6632de6643b",
+  "quality_sha256": "76d05cd07573329fdb11019cea70436f7a11ac590753d04a45829ce516b524ed",
+  "evidence_bytes_sha256_verified": 111,
+  "source_current_and_snapshot_pairs_verified": 19,
+  "harness_current_and_snapshot_pairs_verified": 3,
+  "mismatches": [],
+  "build_provenance_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/build-provenance-final-2.json",
+  "build_provenance_sha256": "17fcb99ef3e4f425b246e1262ec13cfd514af56fd71e314df768b3e8371d9ee8",
+  "harnesses": [
+    {
+      "path": "target\\verification\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 8798208,
+      "sha256": "bccec3ff1b4cce66aea2e54a1d496496222125f7bf46c746b85e56d543a8c946",
+      "snapshot": ".tmp\\a3-s2\\final-2\\kilogram-state-lib-kilogram_state-tests.exe"
+    },
+    {
+      "path": "target\\verification\\deps\\kilogram-state-test-a3_s1_root_review-tests.exe",
+      "bytes": 5564416,
+      "sha256": "0b68a12f8927b6529172d4b5b2037568fc334545e6525487a4f00e22c922a362",
+      "snapshot": ".tmp\\a3-s2\\final-2\\kilogram-state-test-a3_s1_root_review-tests.exe"
+    },
+    {
+      "path": "target\\verification\\deps\\kilogram-state-test-a3_s2_root_review-tests.exe",
+      "bytes": 5821952,
+      "sha256": "dd2c59af68fe208e90f10ba4e59c138984faf1d6a424af47d183b0b2d5c27a49",
+      "snapshot": ".tmp\\a3-s2\\final-2\\kilogram-state-test-a3_s2_root_review-tests.exe"
+    }
+  ],
+  "common_runner": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures redb/cache_metrics -Run -NoCapture",
+  "environment": "TEMP/TMP=<workspace>/.tmp/a3-s2-root-review-2; CARGO_NET_OFFLINE=true; RUST_TEST_THREADS=1; KILOGRAM_CARGO_JOBS=2; BelowNormal",
+  "tests": [
+    {
+      "filter": "history::",
+      "skip": "history_scale_",
+      "passed": 19,
+      "seconds": 10.48
+    },
+    {
+      "filter": "indexed_component_real_owned_child_kills",
+      "passed": 1,
+      "seconds": 2.11,
+      "windows": [
+        "before_commit",
+        "after_commit",
+        "after_extension_sync"
+      ],
+      "pids": [
+        9180,
+        37468,
+        61260
+      ],
+      "recovered_records": [
+        0,
+        2,
+        256
+      ]
+    },
+    {
+      "filter": "a3_s2_review_cursor_survives_new_process_and_append",
+      "parent_passed": 1,
+      "parent_seconds": 0.63,
+      "child_seconds": 0.03,
+      "owned_child_pid": 39452
+    }
+  ],
+  "full_100k_run": false,
+  "native_e2e_messages": 0,
+  "executor_timing_exe_provenance_gap_preserved": true,
+  "development_environment_sha256": "53074ff3734dacd9906ee03cc5c7ded952dedd99d207581f692ff900b9a79f8f",
+  "index_paths": [],
+  "product_code_changed_by_root": false,
+  "logs": [
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-history-s2-review-evidence-2\\s2-small-independent-2.log",
+      "bytes": 4758,
+      "sha256": "7c1b2535a20b1906f4b5841ff8dc9ac65e2019ebe87835dace2bb457cc59e7a6"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-history-s2-review-evidence-2\\s1-owned-kills-independent-2.log",
+      "bytes": 2682,
+      "sha256": "b0e7e3b2fb5a7a8401f119ea1916fadca8350c4ff2fd4dc0536bd223a327de53"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-history-s2-review-evidence-2\\root-process-independent-2.log",
+      "bytes": 2593,
+      "sha256": "88527e0c6dcaa2a44ae4583184d5a1831ccf79d14855ab3444df1b9c14dac971"
+    }
+  ]
+}

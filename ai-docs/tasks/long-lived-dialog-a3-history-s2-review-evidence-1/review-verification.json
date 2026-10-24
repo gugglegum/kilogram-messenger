@@ -1,0 +1,63 @@
+{
+  "status": "PARTIAL_REVIEWED_PERFORMANCE_REPAIR_REQUIRED",
+  "baseline_head": "61524df3a77203d73673f47d38decf6b817615e3",
+  "executor_build_inputs_verified": 14,
+  "executor_evidence_files_verified": 19,
+  "executor_quality_sha256": "46bb6dc9ff9b3d085308af6e8c04771d190f8d46394a2da8fee4efd581a68eca",
+  "raw_scale_matches_parsed_json": true,
+  "independent_small_tests_passed": 14,
+  "independent_small_seconds": 7.28,
+  "new_process_parent_seconds": 0.89,
+  "new_process_child_seconds": 0.04,
+  "new_process_child_pid": 43224,
+  "new_process_cursor_verified": true,
+  "root_initial_compile": "E0618 local helper shadowing, fixed; original log preserved",
+  "targeted_strict_clippy": "PASS",
+  "root_test_rustfmt": "PASS",
+  "tracked_whitespace": "PASS",
+  "product_code_changed_by_root": false,
+  "actual_100k_run": false,
+  "native_e2e_messages": 0,
+  "original_library_exe_sha256": "ff42d3932ac86816e6e29ff221fc3d8b0ed03c4a574a871a327c6fd4a3f34835",
+  "root_test_exe_sha256": "d02a0a0d69af6828b5bb9eb964249279bf3dd6f0221e8e6f9ad5919e587dd9f2",
+  "linear_100k_range_seconds": 1320.4123949999998,
+  "linear_100k_fill_seconds": 1798.3570135796972,
+  "artifacts": [
+    {
+      "path": "crates/kilogram-state/tests/a3_s2_root_review.rs",
+      "bytes": 9443,
+      "sha256": "91b137b62fce9eb456abb2f5dc8e7b5a9126e0e5a6a1353a8258601e3c92e322",
+      "git_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-implementation-review-1.md",
+      "bytes": 10748,
+      "sha256": "3370ebd932a07d6402cbd68423a60a0e579e53fba0e00b2cd7ceb36adf7bf447",
+      "git_blob": "426f73ceefca73dd89825b7c39a341d481f2d8c5"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-history-s2-review-evidence-1\\small-independent.log",
+      "bytes": 3708,
+      "sha256": "378fbf6a161dcf359a373656eaff69df8312f17b0962479b081a67ef5d0e9fb4",
+      "git_blob": "d2f74db132b4706cfcdfb761af49964e5aae58e8"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-history-s2-review-evidence-1\\process-cursor-1.log",
+      "bytes": 1275,
+      "sha256": "7c778bff67affcadb074449cc6a9df93dbaadb574814c4e5163d462839d33457",
+      "git_blob": "3a964be9980b406e707982dca245d97b8f6e3d7e"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-history-s2-review-evidence-1\\process-cursor-2.log",
+      "bytes": 2761,
+      "sha256": "7114a2d6c6d2a0e0823b15a7f6a0753448c61cba242c1ba937b021e83530a44a",
+      "git_blob": "47f98ec953571f75191d80425d7b41c1748674d7"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-history-s2-review-evidence-1\\root-test-clippy.log",
+      "bytes": 260,
+      "sha256": "b34ffa13869407e2e2165b096a3edf406f74a57a7e896ab9eff0c07babf6c697",
+      "git_blob": "2faea361123e9805524e1f0021dde45ec6c6a9c0"
+    }
+  ]
+}

@@ -1,0 +1,442 @@
+{
+  "actual_plan_bytes": 1457498,
+  "app_buffer_bound": 27343254,
+  "fill128_ms": 2005.9847999999997,
+  "fill_oracle_ms_excluded": 2.6261,
+  "fill_profile": {
+    "cache_hits": 3952,
+    "inclusive_timings": {
+      "binding_decode": {
+        "calls": 384,
+        "ms": 0.7441
+      },
+      "cbor": {
+        "calls": 0,
+        "ms": 0.0
+      },
+      "commit_write": {
+        "calls": 9,
+        "ms": 450.7515
+      },
+      "common": {
+        "calls": 5570,
+        "ms": 5.4113
+      },
+      "history_apply": {
+        "calls": 8,
+        "ms": 31.3528
+      },
+      "identity_heads_decode": {
+        "calls": 1058,
+        "ms": 2.9489
+      },
+      "json": {
+        "calls": 0,
+        "ms": 0.0
+      },
+      "node_open": {
+        "calls": 1942,
+        "ms": 208.6817
+      },
+      "node_proof": {
+        "calls": 1942,
+        "ms": 25.0307
+      },
+      "node_seal": {
+        "calls": 6757,
+        "ms": 724.6293
+      },
+      "prefix": {
+        "calls": 17913,
+        "ms": 35.7237
+      },
+      "projection_decode": {
+        "calls": 520,
+        "ms": 0.5805
+      },
+      "source_check": {
+        "calls": 128,
+        "ms": 0.7812
+      },
+      "tree_find": {
+        "calls": 2164,
+        "ms": 358.305
+      },
+      "value_check": {
+        "calls": 88,
+        "ms": 0.3474
+      },
+      "value_get": {
+        "calls": 4690,
+        "ms": 348.5513
+      },
+      "value_open": {
+        "calls": 88,
+        "ms": 11.6564
+      },
+      "value_seal": {
+        "calls": 912,
+        "ms": 145.235
+      },
+      "writer_validation": {
+        "calls": 256,
+        "ms": 289.352
+      }
+    },
+    "key_tracking_cap": 4096,
+    "key_tracking_truncated": false,
+    "namespaces": [
+      {
+        "cipher_bytes": 1065,
+        "gets": 504,
+        "opens": 1,
+        "repeated_gets": 376
+      },
+      {
+        "cipher_bytes": 438,
+        "gets": 152,
+        "opens": 6,
+        "repeated_gets": 143
+      },
+      {
+        "cipher_bytes": 146,
+        "gets": 488,
+        "opens": 2,
+        "repeated_gets": 367
+      },
+      {
+        "cipher_bytes": 10600,
+        "gets": 648,
+        "opens": 8,
+        "repeated_gets": 518
+      },
+      {
+        "cipher_bytes": 1080,
+        "gets": 40,
+        "opens": 8,
+        "repeated_gets": 24
+      },
+      {
+        "cipher_bytes": 8944,
+        "gets": 56,
+        "opens": 8,
+        "repeated_gets": 40
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 16,
+        "opens": 0,
+        "repeated_gets": 8
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 240,
+        "opens": 0,
+        "repeated_gets": 120
+      },
+      {
+        "cipher_bytes": 5590,
+        "gets": 720,
+        "opens": 5,
+        "repeated_gets": 600
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 4796,
+        "gets": 529,
+        "opens": 22,
+        "repeated_gets": 512
+      },
+      {
+        "cipher_bytes": 3498,
+        "gets": 785,
+        "opens": 22,
+        "repeated_gets": 768
+      },
+      {
+        "cipher_bytes": 1782,
+        "gets": 512,
+        "opens": 6,
+        "repeated_gets": 511
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      }
+    ],
+    "negative_cache_hits": 534,
+    "works": 17
+  },
+  "fill_sync_ms": 128.4374,
+  "fill_write_bytes": 15252288,
+  "final_user_rows": 10160,
+  "initial_user_rows": 10016,
+  "instrumented": true,
+  "kind": "synthetic_copy_write",
+  "ordinary16_ms": 802.7477,
+  "ordinary_oracle_ms_excluded": 0.40640000000000004,
+  "ordinary_profile": {
+    "cache_hits": 356,
+    "inclusive_timings": {
+      "binding_decode": {
+        "calls": 48,
+        "ms": 0.1362
+      },
+      "cbor": {
+        "calls": 0,
+        "ms": 0.0
+      },
+      "commit_write": {
+        "calls": 32,
+        "ms": 336.3634
+      },
+      "common": {
+        "calls": 703,
+        "ms": 0.686
+      },
+      "history_apply": {
+        "calls": 32,
+        "ms": 333.592
+      },
+      "identity_heads_decode": {
+        "calls": 224,
+        "ms": 0.6275
+      },
+      "json": {
+        "calls": 0,
+        "ms": 0.0
+      },
+      "node_open": {
+        "calls": 1328,
+        "ms": 137.148
+      },
+      "node_proof": {
+        "calls": 1328,
+        "ms": 16.6234
+      },
+      "node_seal": {
+        "calls": 849,
+        "ms": 90.4028
+      },
+      "prefix": {
+        "calls": 5010,
+        "ms": 9.3855
+      },
+      "projection_decode": {
+        "calls": 65,
+        "ms": 0.1041
+      },
+      "source_check": {
+        "calls": 16,
+        "ms": 0.1031
+      },
+      "tree_find": {
+        "calls": 485,
+        "ms": 188.9026
+      },
+      "value_check": {
+        "calls": 241,
+        "ms": 1.0046
+      },
+      "value_get": {
+        "calls": 678,
+        "ms": 220.3153
+      },
+      "value_open": {
+        "calls": 241,
+        "ms": 30.3522
+      },
+      "value_seal": {
+        "calls": 114,
+        "ms": 18.4192
+      },
+      "writer_validation": {
+        "calls": 32,
+        "ms": 59.8779
+      }
+    },
+    "key_tracking_cap": 4096,
+    "key_tracking_truncated": false,
+    "namespaces": [
+      {
+        "cipher_bytes": 0,
+        "gets": 63,
+        "opens": 0,
+        "repeated_gets": 47
+      },
+      {
+        "cipher_bytes": 1168,
+        "gets": 19,
+        "opens": 16,
+        "repeated_gets": 2
+      },
+      {
+        "cipher_bytes": 1168,
+        "gets": 61,
+        "opens": 16,
+        "repeated_gets": 30
+      },
+      {
+        "cipher_bytes": 42400,
+        "gets": 81,
+        "opens": 32,
+        "repeated_gets": 33
+      },
+      {
+        "cipher_bytes": 135,
+        "gets": 5,
+        "opens": 1,
+        "repeated_gets": 3
+      },
+      {
+        "cipher_bytes": 1118,
+        "gets": 7,
+        "opens": 1,
+        "repeated_gets": 5
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 2,
+        "opens": 0,
+        "repeated_gets": 1
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 30,
+        "opens": 0,
+        "repeated_gets": 15
+      },
+      {
+        "cipher_bytes": 16770,
+        "gets": 90,
+        "opens": 15,
+        "repeated_gets": 60
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 13952,
+        "gets": 112,
+        "opens": 64,
+        "repeated_gets": 48
+      },
+      {
+        "cipher_bytes": 10176,
+        "gets": 144,
+        "opens": 64,
+        "repeated_gets": 80
+      },
+      {
+        "cipher_bytes": 9504,
+        "gets": 64,
+        "opens": 32,
+        "repeated_gets": 32
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      },
+      {
+        "cipher_bytes": 0,
+        "gets": 0,
+        "opens": 0,
+        "repeated_gets": 0
+      }
+    ],
+    "negative_cache_hits": 67,
+    "works": 80
+  },
+  "ordinary_sync_ms": 135.236,
+  "ordinary_write_bytes": 9512960
+}

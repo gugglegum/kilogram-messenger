@@ -1,0 +1,198 @@
+{
+  "phase": "PINNED_BEFORE_FIRST_EXECUTION",
+  "captured_utc": "2026-10-24T16:58:50.3844187+00:00",
+  "baseline_head": "61524df3a77203d73673f47d38decf6b817615e3",
+  "turn_id": "01a16ed1-9cf7-70a1-b282-42cacfc8ff77",
+  "model": "gpt-6.1-sol/max",
+  "config_service_tier": "default",
+  "fast_requested": false,
+  "profile": "verification-scale",
+  "opt_level": "3",
+  "debug_assertions": true,
+  "overflow_checks": true,
+  "debuginfo": "line-tables-only",
+  "incremental": false,
+  "compiler_metadata": "effective-profiles-4.json",
+  "compiler_metadata_sha256": "26630018fdb99b91c94ff5310543cc6fe8f18b39e770c31ec148cf25537edecc",
+  "jobs": 12,
+  "priority": "BelowNormal",
+  "locked_offline": true,
+  "test_threads": 1,
+  "scenario_budget_seconds": 2400,
+  "profile_authority_sha256": "9d9cad04c6dfa8eb5a215de5d89752e41a629b0602f9fc4af16146fb676a42c1",
+  "sources": [
+    {
+      "path": "Cargo.lock",
+      "bytes": 194144,
+      "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126",
+      "git_blob": "e7c84d5d67474922b28507111b18234b14605a15",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/Cargo.lock",
+      "same_as_attempt3": true
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 3398,
+      "sha256": "28700ccee74b2a78f96e945b86087ce9dfac32a2236bf61067976c2ac1082aa0",
+      "git_blob": "071076d2d24dbe6eef6d2df0e9eb0efad9556512",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/Cargo.toml",
+      "same_as_attempt3": false
+    },
+    {
+      "path": "crates/kilogram-state/Cargo.toml",
+      "bytes": 704,
+      "sha256": "593342488618212f65e02b8024fea5b66d888995536c375881af7e05561f3a6c",
+      "git_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/Cargo.toml",
+      "same_as_attempt3": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/authenticated_index.rs",
+      "bytes": 19526,
+      "sha256": "da2f07348eb51d03153226e0bb6e0faac36e790b26ff769dfa3b2e796f82ce70",
+      "git_blob": "bd397d9009a35b91d942160b05134209ad3e8316",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/authenticated_index.rs",
+      "same_as_attempt3": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "bytes": 47786,
+      "sha256": "4f9960dd2cc728cf298d3b3a68c7695f9f6ab0371fba741a6443603a18955619",
+      "git_blob": "021eb684f51f608618d88505fa40582f801e34f7",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "same_as_attempt3": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "bytes": 24600,
+      "sha256": "2108c51b366402e06af920174f0bac6c1687388cc572f3152cb7d259b95127ec",
+      "git_blob": "54d9c245e3e25d2c6cc6eeac3227debdcb99126e",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "same_as_attempt3": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs",
+      "bytes": 3847,
+      "sha256": "81a97de373181160377281a6b0c3386f624438439927f3587f7f232d3def922e",
+      "git_blob": "1163c83cde621a2592bcad8a086d48d9e03e28c0",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs",
+      "same_as_attempt3": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_cursor.rs",
+      "bytes": 3443,
+      "sha256": "2242507628d86b14069cca038991723ba1a31ad3c88d78e08240ec01780b06b6",
+      "git_blob": "3417bbba1b5095db9d814b80888053f40881e745",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_cursor.rs",
+      "same_as_attempt3": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs",
+      "bytes": 31068,
+      "sha256": "7a652581b801aebdd7c552dbeafd9ee4efb2146163f7112a900397d720a5d7e5",
+      "git_blob": "d17875085e562726676dcf33ad8de706eea58025",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs",
+      "same_as_attempt3": false
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_tests.rs",
+      "bytes": 37973,
+      "sha256": "7fc68c3d5021ee44bd23785e69ed13f7a631c5b3836cd7b79f4dc13c514abb40",
+      "git_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_tests.rs",
+      "same_as_attempt3": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_types.rs",
+      "bytes": 17396,
+      "sha256": "4b358cde0c2d9b7aa3306a52b2bb5eebd1924437965dd1a9bf5188975074fa4d",
+      "git_blob": "342f5051b9d6ae3d5a33300a5954c079b8f05c15",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_types.rs",
+      "same_as_attempt3": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "bytes": 45592,
+      "sha256": "57650a6d70cd326e5eafbcf40b0c315ee118e2b248328c15bfc2df0745e84457",
+      "git_blob": "a21c511bb1de6c12d10bd86ca6c908cc940e283e",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "same_as_attempt3": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "bytes": 17370,
+      "sha256": "6a7f3f04786eacd8b11d322a91085418bb8d3ac68a4d390556d71cf5add3fc1a",
+      "git_blob": "3646215816e000f812ee50eda9ea9089ad96d89a",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "same_as_attempt3": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "bytes": 10082,
+      "sha256": "b2009673e48c090717664175a6c1e058d09a3fe46f2ea0c3d372eaf38e2e4815",
+      "git_blob": "bf72682b070baa6347c3b605454ed017f162ab57",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "same_as_attempt3": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/profile.rs",
+      "bytes": 5373,
+      "sha256": "b733c02397aeb4667a97c0940a1ea375656708c9785ca0801637cfb82e46b772",
+      "git_blob": "169ee5c3a7067641e5e9ea77e9d8d8bd215dd09f",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/profile.rs",
+      "same_as_attempt3": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_profile.rs",
+      "bytes": 10930,
+      "sha256": "820f1059f3c79e458ed23b661a6d643fb183714ee634ae5fc83fc683dfc4465f",
+      "git_blob": "027da170e39ae4285efb841e46681f7ff5a91e1c",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_profile.rs",
+      "same_as_attempt3": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/verified_values.rs",
+      "bytes": 2773,
+      "sha256": "8956c36b8f901406d50e4e96bbbe3de5fc0104505d299bab5cb42d31e61e5d5c",
+      "git_blob": "77f5ba3773150d2b785f62ea335f8c5c02a30456",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/verified_values.rs",
+      "same_as_attempt3": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_cache_tests.rs",
+      "bytes": 8469,
+      "sha256": "d4dc1487b01821f47ccae5927b6bfefe5976faebd440ba6e321bb94d2dacd716",
+      "git_blob": "f9d8e94efba0e7c13e8cc354972531ca3e0b30bb",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_cache_tests.rs",
+      "same_as_attempt3": true
+    },
+    {
+      "path": "crates/kilogram-state/tests/a3_s2_root_review.rs",
+      "bytes": 9443,
+      "sha256": "91b137b62fce9eb456abb2f5dc8e7b5a9126e0e5a6a1353a8258601e3c92e322",
+      "git_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/tests/a3_s2_root_review.rs",
+      "same_as_attempt3": true
+    }
+  ],
+  "harnesses": [
+    {
+      "path": "target\\verification-scale\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 5390336,
+      "sha256": "b270073df32ded751368f93e3271a0393af89d5b0a55826a0d7e8cd4a87d89d6",
+      "snapshot_path": ".tmp/a3-s2/final-4/kilogram-state-lib-kilogram_state-tests.exe"
+    },
+    {
+      "path": "target\\verification-scale\\deps\\kilogram-state-test-a3_s1_root_review-tests.exe",
+      "bytes": 3182592,
+      "sha256": "bfd5370bbf4d99f5321397b239b201b69a862d73afe4b21cc946db482641bb58",
+      "snapshot_path": ".tmp/a3-s2/final-4/kilogram-state-test-a3_s1_root_review-tests.exe"
+    },
+    {
+      "path": "target\\verification-scale\\deps\\kilogram-state-test-a3_s2_root_review-tests.exe",
+      "bytes": 3280896,
+      "sha256": "7fff2209091f2d54b56f589c6085f1755044a95a0d47df6869d7f7c6201e2c89",
+      "snapshot_path": ".tmp/a3-s2/final-4/kilogram-state-test-a3_s2_root_review-tests.exe"
+    }
+  ],
+  "no_new_product_helper_dependency_lock_or_cpu_codegen_lto_changes": true
+}

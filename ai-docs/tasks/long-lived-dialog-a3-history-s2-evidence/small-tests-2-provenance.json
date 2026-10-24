@@ -1,0 +1,61 @@
+{
+  "phase": "small-tests-2",
+  "baseline": "61524df3a77203d73673f47d38decf6b817615e3",
+  "harness": "target/verification/deps/kilogram-state-lib-kilogram_state-tests.exe",
+  "harness_sha256": "4c6ab5bb401316fabd18603287f21fae6c8e3109677724ec482b0bd8dd12ff79",
+  "result": "11 PASS, intermediate source before scale integration",
+  "sources": [
+    {
+      "path": "Cargo.toml",
+      "sha256": "b8a0c6695826cd38d27ddb15c6c2d6aa77ca2e67ee61009554e55a785179e3d6"
+    },
+    {
+      "path": "Cargo.lock",
+      "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126"
+    },
+    {
+      "path": "crates/kilogram-state/Cargo.toml",
+      "sha256": "593342488618212f65e02b8024fea5b66d888995536c375881af7e05561f3a6c"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "sha256": "2be1594e5ae9ebda254c996bc49d1e91439cfb5cfc93c47729932e85d4b07819"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/authenticated_index.rs",
+      "sha256": "bd5482d62a6fce2747351c2bcb65c4e2aec48a7e8c1f66f45e4296f49c470740"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\crates\\kilogram-state\\src\\vault\\indexed_dialog\\history_codec.rs",
+      "sha256": "8f5190f25decbe4d12bcaca4f8fc991264cf4f89b0b9f3739351e35d1cee4d05"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\crates\\kilogram-state\\src\\vault\\indexed_dialog\\history_cursor.rs",
+      "sha256": "ab3e8a67ff113520ad678224eb8295e9addf919abad008ef7db67822659f9556"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\crates\\kilogram-state\\src\\vault\\indexed_dialog\\history_tests.rs",
+      "sha256": "60d773ea1674997b359d29fa1b6f113ebf27c3965a3177fb53118542052f8626"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\crates\\kilogram-state\\src\\vault\\indexed_dialog\\history_types.rs",
+      "sha256": "9f3af53e30f2a25ac3a156660653204216a8f26c49d46afd5804a0aeb1e58d07"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\crates\\kilogram-state\\src\\vault\\indexed_dialog\\history_writer.rs",
+      "sha256": "a46802c339a451f9194e20bae88dc241bd36694ee07dfa8282ce6870b5227c84"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\crates\\kilogram-state\\src\\vault\\indexed_dialog\\history.rs",
+      "sha256": "b4970a680951a76fa050ff476ab73f4728a96a1525c0abe6d61ac55191394021"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "sha256": "23761d38b0236d55eabdd7c031d8a3d5cc98a79d5597bd5572c866b28bbb6c22"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "sha256": "ecfd3fc6254d9b647f3004b1c82873d862495259f2b0d174cdd9341ab78ea79a"
+    }
+  ]
+}

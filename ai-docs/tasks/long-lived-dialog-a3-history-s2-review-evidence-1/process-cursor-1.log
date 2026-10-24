@@ -1,0 +1,24 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+error[E0618]: expected function, found `HistoryNativeTransition`
+   --> crates\kilogram-state\tests\a3_s2_root_review.rs:196:18
+    |
+ 83 | / fn native(
+ 84 | |     store: &mut IndexedDialogVault,
+ 85 | |     rows: &[PreparedReadable],
+ 86 | | ) -> Result<HistoryNativeTransition, Box<dyn std::error::Error>> {
+    | |________________________________________________________________- this function of the same name is available here, but it's shadowed by the local binding
+...
+189 |       let native = native(&mut store, &rows)?;
+    |           ------ `native` has type `HistoryNativeTransition`
+...
+196 |       let native = native(&mut store, std::slice::from_ref(&a3))?;
+    |                    ^^^^^^---------------------------------------
+    |                    |
+    |                    call expression requires function
+
+For more information about this error, try `rustc --explain E0618`.
+error: could not compile `kilogram-state` (test "a3_s2_root_review") due to 1 previous error

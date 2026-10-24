@@ -1,6 +1,6 @@
 //! Format5 compressed binary radix tree. Digests cover canonical plaintext; AAD covers addresses.
 use super::{Crypto, Error, Id, NODE_CAP, Reader, Result, Summary};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, VecDeque};
 
 #[derive(Clone, Copy)]
 pub(super) enum Body {
@@ -26,15 +26,20 @@ pub(super) fn bit(key: Id, at: u16) -> bool {
     key[usize::from(at / 8)] & (0x80 >> (at % 8)) != 0
 }
 pub(super) fn prefix(mut key: Id, bits: u16) -> Id {
-    for at in bits..256 {
-        key[usize::from(at / 8)] &= !(0x80 >> (at % 8));
-    }
-    key
+    profiled!(Prefix, {
+        for at in bits..256 {
+            key[usize::from(at / 8)] &= !(0x80 >> (at % 8));
+        }
+        key
+    })
 }
 fn common(a: Id, b: Id) -> u16 {
-    (0..256)
-        .find(|at| bit(a, *at) != bit(b, *at))
-        .unwrap_or(256)
+    profiled!(
+        Common,
+        (0..256)
+            .find(|at| bit(a, *at) != bit(b, *at))
+            .unwrap_or(256)
+    )
 }
 pub(super) fn child(parent: &Node, right: bool) -> (Id, u16) {
     let mut p = parent.prefix;
@@ -158,16 +163,72 @@ pub(super) struct Tree<'a, T: redb::ReadableTable<&'static [u8], &'static [u8]>>
     pub changed: BTreeMap<Id, Option<Vec<u8>>>,
     // Verified nodes only, scoped to this operation/read transaction. No history cache.
     decoded: BTreeMap<Id, (Node, Summary)>,
+    // Only a short history read enables this fixed FIFO. Full candidate proofs
+    // still clear; a reused node must match scope and the expected proof version.
+    read_reuse: bool,
+    reused: BTreeMap<Id, (u8, Node, Summary)>,
+    reuse_fifo: VecDeque<Id>,
+    // Trusted new nodes already live in decoded. The changed map reserves their
+    // exact envelope lengths; only final versions are sealed before publication.
+    pending_scopes: BTreeMap<Id, u8>,
     pub reads: u64,
     pub plan_bytes: usize,
 }
 impl<'a, T: redb::ReadableTable<&'static [u8], &'static [u8]>> Tree<'a, T> {
+    // Read-only history pages discard proofs between candidates; write overlays remain intact.
+    pub fn clear_read_proofs(&mut self) {
+        self.decoded
+            .retain(|address, _| self.pending_scopes.contains_key(address));
+    }
+    pub fn enable_read_reuse(&mut self) {
+        self.read_reuse = true;
+    }
+    #[cfg(test)]
+    pub fn read_reuse_sizes(&self) -> (usize, usize) {
+        (self.reused.len(), self.reuse_bound_bytes())
+    }
+    fn reuse_bound_bytes(&self) -> usize {
+        (self.reused.len() + 11) * 3 * (std::mem::size_of::<(Id, (u8, Node, Summary))>() + 128)
+            + self.reuse_fifo.capacity() * 32
+    }
+    fn reuse(&mut self, address: Id, scope: u8, node: Node, summary: Summary) {
+        if !self.read_reuse || self.reused.contains_key(&address) {
+            return;
+        }
+        while self.reused.len() >= 512 || self.reuse_bound_bytes() + 4096 > 1024 * 1024 {
+            if let Some(old) = self.reuse_fifo.pop_front() {
+                self.reused.remove(&old);
+            } else {
+                break;
+            }
+        }
+        self.reused.insert(address, (scope, node, summary));
+        self.reuse_fifo.push_back(address);
+    }
+    /// Conservative bound from live lengths/capacities; includes sparse BTree nodes.
+    pub fn buffer_bound_bytes(&self) -> usize {
+        let decoded =
+            (self.decoded.len() + 11) * 3 * (std::mem::size_of::<(Id, (Node, Summary))>() + 128);
+        let changed =
+            (self.changed.len() + 11) * 3 * (std::mem::size_of::<(Id, Option<Vec<u8>>)>() + 128)
+                + self
+                    .changed
+                    .values()
+                    .flatten()
+                    .map(Vec::capacity)
+                    .sum::<usize>();
+        decoded + changed + self.reuse_bound_bytes() + (self.pending_scopes.len() + 11) * 3 * 192
+    }
     pub fn new(table: &'a T, crypto: &'a Crypto) -> Self {
         Self {
             table,
             crypto,
             changed: BTreeMap::new(),
             decoded: BTreeMap::new(),
+            read_reuse: false,
+            reused: BTreeMap::new(),
+            reuse_fifo: VecDeque::new(),
+            pending_scopes: BTreeMap::new(),
             reads: 0,
             plan_bytes: 0,
         }
@@ -189,6 +250,13 @@ impl<'a, T: redb::ReadableTable<&'static [u8], &'static [u8]>> Tree<'a, T> {
             }
             return Ok(node.clone());
         }
+        if let Some((proved_scope, node, summary)) = self.reused.get(&address).cloned() {
+            if proved_scope != scope || summary != expected {
+                return Err(Error::Integrity("reused node proof/scope"));
+            }
+            self.remember(address, node.clone(), summary)?;
+            return Ok(node);
+        }
         let raw = if let Some(c) = self.changed.get(&address) {
             c.clone().ok_or(Error::Integrity("removed expected node"))?
         } else {
@@ -204,14 +272,21 @@ impl<'a, T: redb::ReadableTable<&'static [u8], &'static [u8]>> Tree<'a, T> {
             guard.value().to_vec()
         };
         let plain = self.crypto.open_node(scope, address, &raw)?;
-        let n = Node::decode(&plain)?;
-        if n.bits < entrance.1
-            || prefix(n.prefix, entrance.1) != entrance.0
-            || n.summary(self.crypto, scope)? != expected
-        {
-            return Err(Error::Integrity("node proof"));
-        }
+        let n = profiled!(
+            NodeProof,
+            (|| {
+                let n = Node::decode(&plain)?;
+                if n.bits < entrance.1
+                    || prefix(n.prefix, entrance.1) != entrance.0
+                    || n.summary(self.crypto, scope)? != expected
+                {
+                    return Err(Error::Integrity("node proof"));
+                }
+                Ok(n)
+            })()
+        )?;
         self.remember(address, n.clone(), expected)?;
+        self.reuse(address, scope, n.clone(), expected);
         Ok(n)
     }
     fn remember(&mut self, address: Id, node: Node, summary: Summary) -> Result<()> {
@@ -230,6 +305,10 @@ impl<'a, T: redb::ReadableTable<&'static [u8], &'static [u8]>> Tree<'a, T> {
         Ok(())
     }
     fn change(&mut self, address: Id, value: Option<Vec<u8>>) -> Result<()> {
+        self.read_reuse = false;
+        self.reused.clear();
+        self.reuse_fifo.clear();
+        self.pending_scopes.remove(&address);
         self.decoded.remove(&address);
         if !self.changed.contains_key(&address) {
             let old = self.table.get(address.as_slice()).map_err(super::db)?;
@@ -253,15 +332,39 @@ impl<'a, T: redb::ReadableTable<&'static [u8], &'static [u8]>> Tree<'a, T> {
     fn store(&mut self, scope: u8, entrance: (Id, u16), node: Node) -> Result<Summary> {
         let summary = node.summary(self.crypto, scope)?;
         let address = self.address(scope, entrance.0, entrance.1);
-        let raw = self.crypto.seal_node(scope, address, &node.encode())?;
-        if raw.len() > NODE_CAP {
+        let envelope_len = node.encode().len() + 41;
+        if envelope_len > NODE_CAP {
             return Err(Error::Bound("node envelope"));
         }
-        self.change(address, Some(raw))?;
+        self.change(address, Some(vec![0; envelope_len]))?;
+        self.pending_scopes.insert(address, scope);
         self.remember(address, node, summary)?;
         Ok(summary)
     }
+    /// No placeholder can reach a database/plan: the common engine calls this
+    /// before reading changed node bytes. Persisted/old nodes always use AEAD open.
+    pub fn seal_changes(&mut self) -> Result<()> {
+        for (address, scope) in &self.pending_scopes {
+            let (node, _) = self
+                .decoded
+                .get(address)
+                .ok_or(Error::Integrity("pending node missing"))?;
+            let raw = self.crypto.seal_node(*scope, *address, &node.encode())?;
+            let slot = self
+                .changed
+                .get_mut(address)
+                .ok_or(Error::Integrity("pending node change missing"))?;
+            if slot.as_ref().is_none_or(|old| old.len() != raw.len()) || raw.len() > NODE_CAP {
+                return Err(Error::Integrity("pending node envelope bound"));
+            }
+            *slot = Some(raw);
+        }
+        Ok(())
+    }
     pub fn find(&mut self, scope: u8, root: Summary, key: Id) -> Result<Option<Node>> {
+        profiled!(TreeFind, self.find_inner(scope, root, key))
+    }
+    fn find_inner(&mut self, scope: u8, root: Summary, key: Id) -> Result<Option<Node>> {
         let mut cursor = (([0; 32], 0), root);
         while cursor.1.count != 0 {
             let n = self.load(scope, cursor.0, cursor.1)?;

@@ -1,0 +1,202 @@
+{
+  "phase": "PINNED_BEFORE_SINGLE_FULL_RUN",
+  "captured_utc": "2026-10-24T15:38:29.1241382+00:00",
+  "baseline_head": "61524df3a77203d73673f47d38decf6b817615e3",
+  "turn_id": "01a16e8b-5b2f-74c3-9229-a8d3ad151ea3",
+  "model": "gpt-6.1-sol/max",
+  "config_service_tier": "default",
+  "fast_requested": false,
+  "fixture_path": ".tmp/a3-s2/history-full-3",
+  "fixture_existed_at_pin": false,
+  "scenario_budget_seconds": 2400,
+  "budget_amendment": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-time-budget-amendment-1.md",
+    "sha256": "5f9898a928b02c551be858483f5e1b043d3a2c4f95b14b711c6766f6a58415a5"
+  },
+  "profile": "verification",
+  "features": [
+    "redb/cache_metrics"
+  ],
+  "locked": true,
+  "offline": true,
+  "compile_jobs": 12,
+  "prior_clippy_jobs": 2,
+  "jobs_steer": "User CPU parallelism steer arrived after completed Clippy; remaining compile/stable runner12; no concurrent heavy work during normative run",
+  "process_priority": "BelowNormal",
+  "harness_test_threads": 1,
+  "algorithms_profile_payload_distribution_other_limits_changed": false,
+  "sources": [
+    {
+      "path": "Cargo.lock",
+      "bytes": 194144,
+      "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126",
+      "git_blob": "e7c84d5d67474922b28507111b18234b14605a15",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/Cargo.lock",
+      "same_as_repair2": true
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 3201,
+      "sha256": "b8a0c6695826cd38d27ddb15c6c2d6aa77ca2e67ee61009554e55a785179e3d6",
+      "git_blob": "96a2a3542e57e679a535bdfec8681d9b6cb13dd6",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/Cargo.toml",
+      "same_as_repair2": true
+    },
+    {
+      "path": "crates/kilogram-state/Cargo.toml",
+      "bytes": 704,
+      "sha256": "593342488618212f65e02b8024fea5b66d888995536c375881af7e05561f3a6c",
+      "git_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/Cargo.toml",
+      "same_as_repair2": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/authenticated_index.rs",
+      "bytes": 19526,
+      "sha256": "da2f07348eb51d03153226e0bb6e0faac36e790b26ff769dfa3b2e796f82ce70",
+      "git_blob": "bd397d9009a35b91d942160b05134209ad3e8316",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/authenticated_index.rs",
+      "same_as_repair2": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "bytes": 47786,
+      "sha256": "4f9960dd2cc728cf298d3b3a68c7695f9f6ab0371fba741a6443603a18955619",
+      "git_blob": "021eb684f51f608618d88505fa40582f801e34f7",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "same_as_repair2": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "bytes": 24600,
+      "sha256": "2108c51b366402e06af920174f0bac6c1687388cc572f3152cb7d259b95127ec",
+      "git_blob": "54d9c245e3e25d2c6cc6eeac3227debdcb99126e",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "same_as_repair2": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs",
+      "bytes": 3847,
+      "sha256": "81a97de373181160377281a6b0c3386f624438439927f3587f7f232d3def922e",
+      "git_blob": "1163c83cde621a2592bcad8a086d48d9e03e28c0",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs",
+      "same_as_repair2": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_cursor.rs",
+      "bytes": 3443,
+      "sha256": "2242507628d86b14069cca038991723ba1a31ad3c88d78e08240ec01780b06b6",
+      "git_blob": "3417bbba1b5095db9d814b80888053f40881e745",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_cursor.rs",
+      "same_as_repair2": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs",
+      "bytes": 25740,
+      "sha256": "9a5e0d5a4d2bb7560fdff0fd9174a7fa0ca7f5eda264662da3d9c85dc22eee2a",
+      "git_blob": "de03f06302c236c388ad4cb48a75ad0dbfb5aaa2",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs",
+      "same_as_repair2": false
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_tests.rs",
+      "bytes": 37973,
+      "sha256": "7fc68c3d5021ee44bd23785e69ed13f7a631c5b3836cd7b79f4dc13c514abb40",
+      "git_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_tests.rs",
+      "same_as_repair2": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_types.rs",
+      "bytes": 17396,
+      "sha256": "4b358cde0c2d9b7aa3306a52b2bb5eebd1924437965dd1a9bf5188975074fa4d",
+      "git_blob": "342f5051b9d6ae3d5a33300a5954c079b8f05c15",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_types.rs",
+      "same_as_repair2": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "bytes": 45592,
+      "sha256": "57650a6d70cd326e5eafbcf40b0c315ee118e2b248328c15bfc2df0745e84457",
+      "git_blob": "a21c511bb1de6c12d10bd86ca6c908cc940e283e",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "same_as_repair2": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "bytes": 17370,
+      "sha256": "6a7f3f04786eacd8b11d322a91085418bb8d3ac68a4d390556d71cf5add3fc1a",
+      "git_blob": "3646215816e000f812ee50eda9ea9089ad96d89a",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "same_as_repair2": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "bytes": 10082,
+      "sha256": "b2009673e48c090717664175a6c1e058d09a3fe46f2ea0c3d372eaf38e2e4815",
+      "git_blob": "bf72682b070baa6347c3b605454ed017f162ab57",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "same_as_repair2": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/profile.rs",
+      "bytes": 5373,
+      "sha256": "b733c02397aeb4667a97c0940a1ea375656708c9785ca0801637cfb82e46b772",
+      "git_blob": "169ee5c3a7067641e5e9ea77e9d8d8bd215dd09f",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/profile.rs",
+      "same_as_repair2": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_profile.rs",
+      "bytes": 10930,
+      "sha256": "820f1059f3c79e458ed23b661a6d643fb183714ee634ae5fc83fc683dfc4465f",
+      "git_blob": "027da170e39ae4285efb841e46681f7ff5a91e1c",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_profile.rs",
+      "same_as_repair2": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/verified_values.rs",
+      "bytes": 2773,
+      "sha256": "8956c36b8f901406d50e4e96bbbe3de5fc0104505d299bab5cb42d31e61e5d5c",
+      "git_blob": "77f5ba3773150d2b785f62ea335f8c5c02a30456",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/verified_values.rs",
+      "same_as_repair2": true
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_cache_tests.rs",
+      "bytes": 8469,
+      "sha256": "d4dc1487b01821f47ccae5927b6bfefe5976faebd440ba6e321bb94d2dacd716",
+      "git_blob": "f9d8e94efba0e7c13e8cc354972531ca3e0b30bb",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_cache_tests.rs",
+      "same_as_repair2": true
+    },
+    {
+      "path": "crates/kilogram-state/tests/a3_s2_root_review.rs",
+      "bytes": 9443,
+      "sha256": "91b137b62fce9eb456abb2f5dc8e7b5a9126e0e5a6a1353a8258601e3c92e322",
+      "git_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/tests/a3_s2_root_review.rs",
+      "same_as_repair2": true
+    }
+  ],
+  "harnesses": [
+    {
+      "path": "target\\verification\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+      "sha256": "7ce75659705024f399722f959394ab1f6cd27d350296f450315bd03dd103f0b6",
+      "bytes": 8828416,
+      "snapshot_path": ".tmp/a3-s2/final-3/kilogram-state-lib-kilogram_state-tests.exe"
+    },
+    {
+      "path": "target\\verification\\deps\\kilogram-state-test-a3_s1_root_review-tests.exe",
+      "sha256": "0b68a12f8927b6529172d4b5b2037568fc334545e6525487a4f00e22c922a362",
+      "bytes": 5564416,
+      "snapshot_path": ".tmp/a3-s2/final-3/kilogram-state-test-a3_s1_root_review-tests.exe"
+    },
+    {
+      "path": "target\\verification\\deps\\kilogram-state-test-a3_s2_root_review-tests.exe",
+      "sha256": "dd2c59af68fe208e90f10ba4e59c138984faf1d6a424af47d183b0b2d5c27a49",
+      "bytes": 5821952,
+      "snapshot_path": ".tmp/a3-s2/final-3/kilogram-state-test-a3_s2_root_review-tests.exe"
+    }
+  ]
+}

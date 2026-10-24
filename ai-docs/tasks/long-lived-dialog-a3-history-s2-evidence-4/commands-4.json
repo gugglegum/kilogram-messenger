@@ -1,0 +1,69 @@
+{
+  "workspace": "E:\\AI-Projects\\kilogram-p2p-messenger",
+  "common_environment": "CARGO_NET_OFFLINE=true; KILOGRAM_CARGO_JOBS=12; TEMP=TMP=<workspace>/.tmp/a3-s2/tmp",
+  "priority": "BelowNormal",
+  "test_threads": 1,
+  "profile": "verification-scale",
+  "windows_rule": "Only --no-run compilation then stable constant-path EXE execution",
+  "no_profile_or_rustflags_env_overrides": true,
+  "no_package_codegen_lto_cpu_overrides": true,
+  "single_fresh_full": 1,
+  "single_bounded_precheck": 1,
+  "no_other_heavy_or_release_benchmarks": true,
+  "commands": [
+    {
+      "id": "compile-before-pin",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification-scale -CargoJobs 12 -CargoFeatures @('redb/cache_metrics') -Filter 'history::'",
+      "result": "compiled-only32.23s optimized+debuginfo; no EXE executed",
+      "log": "compile-before-run-4.log"
+    },
+    {
+      "id": "effective-compiler-profile",
+      "command": "./scripts/invoke-cargo-friendly.ps1 -CargoCommand test -CargoJobs 12 -CargoArguments @('--locked','--offline','--profile','verification-scale','-p','kilogram-state','--features','redb/cache_metrics','--no-run','--message-format=json-render-diagnostics')",
+      "result": "PASS compiler-artifact.profile opt3/debug=true/overflow=true/line-tables-only for redb and kilogram-state normal/test; no direct harness execution",
+      "log": "compiler-artifacts-4.log",
+      "parsed": "effective-profiles-4.json"
+    },
+    {
+      "id": "strict-clippy",
+      "command": "./scripts/invoke-cargo-friendly.ps1 -CargoCommand clippy -CargoJobs 12 -CargoArguments @('--locked','--offline','--profile','verification-scale','-p','kilogram-state','--all-targets','--features','redb/cache_metrics','--','-D','warnings')",
+      "result": "PASS7.02s",
+      "log": "clippy-4.log"
+    },
+    {
+      "id": "small",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification-scale -CargoJobs 12 -CargoFeatures @('redb/cache_metrics') -Filter 'history::' -SkipTest @('history_scale_') -Run -NoCapture",
+      "result": "19/19 PASS6.79s",
+      "log": "small-4.log"
+    },
+    {
+      "id": "root-process-cursor",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification-scale -CargoJobs 12 -CargoFeatures @('redb/cache_metrics') -Filter 'a3_s2_review_cursor_survives_new_process_and_append' -Run -NoCapture",
+      "result": "PASS parent0.50s/child0.01s PID61116 on new profile stable EXE",
+      "log": "root-process-4.log"
+    },
+    {
+      "id": "single-precheck",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification-scale -CargoJobs 12 -CargoFeatures @('redb/cache_metrics') -Filter 'history_scale_profile_saved_fixture' -Run -NoCapture",
+      "environment": "KILOGRAM_S2_PROFILE_KIND=read; COPY=<workspace>/.tmp/a3-s2/precheck-scale-4; PROVENANCE=<evidence4>/precheck-copy-4.json; SCALE_MODE absent",
+      "result": "PASS0.96s; one instrumented12page/12point replay, no fill/full traversal; proceed decision recorded",
+      "log": "precheck-4.log",
+      "before_pin": "precheck-before-4.json"
+    },
+    {
+      "id": "single-fresh-full",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification-scale -CargoJobs 12 -CargoFeatures @('redb/cache_metrics') -Filter 'history_scale_persistent_100k' -Run -NoCapture",
+      "environment": "KILOGRAM_S2_SCALE_MODE=full; SCALE_DIR=<workspace>/.tmp/a3-s2/history-full-4; PROFILE_KIND absent",
+      "result": "PASS scenario401.9873352s/harness401.99s, all27 phases and all gates; one attempt; no parallel heavy work",
+      "log": "full-history-4.log",
+      "pin": "full-before-4.json",
+      "wall": "runner-wall-4.json"
+    },
+    {
+      "id": "format-whitespace",
+      "command": "cargo fmt --all -- --check;git diff --check;new source/report whitespace/conflict scan",
+      "result": "PASS workspace fmt/tracked whitespace/new profile+harness+report scan;source19/current-snapshot EXE3 hashes MATCH;index empty",
+      "log": "verification-final-4.log"
+    }
+  ]
+}

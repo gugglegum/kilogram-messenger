@@ -1,0 +1,77 @@
+{
+  "workspace": "E:\\AI-Projects\\kilogram-p2p-messenger",
+  "common_environment": "TEMP=TMP=<workspace>/.tmp/a3-s2/tmp; CARGO_NET_OFFLINE=true; KILOGRAM_CARGO_JOBS=2",
+  "test_compile": "stable runner invokes cargo test --no-run --locked; Cargo offline via environment",
+  "commands": [
+    {
+      "id": "check-initial",
+      "command": "./scripts/invoke-cargo-friendly.ps1 -CargoCommand check -CargoJobs 2 -CargoArguments @('--locked','--offline','--profile','verification','-p','kilogram-state','--lib')",
+      "result": "exit101; approved direct base64 edge missing in lock",
+      "log": "check-initial.log"
+    },
+    {
+      "id": "check-library-1",
+      "command": "./scripts/invoke-cargo-friendly.ps1 -CargoCommand check -CargoJobs 2 -CargoArguments @('--locked','--offline','--profile','verification','-p','kilogram-state','--lib')",
+      "result": "PASS after exact approved lock edge",
+      "log": "check-library-1.log"
+    },
+    {
+      "id": "small-tests-1",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'vault::indexed_dialog::history::'",
+      "result": "compile failure; 2 erroneous ? sites, no harness execution",
+      "log": "small-tests-1.log"
+    },
+    {
+      "id": "small-tests-2",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'vault::indexed_dialog::history::'",
+      "result": "11 PASS, intermediate",
+      "log": "small-tests-2.log"
+    },
+    {
+      "id": "small-tests-3",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'vault::indexed_dialog::history::' -SkipTest @('history_scale_')",
+      "result": "14 PASS; scale explicitly skipped",
+      "log": "small-tests-3.log"
+    },
+    {
+      "id": "clippy",
+      "command": "./scripts/invoke-cargo-friendly.ps1 -CargoCommand clippy -CargoJobs 2 -CargoArguments @('--locked','--offline','--profile','verification','-p','kilogram-state','--all-targets','--features','redb/cache_metrics','--','-D','warnings')",
+      "result": "clippy1 FAIL diagnostics; clippy2 FAIL one test loop; clippy3/4 PASS",
+      "logs": [
+        "clippy-1.log",
+        "clippy-2.log",
+        "clippy-3.log",
+        "clippy-4.log"
+      ]
+    },
+    {
+      "id": "s1-components",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'indexed_component_'",
+      "result": "16 PASS including IO/growth/3 owned-child kill points",
+      "log": "s1-component-regression.log"
+    },
+    {
+      "id": "s1-root",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'a3_s1_review_'",
+      "result": "5 PASS",
+      "log": "s1-root-regression.log"
+    },
+    {
+      "id": "scale-small",
+      "environment": "KILOGRAM_S2_SCALE_MODE=small; KILOGRAM_S2_SCALE_DIR=<workspace>/.tmp/a3-s2/history-small",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Profile verification -CargoJobs 2 -CargoFeatures @('redb/cache_metrics') -Run -NoCapture -Filter 'vault::indexed_dialog::history::scale::history_scale_small_timings'",
+      "result": "SMALL_TIMINGS_ONLY,399.6167425s;1k/10k complete; no100k",
+      "log": "scale-small-1.log"
+    },
+    {
+      "id": "fmt-final",
+      "command": "cargo fmt --all -- --check",
+      "result": "exit0; no diagnostic output"
+    },
+    {
+      "id": "whitespace-final",
+      "command": "git diff --check",
+      "result": "exit0; no diagnostic output"
+    }
+  ]
+}

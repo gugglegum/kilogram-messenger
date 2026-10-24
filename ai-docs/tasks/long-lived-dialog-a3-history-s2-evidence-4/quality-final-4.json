@@ -1,0 +1,410 @@
+{
+  "status": "FULL_S2_SCALE_GATE_PASS_PENDING_ROOT_ACCEPTANCE",
+  "baseline_head": "61524df3a77203d73673f47d38decf6b817615e3",
+  "product_published": false,
+  "index_paths": [],
+  "turn_id": "01a16ed1-9cf7-70a1-b282-42cacfc8ff77",
+  "model": "gpt-6.1-sol/max",
+  "config_service_tier": "default",
+  "separate_service_tier_telemetry_available": false,
+  "fast_requested": false,
+  "changed_build_inputs": [
+    "Cargo.toml",
+    "crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs"
+  ],
+  "unchanged_attempt3_inputs": 17,
+  "source19_and_exe3_pinned_before_first_execution": true,
+  "source_exe_provenance": "build-provenance-before-execution-4.json",
+  "source_exe_provenance_sha256": "795c0db1325039dd578fc10fd23dc0e130437ddc87508022c48504b6d1fb8325",
+  "full_before_pin": "full-before-4.json",
+  "library_exe_sha256": "b270073df32ded751368f93e3271a0393af89d5b0a55826a0d7e8cd4a87d89d6",
+  "library_exe_bytes": 5390336,
+  "effective_profile": {
+    "name": "verification-scale",
+    "inherits": "verification",
+    "opt_level": 3,
+    "debug_assertions": true,
+    "overflow_checks": true,
+    "debuginfo": "line-tables-only",
+    "incremental": false,
+    "compiler_artifact_proof": "PASS_EFFECTIVE_FLAGS",
+    "state_normal_test_and_redb_flags_verified": true,
+    "metadata": "effective-profiles-4.json",
+    "package_rustflags_profile_env_codegen_lto_cpu_overrides_added": false,
+    "ordinary_verification_release_unchanged": true
+  },
+  "jobs": 12,
+  "process_priority": "BelowNormal",
+  "test_threads": 1,
+  "small": {
+    "passed": 19,
+    "seconds": 6.79,
+    "scale_skipped": true,
+    "log": "small-4.log"
+  },
+  "root_os_process_cursor": {
+    "parent_pass": true,
+    "parent_seconds": 0.5,
+    "child_pass": true,
+    "child_seconds": 0.01,
+    "child_pid": 61116,
+    "new_profile_current_exe": true,
+    "source_unchanged": true,
+    "log": "root-process-4.log"
+  },
+  "single_precheck": {
+    "status": "PASS",
+    "profile": "verification-scale",
+    "instrumented": true,
+    "pages": 12,
+    "points": 12,
+    "new_synthetic_copy": true,
+    "expected_rows": 10016,
+    "source_db_sha256": "7c613e31c74cb78733e5d459161bf83d67fbbc8096d94251c9b53c9df2e01814",
+    "mean_page_ms": 7.488758333333333,
+    "old_verification_mean_page_ms": 141.52115,
+    "speedup": 18.897812387678865,
+    "phase_namespace_counts_and_backend_reads_equal": true,
+    "debug_overflow_checks_preserved": true,
+    "no_fill_or_full_traversal": true,
+    "decision": "PROCEED_TO_ONE_FRESH_FULL"
+  },
+  "full": {
+    "status": "PASS",
+    "attempts": 1,
+    "profile": "verification-scale",
+    "runtime_debug_assertions": true,
+    "profiling_enabled": false,
+    "pid": 41048,
+    "stages": [
+      1000,
+      10000,
+      100000
+    ],
+    "completed_phase_records": 27,
+    "all_phases_complete": true,
+    "no_missing_metrics": true,
+    "scenario_seconds": 401.9873352,
+    "harness_seconds": 401.99,
+    "runner_wall_seconds": 418.432033,
+    "final_close_seconds": 0.0211181,
+    "scenario_includes_final_close": true,
+    "budget_seconds": 2400,
+    "whole_pass_only_after_all_phases": true,
+    "no_concurrent_heavy_work": true,
+    "native_e2e_messages": 0
+  },
+  "gates": {
+    "status": "PASS_RECOMPUTED",
+    "failures": [],
+    "unavailable": [],
+    "memory": [
+      {
+        "phase": "after_warm_range",
+        "pid": 41048,
+        "small_private_bytes": 12533760,
+        "large_private_bytes": 102481920,
+        "small_cache_bytes": 7156032,
+        "large_cache_bytes": 67108864,
+        "raw_growth_bytes": 89948160,
+        "raw_limit_bytes": 100663296,
+        "residual_growth_bytes": 29995328,
+        "residual_limit_bytes": 33554432,
+        "residual_headroom_bytes": 3559104,
+        "status": "PASS"
+      },
+      {
+        "phase": "after_ordinary_append",
+        "pid": 41048,
+        "small_private_bytes": 12832768,
+        "large_private_bytes": 102522880,
+        "small_cache_bytes": 7328064,
+        "large_cache_bytes": 66363712,
+        "raw_growth_bytes": 89690112,
+        "raw_limit_bytes": 100663296,
+        "residual_growth_bytes": 30654464,
+        "residual_limit_bytes": 33554432,
+        "residual_headroom_bytes": 2899968,
+        "status": "PASS"
+      }
+    ],
+    "page_p95_ratio": 2.0421644533319663,
+    "append_p95_ratio": 1.4302976946390036,
+    "ratio_limit": 4,
+    "process_peak_paged_bytes": 106905600,
+    "max_sampled_private_bytes": 102522880,
+    "max_app_bound_bytes": 31604366,
+    "max_cache_bytes": 67108864,
+    "max_bulk_plan_bytes": 1943944,
+    "max_ordinary_plan_bytes": 47405,
+    "max_page_point_gets": 274,
+    "max_candidates": 2,
+    "exact_range_old_suffix_checkpoints_reopen_c2": "PASS all3 stages",
+    "phase_final_timer_p95_and_io_consistency": "PASS",
+    "memory_samples_available": 21
+  },
+  "transactions": {
+    "fill": 7030,
+    "ordinary": 96,
+    "measured_total": 7126,
+    "setup_excluded": true
+  },
+  "fixture": {
+    "path": ".tmp/a3-s2/history-full-4/state-vault.redb",
+    "bytes": 1182535680,
+    "sha256": "ea5603cf5f06b87b23bae03b8bf31a4c1d1ba200641ede24f18cb941b2930e1e",
+    "user_rows": 100016,
+    "closed_preserved": true,
+    "reopened_after_run": false
+  },
+  "old_attempt3_fail_preserved": true,
+  "old_full3_fixture_sha256": "bc3410a155a55b115f458f541b2fbd3ee6f9900ee33b34ccffd24358d39dbafb",
+  "preservation": "MATCH42 evidence3+217 prior checks+6 older current/snapshot EXE pairs;L1/S1/S2 oldfixtures retained",
+  "foreign_override": "clean53074ff3734dacd9906ee03cc5c7ded952dedd99d207581f692ff900b9a79f8f",
+  "unchanged_heavy_and_crash_suites_repeated": false,
+  "strict_clippy": "PASS7.02s",
+  "locked_offline_compile": "PASS32.23s plus artifact metadata no-run",
+  "fmt": "PASS",
+  "whitespace": "PASS",
+  "native_e2e_messages": 0,
+  "product_runtime_wire_root2_migration_ui_changes": false,
+  "absolute_mvp_latency_accepted": false,
+  "root_acceptance_and_exact_publication_allowlist": "PENDING; stop after callback",
+  "report_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-implementation-4.md",
+  "report_bytes": 12225,
+  "report_sha256": "6dc77932d806be8541713eb0170d1a5eb5696509cba2c09f020c6a39e77b1d8d",
+  "report_blob": "d6a5889ba6019e8cc0d165f5e37bfd95dc8e4520",
+  "evidence_file_count": 46,
+  "evidence": [
+    {
+      "path": "build-provenance-before-execution-4.json",
+      "bytes": 10413,
+      "sha256": "795c0db1325039dd578fc10fd23dc0e130437ddc87508022c48504b6d1fb8325"
+    },
+    {
+      "path": "Cargo-before.toml",
+      "bytes": 3201,
+      "sha256": "b8a0c6695826cd38d27ddb15c6c2d6aa77ca2e67ee61009554e55a785179e3d6"
+    },
+    {
+      "path": "cargo-profile-change-4.patch",
+      "bytes": 551,
+      "sha256": "ddc2ebe19c3d74c046622bbd9ae59081b36bb0753912dbab5362e51198f418b2"
+    },
+    {
+      "path": "clippy-4.log",
+      "bytes": 2051,
+      "sha256": "3b018d1b4c6bec804e6b9cda9752845d92b5a54931113f384bfe0cffa279509b"
+    },
+    {
+      "path": "commands-4.json",
+      "bytes": 4228,
+      "sha256": "1a2c0d4af1ab1dbfd9871b9f01ab063f5b3de06b4d5a57069934f29ad832eee0"
+    },
+    {
+      "path": "compile-before-run-4.log",
+      "bytes": 3861,
+      "sha256": "9a27bd9855e6847da1fc9ff8fff8b41d43746f1ed01ec83622fa4fdfeb69d9d1"
+    },
+    {
+      "path": "compiler-artifacts-4.log",
+      "bytes": 85111,
+      "sha256": "2f21a84ce06fac6f0c9eb794dfca72535bc45af15f8499a671cc5af832a86c9a"
+    },
+    {
+      "path": "completed-phases-4.json",
+      "bytes": 28964,
+      "sha256": "3049aecee8ed13f3d401f24ef230ed3e73fc5236d7c2016694b379fdbc771164"
+    },
+    {
+      "path": "effective-profiles-4.json",
+      "bytes": 4153,
+      "sha256": "26630018fdb99b91c94ff5310543cc6fe8f18b39e770c31ec148cf25537edecc"
+    },
+    {
+      "path": "full-before-4.json",
+      "bytes": 708,
+      "sha256": "450ab09c7969ef344dd4e8a28ef880236bed1b9f65b37a6f0bd0935137a267f7"
+    },
+    {
+      "path": "full-history-4.json",
+      "bytes": 21532,
+      "sha256": "83ea5a4ceaca0a48df127e1450520f6fc2c7bffab9496839219f0f268a7850b5"
+    },
+    {
+      "path": "full-history-4.log",
+      "bytes": 73022,
+      "sha256": "1bed69b71c91683bf61799d3c6c0aced2462d424170392aae406c4a74d280438"
+    },
+    {
+      "path": "gate-recalculation-4.json",
+      "bytes": 1479,
+      "sha256": "9eff765f360ec9622b2f29e34029d00698214ead3c6ae390c7e569501d3a00c4"
+    },
+    {
+      "path": "harness-phase-change-4.patch",
+      "bytes": 13379,
+      "sha256": "f0e9f091d04f6890f9099b635d5b172ef053913d826edf2b1218fff5bd557bb9"
+    },
+    {
+      "path": "history_scale_before.rs",
+      "bytes": 25740,
+      "sha256": "9a5e0d5a4d2bb7560fdff0fd9174a7fa0ca7f5eda264662da3d9c85dc22eee2a"
+    },
+    {
+      "path": "phase-consistency-4.json",
+      "bytes": 1341,
+      "sha256": "512b78da3af413ccad4f8e257520f6fa9ac32d0adc320f471908f90d26ad0a36"
+    },
+    {
+      "path": "post-full-preservation-4.json",
+      "bytes": 319,
+      "sha256": "2253d333ae2a6ff208288b21e68c7a030490accf6a1efce821fde8936456fec2"
+    },
+    {
+      "path": "precheck-4.json",
+      "bytes": 5270,
+      "sha256": "5c6ca0e84426154c4ac6ea0874c2e2fad9a30c63f36f7a121d533c99fb636cad"
+    },
+    {
+      "path": "precheck-4.log",
+      "bytes": 5373,
+      "sha256": "4a58cfb3d9b319f7a796a661eab57807ae6381ec1c6ac94b2909340bdee581e1"
+    },
+    {
+      "path": "precheck-before-4.json",
+      "bytes": 566,
+      "sha256": "516c3451a1d5ff9f8ceba3f297b0eb07d896172df4ef15aeb1be6ac1fffa149b"
+    },
+    {
+      "path": "precheck-copy-4.json",
+      "bytes": 344,
+      "sha256": "6040ec0f8fd9305c5dcf0b48d453ca00ceb26fe99c6bfec945f98798be0b79aa"
+    },
+    {
+      "path": "precheck-decision-4.json",
+      "bytes": 744,
+      "sha256": "fa13fe738d0b487b7086e910ce380ffc0b748b3f700728b5f0b28d0996eb9c8a"
+    },
+    {
+      "path": "preservation-final-4.json",
+      "bytes": 2325,
+      "sha256": "39538b8f506b03ca3bbd3107480001b940db76af764637f1408ff7bf9d858fb4"
+    },
+    {
+      "path": "root-process-4.log",
+      "bytes": 2641,
+      "sha256": "aafd4c82012a5ec4a54f83a9a2aaf81665cb2d79fb12aa1cdeaab0bdffcb1669"
+    },
+    {
+      "path": "runner-wall-4.json",
+      "bytes": 602,
+      "sha256": "1e5bbe7eff63c935681bca79220d2f1b670eee5cc836951a44f39645a70e62bb"
+    },
+    {
+      "path": "small-4.log",
+      "bytes": 4805,
+      "sha256": "8cb58359474b87862b8f941f01020cc5a2cae13dac340b3743f8cc85a981546e"
+    },
+    {
+      "path": "source-before-run/Cargo.lock",
+      "bytes": 194144,
+      "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126"
+    },
+    {
+      "path": "source-before-run/Cargo.toml",
+      "bytes": 3398,
+      "sha256": "28700ccee74b2a78f96e945b86087ce9dfac32a2236bf61067976c2ac1082aa0"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/Cargo.toml",
+      "bytes": 704,
+      "sha256": "593342488618212f65e02b8024fea5b66d888995536c375881af7e05561f3a6c"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/src/vault/authenticated_index.rs",
+      "bytes": 19526,
+      "sha256": "da2f07348eb51d03153226e0bb6e0faac36e790b26ff769dfa3b2e796f82ce70"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "bytes": 47786,
+      "sha256": "4f9960dd2cc728cf298d3b3a68c7695f9f6ab0371fba741a6443603a18955619"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "bytes": 24600,
+      "sha256": "2108c51b366402e06af920174f0bac6c1687388cc572f3152cb7d259b95127ec"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_cache_tests.rs",
+      "bytes": 8469,
+      "sha256": "d4dc1487b01821f47ccae5927b6bfefe5976faebd440ba6e321bb94d2dacd716"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs",
+      "bytes": 3847,
+      "sha256": "81a97de373181160377281a6b0c3386f624438439927f3587f7f232d3def922e"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_cursor.rs",
+      "bytes": 3443,
+      "sha256": "2242507628d86b14069cca038991723ba1a31ad3c88d78e08240ec01780b06b6"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_profile.rs",
+      "bytes": 10930,
+      "sha256": "820f1059f3c79e458ed23b661a6d643fb183714ee634ae5fc83fc683dfc4465f"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs",
+      "bytes": 31068,
+      "sha256": "7a652581b801aebdd7c552dbeafd9ee4efb2146163f7112a900397d720a5d7e5"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_tests.rs",
+      "bytes": 37973,
+      "sha256": "7fc68c3d5021ee44bd23785e69ed13f7a631c5b3836cd7b79f4dc13c514abb40"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_types.rs",
+      "bytes": 17396,
+      "sha256": "4b358cde0c2d9b7aa3306a52b2bb5eebd1924437965dd1a9bf5188975074fa4d"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "bytes": 45592,
+      "sha256": "57650a6d70cd326e5eafbcf40b0c315ee118e2b248328c15bfc2df0745e84457"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "bytes": 17370,
+      "sha256": "6a7f3f04786eacd8b11d322a91085418bb8d3ac68a4d390556d71cf5add3fc1a"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/src/vault/indexed_dialog/profile.rs",
+      "bytes": 5373,
+      "sha256": "b733c02397aeb4667a97c0940a1ea375656708c9785ca0801637cfb82e46b772"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "bytes": 10082,
+      "sha256": "b2009673e48c090717664175a6c1e058d09a3fe46f2ea0c3d372eaf38e2e4815"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/src/vault/indexed_dialog/verified_values.rs",
+      "bytes": 2773,
+      "sha256": "8956c36b8f901406d50e4e96bbbe3de5fc0104505d299bab5cb42d31e61e5d5c"
+    },
+    {
+      "path": "source-before-run/crates/kilogram-state/tests/a3_s2_root_review.rs",
+      "bytes": 9443,
+      "sha256": "91b137b62fce9eb456abb2f5dc8e7b5a9126e0e5a6a1353a8258601e3c92e322"
+    },
+    {
+      "path": "verification-final-4.log",
+      "bytes": 170,
+      "sha256": "339de4ed472d6d77761ab2fab67a364a0ebd4c0020284c4638a814b83d286ea4"
+    }
+  ]
+}

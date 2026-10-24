@@ -1,0 +1,48 @@
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 9.47s
+
+running 14 tests
+test vault::indexed_dialog::history::tests::history_active_repeat_and_global_author_owner_are_isolated ... ok
+test vault::indexed_dialog::history::tests::history_causal_pages_all_limits_snapshot_append_reopen_and_point ... ok
+test vault::indexed_dialog::history::tests::history_codecs_exact_maxima_and_strict_roundtrips ... ok
+test vault::indexed_dialog::history::tests::history_corrupt_expected_payload_never_becomes_empty_or_initialized ... ok
+test vault::indexed_dialog::history::tests::history_fault_reopen_resolves_old_or_new_atomic_state_without_replay ... ok
+test vault::indexed_dialog::history::tests::history_fresh_rejects_invisible_domain_state_and_allows_only_profile_bootstrap ... ok
+test vault::indexed_dialog::history::tests::history_generic_credit_fence_uses_actual_global_author_owner ... ok
+test vault::indexed_dialog::history::tests::history_invalid_rows_native_and_generic_fences_preserve_obligations_and_c2 ... ok
+test vault::indexed_dialog::history::tests::history_peer_capture_and_local_role_b_use_distinct_receipt_and_request_lanes ... ok
+test vault::indexed_dialog::history::tests::history_private_selection_errors_on_blocked_remaining_and_selects_min_eligible_id ... ok
+test vault::indexed_dialog::history::tests::history_request_fifo_retry_and_ack_do_not_replay_native_or_consume ... ok
+test vault::indexed_dialog::history::tests::history_scope_cursor_domains_tampering_and_snapshot_unavailable ... ok
+test vault::indexed_dialog::history::writer::tests::history_private_lowering_rejects_empty_extra_double_cross_context_and_old_event_consumes ... ok
+test vault::indexed_dialog::history::writer::tests::history_private_partial_foreign_malformed_heads_and_tails_never_initialize ... ok
+
+test result: ok. 14 passed; 0 failed; 0 ignored; 0 measured; 51 filtered out; finished in 7.33s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      15093  9.75
+release            5747  1.86
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=59905
+target_gib=64.4
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

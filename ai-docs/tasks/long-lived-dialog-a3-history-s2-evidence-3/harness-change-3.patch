@@ -1,0 +1,120 @@
+diff --git a/ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/history_scale_before.rs b/crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs
+index f90ec04..de03f06 100644
+--- a/ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/history_scale_before.rs
++++ b/crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs
+@@ -6,6 +6,8 @@ use std::{path::PathBuf, time::Instant};
+ 
+ const MIB: u64 = 1024 * 1024;
+ const APPEND_COUNT: u64 = 16;
++// Explicit root amendment1: only the next final S2 history scenario gets this budget.
++const SCENARIO_BUDGET_SECONDS: f64 = 2400.0;
+ pub(super) fn config() -> Config {
+     Config {
+         physical_quota: 2 * 1024 * 1024 * 1024,
+@@ -19,9 +21,14 @@ pub(super) fn count(heads: &Heads) -> u64 {
+     heads.frontiers[0] + heads.frontiers[1] - 2
+ }
+ fn budget(start: Instant) -> Result<()> {
+-    if start.elapsed().as_secs_f64() > 1200.0 {
++    let seconds = start.elapsed().as_secs_f64();
++    if seconds > SCENARIO_BUDGET_SECONDS {
++        println!(
++            "A3_S2_BUDGET_EXCEEDED {}",
++            json!({"scenario_seconds":seconds,"budget_seconds":SCENARIO_BUDGET_SECONDS})
++        );
+         return Err(Error::Bound(
+-            "history scale 1200s ceiling; fixture retained",
++            "history scale scenario ceiling; fixture retained",
+         ));
+     }
+     Ok(())
+@@ -251,11 +258,11 @@ fn limits(stages: &[Value], full: bool, seconds: f64) -> Value {
+     } else if full {
+         unavailable.push("incomplete1k/10k/100k stage set".into());
+     }
+-    if seconds > 1200.0 {
+-        failures.push("1200s ceiling".into());
++    if seconds > SCENARIO_BUDGET_SECONDS {
++        failures.push(format!("{SCENARIO_BUDGET_SECONDS}s scenario ceiling"));
+     }
+     json!({"full_gate":full,"status":if !failures.is_empty(){"FAIL"}else if !unavailable.is_empty(){"UNAVAILABLE"}else if full{"PASS"}else{"SMALL_TIMINGS_ONLY"},
+-        "failures":failures,"unavailable":unavailable,"comparisons":comparisons,"seconds":seconds})
++        "failures":failures,"unavailable":unavailable,"comparisons":comparisons,"seconds":seconds,"budget_seconds":SCENARIO_BUDGET_SECONDS})
+ }
+ 
+ #[derive(Clone)]
+@@ -267,6 +274,10 @@ struct Checkpoint {
+ 
+ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+     let overall = Instant::now();
++    println!(
++        "A3_S2_SCENARIO_START {}",
++        json!({"full":full,"fixture":root,"budget_seconds":SCENARIO_BUDGET_SECONDS,"timer_boundary":"before fixture existence check through final store drop; final summary encoding excluded","profiling_enabled":false})
++    );
+     let exists = root.join(STATE_VAULT_FILE).exists();
+     if exists {
+         return Err("fresh scale fixture already exists; preserved, no rebuild/adoption".into());
+@@ -289,6 +300,7 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+     };
+     for target in targets {
+         budget(overall)?;
++        let stage_start = Instant::now();
+         let fill_transactions_before = fill_transactions;
+         let mut heads = current_heads(&mut store)?;
+         let existing = count(&heads);
+@@ -341,6 +353,7 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+         let after_open = store.backend_stats()?;
+         let memory_open = memory(&store, "after_reopen", target, 0)?;
+         let mut point_ms = Vec::new();
++        let point_start = Instant::now();
+         let point_io_start = store.backend_stats()?;
+         for role in 0..2 {
+             for n in [
+@@ -359,6 +372,7 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+             }
+         }
+         let point_io_end = store.backend_stats()?;
++        let point_phase_ms = point_start.elapsed().as_secs_f64() * 1000.0;
+         let range_start = Instant::now();
+         let first_start = Instant::now();
+         let mut page = store.history_first(0, 32)?;
+@@ -414,6 +428,7 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+         let after_reads = store.backend_stats()?;
+         let memory_warm = memory(&store, "after_warm_range", target, max_app)?;
+         let mut appends = Vec::new();
++        let ordinary_start = Instant::now();
+         let mut max_append_nodes = 0;
+         let mut max_append_plan = 0;
+         let mut last_event = None;
+@@ -454,6 +469,7 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+                 .max(accepted.encoded_plan_bytes);
+         }
+         let after_append = store.backend_stats()?;
++        let ordinary_phase_seconds = ordinary_start.elapsed().as_secs_f64();
+         let memory_append = memory(
+             &store,
+             "after_ordinary_append",
+@@ -526,6 +542,7 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+             "fill_syncs":after_fill.sync_calls-before_fill.sync_calls,"max_bulk_plan_bytes":max_bulk_plan,
+             "cold_reopen_ms":reopen_ms,"open_backend":after_open,"point_p95_ms":p95(&mut point_ms)});
+         let details = json!({
++            "stage_elapsed_seconds":stage_start.elapsed().as_secs_f64(),"point_phase_ms":point_phase_ms,"ordinary_phase_seconds":ordinary_phase_seconds,
+             "point_backend_read_bytes":point_io_end.read_bytes-point_io_start.read_bytes,
+             "page32_p95_ms":p95(&mut latencies),"full_range_seconds":range_seconds,"page_backend_read_bytes":after_reads.read_bytes-point_io_end.read_bytes,
+             "page_record_limit":32,"max_page_point_gets":max_gets,"max_candidates":max_candidates,
+@@ -546,10 +563,15 @@ fn measure(root: PathBuf, full: bool) -> f::TestResult {
+         println!("A3_S2_SCALE {}", serde_json::to_string(&stage)?);
+         stages.push(stage);
+     }
++    let scenario_before_final_close_seconds = overall.elapsed().as_secs_f64();
++    let close_start = Instant::now();
++    drop(store);
++    let final_close_seconds = close_start.elapsed().as_secs_f64();
+     let gates = limits(&stages, full, overall.elapsed().as_secs_f64());
+     println!(
+         "A3_S2_SCALE_FINAL {}",
+         serde_json::to_string(&json!({"stages":stages,"gates":gates,"fixture":root,
++                "scenario_before_final_close_seconds":scenario_before_final_close_seconds,"final_close_seconds":final_close_seconds,"scenario_includes_final_close":true,
+                 "transactions":{"fill":fill_transactions,"ordinary":ordinary_transactions,"measured_total":fill_transactions+ordinary_transactions,"setup_excluded":true},"native_e2e_messages":0}))?
+     );
+     if !matches!(

@@ -1,0 +1,23 @@
+{
+  "decision": "PROCEED_TO_ONE_FRESH_FULL",
+  "instrumented_precheck_only": true,
+  "profile": "verification-scale",
+  "effective_debug_assertions": true,
+  "effective_overflow_checks": true,
+  "source": "effective-profiles-4.json",
+  "old_profile": "verification",
+  "old_mean_page_ms": 141.52115,
+  "new_mean_page_ms": 7.488758333333333,
+  "page_mean_speedup": 18.897812387678865,
+  "new_mean_point_ms": 0.5159583333333334,
+  "phase_call_counts_equal": true,
+  "namespace_counters_equal": true,
+  "backend_read_bytes_equal": true,
+  "backend_read_bytes": 5038080,
+  "node_opens": 10746,
+  "value_opens": 1399,
+  "source_checks": 420,
+  "max_point_gets": 274,
+  "max_candidates": 2,
+  "not_a_100k_or_ux_result": true
+}

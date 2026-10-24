@@ -1,0 +1,203 @@
+{
+  "kind": "single_matched_instrumented_bounded_pair_after_normative_run",
+  "normative_profile_changed": false,
+  "initial_db_sha256": "7c613e31c74cb78733e5d459161bf83d67fbbc8096d94251c9b53c9df2e01814",
+  "cuts_equal": true,
+  "user_rows_equal": true,
+  "samples_per_profile": {
+    "pages": 12,
+    "points": 12
+  },
+  "phase_call_counts_equal": true,
+  "namespace_get_open_cipher_counters_equal": true,
+  "cache_hits_equal": true,
+  "work_counts_equal": true,
+  "max_gets": [
+    274,
+    274
+  ],
+  "max_candidates": [
+    2,
+    2
+  ],
+  "verification_page12_ms": 1698.2538,
+  "release_page12_ms": 124.94200000000001,
+  "verification_page_mean_ms": 141.52115,
+  "release_page_mean_ms": 10.411833333333334,
+  "page_mean_speedup": 13.592337244481438,
+  "verification_point12_ms": 146.2814,
+  "release_point12_ms": 5.7231,
+  "verification_point_mean_ms": 12.190116666666666,
+  "release_point_mean_ms": 0.476925,
+  "point_mean_speedup": 25.559818979224545,
+  "verification_oracle_ms_excluded": 48.5525,
+  "release_oracle_ms_excluded": 3.728500000000001,
+  "verification_external_encoding_ms_excluded": 9.654399999999999,
+  "release_external_encoding_ms_excluded": 0.5025999999999999,
+  "verification_backend_read_bytes": 5038080,
+  "release_backend_read_bytes": 21540864,
+  "backend_read_bytes_equal": false,
+  "backend_write_bytes": [
+    0,
+    0
+  ],
+  "timers_exclude": "compile,DB hash/open/coherence,cursor seeding,oracle and external encodings; API internal CBOR/JSON guards included",
+  "inclusive_sections_not_summed": true,
+  "no_additional_fill_or_full_traversal": true,
+  "no_ux_or_100k_acceptance_claim": true,
+  "phases": [
+    {
+      "phase": "binding_decode",
+      "verification_calls": 1267,
+      "release_calls": 1267,
+      "calls_equal": true,
+      "verification_ms": 2.2701,
+      "release_ms": 0.1828
+    },
+    {
+      "phase": "cbor",
+      "verification_calls": 12,
+      "release_calls": 12,
+      "calls_equal": true,
+      "verification_ms": 0.1976,
+      "release_ms": 0.142
+    },
+    {
+      "phase": "commit_write",
+      "verification_calls": 0,
+      "release_calls": 0,
+      "calls_equal": true,
+      "verification_ms": 0.0,
+      "release_ms": 0.0
+    },
+    {
+      "phase": "common",
+      "verification_calls": 0,
+      "release_calls": 0,
+      "calls_equal": true,
+      "verification_ms": 0.0,
+      "release_ms": 0.0
+    },
+    {
+      "phase": "history_apply",
+      "verification_calls": 0,
+      "release_calls": 0,
+      "calls_equal": true,
+      "verification_ms": 0.0,
+      "release_ms": 0.0
+    },
+    {
+      "phase": "identity_heads_decode",
+      "verification_calls": 48,
+      "release_calls": 48,
+      "calls_equal": true,
+      "verification_ms": 0.1225,
+      "release_ms": 0.0266
+    },
+    {
+      "phase": "json",
+      "verification_calls": 12,
+      "release_calls": 12,
+      "calls_equal": true,
+      "verification_ms": 9.779,
+      "release_ms": 0.6323
+    },
+    {
+      "phase": "node_open",
+      "verification_calls": 10746,
+      "release_calls": 10746,
+      "calls_equal": true,
+      "verification_ms": 1088.2756,
+      "release_ms": 22.724
+    },
+    {
+      "phase": "node_proof",
+      "verification_calls": 10746,
+      "release_calls": 10746,
+      "calls_equal": true,
+      "verification_ms": 123.0155,
+      "release_ms": 13.0096
+    },
+    {
+      "phase": "node_seal",
+      "verification_calls": 0,
+      "release_calls": 0,
+      "calls_equal": true,
+      "verification_ms": 0.0,
+      "release_ms": 0.0
+    },
+    {
+      "phase": "prefix",
+      "verification_calls": 40983,
+      "release_calls": 40983,
+      "calls_equal": true,
+      "verification_ms": 78.305,
+      "release_ms": 9.1513
+    },
+    {
+      "phase": "projection_decode",
+      "verification_calls": 1267,
+      "release_calls": 1267,
+      "calls_equal": true,
+      "verification_ms": 1.1841,
+      "release_ms": 0.3725
+    },
+    {
+      "phase": "source_check",
+      "verification_calls": 420,
+      "release_calls": 420,
+      "calls_equal": true,
+      "verification_ms": 2.6915,
+      "release_ms": 1.0331
+    },
+    {
+      "phase": "tree_find",
+      "verification_calls": 1399,
+      "release_calls": 1399,
+      "calls_equal": true,
+      "verification_ms": 1516.7426,
+      "release_ms": 103.6207
+    },
+    {
+      "phase": "value_check",
+      "verification_calls": 1399,
+      "release_calls": 1399,
+      "calls_equal": true,
+      "verification_ms": 6.2772,
+      "release_ms": 1.5141
+    },
+    {
+      "phase": "value_get",
+      "verification_calls": 3410,
+      "release_calls": 3410,
+      "calls_equal": true,
+      "verification_ms": 1794.6904,
+      "release_ms": 124.4714
+    },
+    {
+      "phase": "value_open",
+      "verification_calls": 1399,
+      "release_calls": 1399,
+      "calls_equal": true,
+      "verification_ms": 248.6223,
+      "release_ms": 3.5527
+    },
+    {
+      "phase": "value_seal",
+      "verification_calls": 0,
+      "release_calls": 0,
+      "calls_equal": true,
+      "verification_ms": 0.0,
+      "release_ms": 0.0
+    },
+    {
+      "phase": "writer_validation",
+      "verification_calls": 0,
+      "release_calls": 0,
+      "calls_equal": true,
+      "verification_ms": 0.0,
+      "release_ms": 0.0
+    }
+  ],
+  "scope_count_hash_checks": "both helper executions PASS"
+}

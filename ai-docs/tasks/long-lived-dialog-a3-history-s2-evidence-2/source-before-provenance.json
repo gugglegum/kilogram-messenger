@@ -1,0 +1,101 @@
+{
+  "baseline_head": "61524df3a77203d73673f47d38decf6b817615e3",
+  "source_files": [
+    {
+      "path": "Cargo.lock",
+      "bytes": 194144,
+      "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/Cargo.lock"
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 3201,
+      "sha256": "b8a0c6695826cd38d27ddb15c6c2d6aa77ca2e67ee61009554e55a785179e3d6",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/Cargo.toml"
+    },
+    {
+      "path": "crates/kilogram-state/Cargo.toml",
+      "bytes": 704,
+      "sha256": "593342488618212f65e02b8024fea5b66d888995536c375881af7e05561f3a6c",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/Cargo.toml"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/authenticated_index.rs",
+      "bytes": 15871,
+      "sha256": "5e0776eb7926592aad85b1151cb189063df856e8744d01709f89e7ff3644cd92",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/authenticated_index.rs"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "bytes": 43813,
+      "sha256": "af5c2877d870087aba5be73e29d67bd9e10aa786ac34b10bc35e8a44b7d720c8",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog.rs"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "bytes": 24600,
+      "sha256": "2108c51b366402e06af920174f0bac6c1687388cc572f3152cb7d259b95127ec",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/credits.rs"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs",
+      "bytes": 3847,
+      "sha256": "81a97de373181160377281a6b0c3386f624438439927f3587f7f232d3def922e",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_cursor.rs",
+      "bytes": 3443,
+      "sha256": "2242507628d86b14069cca038991723ba1a31ad3c88d78e08240ec01780b06b6",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/history_cursor.rs"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs",
+      "bytes": 23517,
+      "sha256": "c79ec0796f2c210f9f4eb65051b1de6ea11c12293c3a3685f74bc7356be28e36",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_tests.rs",
+      "bytes": 37973,
+      "sha256": "7fc68c3d5021ee44bd23785e69ed13f7a631c5b3836cd7b79f4dc13c514abb40",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/history_tests.rs"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_types.rs",
+      "bytes": 16886,
+      "sha256": "e26ccae380b80a6934d64b0e6a421a651cc051270313fcdb0fad20d8babbdf7f",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/history_types.rs"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "bytes": 45563,
+      "sha256": "466def1e91b8887f2ae736402dcd23acc244f0fe0dc3707a453d10a09ddec5da",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "bytes": 17176,
+      "sha256": "2447b7025f3e0627bb5f39d1eaf1c7e78138d00b99e2aa1932b4271add073363",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/history.rs"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "bytes": 9963,
+      "sha256": "7cdbd668c625e4cf60b5f5506775b1979d669d9929badb3df269930b4600f8bb",
+      "snapshot_path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/types.rs"
+    }
+  ],
+  "root_test": {
+    "path": "crates/kilogram-state/tests/a3_s2_root_review.rs",
+    "sha256": "91b137b62fce9eb456abb2f5dc8e7b5a9126e0e5a6a1353a8258601e3c92e322",
+    "snapshot": "ai-docs\\tasks\\long-lived-dialog-a3-history-s2-evidence-2\\source-before\\crates\\kilogram-state\\tests\\a3_s2_root_review.rs"
+  },
+  "baseline_exe": {
+    "path": ".tmp/a3-s2/baseline-2/kilogram-state-lib-kilogram_state-tests.exe",
+    "sha256": "ff42d3932ac86816e6e29ff221fc3d8b0ed03c4a574a871a327c6fd4a3f34835",
+    "bytes": 8320000
+  },
+  "tracked_patch_sha256": "35263c9d69424712895bd0787d5941d07d415bdcc891e4abd178ce7162e99a46",
+  "reproduction": "Checkout61524df then overlay source-before (14 inputs plus root test); untracked S2 modules included, no repo/.git copy"
+}

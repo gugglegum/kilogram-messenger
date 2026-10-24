@@ -1,0 +1,14 @@
+{
+  "captured_utc": "2026-10-24T17:00:46.0954879+00:00",
+  "profile": "verification-scale",
+  "debug_assertions": true,
+  "overflow_checks": true,
+  "effective_flags_source": "effective-profiles-4.json",
+  "source19_exe3_hashes": "MATCH before execution",
+  "source_pin": "build-provenance-before-execution-4.json",
+  "fixture": ".tmp/a3-s2/precheck-scale-4",
+  "initial_db_sha256": "7c613e31c74cb78733e5d459161bf83d67fbbc8096d94251c9b53c9df2e01814",
+  "instrumented": true,
+  "bounded_cases": "12pages+12points",
+  "no_fill_or_full_traversal": true
+}

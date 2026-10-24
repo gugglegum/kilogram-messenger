@@ -1,0 +1,17 @@
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+error: the loop variable `role` is used to index `ids`
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_tests.rs:127:17
+    |
+127 |     for role in 0..2 {
+    |                 ^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+    = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator and enumerate()
+    |
+127 -     for role in 0..2 {
+127 +     for (role, <item>) in ids.iter_mut().enumerate() {
+    |
+
+error: could not compile `kilogram-state` (lib test) due to 1 previous error

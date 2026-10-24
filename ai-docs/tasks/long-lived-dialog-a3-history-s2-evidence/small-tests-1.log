@@ -1,0 +1,58 @@
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+error[E0277]: the `?` operator can only be applied to values that implement `Try`
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_tests.rs:159:31
+    |
+159 |     assert_eq!(Heads::decode(&heads.encode()?)?,heads);
+    |                               ^^^^^^^^^^^^^^^ the `?` operator cannot be applied to type `Vec<u8>`
+    |
+    = help: the nightly-only, unstable trait `Try` is not implemented for `Vec<u8>`
+
+error[E0277]: the size for values of type `[u8]` cannot be known at compilation time
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_tests.rs:159:31
+    |
+159 |     assert_eq!(Heads::decode(&heads.encode()?)?,heads);
+    |                               ^^^^^^^^^^^^^^^ doesn't have a size known at compile-time
+    |
+    = help: the trait `Sized` is not implemented for `[u8]`
+    = note: all local variables must have a statically known size
+
+error[E0277]: the size for values of type `[u8]` cannot be known at compilation time
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_tests.rs:159:45
+    |
+159 |     assert_eq!(Heads::decode(&heads.encode()?)?,heads);
+    |                                             ^ doesn't have a size known at compile-time
+    |
+    = help: the trait `Sized` is not implemented for `[u8]`
+note: required by an implicit `Sized` bound in `ControlFlow`
+   --> /rustc/88d9e12ae178fab0fb5cc050a94da85685d449ea/library\core\src\ops\control_flow.rs:89:0
+
+error[E0277]: the `?` operator can only be applied to values that implement `Try`
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_tests.rs:161:39
+    |
+161 |     assert_eq!(RequestRecord::decode(&request.encode()?)?.event,request.event);
+    |                                       ^^^^^^^^^^^^^^^^^ the `?` operator cannot be applied to type `Vec<u8>`
+    |
+    = help: the nightly-only, unstable trait `Try` is not implemented for `Vec<u8>`
+
+error[E0277]: the size for values of type `[u8]` cannot be known at compilation time
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_tests.rs:161:39
+    |
+161 |     assert_eq!(RequestRecord::decode(&request.encode()?)?.event,request.event);
+    |                                       ^^^^^^^^^^^^^^^^^ doesn't have a size known at compile-time
+    |
+    = help: the trait `Sized` is not implemented for `[u8]`
+    = note: all local variables must have a statically known size
+
+error[E0277]: the size for values of type `[u8]` cannot be known at compilation time
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_tests.rs:161:55
+    |
+161 |     assert_eq!(RequestRecord::decode(&request.encode()?)?.event,request.event);
+    |                                                       ^ doesn't have a size known at compile-time
+    |
+    = help: the trait `Sized` is not implemented for `[u8]`
+note: required by an implicit `Sized` bound in `ControlFlow`
+   --> /rustc/88d9e12ae178fab0fb5cc050a94da85685d449ea/library\core\src\ops\control_flow.rs:89:0
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `kilogram-state` (lib test) due to 6 previous errors
+warning: build failed, waiting for other jobs to finish...

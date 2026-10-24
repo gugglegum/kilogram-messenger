@@ -1,0 +1,41 @@
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 7.87s
+
+running 1 test
+test vault::indexed_dialog::history::profiling::history_scale_profile_saved_fixture ... A3_S2_PROFILE {"api_encodings_included_in_api_and_phase_timings":true,"backend_read_bytes":4792320,"backend_sync_ms":0.0,"backend_write_bytes":0,"cursor_seeding":"private known synthetic chain cuts, no prefix traversal","external_cbor_ms_excluded":0.1825,"external_json_ms_excluded":10.7224,"instrumented":true,"kind":"bounded_read_replay","max_candidates":2,"max_point_gets":274,"oracle_ms_excluded":52.5602,"page_api_ms":[437.8281,432.37399999999997,430.3088,418.2546,461.4378,480.2296,448.615,508.255,461.9121,431.1179,461.01399999999995,472.22520000000003],"point_api_ms":[8.943299999999999,15.5237,14.9155,17.564,16.8542,16.3766,14.809,17.8725,15.3536,14.749699999999999,15.7506,14.7758],"profile":{"cache_hits":0,"inclusive_timings":{"binding_decode":{"calls":1267,"ms":3.1568},"cbor":{"calls":12,"ms":0.224},"commit_write":{"calls":0,"ms":0.0},"common":{"calls":0,"ms":0.0},"history_apply":{"calls":0,"ms":0.0},"identity_heads_decode":{"calls":48,"ms":0.1359},"json":{"calls":12,"ms":10.9173},"node_open":{"calls":33919,"ms":3706.9228},"node_proof":{"calls":33919,"ms":425.3047},"node_seal":{"calls":0,"ms":0.0},"prefix":{"calls":114704,"ms":230.7873},"projection_decode":{"calls":1267,"ms":1.6878},"source_check":{"calls":420,"ms":2.4906},"tree_find":{"calls":3410,"ms":4904.1528},"value_check":{"calls":3410,"ms":16.3404},"value_get":{"calls":3410,"ms":5590.6465},"value_open":{"calls":3410,"ms":583.0635},"value_seal":{"calls":0,"ms":0.0},"writer_validation":{"calls":0,"ms":0.0}},"key_tracking_cap":4096,"key_tracking_truncated":false,"namespaces":[{"cipher_bytes":447300,"gets":420,"opens":420,"repeated_gets":0},{"cipher_bytes":37522,"gets":514,"opens":514,"repeated_gets":442},{"cipher_bytes":84753,"gets":1161,"opens":1161,"repeated_gets":766},{"cipher_bytes":1677135,"gets":1267,"opens":1267,"repeated_gets":803},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":5232,"gets":24,"opens":24,"repeated_gets":0},{"cipher_bytes":3816,"gets":24,"opens":24,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0},{"cipher_bytes":0,"gets":0,"opens":0,"repeated_gets":0}],"negative_cache_hits":0,"works":24}}
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 65 filtered out; finished in 6.85s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      15107  9.78
+release            5747  1.86
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=59919
+target_gib=64.43
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

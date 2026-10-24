@@ -1,0 +1,4 @@
+cargo_fmt_exit=0
+git_diff_check_exit=0
+source_doc_whitespace_conflict_scan=PASS paths=20
+final_source19_and_exe3_hashes=MATCH

@@ -1,0 +1,90 @@
+[workspace]
+members = [
+    "apps/kilogram-bootstrap",
+    "apps/kilogram-cli",
+    "apps/kilogram-offline",
+    "apps/kilogram-ticket-store",
+    "apps/kilogram-windows",
+    "crates/kilogram-bootstrap-contract",
+    "crates/kilogram-crypto",
+    "crates/kilogram-identity",
+    "crates/kilogram-mailbox",
+    "crates/kilogram-mailbox-client",
+    "crates/kilogram-mailbox-provisioning",
+    "crates/kilogram-peer-capability-store",
+    "crates/kilogram-peer-history-recovery",
+    "crates/kilogram-peer-history-recovery-consent",
+    "crates/kilogram-peer-history-recovery-execution",
+    "crates/kilogram-peer-history-recovery-runtime",
+    "crates/kilogram-peer-history-recovery-transport",
+    "crates/kilogram-peer-reenrollment",
+    "crates/kilogram-peer-reenrollment-acceptance",
+    "crates/kilogram-peer-reenrollment-runtime",
+    "crates/kilogram-peer-reenrollment-staging",
+    "crates/kilogram-protocol",
+    "crates/kilogram-publication-conflict",
+    "crates/kilogram-ratchet",
+    "crates/kilogram-rollout",
+    "crates/kilogram-runtime-ipc",
+    "crates/kilogram-session",
+    "crates/kilogram-sync-capability",
+    "crates/kilogram-state",
+    "crates/kilogram-store",
+    "crates/kilogram-ticket-publication",
+    "crates/kilogram-transport-iroh",
+]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.91"
+license = "AGPL-3.0-or-later"
+
+[workspace.dependencies]
+anyhow = "1.0"
+argon2 = "0.5.3"
+base64 = "0.22"
+bip39 = { version = "2.2.2", default-features = false, features = ["std", "zeroize"] }
+blake3 = "1.8"
+clap = { version = "4.5", features = ["derive"] }
+ed25519-dalek = "3.0"
+eframe = { version = "=0.33.3", default-features = false, features = ["accesskit", "default_fonts", "glow", "wayland", "x11"] }
+getrandom = "0.4"
+hpke = { version = "0.14", default-features = false, features = ["alloc", "chacha", "getrandom", "x25519"] }
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png"] }
+iroh = "=1.1.0"
+postcard = { version = "1.1", features = ["alloc"] }
+qrcode = { version = "0.14.1", default-features = false, features = ["image"] }
+redb = "4.2"
+reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+rqrr = { version = "0.10.1", default-features = false, features = ["img"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["raw_value"] }
+sha2 = "0.10.9"
+tempfile = "3.0"
+thiserror = "2.0"
+tokio = { version = "1.0", features = ["fs", "io-util", "macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
+zeroize = { version = "1.8", features = ["zeroize_derive"] }
+url = "2.5"
+vodozemac = "0.10.0"
+x25519-dalek = "3.0.0"
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+dbg_macro = "deny"
+expect_used = "deny"
+panic = "deny"
+todo = "deny"
+unimplemented = "deny"
+unwrap_used = "deny"
+
+# Full test-harness verification is intentionally separated from the fast
+# incremental development cache. It keeps file/line backtraces while avoiding
+# the multi-generation incremental and full-PDB growth seen in target/debug.
+[profile.verification]
+inherits = "test"
+debug = "line-tables-only"
+incremental = false

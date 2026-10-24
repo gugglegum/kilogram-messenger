@@ -1,0 +1,365 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index d44a341..e7c84d5 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -3678,6 +3678,7 @@ name = "kilogram-state"
+ version = "0.1.0"
+ dependencies = [
+  "argon2",
++ "base64 0.22.1",
+  "blake3",
+  "chacha20poly1305 0.10.1",
+  "getrandom 0.4.3",
+diff --git a/crates/kilogram-state/Cargo.toml b/crates/kilogram-state/Cargo.toml
+index 7be0cfd..76a696b 100644
+--- a/crates/kilogram-state/Cargo.toml
++++ b/crates/kilogram-state/Cargo.toml
+@@ -9,6 +9,7 @@ publish = false
+ 
+ [dependencies]
+ argon2.workspace = true
++base64.workspace = true
+ blake3.workspace = true
+ chacha20poly1305 = "0.10"
+ getrandom.workspace = true
+diff --git a/crates/kilogram-state/src/vault/authenticated_index.rs b/crates/kilogram-state/src/vault/authenticated_index.rs
+index b3e88eb..3a40962 100644
+--- a/crates/kilogram-state/src/vault/authenticated_index.rs
++++ b/crates/kilogram-state/src/vault/authenticated_index.rs
+@@ -162,6 +162,24 @@ pub(super) struct Tree<'a, T: redb::ReadableTable<&'static [u8], &'static [u8]>>
+     pub plan_bytes: usize,
+ }
+ impl<'a, T: redb::ReadableTable<&'static [u8], &'static [u8]>> Tree<'a, T> {
++    // Read-only history pages discard proofs between candidates; write overlays remain intact.
++    pub fn clear_read_proofs(&mut self) {
++        self.decoded.clear();
++    }
++    /// Conservative bound from live lengths/capacities; includes sparse BTree nodes.
++    pub fn buffer_bound_bytes(&self) -> usize {
++        let decoded =
++            (self.decoded.len() + 11) * 3 * (std::mem::size_of::<(Id, (Node, Summary))>() + 128);
++        let changed =
++            (self.changed.len() + 11) * 3 * (std::mem::size_of::<(Id, Option<Vec<u8>>)>() + 128)
++                + self
++                    .changed
++                    .values()
++                    .flatten()
++                    .map(Vec::capacity)
++                    .sum::<usize>();
++        decoded + changed
++    }
+     pub fn new(table: &'a T, crypto: &'a Crypto) -> Self {
+         Self {
+             table,
+diff --git a/crates/kilogram-state/src/vault/indexed_dialog.rs b/crates/kilogram-state/src/vault/indexed_dialog.rs
+index 5dd0133..7a5b09a 100644
+--- a/crates/kilogram-state/src/vault/indexed_dialog.rs
++++ b/crates/kilogram-state/src/vault/indexed_dialog.rs
+@@ -3,6 +3,14 @@
+ mod backend;
+ #[path = "indexed_dialog/credits.rs"]
+ mod credits;
++#[path = "indexed_dialog/history.rs"]
++mod history;
++#[path = "indexed_dialog/history_codec.rs"]
++mod history_codec;
++#[path = "indexed_dialog/history_cursor.rs"]
++mod history_cursor;
++#[path = "indexed_dialog/history_types.rs"]
++mod history_types;
+ #[path = "authenticated_index.rs"]
+ mod tree;
+ #[path = "indexed_dialog/types.rs"]
+@@ -21,6 +29,13 @@ use chacha20poly1305::{
+     aead::{Aead, Payload},
+ };
+ pub use credits::{CreditAction, CreditReport, PendingView};
++pub use history::HistoryPage;
++pub use history_cursor::HistoryCursor;
++pub use history_types::{
++    HistoryAuth, HistoryCapture, HistoryExtras, HistoryInit, HistoryNativeTransition,
++    HistoryOperation, HistoryParent, HistoryPending, HistoryReadStats, HistoryRepair,
++    HistoryRequestOutcome, HistoryRow, HistoryScope, HistorySeen, PreparedReadable,
++};
+ use redb::{Database, Durability, ReadableDatabase, ReadableTable, TableDefinition};
+ use std::{
+     collections::{BTreeMap, BTreeSet},
+@@ -78,6 +93,7 @@ struct Crypto {
+     value: Zeroizing<Id>,
+     integrity: Zeroizing<Id>,
+     lookup: Zeroizing<Id>,
++    cursor: Zeroizing<Id>,
+     incarnation: Id,
+     contexts: [Id; 2],
+     account: Id,
+@@ -92,6 +108,7 @@ impl Crypto {
+             )),
+             integrity: Zeroizing::new(blake3::derive_key("kilogram a3 v5 integrity", master)),
+             lookup: Zeroizing::new(blake3::derive_key("kilogram a3 v5 lookup", master)),
++            cursor: Zeroizing::new(blake3::derive_key("kilogram a3 v5 cursor", master)),
+             incarnation,
+             contexts,
+             account,
+@@ -298,6 +315,21 @@ pub struct IndexedDialogVault {
+     backend: backend::BackendControl,
+     poisoned: bool,
+ }
++enum CommitInput {
++    Generic {
++        mutations: Vec<Mutation>,
++        credits: Vec<CreditAction>,
++    },
++    History {
++        context: u8,
++        operation: Box<HistoryOperation>,
++    },
++    #[cfg(test)]
++    HistoryFixture {
++        context: u8,
++        rows: Vec<PreparedReadable>,
++    },
++}
+ impl IndexedDialogVault {
+     pub fn create(lease: StateDirectoryLock, claim: CreationClaim, config: Config) -> Result<Self> {
+         for entry in fs::read_dir(lease.root())? {
+@@ -606,6 +638,43 @@ impl IndexedDialogVault {
+                 .map_err(|_| Error::Bound("request codec"))?,
+         );
+         let digest = self.crypto.hash(0, b"commit-request", &request);
++        self.commit_with(
++            expected,
++            id,
++            digest,
++            CommitInput::Generic { mutations, credits },
++            3 * input_bytes + 16384,
++        )
++    }
++    fn commit_with(
++        &mut self,
++        expected: u64,
++        id: Id,
++        digest: Id,
++        input: CommitInput,
++        input_buffer_bound: usize,
++    ) -> Result<CommitReport> {
++        if self.poisoned {
++            return Err(Error::ReopenRequired);
++        }
++        if id == [0; 32] {
++            return Err(Error::Bound("commit ID"));
++        }
++        let managed_history = !matches!(&input, CommitInput::Generic { .. });
++        let tx = self.vault.database.begin_read().map_err(db)?;
++        let nodes = tx.open_table(NODES).map_err(db)?;
++        let values = tx.open_table(VALUES).map_err(db)?;
++        let mut w = Work::new(&nodes, &values, &self.crypto, self.root.clone());
++        match &input {
++            CommitInput::Generic { mutations, credits } => {
++                w.history_guard_generic(mutations, credits)?
++            }
++            CommitInput::History { context, operation } => {
++                w.history_check_retry(*context, operation)?
++            }
++            #[cfg(test)]
++            CommitInput::HistoryFixture { context, .. } => w.history_fixture_check(*context)?,
++        }
+         if id == self.root.commit_id {
+             if digest != self.root.request_digest {
+                 return Err(Error::Conflict);
+@@ -614,40 +683,49 @@ impl IndexedDialogVault {
+                 generation: self.root.generation,
+                 commit_id: id,
+                 encoded_plan_bytes: 0,
+-                nodes_read: 0,
+-                values_read: 0,
++                nodes_read: w.tree.reads,
++                values_read: w.values_read,
+                 changed_nodes: 0,
++                app_buffer_bound_bytes: (w.buffer_bound_bytes().max(w.history_buffer_peak)
++                    + input_buffer_bound) as u64,
+                 duplicate: true,
+             });
+         }
+         if expected != self.root.generation {
+             return Err(Error::StaleGeneration);
+         }
+-        let tx = self.vault.database.begin_read().map_err(db)?;
+-        let nodes = tx.open_table(NODES).map_err(db)?;
+-        let values = tx.open_table(VALUES).map_err(db)?;
+-        let mut w = Work::new(&nodes, &values, &self.crypto, self.root.clone());
+-        for mutation in mutations {
+-            match mutation {
+-                Mutation::Put { key, value } => {
+-                    if matches!(
+-                        key.namespace,
+-                        Namespace::Credit
+-                            | Namespace::Queue
+-                            | Namespace::Pending
+-                            | Namespace::Undelivered
+-                    ) {
+-                        return Err(Error::Bound("credit-managed namespace"));
++        match input {
++            CommitInput::Generic { mutations, credits } => {
++                for mutation in mutations {
++                    match mutation {
++                        Mutation::Put { key, value } => {
++                            if matches!(
++                                key.namespace,
++                                Namespace::Credit
++                                    | Namespace::Queue
++                                    | Namespace::Pending
++                                    | Namespace::Undelivered
++                            ) {
++                                return Err(Error::Bound("credit-managed namespace"));
++                            }
++                            w.put(key, &value, 0, false)?;
++                        }
++                        Mutation::Retire { .. } => {
++                            return Err(Error::Bound(
++                                "retirement requires typed credit transition",
++                            ));
++                        }
+                     }
+-                    w.put(key, &value, 0, false)?;
+                 }
+-                Mutation::Retire { .. } => {
+-                    return Err(Error::Bound("retirement requires typed credit transition"));
++                for credit in credits {
++                    credits::apply(&mut w, credit)?;
+                 }
+             }
+-        }
+-        for credit in credits {
+-            credits::apply(&mut w, credit)?;
++            CommitInput::History { context, operation } => w.history_apply(context, *operation)?,
++            #[cfg(test)]
++            CommitInput::HistoryFixture { context, rows } => {
++                w.history_fixture_apply(context, rows)?
++            }
+         }
+         for (key, charge) in &w.new_charge {
+             if *charge > 0
+@@ -665,6 +743,12 @@ impl IndexedDialogVault {
+             }
+         }
+         w.root.check()?;
++        if managed_history
++            && w.buffer_bound_bytes().max(w.history_buffer_peak) + input_buffer_bound + MAX_PLAN
++                > 192 * 1024 * 1024
++        {
++            return Err(Error::Bound("history app-owned buffers"));
++        }
+         let duplicate =
+             w.tree.changed.is_empty() && w.changed.is_empty() && w.root.ledger == self.root.ledger;
+         let mut report = CommitReport {
+@@ -674,6 +758,9 @@ impl IndexedDialogVault {
+             nodes_read: w.tree.reads,
+             values_read: w.values_read,
+             changed_nodes: w.tree.changed.len() as u64,
++            app_buffer_bound_bytes: (w.buffer_bound_bytes().max(w.history_buffer_peak)
++                + input_buffer_bound
++                + MAX_PLAN) as u64,
+             duplicate,
+         };
+         if duplicate {
+@@ -914,6 +1001,8 @@ struct Work<
+     spent: BTreeSet<Key>,
+     plan_bytes: usize,
+     values_read: u64,
++    history_gets: u64,
++    history_buffer_peak: usize,
+     settled: [bool; 2],
+ }
+ impl<
+@@ -934,6 +1023,8 @@ impl<
+             spent: BTreeSet::new(),
+             plan_bytes: 0,
+             values_read: 0,
++            history_gets: 0,
++            history_buffer_peak: 0,
+             settled: [false; 2],
+         }
+     }
+@@ -985,6 +1076,23 @@ impl<
+         }
+         Ok(Some(plain.to_vec()))
+     }
++    fn buffer_bound_bytes(&self) -> usize {
++        let maps = self.changed.len()
++            + self.baseline_charge.len()
++            + self.new_charge.len()
++            + self.spent.len()
++            + 44;
++        self.tree.buffer_bound_bytes()
++            + maps * 3 * 256
++            + self
++                .changed
++                .values()
++                .flatten()
++                .map(Vec::capacity)
++                .sum::<usize>()
++            + std::mem::size_of::<Root>()
++            + 3 * (MAX_VALUE + 41)
++    }
+     fn change_value(&mut self, address: Id, value: Option<Vec<u8>>) -> Result<()> {
+         if let Some(old) = self.changed.get(&address) {
+             self.plan_bytes = self
+diff --git a/crates/kilogram-state/src/vault/indexed_dialog/credits.rs b/crates/kilogram-state/src/vault/indexed_dialog/credits.rs
+index 2cf005e..54d9c24 100644
+--- a/crates/kilogram-state/src/vault/indexed_dialog/credits.rs
++++ b/crates/kilogram-state/src/vault/indexed_dialog/credits.rs
+@@ -120,6 +120,13 @@ pub(super) struct Ledger {
+     grant: Option<Grant>,
+ }
+ impl Ledger {
++    pub(super) fn is_pristine(&self) -> bool {
++        self.repair_free == REPAIR_POOL
++            && self.outstanding == 0
++            && self.pending == 0
++            && self.head.is_none()
++            && self.grant.is_none()
++    }
+     pub fn new(quota: u64) -> Result<Self> {
+         let ledger = Self {
+             quota,
+@@ -265,6 +272,13 @@ pub(super) fn pending_view(raw: &[u8]) -> Result<PendingView> {
+         admission_auth: t.captures.map(|v| v[1]),
+     })
+ }
++pub(super) fn history_ticket(raw: &[u8], stage: u8) -> Result<(Id, Vec<u8>)> {
++    let t = Ticket::decode(raw)?;
++    if t.stage != stage {
++        return Err(Error::Integrity("history ticket phase"));
++    }
++    Ok((t.id, t.body))
++}
+ impl Ticket {
+     fn encode(&self) -> Vec<u8> {
+         let mut out = vec![5, self.stage, u8::from(self.repair), u8::from(self.head)];
+diff --git a/crates/kilogram-state/src/vault/indexed_dialog/types.rs b/crates/kilogram-state/src/vault/indexed_dialog/types.rs
+index 0255e73..9b601fc 100644
+--- a/crates/kilogram-state/src/vault/indexed_dialog/types.rs
++++ b/crates/kilogram-state/src/vault/indexed_dialog/types.rs
+@@ -75,6 +75,14 @@ pub enum Error {
+     ConfiguredCapacity { requested: u64, quota: u64 },
+     #[error("reopen required before resolving commit outcome")]
+     ReopenRequired,
++    #[error("HistoryUnavailable")]
++    HistoryUnavailable,
++    #[error("ExistingStateRequiresMigration")]
++    ExistingStateRequiresMigration,
++    #[error("InvalidCursor")]
++    InvalidCursor,
++    #[error("SnapshotUnavailable")]
++    SnapshotUnavailable,
+ }
+ pub type Result<T> = std::result::Result<T, Error>;
+ pub(crate) fn db(error: impl std::fmt::Display) -> Error {
+@@ -328,5 +336,7 @@ pub struct CommitReport {
+     pub nodes_read: u64,
+     pub values_read: u64,
+     pub changed_nodes: u64,
++    /// Conservative app-owned live-buffer bound, from live overlay sizes plus input/plan budgets.
++    pub app_buffer_bound_bytes: u64,
+     pub duplicate: bool,
+ }

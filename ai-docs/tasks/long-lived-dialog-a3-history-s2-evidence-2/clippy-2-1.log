@@ -1,0 +1,25 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+error: this `impl` can be derived
+  --> crates\kilogram-state\src\vault\indexed_dialog\profile.rs:71:1
+   |
+71 | / impl Default for Stats {
+72 | |     fn default() -> Self {
+73 | |         Self {
+74 | |             phases: [Time::default(); 19],
+...  |
+82 | | }
+   | |_^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#derivable_impls
+   = note: `-D clippy::derivable-impls` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::derivable_impls)]`
+help: replace the manual implementation with a derive attribute
+   |
+63 + #[derive(Default)]
+64 | pub(super) struct Stats {
+   |
+
+error: could not compile `kilogram-state` (lib test) due to 1 previous error

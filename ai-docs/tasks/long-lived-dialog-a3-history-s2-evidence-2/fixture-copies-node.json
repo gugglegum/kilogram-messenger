@@ -1,0 +1,18 @@
+[
+  {
+    "path": ".tmp/a3-s2/profile-node-read-2",
+    "initial_db_sha256": "df9d8293753daff382603baa2dcc4670705407e29155325007577c10644b0841",
+    "expected_user_rows": 10016,
+    "expected_scope_context": "05 repeated32",
+    "synthetic": true,
+    "source": "preserved original .tmp/a3-s2/history-small"
+  },
+  {
+    "path": ".tmp/a3-s2/profile-node-write-2",
+    "initial_db_sha256": "df9d8293753daff382603baa2dcc4670705407e29155325007577c10644b0841",
+    "expected_user_rows": 10016,
+    "expected_scope_context": "05 repeated32",
+    "synthetic": true,
+    "source": "preserved original .tmp/a3-s2/history-small"
+  }
+]

@@ -1,0 +1,19 @@
+{
+  "captured_utc": "2026-10-24T16:20:29.9225588+00:00",
+  "measurement_started": false,
+  "diagnostic_only": true,
+  "instrumented": true,
+  "profile": "verification",
+  "source_provenance": "build-provenance-before-run-3.json",
+  "source19_hashes": "MATCH",
+  "fixture": ".tmp/a3-s2/probe-verification-3",
+  "initial_db_sha256": "7c613e31c74cb78733e5d459161bf83d67fbbc8096d94251c9b53c9df2e01814",
+  "exe_path": "target/verification/deps/kilogram-state-lib-kilogram_state-tests.exe",
+  "exe_bytes": 8828416,
+  "exe_sha256": "7ce75659705024f399722f959394ab1f6cd27d350296f450315bd03dd103f0b6",
+  "exe_snapshot": ".tmp\\a3-s2\\probe-bin-verification-3\\kilogram-state-lib-kilogram_state-tests.exe",
+  "compile_jobs": 12,
+  "priority": "BelowNormal",
+  "locked_offline": true,
+  "mode": "one bounded read replay:12cuts/pages plus12points; no fill/full traversal"
+}

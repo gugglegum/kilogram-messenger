@@ -1,0 +1,26 @@
+{
+  "frozen_s1_doc_artifacts": 57,
+  "frozen_s2_contract_files": 4,
+  "manifest_self_hashes": "MATCH",
+  "protected_files": [
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    },
+    {
+      "path": ".tmp/a3-s1/persistent-scale/state-vault.redb",
+      "sha256": "2d48df49c224c7e4543f8a7159b67f795288cb6e4662c9ca852ee1045ed46fa5"
+    },
+    {
+      "path": ".tmp/a3-s1-repair-2/persistent-scale-initial/state-vault.redb",
+      "sha256": "f94e548405b270f2cc5e1f16534b15057dfc719e9cdc302ac2ce1859c5c17525"
+    },
+    {
+      "path": "ai-docs/development-environment.md",
+      "sha256": "53074ff3734dacd9906ee03cc5c7ded952dedd99d207581f692ff900b9a79f8f"
+    }
+  ],
+  "foreign_override": "human removed old dirty diff; tracked file clean at HEAD blob b4be1a56152bcf64e146c2c4418a4ffa439f6096",
+  "index_paths": [],
+  "head": "61524df3a77203d73673f47d38decf6b817615e3"
+}

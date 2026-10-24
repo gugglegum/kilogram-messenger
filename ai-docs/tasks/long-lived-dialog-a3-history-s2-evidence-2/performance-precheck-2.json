@@ -1,0 +1,18 @@
+{
+  "decision": "STOP_BEFORE_100K_INSUFFICIENT_MARGIN",
+  "actual_100k_run": false,
+  "ceiling_seconds": 1200,
+  "measured_small_seconds": 188.4863869,
+  "measured_10k_fill_seconds": 98.8439546,
+  "measured_fill_rows": 8984,
+  "measured_10k_range_seconds": 44.7729855,
+  "measured_10k_resume_seconds": 22.5672495,
+  "linear_next_fill_89984_seconds": 990.0238658422084,
+  "linear_100k_range_seconds": 447.729855,
+  "linear_100k_midpoint_resume_seconds": 225.672495,
+  "sum_of_only_three_estimated_100k_phases_seconds": 1663.4262158422084,
+  "full_scenario_estimate_including_measured_1k10k_seconds": 1851.9126027422085,
+  "interpretation": "Linear projections from measured 10k, not a100k benchmark or bound; no margin even before100k ordinary/reopen/memory overhead",
+  "full_100k_memory_ratios": "UNAVAILABLE",
+  "fixture_distribution_profile_limits_changed": false
+}

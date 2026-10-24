@@ -1,0 +1,15 @@
+diff --git "a/ai-docs\\tasks\\long-lived-dialog-a3-history-s2-evidence-4\\Cargo-before.toml" b/Cargo.toml
+index 96a2a35..071076d 100644
+--- "a/ai-docs\\tasks\\long-lived-dialog-a3-history-s2-evidence-4\\Cargo-before.toml"
++++ b/Cargo.toml
+@@ -88,3 +88,10 @@ unwrap_used = "deny"
+ inherits = "test"
+ debug = "line-tables-only"
+ incremental = false
++
++# Explicit A3-S2 scale-verification amendment: optimize while retaining checks.
++[profile.verification-scale]
++inherits = "verification"
++opt-level = 3
++debug-assertions = true
++overflow-checks = true

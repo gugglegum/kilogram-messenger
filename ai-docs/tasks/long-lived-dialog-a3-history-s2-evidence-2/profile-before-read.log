@@ -1,0 +1,14 @@
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 10.01s
+
+running 1 test
+Error: "fixture hash query failed"
+test vault::indexed_dialog::history::profiling::history_scale_profile_saved_fixture ... FAILED
+
+failures:
+
+failures:
+    vault::indexed_dialog::history::profiling::history_scale_profile_saved_fixture
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 65 filtered out; finished in 0.54s
+

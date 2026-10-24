@@ -88,3 +88,10 @@ unwrap_used = "deny"
 inherits = "test"
 debug = "line-tables-only"
 incremental = false
+
+# Explicit A3-S2 scale-verification amendment: optimize while retaining checks.
+[profile.verification-scale]
+inherits = "verification"
+opt-level = 3
+debug-assertions = true
+overflow-checks = true

@@ -1,0 +1,44 @@
+{
+  "status": "PASS",
+  "phase_count": 27,
+  "phase_and_final_metrics_io_equal": [
+    {
+      "target": 1000,
+      "phase_final_metrics_equal": true,
+      "phase_stage_io_equal": true,
+      "suffix_start": 512,
+      "suffix_end": 1000,
+      "suffix_only_seconds": 0.0679024,
+      "suffix_resume_including_checkpoints_ms": 80.9322,
+      "fill_sync_seconds": 0.2885122,
+      "fill_growth_seconds": 0.9334405
+    },
+    {
+      "target": 10000,
+      "phase_final_metrics_equal": true,
+      "phase_stage_io_equal": true,
+      "suffix_start": 5024,
+      "suffix_end": 10000,
+      "suffix_only_seconds": 1.1089338,
+      "suffix_resume_including_checkpoints_ms": 1132.6622,
+      "fill_sync_seconds": 9.1132643,
+      "fill_growth_seconds": 0.5425523
+    },
+    {
+      "target": 100000,
+      "phase_final_metrics_equal": true,
+      "phase_stage_io_equal": true,
+      "suffix_start": 50016,
+      "suffix_end": 100000,
+      "suffix_only_seconds": 17.3431927,
+      "suffix_resume_including_checkpoints_ms": 17390.2472,
+      "fill_sync_seconds": 175.5617177,
+      "fill_growth_seconds": 0.5680175
+    }
+  ],
+  "absolute_memory_samples": 21,
+  "peak_paged_bytes": 106905600.0,
+  "max_sampled_private_bytes": 102522880.0,
+  "cache_max_bytes": 67108864.0,
+  "no_missing_metrics": true
+}

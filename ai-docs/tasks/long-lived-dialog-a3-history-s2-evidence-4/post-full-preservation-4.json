@@ -1,0 +1,10 @@
+{
+  "status": "MATCH",
+  "source19_and_stable_snapshot_exe3": "MATCH",
+  "fixture": ".tmp/a3-s2/history-full-4/state-vault.redb",
+  "bytes": 1182535680,
+  "sha256": "ea5603cf5f06b87b23bae03b8bf31a4c1d1ba200641ede24f18cb941b2930e1e",
+  "user_rows": 100016,
+  "closed": true,
+  "db_reopened_after_run": false
+}

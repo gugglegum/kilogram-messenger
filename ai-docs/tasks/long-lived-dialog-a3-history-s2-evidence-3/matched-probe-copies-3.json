@@ -1,0 +1,20 @@
+[
+  {
+    "path": ".tmp/a3-s2/probe-verification-3",
+    "synthetic": true,
+    "expected_user_rows": 10016,
+    "initial_db_sha256": "7c613e31c74cb78733e5d459161bf83d67fbbc8096d94251c9b53c9df2e01814",
+    "expected_scope_context": "05 repeated32",
+    "source": "preserved original history-small-2; never DB-opened by probe",
+    "profile": "verification"
+  },
+  {
+    "path": ".tmp/a3-s2/probe-release-3",
+    "synthetic": true,
+    "expected_user_rows": 10016,
+    "initial_db_sha256": "7c613e31c74cb78733e5d459161bf83d67fbbc8096d94251c9b53c9df2e01814",
+    "expected_scope_context": "05 repeated32",
+    "source": "preserved original history-small-2; never DB-opened by probe",
+    "profile": "release"
+  }
+]

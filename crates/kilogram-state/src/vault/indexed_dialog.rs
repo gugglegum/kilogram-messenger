@@ -1,12 +1,40 @@
 //! A3-S1 library boundary. No wire, enrollment, native engine or live migration entrypoint.
+macro_rules! profiled {
+    ($phase:ident, $operation:expr) => {{
+        #[cfg(test)]
+        {
+            crate::vault::indexed_dialog::profile::measure(
+                crate::vault::indexed_dialog::profile::Phase::$phase,
+                || $operation,
+            )
+        }
+        #[cfg(not(test))]
+        {
+            $operation
+        }
+    }};
+}
 #[path = "indexed_dialog/backend.rs"]
 mod backend;
 #[path = "indexed_dialog/credits.rs"]
 mod credits;
+#[path = "indexed_dialog/history.rs"]
+mod history;
+#[path = "indexed_dialog/history_codec.rs"]
+mod history_codec;
+#[path = "indexed_dialog/history_cursor.rs"]
+mod history_cursor;
+#[path = "indexed_dialog/history_types.rs"]
+mod history_types;
+#[cfg(test)]
+#[path = "indexed_dialog/profile.rs"]
+mod profile;
 #[path = "authenticated_index.rs"]
 mod tree;
 #[path = "indexed_dialog/types.rs"]
 mod types;
+#[path = "indexed_dialog/verified_values.rs"]
+mod verified_values;
 use super::{
     EncryptedStateVault, MANIFEST_KEY, META_TABLE, ORDERED_ACCOUNT_FENCE, STATE_VAULT_FILE,
     STATE_VAULT_KEY_FILE, VaultManifest,
@@ -21,6 +49,13 @@ use chacha20poly1305::{
     aead::{Aead, Payload},
 };
 pub use credits::{CreditAction, CreditReport, PendingView};
+pub use history::HistoryPage;
+pub use history_cursor::HistoryCursor;
+pub use history_types::{
+    HistoryAuth, HistoryCapture, HistoryExtras, HistoryInit, HistoryNativeTransition,
+    HistoryOperation, HistoryParent, HistoryPending, HistoryReadStats, HistoryRepair,
+    HistoryRequestOutcome, HistoryRow, HistoryScope, HistorySeen, PreparedReadable,
+};
 use redb::{Database, Durability, ReadableDatabase, ReadableTable, TableDefinition};
 use std::{
     collections::{BTreeMap, BTreeSet},
@@ -78,6 +113,7 @@ struct Crypto {
     value: Zeroizing<Id>,
     integrity: Zeroizing<Id>,
     lookup: Zeroizing<Id>,
+    cursor: Zeroizing<Id>,
     incarnation: Id,
     contexts: [Id; 2],
     account: Id,
@@ -92,6 +128,7 @@ impl Crypto {
             )),
             integrity: Zeroizing::new(blake3::derive_key("kilogram a3 v5 integrity", master)),
             lookup: Zeroizing::new(blake3::derive_key("kilogram a3 v5 lookup", master)),
+            cursor: Zeroizing::new(blake3::derive_key("kilogram a3 v5 cursor", master)),
             incarnation,
             contexts,
             account,
@@ -124,14 +161,20 @@ impl Crypto {
         *h.finalize().as_bytes()
     }
     fn seal_node(&self, scope: u8, address: Id, plain: &[u8]) -> Result<Vec<u8>> {
-        seal(&self.node, &self.aad(scope, b"node", address), plain)
+        profiled!(
+            NodeSeal,
+            seal(&self.node, &self.aad(scope, b"node", address), plain)
+        )
     }
     fn open_node(&self, scope: u8, address: Id, raw: &[u8]) -> Result<Zeroizing<Vec<u8>>> {
-        open(
-            &self.node,
-            &self.aad(scope, b"node", address),
-            raw,
-            NODE_CAP,
+        profiled!(
+            NodeOpen,
+            open(
+                &self.node,
+                &self.aad(scope, b"node", address),
+                raw,
+                NODE_CAP,
+            )
         )
     }
 }
@@ -297,6 +340,21 @@ pub struct IndexedDialogVault {
     root: Root,
     backend: backend::BackendControl,
     poisoned: bool,
+}
+enum CommitInput {
+    Generic {
+        mutations: Vec<Mutation>,
+        credits: Vec<CreditAction>,
+    },
+    History {
+        context: u8,
+        operation: Box<HistoryOperation>,
+    },
+    #[cfg(test)]
+    HistoryFixture {
+        context: u8,
+        rows: Vec<PreparedReadable>,
+    },
 }
 impl IndexedDialogVault {
     pub fn create(lease: StateDirectoryLock, claim: CreationClaim, config: Config) -> Result<Self> {
@@ -606,6 +664,43 @@ impl IndexedDialogVault {
                 .map_err(|_| Error::Bound("request codec"))?,
         );
         let digest = self.crypto.hash(0, b"commit-request", &request);
+        self.commit_with(
+            expected,
+            id,
+            digest,
+            CommitInput::Generic { mutations, credits },
+            3 * input_bytes + 16384,
+        )
+    }
+    fn commit_with(
+        &mut self,
+        expected: u64,
+        id: Id,
+        digest: Id,
+        input: CommitInput,
+        input_buffer_bound: usize,
+    ) -> Result<CommitReport> {
+        if self.poisoned {
+            return Err(Error::ReopenRequired);
+        }
+        if id == [0; 32] {
+            return Err(Error::Bound("commit ID"));
+        }
+        let managed_history = !matches!(&input, CommitInput::Generic { .. });
+        let tx = self.vault.database.begin_read().map_err(db)?;
+        let nodes = tx.open_table(NODES).map_err(db)?;
+        let values = tx.open_table(VALUES).map_err(db)?;
+        let mut w = Work::new(&nodes, &values, &self.crypto, self.root.clone());
+        match &input {
+            CommitInput::Generic { mutations, credits } => {
+                w.history_guard_generic(mutations, credits)?
+            }
+            CommitInput::History { context, operation } => {
+                w.history_check_retry(*context, operation)?
+            }
+            #[cfg(test)]
+            CommitInput::HistoryFixture { context, .. } => w.history_fixture_check(*context)?,
+        }
         if id == self.root.commit_id {
             if digest != self.root.request_digest {
                 return Err(Error::Conflict);
@@ -614,40 +709,51 @@ impl IndexedDialogVault {
                 generation: self.root.generation,
                 commit_id: id,
                 encoded_plan_bytes: 0,
-                nodes_read: 0,
-                values_read: 0,
+                nodes_read: w.tree.reads,
+                values_read: w.values_read,
                 changed_nodes: 0,
+                app_buffer_bound_bytes: (w.buffer_bound_bytes().max(w.history_buffer_peak)
+                    + input_buffer_bound) as u64,
                 duplicate: true,
             });
         }
         if expected != self.root.generation {
             return Err(Error::StaleGeneration);
         }
-        let tx = self.vault.database.begin_read().map_err(db)?;
-        let nodes = tx.open_table(NODES).map_err(db)?;
-        let values = tx.open_table(VALUES).map_err(db)?;
-        let mut w = Work::new(&nodes, &values, &self.crypto, self.root.clone());
-        for mutation in mutations {
-            match mutation {
-                Mutation::Put { key, value } => {
-                    if matches!(
-                        key.namespace,
-                        Namespace::Credit
-                            | Namespace::Queue
-                            | Namespace::Pending
-                            | Namespace::Undelivered
-                    ) {
-                        return Err(Error::Bound("credit-managed namespace"));
+        match input {
+            CommitInput::Generic { mutations, credits } => {
+                for mutation in mutations {
+                    match mutation {
+                        Mutation::Put { key, value } => {
+                            if matches!(
+                                key.namespace,
+                                Namespace::Credit
+                                    | Namespace::Queue
+                                    | Namespace::Pending
+                                    | Namespace::Undelivered
+                            ) {
+                                return Err(Error::Bound("credit-managed namespace"));
+                            }
+                            w.put(key, &value, 0, false)?;
+                        }
+                        Mutation::Retire { .. } => {
+                            return Err(Error::Bound(
+                                "retirement requires typed credit transition",
+                            ));
+                        }
                     }
-                    w.put(key, &value, 0, false)?;
                 }
-                Mutation::Retire { .. } => {
-                    return Err(Error::Bound("retirement requires typed credit transition"));
+                for credit in credits {
+                    credits::apply(&mut w, credit)?;
                 }
             }
-        }
-        for credit in credits {
-            credits::apply(&mut w, credit)?;
+            CommitInput::History { context, operation } => {
+                profiled!(HistoryApply, w.history_apply(context, *operation))?
+            }
+            #[cfg(test)]
+            CommitInput::HistoryFixture { context, rows } => {
+                w.history_fixture_apply(context, rows)?
+            }
         }
         for (key, charge) in &w.new_charge {
             if *charge > 0
@@ -665,6 +771,13 @@ impl IndexedDialogVault {
             }
         }
         w.root.check()?;
+        w.tree.seal_changes()?;
+        if managed_history
+            && w.buffer_bound_bytes().max(w.history_buffer_peak) + input_buffer_bound + MAX_PLAN
+                > 192 * 1024 * 1024
+        {
+            return Err(Error::Bound("history app-owned buffers"));
+        }
         let duplicate =
             w.tree.changed.is_empty() && w.changed.is_empty() && w.root.ledger == self.root.ledger;
         let mut report = CommitReport {
@@ -674,6 +787,9 @@ impl IndexedDialogVault {
             nodes_read: w.tree.reads,
             values_read: w.values_read,
             changed_nodes: w.tree.changed.len() as u64,
+            app_buffer_bound_bytes: (w.buffer_bound_bytes().max(w.history_buffer_peak)
+                + input_buffer_bound
+                + MAX_PLAN) as u64,
             duplicate,
         };
         if duplicate {
@@ -779,56 +895,59 @@ impl IndexedDialogVault {
         drop(meta);
         drop(tx);
         self.backend.begin()?;
-        let write_result = (|| -> Result<()> {
-            let mut tx = self.vault.database.begin_write().map_err(db)?;
-            tx.set_durability(Durability::Immediate).map_err(db)?;
-            {
-                let meta = tx.open_table(META_TABLE).map_err(db)?;
-                if meta
-                    .get(ANCHOR)
-                    .map_err(db)?
-                    .is_none_or(|v| v.value() != old_anchor)
+        let write_result = profiled!(
+            CommitWrite,
+            (|| -> Result<()> {
+                let mut tx = self.vault.database.begin_write().map_err(db)?;
+                tx.set_durability(Durability::Immediate).map_err(db)?;
                 {
-                    return Err(Error::StaleGeneration);
+                    let meta = tx.open_table(META_TABLE).map_err(db)?;
+                    if meta
+                        .get(ANCHOR)
+                        .map_err(db)?
+                        .is_none_or(|v| v.value() != old_anchor)
+                    {
+                        return Err(Error::StaleGeneration);
+                    }
                 }
-            }
-            {
-                let mut table = tx.open_table(NODES).map_err(db)?;
-                for (key, value) in changed_nodes {
-                    match value {
-                        Some(value) => {
-                            table.insert(key.as_slice(), value.as_slice()).map_err(db)?;
-                        }
-                        None => {
-                            table.remove(key.as_slice()).map_err(db)?;
+                {
+                    let mut table = tx.open_table(NODES).map_err(db)?;
+                    for (key, value) in changed_nodes {
+                        match value {
+                            Some(value) => {
+                                table.insert(key.as_slice(), value.as_slice()).map_err(db)?;
+                            }
+                            None => {
+                                table.remove(key.as_slice()).map_err(db)?;
+                            }
                         }
                     }
                 }
-            }
-            {
-                let mut table = tx.open_table(VALUES).map_err(db)?;
-                for (key, value) in changed {
-                    match value {
-                        Some(value) => {
-                            table.insert(key.as_slice(), value.as_slice()).map_err(db)?;
-                        }
-                        None => {
-                            table.remove(key.as_slice()).map_err(db)?;
+                {
+                    let mut table = tx.open_table(VALUES).map_err(db)?;
+                    for (key, value) in changed {
+                        match value {
+                            Some(value) => {
+                                table.insert(key.as_slice(), value.as_slice()).map_err(db)?;
+                            }
+                            None => {
+                                table.remove(key.as_slice()).map_err(db)?;
+                            }
                         }
                     }
                 }
-            }
-            {
-                let mut meta = tx.open_table(META_TABLE).map_err(db)?;
-                meta.insert(ANCHOR, new_anchor.as_slice()).map_err(db)?;
-                meta.insert(MANIFEST_KEY, new_sentinel.as_slice())
-                    .map_err(db)?;
-            }
-            checkpoint("before_commit");
-            tx.commit().map_err(db)?;
-            checkpoint("after_commit");
-            Ok(())
-        })();
+                {
+                    let mut meta = tx.open_table(META_TABLE).map_err(db)?;
+                    meta.insert(ANCHOR, new_anchor.as_slice()).map_err(db)?;
+                    meta.insert(MANIFEST_KEY, new_sentinel.as_slice())
+                        .map_err(db)?;
+                }
+                checkpoint("before_commit");
+                tx.commit().map_err(db)?;
+                checkpoint("after_commit");
+                Ok(())
+            })()
+        );
         if let Err(e) = write_result {
             self.poisoned = true;
             let stats = self.backend.stats()?;
@@ -914,6 +1033,11 @@ struct Work<
     spent: BTreeSet<Key>,
     plan_bytes: usize,
     values_read: u64,
+    history_gets: u64,
+    history_buffer_peak: usize,
+    verified_values: verified_values::VerifiedValues,
+    #[cfg(test)]
+    profile_work: u64,
     settled: [bool; 2],
 }
 impl<
@@ -934,15 +1058,49 @@ impl<
             spent: BTreeSet::new(),
             plan_bytes: 0,
             values_read: 0,
+            history_gets: 0,
+            history_buffer_peak: 0,
+            verified_values: verified_values::VerifiedValues::default(),
+            #[cfg(test)]
+            profile_work: profile::new_work(),
             settled: [false; 2],
         }
     }
     fn get(&mut self, key: Key) -> Result<Option<Vec<u8>>> {
+        #[cfg(test)]
+        profile::get(self.profile_work, key.slot()? as u8, key.bytes);
+        profiled!(ValueGet, self.get_verified(key))
+    }
+    fn get_verified(&mut self, key: Key) -> Result<Option<Vec<u8>>> {
         let slot = key.slot()?;
-        let Some(leaf) = self
-            .tree
-            .find(slot as u8, self.root.roots[slot], key.bytes)?
-        else {
+        if self.root.incarnation != self.crypto.incarnation
+            || self.root.contexts != self.crypto.contexts
+            || self.root.account != self.crypto.account
+        {
+            return Err(Error::Integrity("value cache scope"));
+        }
+        let scope = slot as u8;
+        let root = self.root.roots[slot];
+        let stamp = self.verified_values.stamp(scope, key.bytes);
+        if let Some((proved_root, version)) = stamp
+            && proved_root == root
+        {
+            return self.copy_verified_value(key, root, version);
+        }
+        let leaf = self.tree.find(scope, root, key.bytes)?;
+        let version = leaf
+            .as_ref()
+            .map(verified_values::Version::of)
+            .transpose()?;
+        if let Some((_, old_version)) = stamp
+            && old_version == version
+        {
+            return self.copy_verified_value(key, root, version);
+        }
+        self.verified_values.remove(scope, key.bytes);
+        let Some(leaf) = leaf else {
+            self.verified_values
+                .insert(scope, key.bytes, root, None, None);
             return Ok(None);
         };
         let tree::Body::Leaf {
@@ -969,13 +1127,20 @@ impl<
             }
             g.value().to_vec()
         };
-        let plain = open(
-            &self.crypto.value,
-            &self.crypto.aad(slot as u8, b"value", address),
-            &raw,
-            MAX_VALUE + 41,
+        #[cfg(test)]
+        profile::value_open(key.namespace as usize, raw.len());
+        let plain = profiled!(
+            ValueOpen,
+            open(
+                &self.crypto.value,
+                &self.crypto.aad(slot as u8, b"value", address),
+                &raw,
+                MAX_VALUE + 41,
+            )
         )?;
-        if plain.len() as u64 != length || self.crypto.hash(slot as u8, b"value", &plain) != hash {
+        if plain.len() as u64 != length
+            || profiled!(ValueCheck, self.crypto.hash(slot as u8, b"value", &plain)) != hash
+        {
             return Err(Error::Integrity("value digest/length"));
         }
         if key.namespace.global()
@@ -983,7 +1148,49 @@ impl<
         {
             return Err(Error::Integrity("author scope"));
         }
-        Ok(Some(plain.to_vec()))
+        let result = plain.to_vec();
+        self.verified_values
+            .insert(scope, key.bytes, root, version, Some(plain));
+        Ok(Some(result))
+    }
+    fn copy_verified_value(
+        &mut self,
+        key: Key,
+        root: Summary,
+        version: Option<verified_values::Version>,
+    ) -> Result<Option<Vec<u8>>> {
+        let value = self
+            .verified_values
+            .copy(key.slot()? as u8, key.bytes, root)?;
+        if let (Some(version), Some(value)) = (version, value.as_ref())
+            && key.namespace.global()
+            && (value.len() != 64
+                || version.owner > 1
+                || value[..32] != self.root.contexts[usize::from(version.owner)])
+        {
+            return Err(Error::Integrity("cached Author scope"));
+        }
+        #[cfg(test)]
+        profile::cache_hit(value.is_none());
+        Ok(value)
+    }
+    fn buffer_bound_bytes(&self) -> usize {
+        let maps = self.changed.len()
+            + self.baseline_charge.len()
+            + self.new_charge.len()
+            + self.spent.len()
+            + 44;
+        self.tree.buffer_bound_bytes()
+            + self.verified_values.buffer_bound_bytes()
+            + maps * 3 * 256
+            + self
+                .changed
+                .values()
+                .flatten()
+                .map(Vec::capacity)
+                .sum::<usize>()
+            + std::mem::size_of::<Root>()
+            + 3 * (MAX_VALUE + 41)
     }
     fn change_value(&mut self, address: Id, value: Option<Vec<u8>>) -> Result<()> {
         if let Some(old) = self.changed.get(&address) {
@@ -1077,13 +1284,24 @@ impl<
         let baseline = *self.baseline_charge.entry(key).or_insert(old_charge);
         self.new_charge.insert(key, charge.saturating_sub(baseline));
         let address = self.crypto.address(slot as u8, b"value", &key.bytes);
-        let encrypted = seal(
-            &self.crypto.value,
-            &self.crypto.aad(slot as u8, b"value", address),
-            value,
+        let encrypted = profiled!(
+            ValueSeal,
+            seal(
+                &self.crypto.value,
+                &self.crypto.aad(slot as u8, b"value", address),
+                value,
+            )
         )?;
         self.change_value(address, Some(encrypted))?;
+        let version = verified_values::Version::of(&leaf)?;
         self.root.roots[slot] = self.tree.put(slot as u8, self.root.roots[slot], leaf)?;
+        self.verified_values.insert(
+            slot as u8,
+            key.bytes,
+            self.root.roots[slot],
+            Some(version),
+            Some(Zeroizing::new(value.to_vec())),
+        );
         Ok(())
     }
     fn remove(&mut self, key: Key) -> Result<()> {
@@ -1103,7 +1321,10 @@ impl<
         self.root.roots[slot] = self
             .tree
             .remove(slot as u8, self.root.roots[slot], key.bytes)?;
-        self.change_value(self.crypto.address(slot as u8, b"value", &key.bytes), None)
+        self.change_value(self.crypto.address(slot as u8, b"value", &key.bytes), None)?;
+        self.verified_values
+            .insert(slot as u8, key.bytes, self.root.roots[slot], None, None);
+        Ok(())
     }
 }
 

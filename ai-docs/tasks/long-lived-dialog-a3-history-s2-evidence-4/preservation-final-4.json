@@ -1,0 +1,59 @@
+{
+  "status": "MATCH",
+  "baseline_head": "61524df3a77203d73673f47d38decf6b817615e3",
+  "index_paths": [],
+  "frozen_evidence3_files_verified": 42,
+  "previous_preservation_checks_verified": 217,
+  "old_verification_and_release_current_snapshot_exe_pairs_verified": 6,
+  "changed_build_inputs": [
+    "Cargo.toml",
+    "crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs"
+  ],
+  "other_source_inputs_unchanged": 17,
+  "original_s2_fixtures_db_opened": false,
+  "legacy_l1_exe_and_s1_fixture_hashes": "MATCH via prior preservation",
+  "development_environment": "clean53074ff... per human override",
+  "extra_checks": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/quality-final-3.json",
+      "sha256": "4c12c8d787e93f331c5a1ab5070c850830b420ea71c9e2295ef510ed78f1297a",
+      "bytes": 14051
+    },
+    {
+      "path": "ai-docs/development-environment.md",
+      "sha256": "53074ff3734dacd9906ee03cc5c7ded952dedd99d207581f692ff900b9a79f8f",
+      "bytes": 440717
+    },
+    {
+      "path": ".tmp/a3-s2/history-full-4/state-vault.redb",
+      "sha256": "ea5603cf5f06b87b23bae03b8bf31a4c1d1ba200641ede24f18cb941b2930e1e",
+      "bytes": 1182535680
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-implementation-3.md",
+      "sha256": "538f0bf501db47fa8bade58de03df51416596bce9031df57357a9bb49ae660a1",
+      "bytes": 15429
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-verification-profile-amendment-1.md",
+      "sha256": "9d9cad04c6dfa8eb5a215de5d89752e41a629b0602f9fc4af16146fb676a42c1",
+      "bytes": 6764
+    },
+    {
+      "path": ".tmp/a3-s2/history-full-3/state-vault.redb",
+      "sha256": "bc3410a155a55b115f458f541b2fbd3ee6f9900ee33b34ccffd24358d39dbafb",
+      "bytes": 1182797824
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-implementation-review-3.md",
+      "sha256": "fdca062b5e886143abc88aab8fb54f1e3ada3c3cdb039559ed889d9aa3f11307",
+      "bytes": 5269
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-review-evidence-3/review-verification-3.json",
+      "sha256": "9be37a9fd511a5a885edfc6b4ad0ac1bf0931cd7c3658fa27e514518ec3b5dc4",
+      "bytes": 1985
+    }
+  ],
+  "no_commits_or_push": true
+}

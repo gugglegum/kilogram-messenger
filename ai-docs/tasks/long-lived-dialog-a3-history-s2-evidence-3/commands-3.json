@@ -1,0 +1,62 @@
+{
+  "workspace": "E:\\AI-Projects\\kilogram-p2p-messenger",
+  "common_environment": "CARGO_NET_OFFLINE=true; TEMP=TMP=<workspace>/.tmp/a3-s2/tmp; KILOGRAM_CARGO_JOBS=12 after explicit CPU steer",
+  "windows_execution": "Stable runner compiles cargo test --locked --no-run then invokes only constant-name EXE with test-threads1; no direct cargo test execution",
+  "full_normative_profile": "verification",
+  "full_budget_seconds": 2400,
+  "full_attempts": 1,
+  "extra_probes": "one matched pair only after stopped full run, no concurrent heavy work",
+  "no_repeated_unchanged_suites": true,
+  "no_new_product_or_helper_edits": true,
+  "commands": [
+    {
+      "id": "clippy-before-cpu-steer",
+      "command": "./scripts/invoke-cargo-friendly.ps1 -CargoCommand clippy -CargoJobs 2 -CargoArguments @('--locked','--offline','--profile','verification','-p','kilogram-state','--all-targets','--features','redb/cache_metrics','--','-D','warnings')",
+      "result": "PASS3.20s; completed before user Jobs12 steer",
+      "log": "clippy-3.log"
+    },
+    {
+      "id": "compile-normative-before-pin",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -CargoJobs 12 -CargoFeatures @('redb/cache_metrics') -Profile verification -Filter 'history_scale_persistent_100k'",
+      "result": "compiled-only6.21s; no executable started; source19 andEXE3 pinned afterward before measurement",
+      "log": "compile-before-run-3.log"
+    },
+    {
+      "id": "single-normative-full",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -CargoJobs 12 -CargoFeatures @('redb/cache_metrics') -Profile verification -Filter 'history_scale_persistent_100k' -Run -NoCapture",
+      "environment": "KILOGRAM_S2_SCALE_MODE=full; SCALE_DIR=<workspace>/.tmp/a3-s2/history-full-3; PROFILE_KIND absent",
+      "result": "FAIL Bound scenario ceiling2400.1566769s; harness2400.18s; runner2402.542294s; one attempt; fixture retained",
+      "log": "full-history-3.log",
+      "pin": "build-provenance-before-run-3.json",
+      "wall": "runner-wall-3.json"
+    },
+    {
+      "id": "verification-matched-probe",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -CargoJobs 12 -CargoFeatures @('redb/cache_metrics') -Profile verification -Filter 'history_scale_profile_saved_fixture' -Run -NoCapture",
+      "environment": "KILOGRAM_S2_PROFILE_KIND=read; PROFILE_COPY=<workspace>/.tmp/a3-s2/probe-verification-3; PROFILE_PROVENANCE=<evidence3>/matched-probe-copies-3.json; SCALE_MODE absent",
+      "result": "PASS3.09s harness; one12-cut read-only instrumented replay",
+      "log": "probe-verification-3.log",
+      "pin": "probe-verification-before-3.json"
+    },
+    {
+      "id": "compile-release-probe",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -CargoJobs 12 -CargoFeatures @('redb/cache_metrics') -Profile release -Filter 'history_scale_profile_saved_fixture'",
+      "result": "compiled-only21.82s optimized; no executable started; EXE pinned next",
+      "log": "compile-release-probe-3.log"
+    },
+    {
+      "id": "release-matched-probe",
+      "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -CargoJobs 12 -CargoFeatures @('redb/cache_metrics') -Profile release -Filter 'history_scale_profile_saved_fixture' -Run -NoCapture",
+      "environment": "KILOGRAM_S2_PROFILE_KIND=read; PROFILE_COPY=<workspace>/.tmp/a3-s2/probe-release-3; PROFILE_PROVENANCE=<evidence3>/matched-probe-copies-3.json; SCALE_MODE absent",
+      "result": "PASS0.57s harness; one12-cut read-only instrumented replay; diagnostic only, normative profile unchanged",
+      "log": "probe-release-3.log",
+      "pin": "probe-release-before-3.json"
+    },
+    {
+      "id": "format-whitespace",
+      "command": "cargo fmt --all -- --check;git diff --check; source/doc whitespace and conflict scan",
+      "result": "PASS workspace fmt,tracked whitespace,new harness/report whitespace/conflict scan;source19/fullEXE3/releaseEXE3 before/after pairs MATCH",
+      "log": "verification-final-3.log"
+    }
+  ]
+}

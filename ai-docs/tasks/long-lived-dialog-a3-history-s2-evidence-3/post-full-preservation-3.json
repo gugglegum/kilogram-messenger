@@ -1,0 +1,10 @@
+{
+  "post_full_source19": "MATCH",
+  "post_full_stable_exe3": "MATCH",
+  "closed_fixture_path": ".tmp/a3-s2/history-full-3/state-vault.redb",
+  "closed_fixture_bytes": 1182797824,
+  "closed_fixture_sha256": "bc3410a155a55b115f458f541b2fbd3ee6f9900ee33b34ccffd24358d39dbafb",
+  "store_opened_for_this_hash_check": false,
+  "fixture_latest_observed_user_rows": 100016,
+  "single_full_attempt": 1
+}

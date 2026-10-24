@@ -1,0 +1,167 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 0.76s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 1 test
+test vault::indexed_dialog::history::scale::history_scale_persistent_100k ... A3_S2_SCENARIO_START {"budget_seconds":2400.0,"fixture":"E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s2\\history-full-3","full":true,"profiling_enabled":false,"timer_boundary":"before fixture existence check through final store drop; final summary encoding excluded"}
+A3_S2_MEMORY {"app_buffer_bound_bytes":0,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"before_fill","process":{"peak_paged_bytes":1822720,"private_bytes":1703936,"working_set_bytes":11927552},"records":0,"redb_cache_data_bytes":82240,"same_process":29124}
+A3_S2_FILL {"max_app_buffer_bound":26438471,"max_plan":986335,"rows":1000,"seconds":8.5514693,"target":1000}
+A3_S2_MEMORY {"app_buffer_bound_bytes":26438471,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_fill","process":{"peak_paged_bytes":19144704,"private_bytes":16465920,"working_set_bytes":26185728},"records":1000,"redb_cache_data_bytes":7168320,"same_process":29124}
+A3_S2_MEMORY {"app_buffer_bound_bytes":0,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_reopen","process":{"peak_paged_bytes":19144704,"private_bytes":11747328,"working_set_bytes":21094400},"records":1000,"redb_cache_data_bytes":7143744,"same_process":29124}
+A3_S2_MEMORY {"app_buffer_bound_bytes":3668871,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"first_page_live","process":{"peak_paged_bytes":19144704,"private_bytes":12111872,"working_set_bytes":21651456},"records":1000,"redb_cache_data_bytes":7143744,"same_process":29124}
+A3_S2_MEMORY {"app_buffer_bound_bytes":26438471,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_warm_range","process":{"peak_paged_bytes":19144704,"private_bytes":11812864,"working_set_bytes":22056960},"records":1000,"redb_cache_data_bytes":7143744,"same_process":29124}
+A3_S2_MEMORY {"app_buffer_bound_bytes":26438471,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_ordinary_append","process":{"peak_paged_bytes":19144704,"private_bytes":11718656,"working_set_bytes":22196224},"records":1016,"redb_cache_data_bytes":7283008,"same_process":29124}
+A3_S2_MEMORY {"app_buffer_bound_bytes":26438471,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_resume_reopen","process":{"peak_paged_bytes":19144704,"private_bytes":11788288,"working_set_bytes":21962752},"records":1016,"redb_cache_data_bytes":7270720,"same_process":29124}
+A3_S2_SCALE {"all_context_record_counts_before_append":[4081,8145,4081],"append_growth_bytes":0,"append_p95_ms":51.3961,"append_read_bytes":0,"append_syncs":32,"append_write_bytes":6313984,"c2_unchanged":true,"cold_reopen_ms":89.92559999999999,"cumulative_fill_transactions":71,"cumulative_measured_transactions":103,"cumulative_ordinary_transactions":32,"exact_streamed_domain":true,"fill_growth_bytes":17903616,"fill_read_bytes":0,"fill_seconds":7.7706192,"fill_syncs":76,"fill_transactions":71,"fill_write_bytes":31815872,"fixture_text_lanes":2,"full_range_seconds":3.8837972,"latency_samples_bytes":256,"max_app_buffer_bound_bytes":26438471,"max_bulk_plan_bytes":986335,"max_candidates":2,"max_page_point_gets":274,"memory_phases":[{"app_buffer_bound_bytes":0,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"before_fill","process":{"peak_paged_bytes":1822720,"private_bytes":1703936,"working_set_bytes":11927552},"records":0,"redb_cache_data_bytes":82240,"same_process":29124},{"app_buffer_bound_bytes":26438471,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_fill","process":{"peak_paged_bytes":19144704,"private_bytes":16465920,"working_set_bytes":26185728},"records":1000,"redb_cache_data_bytes":7168320,"same_process":29124},{"app_buffer_bound_bytes":0,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_reopen","process":{"peak_paged_bytes":19144704,"private_bytes":11747328,"working_set_bytes":21094400},"records":1000,"redb_cache_data_bytes":7143744,"same_process":29124},{"app_buffer_bound_bytes":3668871,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"first_page_live","process":{"peak_paged_bytes":19144704,"private_bytes":12111872,"working_set_bytes":21651456},"records":1000,"redb_cache_data_bytes":7143744,"same_process":29124},{"app_buffer_bound_bytes":26438471,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_warm_range","process":{"peak_paged_bytes":19144704,"private_bytes":11812864,"working_set_bytes":22056960},"records":1000,"redb_cache_data_bytes":7143744,"same_process":29124},{"app_buffer_bound_bytes":26438471,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_ordinary_append","process":{"peak_paged_bytes":19144704,"private_bytes":11718656,"working_set_bytes":22196224},"records":1016,"redb_cache_data_bytes":7283008,"same_process":29124},{"app_buffer_bound_bytes":26438471,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_resume_reopen","process":{"peak_paged_bytes":19144704,"private_bytes":11788288,"working_set_bytes":21962752},"records":1016,"redb_cache_data_bytes":7270720,"same_process":29124}],"native_e2e_messages":0,"no_n_sized_expected_vector":true,"open_backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":18485248,"max_growth":0,"physical_quota":2147483648,"read_bytes":7143753,"reads":1745,"set_len_calls":0,"sync_calls":1,"sync_nanos":975600,"write_bytes":320,"writes":1},"ordinary_append_count":16,"ordinary_max_node_reads":73,"ordinary_max_plan_bytes":37170,"ordinary_phase_seconds":0.7449816,"ordinary_transactions":32,"own_row_every":16,"page32_p95_ms":123.8023,"page_backend_read_bytes":0,"page_record_limit":32,"point_backend_read_bytes":0,"point_p95_ms":12.2658,"point_phase_ms":72.38369999999999,"records_after_append":1016,"resume_checkpoints":3,"resume_ms":1913.0925,"resume_pages":16,"resume_reopen_ms":103.4133,"setup_transactions_excluded":true,"source_payload_bytes":1024,"source_records_c0":1002,"stage_elapsed_seconds":17.1405073,"synthetic_trusted_dto":true,"target_records":1000,"text_payload_bytes":1024}
+A3_S2_MEMORY {"app_buffer_bound_bytes":26438471,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"before_fill","process":{"peak_paged_bytes":19144704,"private_bytes":11788288,"working_set_bytes":22007808},"records":1016,"redb_cache_data_bytes":7270720,"same_process":29124}
+A3_S2_FILL {"max_app_buffer_bound":27408954,"max_plan":1162481,"rows":2040,"seconds":27.3057473,"target":10000}
+A3_S2_FILL {"max_app_buffer_bound":27904248,"max_plan":1254266,"rows":3064,"seconds":37.2881568,"target":10000}
+A3_S2_FILL {"max_app_buffer_bound":28102314,"max_plan":1292633,"rows":4088,"seconds":48.3194612,"target":10000}
+A3_S2_FILL {"max_app_buffer_bound":28505674,"max_plan":1369338,"rows":5112,"seconds":58.8462281,"target":10000}
+A3_S2_FILL {"max_app_buffer_bound":28598320,"max_plan":1385259,"rows":6008,"seconds":69.4410548,"target":10000}
+A3_S2_FILL {"max_app_buffer_bound":28800386,"max_plan":1420987,"rows":7032,"seconds":81.8482766,"target":10000}
+A3_S2_FILL {"max_app_buffer_bound":28948650,"max_plan":1448798,"rows":8056,"seconds":94.4157809,"target":10000}
+A3_S2_FILL {"max_app_buffer_bound":28975318,"max_plan":1453235,"rows":9080,"seconds":107.4176599,"target":10000}
+A3_S2_FILL {"max_app_buffer_bound":29212662,"max_plan":1496996,"rows":10000,"seconds":119.8551693,"target":10000}
+A3_S2_MEMORY {"app_buffer_bound_bytes":29212662,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_fill","process":{"peak_paged_bytes":97394688,"private_bytes":92975104,"working_set_bytes":102211584},"records":10000,"redb_cache_data_bytes":54919488,"same_process":29124}
+A3_S2_MEMORY {"app_buffer_bound_bytes":0,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_reopen","process":{"peak_paged_bytes":97394688,"private_bytes":84099072,"working_set_bytes":90873856},"records":10000,"redb_cache_data_bytes":67105088,"same_process":29124}
+A3_S2_MEMORY {"app_buffer_bound_bytes":3686679,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"first_page_live","process":{"peak_paged_bytes":97394688,"private_bytes":84803584,"working_set_bytes":91717632},"records":10000,"redb_cache_data_bytes":67105088,"same_process":29124}
+A3_S2_RANGE {"seconds":161.65045,"seen":8192,"target":10000}
+A3_S2_MEMORY {"app_buffer_bound_bytes":29212662,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_warm_range","process":{"peak_paged_bytes":97394688,"private_bytes":92106752,"working_set_bytes":99495936},"records":10000,"redb_cache_data_bytes":67108864,"same_process":29124}
+A3_S2_MEMORY {"app_buffer_bound_bytes":29212662,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_ordinary_append","process":{"peak_paged_bytes":97394688,"private_bytes":93786112,"working_set_bytes":101298176},"records":10016,"redb_cache_data_bytes":66580800,"same_process":29124}
+A3_S2_MEMORY {"app_buffer_bound_bytes":29212662,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_resume_reopen","process":{"peak_paged_bytes":97394688,"private_bytes":89149440,"working_set_bytes":96997376},"records":10016,"redb_cache_data_bytes":67105088,"same_process":29124}
+A3_S2_SCALE {"all_context_record_counts_before_append":[40643,81269,40643],"append_growth_bytes":0,"append_p95_ms":61.7148,"append_read_bytes":32768,"append_syncs":32,"append_write_bytes":9500672,"c2_unchanged":true,"cold_reopen_ms":831.4372,"cumulative_fill_transactions":703,"cumulative_measured_transactions":767,"cumulative_ordinary_transactions":64,"exact_streamed_domain":true,"fill_growth_bytes":129368064,"fill_read_bytes":16965632,"fill_seconds":102.0305517,"fill_syncs":635,"fill_transactions":632,"fill_write_bytes":855270912,"fixture_text_lanes":2,"full_range_seconds":48.8717573,"latency_samples_bytes":4096,"max_app_buffer_bound_bytes":29212662,"max_bulk_plan_bytes":1496996,"max_candidates":2,"max_page_point_gets":274,"memory_phases":[{"app_buffer_bound_bytes":26438471,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"before_fill","process":{"peak_paged_bytes":19144704,"private_bytes":11788288,"working_set_bytes":22007808},"records":1016,"redb_cache_data_bytes":7270720,"same_process":29124},{"app_buffer_bound_bytes":29212662,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_fill","process":{"peak_paged_bytes":97394688,"private_bytes":92975104,"working_set_bytes":102211584},"records":10000,"redb_cache_data_bytes":54919488,"same_process":29124},{"app_buffer_bound_bytes":0,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_reopen","process":{"peak_paged_bytes":97394688,"private_bytes":84099072,"working_set_bytes":90873856},"records":10000,"redb_cache_data_bytes":67105088,"same_process":29124},{"app_buffer_bound_bytes":3686679,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"first_page_live","process":{"peak_paged_bytes":97394688,"private_bytes":84803584,"working_set_bytes":91717632},"records":10000,"redb_cache_data_bytes":67105088,"same_process":29124},{"app_buffer_bound_bytes":29212662,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_warm_range","process":{"peak_paged_bytes":97394688,"private_bytes":92106752,"working_set_bytes":99495936},"records":10000,"redb_cache_data_bytes":67108864,"same_process":29124},{"app_buffer_bound_bytes":29212662,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_ordinary_append","process":{"peak_paged_bytes":97394688,"private_bytes":93786112,"working_set_bytes":101298176},"records":10016,"redb_cache_data_bytes":66580800,"same_process":29124},{"app_buffer_bound_bytes":29212662,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_resume_reopen","process":{"peak_paged_bytes":97394688,"private_bytes":89149440,"working_set_bytes":96997376},"records":10016,"redb_cache_data_bytes":67105088,"same_process":29124}],"native_e2e_messages":0,"no_n_sized_expected_vector":true,"open_backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":147853312,"max_growth":0,"physical_quota":2147483648,"read_bytes":71909705,"reads":17551,"set_len_calls":0,"sync_calls":1,"sync_nanos":972300,"write_bytes":320,"writes":1},"ordinary_append_count":16,"ordinary_max_node_reads":94,"ordinary_max_plan_bytes":39865,"ordinary_phase_seconds":0.9409211,"ordinary_transactions":32,"own_row_every":16,"page32_p95_ms":173.36509999999998,"page_backend_read_bytes":28340224,"page_record_limit":32,"point_backend_read_bytes":270336,"point_p95_ms":15.4419,"point_phase_ms":93.11880000000001,"records_after_append":10016,"resume_checkpoints":3,"resume_ms":24732.7443,"resume_pages":156,"resume_reopen_ms":933.1279999999999,"setup_transactions_excluded":true,"source_payload_bytes":1024,"source_records_c0":10002,"stage_elapsed_seconds":180.9078189,"synthetic_trusted_dto":true,"target_records":10000,"text_payload_bytes":1024}
+A3_S2_MEMORY {"app_buffer_bound_bytes":29212662,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"before_fill","process":{"peak_paged_bytes":97394688,"private_bytes":89149440,"working_set_bytes":97013760},"records":10016,"redb_cache_data_bytes":67105088,"same_process":29124}
+A3_S2_FILL {"max_app_buffer_bound":29220912,"max_plan":1501520,"rows":11040,"seconds":211.5388073,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":29311676,"max_plan":1515382,"rows":12064,"seconds":225.2397829,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":29359076,"max_plan":1527649,"rows":13088,"seconds":239.1563682,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":29482260,"max_plan":1551719,"rows":14112,"seconds":253.0745574,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":29502958,"max_plan":1551719,"rows":15008,"seconds":266.3619177,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":29558120,"max_plan":1563232,"rows":16032,"seconds":281.1572829,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":29719592,"max_plan":1592203,"rows":17056,"seconds":295.679549,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":29751352,"max_plan":1596930,"rows":18080,"seconds":309.7630157,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":29764496,"max_plan":1601686,"rows":19104,"seconds":324.2058252,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":29935394,"max_plan":1635268,"rows":20000,"seconds":337.42121,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":29977140,"max_plan":1639241,"rows":21024,"seconds":352.7921003,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":29977140,"max_plan":1639241,"rows":22048,"seconds":368.8637139,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":29977140,"max_plan":1639241,"rows":23072,"seconds":384.3056795,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30135840,"max_plan":1670300,"rows":24096,"seconds":400.1751537,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30135840,"max_plan":1670300,"rows":25120,"seconds":416.3774715,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30135840,"max_plan":1670300,"rows":26016,"seconds":430.7566888,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30135840,"max_plan":1670300,"rows":27040,"seconds":447.226167,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30158170,"max_plan":1677666,"rows":28064,"seconds":461.7922953,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30158170,"max_plan":1677666,"rows":29088,"seconds":476.6232365,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30304346,"max_plan":1701301,"rows":30112,"seconds":492.7322817,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30393840,"max_plan":1720412,"rows":31008,"seconds":507.1876146,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30393840,"max_plan":1720412,"rows":32032,"seconds":523.86637,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30393840,"max_plan":1720412,"rows":33056,"seconds":538.8645958,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30430694,"max_plan":1731229,"rows":34080,"seconds":553.9349336,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30438064,"max_plan":1731229,"rows":35104,"seconds":569.0060869,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30438064,"max_plan":1731229,"rows":36000,"seconds":582.2556674,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30442206,"max_plan":1731229,"rows":37024,"seconds":597.543916,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30544886,"max_plan":1748542,"rows":38048,"seconds":612.9143479,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30544886,"max_plan":1748542,"rows":39072,"seconds":629.299269,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30552420,"max_plan":1748687,"rows":40096,"seconds":645.2323174,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30569336,"max_plan":1754719,"rows":41120,"seconds":660.8615684,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30655078,"max_plan":1766667,"rows":42016,"seconds":674.5379414,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30655078,"max_plan":1766667,"rows":43040,"seconds":690.3988288,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30704478,"max_plan":1777136,"rows":44064,"seconds":706.2341448,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30729286,"max_plan":1779282,"rows":45088,"seconds":722.0533481,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30741582,"max_plan":1785227,"rows":46112,"seconds":738.3336145,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30766836,"max_plan":1787924,"rows":47008,"seconds":752.5869391,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30863080,"max_plan":1804773,"rows":48032,"seconds":770.0733894,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30863080,"max_plan":1804773,"rows":49056,"seconds":787.8869824,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30863080,"max_plan":1804773,"rows":50080,"seconds":806.5225764,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30863080,"max_plan":1804773,"rows":51104,"seconds":824.6415106,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30863080,"max_plan":1804773,"rows":52000,"seconds":841.3062121,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30882986,"max_plan":1811356,"rows":53024,"seconds":860.0385091,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30927428,"max_plan":1819882,"rows":54048,"seconds":879.3027271,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30927428,"max_plan":1819882,"rows":55072,"seconds":898.8484431,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30927428,"max_plan":1819882,"rows":56096,"seconds":917.537693,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30950530,"max_plan":1825566,"rows":57120,"seconds":937.0477131,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":30950530,"max_plan":1825566,"rows":58016,"seconds":952.256715,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31037620,"max_plan":1841574,"rows":59040,"seconds":971.4125336,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31037620,"max_plan":1841574,"rows":60064,"seconds":990.3250266,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31037620,"max_plan":1841574,"rows":61088,"seconds":1009.4665328,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31037620,"max_plan":1841574,"rows":62112,"seconds":1028.6171028,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31037620,"max_plan":1841574,"rows":63008,"seconds":1045.5589397,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31117014,"max_plan":1854044,"rows":64032,"seconds":1064.9552824,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31117014,"max_plan":1854044,"rows":65056,"seconds":1084.5519267,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31119656,"max_plan":1857466,"rows":66080,"seconds":1103.9212018,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31119656,"max_plan":1857466,"rows":67104,"seconds":1123.1731031,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31119656,"max_plan":1857466,"rows":68000,"seconds":1140.0760271,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31119656,"max_plan":1857466,"rows":69024,"seconds":1159.5467903,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31119656,"max_plan":1857466,"rows":70048,"seconds":1179.0632296,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31119656,"max_plan":1857466,"rows":71072,"seconds":1198.2057187,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31119656,"max_plan":1857466,"rows":72096,"seconds":1217.7592083,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31223456,"max_plan":1877389,"rows":73120,"seconds":1237.2099779,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31223456,"max_plan":1877389,"rows":74016,"seconds":1254.1678497,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31255820,"max_plan":1882609,"rows":75040,"seconds":1273.7416582,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31255820,"max_plan":1882609,"rows":76064,"seconds":1293.6915923,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31312796,"max_plan":1890265,"rows":77088,"seconds":1313.5952128,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31312796,"max_plan":1890265,"rows":78112,"seconds":1333.2703936,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31312796,"max_plan":1890265,"rows":79008,"seconds":1349.5851437,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31344616,"max_plan":1895079,"rows":80032,"seconds":1367.0124072,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31352966,"max_plan":1899400,"rows":81056,"seconds":1385.7100388,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31352966,"max_plan":1899400,"rows":82080,"seconds":1403.6349676,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31352966,"max_plan":1899400,"rows":83104,"seconds":1421.861373,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31352966,"max_plan":1899400,"rows":84000,"seconds":1437.4027677,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31352966,"max_plan":1899400,"rows":85024,"seconds":1455.2050558,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31355608,"max_plan":1902822,"rows":86048,"seconds":1473.3900402,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31375274,"max_plan":1903837,"rows":87072,"seconds":1491.4038151,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31377720,"max_plan":1903982,"rows":88096,"seconds":1509.228149,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31382134,"max_plan":1905519,"rows":89120,"seconds":1526.9645981,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31462408,"max_plan":1918569,"rows":90016,"seconds":1542.6141427,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31462408,"max_plan":1918569,"rows":91040,"seconds":1560.5201415,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31545770,"max_plan":1935592,"rows":92064,"seconds":1578.6001637,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31545770,"max_plan":1935592,"rows":93088,"seconds":1596.4904384,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31545770,"max_plan":1935592,"rows":94112,"seconds":1614.5661843,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31545770,"max_plan":1935592,"rows":95008,"seconds":1630.4954453,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31545770,"max_plan":1935592,"rows":96032,"seconds":1648.5039163,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31545770,"max_plan":1935592,"rows":97056,"seconds":1666.5087345,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31545770,"max_plan":1935592,"rows":98080,"seconds":1684.7314211,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31545770,"max_plan":1935592,"rows":99104,"seconds":1702.8236983,"target":100000}
+A3_S2_FILL {"max_app_buffer_bound":31604366,"max_plan":1943944,"rows":100000,"seconds":1718.887468,"target":100000}
+A3_S2_MEMORY {"app_buffer_bound_bytes":31604366,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_fill","process":{"peak_paged_bytes":107732992,"private_bytes":101998592,"working_set_bytes":114987008},"records":100000,"redb_cache_data_bytes":43213120,"same_process":29124}
+A3_S2_MEMORY {"app_buffer_bound_bytes":0,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_reopen","process":{"peak_paged_bytes":107732992,"private_bytes":102694912,"working_set_bytes":111665152},"records":100000,"redb_cache_data_bytes":67105088,"same_process":29124}
+A3_S2_MEMORY {"app_buffer_bound_bytes":3695583,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"first_page_live","process":{"peak_paged_bytes":107732992,"private_bytes":102862848,"working_set_bytes":112058368},"records":100000,"redb_cache_data_bytes":67105088,"same_process":29124}
+A3_S2_RANGE {"seconds":1780.5577763,"seen":8192,"target":100000}
+A3_S2_RANGE {"seconds":1833.0780663,"seen":16384,"target":100000}
+A3_S2_RANGE {"seconds":1885.554773,"seen":24576,"target":100000}
+A3_S2_RANGE {"seconds":1937.8550752,"seen":32768,"target":100000}
+A3_S2_RANGE {"seconds":1990.5746544,"seen":40960,"target":100000}
+A3_S2_RANGE {"seconds":2043.7946879,"seen":49152,"target":100000}
+A3_S2_RANGE {"seconds":2097.3822246,"seen":57344,"target":100000}
+A3_S2_RANGE {"seconds":2149.919448,"seen":65536,"target":100000}
+A3_S2_RANGE {"seconds":2204.004424,"seen":73728,"target":100000}
+A3_S2_RANGE {"seconds":2258.0092393,"seen":81920,"target":100000}
+A3_S2_RANGE {"seconds":2312.083961,"seen":90112,"target":100000}
+A3_S2_RANGE {"seconds":2365.5864099,"seen":98304,"target":100000}
+A3_S2_MEMORY {"app_buffer_bound_bytes":31604366,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_warm_range","process":{"peak_paged_bytes":107732992,"private_bytes":103866368,"working_set_bytes":114167808},"records":100000,"redb_cache_data_bytes":67108864,"same_process":29124}
+A3_S2_MEMORY {"app_buffer_bound_bytes":31604366,"app_buffer_bound_kind":"conservative live overlay sizes/capacities plus bounded input/plan/encoding; not allocator attribution","cache_metrics_available":true,"configured_cache_bytes":67108864,"phase":"after_ordinary_append","process":{"peak_paged_bytes":107732992,"private_bytes":104108032,"working_set_bytes":114184192},"records":100016,"redb_cache_data_bytes":66363712,"same_process":29124}
+A3_S2_BUDGET_EXCEEDED {"budget_seconds":2400.0,"scenario_seconds":2400.1566769}
+FAILED
+
+failures:
+
+failures:
+    vault::indexed_dialog::history::scale::history_scale_persistent_100k
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 70 filtered out; finished in 2400.18s
+
+Error: Bound("history scale scenario ceiling; fixture retained")
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:285
+Line |
+ 285 |              throw "Stable test executable failed with exit code ${tes …
+     |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Stable test executable failed with exit code 101:
+     | E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
