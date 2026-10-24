@@ -1,0 +1,48 @@
+{
+  "format_version": 1,
+  "accepted_date": "2026-10-24",
+  "baseline_head": "4d1d8b191f6e84c812c10ed3a2fa17a8dfa03629",
+  "decision": "A3-S2 integration contract accepted after H1/H2; product implementation remains a separate review",
+  "review": "ai-docs/tasks/long-lived-dialog-a3-history-s2-integration-review-2.md",
+  "excluded_foreign_file": "ai-docs/development-environment.md",
+  "excluded_sha256": "330ad3c4d1941b213e7e5bef958416a6847d3defb8e368f79d6d21c944efe798",
+  "self_note": "Commit this manifest too; its SHA256 and Git blob are pinned in root dispatch",
+  "files": [
+    {
+      "path": "ai-docs/README.md",
+      "sha256": "d8ed975471b8a575fb17c8b967b7cee3953970cef44eb6d908996db35e3aedc3",
+      "bytes": 148613,
+      "git_blob": "18cfabe1a47782048c0b8e58ae57e1817d2b5120"
+    },
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "sha256": "52818d8f5dc7d93ad596b26ce46f78c6c2f01fa1217242d8eecdf0200efd5409",
+      "bytes": 44473,
+      "git_blob": "4460a1a26c5220388b7026d76dc751e7afceaebf"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-task.md",
+      "sha256": "d59410a688046d52c45c3758ed02b83784f3685481bf0c17909b13786d7a2f2d",
+      "bytes": 10808,
+      "git_blob": "9238d2d40c24e481c5d9fee2d3a5fcdac798b937"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-integration-plan.md",
+      "sha256": "e06e33e6d3619ded8e433d99f5b1870163af4f357ffa933cd81f7ee9e0ddb37d",
+      "bytes": 29697,
+      "git_blob": "da3fc52eff465b770b577050a4479ca408f0aa35"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-integration-review-1.md",
+      "sha256": "73befc0e890ecda2eed6e36c3d6e648016f4d488b40179aa98c8946d2553052c",
+      "bytes": 9537,
+      "git_blob": "27871819cbb89def34dfe7cf6484e15c2f870de2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-integration-review-2.md",
+      "sha256": "74d27c3ad512e9ba198a38e8595e76fd3e9bb94ae858689ff763ab0c3daccb31",
+      "bytes": 7584,
+      "git_blob": "3b8a292caa9e6fe981c97bf9a8789211a56afa41"
+    }
+  ]
+}

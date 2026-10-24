@@ -416,3 +416,55 @@ Parent ожидается f59d285d5704dc2c6969b6f8e416f204223e27cc. После �
 root сверяет tree/blobs/remote и лишь затем определяет следующую A3 implementation
 часть. Foreign development-environment.md исключён, человеческое постоянное
 разрешение commit/push после приёмки действует; повторного запроса пользователю нет.
+
+S1 publication callback получен: `4d1d8b191f6e84c812c10ed3a2fa17a8dfa03629`.
+Root независимо сверил single parent f59d285, exact76 committed paths/blobs, raw
+working hashes и manifest self SHA/blob; actual remote refs/heads/master совпал.
+Index пуст, только foreign development-environment.md dirty с прежним SHA. Non-log
+whitespace checks PASS; accepted raw logs сохранены без косметической переписи.
+Publication принята. Исполнитель закончил turn `01a16d39-143f-78a3-920d-963956df75a7`.
+
+[S2 task](tasks/long-lived-dialog-a3-history-s2-task.md) задаёт следующий слой того же
+разрешённого A3: bounded causal history и stable cursor поверх S1. Сначала короткий
+integration contract уточняет persisted metadata/writer boundary/cursor codec; root
+проверяет до product edits. Тот же чат GPT-6.1 Sol Max/default без Fast, без новых
+агентов. Whole A3/MVP не объявлены завершёнными; scope соседних runtime/native/A2
+работ не расширяется. Root docs после публикации относятся уже к S2.
+
+S2 contract-only поручение успешно отправлено с gpt-6.1-sol/max; local config
+default/no Fast сверено. Compact wait подтвердил active turn
+`01a16d46-bd6c-7252-b564-7d5d666c6dfc`, cursor
+`b945b76a-eaaa-4ff8-8894-3dc54143a9d9:53`. Исполнитель подтвердил scope integration
+plan и остановку до product edits. Следующее root действие — review содержательной
+S2 сдачи, без автоматической приёмки по одному callback.
+
+S2 integration contract получен, SHA0e955f3de2af71aa4411ac2d7d36b16076313dd805d741ab06ab13ab1e1f0bcf.
+[Review1](tasks/long-lived-dialog-a3-history-s2-integration-review-1.md) независимо
+сверило codecs/response arithmetic и текущий S1 credit code. Схема поддержана, но
+H1/H2 требуют contract-only repairs: bijective row↔consume/context scope и fresh
+initializer без переноса прежнего accepted/native state. Product code не менять.
+Executor закончил turn01a16d46-bd6c-7252-b564-7d5d666c6dfc; следующее поручение тому же
+GPT-6.1 Sol Max/default без Fast, один содержательный callback и повторное root review.
+
+H1/H2 repair поручение отправлено с gpt-6.1-sol/max; compact wait подтвердил active
+turn `01a16d6c-a4d0-7b91-8781-7b69676024cd`, cursor
+`b945b76a-eaaa-4ff8-8894-3dc54143a9d9:57`. Исполнитель подтвердил contract-only scope,
+закрытую transition matrix и fresh/bootstrap predicate; product edits ещё запрещены.
+
+## A3-S2: приёмка integration contract
+
+H1/H2 repair получен после completed turn `01a16d6c-a4d0-7b91-8781-7b69676024cd`,
+cursor `b945b76a-eaaa-4ff8-8894-3dc54143a9d9:58`. Входной plan SHA
+`536d23e2d5682a1ddaffcf46f332ed6ef5680742f0aa24602692bac0b0d5c32f`.
+[Review2](tasks/long-lived-dialog-a3-history-s2-integration-review-2.md) принимает
+contract: закрытая purpose matrix, row↔consume bijection, single-C census и fresh
+summary/ledger predicate закрывают H1/H2. Permanent Request94B укладывается в128B;
+cursor/response bounds прежние. Проверен дизайн, а не выполненная S2 реализация.
+Root сверил73 frozen S1 hashes/manifest self/foreign; source drift нет, index пуст.
+
+Следующее поручение прежнему executor — commit/push точного S2 contract manifest
+и самого manifest, без product edits/status artifacts/evidence rewrites. Ожидаемый
+parent `4d1d8b191f6e84c812c10ed3a2fa17a8dfa03629`; foreign исключён. После callback
+root сверяет exact committed paths/blobs и actual remote, затем поручает S2 code
+в пределах task/accepted contract. Новые чаты/агенты/Fast не нужны. Whole A3 уже
+разрешён human01a16bf9…, повторного human approval на эту часть не требуется.

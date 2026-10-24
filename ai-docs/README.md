@@ -80,9 +80,19 @@ root tests5/5 PASS. Принято [явное уточнение memory budget]
 для A3-5:96MiB raw growth и32MiB residual одновременно, остальные bounds сохраняются.
 Final fresh100k run завершён за558.33s; обе memory-фазы и ratios прошли. S1
 [принят итоговым root review](tasks/long-lived-dialog-a3-storage-s1-review-3.md):
-публикация точного allowlist поручается прежнему исполнителю, затем root проверяет
-commit и remote. Весь A3 открыт: protocol2/native continuation, causal history cursor,
+публикация `4d1d8b191f6e84c812c10ed3a2fa17a8dfa03629` подтверждена root:76 committed
+paths/blobs и actual remote master совпали. Весь A3 открыт: protocol2/native continuation, causal history cursor,
 Root2/offline, live L1 migration/runtime/routes ещё впереди.
+Следующая часть — [A3-S2: bounded history/cursor](tasks/long-lived-dialog-a3-history-s2-task.md).
+Прежний OD1 исполнитель сначала сдаёт короткий integration contract по §5 A3;
+product S2 code и публикация только после соответствующего root review.
+[Integration plan](tasks/long-lived-dialog-a3-history-s2-integration-plan.md)
+получен; [review1](tasks/long-lived-dialog-a3-history-s2-integration-review-1.md)
+поддержало cursor/codec/bounded algorithm и потребовало H1/H2: обратного соответствия
+consuming credits новым rows, scope fence и точного fresh-init predicate. Исправления
+[проверены, контракт принят](tasks/long-lived-dialog-a3-history-s2-integration-review-2.md).
+Product S2 ещё не реализован. Сначала публикация принятой документации и сверка root,
+затем реализация history writer/pages/cursor и её отдельное review с проверками.
 
 Независимый обзор архитектуры и пути до пользовательского MVP на ревизии
 `3e82e63`: [аудит 2026-10-22](reviews/2026-10-22-architecture-mvp-audit.md).
