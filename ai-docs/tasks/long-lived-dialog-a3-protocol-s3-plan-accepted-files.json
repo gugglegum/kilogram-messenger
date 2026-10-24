@@ -1,0 +1,64 @@
+{
+  "format_version": 1,
+  "accepted_date": "2026-10-25",
+  "baseline_head": "e136c59b829c6ecc5eb501273f25091e9b9e4789",
+  "branch": "master",
+  "remote": "origin",
+  "destination_ref": "refs/heads/master",
+  "decision": "A3-S3 component implementation plan accepted after R1-R3 contract review; product implementation not started",
+  "review": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-plan-review-2.md",
+  "review_sha256": "172cfaefd378841513bcfb44ab1298bd85d73752ed0b7e614ce02d67ac513830",
+  "publication": "One documentation commit with exact baseline parent, then ordinary non-force push origin/master; no changes during publication",
+  "commit_subject": "docs: accept protocol2 and bounded guard integration plan",
+  "excluded_clean_file": "ai-docs/development-environment.md",
+  "excluded_clean_sha256": "53074ff3734dacd9906ee03cc5c7ded952dedd99d207581f692ff900b9a79f8f",
+  "excluded_dirty_paths": [],
+  "self_note": "Commit this manifest too; its SHA256 and Git blob are pinned separately in root dispatch",
+  "listed_file_count": 6,
+  "source_config_test_file_count": 0,
+  "documentation_file_count": 6,
+  "files": [
+    {
+      "path": "ai-docs/README.md",
+      "sha256": "bee69fa12f5cf836c66cad6a216813fafdfbc2a903f7d3e512119ebd0c31dbcb",
+      "bytes": 154996,
+      "git_blob": "9df1a64ccc06160a5b4b5214c5b7eb0625504291",
+      "category": "documentation"
+    },
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "sha256": "0d06720b3411966e9008ea50d881ab220ad49ce7cb1002b6427b4f82fe2a5dee",
+      "bytes": 70713,
+      "git_blob": "bfb89e1d60fe0991cf85edafcd40aceed8be3924",
+      "category": "documentation"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-task.md",
+      "sha256": "5bc111106d61bc5493a1ff21b40844b4a27b51cd9b1b99f15763f1df3b96a522",
+      "bytes": 8607,
+      "git_blob": "949b263cbb7f33b84c542d143b18b779bd82fba9",
+      "category": "documentation"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-plan.md",
+      "sha256": "b0e90087f43142d844f7de25963f62efe0bfb43f9c23743dc816847ab4c13a49",
+      "bytes": 85553,
+      "git_blob": "626b805d8da25c77fdcea51ff4964659c7409b99",
+      "category": "documentation"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-plan-review-1.md",
+      "sha256": "f46662b070a138a9e90a12f5bad9395ebaa54afa9ce5e6b4c3556a4b5a3bdbc4",
+      "bytes": 8172,
+      "git_blob": "d07863a5800fc28f7fca6052cd262459b74a189b",
+      "category": "documentation"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-plan-review-2.md",
+      "sha256": "172cfaefd378841513bcfb44ab1298bd85d73752ed0b7e614ce02d67ac513830",
+      "bytes": 6522,
+      "git_blob": "f0859c72066ce189d3f5d010204d42160e38e0c9",
+      "category": "documentation"
+    }
+  ]
+}

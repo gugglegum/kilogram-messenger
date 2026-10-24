@@ -152,6 +152,17 @@ compiler flags/hashes и независимо повторил OS-process cursor
 source/config/test files и связанные docs/evidence. Это storage/library slice;
 whole A3/native/runtime/MVP и абсолютная UI latency остаются открытыми.
 
+S2 опубликован commit `e136c59b829c6ecc5eb501273f25091e9b9e4789`; root независимо
+подтвердил remote и268 exact paths/blobs, чистое дерево после публикации.
+Следующая часть A3 — [S3 protocol/native guard contract](tasks/long-lived-dialog-a3-protocol-s3-task.md):
+сначала конкретный codec2/Guard2/storage-seam plan и matrix, затем root review.
+Rust реализация S3 пока не начата; ограничения старого L1 не ослабляются.
+
+S3 plan принят после исправлений:
+[review2](tasks/long-lived-dialog-a3-protocol-s3-plan-review-2.md).
+Уточнены genesis request в storage Binding, authority resolution и differential matrix.
+Сначала exact commit/push документации, затем отдельное поручение реализации.
+
 Независимый обзор архитектуры и пути до пользовательского MVP на ревизии
 `3e82e63`: [аудит 2026-10-22](reviews/2026-10-22-architecture-mvp-audit.md).
 В нём отдельно перечислены active-path blockers, dormant mechanisms и

@@ -707,3 +707,51 @@ Publication: один commit и обычный push origin/master с parent61524
 `tasks/long-lived-dialog-a3-history-s2-accepted-files.json` и pinned manifest. Исходные
 bytes/evidence не менять; development-environment.md clean53074ff… исключён.
 Executor возвращает SHA/path/blob verification/push; root независимо проверяет remote.
+
+S2 publication independently verified root: commit
+`e136c59b829c6ecc5eb501273f25091e9b9e4789`, единственный parent61524df…,
+exact268 changed paths/tree blobs,267 listed raw files+manifest MATCH. Local
+HEAD/origin/master и actual `git ls-remote` совпали; рабочее дерево/index были чистыми.
+development-environment.md clean53074ff… исключён. Accepted manifest raw SHA3e5afca2…,
+blob3fb94629… сохранены; ни один frozen report/evidence не переписан.
+
+Следующее поручение в рамках уже разрешённого A3 —
+[S3 protocol/native guard plan](tasks/long-lived-dialog-a3-protocol-s3-task.md),
+тому же OD1 GPT-6.1 Sol Max/default без Fast. Только integration contract/matrix:
+codec2 trust boundaries, bounded Guard2/native counters, atomic seen/checkpoint seam
+с S1/S2 и component acceptance. Сначала root review; без product edits/commit/push.
+Runtime activation/migration/transport acceptance остаются последующими частями A3.
+
+S3 contract task отправлен прежнему исполнителю; active turn
+`01a16f0c-427a-79a2-aeb1-d2acb73d8525` подтверждён через wait_threads.
+Task: 8607 bytes, SHA256
+`5bc111106d61bc5493a1ff21b40844b4a27b51cd9b1b99f15763f1df3b96a522`.
+Исполнитель подтвердил contract-only работу и остановку перед review. Callback root
+поручен с прежним прямым разрешением пользователя; новые settings/chats не нужны.
+
+2026-10-25: S3 draft 62252 bytes, SHA256
+`3acd22a1557dd1acb29a8fda71b96af28fdae7df11b9a9e13fd9d2dd013a8ece`, получен root
+через read_thread и локальный файл. Callback исполнителя auto-review отклонил дважды;
+это не свидетельство истечения срока разрешения, причина сообщена как отсутствие
+признанного human authorization. Root не выдаёт пересказ за новое разрешение.
+
+[S3 review1](tasks/long-lived-dialog-a3-protocol-s3-plan-review-1.md) требует R1 genesis
+request/Binding compatibility, R2 exact authority resolution и R3 differential matrix.
+Тому же GPT-6.1 Sol Max/default без Fast отправлена только доработка плана, без product
+edits/commit/push. Повторять отклонённый callback не поручено; результат в финальном
+ответе исполнителя доступен root для обычного read-only review.
+
+Пользователь 2026-10-25 напрямую подтвердил создание новых чатов и отправку сообщений
+в существующие чаты этого проекта: root human message
+`01a16fb2-f93a-7ba3-8d21-bb74deacec7c` в чате `01a164ec-589c-7b41-bc34-3ba158d1f22b`.
+Отдельное прямое разрешение callback находится в самом чате OD1, human message
+`01a16faf-e3a0-76a3-912a-1249ed4ca1e5`: результаты, проблемы и уточнения по Kilogram
+в root, последующие этапы/циклы, до явного отзыва. Root прочитал исходный userMessage
+через read_thread. Эта запись — указатель на human source, не его замена.
+
+Исправленный S3 plan 85514 bytes, SHA2563b149b5c… проверен:
+[review2](tasks/long-lived-dialog-a3-protocol-s3-plan-review-2.md), R1–R3 закрыты на уровне
+контракта. Приняты normalization genesis metadata при exact wire, O/A/F/R resolution
+с mandatory capture/F link и37 differential comparisons. Следующий dispatch — только
+публикация6 принятых документов и manifest с baseline e136c59b…; затем root проверяет
+remote/tree и поручает implementation. Root меняет в plan только статус/ссылку review2.
