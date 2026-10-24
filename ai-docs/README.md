@@ -61,14 +61,28 @@ root независимо сверил82 committed blobs и remote master. A2 о
 продолжение OD1 за511 Text/направление, ограниченные ресурсы операций, paged history,
 offline catch-up и поведение существующих L1 profiles. Пользователь поручил прежнему
 исполнителю OD1 на GPT-6.1 Sol Max без Fast. Сначала контракт и root review/repair,
-затем реализация и review/repair; commit/push каждой принятой части. Сейчас разрешена
-подготовка контракта, продуктовая реализация ещё не начата.
+затем реализация и review/repair; commit/push каждой принятой части.
 [Первое review контракта](tasks/long-lived-dialog-a3-contract-review-1.md) поддержало
 направление, offline authorization и forward-only переход; перед приёмкой нужны
 R1–R3: production redb growth bounds, единый fresh/existing mode reference и точный
 preflight внутренних native counters. Исправления [проверены и контракт принят](tasks/long-lived-dialog-a3-contract-review-2.md).
 Сначала публикация принятой документации и независимая сверка root; затем первая
 часть реализации — indexed storage/integrity/ресурсы. Runtime A3 ещё не реализован.
+Контракт опубликован в `f59d285d5704dc2c6969b6f8e416f204223e27cc`; root независимо
+сверил7 committed blobs и remote master. Разрешена первая часть реализации:
+[A3-S1 storage](tasks/long-lived-dialog-a3-storage-s1-task.md), с отдельной сдачей
+на review до подключения нового wire/migration/runtime.
+[Первая реализация](tasks/long-lived-dialog-a3-storage-s1-implementation.md)
+[проверена root](tasks/long-lived-dialog-a3-storage-s1-review-1.md): независимые
+regressions выявили retained charge и receipt ordinal ошибки. Исправления R1/R2
+[приняты повторным review](tasks/long-lived-dialog-a3-storage-s1-review-2.md),
+root tests5/5 PASS. Принято [явное уточнение memory budget](tasks/long-lived-dialog-a3-memory-budget-amendment-1.md)
+для A3-5:96MiB raw growth и32MiB residual одновременно, остальные bounds сохраняются.
+Final fresh100k run завершён за558.33s; обе memory-фазы и ratios прошли. S1
+[принят итоговым root review](tasks/long-lived-dialog-a3-storage-s1-review-3.md):
+публикация точного allowlist поручается прежнему исполнителю, затем root проверяет
+commit и remote. Весь A3 открыт: protocol2/native continuation, causal history cursor,
+Root2/offline, live L1 migration/runtime/routes ещё впереди.
 
 Независимый обзор архитектуры и пути до пользовательского MVP на ревизии
 `3e82e63`: [аудит 2026-10-22](reviews/2026-10-22-architecture-mvp-audit.md).

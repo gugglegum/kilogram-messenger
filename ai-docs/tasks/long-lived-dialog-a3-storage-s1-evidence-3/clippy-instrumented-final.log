@@ -1,0 +1,5 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 2.72s

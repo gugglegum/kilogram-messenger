@@ -1,0 +1,27 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+error: this `if` statement can be collapsed
+   --> crates\kilogram-state\tests\a3_s1_root_review.rs:426:17
+    |
+426 | /                 if let Mutation::Put { key, .. } = row {
+427 | |                     if key.namespace == Namespace::ReceiptA {
+428 | |                         key.context = 1;
+429 | |                     }
+430 | |                 }
+    | |_________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+    = note: `-D clippy::collapsible-if` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+    |
+426 ~                 if let Mutation::Put { key, .. } = row
+427 ~                     && key.namespace == Namespace::ReceiptA {
+428 |                         key.context = 1;
+429 ~                     }
+    |
+
+error: could not compile `kilogram-state` (test "a3_s1_root_review") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...

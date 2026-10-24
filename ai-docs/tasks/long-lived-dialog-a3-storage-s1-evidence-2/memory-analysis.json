@@ -1,0 +1,603 @@
+{
+  "mode": "diagnostic only; accepted64MiB raw growth not PASS",
+  "setup": "single process10632; verification debug_assertions=true; production cache64MiB; redb/cache_metrics instrumentation only",
+  "rows": [
+    {
+      "records": 1016,
+      "private_bytes": 4513792,
+      "redb_cache_data_bytes": 2580800,
+      "private_minus_cache_bytes": 1932992,
+      "live_test_expected_bytes": 0,
+      "max_returned_page_payload_bytes": 32768
+    },
+    {
+      "records": 10016,
+      "private_bytes": 29569024,
+      "redb_cache_data_bytes": 24412480,
+      "private_minus_cache_bytes": 5156544,
+      "live_test_expected_bytes": 0,
+      "max_returned_page_payload_bytes": 32768
+    },
+    {
+      "records": 100048,
+      "private_bytes": 95612928,
+      "redb_cache_data_bytes": 67108864,
+      "private_minus_cache_bytes": 28504064,
+      "live_test_expected_bytes": 0,
+      "max_returned_page_payload_bytes": 32768
+    }
+  ],
+  "raw_private_growth_bytes": 91099136,
+  "reported_cache_data_growth_bytes": 64528064,
+  "cache_excluded_private_growth_bytes": 26571072,
+  "largest_test_expected_vector_capacity_bytes": 3201536,
+  "observed_vector_private_increment_bytes": 3207168,
+  "private_after_largest_vector_drop_bytes": 95612928,
+  "private_after_largest_store_drop_bytes": 3579904,
+  "inference": "Excess is present before test vector. Database-associated retained cache/metadata and allocator overhead dominates; exact native-heap attribution is not claimed.",
+  "narrow_proposal": "Keep actual redb cache64MiB, buffers192MiB and absolute process384MiB. For warm1k-to100k compare both raw PrivateBytes growth<=96MiB and (PrivateBytes minus measured cache data) growth<=32MiB, excluding only explicitly reported test buffers. Requires root architecture acceptance; not applied.",
+  "final_initial100k_run": "not started before root review of measured metric conflict; prepared separate fixture .tmp/a3-s1-repair-2/persistent-scale-initial",
+  "samples": [
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": null,
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "before_open",
+      "process": {
+        "peak_paged_bytes": 1032192,
+        "private_bytes": 1024000,
+        "working_set_bytes": 7127040
+      },
+      "records": 0,
+      "redb_cache_data_bytes": null,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 4214784,
+        "max_growth": 0,
+        "physical_quota": 1073741824,
+        "read_bytes": 2580809,
+        "reads": 631,
+        "set_len_calls": 0,
+        "sync_calls": 1,
+        "sync_nanos": 5030300,
+        "write_bytes": 320,
+        "writes": 1
+      },
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "after_open",
+      "process": {
+        "peak_paged_bytes": 4415488,
+        "private_bytes": 4407296,
+        "working_set_bytes": 12849152
+      },
+      "records": 1016,
+      "redb_cache_data_bytes": 2580800,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 32768,
+      "backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 4214784,
+        "max_growth": 0,
+        "physical_quota": 1073741824,
+        "read_bytes": 2580809,
+        "reads": 631,
+        "set_len_calls": 0,
+        "sync_calls": 1,
+        "sync_nanos": 5030300,
+        "write_bytes": 320,
+        "writes": 1
+      },
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "after_full_warm_no_expected_vector",
+      "process": {
+        "peak_paged_bytes": 4521984,
+        "private_bytes": 4513792,
+        "working_set_bytes": 13275136
+      },
+      "records": 1016,
+      "redb_cache_data_bytes": 2580800,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 4214784,
+        "max_growth": 0,
+        "physical_quota": 1073741824,
+        "read_bytes": 2580809,
+        "reads": 631,
+        "set_len_calls": 0,
+        "sync_calls": 1,
+        "sync_nanos": 5030300,
+        "write_bytes": 320,
+        "writes": 1
+      },
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "test_expected_vector_live",
+      "process": {
+        "peak_paged_bytes": 4587520,
+        "private_bytes": 4579328,
+        "working_set_bytes": 13389824
+      },
+      "records": 1016,
+      "redb_cache_data_bytes": 2580800,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 32512
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 4214784,
+        "max_growth": 0,
+        "physical_quota": 1073741824,
+        "read_bytes": 2580809,
+        "reads": 631,
+        "set_len_calls": 0,
+        "sync_calls": 1,
+        "sync_nanos": 5030300,
+        "write_bytes": 320,
+        "writes": 1
+      },
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "after_test_expected_vector_drop",
+      "process": {
+        "peak_paged_bytes": 4587520,
+        "private_bytes": 4579328,
+        "working_set_bytes": 13389824
+      },
+      "records": 1016,
+      "redb_cache_data_bytes": 2580800,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 4214784,
+        "max_growth": 0,
+        "physical_quota": 1073741824,
+        "read_bytes": 2580809,
+        "reads": 631,
+        "set_len_calls": 0,
+        "sync_calls": 17,
+        "sync_nanos": 41301500,
+        "write_bytes": 1779008,
+        "writes": 434
+      },
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "after_ordinary_16_appends",
+      "process": {
+        "peak_paged_bytes": 4804608,
+        "private_bytes": 4796416,
+        "working_set_bytes": 14155776
+      },
+      "records": 1032,
+      "redb_cache_data_bytes": 2621760,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": null,
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "after_store_drop",
+      "process": {
+        "peak_paged_bytes": 4804608,
+        "private_bytes": 2633728,
+        "working_set_bytes": 11358208
+      },
+      "records": 1032,
+      "redb_cache_data_bytes": null,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": null,
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "before_open",
+      "process": {
+        "peak_paged_bytes": 4804608,
+        "private_bytes": 2633728,
+        "working_set_bytes": 11358208
+      },
+      "records": 0,
+      "redb_cache_data_bytes": null,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 33689600,
+        "max_growth": 0,
+        "physical_quota": 1073741824,
+        "read_bytes": 24412489,
+        "reads": 5961,
+        "set_len_calls": 0,
+        "sync_calls": 1,
+        "sync_nanos": 4866500,
+        "write_bytes": 320,
+        "writes": 1
+      },
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "after_open",
+      "process": {
+        "peak_paged_bytes": 29577216,
+        "private_bytes": 29569024,
+        "working_set_bytes": 38367232
+      },
+      "records": 10016,
+      "redb_cache_data_bytes": 24412480,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 32768,
+      "backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 33689600,
+        "max_growth": 0,
+        "physical_quota": 1073741824,
+        "read_bytes": 24412489,
+        "reads": 5961,
+        "set_len_calls": 0,
+        "sync_calls": 1,
+        "sync_nanos": 4866500,
+        "write_bytes": 320,
+        "writes": 1
+      },
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "after_full_warm_no_expected_vector",
+      "process": {
+        "peak_paged_bytes": 29577216,
+        "private_bytes": 29569024,
+        "working_set_bytes": 38400000
+      },
+      "records": 10016,
+      "redb_cache_data_bytes": 24412480,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 33689600,
+        "max_growth": 0,
+        "physical_quota": 1073741824,
+        "read_bytes": 24412489,
+        "reads": 5961,
+        "set_len_calls": 0,
+        "sync_calls": 1,
+        "sync_nanos": 4866500,
+        "write_bytes": 320,
+        "writes": 1
+      },
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "test_expected_vector_live",
+      "process": {
+        "peak_paged_bytes": 30224384,
+        "private_bytes": 30216192,
+        "working_set_bytes": 39038976
+      },
+      "records": 10016,
+      "redb_cache_data_bytes": 24412480,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 320512
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 33689600,
+        "max_growth": 0,
+        "physical_quota": 1073741824,
+        "read_bytes": 24412489,
+        "reads": 5961,
+        "set_len_calls": 0,
+        "sync_calls": 1,
+        "sync_nanos": 4866500,
+        "write_bytes": 320,
+        "writes": 1
+      },
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "after_test_expected_vector_drop",
+      "process": {
+        "peak_paged_bytes": 30224384,
+        "private_bytes": 30216192,
+        "working_set_bytes": 39038976
+      },
+      "records": 10016,
+      "redb_cache_data_bytes": 24412480,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 33689600,
+        "max_growth": 0,
+        "physical_quota": 1073741824,
+        "read_bytes": 24412489,
+        "reads": 5961,
+        "set_len_calls": 0,
+        "sync_calls": 17,
+        "sync_nanos": 50565600,
+        "write_bytes": 2774336,
+        "writes": 677
+      },
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "after_ordinary_16_appends",
+      "process": {
+        "peak_paged_bytes": 31072256,
+        "private_bytes": 31064064,
+        "working_set_bytes": 39821312
+      },
+      "records": 10032,
+      "redb_cache_data_bytes": 24473920,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": null,
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "after_store_drop",
+      "process": {
+        "peak_paged_bytes": 31072256,
+        "private_bytes": 2113536,
+        "working_set_bytes": 11571200
+      },
+      "records": 10032,
+      "redb_cache_data_bytes": null,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": null,
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "before_open",
+      "process": {
+        "peak_paged_bytes": 31072256,
+        "private_bytes": 2113536,
+        "working_set_bytes": 11571200
+      },
+      "records": 0,
+      "redb_cache_data_bytes": null,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 269488128,
+        "max_growth": 0,
+        "physical_quota": 1073741824,
+        "read_bytes": 244117833,
+        "reads": 59586,
+        "set_len_calls": 0,
+        "sync_calls": 1,
+        "sync_nanos": 1017700,
+        "write_bytes": 320,
+        "writes": 1
+      },
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "after_open",
+      "process": {
+        "peak_paged_bytes": 95698944,
+        "private_bytes": 95645696,
+        "working_set_bytes": 102424576
+      },
+      "records": 100048,
+      "redb_cache_data_bytes": 67105088,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 32768,
+      "backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 269488128,
+        "max_growth": 0,
+        "physical_quota": 1073741824,
+        "read_bytes": 958669129,
+        "reads": 234037,
+        "set_len_calls": 0,
+        "sync_calls": 1,
+        "sync_nanos": 1017700,
+        "write_bytes": 320,
+        "writes": 1
+      },
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "after_full_warm_no_expected_vector",
+      "process": {
+        "peak_paged_bytes": 95698944,
+        "private_bytes": 95612928,
+        "working_set_bytes": 102498304
+      },
+      "records": 100048,
+      "redb_cache_data_bytes": 67108864,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 269488128,
+        "max_growth": 0,
+        "physical_quota": 1073741824,
+        "read_bytes": 958669129,
+        "reads": 234037,
+        "set_len_calls": 0,
+        "sync_calls": 1,
+        "sync_nanos": 1017700,
+        "write_bytes": 320,
+        "writes": 1
+      },
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "test_expected_vector_live",
+      "process": {
+        "peak_paged_bytes": 102072320,
+        "private_bytes": 98820096,
+        "working_set_bytes": 105701376
+      },
+      "records": 100048,
+      "redb_cache_data_bytes": 67108864,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 3201536
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 269488128,
+        "max_growth": 0,
+        "physical_quota": 1073741824,
+        "read_bytes": 958669129,
+        "reads": 234037,
+        "set_len_calls": 0,
+        "sync_calls": 1,
+        "sync_nanos": 1017700,
+        "write_bytes": 320,
+        "writes": 1
+      },
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "after_test_expected_vector_drop",
+      "process": {
+        "peak_paged_bytes": 102072320,
+        "private_bytes": 95612928,
+        "working_set_bytes": 102498304
+      },
+      "records": 100048,
+      "redb_cache_data_bytes": 67108864,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 269488128,
+        "max_growth": 0,
+        "physical_quota": 1073741824,
+        "read_bytes": 959185225,
+        "reads": 234155,
+        "set_len_calls": 0,
+        "sync_calls": 17,
+        "sync_nanos": 59325400,
+        "write_bytes": 3818816,
+        "writes": 932
+      },
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "after_ordinary_16_appends",
+      "process": {
+        "peak_paged_bytes": 102072320,
+        "private_bytes": 95629312,
+        "working_set_bytes": 102592512
+      },
+      "records": 100064,
+      "redb_cache_data_bytes": 66855232,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    },
+    {
+      "app_returned_payload_bytes": 0,
+      "backend": null,
+      "configured_cache_bytes": 67108864,
+      "debug_assertions": true,
+      "phase": "after_store_drop",
+      "process": {
+        "peak_paged_bytes": 102072320,
+        "private_bytes": 3579904,
+        "working_set_bytes": 12500992
+      },
+      "records": 100064,
+      "redb_cache_data_bytes": null,
+      "same_process": 10632,
+      "test_expected_capacity_bytes": 0
+    }
+  ]
+}

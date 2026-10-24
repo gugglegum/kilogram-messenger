@@ -15,6 +15,7 @@ mod vault;
 
 pub use key_provider::{VaultKeyLoadOutcome, VaultKeyProtection};
 pub use key_recovery::{VaultKeyRecoveryExport, VaultKeyRecoveryImport, VaultRecoveryWitness};
+pub use vault::indexed_dialog;
 pub use vault::{
     DeviceIdentityStateRepository, EncryptedStateVault, STATE_VAULT_FILE, STATE_VAULT_KEY_FILE,
     StateMirrorRepository, StateRecordKind, TrustStateRepository, TypedShadowReadReport,
@@ -959,6 +960,9 @@ fn recover(root: &Path) -> Result<(), StateError> {
     }
     let manifest_path = active.join(MANIFEST_FILE);
     let raw = io_at(&manifest_path, fs::read(&manifest_path))?;
+    if vault::has_indexed_anchor(root)? {
+        return Err(StateError::OrderedWriterRequired);
+    }
     let manifest: TransactionManifest =
         serde_json::from_slice(&raw).map_err(|source| StateError::InvalidManifest {
             path: manifest_path,

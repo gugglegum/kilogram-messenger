@@ -1,0 +1,72 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling redb v4.2.0
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 10.84s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 1 test
+test vault::indexed_dialog::tests::memory::indexed_memory_diagnostic_preserved_fixtures ... A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":null,"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"before_open","process":{"peak_paged_bytes":1032192,"private_bytes":1024000,"working_set_bytes":7127040},"records":0,"redb_cache_data_bytes":null,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":4214784,"max_growth":0,"physical_quota":1073741824,"read_bytes":2580809,"reads":631,"set_len_calls":0,"sync_calls":1,"sync_nanos":5030300,"write_bytes":320,"writes":1},"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"after_open","process":{"peak_paged_bytes":4415488,"private_bytes":4407296,"working_set_bytes":12849152},"records":1016,"redb_cache_data_bytes":2580800,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY_RANGE records=1016 elapsed_seconds=0.6288864
+A3_S1_MEMORY {"app_returned_payload_bytes":32768,"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":4214784,"max_growth":0,"physical_quota":1073741824,"read_bytes":2580809,"reads":631,"set_len_calls":0,"sync_calls":1,"sync_nanos":5030300,"write_bytes":320,"writes":1},"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"after_full_warm_no_expected_vector","process":{"peak_paged_bytes":4521984,"private_bytes":4513792,"working_set_bytes":13275136},"records":1016,"redb_cache_data_bytes":2580800,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":4214784,"max_growth":0,"physical_quota":1073741824,"read_bytes":2580809,"reads":631,"set_len_calls":0,"sync_calls":1,"sync_nanos":5030300,"write_bytes":320,"writes":1},"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"test_expected_vector_live","process":{"peak_paged_bytes":4587520,"private_bytes":4579328,"working_set_bytes":13389824},"records":1016,"redb_cache_data_bytes":2580800,"same_process":10632,"test_expected_capacity_bytes":32512}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":4214784,"max_growth":0,"physical_quota":1073741824,"read_bytes":2580809,"reads":631,"set_len_calls":0,"sync_calls":1,"sync_nanos":5030300,"write_bytes":320,"writes":1},"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"after_test_expected_vector_drop","process":{"peak_paged_bytes":4587520,"private_bytes":4579328,"working_set_bytes":13389824},"records":1016,"redb_cache_data_bytes":2580800,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":4214784,"max_growth":0,"physical_quota":1073741824,"read_bytes":2580809,"reads":631,"set_len_calls":0,"sync_calls":17,"sync_nanos":41301500,"write_bytes":1779008,"writes":434},"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"after_ordinary_16_appends","process":{"peak_paged_bytes":4804608,"private_bytes":4796416,"working_set_bytes":14155776},"records":1032,"redb_cache_data_bytes":2621760,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":null,"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"after_store_drop","process":{"peak_paged_bytes":4804608,"private_bytes":2633728,"working_set_bytes":11358208},"records":1032,"redb_cache_data_bytes":null,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":null,"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"before_open","process":{"peak_paged_bytes":4804608,"private_bytes":2633728,"working_set_bytes":11358208},"records":0,"redb_cache_data_bytes":null,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":33689600,"max_growth":0,"physical_quota":1073741824,"read_bytes":24412489,"reads":5961,"set_len_calls":0,"sync_calls":1,"sync_nanos":4866500,"write_bytes":320,"writes":1},"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"after_open","process":{"peak_paged_bytes":29577216,"private_bytes":29569024,"working_set_bytes":38367232},"records":10016,"redb_cache_data_bytes":24412480,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY_RANGE records=10016 elapsed_seconds=6.5305666
+A3_S1_MEMORY {"app_returned_payload_bytes":32768,"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":33689600,"max_growth":0,"physical_quota":1073741824,"read_bytes":24412489,"reads":5961,"set_len_calls":0,"sync_calls":1,"sync_nanos":4866500,"write_bytes":320,"writes":1},"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"after_full_warm_no_expected_vector","process":{"peak_paged_bytes":29577216,"private_bytes":29569024,"working_set_bytes":38400000},"records":10016,"redb_cache_data_bytes":24412480,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":33689600,"max_growth":0,"physical_quota":1073741824,"read_bytes":24412489,"reads":5961,"set_len_calls":0,"sync_calls":1,"sync_nanos":4866500,"write_bytes":320,"writes":1},"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"test_expected_vector_live","process":{"peak_paged_bytes":30224384,"private_bytes":30216192,"working_set_bytes":39038976},"records":10016,"redb_cache_data_bytes":24412480,"same_process":10632,"test_expected_capacity_bytes":320512}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":33689600,"max_growth":0,"physical_quota":1073741824,"read_bytes":24412489,"reads":5961,"set_len_calls":0,"sync_calls":1,"sync_nanos":4866500,"write_bytes":320,"writes":1},"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"after_test_expected_vector_drop","process":{"peak_paged_bytes":30224384,"private_bytes":30216192,"working_set_bytes":39038976},"records":10016,"redb_cache_data_bytes":24412480,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":33689600,"max_growth":0,"physical_quota":1073741824,"read_bytes":24412489,"reads":5961,"set_len_calls":0,"sync_calls":17,"sync_nanos":50565600,"write_bytes":2774336,"writes":677},"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"after_ordinary_16_appends","process":{"peak_paged_bytes":31072256,"private_bytes":31064064,"working_set_bytes":39821312},"records":10032,"redb_cache_data_bytes":24473920,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":null,"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"after_store_drop","process":{"peak_paged_bytes":31072256,"private_bytes":2113536,"working_set_bytes":11571200},"records":10032,"redb_cache_data_bytes":null,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":null,"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"before_open","process":{"peak_paged_bytes":31072256,"private_bytes":2113536,"working_set_bytes":11571200},"records":0,"redb_cache_data_bytes":null,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":269488128,"max_growth":0,"physical_quota":1073741824,"read_bytes":244117833,"reads":59586,"set_len_calls":0,"sync_calls":1,"sync_nanos":1017700,"write_bytes":320,"writes":1},"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"after_open","process":{"peak_paged_bytes":95698944,"private_bytes":95645696,"working_set_bytes":102424576},"records":100048,"redb_cache_data_bytes":67105088,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY_RANGE records=100048 elapsed_seconds=78.3121519
+A3_S1_MEMORY {"app_returned_payload_bytes":32768,"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":269488128,"max_growth":0,"physical_quota":1073741824,"read_bytes":958669129,"reads":234037,"set_len_calls":0,"sync_calls":1,"sync_nanos":1017700,"write_bytes":320,"writes":1},"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"after_full_warm_no_expected_vector","process":{"peak_paged_bytes":95698944,"private_bytes":95612928,"working_set_bytes":102498304},"records":100048,"redb_cache_data_bytes":67108864,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":269488128,"max_growth":0,"physical_quota":1073741824,"read_bytes":958669129,"reads":234037,"set_len_calls":0,"sync_calls":1,"sync_nanos":1017700,"write_bytes":320,"writes":1},"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"test_expected_vector_live","process":{"peak_paged_bytes":102072320,"private_bytes":98820096,"working_set_bytes":105701376},"records":100048,"redb_cache_data_bytes":67108864,"same_process":10632,"test_expected_capacity_bytes":3201536}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":269488128,"max_growth":0,"physical_quota":1073741824,"read_bytes":958669129,"reads":234037,"set_len_calls":0,"sync_calls":1,"sync_nanos":1017700,"write_bytes":320,"writes":1},"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"after_test_expected_vector_drop","process":{"peak_paged_bytes":102072320,"private_bytes":95612928,"working_set_bytes":102498304},"records":100048,"redb_cache_data_bytes":67108864,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":269488128,"max_growth":0,"physical_quota":1073741824,"read_bytes":959185225,"reads":234155,"set_len_calls":0,"sync_calls":17,"sync_nanos":59325400,"write_bytes":3818816,"writes":932},"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"after_ordinary_16_appends","process":{"peak_paged_bytes":102072320,"private_bytes":95629312,"working_set_bytes":102592512},"records":100064,"redb_cache_data_bytes":66855232,"same_process":10632,"test_expected_capacity_bytes":0}
+A3_S1_MEMORY {"app_returned_payload_bytes":0,"backend":null,"configured_cache_bytes":67108864,"debug_assertions":true,"phase":"after_store_drop","process":{"peak_paged_bytes":102072320,"private_bytes":3579904,"working_set_bytes":12500992},"records":100064,"redb_cache_data_bytes":null,"same_process":10632,"test_expected_capacity_bytes":0}
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 46 filtered out; finished in 97.39s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      15018  9.68
+release            5747  1.86
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=59830
+target_gib=64.33
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

@@ -1,0 +1,45 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 5.51s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 1 test
+test vault::indexed_dialog::tests::scale::indexed_scale_small_verification ... A3_S1_SCALE {"append_growth_bytes":0,"append_p50_ms":11.158,"append_p95_ms":14.0509,"append_read_bytes":0,"append_syncs":16,"append_write_bytes":1778688,"cold_reopen_ms":30.0821,"fill_grow_bytes":3158016,"fill_read_bytes":0,"fill_seconds":2.2666453,"fill_syncs":4,"fill_write_bytes":3445376,"full_range_read_seconds":0.6179831,"history_cursor_implemented":false,"max_bulk_plan_bytes":1030424,"native_e2e_messages":0,"open_backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":4214784,"max_growth":0,"physical_quota":1073741824,"read_bytes":2552137,"reads":624,"set_len_calls":0,"sync_calls":1,"sync_nanos":946200,"write_bytes":320,"writes":1},"page32_p50_ms":19.717399999999998,"page32_p95_ms":20.3541,"page_backend_read_bytes":0,"physical_nodes":1999,"physical_values":1000,"process_private_bytes":5558272,"retained_records_after_samples":1016,"single_append_max_node_reads":13,"single_append_max_plan_bytes":18101,"synthetic_storage_records":true,"target_records":1000}
+A3_S1_SCALE_FINAL {"commits_this_run":18,"elapsed_seconds":3.4745603,"final_counts":[1016,2031,1016],"fixture_preserved":true,"stages":[{"append_growth_bytes":0,"append_p50_ms":11.158,"append_p95_ms":14.0509,"append_read_bytes":0,"append_syncs":16,"append_write_bytes":1778688,"cold_reopen_ms":30.0821,"fill_grow_bytes":3158016,"fill_read_bytes":0,"fill_seconds":2.2666453,"fill_syncs":4,"fill_write_bytes":3445376,"full_range_read_seconds":0.6179831,"history_cursor_implemented":false,"max_bulk_plan_bytes":1030424,"native_e2e_messages":0,"open_backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":4214784,"max_growth":0,"physical_quota":1073741824,"read_bytes":2552137,"reads":624,"set_len_calls":0,"sync_calls":1,"sync_nanos":946200,"write_bytes":320,"writes":1},"page32_p50_ms":19.717399999999998,"page32_p95_ms":20.3541,"page_backend_read_bytes":0,"physical_nodes":1999,"physical_values":1000,"process_private_bytes":5558272,"retained_records_after_samples":1016,"single_append_max_node_reads":13,"single_append_max_plan_bytes":18101,"synthetic_storage_records":true,"target_records":1000}]}
+A3_S1_SCALE_PROGRESS records=10000 elapsed_seconds=30.42
+A3_S1_SCALE {"append_growth_bytes":0,"append_p50_ms":13.3344,"append_p95_ms":14.7466,"append_read_bytes":0,"append_syncs":16,"append_write_bytes":2753536,"cold_reopen_ms":242.2766,"fill_grow_bytes":32632832,"fill_read_bytes":0,"fill_seconds":30.4239136,"fill_syncs":25,"fill_write_bytes":118302976,"full_range_read_seconds":6.5579458,"history_cursor_implemented":false,"max_bulk_plan_bytes":1905274,"native_e2e_messages":0,"open_backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":33689600,"max_growth":0,"physical_quota":1073741824,"read_bytes":24367433,"reads":5950,"set_len_calls":0,"sync_calls":1,"sync_nanos":2425900,"write_bytes":320,"writes":1},"page32_p50_ms":20.953699999999998,"page32_p95_ms":21.8544,"page_backend_read_bytes":0,"physical_nodes":19999,"physical_values":10000,"process_private_bytes":32870400,"retained_records_after_samples":10016,"single_append_max_node_reads":15,"single_append_max_plan_bytes":19087,"synthetic_storage_records":true,"target_records":10000}
+A3_S1_SCALE_FINAL {"commits_this_run":36,"elapsed_seconds":37.7825304,"final_counts":[10016,20031,10016],"fixture_preserved":true,"stages":[{"append_growth_bytes":0,"append_p50_ms":13.3344,"append_p95_ms":14.7466,"append_read_bytes":0,"append_syncs":16,"append_write_bytes":2753536,"cold_reopen_ms":242.2766,"fill_grow_bytes":32632832,"fill_read_bytes":0,"fill_seconds":30.4239136,"fill_syncs":25,"fill_write_bytes":118302976,"full_range_read_seconds":6.5579458,"history_cursor_implemented":false,"max_bulk_plan_bytes":1905274,"native_e2e_messages":0,"open_backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":33689600,"max_growth":0,"physical_quota":1073741824,"read_bytes":24367433,"reads":5950,"set_len_calls":0,"sync_calls":1,"sync_nanos":2425900,"write_bytes":320,"writes":1},"page32_p50_ms":20.953699999999998,"page32_p95_ms":21.8544,"page_backend_read_bytes":0,"physical_nodes":19999,"physical_values":10000,"process_private_bytes":32870400,"retained_records_after_samples":10016,"single_append_max_node_reads":15,"single_append_max_plan_bytes":19087,"synthetic_storage_records":true,"target_records":10000}]}
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 45 filtered out; finished in 41.73s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      14967  9.58
+release            5111  1.74
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=59143
+target_gib=64.11
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

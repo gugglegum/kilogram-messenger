@@ -27,6 +27,8 @@ use serde::{Deserialize, Serialize};
 use tempfile::{NamedTempFile, TempDir};
 use zeroize::{ZeroizeOnDrop, Zeroizing};
 
+pub mod indexed_dialog;
+pub(crate) use indexed_dialog::has_indexed_anchor;
 mod ordered;
 pub use ordered::{ORDERED_ACCOUNT_FENCE, OrderedCommit, OrderedMutation, OrderedVault};
 pub(crate) use ordered::{has_ordered_fence, recover_ordered_journal};

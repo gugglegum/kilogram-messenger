@@ -1,0 +1,148 @@
+{
+  "format_version": 1,
+  "scope": "A3-S1 synthetic storage component/integrity/fault/growth; no native E2E",
+  "baseline": "f59d285d5704dc2c6969b6f8e416f204223e27cc",
+  "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Filter indexed_component -CargoJobs 2 -Run -NoCapture",
+  "environment": {
+    "TEMP": ".tmp/a3-s1",
+    "CARGO_NET_OFFLINE": "true",
+    "RUST_TEST_THREADS": "1",
+    "TMP": ".tmp/a3-s1"
+  },
+  "result": {
+    "passed": 13,
+    "seconds": 87.35,
+    "failed": 0
+  },
+  "harness_sha256": "6f89a49b98ca5464d1966b7e0daca9017535b81af308dfba5152ae32e9402d54",
+  "sources": [
+    {
+      "path": "crates/kilogram-state/src/lib.rs",
+      "sha256": "29c166411acba2f2b5c8e006d3054fe9f0b9d0d47dae8314d681b4064ab2f4b6"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault.rs",
+      "sha256": "7123a6a5674eaedb9f104875cb633abaac14aaa62ac66213e26b49bebf22dce1"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/authenticated_index.rs",
+      "sha256": "53fd9f647edb4e2ca63d7b0c99376c06528d3c97eb6fc13946d0877f12295ea4"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "sha256": "45466b6e9228b7cce25d91a9dc0c02638aa26d94f077bdc929e6586516aebc8a"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/backend.rs",
+      "sha256": "dce286803c4d4a23e7e844bee406362afa603ac469b8eda75f0ea4d76f2b9fa4"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credit_tests.rs",
+      "sha256": "0e82a531d5ded5198109b3debad47803c8dc9fa163dbd7e4240d69fcdf3f75e1"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "sha256": "c111e358cde7089e971eb9ae149fbe44df8511e2721c03bfc9aa11fd9774f7c8"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/integrity_tests.rs",
+      "sha256": "f683e44f4114a63b5a7850f2d995d77c62d6dcae88f11d7a9ec26719c2a9834f"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/process_tests.rs",
+      "sha256": "79dcd0c8e8bb8cb524d1eeab4b0c1bb4e645f7dd53ecc60bfbf2897ddae85dc4"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/scale_tests.rs",
+      "sha256": "3efb36d36782409dac1d5eb782c78c0b0bc75fc8607e83bf69e4f48a57750706"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/tests.rs",
+      "sha256": "10ec50072b18984012909ad3a245ad66713e5d7e35151c3f4655ca807b56d450"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "sha256": "2335832c4b9202d2faa47936279196b3485c72dc0036cacba87cc09845a50989"
+    }
+  ],
+  "max_plan": {
+    "encoded_bytes": 15231748,
+    "node_reads": 0,
+    "changed_nodes": 1799
+  },
+  "growth": {
+    "synthetic_records": 4017,
+    "delta": 134742016,
+    "new_length": 269488128,
+    "reopen_continuation": true,
+    "plan_bytes": 33461,
+    "total_seconds": 57.4907081,
+    "write_delta": 184640,
+    "append_ms": 288.7038,
+    "sync_delta": 2,
+    "batch": 1,
+    "old_length": 134746112,
+    "node_reads": 39
+  },
+  "capacity": {
+    "requested": 2109440,
+    "retained_external": 317,
+    "refused_quota": 270545212,
+    "continued_records": 288
+  },
+  "kills": [
+    {
+      "owned_pid": 13500,
+      "point": "before_commit",
+      "recovered_records": 0
+    },
+    {
+      "owned_pid": 42940,
+      "point": "after_commit",
+      "recovered_records": 2
+    },
+    {
+      "owned_pid": 3128,
+      "point": "after_extension_sync",
+      "recovered_records": 288
+    }
+  ],
+  "io_cases": [
+    {
+      "recovered_new": false,
+      "returned_error": true,
+      "point": "before_write",
+      "index": 0
+    },
+    {
+      "recovered_new": false,
+      "returned_error": true,
+      "point": "after_write",
+      "index": 0
+    },
+    {
+      "recovered_new": true,
+      "returned_error": true,
+      "point": "before_sync",
+      "index": 0
+    },
+    {
+      "recovered_new": true,
+      "returned_error": true,
+      "point": "after_sync",
+      "index": 0
+    },
+    {
+      "recovered_new": true,
+      "returned_error": false,
+      "point": "after_sync",
+      "index": 1
+    },
+    {
+      "recovered_new": true,
+      "returned_error": false,
+      "point": "after_sync",
+      "index": 2
+    }
+  ]
+}

@@ -1,0 +1,462 @@
+{
+  "format_version": 1,
+  "accepted_date": "2026-10-24",
+  "baseline_head": "f59d285d5704dc2c6969b6f8e416f204223e27cc",
+  "decision": "A3-S1 indexed storage accepted after R1/R2 fixes and final100k R3 with explicit memory amendment1",
+  "review": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-review-3.md",
+  "excluded_foreign_file": "ai-docs/development-environment.md",
+  "excluded_sha256": "330ad3c4d1941b213e7e5bef958416a6847d3defb8e368f79d6d21c944efe798",
+  "self_note": "Commit this manifest too; its SHA256 and Git blob are pinned in root dispatch",
+  "files": [
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "sha256": "548d3328bb2c8daed68a67499f4beac123c8e4ca829a30ea54d301d2eb337d14",
+      "bytes": 40061,
+      "git_blob": "6e63415fe6c7182ccbac02c30724eccd2721ec61"
+    },
+    {
+      "path": "ai-docs/README.md",
+      "sha256": "05437abfdba643a9e386d7af6eed011ad02db857de539ae51fb9011cc571e432",
+      "bytes": 147486,
+      "git_blob": "e3f2ef06a4541f6427609673c56fba5d28015878"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-memory-budget-amendment-1.md",
+      "sha256": "6f02c684d11ce5ae54cef58857719e60ab465032c0b2fb01308234b1a9abab5c",
+      "bytes": 7099,
+      "git_blob": "828d21ac083ba8456d05344098786ec9057709b2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-2/affected-state.log",
+      "sha256": "6ff1d241a9291ad61c9a73327c1b31b32006be681d2c1317da36b3417158965e",
+      "bytes": 5087,
+      "git_blob": "7adee0379f572d59dd833256898430d4c4e153a4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-2/clippy-final.log",
+      "sha256": "b895b3b1245d35533ad0f962a5e09ba47ce65bde7bf24505edf5156e37b3d0c6",
+      "bytes": 260,
+      "git_blob": "697db10a791ff07fe01ae3bd231ae60fa70dd3ca"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-2/clippy-instrumented-final.log",
+      "sha256": "e24ed5ebd67979ae5020428798fc03d05c2028a02d2586b99d1a8be886c28a27",
+      "bytes": 286,
+      "git_blob": "ca1d5fa269c837481836c20ef3930a70a6e8dea0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-2/clippy-test-style-initial.log",
+      "sha256": "bd91ec53d1d4b5eca8eb32282da2360806b60feae4a56a263b1c48be1f2fadac",
+      "bytes": 1248,
+      "git_blob": "537e0fc4bda96a58c7cf23c22617ea75e6c90341"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-2/extra-test-fixture-initial.log",
+      "sha256": "86cd220969f33def47a001018a1179d6975c4bf477eaf3f550cc770619b6460a",
+      "bytes": 4795,
+      "git_blob": "6ac4c79c0425158a6f88d27ff42ff1cd71f7bace"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-2/memory-analysis.json",
+      "sha256": "3ac7c897470b58920ce948200107c4d8aab7c0f80966f929b8046b3f995206c6",
+      "bytes": 18338,
+      "git_blob": "6cf5ef20280422134a5dd3a4de806b199e38bbf4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-2/memory-diagnostic.log",
+      "sha256": "5366f50bfa57cb4b3835e6338bb2c07277bd39418e51c73159082d30328a699f",
+      "bytes": 13532,
+      "git_blob": "5a308e283418776290964beb4508c2be1e7c15a4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-2/quality-final.json",
+      "sha256": "c0e35f28703cd7eba3e51f28f90b459903436147a4d6703d9d3858775e5bd6cc",
+      "bytes": 1431,
+      "git_blob": "4b047ba7d786b3bb5246d789d791da20f2d4068a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-2/root-regressions.log",
+      "sha256": "d7804a87945c13f03b766e8c8846bc245f351345f212a065298b2230616d8ca8",
+      "bytes": 5730,
+      "git_blob": "aba8321affa22d086ce2f07a0e97e803a28efb2d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-2/scale-small-phases.log",
+      "sha256": "f76c4379b5d81f98f3e26b4c1be10a9ddb39c5859d26e86b56d39d9faba20dd9",
+      "bytes": 26080,
+      "git_blob": "2dcbef3770f3030179abd3eea2fc48c82e51c613"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-2/source-diagnostic.json",
+      "sha256": "e39e62018a625ff30e04f2435a56b394b667a015d759bc0f7de900548e24f0c5",
+      "bytes": 3944,
+      "git_blob": "d22f0f2c150d97b497d995ed1e40567bc99d26c6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-2/source-final.json",
+      "sha256": "e17fc9ba14964d143be993a6d002f80b20dd5197d45f57a06edb964290faf55d",
+      "bytes": 4939,
+      "git_blob": "cd777bcde9a17d1f7faac734d07fb5c5203332a7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-2/validation-result.json",
+      "sha256": "2b9242707c72b7675f8351e97809b29985a35bae0ba4baf31b7b930ff10b8337",
+      "bytes": 20372,
+      "git_blob": "3b6d0ee570bca3733a8c2b38b2d88c61f2bd018c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-3/clippy-default-final.log",
+      "sha256": "497a2ec74d9f82c967185f73b6dfce87846909d726b102f04fe2146985f0dc3d",
+      "bytes": 260,
+      "git_blob": "d81870745006380705d416673c4506dd0dec7838"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-3/clippy-helper-initial.log",
+      "sha256": "e28b52f636e52dd673f1e1cd4587f1449ef55891887e8b80b7e22fb876529ba8",
+      "bytes": 1400,
+      "git_blob": "0f2c9a25ec96064de22d341eb1b955dad2ec42de"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-3/clippy-instrumented-final.log",
+      "sha256": "f5a49eb5b3294df3853be69ec88bdfa5afb19eb735d3b2c62dc397872a1fe457",
+      "bytes": 260,
+      "git_blob": "1e8f0d9b3d33a55b61a9c15b4c4a42945f2299b7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-3/clippy-instrumented.log",
+      "sha256": "708a1e79e1dbfea731c2b939486b29e856a296196939bab25a046d64d2122cb0",
+      "bytes": 260,
+      "git_blob": "b4cfb45262af4458713edee383a90feeb8bd5c26"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-3/default-helper-harness.sha256",
+      "sha256": "8b55d0bcf206e00b7989e4fbb9e798c638d925cb340548ee3d5bb7d1f577b976",
+      "bytes": 66,
+      "git_blob": "06aa668bf545711ff2fcb3c4e00e565ec0079a08"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-3/gate-helper-final.log",
+      "sha256": "bc6e294278a750bdbeeb88d538cad6968c0793abbcdb8ca14d6cb4eaf347a892",
+      "bytes": 2161,
+      "git_blob": "150157279a80c8a5754c74bb25bfa144fc5b001d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-3/gate-helper.log",
+      "sha256": "f17bd370bd28cdf012e9beec31b10041c60dbb45cb8af97e9dbc74062d6ad613",
+      "bytes": 2161,
+      "git_blob": "74f6d91acbecfa37d342b67aebf258fd7ab03b3b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-3/initial100k-final.log",
+      "sha256": "54ecf798582ed55be739f233a77f5ac57e8eae181dcfaa57b494c784b8bd0ee0",
+      "bytes": 52035,
+      "git_blob": "ca05c1c66e30c6e30b6356687fdc5582182f3103"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-3/initial100k-result.json",
+      "sha256": "8712d424ead30dc49a8796936d97b1120969d1aa778c0a624857179e20804dc9",
+      "bytes": 63082,
+      "git_blob": "2544c54236ee19e420b153a8a54b7813aeb89e62"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-3/optional-metrics-default.log",
+      "sha256": "ec940fa12df6d0a10b8f365b49b44f4c5a8954c5b7b0c273490eaf353316e069",
+      "bytes": 2946,
+      "git_blob": "4c5a7c563c4c14fdf604aa22996d06f36d108427"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-3/preservation-during-run.json",
+      "sha256": "a371b43890a4141651c9695157d9e07b8021accf01e65d22fd5609398c17f3e2",
+      "bytes": 1481,
+      "git_blob": "745dd61192fa4f09a6479e94dc7a2e337f6737c5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-3/quality-final.json",
+      "sha256": "d9a8956ac46f59c40ea76521e970fd0766717d3b6c7e04a181455062cbc47817",
+      "bytes": 1583,
+      "git_blob": "932700430ea2e4b6b4429cb0c5ad165f8fc881f8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-3/small-instrumented.log",
+      "sha256": "fa49ad89d7bea31779e112db0502921e0784f8ca112c8e9f295eaed8587b078f",
+      "bytes": 35265,
+      "git_blob": "76bed4c7523571f64c694bee1bdea2d71644975c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-3/source-final.json",
+      "sha256": "af4662621709ed73c4280eebc6c142cbafbcd32c736fc614dd1864a7d9daaa78",
+      "bytes": 4787,
+      "git_blob": "76566f493af2f587af37829d6c306975d326fe6b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence-3/validation-result.json",
+      "sha256": "cd741ca95770a344a9d3368fce0a3a25ac7f46741b18b20b82c5dd8a75412757",
+      "bytes": 6964,
+      "git_blob": "fa2eb94154d27112a3e201fc597804c54d5ba330"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence/clippy-final.log",
+      "sha256": "4317c142642ffd92cc7ed1613144e97d32d75079f1c0ad04fba0145c3cd89df5",
+      "bytes": 520,
+      "git_blob": "6c76083930eb47f5b863f2504f1d3e5e4e8d4ad6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence/clippy-release-final.log",
+      "sha256": "c2528746f23498c75f765abbfd2f8267461aa0dedff12cf5f93f1523eebcf067",
+      "bytes": 1999,
+      "git_blob": "02bd8432cf4f325efe35550ede5dbbca857fda6a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence/cold-release-final.log",
+      "sha256": "0742ee90da17a46ee9c8950cccce4247e7b4ead9a681f7529e5d59f20b606640",
+      "bytes": 3416,
+      "git_blob": "fedbd50e1c5d51ecb81087f20b72ea9b44153a20"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence/component-initial.json",
+      "sha256": "cd9006e773466dd3339371315f6b03020e58df7881affdfa1176c6aaad2cd408",
+      "bytes": 4413,
+      "git_blob": "dbf2320c052bc4f82d801e7448a59121b40815d3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence/scale-final.log",
+      "sha256": "45e0cc67e2ba204863a7842fad445a0eb6786e8ce32e7e15c7bf6ed7e0a4e0d3",
+      "bytes": 3825,
+      "git_blob": "dcf15d704ec5b57a9ed5a69ac47574ee44d479ec"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence/scale-pre-cache-result.json",
+      "sha256": "8976fa0d01714a7e84c044abc2fedb44e57fe96373587ac6b6763f720f0ac522",
+      "bytes": 5195,
+      "git_blob": "e7cbd0bfca023f8b82cc47a494c07d33077e639d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence/scale-pre-cache.log",
+      "sha256": "12758bc310e020e9568a342eccffd5cbf0fc17a0a4460d5bbccc9f5da4e82d16",
+      "bytes": 8010,
+      "git_blob": "fcba1f61b870717f646cba1c928b134a0e77e299"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence/scale-release-final.log",
+      "sha256": "eed156f8df43802674b9e457bd07a77d06ebc155fc996c2694f7927b6a8f48f5",
+      "bytes": 3732,
+      "git_blob": "4456e6b6cb9ef9b384f08534f99bef8621dcfda9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence/scale-small-final.log",
+      "sha256": "ba77256e042f2a32c017a8fcd4ca3b71775ab340b9d1f068bb531fcfc0cc5626",
+      "bytes": 6153,
+      "git_blob": "70a83496ca653fc394724a1e6d3c1764f449bffe"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence/source-final.json",
+      "sha256": "e545b25d3fc161f119bb5d2ee229bd89d873b7a37c412ee9a578db83d417bcf6",
+      "bytes": 3564,
+      "git_blob": "f31107bfe4f4a7e786a583df02e32a0f6d4b318d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence/source-pre-cache.json",
+      "sha256": "84f7116878101f6d70fad2fb2278bd644e55e3482389a2df5ba0956b4ecaba1f",
+      "bytes": 3287,
+      "git_blob": "4f191911e57ecf160f141ba0fd74954cf88b1a0f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence/source-preservation-counterexample.json",
+      "sha256": "5713794590ebb8b64e3268d14359505f36a0b753e950c6e74c905f833f1bcfda",
+      "bytes": 1089,
+      "git_blob": "b5c281346813e86f035dc6dfb41d55700186fede"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence/state-before-capture.log",
+      "sha256": "f82a606429c2f70f51f073b01a4091bdc4c8002bde3f177e1f2bb6c331872012",
+      "bytes": 6833,
+      "git_blob": "e17db0f796b5a7ff2876d57dbab7bd5543c5dd7f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence/state-final.log",
+      "sha256": "4f651479b80740ab7631b726f42d30fe64561c686763eb69441d434dd82c10d0",
+      "bytes": 7227,
+      "git_blob": "c1deaf32e8eab4e22f44d9987561c37a63a97908"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence/state-pre-cache.log",
+      "sha256": "191a057716f552a0d9fcf092e90eb349785b9d2cc01551869d64156e8e974fa2",
+      "bytes": 7170,
+      "git_blob": "35895bcda1099b3a246c3e63c5c6e63aa24e07c6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-evidence/validation-result.json",
+      "sha256": "8b9544a33c344a093cf11b572d9735d68f0a656bd83c3ab60c5bc7626105502d",
+      "bytes": 14257,
+      "git_blob": "a940958c796706b16a69bca38c326687f2101246"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-implementation-2.md",
+      "sha256": "eb827bca2de7987877280fc37be74563d90ccc45cde01de789532eabd6867394",
+      "bytes": 15732,
+      "git_blob": "e85be9d44bcc93ff4c8a385ec7afe8b7afc09560"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-implementation-3.md",
+      "sha256": "3431c11a2f4bae947d57b00608514ae5f171bbe49bb18aa65a4c21c4523c2f58",
+      "bytes": 13153,
+      "git_blob": "56d1c0d34f3847b1b4f80c0cbfb9043b6caecca1"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-implementation.md",
+      "sha256": "c9f9e50b2fcd9462eb20a15bbce38c96ba4bb44e94e3415fbbc291c07c314d62",
+      "bytes": 26486,
+      "git_blob": "efe4d81e651abc1429e7c1d3be2f8bd3b5343b2a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-review-1-evidence/independent-regressions-baseline.log",
+      "sha256": "12a43e97ba8ec4b74023cb01ac2ee84156a85341c7ccb4d1f390aa2a49421fe0",
+      "bytes": 2697,
+      "git_blob": "65207439ef812e6ac74fb8db9612a21ca9eb06e6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-review-1-evidence/regressions-baseline.rs",
+      "sha256": "94c0ebb3909d38e663fe64b7772c471438de11cdb8da066f09d4ccee908e544b",
+      "bytes": 4573,
+      "git_blob": "4fce68af54aa16bf91d7bedc79be7cecd1c2f8a3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-review-1-evidence/sandbox-temp-init-error.log",
+      "sha256": "0343fe4140d4a976bc9095a4154d2c97e75f21a3d3bb66b6b9f5cdcaf3259091",
+      "bytes": 2149,
+      "git_blob": "40adfea96b8ec663e48bc9c3ec797ab43f534d53"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-review-1.md",
+      "sha256": "1c4b9a6a3d443ba83832a3a1c7a17a1d5971ac74fa4a67146a9779020e9968cb",
+      "bytes": 11403,
+      "git_blob": "bd976fab224b9ba4072bd82fe263083c34685608"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-review-2-evidence/independent-regressions.log",
+      "sha256": "e059aa468b7abaf740ceed195480c7fe199a11d5591d3f2175a7090573a603bb",
+      "bytes": 5730,
+      "git_blob": "c1c830be634435659590690ebb8f5990b575fbe4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-review-2.md",
+      "sha256": "e01439325b07b3c060dbc52c64b58edfe92ef7a860818a878537ce1a65ff2f26",
+      "bytes": 6266,
+      "git_blob": "33562e383ed57b495c615c08dc1ea86569c92aa7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-review-3-evidence/independent-verification.json",
+      "sha256": "3814e782b9b6aea3185843da0f9c5d448d045bd47b2566f28b1f0aa824956cae",
+      "bytes": 1493,
+      "git_blob": "a30a90c80e2330a3bb6dd7467f9c83178089bdc0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-review-3.md",
+      "sha256": "3885d5a9b974b71df446b471b2ca4d12540a2e9be4feae7df217262df2efadf9",
+      "bytes": 7070,
+      "git_blob": "b9db53a19b248f9f5ed9f8b61371214de9f8cb4c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-task.md",
+      "sha256": "7a23b1950c1002643a6e6a82618eb79b38abc1418782c21ecd0b587003c855d5",
+      "bytes": 12357,
+      "git_blob": "b5de306201985316a0707ce4a6848c71eb5fc7ce"
+    },
+    {
+      "path": "crates/kilogram-state/src/lib.rs",
+      "sha256": "29c166411acba2f2b5c8e006d3054fe9f0b9d0d47dae8314d681b4064ab2f4b6",
+      "bytes": 68401,
+      "git_blob": "5201bff33779a51128a6b3abc3a78624348a2202"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault.rs",
+      "sha256": "7123a6a5674eaedb9f104875cb633abaac14aaa62ac66213e26b49bebf22dce1",
+      "bytes": 154787,
+      "git_blob": "76decd61a13bbf45388da79165af7c3570393186"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/authenticated_index.rs",
+      "sha256": "903152e901c41cfc23dbfb1938d4009ee5ad1d7e02383529405ef36b43c8cca1",
+      "bytes": 15102,
+      "git_blob": "b3e88ebdcad6433beb310f82e7526f0b9c9ebc37"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "sha256": "980d4c778696dd367be082889b6a5c374f9e76bcb6f794ac5ea525c04078e0ad",
+      "bytes": 39925,
+      "git_blob": "5dd0133f646132b9757b793cadf8cb41a3aaa49a"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/backend.rs",
+      "sha256": "3984bec7840897cca9873eebc31a22bbd69ad070311b5e7977dd8e0e1798b93b",
+      "bytes": 10535,
+      "git_blob": "f261ad02fa1eba8e3a72d36963882a71b4f73a82"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credit_tests.rs",
+      "sha256": "f999495964f872f8b0b75593aa09baa33eb0c315dac1700493ccdfd0f544220a",
+      "bytes": 16466,
+      "git_blob": "a493eb7b28499771d22708c4fd9ca24c8335df79"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "sha256": "9b45d27ce14e58ce89f6ba53e956091b99e9a159d47ef1743a98eeea2f928405",
+      "bytes": 24134,
+      "git_blob": "2cf005e695771ef23f6e42e4035bed0acf6e8d50"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/integrity_tests.rs",
+      "sha256": "fc87a0e74420ac93b6ff55ca5fe030287fe5f8fde43851eec8e2ae2e839883db",
+      "bytes": 11307,
+      "git_blob": "b2e1535a461e4ec9a173e15a2f233664e61e56f1"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/memory_tests.rs",
+      "sha256": "8707de6f0f26cdb71418df72229109c463ef5678929a2ac95a411dff9f292573",
+      "bytes": 7143,
+      "git_blob": "222234c1a37f5b27fe4aaba8e33a06c47901b93a"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/process_tests.rs",
+      "sha256": "79dcd0c8e8bb8cb524d1eeab4b0c1bb4e645f7dd53ecc60bfbf2897ddae85dc4",
+      "bytes": 9083,
+      "git_blob": "08444872dfd7468e1eb85ac81eeda5e2e1a73e6e"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/scale_gates.rs",
+      "sha256": "7b6ad9bc224e22827d993b80920c637dd799cbf8bfa492f6a9376923860cab21",
+      "bytes": 10490,
+      "git_blob": "54bad78aeb829f073ae4431d9032f50449ecd1aa"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/scale_tests.rs",
+      "sha256": "886e52d2ba785901481b29a5525b0da532c7c7de1ac38a997d7e08ee91b07a6e",
+      "bytes": 12817,
+      "git_blob": "9d534026736a19c060cc343af0cbd8daec5cf899"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/tests.rs",
+      "sha256": "23f0c3f7f33805d8fa25e63beb35f958e1f11d357d2b1357a6355286b7e903ea",
+      "bytes": 3985,
+      "git_blob": "f27db7238e38149e72c6fed9cd2280412e041763"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "sha256": "4233d0db60a483d208b14024aa1229c5659946d1235fd52f370a34acdb1cc1dd",
+      "bytes": 9575,
+      "git_blob": "0255e73d4806ea3584906a27f6ad99a429b23856"
+    },
+    {
+      "path": "crates/kilogram-state/tests/a3_s1_root_review.rs",
+      "sha256": "4dce6a35515599e8ac3049f9df9f452cbb2051b69b257bb1cd1fab38aab20c05",
+      "bytes": 15711,
+      "git_blob": "e973f3060dc26e4348d2efd8157c493a0f4bef3e"
+    },
+    {
+      "path": "scripts/run-cargo-tests-stable.ps1",
+      "sha256": "c2cba5140b56c99a6482884e049426ba0ed54e90b572aebf01ace45e65cd06c3",
+      "bytes": 10839,
+      "git_blob": "9382cadb6ae2ecdc9a9a782e06d2439f9639e723"
+    }
+  ]
+}

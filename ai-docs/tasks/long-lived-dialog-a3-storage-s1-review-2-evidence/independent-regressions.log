@@ -1,0 +1,81 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 5.64s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 47 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+
+running 5 tests
+test a3_s1_review_matching_receipt_must_exist_and_context_match ... ok
+test a3_s1_review_multi_frame_shared_checkpoint_funded_once ... ok
+test a3_s1_review_mutable_growth_is_charged_from_committed_baseline ... REVIEW mutable repeated=false result=Ok(CommitReport { generation: 3, commit_id: [46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46], encoded_plan_bytes: 15990, nodes_read: 1, values_read: 2, changed_nodes: 5, duplicate: false })
+REVIEW mutable repeated=true result=Ok(CommitReport { generation: 3, commit_id: [46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46, 46], encoded_plan_bytes: 15990, nodes_read: 1, values_read: 2, changed_nodes: 5, duplicate: false })
+ok
+test a3_s1_review_mutable_plan_conservation_matrix_and_reopen_retry ... A3_S1_R1_MATRIX namespace=Native initial=None versions=[(32, 1), (64, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Native initial=None versions=[(96, 1), (32, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Native initial=None versions=[(64, 1), (64, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Native initial=None versions=[(64, 2), (64, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Native initial=Some(32) versions=[(64, 1), (96, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Native initial=Some(64) versions=[(96, 1), (32, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Native initial=Some(64) versions=[(32, 1), (96, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Native initial=Some(64) versions=[(64, 1), (64, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Native initial=Some(64) versions=[(96, 1), (64, 97)] control_equal=true
+A3_S1_R1_MATRIX namespace=Current initial=None versions=[(32, 1), (64, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Current initial=None versions=[(96, 1), (32, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Current initial=None versions=[(64, 1), (64, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Current initial=None versions=[(64, 2), (64, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Current initial=Some(32) versions=[(64, 1), (96, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Current initial=Some(64) versions=[(96, 1), (32, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Current initial=Some(64) versions=[(32, 1), (96, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Current initial=Some(64) versions=[(64, 1), (64, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Current initial=Some(64) versions=[(96, 1), (64, 97)] control_equal=true
+A3_S1_R1_MATRIX namespace=Request initial=None versions=[(32, 1), (64, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Request initial=None versions=[(96, 1), (32, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Request initial=None versions=[(64, 1), (64, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Request initial=None versions=[(64, 2), (64, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Request initial=Some(32) versions=[(64, 1), (96, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Request initial=Some(64) versions=[(96, 1), (32, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Request initial=Some(64) versions=[(32, 1), (96, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Request initial=Some(64) versions=[(64, 1), (64, 2)] control_equal=true
+A3_S1_R1_MATRIX namespace=Request initial=Some(64) versions=[(96, 1), (64, 97)] control_equal=true
+ok
+test a3_s1_review_readable_requires_receipt_for_pending_ordinal ... REVIEW pending_ordinal=1 receipt_ordinal=2 result=Err(Bound("readable receipt ordinal"))
+ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 14.93s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      15048  9.68
+release            5747  1.86
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=59860
+target_gib=64.33
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

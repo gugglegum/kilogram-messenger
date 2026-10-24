@@ -1,0 +1,396 @@
+{
+  "format_version": 1,
+  "phase": "A3-S1 library implementation, submitted for architecture/code review; no commit or push",
+  "baseline": "f59d285d5704dc2c6969b6f8e416f204223e27cc",
+  "source_snapshot": "source-final.json",
+  "source_snapshot_sha256": "e545b25d3fc161f119bb5d2ee229bd89d873b7a37c412ee9a578db83d417bcf6",
+  "verification_harness_sha256": "2d84fa425ef235012133ac437088ea5b40dc1206c64ea5c7df6b5cc2c2c5eb07",
+  "state44_harness_sha256": "6e92bc66622947669ad44545846356bf364595d257729b3e5da5e030ecbdcaad",
+  "release_harness_path": "target/release/deps/kilogram-state-lib-kilogram_state-tests.exe",
+  "release_harness_sha256": "13bbf0328305eb2e49a783d6fe8ec38bfc68eded312c783decb5fa12740231e1",
+  "validation": {
+    "state_component_and_legacy": {
+      "passed": 44,
+      "failed": 0,
+      "elapsed_seconds": 89.78,
+      "log": "state-final.log",
+      "note": "Both scale tests excluded. Production source matches final snapshot; scale-only total budget check was added after this compilation."
+    },
+    "verification_small_scale": {
+      "passed": 1,
+      "failed": 0,
+      "elapsed_seconds": 41.73,
+      "log": "scale-small-final.log"
+    },
+    "verification_reused_100k": {
+      "passed": 1,
+      "failed": 0,
+      "elapsed_seconds": 83.68,
+      "measured_operation_seconds": 81.3203691,
+      "log": "scale-final.log"
+    },
+    "release_cold_backend": {
+      "passed": 1,
+      "failed": 0,
+      "elapsed_seconds": 4.0,
+      "log": "cold-release-final.log"
+    },
+    "release_reused_100k": {
+      "passed": 1,
+      "failed": 0,
+      "elapsed_seconds": 4.65,
+      "log": "scale-release-final.log"
+    },
+    "clippy_verification_all_targets": "PASS -D warnings; clippy-final.log",
+    "clippy_release_all_targets": "PASS -D warnings; clippy-release-final.log",
+    "fmt": "cargo fmt --package kilogram-state -- --check PASS",
+    "windows_runner": "All harness execution used scripts/run-cargo-tests-stable.ps1; no direct cargo test; actual compile CargoJobs2 BelowNormal locked offline. Footer jobs12 is cache-report default, not test compilation."
+  },
+  "measurements": {
+    "verification_stages": [
+      {
+        "append_growth_bytes": 0,
+        "append_p50_ms": 11.158,
+        "append_p95_ms": 14.0509,
+        "append_read_bytes": 0,
+        "append_syncs": 16,
+        "append_write_bytes": 1778688,
+        "cold_reopen_ms": 30.0821,
+        "fill_grow_bytes": 3158016,
+        "fill_read_bytes": 0,
+        "fill_seconds": 2.2666453,
+        "fill_syncs": 4,
+        "fill_write_bytes": 3445376,
+        "full_range_read_seconds": 0.6179831,
+        "history_cursor_implemented": false,
+        "max_bulk_plan_bytes": 1030424,
+        "native_e2e_messages": 0,
+        "open_backend": {
+          "growth_bytes": 0,
+          "growth_nanos": 0,
+          "last_failure": null,
+          "last_requested_length": 0,
+          "length": 4214784,
+          "max_growth": 0,
+          "physical_quota": 1073741824,
+          "read_bytes": 2552137,
+          "reads": 624,
+          "set_len_calls": 0,
+          "sync_calls": 1,
+          "sync_nanos": 946200,
+          "write_bytes": 320,
+          "writes": 1
+        },
+        "page32_p50_ms": 19.717399999999998,
+        "page32_p95_ms": 20.3541,
+        "page_backend_read_bytes": 0,
+        "physical_nodes": 1999,
+        "physical_values": 1000,
+        "process_private_bytes": 5558272,
+        "retained_records_after_samples": 1016,
+        "single_append_max_node_reads": 13,
+        "single_append_max_plan_bytes": 18101,
+        "synthetic_storage_records": true,
+        "target_records": 1000
+      },
+      {
+        "append_growth_bytes": 0,
+        "append_p50_ms": 13.3344,
+        "append_p95_ms": 14.7466,
+        "append_read_bytes": 0,
+        "append_syncs": 16,
+        "append_write_bytes": 2753536,
+        "cold_reopen_ms": 242.2766,
+        "fill_grow_bytes": 32632832,
+        "fill_read_bytes": 0,
+        "fill_seconds": 30.4239136,
+        "fill_syncs": 25,
+        "fill_write_bytes": 118302976,
+        "full_range_read_seconds": 6.5579458,
+        "history_cursor_implemented": false,
+        "max_bulk_plan_bytes": 1905274,
+        "native_e2e_messages": 0,
+        "open_backend": {
+          "growth_bytes": 0,
+          "growth_nanos": 0,
+          "last_failure": null,
+          "last_requested_length": 0,
+          "length": 33689600,
+          "max_growth": 0,
+          "physical_quota": 1073741824,
+          "read_bytes": 24367433,
+          "reads": 5950,
+          "set_len_calls": 0,
+          "sync_calls": 1,
+          "sync_nanos": 2425900,
+          "write_bytes": 320,
+          "writes": 1
+        },
+        "page32_p50_ms": 20.953699999999998,
+        "page32_p95_ms": 21.8544,
+        "page_backend_read_bytes": 0,
+        "physical_nodes": 19999,
+        "physical_values": 10000,
+        "process_private_bytes": 32870400,
+        "retained_records_after_samples": 10016,
+        "single_append_max_node_reads": 15,
+        "single_append_max_plan_bytes": 19087,
+        "synthetic_storage_records": true,
+        "target_records": 10000
+      },
+      {
+        "append_growth_bytes": 0,
+        "append_p50_ms": 17.0177,
+        "append_p95_ms": 18.368,
+        "append_read_bytes": 413696,
+        "append_syncs": 16,
+        "append_write_bytes": 3826688,
+        "cold_reopen_ms": 2273.4052,
+        "fill_grow_bytes": 0,
+        "fill_read_bytes": 0,
+        "fill_seconds": 7.2E-06,
+        "fill_syncs": 0,
+        "fill_write_bytes": 0,
+        "full_range_read_seconds": 78.3100495,
+        "history_cursor_implemented": false,
+        "max_bulk_plan_bytes": 0,
+        "native_e2e_messages": 0,
+        "open_backend": {
+          "growth_bytes": 0,
+          "growth_nanos": 0,
+          "last_failure": null,
+          "last_requested_length": 0,
+          "length": 269488128,
+          "max_growth": 0,
+          "physical_quota": 1073741824,
+          "read_bytes": 244040009,
+          "reads": 59567,
+          "set_len_calls": 0,
+          "sync_calls": 1,
+          "sync_nanos": 1217200,
+          "write_bytes": 320,
+          "writes": 1
+        },
+        "page32_p50_ms": 24.988400000000002,
+        "page32_p95_ms": 26.5943,
+        "page_backend_read_bytes": 714145792,
+        "physical_nodes": 200031,
+        "physical_values": 100016,
+        "process_private_bytes": 98963456,
+        "retained_records_after_samples": 100032,
+        "single_append_max_node_reads": 19,
+        "single_append_max_plan_bytes": 21233,
+        "synthetic_storage_records": true,
+        "target_records": 100016
+      }
+    ],
+    "p95_page_100k_over_1k": 1.3065819662868907,
+    "p95_append_100k_over_1k": 1.3072472225978407,
+    "observed_private_growth_bytes": 93405184,
+    "observed_private_growth_64mib_pass": false,
+    "process_private_384mib_pass": true,
+    "release_cold_probes": [
+      {
+        "cache_bytes": 67108864,
+        "cold_reopen_ms": 7.4174999999999995,
+        "debug_assertions": false,
+        "native_e2e_messages": 0,
+        "not_full_history_gate": true,
+        "open_read_bytes": 37193,
+        "page32_ms": 1.3699000000000001,
+        "page_backend_read_bytes": 430080,
+        "page_backend_reads": 105,
+        "synthetic_records": 1000
+      },
+      {
+        "cache_bytes": 67108864,
+        "cold_reopen_ms": 3.8872999999999998,
+        "debug_assertions": false,
+        "native_e2e_messages": 0,
+        "not_full_history_gate": true,
+        "open_read_bytes": 37193,
+        "page32_ms": 2.0008999999999997,
+        "page_backend_read_bytes": 675840,
+        "page_backend_reads": 165,
+        "synthetic_records": 10000
+      }
+    ],
+    "release_reused_stage": {
+      "append_growth_bytes": 0,
+      "append_p50_ms": 5.5655,
+      "append_p95_ms": 7.6314,
+      "append_read_bytes": 491520,
+      "append_syncs": 16,
+      "append_write_bytes": 3843072,
+      "cold_reopen_ms": 7.101,
+      "fill_grow_bytes": 0,
+      "fill_read_bytes": 0,
+      "fill_seconds": 1E-07,
+      "fill_syncs": 0,
+      "fill_write_bytes": 0,
+      "full_range_read_seconds": 4.1749702,
+      "history_cursor_implemented": false,
+      "max_bulk_plan_bytes": 0,
+      "native_e2e_messages": 0,
+      "open_backend": {
+        "growth_bytes": 0,
+        "growth_nanos": 0,
+        "last_failure": null,
+        "last_requested_length": 0,
+        "length": 269488128,
+        "max_growth": 0,
+        "physical_quota": 1073741824,
+        "read_bytes": 65865,
+        "reads": 10,
+        "set_len_calls": 0,
+        "sync_calls": 1,
+        "sync_nanos": 1092500,
+        "write_bytes": 320,
+        "writes": 1
+      },
+      "page32_p50_ms": 1.2809,
+      "page32_p95_ms": 1.6891,
+      "page_backend_read_bytes": 720228352,
+      "physical_nodes": 200063,
+      "physical_values": 100032,
+      "process_private_bytes": 92381184,
+      "retained_records_after_samples": 100048,
+      "single_append_max_node_reads": 18,
+      "single_append_max_plan_bytes": 20566,
+      "synthetic_storage_records": true,
+      "target_records": 100032
+    },
+    "production_growth": {
+      "append_ms": 289.2455,
+      "batch_at_boundary": 1,
+      "grow_delta": 134742016,
+      "new_len": 269488128,
+      "nodes_read": 12,
+      "old_len": 134746112,
+      "plan_bytes": 32968,
+      "production_region_bytes": 4294967296,
+      "reopen_continuation": true,
+      "sync_delta": 2,
+      "synthetic_records": 4016,
+      "total_seconds": 48.8809103,
+      "write_delta": 172352
+    },
+    "maximal_encoded_plan_bytes": 15231748,
+    "maximal_changed_nodes": 1799,
+    "exact_capacity_requested": 2109440,
+    "exact_capacity_external_bytes": 317,
+    "exact_capacity_refused_quota": 270545212,
+    "capacity_retry_retained_records": 288
+  },
+  "known_open_items": [
+    "Observed verification PrivateBytes growth 1k-to100k exceeds64MiB. Full A3-5 warm-growth gate remains OPEN;384MiB absolute process limit passes.",
+    "Original full initial-import plus reads ran1275.31s, exceeding1200s. The fixture is preserved and final-code reuse read/append is81.32s; final-code creation of100k was not regenerated or claimed under budget.",
+    "No causal history cursor, wire2, native Olm integration, enrollment, runtime activation, live L1 migration or full A3 E2E gates.",
+    "A2 remains OPEN7 warnings; strict advisory FAIL. Deferred security reproducer neither run nor developed."
+  ],
+  "fault_scope": {
+    "triggered_error_cases": 5,
+    "untriggered_after_sync_controls": 2,
+    "owned_child_kill_points": [
+      "before_commit",
+      "after_commit",
+      "after_extension_sync"
+    ],
+    "not_full_host_volume_test": true
+  },
+  "safety_disposition": "Automatic review rejected an optional device-secret export getter; it was omitted, with no equivalent export or workaround.",
+  "fixture": {
+    "private_path": ".tmp/a3-s1/persistent-scale",
+    "preserved": true,
+    "final_logical_events": 100048,
+    "final_node_rows": 200095,
+    "final_value_rows": 100048,
+    "native_e2e_messages": 0,
+    "history_gate_pass": false
+  },
+  "preserved": {
+    "foreign_path": "ai-docs/development-environment.md",
+    "foreign_sha256": "330ad3c4d1941b213e7e5bef958416a6847d3defb8e368f79d6d21c944efe798",
+    "baseline_exe_path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+    "baseline_exe_sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+    "dependencies_changed": false,
+    "historical_accepted_evidence_changed": false
+  },
+  "evidence_files": [
+    {
+      "name": "clippy-final.log",
+      "bytes": 520,
+      "sha256": "4317c142642ffd92cc7ed1613144e97d32d75079f1c0ad04fba0145c3cd89df5"
+    },
+    {
+      "name": "clippy-release-final.log",
+      "bytes": 1999,
+      "sha256": "c2528746f23498c75f765abbfd2f8267461aa0dedff12cf5f93f1523eebcf067"
+    },
+    {
+      "name": "cold-release-final.log",
+      "bytes": 3416,
+      "sha256": "0742ee90da17a46ee9c8950cccce4247e7b4ead9a681f7529e5d59f20b606640"
+    },
+    {
+      "name": "component-initial.json",
+      "bytes": 4413,
+      "sha256": "cd9006e773466dd3339371315f6b03020e58df7881affdfa1176c6aaad2cd408"
+    },
+    {
+      "name": "scale-final.log",
+      "bytes": 3825,
+      "sha256": "45e0cc67e2ba204863a7842fad445a0eb6786e8ce32e7e15c7bf6ed7e0a4e0d3"
+    },
+    {
+      "name": "scale-pre-cache-result.json",
+      "bytes": 5195,
+      "sha256": "8976fa0d01714a7e84c044abc2fedb44e57fe96373587ac6b6763f720f0ac522"
+    },
+    {
+      "name": "scale-pre-cache.log",
+      "bytes": 8010,
+      "sha256": "12758bc310e020e9568a342eccffd5cbf0fc17a0a4460d5bbccc9f5da4e82d16"
+    },
+    {
+      "name": "scale-release-final.log",
+      "bytes": 3732,
+      "sha256": "eed156f8df43802674b9e457bd07a77d06ebc155fc996c2694f7927b6a8f48f5"
+    },
+    {
+      "name": "scale-small-final.log",
+      "bytes": 6153,
+      "sha256": "ba77256e042f2a32c017a8fcd4ca3b71775ab340b9d1f068bb531fcfc0cc5626"
+    },
+    {
+      "name": "source-final.json",
+      "bytes": 3564,
+      "sha256": "e545b25d3fc161f119bb5d2ee229bd89d873b7a37c412ee9a578db83d417bcf6"
+    },
+    {
+      "name": "source-pre-cache.json",
+      "bytes": 3287,
+      "sha256": "84f7116878101f6d70fad2fb2278bd644e55e3482389a2df5ba0956b4ecaba1f"
+    },
+    {
+      "name": "source-preservation-counterexample.json",
+      "bytes": 1089,
+      "sha256": "5713794590ebb8b64e3268d14359505f36a0b753e950c6e74c905f833f1bcfda"
+    },
+    {
+      "name": "state-before-capture.log",
+      "bytes": 6833,
+      "sha256": "f82a606429c2f70f51f073b01a4091bdc4c8002bde3f177e1f2bb6c331872012"
+    },
+    {
+      "name": "state-final.log",
+      "bytes": 7227,
+      "sha256": "4f651479b80740ab7631b726f42d30fe64561c686763eb69441d434dd82c10d0"
+    },
+    {
+      "name": "state-pre-cache.log",
+      "bytes": 7170,
+      "sha256": "191a057716f552a0d9fcf092e90eb349785b9d2cc01551869d64156e8e974fa2"
+    }
+  ]
+}

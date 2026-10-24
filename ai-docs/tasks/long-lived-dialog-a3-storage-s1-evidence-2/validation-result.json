@@ -1,0 +1,534 @@
+{
+  "format_version": 1,
+  "status": "R1/R2 repair submitted for review; R3 remains OPEN pending root architecture decision before one new initial100k heavy run",
+  "source_manifest": "source-final.json",
+  "source_manifest_sha256": "e17fc9ba14964d143be993a6d002f80b20dd5197d45f57a06edb964290faf55d",
+  "validation": {
+    "public_regressions": {
+      "passed": 5,
+      "failed": 0,
+      "seconds": 14.66,
+      "matrix_scenarios": 27,
+      "matrix_control_repeated_executions": 54,
+      "log": "root-regressions.log"
+    },
+    "affected_state": {
+      "passed": 18,
+      "failed": 0,
+      "seconds": 20.72,
+      "log": "affected-state.log"
+    },
+    "diagnostic": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 97.39,
+      "raw64mib_gate_pass": false,
+      "log": "memory-diagnostic.log",
+      "source_manifest": "source-diagnostic.json"
+    },
+    "phased_small": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 46.46,
+      "log": "scale-small-phases.log",
+      "stages": [
+        {
+          "append_growth_bytes": 0,
+          "append_p50_ms": 10.2281,
+          "append_p95_ms": 11.2036,
+          "append_read_bytes": 0,
+          "append_syncs": 16,
+          "append_write_bytes": 1778688,
+          "cold_reopen_ms": 31.9918,
+          "fill_grow_bytes": 3158016,
+          "fill_read_bytes": 0,
+          "fill_seconds": 2.7561898,
+          "fill_syncs": 4,
+          "fill_write_bytes": 3449472,
+          "full_range_read_seconds": 1.039886,
+          "history_cursor_implemented": false,
+          "max_bulk_plan_bytes": 1030424,
+          "memory_phases": [
+            {
+              "app_returned_payload_bytes": 0,
+              "backend": {
+                "growth_bytes": 1056768,
+                "growth_nanos": 196575900,
+                "last_failure": null,
+                "last_requested_length": 1056768,
+                "length": 1056768,
+                "max_growth": 1056768,
+                "physical_quota": 1073741824,
+                "read_bytes": 320,
+                "reads": 1,
+                "set_len_calls": 1,
+                "sync_calls": 7,
+                "sync_nanos": 7867900,
+                "write_bytes": 26816,
+                "writes": 12
+              },
+              "configured_cache_bytes": 67108864,
+              "debug_assertions": true,
+              "phase": "before_fill",
+              "process": {
+                "peak_paged_bytes": 1294336,
+                "private_bytes": 1282048,
+                "working_set_bytes": 10027008
+              },
+              "records": 0,
+              "redb_cache_data_bytes": 24896,
+              "same_process": 54168,
+              "test_expected_capacity_bytes": 0
+            },
+            {
+              "app_returned_payload_bytes": 0,
+              "backend": {
+                "growth_bytes": 4214784,
+                "growth_nanos": 560533400,
+                "last_failure": null,
+                "last_requested_length": 4214784,
+                "length": 4214784,
+                "max_growth": 2105344,
+                "physical_quota": 1073741824,
+                "read_bytes": 320,
+                "reads": 1,
+                "set_len_calls": 3,
+                "sync_calls": 11,
+                "sync_nanos": 20388200,
+                "write_bytes": 3476288,
+                "writes": 854
+              },
+              "configured_cache_bytes": 67108864,
+              "debug_assertions": true,
+              "phase": "after_fill",
+              "process": {
+                "peak_paged_bytes": 10358784,
+                "private_bytes": 5861376,
+                "working_set_bytes": 15241216
+              },
+              "records": 1000,
+              "redb_cache_data_bytes": 2588992,
+              "same_process": 54168,
+              "test_expected_capacity_bytes": 0
+            },
+            {
+              "app_returned_payload_bytes": 0,
+              "backend": {
+                "growth_bytes": 0,
+                "growth_nanos": 0,
+                "last_failure": null,
+                "last_requested_length": 0,
+                "length": 4214784,
+                "max_growth": 0,
+                "physical_quota": 1073741824,
+                "read_bytes": 2580809,
+                "reads": 631,
+                "set_len_calls": 0,
+                "sync_calls": 1,
+                "sync_nanos": 802400,
+                "write_bytes": 320,
+                "writes": 1
+              },
+              "configured_cache_bytes": 67108864,
+              "debug_assertions": true,
+              "phase": "after_reopen",
+              "process": {
+                "peak_paged_bytes": 10358784,
+                "private_bytes": 5607424,
+                "working_set_bytes": 14524416
+              },
+              "records": 1000,
+              "redb_cache_data_bytes": 2580800,
+              "same_process": 54168,
+              "test_expected_capacity_bytes": 0
+            },
+            {
+              "app_returned_payload_bytes": 0,
+              "backend": {
+                "growth_bytes": 0,
+                "growth_nanos": 0,
+                "last_failure": null,
+                "last_requested_length": 0,
+                "length": 4214784,
+                "max_growth": 0,
+                "physical_quota": 1073741824,
+                "read_bytes": 2580809,
+                "reads": 631,
+                "set_len_calls": 0,
+                "sync_calls": 1,
+                "sync_nanos": 802400,
+                "write_bytes": 320,
+                "writes": 1
+              },
+              "configured_cache_bytes": 67108864,
+              "debug_assertions": true,
+              "phase": "after_warm_range_no_expected_vector",
+              "process": {
+                "peak_paged_bytes": 10358784,
+                "private_bytes": 5873664,
+                "working_set_bytes": 14864384
+              },
+              "records": 1000,
+              "redb_cache_data_bytes": 2580800,
+              "same_process": 54168,
+              "test_expected_capacity_bytes": 0
+            },
+            {
+              "app_returned_payload_bytes": 0,
+              "backend": {
+                "growth_bytes": 0,
+                "growth_nanos": 0,
+                "last_failure": null,
+                "last_requested_length": 0,
+                "length": 4214784,
+                "max_growth": 0,
+                "physical_quota": 1073741824,
+                "read_bytes": 2580809,
+                "reads": 631,
+                "set_len_calls": 0,
+                "sync_calls": 17,
+                "sync_nanos": 36644200,
+                "write_bytes": 1779008,
+                "writes": 434
+              },
+              "configured_cache_bytes": 67108864,
+              "debug_assertions": true,
+              "phase": "after_ordinary_append",
+              "process": {
+                "peak_paged_bytes": 10358784,
+                "private_bytes": 5873664,
+                "working_set_bytes": 14962688
+              },
+              "records": 1016,
+              "redb_cache_data_bytes": 2617664,
+              "same_process": 54168,
+              "test_expected_capacity_bytes": 0
+            }
+          ],
+          "native_e2e_messages": 0,
+          "open_backend": {
+            "growth_bytes": 0,
+            "growth_nanos": 0,
+            "last_failure": null,
+            "last_requested_length": 0,
+            "length": 4214784,
+            "max_growth": 0,
+            "physical_quota": 1073741824,
+            "read_bytes": 2580809,
+            "reads": 631,
+            "set_len_calls": 0,
+            "sync_calls": 1,
+            "sync_nanos": 802400,
+            "write_bytes": 320,
+            "writes": 1
+          },
+          "page32_p50_ms": 19.8535,
+          "page32_p95_ms": 20.8661,
+          "page_backend_read_bytes": 0,
+          "physical_nodes": 1999,
+          "physical_values": 1000,
+          "process_private_bytes": 5873664,
+          "retained_records_after_samples": 1016,
+          "single_append_max_node_reads": 13,
+          "single_append_max_plan_bytes": 18101,
+          "strict_unique_complete_domain_check": true,
+          "synthetic_storage_records": true,
+          "target_records": 1000,
+          "test_expected_vector_bytes": 0
+        },
+        {
+          "append_growth_bytes": 0,
+          "append_p50_ms": 12.5492,
+          "append_p95_ms": 13.013200000000001,
+          "append_read_bytes": 0,
+          "append_syncs": 16,
+          "append_write_bytes": 2749440,
+          "cold_reopen_ms": 227.9776,
+          "fill_grow_bytes": 32632832,
+          "fill_read_bytes": 0,
+          "fill_seconds": 30.7503659,
+          "fill_syncs": 25,
+          "fill_write_bytes": 118589696,
+          "full_range_read_seconds": 6.9564552,
+          "history_cursor_implemented": false,
+          "max_bulk_plan_bytes": 1905274,
+          "memory_phases": [
+            {
+              "app_returned_payload_bytes": 0,
+              "backend": {
+                "growth_bytes": 1056768,
+                "growth_nanos": 176041300,
+                "last_failure": null,
+                "last_requested_length": 1056768,
+                "length": 1056768,
+                "max_growth": 1056768,
+                "physical_quota": 1073741824,
+                "read_bytes": 320,
+                "reads": 1,
+                "set_len_calls": 1,
+                "sync_calls": 7,
+                "sync_nanos": 7974600,
+                "write_bytes": 26816,
+                "writes": 12
+              },
+              "configured_cache_bytes": 67108864,
+              "debug_assertions": true,
+              "phase": "before_fill",
+              "process": {
+                "peak_paged_bytes": 10358784,
+                "private_bytes": 2068480,
+                "working_set_bytes": 11800576
+              },
+              "records": 0,
+              "redb_cache_data_bytes": 24896,
+              "same_process": 54168,
+              "test_expected_capacity_bytes": 0
+            },
+            {
+              "app_returned_payload_bytes": 0,
+              "backend": {
+                "growth_bytes": 33689600,
+                "growth_nanos": 1071098300,
+                "last_failure": null,
+                "last_requested_length": 33689600,
+                "length": 33689600,
+                "max_growth": 16842752,
+                "physical_quota": 1073741824,
+                "read_bytes": 320,
+                "reads": 1,
+                "set_len_calls": 6,
+                "sync_calls": 32,
+                "sync_nanos": 734227400,
+                "write_bytes": 118616512,
+                "writes": 28963
+              },
+              "configured_cache_bytes": 67108864,
+              "debug_assertions": true,
+              "phase": "after_fill",
+              "process": {
+                "peak_paged_bytes": 50348032,
+                "private_bytes": 46096384,
+                "working_set_bytes": 55021568
+              },
+              "records": 10000,
+              "redb_cache_data_bytes": 24518976,
+              "same_process": 54168,
+              "test_expected_capacity_bytes": 0
+            },
+            {
+              "app_returned_payload_bytes": 0,
+              "backend": {
+                "growth_bytes": 0,
+                "growth_nanos": 0,
+                "last_failure": null,
+                "last_requested_length": 0,
+                "length": 33689600,
+                "max_growth": 0,
+                "physical_quota": 1073741824,
+                "read_bytes": 24469833,
+                "reads": 5975,
+                "set_len_calls": 0,
+                "sync_calls": 1,
+                "sync_nanos": 863800,
+                "write_bytes": 320,
+                "writes": 1
+              },
+              "configured_cache_bytes": 67108864,
+              "debug_assertions": true,
+              "phase": "after_reopen",
+              "process": {
+                "peak_paged_bytes": 50348032,
+                "private_bytes": 31440896,
+                "working_set_bytes": 39899136
+              },
+              "records": 10000,
+              "redb_cache_data_bytes": 24469824,
+              "same_process": 54168,
+              "test_expected_capacity_bytes": 0
+            },
+            {
+              "app_returned_payload_bytes": 0,
+              "backend": {
+                "growth_bytes": 0,
+                "growth_nanos": 0,
+                "last_failure": null,
+                "last_requested_length": 0,
+                "length": 33689600,
+                "max_growth": 0,
+                "physical_quota": 1073741824,
+                "read_bytes": 24469833,
+                "reads": 5975,
+                "set_len_calls": 0,
+                "sync_calls": 1,
+                "sync_nanos": 863800,
+                "write_bytes": 320,
+                "writes": 1
+              },
+              "configured_cache_bytes": 67108864,
+              "debug_assertions": true,
+              "phase": "after_warm_range_no_expected_vector",
+              "process": {
+                "peak_paged_bytes": 50348032,
+                "private_bytes": 31580160,
+                "working_set_bytes": 40017920
+              },
+              "records": 10000,
+              "redb_cache_data_bytes": 24469824,
+              "same_process": 54168,
+              "test_expected_capacity_bytes": 0
+            },
+            {
+              "app_returned_payload_bytes": 0,
+              "backend": {
+                "growth_bytes": 0,
+                "growth_nanos": 0,
+                "last_failure": null,
+                "last_requested_length": 0,
+                "length": 33689600,
+                "max_growth": 0,
+                "physical_quota": 1073741824,
+                "read_bytes": 24469833,
+                "reads": 5975,
+                "set_len_calls": 0,
+                "sync_calls": 17,
+                "sync_nanos": 43125800,
+                "write_bytes": 2749760,
+                "writes": 671
+              },
+              "configured_cache_bytes": 67108864,
+              "debug_assertions": true,
+              "phase": "after_ordinary_append",
+              "process": {
+                "peak_paged_bytes": 50348032,
+                "private_bytes": 32997376,
+                "working_set_bytes": 41455616
+              },
+              "records": 10016,
+              "redb_cache_data_bytes": 24527168,
+              "same_process": 54168,
+              "test_expected_capacity_bytes": 0
+            }
+          ],
+          "native_e2e_messages": 0,
+          "open_backend": {
+            "growth_bytes": 0,
+            "growth_nanos": 0,
+            "last_failure": null,
+            "last_requested_length": 0,
+            "length": 33689600,
+            "max_growth": 0,
+            "physical_quota": 1073741824,
+            "read_bytes": 24469833,
+            "reads": 5975,
+            "set_len_calls": 0,
+            "sync_calls": 1,
+            "sync_nanos": 863800,
+            "write_bytes": 320,
+            "writes": 1
+          },
+          "page32_p50_ms": 20.9514,
+          "page32_p95_ms": 22.1055,
+          "page_backend_read_bytes": 0,
+          "physical_nodes": 19999,
+          "physical_values": 10000,
+          "process_private_bytes": 32997376,
+          "retained_records_after_samples": 10016,
+          "single_append_max_node_reads": 15,
+          "single_append_max_plan_bytes": 19087,
+          "strict_unique_complete_domain_check": true,
+          "synthetic_storage_records": true,
+          "target_records": 10000,
+          "test_expected_vector_bytes": 0
+        }
+      ]
+    },
+    "strict_clippy": "verification all-targets PASS, default and redb/cache_metrics",
+    "fmt": "PASS",
+    "powershell_parser": "PASS",
+    "windows_runner": "All harness execution stable runner, compile no-run locked offline CargoJobs2 BelowNormal. CargoFeatures enables existing redb instrumentation only."
+  },
+  "R1": "Charge is final minus committed baseline for the whole plan, with one-time spent allocation. Tight quotas, grow/shrink, existing keys, repeated/multi-frame/retry pass.",
+  "R2": "Readable requires matching C+ordinal receipt reference and authenticated existence. Reject preserves generation/root/ledger/Pending; matching control passes.",
+  "R3": {
+    "measured_raw_private_growth_bytes": 91099136,
+    "measured_cache_data_growth_bytes": 64528064,
+    "measured_cache_excluded_private_growth_bytes": 26571072,
+    "expected_vector_capacity_bytes": 3201536,
+    "expected_vector_private_increment_bytes": 3207168,
+    "after_expected_vector_drop_private_bytes": 95612928,
+    "after_store_drop_private_bytes": 3579904,
+    "accepted_gate": "raw64MiB remains OPEN, not silently changed",
+    "narrow_proposal": "Keep actual redb cache64MiB, buffers192MiB and absolute process384MiB. For warm1k-to100k compare both raw PrivateBytes growth<=96MiB and (PrivateBytes minus measured cache data) growth<=32MiB, excluding only explicitly reported test buffers. Requires root architecture acceptance; not applied.",
+    "final_initial100k_run": "not started; root review1 R3.2 says return concrete conflict/proposal first",
+    "final_initial100k_fixture": ".tmp/a3-s1-repair-2/persistent-scale-initial",
+    "old_fixture_preserved": ".tmp/a3-s1/persistent-scale; diagnostic appended16, logical count100064; no prior records removed"
+  },
+  "rejected_optional_secret_getter": "not added or bypassed",
+  "unrelated_scope": "wire2, native/migration/live runtime and deferred A2 security reproducer untouched; A2 OPEN7 warnings/strict advisory FAIL",
+  "initial_extra_test_failure": "Fixture Conflict before multi-frame assertions: missing CancelGrant. Fixed in test setup; extra-test-fixture-initial.log retained.",
+  "initial_clippy_failure": "One collapsible-if in added integration test, fixed without suppression; initial log retained.",
+  "dependencies_changed": false,
+  "commit_or_push": false,
+  "evidence_files": [
+    {
+      "name": "affected-state.log",
+      "bytes": 5087,
+      "sha256": "6ff1d241a9291ad61c9a73327c1b31b32006be681d2c1317da36b3417158965e"
+    },
+    {
+      "name": "clippy-final.log",
+      "bytes": 260,
+      "sha256": "b895b3b1245d35533ad0f962a5e09ba47ce65bde7bf24505edf5156e37b3d0c6"
+    },
+    {
+      "name": "clippy-instrumented-final.log",
+      "bytes": 286,
+      "sha256": "e24ed5ebd67979ae5020428798fc03d05c2028a02d2586b99d1a8be886c28a27"
+    },
+    {
+      "name": "clippy-test-style-initial.log",
+      "bytes": 1248,
+      "sha256": "bd91ec53d1d4b5eca8eb32282da2360806b60feae4a56a263b1c48be1f2fadac"
+    },
+    {
+      "name": "extra-test-fixture-initial.log",
+      "bytes": 4795,
+      "sha256": "86cd220969f33def47a001018a1179d6975c4bf477eaf3f550cc770619b6460a"
+    },
+    {
+      "name": "memory-analysis.json",
+      "bytes": 18338,
+      "sha256": "3ac7c897470b58920ce948200107c4d8aab7c0f80966f929b8046b3f995206c6"
+    },
+    {
+      "name": "memory-diagnostic.log",
+      "bytes": 13532,
+      "sha256": "5366f50bfa57cb4b3835e6338bb2c07277bd39418e51c73159082d30328a699f"
+    },
+    {
+      "name": "quality-final.json",
+      "bytes": 1431,
+      "sha256": "c0e35f28703cd7eba3e51f28f90b459903436147a4d6703d9d3858775e5bd6cc"
+    },
+    {
+      "name": "root-regressions.log",
+      "bytes": 5730,
+      "sha256": "d7804a87945c13f03b766e8c8846bc245f351345f212a065298b2230616d8ca8"
+    },
+    {
+      "name": "scale-small-phases.log",
+      "bytes": 26080,
+      "sha256": "f76c4379b5d81f98f3e26b4c1be10a9ddb39c5859d26e86b56d39d9faba20dd9"
+    },
+    {
+      "name": "source-diagnostic.json",
+      "bytes": 3944,
+      "sha256": "e39e62018a625ff30e04f2435a56b394b667a015d759bc0f7de900548e24f0c5"
+    },
+    {
+      "name": "source-final.json",
+      "bytes": 4939,
+      "sha256": "e17fc9ba14964d143be993a6d002f80b20dd5197d45f57a06edb964290faf55d"
+    }
+  ]
+}

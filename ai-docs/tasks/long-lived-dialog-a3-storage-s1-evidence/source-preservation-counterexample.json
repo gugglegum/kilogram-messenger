@@ -1,0 +1,24 @@
+{
+  "sources": [
+    {
+      "sha256": "45466b6e9228b7cce25d91a9dc0c02638aa26d94f077bdc929e6586516aebc8a",
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs"
+    },
+    {
+      "sha256": "c111e358cde7089e971eb9ae149fbe44df8511e2721c03bfc9aa11fd9774f7c8",
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs"
+    },
+    {
+      "sha256": "e61ccaa2114e0b497206a251b5fec559d926bd3f56f965fd293e2a6aca011c2a",
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credit_tests.rs"
+    }
+  ],
+  "failed": 1,
+  "harness_sha256": "034d1baa7c16a620cf0014d7575abee3455d76afabe0006cf98be2e68ac68a50",
+  "expected_negative_result": "FAIL on pre-fix S1",
+  "command": "./scripts/run-cargo-tests-stable.ps1 -Package kilogram-state -Filter indexed_component_accepted_source_cannot_be_replaced -CargoJobs 2 -Run -NoCapture",
+  "passed": 0,
+  "format_version": 1,
+  "reason": "pending retirement accepted different source bytes",
+  "scope": "S1 storage functional counterexample; synthetic local records, no native protocol or network"
+}

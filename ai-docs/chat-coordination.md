@@ -344,3 +344,75 @@ runtime/fault/scale evidence ещё предстоит. Root изменил то
 Следующий dispatch — commit/push точной принятой документации тем же исполнителем;
 после root remote/tree verification — первый implementation slice storage/integrity
 с отдельными review/repair/commit/push. Product edits до этой сверки не начинать.
+
+Документация опубликована `f59d285d5704dc2c6969b6f8e416f204223e27cc`, parent860b351.
+Root независимо сверил ровно7 committed paths/blobs с frozen manifest, raw working
+hashes, пустой index и сохранённый foreign SHA. Первый sandbox ls-remote столкнулся
+с известным MSYS NtCreateDirectoryObject0xC0000022; native read-only ls-remote
+подтвердил тот же фактический refs/heads/master. Публикация принята.
+[A3-S1 task](tasks/long-lived-dialog-a3-storage-s1-task.md) разрешает прежнему
+исполнителю первую ограниченную implementation сдачу indexed storage/integrity/
+resources/fences. Затем review/repair и отдельное поручение commit/push;
+wire2/migration/live runtime пока не включать. Model Max/default/no Fast прежние.
+
+S1 поручение успешно отправлено с явными gpt-6.1-sol/max. Compact wait подтвердил
+active turn `01a16c6b-b0de-7dd3-b263-b8fbbab408ec`; исполнитель начал S1 с проверки
+настроек/baseline и подтвердил границу storage без live runtime. Cursor
+`b945b76a-eaaa-4ff8-8894-3dc54143a9d9:37`. Следующий substantive callback — сдача
+реализации/evidence или конкретное препятствие; пустые ACK/heartbeat не нужны.
+
+## A3-S1: первое implementation review и repair iteration2
+
+Исполнитель завершил turn `01a16c6b-b0de-7dd3-b263-b8fbbab408ec`, содержательный
+callback получен автоматически. [Review1](tasks/long-lived-dialog-a3-storage-s1-review-1.md)
+не приняло сдачу: root сверил12 source hashes/blobs и15 artifact hashes, прочитал
+реализацию и независимо воспроизвёл2/2 counterexamples через public API. R1:
+повторный Native Put в одном plan теряет retained charge и блокирует funded head
+при tight quota. R2: Readable принимает receipt другого ordinal. R3: рост памяти
+89.08MiB превышает64MiB цель, final initial100k timing после hot path fix не измерен.
+44/44 исходных library tests не покрывали R1/R2; baseline evidence сохраняются.
+
+Следующее поручение прежнему OD1 чату — только S1 repair iteration2, те же
+gpt-6.1-sol/max/default без Fast. Новые report/evidence с суффиксом2; исходные не
+переписывать. Extra secret getter и deferred A2 reproducer не требуются и не входят
+в поручение. После содержательной сдачи root снова проводит review. Product S1
+не принят, commit/push пока не разрешены; human scope и callback permissions прежние.
+
+Repair2 поручение отправлено с явными model=gpt-6.1-sol/thinking=max; root прочитал
+config.toml service_tier=default. Compact wait подтвердил active turn
+`01a16cf9-419f-7192-9ee9-4f805725fe08` без ошибки; исполнитель принял R1/R2 repair и
+диагностику R3. Cursor `b945b76a-eaaa-4ff8-8894-3dc54143a9d9:40`. Следующее событие
+для root — содержательная сдача repair2/конкретного contract conflict, затем review.
+
+Repair2 callback получен. [Review2](tasks/long-lived-dialog-a3-storage-s1-review-2.md)
+закрыл R1/R2: root сверил15 source hashes/blobs и12 evidence hashes, прочитал исправления
+и самостоятельно повторил public regressions5/5 PASS14.93s. Memory diagnostic
+показал real raw86.879MiB growth, cache data61.539MiB и residual25.340MiB.
+[Amendment1](tasks/long-lived-dialog-a3-memory-budget-amendment-1.md) явно уточняет A3-5
+до96MiB raw и32MiB residual вместе; cache64MiB/absolute384MiB/app192MiB/ratio4/time1200s
+прежние. Старая цель64MiB не объявляется PASS, исходный контракт/manifests не меняются.
+Следующий dispatch — узкие measurement helper исправления и единственный final fresh
+initial100k, новый report/evidence3, затем root review. S1/commit/push ещё не приняты.
+
+Поручение на финальные S1 measurements отправлено прежнему чату с gpt-6.1-sol/max;
+config default/no Fast перепроверен. Compact wait подтвердил active turn
+`01a16d18-02d9-7b61-99fe-1fc28eebbd49`, cursor
+`b945b76a-eaaa-4ff8-8894-3dc54143a9d9:45`. Исполнитель принял amendment/helper/fresh
+run scope и сохранение принятых R1/R2. Следующее root действие после callback —
+final evidence review, а не автоматический commit или переход в runtime.
+
+## A3-S1: окончательная приёмка и publication gate
+
+Iteration3 сдана после единственного fresh initial100k run558.33s. Root независимо
+сверил16 source SHA/blobs,14 evidence hashes, final EXE и exact JSON vs run log,
+пересчитал обе memory-фазы и ratios. [Review3](tasks/long-lived-dialog-a3-storage-s1-review-3.md)
+принимает S1 по контракту с явным memory amendment1. R1/R2 ранее закрыты root5/5.
+Raw memory growth88.793/88.688MiB, residual27.203/27.371MiB; max sampled process94.797MiB.
+Результат относится к indexed storage, не к full A3/native E2E/daily MVP.
+
+Следующее поручение прежнему исполнителю — только commit/push точного S1 accepted
+manifest и самого manifest; никаких новых edits/status files/evidence rewrites.
+Parent ожидается f59d285d5704dc2c6969b6f8e416f204223e27cc. После содержательного callback
+root сверяет tree/blobs/remote и лишь затем определяет следующую A3 implementation
+часть. Foreign development-environment.md исключён, человеческое постоянное
+разрешение commit/push после приёмки действует; повторного запроса пользователю нет.

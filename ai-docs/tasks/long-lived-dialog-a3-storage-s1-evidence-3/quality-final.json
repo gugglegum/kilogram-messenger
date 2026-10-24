@@ -1,0 +1,22 @@
+{
+  "source_fingerprints_verified": 16,
+  "harness_sha256": "1f8a71407afcefc20bcb46f341fd41e6b76197b85b910ecbaf8c33c37e1ac08b",
+  "old_fixture_unchanged_hash": "2d48df49c224c7e4543f8a7159b67f795288cb6e4662c9ca852ee1045ed46fa5",
+  "new_fixture_path": ".tmp/a3-s1-repair-2/persistent-scale-initial",
+  "new_fixture_bytes": 269422592,
+  "new_fixture_sha256": "f94e548405b270f2cc5e1f16534b15057dfc719e9cdc302ac2ce1859c5c17525",
+  "preserved_review_contract_foreign_hashes_verified": {
+    "ai-docs/tasks/long-lived-dialog-a3-storage-s1-implementation-2.md": "eb827bca2de7987877280fc37be74563d90ccc45cde01de789532eabd6867394",
+    "ai-docs/tasks/long-lived-dialog-a3-memory-budget-amendment-1.md": "6f02c684d11ce5ae54cef58857719e60ab465032c0b2fb01308234b1a9abab5c",
+    "ai-docs/tasks/long-lived-dialog-a3-storage-s1-review-2.md": "e01439325b07b3c060dbc52c64b58edfe92ef7a860818a878537ce1a65ff2f26",
+    "ai-docs/development-environment.md": "330ad3c4d1941b213e7e5bef958416a6847d3defb8e368f79d6d21c944efe798",
+    "ai-docs/tasks/long-lived-dialog-a3-contract.md": "70af8abcbbf12d553a8a4ae0751292d8780eea94b0dea350e1d17d68f54b8941",
+    "ai-docs/tasks/long-lived-dialog-a3-storage-s1-implementation.md": "c9f9e50b2fcd9462eb20a15bbce38c96ba4bb44e94e3415fbbc291c07c314d62",
+    "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+  },
+  "fmt": "PASS",
+  "powershell_parser_errors": 0,
+  "index_empty": true,
+  "head": "f59d285d5704dc2c6969b6f8e416f204223e27cc",
+  "commit_push": false
+}

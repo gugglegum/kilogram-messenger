@@ -1,0 +1,188 @@
+{
+  "format_version": 1,
+  "status": "R3 normative storage measurement PASS under accepted amendment; S1 submitted for root review, no publication",
+  "baseline": "f59d285d5704dc2c6969b6f8e416f204223e27cc",
+  "source_manifest": "source-final.json",
+  "source_manifest_sha256": "af4662621709ed73c4280eebc6c142cbafbcd32c736fc614dd1864a7d9daaa78",
+  "benchmark_result": "initial100k-result.json",
+  "benchmark_result_sha256": "8712d424ead30dc49a8796936d97b1120969d1aa778c0a624857179e20804dc9",
+  "harness_path": "target/verification/deps/kilogram-state-lib-kilogram_state-tests.exe",
+  "harness_sha256": "1f8a71407afcefc20bcb46f341fd41e6b76197b85b910ecbaf8c33c37e1ac08b",
+  "final_initial_run_count": 1,
+  "elapsed_seconds": 558.309309,
+  "application_commits": 244,
+  "final_counts": [
+    100016,
+    200031,
+    100016
+  ],
+  "gate_result": {
+    "amendment": "long-lived-dialog-a3-memory-budget-amendment-1",
+    "append_p95_ratio": 1.6047218247622257,
+    "elapsed_seconds": 558.309309,
+    "failures": [],
+    "max_measured_cache_data_bytes": 67108864,
+    "max_measured_private_bytes": 99401728,
+    "page_p95_ratio": 1.238874989458297,
+    "phase_comparisons": [
+      {
+        "baseline_cache_bytes": 2527552,
+        "baseline_private_bytes": 6295552,
+        "baseline_records": 1000,
+        "final_cache_bytes": 67108864,
+        "final_private_bytes": 99401728,
+        "final_records": 100000,
+        "phase": "after_warm_range_no_expected_vector",
+        "raw_growth_bytes": 93106176,
+        "raw_limit_bytes": 100663296,
+        "raw_pass": true,
+        "residual_growth_bytes": 28524864,
+        "residual_limit_bytes": 33554432,
+        "residual_pass": true
+      },
+      {
+        "baseline_cache_bytes": 2588992,
+        "baseline_private_bytes": 6406144,
+        "baseline_records": 1016,
+        "final_cache_bytes": 66883904,
+        "final_private_bytes": 99401728,
+        "final_records": 100016,
+        "phase": "after_ordinary_append",
+        "raw_growth_bytes": 92995584,
+        "raw_limit_bytes": 100663296,
+        "raw_pass": true,
+        "residual_growth_bytes": 28700672,
+        "residual_limit_bytes": 33554432,
+        "residual_pass": true
+      }
+    ],
+    "process_ids": [
+      34508
+    ],
+    "ratio_limit": 4,
+    "status": "PASS",
+    "time_limit_seconds": 1200,
+    "time_pass": true,
+    "unavailable": []
+  },
+  "independent_signed_arithmetic": [
+    {
+      "phase": "after_warm_range_no_expected_vector",
+      "raw_growth_bytes": 93106176,
+      "residual_growth_bytes": 28524864,
+      "raw96_pass": true,
+      "residual32_pass": true,
+      "original64_pass": false
+    },
+    {
+      "phase": "after_ordinary_append",
+      "raw_growth_bytes": 92995584,
+      "residual_growth_bytes": 28700672,
+      "raw96_pass": true,
+      "residual32_pass": true,
+      "original64_pass": false
+    }
+  ],
+  "measured_memory_points": 18,
+  "historical_evidence_hashes_rechecked": 27,
+  "helper_checks": {
+    "gate_arithmetic": "PASS; final source gate-helper-final.log,1/1; negatives unavailable, phase limit+1, signed deltas, PID/cache/time bounds",
+    "instrumented_small": "PASS1/1,45.50s; benchmark/gate logic final, optional smoke added afterward without changing them",
+    "uninstrumented_optional": "PASS1/1,0.64s; measured cache=null/unavailable, storage get/range still pass",
+    "clippy": "verification all-targets default+instrumented PASS",
+    "fmt": "PASS",
+    "powershell_parser": "PASS",
+    "linux_runtime": "not tested or claimed"
+  },
+  "scope": {
+    "native_e2e_messages": 0,
+    "history_cursor_implemented": false,
+    "full_A3_gate_closed": false,
+    "R1_R2": "accepted review2; production/test sources unchanged this iteration, not rerun",
+    "wire_native_migration_runtime": "untouched",
+    "extra_secret_getter": "not added or bypassed",
+    "A2": "OPEN7 warnings/strict advisory FAIL; deferred reproducer untouched"
+  },
+  "metric_scope": "Counters are per opened backend: fill/range/ordinary append differences and open snapshots. Native close/shutdown I/O after the last snapshot of an instance is not separately accumulated. Overall elapsed includes these closes.",
+  "memory_peak_scope": "Process PrivateBytes sampled at18 phases. PeakPagedMemorySize64 shown separately; not a global allocator peak proof.",
+  "fixtures": {
+    "new_path": ".tmp/a3-s1-repair-2/persistent-scale-initial",
+    "fresh_initial": true,
+    "preserved": true,
+    "old_path": ".tmp/a3-s1/persistent-scale",
+    "old_hash_unchanged": true
+  },
+  "commit_push": false,
+  "evidence_files": [
+    {
+      "name": "clippy-default-final.log",
+      "bytes": 260,
+      "sha256": "497a2ec74d9f82c967185f73b6dfce87846909d726b102f04fe2146985f0dc3d"
+    },
+    {
+      "name": "clippy-helper-initial.log",
+      "bytes": 1400,
+      "sha256": "e28b52f636e52dd673f1e1cd4587f1449ef55891887e8b80b7e22fb876529ba8"
+    },
+    {
+      "name": "clippy-instrumented-final.log",
+      "bytes": 260,
+      "sha256": "f5a49eb5b3294df3853be69ec88bdfa5afb19eb735d3b2c62dc397872a1fe457"
+    },
+    {
+      "name": "clippy-instrumented.log",
+      "bytes": 260,
+      "sha256": "708a1e79e1dbfea731c2b939486b29e856a296196939bab25a046d64d2122cb0"
+    },
+    {
+      "name": "default-helper-harness.sha256",
+      "bytes": 66,
+      "sha256": "8b55d0bcf206e00b7989e4fbb9e798c638d925cb340548ee3d5bb7d1f577b976"
+    },
+    {
+      "name": "gate-helper-final.log",
+      "bytes": 2161,
+      "sha256": "bc6e294278a750bdbeeb88d538cad6968c0793abbcdb8ca14d6cb4eaf347a892"
+    },
+    {
+      "name": "gate-helper.log",
+      "bytes": 2161,
+      "sha256": "f17bd370bd28cdf012e9beec31b10041c60dbb45cb8af97e9dbc74062d6ad613"
+    },
+    {
+      "name": "initial100k-final.log",
+      "bytes": 52035,
+      "sha256": "54ecf798582ed55be739f233a77f5ac57e8eae181dcfaa57b494c784b8bd0ee0"
+    },
+    {
+      "name": "initial100k-result.json",
+      "bytes": 63082,
+      "sha256": "8712d424ead30dc49a8796936d97b1120969d1aa778c0a624857179e20804dc9"
+    },
+    {
+      "name": "optional-metrics-default.log",
+      "bytes": 2946,
+      "sha256": "ec940fa12df6d0a10b8f365b49b44f4c5a8954c5b7b0c273490eaf353316e069"
+    },
+    {
+      "name": "preservation-during-run.json",
+      "bytes": 1481,
+      "sha256": "a371b43890a4141651c9695157d9e07b8021accf01e65d22fd5609398c17f3e2"
+    },
+    {
+      "name": "quality-final.json",
+      "bytes": 1583,
+      "sha256": "d9a8956ac46f59c40ea76521e970fd0766717d3b6c7e04a181455062cbc47817"
+    },
+    {
+      "name": "small-instrumented.log",
+      "bytes": 35265,
+      "sha256": "fa49ad89d7bea31779e112db0502921e0784f8ca112c8e9f295eaed8587b078f"
+    },
+    {
+      "name": "source-final.json",
+      "bytes": 4787,
+      "sha256": "af4662621709ed73c4280eebc6c142cbafbcd32c736fc614dd1864a7d9daaa78"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1.67s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 46 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+
+running 2 tests
+Error: State(Io { path: "\\\\?\\C:\\Users\\Paul\\AppData\\Local\\Packages\\sandbox.{a1183876-ca50-46b1-ad6b-b45989b30c3d}\\AC\\Temp\\.tmpqnj7C6\\ratchet\\account.pickle", source: Os { code: 5, kind: PermissionDenied, message: "Отказано в доступе." } })
+test a3_s1_review_mutable_growth_is_charged_from_committed_baseline ... FAILED
+Error: State(Io { path: "\\\\?\\C:\\Users\\Paul\\AppData\\Local\\Packages\\sandbox.{a1183876-ca50-46b1-ad6b-b45989b30c3d}\\AC\\Temp\\.tmpMoH2Bw\\ratchet\\account.pickle", source: Os { code: 5, kind: PermissionDenied, message: "Отказано в доступе." } })
+test a3_s1_review_readable_requires_receipt_for_pending_ordinal ... FAILED
+
+failures:
+
+failures:
+    a3_s1_review_mutable_growth_is_charged_from_committed_baseline
+    a3_s1_review_readable_requires_receipt_for_pending_ordinal
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.02s
+

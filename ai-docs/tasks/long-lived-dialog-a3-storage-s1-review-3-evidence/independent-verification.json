@@ -1,0 +1,45 @@
+{
+  "review": "root S1 final source/evidence and independent arithmetic",
+  "baseline": "f59d285d5704dc2c6969b6f8e416f204223e27cc",
+  "source_fingerprints_checked": 16,
+  "evidence_hashes_checked": 14,
+  "executed_harness_sha256": "1f8a71407afcefc20bcb46f341fd41e6b76197b85b910ecbaf8c33c37e1ac08b",
+  "exact_final_json_matches_log": true,
+  "final_result_lines": 1,
+  "phases": 18,
+  "process_ids": [
+    34508
+  ],
+  "comparisons": [
+    {
+      "phase": "after_warm_range_no_expected_vector",
+      "raw_growth_bytes": 93106176,
+      "residual_growth_bytes": 28524864,
+      "raw_pass": true,
+      "residual_pass": true
+    },
+    {
+      "phase": "after_ordinary_append",
+      "raw_growth_bytes": 92995584,
+      "residual_growth_bytes": 28700672,
+      "raw_pass": true,
+      "residual_pass": true
+    }
+  ],
+  "max_sampled_private_bytes": 99401728.0,
+  "max_sampled_cache_bytes": 67108864.0,
+  "page_ratio": 1.238874989458297,
+  "append_ratio": 1.6047218247622257,
+  "elapsed_before_final_drop_seconds": 558.309309,
+  "harness_result": [
+    "test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 48 filtered out; finished in 558.33s",
+    "test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s"
+  ],
+  "final_counts": [
+    100016,
+    200031,
+    100016
+  ],
+  "additional_heavy_run_performed": false,
+  "foreign_sha256": "330ad3c4d1941b213e7e5bef958416a6847d3defb8e368f79d6d21c944efe798"
+}

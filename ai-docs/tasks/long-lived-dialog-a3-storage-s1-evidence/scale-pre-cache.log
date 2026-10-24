@@ -1,0 +1,53 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 0.76s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 1 test
+test vault::indexed_dialog::tests::scale::indexed_scale_persistent_100k ... A3_S1_SCALE {"append_p50_ms":12.2089,"append_p95_ms":14.3432,"cold_reopen_ms":32.1165,"fill_grow_bytes":3158016,"fill_read_bytes":0,"fill_seconds":5.2706517,"fill_syncs":4,"fill_write_bytes":3449472,"full_range_read_seconds":1.9801415,"history_cursor_implemented":false,"max_bulk_plan_bytes":1030424,"native_e2e_messages":0,"open_backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":4214784,"max_growth":0,"physical_quota":1073741824,"read_bytes":2556233,"reads":625,"set_len_calls":0,"sync_calls":1,"sync_nanos":805300,"write_bytes":320,"writes":1},"page32_p50_ms":63.15469999999999,"page32_p95_ms":64.4265,"page_backend_read_bytes":0,"physical_nodes":1999,"physical_values":1000,"process_private_bytes":5951488,"retained_records_after_samples":1016,"single_append_max_node_reads":39,"single_append_max_plan_bytes":18101,"synthetic_storage_records":true,"target_records":1000}
+A3_S1_SCALE_PROGRESS records=10000 elapsed_seconds=72.43
+A3_S1_SCALE {"append_p50_ms":15.288400000000001,"append_p95_ms":16.7937,"cold_reopen_ms":235.65810000000002,"fill_grow_bytes":29474816,"fill_read_bytes":0,"fill_seconds":64.5450271,"fill_syncs":21,"fill_write_bytes":114914944,"full_range_read_seconds":24.650189,"history_cursor_implemented":false,"max_bulk_plan_bytes":1909711,"native_e2e_messages":0,"open_backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":33689600,"max_growth":0,"physical_quota":1073741824,"read_bytes":24498505,"reads":5982,"set_len_calls":0,"sync_calls":1,"sync_nanos":878400,"write_bytes":320,"writes":1},"page32_p50_ms":78.8154,"page32_p95_ms":82.1979,"page_backend_read_bytes":0,"physical_nodes":19999,"physical_values":10000,"process_private_bytes":33562624,"retained_records_after_samples":10016,"single_append_max_node_reads":45,"single_append_max_plan_bytes":19087,"synthetic_storage_records":true,"target_records":10000}
+A3_S1_SCALE_PROGRESS records=20256 elapsed_seconds=182.56
+A3_S1_SCALE_PROGRESS records=30496 elapsed_seconds=273.82
+A3_S1_SCALE_PROGRESS records=40224 elapsed_seconds=364.29
+A3_S1_SCALE_PROGRESS records=50464 elapsed_seconds=463.64
+A3_S1_SCALE_PROGRESS records=60192 elapsed_seconds=559.93
+A3_S1_SCALE_PROGRESS records=70432 elapsed_seconds=662.00
+A3_S1_SCALE_PROGRESS records=80160 elapsed_seconds=761.81
+A3_S1_SCALE_PROGRESS records=90400 elapsed_seconds=868.65
+A3_S1_SCALE_PROGRESS records=100000 elapsed_seconds=969.88
+A3_S1_SCALE {"append_p50_ms":20.6279,"append_p95_ms":24.4367,"cold_reopen_ms":2227.1474,"fill_grow_bytes":235798528,"fill_read_bytes":847687680,"fill_seconds":871.9535399,"fill_syncs":179,"fill_write_bytes":3404553216,"full_range_read_seconds":302.4183435,"history_cursor_implemented":false,"max_bulk_plan_bytes":2795168,"native_e2e_messages":0,"open_backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":269488128,"max_growth":0,"physical_quota":1073741824,"read_bytes":243999049,"reads":59557,"set_len_calls":0,"sync_calls":1,"sync_nanos":4868200,"write_bytes":320,"writes":1},"page32_p50_ms":96.7239,"page32_p95_ms":100.7072,"page_backend_read_bytes":684929024,"physical_nodes":199999,"physical_values":100000,"process_private_bytes":102805504,"retained_records_after_samples":100016,"single_append_max_node_reads":54,"single_append_max_plan_bytes":20566,"synthetic_storage_records":true,"target_records":100000}
+A3_S1_SCALE_FINAL {"commits_this_run":244,"elapsed_seconds":1275.3097517,"final_counts":[100016,200031,100016],"fixture_preserved":true,"stages":[{"append_p50_ms":12.2089,"append_p95_ms":14.3432,"cold_reopen_ms":32.1165,"fill_grow_bytes":3158016,"fill_read_bytes":0,"fill_seconds":5.2706517,"fill_syncs":4,"fill_write_bytes":3449472,"full_range_read_seconds":1.9801415,"history_cursor_implemented":false,"max_bulk_plan_bytes":1030424,"native_e2e_messages":0,"open_backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":4214784,"max_growth":0,"physical_quota":1073741824,"read_bytes":2556233,"reads":625,"set_len_calls":0,"sync_calls":1,"sync_nanos":805300,"write_bytes":320,"writes":1},"page32_p50_ms":63.15469999999999,"page32_p95_ms":64.4265,"page_backend_read_bytes":0,"physical_nodes":1999,"physical_values":1000,"process_private_bytes":5951488,"retained_records_after_samples":1016,"single_append_max_node_reads":39,"single_append_max_plan_bytes":18101,"synthetic_storage_records":true,"target_records":1000},{"append_p50_ms":15.288400000000001,"append_p95_ms":16.7937,"cold_reopen_ms":235.65810000000002,"fill_grow_bytes":29474816,"fill_read_bytes":0,"fill_seconds":64.5450271,"fill_syncs":21,"fill_write_bytes":114914944,"full_range_read_seconds":24.650189,"history_cursor_implemented":false,"max_bulk_plan_bytes":1909711,"native_e2e_messages":0,"open_backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":33689600,"max_growth":0,"physical_quota":1073741824,"read_bytes":24498505,"reads":5982,"set_len_calls":0,"sync_calls":1,"sync_nanos":878400,"write_bytes":320,"writes":1},"page32_p50_ms":78.8154,"page32_p95_ms":82.1979,"page_backend_read_bytes":0,"physical_nodes":19999,"physical_values":10000,"process_private_bytes":33562624,"retained_records_after_samples":10016,"single_append_max_node_reads":45,"single_append_max_plan_bytes":19087,"synthetic_storage_records":true,"target_records":10000},{"append_p50_ms":20.6279,"append_p95_ms":24.4367,"cold_reopen_ms":2227.1474,"fill_grow_bytes":235798528,"fill_read_bytes":847687680,"fill_seconds":871.9535399,"fill_syncs":179,"fill_write_bytes":3404553216,"full_range_read_seconds":302.4183435,"history_cursor_implemented":false,"max_bulk_plan_bytes":2795168,"native_e2e_messages":0,"open_backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":269488128,"max_growth":0,"physical_quota":1073741824,"read_bytes":243999049,"reads":59557,"set_len_calls":0,"sync_calls":1,"sync_nanos":4868200,"write_bytes":320,"writes":1},"page32_p50_ms":96.7239,"page32_p95_ms":100.7072,"page_backend_read_bytes":684929024,"physical_nodes":199999,"physical_values":100000,"process_private_bytes":102805504,"retained_records_after_samples":100016,"single_append_max_node_reads":54,"single_append_max_plan_bytes":20566,"synthetic_storage_records":true,"target_records":100000}]}
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 44 filtered out; finished in 1275.55s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      14967  9.58
+release            5111  1.74
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=59143
+target_gib=64.11
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

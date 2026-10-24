@@ -1,0 +1,41 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'release' without executing them...
+    Finished `release` profile [optimized] target(s) in 0.75s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\release\deps\kilogram-state-lib-kilogram_state-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\release\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 1 test
+test vault::indexed_dialog::tests::scale::indexed_scale_persistent_100k ... A3_S1_SCALE {"append_growth_bytes":0,"append_p50_ms":5.5655,"append_p95_ms":7.6314,"append_read_bytes":491520,"append_syncs":16,"append_write_bytes":3843072,"cold_reopen_ms":7.101,"fill_grow_bytes":0,"fill_read_bytes":0,"fill_seconds":1e-7,"fill_syncs":0,"fill_write_bytes":0,"full_range_read_seconds":4.1749702,"history_cursor_implemented":false,"max_bulk_plan_bytes":0,"native_e2e_messages":0,"open_backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":269488128,"max_growth":0,"physical_quota":1073741824,"read_bytes":65865,"reads":10,"set_len_calls":0,"sync_calls":1,"sync_nanos":1092500,"write_bytes":320,"writes":1},"page32_p50_ms":1.2809,"page32_p95_ms":1.6891,"page_backend_read_bytes":720228352,"physical_nodes":200063,"physical_values":100032,"process_private_bytes":92381184,"retained_records_after_samples":100048,"single_append_max_node_reads":18,"single_append_max_plan_bytes":20566,"synthetic_storage_records":true,"target_records":100032}
+A3_S1_SCALE_FINAL {"commits_this_run":16,"elapsed_seconds":4.6293681,"final_counts":[100048,200095,100048],"fixture_preserved":true,"stages":[{"append_growth_bytes":0,"append_p50_ms":5.5655,"append_p95_ms":7.6314,"append_read_bytes":491520,"append_syncs":16,"append_write_bytes":3843072,"cold_reopen_ms":7.101,"fill_grow_bytes":0,"fill_read_bytes":0,"fill_seconds":1e-7,"fill_syncs":0,"fill_write_bytes":0,"full_range_read_seconds":4.1749702,"history_cursor_implemented":false,"max_bulk_plan_bytes":0,"native_e2e_messages":0,"open_backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":269488128,"max_growth":0,"physical_quota":1073741824,"read_bytes":65865,"reads":10,"set_len_calls":0,"sync_calls":1,"sync_nanos":1092500,"write_bytes":320,"writes":1},"page32_p50_ms":1.2809,"page32_p95_ms":1.6891,"page_backend_read_bytes":720228352,"physical_nodes":200063,"physical_values":100032,"process_private_bytes":92381184,"retained_records_after_samples":100048,"single_append_max_node_reads":18,"single_append_max_plan_bytes":20566,"synthetic_storage_records":true,"target_records":100032}]}
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 46 filtered out; finished in 4.65s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      14967  9.58
+release            5405  1.83
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=59437
+target_gib=64.2
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

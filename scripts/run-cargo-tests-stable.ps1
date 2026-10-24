@@ -3,6 +3,7 @@ param(
     [string[]]$Package = @(),
     [string]$Filter,
     [string]$Profile = 'verification',
+    [string[]]$CargoFeatures = @(),
     [int]$CargoJobs = 0,
     [string]$IsolatedTestsFile,
     [ValidateSet('AfterAggregate', 'BeforeAggregate')]
@@ -51,6 +52,12 @@ $cargoArguments = @(
     '--no-run'
     '--message-format=json-render-diagnostics'
 )
+if ($CargoFeatures.Count -gt 0) {
+    if ($CargoFeatures | Where-Object { [string]::IsNullOrWhiteSpace($_) }) {
+        throw 'Cargo feature names must not be empty.'
+    }
+    $cargoArguments += @('--features', ($CargoFeatures -join ','))
+}
 
 if ($Package.Count -eq 0) {
     $cargoArguments += '--workspace'

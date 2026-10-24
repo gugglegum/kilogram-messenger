@@ -1,0 +1,80 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 0.71s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+skipping_unchanged_test=indexed_scale_persistent_100k
+skipping_unchanged_test=indexed_scale_small_verification
+skipping_unchanged_test=indexed_memory_diagnostic_preserved_fixtures
+skipping_unchanged_test=indexed_component_production_growth_single_append
+skipping_unchanged_test=ordered_maximal_index_commit_and_prepaid_reservations_are_bounded
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 18 tests
+test vault::indexed_dialog::tests::credit::indexed_component_accepted_source_cannot_be_replaced ... ok
+test vault::indexed_dialog::tests::credit::indexed_component_funded_head_full_pending_remainder_and_refill ... ok
+test vault::indexed_dialog::tests::credit::indexed_component_io_failures_atomic_root_records_credits ... A3_S1_IO point=storage_full index=0 returned_error=true recovered_new=false
+A3_S1_IO point=before_write index=0 returned_error=true recovered_new=false
+A3_S1_IO point=after_write index=0 returned_error=true recovered_new=false
+A3_S1_IO point=before_sync index=0 returned_error=true recovered_new=true
+A3_S1_IO point=after_sync index=0 returned_error=true recovered_new=true
+A3_S1_IO point=after_sync index=1 returned_error=false recovered_new=true
+A3_S1_IO point=after_sync index=2 returned_error=false recovered_new=true
+ok
+test vault::indexed_dialog::tests::credit::indexed_component_long_prefix_split_merge_and_credit_retirement ... ok
+test vault::indexed_dialog::tests::credit::indexed_component_owner_schema_and_old_recovery_fences ... ok
+test vault::indexed_dialog::tests::credit::indexed_component_queue_debt_receipt_and_context_conservation ... ok
+test vault::indexed_dialog::tests::credit::indexed_component_queued_text_cannot_be_replaced ... ok
+test vault::indexed_dialog::tests::indexed_smoke_reopen ... ok
+test vault::indexed_dialog::tests::integrity::indexed_component_anchor_tamper_never_reinitializes ... ok
+test vault::indexed_dialog::tests::integrity::indexed_component_deletion_corruption_scope_and_complete_range ... ok
+test vault::indexed_dialog::tests::integrity::indexed_component_global_fork_generation_and_commit_identity ... ok
+test vault::indexed_dialog::tests::integrity::indexed_component_maximal_plan_and_bounds ... A3_S1_MAX_PLAN encoded_bytes=15231748 changed_nodes=1799 nodes_read=0
+ok
+test vault::indexed_dialog::tests::integrity::indexed_component_membership_absence_numeric_and_reopen ... ok
+test vault::indexed_dialog::tests::integrity::indexed_component_projection_codec_and_caps ... ok
+test vault::indexed_dialog::tests::processes::indexed_component_file_capacity_refusal_and_continuation ... A3_S1_CAPACITY requested=2109440 external=317 refused_quota=270545212 continued_records=288
+ok
+test vault::indexed_dialog::tests::processes::indexed_component_real_owned_child_kills ... A3_S1_KILL point=before_commit owned_pid=58692 recovered_records=0 elapsed_ms=243
+A3_S1_KILL point=after_commit owned_pid=47996 recovered_records=2 elapsed_ms=253
+A3_S1_KILL point=after_extension_sync owned_pid=49852 recovered_records=256 elapsed_ms=1428
+ok
+test vault::indexed_dialog::tests::processes::indexed_crash_child ... ok
+test vault::tests::indexed_v2_upgrade_retires_identity_shadow_and_is_crash_resumable ... ok
+
+test result: ok. 18 passed; 0 failed; 0 ignored; 0 measured; 29 filtered out; finished in 20.72s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      15024  9.68
+release            5747  1.86
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=59836
+target_gib=64.33
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false
