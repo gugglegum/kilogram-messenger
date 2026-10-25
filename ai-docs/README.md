@@ -24,9 +24,15 @@ queue/pending/debt. Полный F содержит19 cases; итог F с suppo
 Исполнитель — прежний OD1 чат GPT-6.1 Sol Max, без Fast; приёмка и проверка
 публикации принадлежат root.
 
-Следующая обязательная граница A3 — **S5: existing L1 migration/handoff**; она
-ещё не начата. Whole A3, самостоятельный onboarding и пользовательский MVP остаются
-открыты. M1.2.63 не запускается автоматически; ниже сохранена история этапов.
+Пользователь поручил **S5: existing L1 migration/handoff**. Завершён
+[контрактный этап S5](tasks/long-lived-dialog-a3-migration-s5-task.md) на опубликованной
+базе `0c1baa887008f784a86fd7ebabdcd5145fb4d1c0`; код S5 ещё не реализуется.
+[Review2 контракта](tasks/long-lived-dialog-a3-migration-s5-contract-review-2.md)
+закрыл R1–R4 и принял контракт. Следуют exact documentation publication, independent
+remote verification и отдельная bounded implementation assignment; whole S5 ещё открыт.
+Исполнитель прежний, GPT-6.1 Sol Max без Fast; сначала review контракта, затем
+реализации, после приёмки exact commit/push. Whole A3, самостоятельный onboarding
+и пользовательский MVP остаются открыты. M1.2.63 не запускается автоматически.
 
 Текущая компактная передача состояния, границы active/dormant/planned,
 корректировки архитектурного аудита и три ближайших product-приоритета:

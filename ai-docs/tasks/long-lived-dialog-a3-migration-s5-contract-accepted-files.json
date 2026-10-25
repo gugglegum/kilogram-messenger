@@ -1,0 +1,68 @@
+{
+  "status": "root-accepted-for-exact-commit-and-push",
+  "date": "2026-10-25",
+  "scope": "A3-S5 architecture contract only; review2 acceptance; no product implementation",
+  "baseline": "0c1baa887008f784a86fd7ebabdcd5145fb4d1c0",
+  "expected_commit_parent": "0c1baa887008f784a86fd7ebabdcd5145fb4d1c0",
+  "branch": "master",
+  "remote": "origin",
+  "remote_branch": "master",
+  "review": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-contract-review-2.md",
+  "self_excluded": true,
+  "self_path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-contract-accepted-files.json",
+  "rule": "Stage only these exact paths plus this manifest. Verify raw hashes, staged and committed normalized blobs, sole parent and exact path set. One ordinary commit and normal fast-forward push. No product changes or other edits.",
+  "file_count": 8,
+  "commit_file_count_including_self": 9,
+  "unchanged_development_environment_excluded": "ai-docs/development-environment.md",
+  "unchanged_development_environment_sha256": "53074ff3734dacd9906ee03cc5c7ded952dedd99d207581f692ff900b9a79f8f",
+  "files": [
+    {
+      "path": "ai-docs/README.md",
+      "bytes": 159167,
+      "sha256": "b4cc846e7c34d693f7de8c0a295e2a4ef06578fe31cb6058f7ce553a3d6bbd28",
+      "git_blob": "877a82d60187bf25840c8d638d67767c89c187ad"
+    },
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "bytes": 94668,
+      "sha256": "465f15b6a5ae8d210ae00c0d619fe41e9ec06dcfc8a83b84bf24271d3290eca2",
+      "git_blob": "83b6d1a651a069dfbdcaebcc0b4500b0676dd778"
+    },
+    {
+      "path": "ai-docs/next-stage-plan.md",
+      "bytes": 4159,
+      "sha256": "d5e44e0ac5b5ac155cab8b748251f282100655ff2840486c0a9062a5caf005c2",
+      "git_blob": "e16657a0386bc04beb3de3b7ccd989486e1f0898"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-task.md",
+      "bytes": 14391,
+      "sha256": "ff3595414aa9549e736ca43301948b0f57ceb8ee14553314c95a4096a589aecc",
+      "git_blob": "00c572042d7cf08ab62363347df8d26e8e3f27b8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-provenance-decision-1.md",
+      "bytes": 10230,
+      "sha256": "13e734968a3bb6d2710a8d99437cea0a137f257d8be3eedff764398879907bba",
+      "git_blob": "eac11dbd6ef0130b40e476ae933cf8459523e661"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-contract.md",
+      "bytes": 109805,
+      "sha256": "f87c5c8b0b307863078cf3e2e85f3d13a05392d1d654affd5f2a40a3943ad2ad",
+      "git_blob": "23d7d6d094345d80352e7342d0f12848859fb295"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-contract-review-1.md",
+      "bytes": 9708,
+      "sha256": "91f5f1aeae2ba4016c97ad9dbba3c3b9953f614c39e54a76dafc7ddd858ac347",
+      "git_blob": "86319dbcf44e04691a7fc978bab4677bf8d7f6c0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-contract-review-2.md",
+      "bytes": 4828,
+      "sha256": "225944c8846b3d017060bec263fd69f5d0b7a9dbae728cbd4c662fca0ce603f4",
+      "git_blob": "494c547a89a36c47e0e044d8be7ef8ab185fdf59"
+    }
+  ]
+}

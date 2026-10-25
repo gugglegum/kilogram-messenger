@@ -1,12 +1,18 @@
-# Текущая точка: A3-S4 принят; S5 ещё не начат
+# Текущая точка: A3-S4 опубликован; контракт S5 принят
 
 Актуально на2026-10-25. Принят fresh runtime двух процессов, перезапуски и
 offline-доставка: [итоговое review S4](tasks/long-lived-dialog-a3-runtime-s4-implementation-review-5.md).
 Полный P подтвердил1640 Text и точную историю после direct/own-relay restart;
 F и выбранные component проверки пройдены. Это не завершение whole A3/MVP.
 
-Следующая обязательная граница принятого A3 плана — S5 existing L1 migration/handoff.
-Для неё нужен отдельный контракт/review до реализации; S5 сейчас не начат.
+Пользователь поручил S5 existing L1 migration/handoff:
+[задача на контракт](tasks/long-lived-dialog-a3-migration-s5-task.md), baseline
+`0c1baa887008f784a86fd7ebabdcd5145fb4d1c0`.
+[Review2](tasks/long-lived-dialog-a3-migration-s5-contract-review-2.md) принял
+исправленный контракт: R1–R4 закрыты. Сейчас exact documentation commit/push,
+затем independent remote verification и отдельное поручение первой части реализации
+(storage migration core). Product implementation/build/migration ещё не начаты.
+Каждая логическая часть сдаётся на review до commit/push; whole S5/P5 пока открыт.
 Ниже сохранён отложенный recovery API-retirement план. Он не является текущим
 приоритетом и не должен автоматически запускаться после S4.
 

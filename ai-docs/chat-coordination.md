@@ -993,3 +993,53 @@ README/next-stage/coordination and supplies a final exact accepted manifest incl
 this acceptance. Executor is instructed to commit/push that list only, then root
 independently verifies committed blobs, sole parent and actual remote master.
 S5/whole A3/MVP remain open; no next implementation stage is launched automatically.
+
+### 2026-10-25: пользователь поручил S5, старт контрактного этапа
+
+S4 опубликован commit0c1baa887008f784a86fd7ebabdcd5145fb4d1c0, sole parent9547ed1…;
+root сверил exact528 paths/blobs, clean index/worktree и actual GitHub master.
+На последующее прямое поручение пользователя создана
+[задача S5](tasks/long-lived-dialog-a3-migration-s5-task.md): explicit V4 storage
+upgrade и existing L1→L2 handoff с прежними identities/native/историей/долгами.
+Прежнему исполнителю01a1653c-0154-7611-8e8c-044fbe1e4d7a на GPT-6.1 Sol Max без Fast
+передаётся только подготовка контракта и source map; product edits пока не разрешены.
+После callback root проверяет контракт, при необходимости возвращает замечания,
+публикует принятый contract package, затем отдельно поручает реализацию. Final
+review/commit/push и independent remote verification сохраняются. Human callback
+authorization действует; пользователь не должен переносить ответы вручную.
+
+### 2026-10-25: S5 historical provenance gap — root design decision1
+
+Исполнитель обнаружил, root подтвердил по ingress/outbox/engine: у already-readable
+V4 rows Auth bytes остаются в catalog, но per-event admission/final refs не сохранены
+после удаления pending-state. Pending A сохранён; O/R имеют собственные signed links.
+[Decision1](tasks/long-lived-dialog-a3-migration-s5-provenance-decision-1.md) принимает
+для контракта отдельный migration-only LegacySnapshot с honest Recorded/NotApplicable/
+UnrecordedLegacy, bound to authenticated frozen source inventory. Нельзя угадывать A/F
+из current pins, создавать full H2 proof, новый ACK/Delivered или разрешение на новую
+операцию. Новые transitions сохраняют полные применимые captures; missing mandatory
+evidence/corruption остаются ошибками. Требуются purpose/version gates и negative tests.
+Full S5 contract/layout и implementation ещё не приняты; product edits запрещены.
+
+### 2026-10-25: S5 contract review1 — changes requested
+
+Root проверил contract72768B/SHA c99ad8f15810348257ea9d5ef0eebe173cbc32c11e5175700ba3cb0d7c96b495
+по актуальному baseline code. [Review1](tasks/long-lived-dialog-a3-migration-s5-contract-review-1.md)
+разрешает направления Root7/LegacySnapshot/offline migration/per-C handoff и сохраняет
+C600/F1200/P2400, но возвращает четыре concrete seams: R1 local/wire mode numbers,
+R2 pre-Q receipt/head/admission и asymmetric reconnect, R3 authenticated per-C
+LegacyHold/config retry, R4 deterministic two-frontier source fold. Полный контракт
+не принят. Исполнитель меняет только свой contract, возвращает hash/disposition;
+никаких product edits/build/fixtures/migration/commit/push до следующего root решения.
+
+### 2026-10-25: S5 contract review2 — accepted for exact documentation publication
+
+Executor revision109621B/SHA a459a1aac6254ec7ad4473b12897b0864a72c8574f4a5709d7ac22316fc46719
+закрыл R1–R4. Root уточнил выбор только из filtered continuations в fold и статус
+документа; accepted contract109805B/SHA f87c5c8b0b307863078cf3e2e85f3d13a05392d1d654affd5f2a40a3943ad2ad.
+[Review2](tasks/long-lived-dialog-a3-migration-s5-contract-review-2.md) принимает
+contract directions D1–D4, сохраняет C600/F1200/P2400 и обязанность charged feasibility.
+Executor поручается только exact docs commit/push по accepted manifest с parent0c1baa8.
+Root сверяет actual remote/diff и затем отдельно поручает storage migration core.
+Implementation ещё не начат; whole S5/A3/MVP не закрыты. Human standing publication
+и callback authorization сохраняются; повторный запрос пользователю не требуется.
