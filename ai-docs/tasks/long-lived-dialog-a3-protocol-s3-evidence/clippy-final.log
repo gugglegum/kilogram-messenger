@@ -1,0 +1,5 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 4.16s

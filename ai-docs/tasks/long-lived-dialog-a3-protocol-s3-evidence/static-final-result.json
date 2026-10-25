@@ -1,0 +1,10 @@
+{
+  "checks": {
+    "cargo_fmt": 0,
+    "helper_rustfmt": 0,
+    "powershell_parse_errors": 0,
+    "git_diff_check": 0
+  },
+  "seconds": 4.1641534,
+  "profile": "static-only"
+}

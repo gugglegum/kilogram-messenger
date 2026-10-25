@@ -1,0 +1,14 @@
+[
+  {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram_protocol-56630b5a6e6f390d.exe",
+    "sha256": "fc4f8b66af069d420b9acbf2f5a449de0a2b7371b60c3ed9ac0302c86bd0c0dc"
+  },
+  {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram_ratchet-395093e7d42473c0.exe",
+    "sha256": "903014c0b747fe928f1c362463fd3b38ac9120e44d95673689cdbadb8652e09a"
+  },
+  {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram_state-7bc6ade9b3404513.exe",
+    "sha256": "4d2eb5349ee24823fef53100c0d5c05272f02a0ae9c26a0bd7d7b738687c0ea6"
+  }
+]

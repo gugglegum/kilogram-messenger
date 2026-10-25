@@ -1,0 +1,73 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking digest v0.11.3
+    Checking tempfile v3.27.0
+    Checking tokio v1.53.3
+    Checking curve25519-dalek v5.0.0
+    Checking sha2 v0.11.0
+    Checking hmac v0.13.0
+   Compiling matrix-pickle-derive v0.2.3
+    Checking rustls-webpki v0.103.16
+   Compiling rustls v0.23.46
+    Checking data-encoding-macro v0.1.21
+   Compiling num_enum_derive v0.7.6
+    Checking netdev v0.45.1
+    Checking webpki-roots v1.0.10
+    Checking hkdf v0.13.0
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Checking ed25519-dalek v3.0.0
+    Checking x25519-dalek v3.0.0
+    Checking hpke v0.14.0
+    Checking matrix-pickle v0.2.3
+    Checking num_enum v0.7.6
+    Checking iroh-base v1.1.0
+    Checking kilogram-ticket-publication v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ticket-publication)
+    Checking vodozemac v0.10.0
+    Checking kilogram-crypto v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-crypto)
+    Checking kilogram-identity v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-identity)
+    Checking kilogram-mailbox v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox)
+error: this function has too many arguments (9/7)
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_protocol2.rs:625:5
+    |
+625 | /     fn proto_rows(
+626 | |         &mut self,
+627 | |         c: u8,
+628 | |         identity: &Identity,
+...   |
+634 | |         genesis: bool,
+635 | |     ) -> Result<Plan> {
+    | |_____________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#too_many_arguments
+    = note: `-D clippy::too-many-arguments` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::too_many_arguments)]`
+
+error: the loop variable `role` is used to index `last`
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_protocol2.rs:642:21
+    |
+642 |         for role in 0..2 {
+    |                     ^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+    = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator and enumerate()
+    |
+642 -         for role in 0..2 {
+642 +         for (role, <item>) in last.iter_mut().enumerate() {
+    |
+
+error: could not compile `kilogram-state` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: manual implementation of `.is_multiple_of()`
+ --> crates\kilogram-state\src\vault\indexed_dialog\history_protocol2_tests.rs:9:8
+  |
+9 |     if raw.len() % 2 != 0 {
+  |        ^^^^^^^^^^^^^^^^^^ help: replace with: `!raw.len().is_multiple_of(2)`
+  |
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#manual_is_multiple_of
+  = note: `-D clippy::manual-is-multiple-of` implied by `-D warnings`
+  = help: to override `-D warnings` add `#[allow(clippy::manual_is_multiple_of)]`
+
+error: could not compile `kilogram-state` (lib test) due to 3 previous errors

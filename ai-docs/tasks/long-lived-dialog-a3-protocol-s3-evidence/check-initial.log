@@ -1,0 +1,105 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking crypto-common v0.2.2
+    Checking zeroize v1.9.0
+    Checking serde v1.0.229
+    Checking thiserror v2.0.20
+    Checking zerofrom v0.1.8
+    Checking yoke v0.8.3
+    Checking getrandom v0.4.3
+    Checking smallvec v1.15.2
+    Checking signature v3.0.0
+    Checking cobs v0.3.0
+    Checking bytes v1.12.1
+    Checking serde_json v1.0.151
+    Checking stellar-agent-windows-identity v0.1.0-alpha.6
+    Checking matrix-pickle v0.2.3
+    Checking cipher v0.4.4
+    Checking serde_bytes v0.11.19
+    Checking percent-encoding v2.3.2
+    Checking digest v0.11.3
+    Checking arrayvec v0.7.8
+    Checking universal-hash v0.6.1
+    Checking cipher v0.5.2
+    Checking aead v0.6.1
+    Checking poly1305 v0.9.1
+    Checking curve25519-dalek v5.0.0
+    Checking hmac v0.13.0
+    Checking sha2 v0.11.0
+    Checking curve25519-dalek v4.1.3
+    Checking zerovec v0.11.8
+    Checking zerotrie v0.2.5
+    Checking chacha20 v0.9.1
+    Checking chacha20 v0.10.1
+    Checking ed25519 v3.0.0
+    Checking ed25519 v2.2.3
+    Checking hkdf v0.13.0
+    Checking heapless v0.7.17
+    Checking cbc v0.1.2
+    Checking aes v0.8.4
+    Checking chacha20poly1305 v0.10.1
+    Checking prost v0.14.4
+    Checking hex-conservative v0.2.3
+    Checking chacha20poly1305 v0.11.0
+    Checking blake3 v1.8.7
+    Checking form_urlencoded v1.2.2
+    Checking bitcoin_hashes v0.14.101
+    Checking postcard v1.1.3
+    Checking tinystr v0.8.4
+    Checking potential_utf v0.1.6
+    Checking x25519-dalek v3.0.0
+    Checking ed25519-dalek v3.0.0
+    Checking x25519-dalek v2.0.1
+    Checking ed25519-dalek v2.2.0
+    Checking icu_collections v2.3.0
+    Checking bip39 v2.2.2
+    Checking icu_locale_core v2.3.0
+    Checking hpke v0.14.0
+    Checking vodozemac v0.10.0
+    Checking kilogram-crypto v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-crypto)
+    Checking kilogram-identity v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-identity)
+    Checking icu_provider v2.3.1
+    Checking icu_normalizer v2.3.0
+    Checking icu_properties v2.3.0
+    Checking kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+    Checking idna_adapter v1.2.2
+    Checking idna v1.1.0
+    Checking url v2.5.8
+    Checking kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+error[E0616]: field `offer_id` of struct `ParsedModeProof2` is private
+   --> crates\kilogram-protocol\src\ordered_dialog_v2.rs:128:62
+    |
+128 |             let request = if c.role == 0 { selection.proof.0.offer_id } else { selection.proof.0.grant_id };
+    |                                                              ^^^^^^^^ private field
+    |
+help: a method `offer_id` also exists, call it with parentheses
+    |
+128 |             let request = if c.role == 0 { selection.proof.0.offer_id() } else { selection.proof.0.grant_id };
+    |                                                                      ++
+
+error[E0616]: field `grant_id` of struct `ParsedModeProof2` is private
+   --> crates\kilogram-protocol\src\ordered_dialog_v2.rs:128:98
+    |
+128 |             let request = if c.role == 0 { selection.proof.0.offer_id } else { selection.proof.0.grant_id };
+    |                                                                                                  ^^^^^^^^ private field
+    |
+help: a method `grant_id` also exists, call it with parentheses
+    |
+128 |             let request = if c.role == 0 { selection.proof.0.offer_id } else { selection.proof.0.grant_id() };
+    |                                                                                                          ++
+
+error[E0616]: field `native_a` of struct `ParsedModeProof2` is private
+   --> crates\kilogram-protocol\src\ordered_dialog_v2.rs:133:101
+    |
+133 | ...   if c.kind == 1 { require(actual.prekey_keys.is_some_and(|k| Some(k[0]) == selection.proof.0.native_a && Some(k[2]) == selecti...
+    |                                                                                                   ^^^^^^^^ private field
+
+error[E0616]: field `otk` of struct `ParsedModeProof2` is private
+   --> crates\kilogram-protocol\src\ordered_dialog_v2.rs:133:145
+    |
+133 | ...on.proof.0.native_a && Some(k[2]) == selection.proof.0.otk), "prekey selection")?; }
+    |                                                           ^^^ private field
+
+For more information about this error, try `rustc --explain E0616`.
+error: could not compile `kilogram-protocol` (lib) due to 4 previous errors

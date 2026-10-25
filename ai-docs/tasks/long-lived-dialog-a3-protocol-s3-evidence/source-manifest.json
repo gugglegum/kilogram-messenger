@@ -1,0 +1,181 @@
+{
+  "baseline": "e6f9b8ff6c7e9305d7216a94b142f0220b0c4a25",
+  "source_count": 25,
+  "sources": [
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+      "bytes": 326,
+      "lines": 15,
+      "sha256": "1b59fba0774b8cb3fad8f5de8de5a0a4df1bb9093fbcac600a3e055f884d8fdd",
+      "baseline_blob": "f16f00f5cf651fca100d947b942cc214ea0a3c89"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/protocol2_component_tests.rs",
+      "bytes": 38533,
+      "lines": 1112,
+      "sha256": "8188f4c5d0cdf97b9203354ee0fec93b8edb6906ca11d6861a47a0c0340c05b7",
+      "baseline_blob": null
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/protocol2_failure_tests.rs",
+      "bytes": 12773,
+      "lines": 395,
+      "sha256": "90a62274259acf74c0f315cf3add0de42e90058f489b290360cbfd994d5d3240",
+      "baseline_blob": null
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/protocol2_legacy_tests.rs",
+      "bytes": 26777,
+      "lines": 820,
+      "sha256": "f5f63e906a0d20d5836ffe75605f30feb96010515892ae1f15685f91c0717a09",
+      "baseline_blob": null
+    },
+    {
+      "path": "crates/kilogram-protocol/src/lib.rs",
+      "bytes": 65569,
+      "lines": 1794,
+      "sha256": "526cafec5efea50f44035dd17ab5730989eccdf7b81ca6a8840cf9538e88f0ea",
+      "baseline_blob": "f17b489d95807f3a187e6eea7116150b5fcec75e"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2.rs",
+      "bytes": 13260,
+      "lines": 443,
+      "sha256": "0ef3aef20cdfc2ceffa2e5625ff9d88b56c6ad1bba100711b9b0b4e7affdb764",
+      "baseline_blob": null
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/authority.rs",
+      "bytes": 17419,
+      "lines": 594,
+      "sha256": "93249a59855b61ddef36223844b1e43827d3e46dde6902da1244aeaedca225b5",
+      "baseline_blob": null
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/frame.rs",
+      "bytes": 14596,
+      "lines": 500,
+      "sha256": "8fa1a455af9b1a14dbcbb56b8cb78a3bc2e6b3a9ad392113e57f6dd52a28c6e9",
+      "baseline_blob": null
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/mode.rs",
+      "bytes": 19169,
+      "lines": 574,
+      "sha256": "288f8e275894e0ffb8d0e6ff2b5fabfb87d9afdf3785cc286a524f336267f2de",
+      "baseline_blob": null
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/tests.rs",
+      "bytes": 1307,
+      "lines": 41,
+      "sha256": "71b5400b49ac02158d47e1610721e7d8369a73815bc7dd1b4599de074b201e0f",
+      "baseline_blob": null
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/tests/golden.rs",
+      "bytes": 14162,
+      "lines": 429,
+      "sha256": "6ca86a6840ce0781a4b85c4d7fe0b8788804e3f4c5f3a221ae73bdfe216a5a84",
+      "baseline_blob": null
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/tests/matrix.rs",
+      "bytes": 32637,
+      "lines": 1021,
+      "sha256": "544c68258a21930031e46f07d277ffbfb98fc0b9b3380018ad2024bb5a69d240",
+      "baseline_blob": null
+    },
+    {
+      "path": "crates/kilogram-protocol/tests/data/s3-differential.json",
+      "bytes": 92970,
+      "lines": 613,
+      "sha256": "d55575e9a996e24d45c5ef770007bb918963154d31918b8c11700cfb051392a7",
+      "baseline_blob": null
+    },
+    {
+      "path": "crates/kilogram-protocol/tests/support/ordered_dialog_v2.rs",
+      "bytes": 13159,
+      "lines": 423,
+      "sha256": "daebb3ecd953921deac9b0632a5a82670e7ee825fb3349fc0c01642fb87be845",
+      "baseline_blob": null
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/lib.rs",
+      "bytes": 95396,
+      "lines": 2540,
+      "sha256": "6b5c9269841a0db59c7f7afb76f30dba22557dadbac0a30b684a8fa402ba2784",
+      "baseline_blob": "d2fe003f130fc896778de4d799d558258d07d6ea"
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/ordered_v2.rs",
+      "bytes": 17896,
+      "lines": 548,
+      "sha256": "61922db8f80f93e204b3ae5689ec80022e53d1688ac5b0c4951ae668b01417f1",
+      "baseline_blob": null
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/ordered_v2/tests.rs",
+      "bytes": 7294,
+      "lines": 239,
+      "sha256": "e907f9f17d6cb77fbc7e0bc66f52bc862741f7035b54b34ac6e9a8c04463d729",
+      "baseline_blob": null
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "bytes": 48387,
+      "lines": 1348,
+      "sha256": "8df981d5c9fb272ce6c7572f1066cbdbc9d24212ba35ee9dff15592a3107927a",
+      "baseline_blob": "021eb684f51f608618d88505fa40582f801e34f7"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "bytes": 24833,
+      "lines": 766,
+      "sha256": "360b9cde9facff8c1e16afdd82876636266612620d74beb91552984cf29cd312",
+      "baseline_blob": "54d9c245e3e25d2c6cc6eeac3227debdcb99126e"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_protocol2_storage_tests.rs",
+      "bytes": 39556,
+      "lines": 1208,
+      "sha256": "1b49aa326f95c610e228aa503c49fdfddaceb9ddd2fb1431cb4317fab7214a77",
+      "baseline_blob": null
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_protocol2_tests.rs",
+      "bytes": 3620,
+      "lines": 80,
+      "sha256": "0e51b9adef40b9d0d410b940efb5129b8b4edea8b76a3410148b907b73b700d5",
+      "baseline_blob": null
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_protocol2.rs",
+      "bytes": 49292,
+      "lines": 1353,
+      "sha256": "483e782a18fdb0abb609fddebf6985f0d2cfbaf956785ccaa5c4842548559547",
+      "baseline_blob": null
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_source_v2.rs",
+      "bytes": 13077,
+      "lines": 462,
+      "sha256": "9f6e8d2fd4883cde7f8884e90c90c248bb34cbdede7695af656868f59b92b6e0",
+      "baseline_blob": null
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "bytes": 46325,
+      "lines": 1175,
+      "sha256": "ad1afa192b44db32a2004125e157e7e6d21c0fd4f61352b616692a2177cb8de9",
+      "baseline_blob": "a21c511bb1de6c12d10bd86ca6c908cc940e283e"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "bytes": 17968,
+      "lines": 478,
+      "sha256": "5e18e437ed8795e8760eaabca117962b4b79111ec820a4aadc83a34092734524",
+      "baseline_blob": "3646215816e000f812ee50eda9ea9089ad96d89a"
+    }
+  ]
+}

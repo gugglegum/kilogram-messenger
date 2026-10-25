@@ -279,6 +279,13 @@ pub(super) fn history_ticket(raw: &[u8], stage: u8) -> Result<(Id, Vec<u8>)> {
     }
     Ok((t.id, t.body))
 }
+pub(super) fn pending_captures(raw: &[u8]) -> Result<Option<[Id; 2]>> {
+    let ticket = Ticket::decode(raw)?;
+    if ticket.stage != 2 {
+        return Err(Error::Integrity("pending capture stage"));
+    }
+    Ok(ticket.captures)
+}
 impl Ticket {
     fn encode(&self) -> Vec<u8> {
         let mut out = vec![5, self.stage, u8::from(self.repair), u8::from(self.head)];

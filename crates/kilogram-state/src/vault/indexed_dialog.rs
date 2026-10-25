@@ -50,6 +50,10 @@ use chacha20poly1305::{
 };
 pub use credits::{CreditAction, CreditReport, PendingView};
 pub use history::HistoryPage;
+pub use history::protocol2::{
+    HistoryCheckpointRead, HistoryNativeRecord, HistoryProtocol2Binding, HistoryProtocol2Operation,
+    HistoryReadable2, HistorySeenRecord,
+};
 pub use history_cursor::HistoryCursor;
 pub use history_types::{
     HistoryAuth, HistoryCapture, HistoryExtras, HistoryInit, HistoryNativeTransition,
@@ -342,6 +346,10 @@ pub struct IndexedDialogVault {
     poisoned: bool,
 }
 enum CommitInput {
+    Protocol2 {
+        context: u8,
+        operation: Box<HistoryProtocol2Operation>,
+    },
     Generic {
         mutations: Vec<Mutation>,
         credits: Vec<CreditAction>,
@@ -692,6 +700,7 @@ impl IndexedDialogVault {
         let values = tx.open_table(VALUES).map_err(db)?;
         let mut w = Work::new(&nodes, &values, &self.crypto, self.root.clone());
         match &input {
+            CommitInput::Protocol2 { .. } => {}
             CommitInput::Generic { mutations, credits } => {
                 w.history_guard_generic(mutations, credits)?
             }
@@ -704,6 +713,9 @@ impl IndexedDialogVault {
         if id == self.root.commit_id {
             if digest != self.root.request_digest {
                 return Err(Error::Conflict);
+            }
+            if let CommitInput::Protocol2 { context, operation } = &input {
+                w.history2_check_retry(*context, operation)?;
             }
             return Ok(CommitReport {
                 generation: self.root.generation,
@@ -721,6 +733,9 @@ impl IndexedDialogVault {
             return Err(Error::StaleGeneration);
         }
         match input {
+            CommitInput::Protocol2 { context, operation } => {
+                w.history2_apply(context, *operation)?
+            }
             CommitInput::Generic { mutations, credits } => {
                 for mutation in mutations {
                     match mutation {

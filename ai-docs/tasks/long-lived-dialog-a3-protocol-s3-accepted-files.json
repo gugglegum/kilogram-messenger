@@ -1,0 +1,1373 @@
+{
+  "format_version": 1,
+  "accepted_date": "2026-10-25",
+  "baseline_head": "e6f9b8ff6c7e9305d7216a94b142f0220b0c4a25",
+  "branch": "master",
+  "remote": "origin",
+  "destination_ref": "refs/heads/master",
+  "decision": "A3-S3 component implementation accepted after independent source/evidence review and native schedule probe; production activation and whole A3 remain open",
+  "review": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-implementation-review-1.md",
+  "review_sha256": "f50a19d9470c7bd9f61a0324b5a8b4412ed7188eb2977dccdb0df145265eeaca",
+  "publication": "One exact allowlisted commit with baseline as the sole parent, then ordinary non-force push origin/master; no source or evidence changes during publication",
+  "commit_subject": "feat: add protocol2 and bounded native dialog components",
+  "excluded_clean_file": "ai-docs/development-environment.md",
+  "excluded_clean_sha256": "53074ff3734dacd9906ee03cc5c7ded952dedd99d207581f692ff900b9a79f8f",
+  "excluded_dirty_paths": [],
+  "self_note": "Commit this manifest too; its raw SHA256 and normalized Git blob are pinned separately in root dispatch",
+  "listed_file_count": 193,
+  "source_config_test_file_count": 26,
+  "documentation_file_count": 167,
+  "files": [
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "sha256": "d732ca463345661fc119dce1cb2b7eb80debf9c62c8d4e069043583acce622ee",
+      "bytes": 74918,
+      "git_blob": "298ed52a5a8ee77841418a9c9fb98e6fd08af563",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/README.md",
+      "sha256": "ccb1fef9eaba5b5c590b63995fbb7ad0c17b9bdef594b32c61495b6c566336f8",
+      "bytes": 156233,
+      "git_blob": "86da03d884b026feef2f11a64b1b3f5ec75153d9",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/artifact-hashes.json",
+      "sha256": "99c97032c7d2f1ead5407c30acba279d0afab4b36a675c3bd8180bd790408408",
+      "bytes": 39078,
+      "git_blob": "4d7e70541bba19514d8b3a90668b77ffc42dc6f1",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/atomic-1-executables-before.json",
+      "sha256": "1a3f89b387f96738b512da4b21ac198de4132ea664bea3cdd3c86376cb5413d0",
+      "bytes": 2421,
+      "git_blob": "04e8d4aaca3a1f9af6e6b54af185826d2a271483",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/atomic-1-result.json",
+      "sha256": "12ab204add546c1506217a106cff6ee4b85e83bf96013244e893994c4edf3634",
+      "bytes": 211,
+      "git_blob": "c20e0fde7bd5f22f60f8e59baecbf4da5365b136",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/atomic-1.log",
+      "sha256": "f5218c4abf3353cb1973126137407d9354b5caaff9cfd518a3c0f57f6b346981",
+      "bytes": 4597,
+      "git_blob": "413dfa40f6cb785daa7a2eff2870ce2ae3ffc891",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/atomic-2-executables-before.json",
+      "sha256": "fdc7a13d2a063dc0db46fceaa45df461055d534e2b4d172f11ead65dabf29113",
+      "bytes": 2421,
+      "git_blob": "89d0642a1a9eaa221cd7bb01e39366f32d7c3154",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/atomic-2-result.json",
+      "sha256": "aa6c6d5fdcd8b151c9308ace8c075e5665b1162c6b23d9975bfa6787d2bf0031",
+      "bytes": 211,
+      "git_blob": "6851712e474b3b6657491b8b0f2fd038b8e74024",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/atomic-2.log",
+      "sha256": "138d70763d6c3bbaa7a94e1c13a9d1816b4963b9ccc5f8e3d933ff1d015a7945",
+      "bytes": 4582,
+      "git_blob": "639bd381d5a2af4244f5dbdd93f4fd28b3a635e3",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/atomic-3-result.json",
+      "sha256": "3fc09341e5d0393f9671ddf529c7072b78516a9761ebbd2c09431121a15f6721",
+      "bytes": 3111,
+      "git_blob": "40192201f9a91cca414ecd04e16f53eff1ec8dd6",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/atomic-3-source.json",
+      "sha256": "6a9cc30df9b90ea68f163e66cafdcc78f5ced0679866d4ea5abd9e0f06d58ca9",
+      "bytes": 3315,
+      "git_blob": "1afa23ce785deec00e383fdbd6194fc09e9370ae",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/atomic-3.log",
+      "sha256": "9433d00a293ebc30c51b5a2cfb5a1605a36993ddc7cdbb791c74dbb157c9f40f",
+      "bytes": 7609,
+      "git_blob": "1a6ae5cb2e27c012c6dcdc7f28728d4d7d8c21fb",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/baseline.json",
+      "sha256": "32fc6f76f5b55b4879baa3db6e2e8f98152020c99d66e30b8e311cc7328673a1",
+      "bytes": 1952,
+      "git_blob": "53e1e4e3482bc83b72f370ab2ea65a5c92235960",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/bounded-final-result.json",
+      "sha256": "714c1653ae722e3b1746cb0c05c319c77fa8f2a456b1a0796e08e02d936f4b8d",
+      "bytes": 3154,
+      "git_blob": "1b9c45fbfe43e02e12df7c841bf6c14edf6fe257",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/bounded-final-source.json",
+      "sha256": "99296c7caf266dae4b1661fa0eab0def183bd5d22f982e036ea6f74575affac7",
+      "bytes": 4691,
+      "git_blob": "a77316dd61d9085ef7565493110962a36b4db808",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/bounded-final.log",
+      "sha256": "36f2398a1014944dc8ace5803971d4e8c0bd87935c381f42dc5fdd7dd21be6d0",
+      "bytes": 13862,
+      "git_blob": "73f1139c17e888c7c141cd9ee4cc749bf30502b6",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/capture-source.ps1",
+      "sha256": "667d241a374be24cd1c74a47ec4300b5095856b7eb6db8abbc6d5a607a192457",
+      "bytes": 3830,
+      "git_blob": "57df587e6f40c744b19fa1964f7db464318553b7",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/check-initial.log",
+      "sha256": "23dd998c1f9c3344e3606d63b270d286c2d0e4ac6db3750b5e69d0abe6c180f7",
+      "bytes": 4689,
+      "git_blob": "504289521d8cf397ea11fca4eac72fc522624883",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/check-state-1.log",
+      "sha256": "da9c570901cdb92664fac553b31386d8d93c8fc336a546a18a48cbef4b0beafc",
+      "bytes": 2021,
+      "git_blob": "8230dedc0c90649003a9a6d8cee07a73800a26bc",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-1-result.json",
+      "sha256": "4df5530e4911e3bb28b2360cc0ce9c8f0e9cc399a5acea26e71da5489955487c",
+      "bytes": 221,
+      "git_blob": "9c24b8bb515aadcd6b2b387a37ad9abc6a9ddaf0",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-1-source.json",
+      "sha256": "ce7468a698223e705148b40e892eff9fe4a2ad4bb6b57a4837ebac2f4036c244",
+      "bytes": 4690,
+      "git_blob": "4e7cebeb3ed61738c73a9a8ca86b744551e7465c",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-1.log",
+      "sha256": "897681ccb3f40d58a7c0af046df32671715c66957f56bd3fbb591b91f422c383",
+      "bytes": 3366,
+      "git_blob": "0e73042b9eacfcb754f631e37b46b040252c85a7",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-2-result.json",
+      "sha256": "5cb0f3185a1e9b4ea3c07368795bcbccc77e09800e50fefba5d414c3e43c7ad1",
+      "bytes": 222,
+      "git_blob": "fe6f6b33c1652a1f96c1fc9987b1bdab1c2ac79a",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-2-source.json",
+      "sha256": "d0c7715d0355c8fbd45653d3cc2b019d78d2d1ed088497ee48b55f00ca53a143",
+      "bytes": 4691,
+      "git_blob": "8dd970819e471ef402c14b9d8b59b9f2cd8d7792",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-2.log",
+      "sha256": "23fd03c6982e1c427e4c33295180a94538cfb57c6fcc9ee86487a8d76a8700ca",
+      "bytes": 3770,
+      "git_blob": "3d710da118175afd25394028b36238a39bcf7a03",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-3-result.json",
+      "sha256": "9d7895664fc81213aa3679b1e88e99d265174641243564371719699cfb96e7f0",
+      "bytes": 222,
+      "git_blob": "6fcbd7d49f38a60997b2f97bc3bdfb9c52c593b5",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-3-source.json",
+      "sha256": "abda32c21622f68abad0f82e339405c6def766779008517afa2f540a52a9b3d1",
+      "bytes": 4691,
+      "git_blob": "2214873a3f48e33b56c8eb6f5d43049ae0e7fb9b",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-3.log",
+      "sha256": "f613286f8aa39dfa9c9ecbf63120bae3687deb624995afd20d080f231af26316",
+      "bytes": 3670,
+      "git_blob": "e52cdcf4a826a98e79b8d2e4f0a4a83538fe2c5f",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-4-result.json",
+      "sha256": "3af5cf27698ac9191d5705dee15768f77abc34208d8000b6bd91708b541ad11b",
+      "bytes": 220,
+      "git_blob": "4e29c59660139a8e4d2049d98b6044eec372877b",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-4-source.json",
+      "sha256": "ec4eece541afe49889d507b09402f4f54a0e3e6185767bbbbaf5326494c85375",
+      "bytes": 4691,
+      "git_blob": "2f4a2a2d43de20019cb451bddbc217db6d3276d1",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-4.log",
+      "sha256": "90f6313e8aa2a15c6a0ea209bc0ebfadffb01615b270d77a97a7b81e8c98af37",
+      "bytes": 360,
+      "git_blob": "4732297600609353b13119e3007139cd55e3adad",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-5-result.json",
+      "sha256": "d305881f0078507021b5698f66067a71030acc996d0ddf1d02448fe6b9f0f8b3",
+      "bytes": 220,
+      "git_blob": "a0645aba0a6b23bf583906aef3d92c9580db919d",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-5-source.json",
+      "sha256": "0039fe5691f019ff0513653b727b942bf9636f4fc4018d584fc6e7e700e32709",
+      "bytes": 4691,
+      "git_blob": "0c9d76b37692bbf31f44b90d428be870d36b0a39",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-5.log",
+      "sha256": "92ba147eccb1aee29ed3d93455d8c5078fa45df5a85ff5ebbd9d82b9f7556932",
+      "bytes": 268,
+      "git_blob": "c263448e58ba10e16a5ff4571c87b53b588124ca",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-6-result.json",
+      "sha256": "3f61dec120457e18e2a388a1a64932a897f21ee77a09acaa037dade9411416a2",
+      "bytes": 220,
+      "git_blob": "293f6cf3c15dcbad69f540cb2c1259b5b1218908",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-6-source.json",
+      "sha256": "9c265cc35e6170c90cfe8d2a2d3831f59943f7f23847ed32f153527cc8c0e163",
+      "bytes": 4691,
+      "git_blob": "8d7789ef2d06ea7a260584dbd9631e042751f1c2",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-6.log",
+      "sha256": "e48c26a50f1595b0b4cbb60c50ae2d2571336c29cbbc25253766fa1560c12f17",
+      "bytes": 650,
+      "git_blob": "0d74c4f0e997b77f1da8de01165739db44947168",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-7-result.json",
+      "sha256": "793a8e297fe4227c7d47b60057c29774e60784beccaa0c253676ffb0575576c9",
+      "bytes": 220,
+      "git_blob": "62b732b6c8835b2e62e672bb80a994f380ae1a77",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-7-source.json",
+      "sha256": "4964fc7a09c3f9fcc03b55d06c14126d1b50ab744163b304f7f7ced561b08891",
+      "bytes": 4691,
+      "git_blob": "272247de4e1a3d2cd3362320f924bc903ba81ba4",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-7.log",
+      "sha256": "af437665d62e4f3919cc69bab0b3a200115600c767e2500decab5514f3d37c1c",
+      "bytes": 650,
+      "git_blob": "5d19df941bd5cfdb913540de5d885eae30bc51be",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-final-2-result.json",
+      "sha256": "7db921b7cb9f272cb096f56fbb9e4730f37117847010da4d569776ed1d83b2b7",
+      "bytes": 268,
+      "git_blob": "e865ae5b3b084c855488837936e1dbf7d55f9b6c",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-final-2-source.json",
+      "sha256": "99296c7caf266dae4b1661fa0eab0def183bd5d22f982e036ea6f74575affac7",
+      "bytes": 4691,
+      "git_blob": "a77316dd61d9085ef7565493110962a36b4db808",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-final-2.log",
+      "sha256": "adb9b92e8d344f6cbd30d305053f1539affb3d812bb7cf31f655527d5fa3bc9a",
+      "bytes": 360,
+      "git_blob": "8adff58a0ec9e461a3adfa4a5e1d6a996b3071df",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-final-result.json",
+      "sha256": "a2ccefe1bc2cb479c86b36d9b95be8cfbf667913c2db563e9a12bf3791196c03",
+      "bytes": 219,
+      "git_blob": "442641125c2d312340fcca7213037cd6c5377b23",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-final-source.json",
+      "sha256": "faffa53616d1ed6985073076e1a9c2a8087bfe9de3556dbf0daff71674375343",
+      "bytes": 4691,
+      "git_blob": "fbf3cfda7cf3ef672efc502897d0b620ced4d599",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/clippy-final.log",
+      "sha256": "0b2af1d3e3d5394fcbe47f4c438c5ce6c94f16c487b238cd9e53c1057c32998e",
+      "bytes": 255,
+      "git_blob": "953553bfe51f6f559f2015f44b8dc009d33045e5",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/collect-verification.ps1",
+      "sha256": "7ab2348dfe32f3202f763334875228794e041081fe24346b0eba75e750ab98bf",
+      "bytes": 4427,
+      "git_blob": "9827b3ca753b8f2331660eda7e685dd26cd61b44",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-1-source.json",
+      "sha256": "fad1b0d50f4dfb9f0e45545fbdecc07cdc7f0825d3a18922d0bbd5d77dfa082c",
+      "bytes": 2943,
+      "git_blob": "cb00316c9b633889908c24f2e0d2ae984fd6b41b",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-1.log",
+      "sha256": "566c668355dfd5a6fa4b4545fbf2b39d50ed6321cea847c5b2f7a04c206e319a",
+      "bytes": 1881,
+      "git_blob": "73f311b039fde3119755d38561b23e94a6848d98",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-10-result.json",
+      "sha256": "678bde906c7fe3ccfb817d0f5391cdb42e195049470ecd237078cdf77d6a1109",
+      "bytes": 193,
+      "git_blob": "1f7103ad3ef2ff58d35cc77f83c00349340eed55",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-10-source.json",
+      "sha256": "a47e998d5e5d117c503f7a117da117717421d0f4858206e9e0111d5442f28569",
+      "bytes": 4284,
+      "git_blob": "b2fd3451e151d7aebbb26e09deff205a63400ae8",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-10.log",
+      "sha256": "80fc1e069904e7aa816b438ac19b6077029e144eddb0fc4c0ebf78d884eb2e2a",
+      "bytes": 1825,
+      "git_blob": "cb1a19a76157ad4e81be2c7f608d0512155bb65a",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-11-result.json",
+      "sha256": "7c0601d64f308a2b701e70a6363add188029defc4c7b2a8d87e0edc60821a148",
+      "bytes": 191,
+      "git_blob": "fe6af9d5c65f6617affd1fb28385103d3553f5e9",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-11-source.json",
+      "sha256": "01fdea0c8b373bf55145f9bd9c48150d72cfc436636b2f77924735e93f09394d",
+      "bytes": 4284,
+      "git_blob": "745743f43fe44ab93718b189656c96b2226997ca",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-11.log",
+      "sha256": "91e94badb20d3faa0bf2e46a202b0ee62cadd21a3a228e106634d3db3e1ffd89",
+      "bytes": 1577,
+      "git_blob": "7ac53da43d580505a5f5680a7e83b0051848209f",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-2-source.json",
+      "sha256": "3f88eb83c619265b60bedf4d05dbba5ca1633d73798f469462ad3b4f35f3e13b",
+      "bytes": 3315,
+      "git_blob": "76a28267d673b7226c3cb85b8b3f691b325a8497",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-2.log",
+      "sha256": "c8a1c5cfa3623683b9144d0cd4de2c3e36b72324c7c265a5a046c9df6bf816e3",
+      "bytes": 3306,
+      "git_blob": "8363c696d9cfa0d82e5e1f63fe67d0e831efe7ed",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-3-source.json",
+      "sha256": "a0b8bc7fd5bf8e75bad0a7121d9b2add0aff056afd7c83cac517013411121707",
+      "bytes": 3315,
+      "git_blob": "b0177700fd0cbfb33123f0c24c1ce8fff2557e62",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-3.log",
+      "sha256": "ba84565d232c6f3f833b100fba6afdd081b0c6054d1dfdd6705b688093aae05e",
+      "bytes": 4236,
+      "git_blob": "090aa049d6fa49893f71bcda7b2cb5d14092ab74",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-4-source.json",
+      "sha256": "02f5fd1c98bf3e8bb6d224b0bc3ad0953adfe5bca13a811fcbb10fa41638616b",
+      "bytes": 3315,
+      "git_blob": "161a4dbefff699a7cc67c0afae6b0c8942ca2f93",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-4.log",
+      "sha256": "49109daa8f4288ed85c2754ad424dccbea1e22afb4e2455674de83b6b0ec3bb4",
+      "bytes": 2933,
+      "git_blob": "bc9999801ea6805e0e77696e9e776b1db5b50c43",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-5-source.json",
+      "sha256": "eb5c069bdce593ef20ae1e966faf33fb9673c3d0327bf1114f7d68c86f4b7381",
+      "bytes": 3315,
+      "git_blob": "7cdf31e7c2ef8ef430bd916dd067616f9734b02c",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-5.log",
+      "sha256": "40b99da71896d1c5dfe49eaf2520777f2b51855117e5add962391396beab4630",
+      "bytes": 4340,
+      "git_blob": "a0e960ae5bb1f4b6b85abca926ac817776f9f189",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-6-source.json",
+      "sha256": "2eb33e8c1c2c13f97bcfe6e17970393e21014c0ca36b2f0c2288e20e49d0f6c1",
+      "bytes": 3315,
+      "git_blob": "c1c45f76c69072dd0ee65d1db69bdf60e72d11b2",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-6.log",
+      "sha256": "d0e26dc30a41a19a74500bf459d524dc80940266d8503e7c5ca887c70c1822a6",
+      "bytes": 3328,
+      "git_blob": "4df00572aed5c8e46d6e1c66a20892f64b1d4b34",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-7-result.json",
+      "sha256": "e305006d393f62ede33d653ad1d72ab18ab84f80e3312097321cc46b177dd5ba",
+      "bytes": 192,
+      "git_blob": "72026a26f57bdcfb0182f5e6c92e228dca6b2636",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-7-source.json",
+      "sha256": "6a9cc30df9b90ea68f163e66cafdcc78f5ced0679866d4ea5abd9e0f06d58ca9",
+      "bytes": 3315,
+      "git_blob": "1afa23ce785deec00e383fdbd6194fc09e9370ae",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-7.log",
+      "sha256": "31703fd2bb0ab34109b423a3575d5badf38e4c5527bce53c751ffdeea5fcaabd",
+      "bytes": 4438,
+      "git_blob": "3a78b8b342191d92ac54ef9dc9ef788b82c511bb",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-8-result.json",
+      "sha256": "cbaaf5bf63a4dc3043f93fdee9946e7d900b1c6a6ee59557cbc8f5f4af2f70cd",
+      "bytes": 192,
+      "git_blob": "87b84fdd37ff57a8144a4883e839f60ba309f853",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-8-source.json",
+      "sha256": "c5b99ed1aec0a5d44212c4c6f55c7fffdfbb1a5b1137e464b5e9f6c96d46b379",
+      "bytes": 3904,
+      "git_blob": "18f61686e0a8f7ede9532cf396198e33fe5cdf1f",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-8.log",
+      "sha256": "39f8cc96aab22362e5c7c9bed1891a0b90d2a5f0bc548919ed1deebf8acf82df",
+      "bytes": 2389,
+      "git_blob": "148af775032b815faa36cee8e990c9437119199b",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-9-result.json",
+      "sha256": "5812c44d85b492419336c69ff9f86833716b59cd9889d2ab5a706ea53dc35040",
+      "bytes": 193,
+      "git_blob": "630f5f9951b0be83fc0bd82179a7a0a7667d2a49",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-9-source.json",
+      "sha256": "74c3ad22e76a7aee1af7120311cfe298dab932c16b9a6dfea77241a77d61e526",
+      "bytes": 4284,
+      "git_blob": "3f6ce5c069e3dc22085862210ad0ea42f16725fb",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/compile-9.log",
+      "sha256": "d805ce3ffe70734be3ecdc06dbb23d44039e6b403644411a5f96f07ffafe4a19",
+      "bytes": 5916,
+      "git_blob": "09cb9a84a9790fd0e25b215c854516b9abe50de6",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/failed-runs.json",
+      "sha256": "7db3902dfd015c4adea5ec38f6c66890355658a31a41ff8916799ce1dc1a9df8",
+      "bytes": 1267,
+      "git_blob": "e5a3824f630e9d420777cbcc4ae26f2572e0acc8",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/fast-1-result.json",
+      "sha256": "392bed70ee9fdce2a7bb4e2f6afe9cfb483c01086d39379c176a6d7f2ebcab92",
+      "bytes": 215,
+      "git_blob": "ed8024da5f4c8d4efbf12f78d4219b882d76ac90",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/fast-1-source.json",
+      "sha256": "b83e53b08824163bfbb3433a540067a8bf149e242dd7373d848460f00fd8ffe0",
+      "bytes": 4496,
+      "git_blob": "3dbb8e3b5dadac60dc0038da9dcaa045c9d95dc7",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/fast-1.log",
+      "sha256": "ac9c9a28cbe037dd471ffae80b2e8fd6e735f44e66bb9c3429e5ed0cae0fca95",
+      "bytes": 1808,
+      "git_blob": "8b9ce931fc76b4241e231fe746e37ff0ea483bb6",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/fast-2-result.json",
+      "sha256": "314d8f72c09cab73cbd11fc57a2cd9f3de0b809344179111b3c1dd0741fd212d",
+      "bytes": 3107,
+      "git_blob": "b7f893267f34fee7cd4ac81860ca457dbe5e258b",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/fast-2-source.json",
+      "sha256": "ca289dfaec1f12fab5ae6d2b9be2f002506111bd5d985fe3c1b813d3ca6ab3fe",
+      "bytes": 4690,
+      "git_blob": "007bd79e3b66ece3e744d7985f548c497f8d4a6e",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/fast-2.log",
+      "sha256": "2d5df71ba56333e370c915369ed6b11d0671fcef88efe001a0ea9e6faceab6ac",
+      "bytes": 9853,
+      "git_blob": "2c30a59ef68f3501bfa1c3bbee7986a9cf4a42b9",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/fast-3-result.json",
+      "sha256": "2b6d9e90b10afebf30da53ed716be98de568b02b1d4e2bd04953f602b52bde45",
+      "bytes": 3107,
+      "git_blob": "0040ec7f9c9db2da8bcefa84e9c32c0f6eff6544",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/fast-3-source.json",
+      "sha256": "0cf6aeaa5b715956c60ae8b672c377f8dd248b13893ef71d5ce156c75bb91de9",
+      "bytes": 4690,
+      "git_blob": "183cbcf245ee6a5b11690690137128e41cc68057",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/fast-3.log",
+      "sha256": "26080fa7897fd69aad5f170ceb32cc98c7b26bdb8a423fdaebb91132ea0a1a0d",
+      "bytes": 13639,
+      "git_blob": "154efd4876834f06e3f2f94c88fe2fe83b3931a4",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/fast-4-result.json",
+      "sha256": "d9c30dd5ca37e058a0bca8e64aec02a3008d9ac28213a045deacf355cb40edb5",
+      "bytes": 3108,
+      "git_blob": "e2aa6cda2627228ff1afc793d1360d91d558a271",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/fast-4-source.json",
+      "sha256": "79ee8862ecc5723e2681f1475ed35725073e4e5d057c8f45132f9470607a8b1f",
+      "bytes": 4691,
+      "git_blob": "34fb629828987922876f62a30b5b785dbcbd694c",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/fast-4.log",
+      "sha256": "59f7af74b64064f2d5a672a83fbf934a63d33411afdfea838debd2c7eebaab89",
+      "bytes": 15325,
+      "git_blob": "dd8853a8b1e5657ccc57133b04b87ad8a72a6052",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/fast-5-result.json",
+      "sha256": "920df10d24a1b7ca18f694362f02ba45cbabe2a764daac485d130a6a45f1a637",
+      "bytes": 3108,
+      "git_blob": "678e3d6b0f955064822ec4d3f1e0e920c488e63d",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/fast-5-source.json",
+      "sha256": "4964fc7a09c3f9fcc03b55d06c14126d1b50ab744163b304f7f7ced561b08891",
+      "bytes": 4691,
+      "git_blob": "272247de4e1a3d2cd3362320f924bc903ba81ba4",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/fast-5.log",
+      "sha256": "d70b91e85209182261a4506d9e05d3c2738f22ff13b880ca88e288280ac6b17d",
+      "bytes": 14321,
+      "git_blob": "c349fb2320f9c7a9f65eb7793edeeef54055bb9b",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/final-integrity.json",
+      "sha256": "23ad697423bd5c4cbc1d9711a7fd6f8eb83bd5d83ac380299b15645cbae114fc",
+      "bytes": 1540,
+      "git_blob": "004c8bf483c91923bf96d4c0ecd77a0382867b85",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/finalize-evidence.ps1",
+      "sha256": "f03236d9a7d6067dc28ef248d93c7cddb442fc5b20f466148ad6921456c41926",
+      "bytes": 8207,
+      "git_blob": "5e90c991f2afa1813603d73e91d794e63d2c59c5",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/fmt-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/helper-fmt-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/implementation-source.diff",
+      "sha256": "6c0155f4e629127ed56ed09abfd4e8257794e8f665b3639b34b125d0b3b43400",
+      "bytes": 465659,
+      "git_blob": "b4c00f36c3751d4bd9a552a5f04473f3a5ed135d",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/n01-1-result.json",
+      "sha256": "6a1604cc70c16382cd86bde5bc54e3c51fc62f43ced320442ede11ae4fa30e31",
+      "bytes": 3114,
+      "git_blob": "970ea8144e839bfa8c727713f58fc2da74d8364e",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/n01-1-source.json",
+      "sha256": "5d77b8629780e8bbd12a20951ad5ed942d65edd8d4fdf507e0a990ed8b232f3c",
+      "bytes": 3508,
+      "git_blob": "74e5ce6d05ea0a4f26314360ca3e1fcad46a0dbf",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/n01-1.log",
+      "sha256": "81c8024a54517481b253bd23aeef203dcf9b758931cc558ad97a365cf4394712",
+      "bytes": 7726,
+      "git_blob": "00835b0d4c1bb51722a2092de5664db62fcb398f",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/n01-final-result.json",
+      "sha256": "d69363d276ef0451dc23659bbb9006ea218a7f2b3ba1f97eb1ca79e1dd7e2b46",
+      "bytes": 3143,
+      "git_blob": "b40e421656367ecb2378764de3ffacab7ac15fed",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/n01-final-source.json",
+      "sha256": "faffa53616d1ed6985073076e1a9c2a8087bfe9de3556dbf0daff71674375343",
+      "bytes": 4691,
+      "git_blob": "fbf3cfda7cf3ef672efc502897d0b620ced4d599",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/n01-final.log",
+      "sha256": "c049a64c2b3e297e467998d09b1975690a27582a7cadc484a38575eeef4d43d8",
+      "bytes": 6430,
+      "git_blob": "c72af8504c1f4068acf7f308bc5d49f328f1b095",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/n02-1-result.json",
+      "sha256": "07bbac23e1f63fee749f08214e3abddc0d80028a28edff8998865ac211103aed",
+      "bytes": 3121,
+      "git_blob": "0515186a917c03fdad2e53aa8e1937d14c16d211",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/n02-1-source.json",
+      "sha256": "01fdea0c8b373bf55145f9bd9c48150d72cfc436636b2f77924735e93f09394d",
+      "bytes": 4284,
+      "git_blob": "745743f43fe44ab93718b189656c96b2226997ca",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/n02-1.log",
+      "sha256": "192dcc752eef9e67c3c971bb890c96435d281ce3411fd889ee68bdc834931811",
+      "bytes": 6174,
+      "git_blob": "3f7fb32891a313ee9eaf906d6e290b1a02a980c0",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/n02-final-result.json",
+      "sha256": "d04ceedb3f9febbe6a6684b2650b4f19fe6993bfb697b86941d4ed82606a5ebe",
+      "bytes": 3150,
+      "git_blob": "4014a06228d7ac09b51df22548e2ad6c60fb81b7",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/n02-final-source.json",
+      "sha256": "99296c7caf266dae4b1661fa0eab0def183bd5d22f982e036ea6f74575affac7",
+      "bytes": 4691,
+      "git_blob": "a77316dd61d9085ef7565493110962a36b4db808",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/n02-final.log",
+      "sha256": "a97366a3adda3ddaa56a05604a8655a5e55269c0633fb14848a40bb009b61fea",
+      "bytes": 6598,
+      "git_blob": "ae7c4ee553666627fa608dbebe54244f60c840a6",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/protected-files.json",
+      "sha256": "a081dce3f1f8113cdca3158301153be71042ecd768f83d546d8c6f1a0784adb4",
+      "bytes": 2735,
+      "git_blob": "e7714713be4143af74077dc2c37f91f053a9b28f",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/pure-1-executables-before.json",
+      "sha256": "e6744d1daceb1935993e6db0b6dc69c4395fa49f3d7e65d5b9f96c48f5ce7aff",
+      "bytes": 652,
+      "git_blob": "45f4c49e0ee300c5c931544dde8fdb7150fd77d9",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/pure-1.log",
+      "sha256": "523bda276213b0b7e77cdf5bb70ace33360b46415a6cea67ae141936aae9daf3",
+      "bytes": 2256,
+      "git_blob": "c67ed157fa2d98b521fd1a2509f5401c6384f979",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/pure-2-executables-before.json",
+      "sha256": "29d1a3b434afbf5e95d8164926f9c0ba431a1499d379d8362f1aaca20501a7c4",
+      "bytes": 2421,
+      "git_blob": "ebcd1259e2245d7e8f50e90f383b37c85c45dbe5",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/pure-2-guard-result.json",
+      "sha256": "fe1f947341806ce7d5b15bbecf4415835095722dd1a0eb12ed7ee39a1d0c69d5",
+      "bytes": 204,
+      "git_blob": "6eb7830d14d9e28c74928e94e4556604ca9b78ca",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/pure-2-guard.log",
+      "sha256": "d889024e2540f4fafe92d97fed7aabfec82117b58b2773365c6c008bb26869ca",
+      "bytes": 7221,
+      "git_blob": "15894de6ce5a919c9e65dd22c4e9e1f30dce4863",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/pure-2-root-result.json",
+      "sha256": "71b7a8661707b1ed58f0c6e803739c1f2ae85bcf05f00609b28d9b62d155cf43",
+      "bytes": 219,
+      "git_blob": "9dfe30381ee07eb0870e9373ac7cb59e6441ae70",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/pure-2-root.log",
+      "sha256": "3f0f46356190e40f86722e6df753525d931eb337cd65e6ad0a5d603aab8abfd2",
+      "bytes": 7069,
+      "git_blob": "935f7cc9cff883564cf4288f9f2d9e12f48912ee",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-byte-adapter-result.json",
+      "sha256": "176c8b330f383b49f77180239413792d2f03fef9d5acee4e21e452fb886015cd",
+      "bytes": 3223,
+      "git_blob": "0092cda93851c9bf99438e378efe07b6f195e27e",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-byte-adapter-source.json",
+      "sha256": "99296c7caf266dae4b1661fa0eab0def183bd5d22f982e036ea6f74575affac7",
+      "bytes": 4691,
+      "git_blob": "a77316dd61d9085ef7565493110962a36b4db808",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-byte-adapter.log",
+      "sha256": "2bf35494433ce8953378b3acf6531aae534c445d004a1a7dd8cfb461b8acdbe8",
+      "bytes": 5636,
+      "git_blob": "ac74497759b3553fbdb208ec5178b50e551666c4",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-codec1-bounds-result.json",
+      "sha256": "cdc7cb24a262467dacdb9a905f35cb8f1f33f5cb5accbd20a1c617fc522ecc2d",
+      "bytes": 3213,
+      "git_blob": "fbae4cf578405a4311a9ed9804f617039d203e88",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-codec1-bounds-source.json",
+      "sha256": "99296c7caf266dae4b1661fa0eab0def183bd5d22f982e036ea6f74575affac7",
+      "bytes": 4691,
+      "git_blob": "a77316dd61d9085ef7565493110962a36b4db808",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-codec1-bounds.log",
+      "sha256": "612f94f0f7208c7bd7fa7e1f1dbc27d4cfd9bcf8d975846243d4828cbf31eaa4",
+      "bytes": 5720,
+      "git_blob": "215b8ea1df915e3d4aebff0818bc40af54e92dc9",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-codec1-result.json",
+      "sha256": "067ae644d6b35fba3bd5eb9a956493e002da307e99c12660474153e0b78e355b",
+      "bytes": 3175,
+      "git_blob": "e1d40fb8e187abd47c7b4301af6c45ef733ff09d",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-codec1-source.json",
+      "sha256": "99296c7caf266dae4b1661fa0eab0def183bd5d22f982e036ea6f74575affac7",
+      "bytes": 4691,
+      "git_blob": "a77316dd61d9085ef7565493110962a36b4db808",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-codec1.log",
+      "sha256": "39963cde89e8caed2f14facc7645dda9861b8629c688550f3c7d66c0b2c3adaa",
+      "bytes": 5712,
+      "git_blob": "5a42f94f44b50740791c82f6837d2bfc5147f5e4",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-guard1-result.json",
+      "sha256": "a68b07f2259489ea1288784fb8c498bbfcaa22ed4ba02821c1cafe5207c59f16",
+      "bytes": 3213,
+      "git_blob": "e21aae3c3ea849c39c5eeb68b9402764769f8107",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-guard1-source.json",
+      "sha256": "99296c7caf266dae4b1661fa0eab0def183bd5d22f982e036ea6f74575affac7",
+      "bytes": 4691,
+      "git_blob": "a77316dd61d9085ef7565493110962a36b4db808",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-guard1.log",
+      "sha256": "ec6d9f20b318da7aa8f01e8e576de990cc6bd7f6c1893f6eae0af89b52f62135",
+      "bytes": 5642,
+      "git_blob": "04d063ed8754b011d991ba4a17359b2ef057b87a",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-s1-ledger-result.json",
+      "sha256": "7bd689c9f5ef909b2a5a38b37202e19484dc45cacb81221f3d1cf49bda7de9a6",
+      "bytes": 3162,
+      "git_blob": "f87b14ad45062abab252a047f344ad9f1d71333c",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-s1-ledger-source.json",
+      "sha256": "99296c7caf266dae4b1661fa0eab0def183bd5d22f982e036ea6f74575affac7",
+      "bytes": 4691,
+      "git_blob": "a77316dd61d9085ef7565493110962a36b4db808",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-s1-ledger.log",
+      "sha256": "fe11d1c2add7bf0295807484bf341885087f75f57a0b3697a59c5070d542f2bd",
+      "bytes": 9290,
+      "git_blob": "88f9b306c259e53d50ddf108d23742a42a116bb4",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-s2-cache-result.json",
+      "sha256": "c091f4fcade5655c363a28a4fec4370c8e239b3ddd9f76e9c8afd3395e48f36a",
+      "bytes": 3194,
+      "git_blob": "b8949c3d6790cfcd5ba7318c6d82a57223511258",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-s2-cache-source.json",
+      "sha256": "99296c7caf266dae4b1661fa0eab0def183bd5d22f982e036ea6f74575affac7",
+      "bytes": 4691,
+      "git_blob": "a77316dd61d9085ef7565493110962a36b4db808",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-s2-cache.log",
+      "sha256": "ebb22e0e3d654f279264c5417a59482a4bf4423970b35347a3715613641998c0",
+      "bytes": 6193,
+      "git_blob": "c2a0bf7233caaeee7ed537dbb39e181104f221a5",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-s2-cursor-result.json",
+      "sha256": "a19d9dd1729e9586a5e1064631547fcf0f639dd2fe05dd4ba0dce49783e763c6",
+      "bytes": 3161,
+      "git_blob": "d87741d7ff731d2c383c5ef541bc6f326e81779e",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-s2-cursor-source.json",
+      "sha256": "99296c7caf266dae4b1661fa0eab0def183bd5d22f982e036ea6f74575affac7",
+      "bytes": 4691,
+      "git_blob": "a77316dd61d9085ef7565493110962a36b4db808",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-s2-cursor.log",
+      "sha256": "f476189f142f77c509e0c7e871895644e5aaf4e454cd25b965307783c44efd13",
+      "bytes": 5865,
+      "git_blob": "037cdb8e4bfa2020c3a218a62f44a3d3fcfd3423",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-s2-history-result.json",
+      "sha256": "97db19f6c498aad9dad529b533f7736301bb602e5efe2eeaf0bd4156a8b57690",
+      "bytes": 3196,
+      "git_blob": "bc00c56cad1e4090e881914b4874270c79eaf92e",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-s2-history-source.json",
+      "sha256": "99296c7caf266dae4b1661fa0eab0def183bd5d22f982e036ea6f74575affac7",
+      "bytes": 4691,
+      "git_blob": "a77316dd61d9085ef7565493110962a36b4db808",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-s2-history.log",
+      "sha256": "5579a718f8e56f4f146affc107a01f38dcc30f8c094724901b7e982e7f881f42",
+      "bytes": 6975,
+      "git_blob": "757a8640ea9e0e949dac4e739a9f69624855dc86",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-s2-private-result.json",
+      "sha256": "6092a948d541b4dc92ca971b9786527a53250848b196ff168c52e94d19ea0a0c",
+      "bytes": 3196,
+      "git_blob": "19aef454692213955cbe4e4810fcbfc0b5f7dd25",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-s2-private-source.json",
+      "sha256": "99296c7caf266dae4b1661fa0eab0def183bd5d22f982e036ea6f74575affac7",
+      "bytes": 4691,
+      "git_blob": "a77316dd61d9085ef7565493110962a36b4db808",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/regression-s2-private.log",
+      "sha256": "bc336ea816e9961fba1139b7cbc7a8b75605d89b0538e847db31627c406b0894",
+      "bytes": 5817,
+      "git_blob": "44254e6178c0892ec82e295e6b62da5bcc5b0702",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/report-links.json",
+      "sha256": "5d930577b6aafa0e6967974efae99abf7d7eb17f03002aa177076c2084c61370",
+      "bytes": 76,
+      "git_blob": "4594700037ff96089ce83515eaef38766fbd07fa",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/review-files.json",
+      "sha256": "49708c7e3d16bf68557850c577188e5d3d52b5ed5e7a2c296dd81d63997dfa65",
+      "bytes": 15648,
+      "git_blob": "4ecae5f5b856a27ec4ec16f734975fc826f807e3",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/run-check.ps1",
+      "sha256": "113adbabd570929d37a3cdde93983b2d3d2d6c5a798c3997340acff3e6a9e2d5",
+      "bytes": 3959,
+      "git_blob": "86a8a78f4cc99ae2276fe5d01e39469671f3e5d4",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/source-exe-correspondence.json",
+      "sha256": "39fc366341a55b9cb97140cb04326c5c96a5f3f1309f7dc0d5b15ab76a5696aa",
+      "bytes": 4779,
+      "git_blob": "29a1f45220b0f747905006d38ec0a7ef79127aab",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/source-manifest.json",
+      "sha256": "079cae70fa8837624a60ab9ce7f603bad37a2caa62442921804b771d2fd2b622",
+      "bytes": 6590,
+      "git_blob": "c99c245a57ff17704928b85cafcadc8ccfcbb362",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/source-review.json",
+      "sha256": "4cce1f41cf3bcf6c4afe62f76b11c672376261508d31e27d3163d404db8f2e52",
+      "bytes": 265,
+      "git_blob": "7940d8246fb890f43a1cec3b578c8e981d1503a6",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/static-final-result.json",
+      "sha256": "9bdfec1bda65734f709499b2522f760be60ca09c04949912b6bd49a70a3a9a07",
+      "bytes": 187,
+      "git_blob": "1baeaa293f69c588435c0590012dfebda9df78cb",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/toolchain.txt",
+      "sha256": "e85195ad801de13fb1da7c7d777f93eaa6235e8c9acb5fc2803ed18984f441a0",
+      "bytes": 245,
+      "git_blob": "ba7c54d5bcec9039ff11bea90df2330501f39058",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/vectors-1-result.json",
+      "sha256": "f2d7c002f083c3eb4ee1384459140fcb4d62423ab403b5ecbf1b2f26d42fcd1b",
+      "bytes": 3100,
+      "git_blob": "c7c9d0b27bd72d39091e8a00bd312b1fec343390",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/vectors-1-source.json",
+      "sha256": "c5b99ed1aec0a5d44212c4c6f55c7fffdfbb1a5b1137e464b5e9f6c96d46b379",
+      "bytes": 3904,
+      "git_blob": "18f61686e0a8f7ede9532cf396198e33fe5cdf1f",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/vectors-1.log",
+      "sha256": "ec34ee2a6154ac7aa8ba8aaa36b321ae31afc3462ca770eaad79f5630ce900b6",
+      "bytes": 6119,
+      "git_blob": "da60673d135671ef7d57bc35cf20e7f694684c17",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/verification-summary-initial-null-aggregate.json",
+      "sha256": "b1c660a04a58a41527a3f8ae2fed6a92f1500e457b60e5ba9e11342ae7ac0029",
+      "bytes": 76112,
+      "git_blob": "c09db5549e49ae7aba458634f2c9bc4540f0ed21",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/verification-summary.json",
+      "sha256": "081fc7d5938a81530f9459cfdff159d2ff7d0b72151a70322746c198500b797a",
+      "bytes": 111559,
+      "git_blob": "4124af298a19268637eaf6a4d97e8d89d0ec46f6",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/whitespace-final.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-implementation-review-1.md",
+      "sha256": "f50a19d9470c7bd9f61a0324b5a8b4412ed7188eb2977dccdb0df145265eeaca",
+      "bytes": 11948,
+      "git_blob": "2bfb8548ebe858852a9569c00e70a290fc422396",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-implementation-task.md",
+      "sha256": "0b2c03e7b3da322147f496a574f82fa8ef8e3d2311a51ba2a964be5f16d87163",
+      "bytes": 9170,
+      "git_blob": "d8439f0d3ef982b9f76b5ec0c663a81eb7e7a86b",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-implementation.md",
+      "sha256": "fa364c666b4e5a94a07381afbfc82d3e28acde7317b445b4da9f8e8f65cd4831",
+      "bytes": 27561,
+      "git_blob": "b5cbe045e96457ff8451bdcad882ffa2af055fd8",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-provenance-test-clarification-1.md",
+      "sha256": "b169a7b0c8786df8f7ac1d6cc211d45f197194db8692e9d950ffd86b7fd389e4",
+      "bytes": 4234,
+      "git_blob": "6855086f244471003f12cd756772e5b0abc688f2",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-read-budget-amendment-1.md",
+      "sha256": "9a5109f5234fbe49f3c0f407d97f3903c829bb981d9b21c1c13ea54c4e71f9fe",
+      "bytes": 7358,
+      "git_blob": "689fc431f153c6ade29a12939087bd6d738b8072",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-root-review-evidence/native-schedules-1-result.json",
+      "sha256": "53ebef1411e1a933a4367fd9d938b9624610d7a4324955522ab520a04aad23ce",
+      "bytes": 2321,
+      "git_blob": "d37603278e6f1e8bcf38f5c20d9ef9dd90cdeced",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-root-review-evidence/native-schedules-1.log",
+      "sha256": "94275bb84d95d68ea40005514c7ada8da895e3bca77cb786c3b2ab03cd144c1a",
+      "bytes": 2725,
+      "git_blob": "57c379f3ba4e7d971a031fe0b50bc5566f0a3d25",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-root-review-evidence/run-native-probe.ps1",
+      "sha256": "67f969fd9bd82b584aadb55efc429b2b9d2ede6c891c24b808479b58ab0882e8",
+      "bytes": 2415,
+      "git_blob": "c5c5859689f52a996d68cd0a6688d9434ae02a7a",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-root-review-evidence/static-1-result.json",
+      "sha256": "a9545ecc46dabdd578a1b69a7b3282d19317cb13fe85dc00d6620b12d31ad44e",
+      "bytes": 206,
+      "git_blob": "788aa8269d08b61000e864f17f1c91efeacad997",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-root-review-evidence/static-1.log",
+      "sha256": "f60c4ff5d7628aec08f27ca73b5d884d0ed8fa1a045fc488de2e654781a9ff96",
+      "bytes": 1143,
+      "git_blob": "920423675b9ded47cf0f232c8bf6223600269921",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-time-budget-amendment-1.md",
+      "sha256": "69d3166a4481540273501273ae2a77a63491934de89616a13afcaa8e69d796e6",
+      "bytes": 7879,
+      "git_blob": "8545675b87f1030983c70303bcba1aa746d7ec74",
+      "category": "documentation-evidence"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+      "sha256": "1b59fba0774b8cb3fad8f5de8de5a0a4df1bb9093fbcac600a3e055f884d8fdd",
+      "bytes": 326,
+      "git_blob": "19a5d6e93ae7601e009803ba95961768de051b70",
+      "category": "source-test-data"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/protocol2_component_tests.rs",
+      "sha256": "8188f4c5d0cdf97b9203354ee0fec93b8edb6906ca11d6861a47a0c0340c05b7",
+      "bytes": 38533,
+      "git_blob": "6004b5a847f17d04974b7a194b0143af85be9a92",
+      "category": "source-test-data"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/protocol2_failure_tests.rs",
+      "sha256": "90a62274259acf74c0f315cf3add0de42e90058f489b290360cbfd994d5d3240",
+      "bytes": 12773,
+      "git_blob": "5f39d6ac2fc0808cafe2655652c8544b2db8819e",
+      "category": "source-test-data"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/protocol2_legacy_tests.rs",
+      "sha256": "f5f63e906a0d20d5836ffe75605f30feb96010515892ae1f15685f91c0717a09",
+      "bytes": 26777,
+      "git_blob": "009957224d075d48fbc91b1e58169c5f04f5b792",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/lib.rs",
+      "sha256": "526cafec5efea50f44035dd17ab5730989eccdf7b81ca6a8840cf9538e88f0ea",
+      "bytes": 65569,
+      "git_blob": "a6a93fc84bbd9c93a73856fa5588ed6bc9f2e3be",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2.rs",
+      "sha256": "0ef3aef20cdfc2ceffa2e5625ff9d88b56c6ad1bba100711b9b0b4e7affdb764",
+      "bytes": 13260,
+      "git_blob": "912b1817d43789ca1aeacd62e1bb8ea962145f06",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/authority.rs",
+      "sha256": "93249a59855b61ddef36223844b1e43827d3e46dde6902da1244aeaedca225b5",
+      "bytes": 17419,
+      "git_blob": "1cf8be4ab3f725d74e421cef0e256b77bc7014e1",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/frame.rs",
+      "sha256": "8fa1a455af9b1a14dbcbb56b8cb78a3bc2e6b3a9ad392113e57f6dd52a28c6e9",
+      "bytes": 14596,
+      "git_blob": "5958fbc1ae2db54970b517bbb20adf82bfb9e165",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/mode.rs",
+      "sha256": "288f8e275894e0ffb8d0e6ff2b5fabfb87d9afdf3785cc286a524f336267f2de",
+      "bytes": 19169,
+      "git_blob": "8cdef4e51ea19e04d8bdac5c29a61782e603b628",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/tests.rs",
+      "sha256": "71b5400b49ac02158d47e1610721e7d8369a73815bc7dd1b4599de074b201e0f",
+      "bytes": 1307,
+      "git_blob": "9fec5db986b9e4e15aff59107fc1a68f7ab9fd9f",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/tests/golden.rs",
+      "sha256": "6ca86a6840ce0781a4b85c4d7fe0b8788804e3f4c5f3a221ae73bdfe216a5a84",
+      "bytes": 14162,
+      "git_blob": "4e53c6f789e78373523f2abdbd7b7ef8baad65bc",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/tests/matrix.rs",
+      "sha256": "544c68258a21930031e46f07d277ffbfb98fc0b9b3380018ad2024bb5a69d240",
+      "bytes": 32637,
+      "git_blob": "9d4eae6ce3972f8b26419424eaa3e73500406836",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-protocol/tests/data/s3-differential.json",
+      "sha256": "d55575e9a996e24d45c5ef770007bb918963154d31918b8c11700cfb051392a7",
+      "bytes": 92970,
+      "git_blob": "7437b01e8feee3967c57ac5e520542da09a8ae38",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-protocol/tests/support/ordered_dialog_v2.rs",
+      "sha256": "daebb3ecd953921deac9b0632a5a82670e7ee825fb3349fc0c01642fb87be845",
+      "bytes": 13159,
+      "git_blob": "c61c41d1142bd7a683a42858db38241d5db5992f",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/lib.rs",
+      "sha256": "6b5c9269841a0db59c7f7afb76f30dba22557dadbac0a30b684a8fa402ba2784",
+      "bytes": 95396,
+      "git_blob": "3c6513832301044f6aae529acbfebfb5e95c9672",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/ordered_v2.rs",
+      "sha256": "61922db8f80f93e204b3ae5689ec80022e53d1688ac5b0c4951ae668b01417f1",
+      "bytes": 17896,
+      "git_blob": "b7e01f2769aff60e8a5a8230ea6aa8fe23e702e6",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/ordered_v2/tests.rs",
+      "sha256": "e907f9f17d6cb77fbc7e0bc66f52bc862741f7035b54b34ac6e9a8c04463d729",
+      "bytes": 7294,
+      "git_blob": "842026fdcb5868dc3de7dd80fe17ae8a723f7b18",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-ratchet/tests/a3_s3_root_review.rs",
+      "sha256": "d680bee8cda588c44613e332bf4a61fa81d4b965c8629fe8ecb524d97afb9aa4",
+      "bytes": 8422,
+      "git_blob": "53fbe06da88c2e6d787692c6e1347275e00e51f4",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "sha256": "8df981d5c9fb272ce6c7572f1066cbdbc9d24212ba35ee9dff15592a3107927a",
+      "bytes": 48387,
+      "git_blob": "499b274f0ccab9894ec12b6fd32e79d7b02981c4",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "sha256": "360b9cde9facff8c1e16afdd82876636266612620d74beb91552984cf29cd312",
+      "bytes": 24833,
+      "git_blob": "6cf5ece8f562539861e59a78c452417da195d969",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_protocol2_storage_tests.rs",
+      "sha256": "1b49aa326f95c610e228aa503c49fdfddaceb9ddd2fb1431cb4317fab7214a77",
+      "bytes": 39556,
+      "git_blob": "aee1d77b05b4b6b4d4788961647e721e1bbb25d2",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_protocol2_tests.rs",
+      "sha256": "0e51b9adef40b9d0d410b940efb5129b8b4edea8b76a3410148b907b73b700d5",
+      "bytes": 3620,
+      "git_blob": "66ff8189365ebf95f1f6967a1c607c14a9245ae7",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_protocol2.rs",
+      "sha256": "483e782a18fdb0abb609fddebf6985f0d2cfbaf956785ccaa5c4842548559547",
+      "bytes": 49292,
+      "git_blob": "c49e56960e0ba2dc78fbcfef5f5419aa8fa4fd22",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_source_v2.rs",
+      "sha256": "9f6e8d2fd4883cde7f8884e90c90c248bb34cbdede7695af656868f59b92b6e0",
+      "bytes": 13077,
+      "git_blob": "80d9d2fe147ad45f6d6c5ba941fe5b0a0a0dceab",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "sha256": "ad1afa192b44db32a2004125e157e7e6d21c0fd4f61352b616692a2177cb8de9",
+      "bytes": 46325,
+      "git_blob": "fc7f0eed43f87005a469a4143f8bc56eefafab38",
+      "category": "source-test-data"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "sha256": "5e18e437ed8795e8760eaabca117962b4b79111ec820a4aadc83a34092734524",
+      "bytes": 17968,
+      "git_blob": "e8d683d1b62bf83ce8b54b63060fd976cda19f83",
+      "category": "source-test-data"
+    }
+  ]
+}

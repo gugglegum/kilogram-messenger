@@ -1,0 +1,9 @@
+{
+  "filter": "a3_s3_root_selected_proof_and_authority",
+  "exit_code": 0,
+  "seconds": 28.3826242,
+  "packages": "protocol,ratchet,state,cli",
+  "profile": "verification",
+  "jobs": 12,
+  "runner": "stable"
+}

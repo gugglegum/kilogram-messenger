@@ -1,0 +1,10 @@
+{
+  "exit_code": 101,
+  "seconds": 7.9150474,
+  "mode": "compile",
+  "filter": "a3_s3_",
+  "profile": "verification",
+  "jobs": 12,
+  "priority": "BelowNormal",
+  "executables": []
+}

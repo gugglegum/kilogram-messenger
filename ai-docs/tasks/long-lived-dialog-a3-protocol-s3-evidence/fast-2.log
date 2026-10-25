@@ -1,0 +1,146 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+warning: unused import: `std::time::Instant`
+ --> crates\kilogram-state\src\vault\indexed_dialog\history_protocol2_storage_tests.rs:4:5
+  |
+4 | use std::time::Instant;
+  |     ^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+   Compiling kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+warning: fields `dir` and `proof` are never read
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_protocol2_storage_tests.rs:125:5
+    |
+124 | struct Fixture {
+    |        ------- fields in this struct
+125 |     dir: tempfile::TempDir,
+    |     ^^^
+...
+128 |     proof: Vec<u8>,
+    |     ^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+   Compiling kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+warning: `kilogram-state` (lib test) generated 2 warnings (run `cargo fix --lib -p kilogram-state --tests` to apply 1 suggestion)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 32.52s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-lib-kilogram_protocol-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_decoder_mutations-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_sync_v2_decoder_mutations-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_sync_v2_fuzz_seeds-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-ordered_dialog_bounds-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-ratchet-lib-kilogram_ratchet-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+skipping_unchanged_test=ordered_dialog::protocol2_component_tests::a3_s3_n01_real_native_indexed_long_chain
+skipping_unchanged_test=ordered_dialog::protocol2_component_tests::a3_s3_n02_real_native_indexed_duplex_late_tails
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 5 tests
+test ordered_dialog::protocol2_component_tests::a3_s3_component_authority_atomic_reopen ... A01 sources=11 text=9 native_calls=22 elapsed_seconds=3.656
+A01 role=0 SID=lcWYNtVU5GtWqb6cy9iANpujeZmgpHv93IV8Oj6hu8Y g_own=5 g_peer=4 native_generation=11 max_blob=4787 max_guard=343
+A01 fixture=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../../.tmp/a3-s3\component-0-qVek5J
+A01 role=1 SID=lcWYNtVU5GtWqb6cy9iANpujeZmgpHv93IV8Oj6hu8Y g_own=4 g_peer=5 native_generation=11 max_blob=4850 max_guard=343
+A01 fixture=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../../.tmp/a3-s3\component-1-IjUrI4
+ok
+test ordered_dialog::protocol2_component_tests::failure_tests::a3_s3_g01_duplicate_gap_seen_and_lookup_fail_closed ... a3_s3_G01=7 duplicate_native_calls=0 lookup_attempts=2 consume_after_lookup_error=0 accepted_points_unchanged=true
+ok
+test ordered_dialog::protocol2_component_tests::failure_tests::a3_s3_g02_six_post_trial_rollbacks ... a3_s3_G02=6 trial_message_calls=10 post_MAC_inner_rejections=3 next_valid_transitions=6 checkpoints_points_unchanged=true
+ok
+test ordered_dialog::protocol2_component_tests::legacy_tests::a3_s3_l1_import_eight_provenance_categories ... a3_s3_import_negative_categories=8 rejection_calls=9 missing_head_aad_calls=2 config2_probe=ImportProbe { boundaries: ["owner-verifier"] } config1_control=ImportProbe { boundaries: ["owner-verifier", "native-restore/open", "guard-import"] } writes_capability=false actual_config2_pickle=false
+ok
+test ordered_dialog::protocol2_component_tests::legacy_tests::a3_s3_n03_generated_l1_provenance_and_continuation ... N03 sources=20 Text=18 native_calls=40 cutA=9 cutB=9 pre_session_shapes=2 elapsed_seconds=1.481 in_memory_only=true
+ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 29.30s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-lib-kilogram_protocol-tests.exe
+
+running 5 tests
+test ordered_dialog_v2::tests::a3_s3_root_selected_proof_and_authority ... ok
+test ordered_dialog_v2::tests::golden::a3_s3_differential_37_codec_and_construction ... a3_s3_D01_D09_codec=37 field_comparisons=19 matching_rejects=18 native_calls=0
+ok
+test ordered_dialog_v2::tests::matrix::a3_s3_c01_roundtrip_28_and_mixed_receipts ... a3_s3_C01_roundtrips=28 mixed_receipt2_legacy=1 text_boundary_bytes=4096
+ok
+test ordered_dialog_v2::tests::matrix::a3_s3_c02_c03_c08_bounds_canonical_collections ... a3_s3_C02=12 C03_cap_pairs=13 cap_vectors=26 C08=6 native_calls=0
+ok
+test ordered_dialog_v2::tests::matrix::a3_s3_c04_c05_c06_c07_c09_static_verification ... a3_s3_C04=8 C05=12 C06=8 C07=8 C09=4 static_reject_native_calls=0
+ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 173 filtered out; finished in 2.83s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_decoder_mutations-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_sync_v2_decoder_mutations-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_sync_v2_fuzz_seeds-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-ordered_dialog_bounds-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-ratchet-lib-kilogram_ratchet-tests.exe
+
+running 3 tests
+test ordered_v2::tests::a3_s3_arithmetic_24_vectors ... a3_s3_arithmetic_vectors=24 native_calls=0
+ok
+test ordered_v2::tests::a3_s3_phase_checkpoint_and_provenance ... a3_s3_phase_vectors=8 guard_bytes=343 import_sources=4
+ok
+test ordered_v2::tests::a3_s3_public_config_serde_rejects_disabled_v2 ... a3_s3_public_config_v2_serde_rejection=1 native_message_calls=0 actual_config2_pickle=false
+ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 13 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 2 tests
+Error: State(Io { path: "\\\\?\\C:\\Users\\Paul\\AppData\\Local\\Packages\\sandbox.{8ad1b0dc-754e-4b23-a632-16620236b893}\\AC\\Temp\\.tmplWjLln\\ratchet\\account.pickle", source: Os { code: 5, kind: PermissionDenied, message: "Отказано в доступе." } })
+test vault::indexed_dialog::history::writer::protocol2::storage_tests::a3_s3_s01_s02_stateful_source_receipt_rejections ... FAILED
+test vault::indexed_dialog::history::writer::protocol2::tests::a3_s3_differential_37_state_reader ... a3_s3_D01_D09_state=37 field_comparisons=19 matching_rejects=18 native_calls=0
+ok
+
+failures:
+
+failures:
+    vault::indexed_dialog::history::writer::protocol2::storage_tests::a3_s3_s01_s02_stateful_source_receipt_rejections
+
+test result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 71 filtered out; finished in 0.02s
+
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:285
+Line |
+ 285 |              throw "Stable test executable failed with exit code ${tes …
+     |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Stable test executable failed with exit code 101:
+     | E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+

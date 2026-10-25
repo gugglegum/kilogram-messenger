@@ -163,6 +163,19 @@ S3 plan принят после исправлений:
 Уточнены genesis request в storage Binding, authority resolution и differential matrix.
 Сначала exact commit/push документации, затем отдельное поручение реализации.
 
+S3 документация опубликована commit `e6f9b8ff6c7e9305d7216a94b142f0220b0c4a25`;
+root подтвердил7 exact paths/blobs и actual remote. Передаётся
+[S3 implementation task](tasks/long-lived-dialog-a3-protocol-s3-implementation-task.md):
+codec/guard/closed storage и test-only component driver, затем implementation review.
+Для итоговой S3 verification matrix root разрешил явную
+[поправку бюджета времени](tasks/long-lived-dialog-a3-protocol-s3-time-budget-amendment-1.md):
+20 минут совокупно при прежних 10 минутах на каждый N01/N02; исходные 10 минут
+совокупно превышены. Это resource amendment, не product latency assertion.
+S3 component реализация [принята root](tasks/long-lived-dialog-a3-protocol-s3-implementation-review-1.md):
+55 tests исполнителя и дополнительный независимый native schedule probe PASS.
+Проверены182 source/evidence hashes; publication следует exact accepted manifest.
+Production activation, whole A3 и пользовательский MVP ещё не завершены.
+
 Независимый обзор архитектуры и пути до пользовательского MVP на ревизии
 `3e82e63`: [аудит 2026-10-22](reviews/2026-10-22-architecture-mvp-audit.md).
 В нём отдельно перечислены active-path blockers, dormant mechanisms и

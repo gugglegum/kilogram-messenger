@@ -1,0 +1,60 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+    Checking hyper v1.11.0
+    Checking hickory-net v0.26.1
+    Checking kilogram-peer-reenrollment-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-runtime)
+    Checking tokio-websockets v0.13.3
+    Checking noq v1.2.0
+    Checking netwatch v0.19.3
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Checking kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+    Checking hickory-resolver v0.26.1
+    Checking hyper-util v0.1.20
+    Checking iroh-dns v1.1.0
+    Checking hyper-rustls v0.27.9
+    Checking igd-next v0.17.1
+    Checking reqwest v0.13.4
+    Checking portmapper v0.19.3
+    Checking iroh-relay v1.1.0
+    Checking kilogram-mailbox-client v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-client)
+    Checking iroh v1.1.0
+    Checking kilogram-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-store)
+    Checking kilogram-peer-history-recovery v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery)
+    Checking kilogram-runtime-ipc v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-runtime-ipc)
+    Checking kilogram-peer-history-recovery-consent v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-consent)
+    Checking kilogram-session v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-session)
+    Checking kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+    Checking kilogram-rollout v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-rollout)
+    Checking kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+    Checking kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: very complex type used. Consider factoring parts into `type` definitions
+   --> apps\kilogram-cli\src\ordered_dialog\protocol2_legacy_tests.rs:416:10
+    |
+416 |     ) -> TestResult<(Native, BTreeMap<(u8, Id), guard::Seen>)> {
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#type_complexity
+    = note: `-D clippy::type-complexity` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::type_complexity)]`
+
+error: this function has too many arguments (8/7)
+   --> apps\kilogram-cli\src\ordered_dialog\protocol2_component_tests.rs:250:5
+    |
+250 | /     fn save_trial(
+251 | |         &mut self,
+252 | |         trial: Native,
+253 | |         event: &wire::ParsedEvent2,
+...   |
+258 | |         before: Option<Id>,
+259 | |     ) -> TestResult<()> {
+    | |_______________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#too_many_arguments
+    = note: `-D clippy::too-many-arguments` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::too_many_arguments)]`
+
+error: could not compile `kilogram-cli` (lib test) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...

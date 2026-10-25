@@ -22,6 +22,7 @@ use serde::{Deserialize, Serialize};
 use tempfile::NamedTempFile;
 use thiserror::Error;
 pub mod ordered;
+pub mod ordered_v2;
 use vodozemac::{
     Curve25519PublicKey, DecodeError, PickleError,
     olm::{

@@ -1,0 +1,11 @@
+{
+  "exit_code": 1,
+  "seconds": 7.0522411,
+  "mode": "run",
+  "filter": "a3_s3_",
+  "skip_long_cases": true,
+  "profile": "verification",
+  "jobs": 12,
+  "priority": "BelowNormal",
+  "executables": []
+}

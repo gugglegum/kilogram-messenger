@@ -1,0 +1,55 @@
+{
+  "recorded_nonzero_results": [
+    {
+      "file": "atomic-1-result.json",
+      "exit_code": 1,
+      "seconds": 4.8842179
+    },
+    {
+      "file": "atomic-2-result.json",
+      "exit_code": 1,
+      "seconds": 9.4236514
+    },
+    {
+      "file": "clippy-1-result.json",
+      "exit_code": 101,
+      "seconds": 8.6860109
+    },
+    {
+      "file": "clippy-2-result.json",
+      "exit_code": 101,
+      "seconds": 13.0368421
+    },
+    {
+      "file": "clippy-3-result.json",
+      "exit_code": 101,
+      "seconds": 27.6831804
+    },
+    {
+      "file": "compile-10-result.json",
+      "exit_code": 101,
+      "seconds": 7.9150474
+    },
+    {
+      "file": "compile-9-result.json",
+      "exit_code": 101,
+      "seconds": 4.5363005
+    },
+    {
+      "file": "fast-1-result.json",
+      "exit_code": 1,
+      "seconds": 7.0522411
+    },
+    {
+      "file": "fast-2-result.json",
+      "exit_code": 1,
+      "seconds": 71.8474155
+    }
+  ],
+  "early_compile_failure_logs_without_result_json": [
+    "check-initial.log",
+    "pure-1.log",
+    "compile-2.log"
+  ],
+  "note": "Intermediate failures retained; not part of the final 12-command aggregate. Early diagnostics lack complete final provenance."
+}

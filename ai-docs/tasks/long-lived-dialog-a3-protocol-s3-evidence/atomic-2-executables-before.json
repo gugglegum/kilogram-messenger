@@ -1,0 +1,46 @@
+[
+  {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram_cli-f34eb2b019a632f6.exe",
+    "sha256": "81d2722e8e3ce905904b10158f4cb7ad54b98257ef9d2b4b1acd31c57a76ecb9"
+  },
+  {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram_cli-17f703a46b89518f.exe",
+    "sha256": "37fffd1879441dac3d433d73cd6effc518f69a3998556fa14c3256b0fd575ada"
+  },
+  {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram_protocol-ebcc33803eb9694f.exe",
+    "sha256": "230488fbe70408aa93d9f49f7e2f06fcc0c1a152beae572cd0a044482a1884b1"
+  },
+  {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\canonical_decoder_mutations-02486596cb5c8df1.exe",
+    "sha256": "8de582c335edf92175367a0c45d50dadac1d24813a3e502118607e8f8805dfe2"
+  },
+  {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\canonical_sync_v2_decoder_mutations-438b07a03e8e3062.exe",
+    "sha256": "6df3d17067409bf3b966372de9d0d1c611aab8661bacc61184017cb8d3a9dc55"
+  },
+  {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\canonical_sync_v2_fuzz_seeds-223c97ef536ee84e.exe",
+    "sha256": "91690be2dc6e6b5c93968120a3c8a629dc7b01a40c0f2edf756328245f7e08d8"
+  },
+  {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\ordered_dialog_bounds-f33c48c97dc28128.exe",
+    "sha256": "d68930858cc68a157046dbf58a2b2abc4134ad58a3b51b2b5af831ee163d9c07"
+  },
+  {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram_ratchet-7b5461caa8135afb.exe",
+    "sha256": "220ce371f42c5b93ba940af9ada43a08d04d50ba96412f751983fbace5ca101e"
+  },
+  {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram_state-8ed7b2a392b6b832.exe",
+    "sha256": "6252dad7e51a381da68554deb21c5ab9ad3805ae2054db52216766f95cbee25e"
+  },
+  {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\a3_s1_root_review-7e8c16e84c55303f.exe",
+    "sha256": "57d6dc234cfa1617ef499e1ce7f18282b5b7579520f4f861305462a50202ef9c"
+  },
+  {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\a3_s2_root_review-0d793604808176fd.exe",
+    "sha256": "ee22ef59258e8968470974b50a771be139d18af6482c09b318f74f94aabe9357"
+  }
+]

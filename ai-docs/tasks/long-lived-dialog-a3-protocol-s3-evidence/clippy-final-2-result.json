@@ -1,0 +1,13 @@
+{
+  "exit_code": 0,
+  "seconds": 11.5034973,
+  "mode": "clippy",
+  "filter": "a3_s3_",
+  "skip_long_cases": false,
+  "workspace_temp": false,
+  "offline": true,
+  "profile": "verification",
+  "jobs": 12,
+  "priority": "BelowNormal",
+  "executables": []
+}

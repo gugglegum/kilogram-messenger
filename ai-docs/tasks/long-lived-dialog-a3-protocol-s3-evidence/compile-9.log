@@ -1,0 +1,116 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+   Compiling kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error[E0599]: no associated function or constant named `version_2` found for struct `vodozemac::olm::SessionConfig` in the current scope
+   --> crates\kilogram-ratchet\src\ordered_v2\tests.rs:195:24
+    |
+195 |         SessionConfig::version_2(),
+    |                        ^^^^^^^^^ associated function or constant not found in `vodozemac::olm::SessionConfig`
+    |
+note: if you're trying to build a new `vodozemac::olm::SessionConfig`, consider using `vodozemac::olm::SessionConfig::version_1` which returns `vodozemac::olm::SessionConfig`
+   --> C:\Users\Paul\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\vodozemac-0.10.0\src\olm\session_config.rs:40:5
+    |
+ 40 |     pub const fn version_1() -> Self {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: there is an associated function `version_1` with a similar name
+    |
+195 -         SessionConfig::version_2(),
+195 +         SessionConfig::version_1(),
+    |
+
+warning: unused import: `Value`
+  --> apps\kilogram-cli\src\ordered_dialog\protocol2_component_tests.rs:11:16
+   |
+11 | use wire::{Id, Value, a, b, u};
+   |                ^^^^^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `kilogram-ratchet` (lib test) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error[E0599]: no associated function or constant named `sign` found for struct `kilogram_protocol::ordered_dialog_v1::Frame` in the current scope
+   --> apps\kilogram-cli\src\ordered_dialog\protocol2_legacy_tests.rs:108:29
+    |
+108 |                 old::Frame::sign(
+    |                             ^^^^ associated function or constant not found in `kilogram_protocol::ordered_dialog_v1::Frame`
+    |
+note: if you're trying to build a new `kilogram_protocol::ordered_dialog_v1::Frame` consider using one of the following associated functions:
+      kilogram_protocol::ordered_dialog_v1::Frame::signed
+      kilogram_protocol::ordered_dialog_v1::Frame::parse
+   --> crates\kilogram-protocol\src\ordered_dialog_v1.rs:479:5
+    |
+479 | /     pub fn signed(
+480 | |         kind: u64,
+481 | |         binding: Id,
+482 | |         request: [u8; 16],
+483 | |         body: Value,
+484 | |         identity: &DeviceIdentity,
+485 | |     ) -> Result<Self> {
+    | |_____________________^
+...
+510 |       pub fn parse(raw: &[u8]) -> Result<Self> {
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: there is an associated function `signed` with a similar name
+    |
+108 |                 old::Frame::signed(
+    |                                 ++
+
+error[E0599]: no associated function or constant named `sign` found for struct `kilogram_protocol::ordered_dialog_v1::Frame` in the current scope
+   --> apps\kilogram-cli\src\ordered_dialog\protocol2_legacy_tests.rs:134:25
+    |
+134 |             old::Frame::sign(2, binding, [3; 16], proof_body.clone(), &actors.devices[0])?.raw()?,
+    |                         ^^^^ associated function or constant not found in `kilogram_protocol::ordered_dialog_v1::Frame`
+    |
+note: if you're trying to build a new `kilogram_protocol::ordered_dialog_v1::Frame` consider using one of the following associated functions:
+      kilogram_protocol::ordered_dialog_v1::Frame::signed
+      kilogram_protocol::ordered_dialog_v1::Frame::parse
+   --> crates\kilogram-protocol\src\ordered_dialog_v1.rs:479:5
+    |
+479 | /     pub fn signed(
+480 | |         kind: u64,
+481 | |         binding: Id,
+482 | |         request: [u8; 16],
+483 | |         body: Value,
+484 | |         identity: &DeviceIdentity,
+485 | |     ) -> Result<Self> {
+    | |_____________________^
+...
+510 |       pub fn parse(raw: &[u8]) -> Result<Self> {
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: there is an associated function `signed` with a similar name
+    |
+134 |             old::Frame::signed(2, binding, [3; 16], proof_body.clone(), &actors.devices[0])?.raw()?,
+    |                             ++
+
+error[E0599]: no associated function or constant named `sign` found for struct `kilogram_protocol::ordered_dialog_v1::Frame` in the current scope
+   --> apps\kilogram-cli\src\ordered_dialog\protocol2_legacy_tests.rs:135:25
+    |
+135 |             old::Frame::sign(2, binding, [4; 16], proof_body, &actors.devices[1])?.raw()?,
+    |                         ^^^^ associated function or constant not found in `kilogram_protocol::ordered_dialog_v1::Frame`
+    |
+note: if you're trying to build a new `kilogram_protocol::ordered_dialog_v1::Frame` consider using one of the following associated functions:
+      kilogram_protocol::ordered_dialog_v1::Frame::signed
+      kilogram_protocol::ordered_dialog_v1::Frame::parse
+   --> crates\kilogram-protocol\src\ordered_dialog_v1.rs:479:5
+    |
+479 | /     pub fn signed(
+480 | |         kind: u64,
+481 | |         binding: Id,
+482 | |         request: [u8; 16],
+483 | |         body: Value,
+484 | |         identity: &DeviceIdentity,
+485 | |     ) -> Result<Self> {
+    | |_____________________^
+...
+510 |       pub fn parse(raw: &[u8]) -> Result<Self> {
+    |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: there is an associated function `signed` with a similar name
+    |
+135 |             old::Frame::signed(2, binding, [4; 16], proof_body, &actors.devices[1])?.raw()?,
+    |                             ++
+
+warning: `kilogram-cli` (lib test) generated 1 warning
+error: could not compile `kilogram-cli` (lib test) due to 3 previous errors; 1 warning emitted

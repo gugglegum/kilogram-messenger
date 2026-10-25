@@ -1,0 +1,68 @@
+{
+  "exit_code": 0,
+  "seconds": 25.1146726,
+  "profile": "verification",
+  "offline": true,
+  "jobs": 12,
+  "priority": "BelowNormal",
+  "filter": "a3_s3_root_native_delayed_delivery_schedules",
+  "sources": [
+    {
+      "path": "Cargo.toml",
+      "bytes": 3398,
+      "sha256": "28700ccee74b2a78f96e945b86087ce9dfac32a2236bf61067976c2ac1082aa0"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 194144,
+      "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126"
+    },
+    {
+      "path": "crates/kilogram-ratchet/Cargo.toml",
+      "bytes": 565,
+      "sha256": "e1c9ec6d09a4618f5df5ff96de72b6867380ed88b4c677307489effe3bc82729"
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/lib.rs",
+      "bytes": 95396,
+      "sha256": "6b5c9269841a0db59c7f7afb76f30dba22557dadbac0a30b684a8fa402ba2784"
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/ordered.rs",
+      "bytes": 10142,
+      "sha256": "8b40547a9f622410ca8af7915358ec58f1e05f526f5c83b806b11c8e9c2fad9b"
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/ordered_v2.rs",
+      "bytes": 17896,
+      "sha256": "61922db8f80f93e204b3ae5689ec80022e53d1688ac5b0c4951ae668b01417f1"
+    },
+    {
+      "path": "crates/kilogram-ratchet/tests/a3_s3_root_review.rs",
+      "bytes": 8422,
+      "sha256": "d680bee8cda588c44613e332bf4a61fa81d4b965c8629fe8ecb524d97afb9aa4"
+    },
+    {
+      "path": "scripts/run-cargo-tests-stable.ps1",
+      "bytes": 10839,
+      "sha256": "c2cba5140b56c99a6482884e049426ba0ed54e90b572aebf01ace45e65cd06c3"
+    },
+    {
+      "path": "scripts/cargo-resource-policy.ps1",
+      "bytes": 1168,
+      "sha256": "2485a0b0ae5b07d6625f218e4c02a8f6927b78c26f10b5506f157066abba676e"
+    }
+  ],
+  "executables": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-ratchet-lib-kilogram_ratchet-tests.exe",
+      "bytes": 4277248,
+      "sha256": "6d93b7e6ffd1f0739aebcc8f88d5571ebe32bf13541ccd4f69d6a8977de26754"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-ratchet-test-a3_s3_root_review-tests.exe",
+      "bytes": 2905088,
+      "sha256": "b37e2616009b63b7cbb289f455bcf5205ec2d47f21cd4cbc19fa78d6f43d13ef"
+    }
+  ]
+}

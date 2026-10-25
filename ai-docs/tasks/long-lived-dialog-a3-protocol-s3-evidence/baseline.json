@@ -1,0 +1,52 @@
+{
+  "baseline": "e6f9b8ff6c7e9305d7216a94b142f0220b0c4a25",
+  "timestamp_utc": "2026-10-24T21:14:56.7409217Z",
+  "protected_files": [
+    {
+      "path": "ai-docs/README.md",
+      "bytes": 155366,
+      "sha256": "66ac75e2dcaef8b19cd21a50b86ca4906c551dbc5bcea9c58c1114b25081343e"
+    },
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "bytes": 71815,
+      "sha256": "6301a7e1d6ab5604141b1b64b8d7603965d4c06a0311cf0fbb1af72d2003586c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-implementation-task.md",
+      "bytes": 9170,
+      "sha256": "0b2c03e7b3da322147f496a574f82fa8ef8e3d2311a51ba2a964be5f16d87163"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-plan.md",
+      "bytes": 85553,
+      "sha256": "b0e90087f43142d844f7de25963f62efe0bfb43f9c23743dc816847ab4c13a49"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-plan-review-1.md",
+      "bytes": 8172,
+      "sha256": "f46662b070a138a9e90a12f5bad9395ebaa54afa9ce5e6b4c3556a4b5a3bdbc4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-plan-review-2.md",
+      "bytes": 6522,
+      "sha256": "172cfaefd378841513bcfb44ab1298bd85d73752ed0b7e614ce02d67ac513830"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-plan-accepted-files.json",
+      "bytes": 2876,
+      "sha256": "9c1565e4bc9c3218c0e596dc100bb8cee33cf48d3be0bb408448dffe8ff2b5f5"
+    },
+    {
+      "path": "ai-docs/development-environment.md",
+      "bytes": 440717,
+      "sha256": "53074ff3734dacd9906ee03cc5c7ded952dedd99d207581f692ff900b9a79f8f"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "bytes": 61531648,
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    }
+  ],
+  "scope": "S3 libraries and test-only CLI; no activation or migration"
+}

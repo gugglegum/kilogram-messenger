@@ -1,5 +1,7 @@
 //! Private lowering; the public API cannot construct this plan or its credit refs.
 use super::*;
+#[path = "history_protocol2.rs"]
+pub mod protocol2;
 
 #[derive(Clone, Copy, Eq, PartialEq)]
 enum Purpose {
@@ -28,6 +30,7 @@ struct RowClaim {
 }
 #[derive(Clone)]
 struct Plan {
+    protocol2: bool,
     context: u8,
     purpose: Purpose,
     puts: BTreeMap<Key, Vec<u8>>,
@@ -38,6 +41,7 @@ struct Plan {
 impl Plan {
     fn new(context: u8, purpose: Purpose) -> Self {
         Self {
+            protocol2: false,
             context,
             purpose,
             puts: BTreeMap::new(),
@@ -221,6 +225,7 @@ impl<
         c: u8,
         operation: &HistoryOperation,
     ) -> Result<()> {
+        self.history2_guard_old(c, operation)?;
         if matches!(operation, HistoryOperation::Init(_)) {
             match self.history_view(c) {
                 Ok((identity, heads)) => self.history_coherent(c, &identity, &heads),
@@ -303,6 +308,7 @@ impl<
         Ok(())
     }
     pub(crate) fn history_apply(&mut self, c: u8, operation: HistoryOperation) -> Result<()> {
+        self.history2_guard_old(c, &operation)?;
         if let HistoryOperation::Init(init) = operation {
             if init.scope.context != self.root.contexts[usize::from(c)] {
                 return Err(Error::Conflict);
@@ -738,6 +744,7 @@ impl<
         Ok(p)
     }
     fn history_validate_plan(&mut self, p: &Plan) -> Result<()> {
+        self.history2_extra_check(p)?;
         let c = p.context;
         if p.puts.keys().copied().collect::<BTreeSet<_>>() != p.allowed {
             return Err(Error::Bound("history extra effect"));
@@ -779,15 +786,25 @@ impl<
                 }
             }
             let allowed = match p.purpose {
-                Purpose::Init => *key == identity_key(c)? || *key == heads_key(c)?,
+                Purpose::Init => {
+                    *key == identity_key(c)?
+                        || *key == heads_key(c)?
+                        || key.namespace == Namespace::Control
+                            && self.history2_allowed_control(p, *key, value)?
+                }
                 Purpose::Queue => key.namespace == Namespace::Request,
                 Purpose::Pending | Purpose::Capture => key.namespace == Namespace::Auth,
                 Purpose::Repair => false,
-                Purpose::Ack => matches!(
-                    key.namespace,
-                    Namespace::ReceiptA | Namespace::ReceiptB | Namespace::Auth
-                ),
+                Purpose::Ack => {
+                    key.namespace == Namespace::Control
+                        && self.history2_allowed_control(p, *key, value)?
+                        || matches!(
+                            key.namespace,
+                            Namespace::ReceiptA | Namespace::ReceiptB | Namespace::Auth
+                        )
+                }
                 Purpose::Genesis | Purpose::Text => match key.namespace {
+                    Namespace::Control => self.history2_allowed_control(p, *key, value)?,
                     Namespace::Event | Namespace::Projection => {
                         p.rows.iter().any(|r| r.event == key.bytes)
                     }

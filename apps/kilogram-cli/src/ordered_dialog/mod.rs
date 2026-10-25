@@ -4,6 +4,8 @@ pub mod engine;
 pub mod handshake;
 pub mod ingress;
 pub mod outbox;
+#[cfg(test)]
+mod protocol2_component_tests;
 pub mod ratchet;
 pub mod repair;
 #[cfg(test)]

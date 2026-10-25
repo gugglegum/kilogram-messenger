@@ -1,0 +1,37 @@
+{
+  "baseline": "e6f9b8ff6c7e9305d7216a94b142f0220b0c4a25",
+  "source_count": 25,
+  "current_source_hashes": "matched",
+  "final_runner_commands": 12,
+  "final_top_level_passes": 55,
+  "final_runner_aggregate_seconds": 1117.3353277999997,
+  "original_600_second_limit_met": false,
+  "amended_1200_second_limit_met": true,
+  "clippy_final": "passed; exact final source snapshot",
+  "static_checks": {
+    "cargo_fmt": 0,
+    "helper_rustfmt": 0,
+    "powershell_parse_errors": 0,
+    "git_diff_check": 0
+  },
+  "evidence_helper_parse_errors": 0,
+  "frozen_protected_files": "matched; see protected-files.json and source-review.json",
+  "normative_amendments": [
+    {
+      "sha256": "9a5109f5234fbe49f3c0f407d97f3903c829bb981d9b21c1c13ea54c4e71f9fe",
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-read-budget-amendment-1.md"
+    },
+    {
+      "sha256": "b169a7b0c8786df8f7ac1d6cc211d45f197194db8692e9d950ffd86b7fd389e4",
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-provenance-test-clarification-1.md"
+    },
+    {
+      "sha256": "69d3166a4481540273501273ae2a77a63491934de89616a13afcaa8e69d796e6",
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-time-budget-amendment-1.md"
+    }
+  ],
+  "index": "empty",
+  "commit_push": "not performed; awaiting explicit root acceptance",
+  "root_owned_changes": "preserved; excluded from executor candidate paths",
+  "scope": "S3 component libraries and cfg(test) CLI; production actor/transport/migration excluded"
+}

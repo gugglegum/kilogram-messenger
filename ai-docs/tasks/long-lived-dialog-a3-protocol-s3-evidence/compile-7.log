@@ -1,0 +1,62 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+   Compiling kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+   Compiling kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+   Compiling kilogram-offline v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-offline)
+warning: field `native_kind` is never read
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_source_v2.rs:199:9
+    |
+197 | pub(super) struct EventFields {
+    |                   ----------- field in this struct
+198 |     #[cfg(test)]
+199 |     pub native_kind: u8,
+    |         ^^^^^^^^^^^
+    |
+    = note: `EventFields` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `transcript` is never read
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_source_v2.rs:374:9
+    |
+365 | pub(super) struct FreshFields {
+    |                   ----------- field in this struct
+...
+374 |     pub transcript: Id,
+    |         ^^^^^^^^^^
+    |
+    = note: `FreshFields` has derived impls for the traits `Debug` and `Clone`, but these are intentionally ignored during dead code analysis
+
+warning: `kilogram-state` (lib test) generated 2 warnings
+   Compiling kilogram-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-store)
+   Compiling kilogram-peer-history-recovery v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery)
+   Compiling kilogram-runtime-ipc v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-runtime-ipc)
+   Compiling kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+   Compiling kilogram-peer-history-recovery-consent v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-consent)
+   Compiling kilogram-session v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-session)
+   Compiling kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+   Compiling kilogram-rollout v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-rollout)
+   Compiling kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+warning: unused imports: `Value` and `u`
+  --> apps\kilogram-cli\src\ordered_dialog\protocol2_component_tests.rs:11:16
+   |
+11 | use wire::{Id, Value, a, b, u};
+   |                ^^^^^        ^
+   |
+   = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: `kilogram-cli` (lib test) generated 1 warning (run `cargo fix --lib -p kilogram-cli --tests` to apply 1 suggestion)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 38.36s
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_cli-f34eb2b019a632f6.exe)
+  Executable unittests src\main.rs (target\verification\deps\kilogram_cli-17f703a46b89518f.exe)
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_protocol-ebcc33803eb9694f.exe)
+  Executable tests\canonical_decoder_mutations.rs (target\verification\deps\canonical_decoder_mutations-02486596cb5c8df1.exe)
+  Executable tests\canonical_sync_v2_decoder_mutations.rs (target\verification\deps\canonical_sync_v2_decoder_mutations-438b07a03e8e3062.exe)
+  Executable tests\canonical_sync_v2_fuzz_seeds.rs (target\verification\deps\canonical_sync_v2_fuzz_seeds-223c97ef536ee84e.exe)
+  Executable tests\ordered_dialog_bounds.rs (target\verification\deps\ordered_dialog_bounds-f33c48c97dc28128.exe)
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_ratchet-7b5461caa8135afb.exe)
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_state-8ed7b2a392b6b832.exe)
+  Executable tests\a3_s1_root_review.rs (target\verification\deps\a3_s1_root_review-7e8c16e84c55303f.exe)
+  Executable tests\a3_s2_root_review.rs (target\verification\deps\a3_s2_root_review-0d793604808176fd.exe)

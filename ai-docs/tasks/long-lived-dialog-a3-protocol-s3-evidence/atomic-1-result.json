@@ -1,0 +1,9 @@
+{
+  "exit_code": 1,
+  "seconds": 4.8842179,
+  "filter": "a3_s3_component_authority_atomic_reopen",
+  "source": "compile-5-source.json",
+  "runner": "stable",
+  "profile": "verification",
+  "jobs": 12
+}

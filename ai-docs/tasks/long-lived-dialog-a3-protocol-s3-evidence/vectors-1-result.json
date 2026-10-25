@@ -1,0 +1,66 @@
+{
+  "exit_code": 0,
+  "seconds": 22.6017282,
+  "mode": "run",
+  "filter": "a3_s3_differential_37_codec",
+  "profile": "verification",
+  "jobs": 12,
+  "priority": "BelowNormal",
+  "executables": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 63219200,
+      "sha256": "3ba1a18fc72cd2d8b7b3a6b922793befb81e9519156bd986e041711ec6230528"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 15017472,
+      "sha256": "d6bb1cef2f009c5c7b8ba3cc2537760d23feca29d85b11d2ba25d7fa7a43fe21"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-protocol-lib-kilogram_protocol-tests.exe",
+      "bytes": 15322624,
+      "sha256": "035f77a94410bd5d550fd3cc482fcefbeee744d2a00b0e8fbcc18a2d67d8e7e4"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-protocol-test-canonical_decoder_mutations-tests.exe",
+      "bytes": 7290880,
+      "sha256": "2129772bbdcbc72d13559ddbb4eb4e29fc003e9021af81a4bcfe368a386b782e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-protocol-test-canonical_sync_v2_decoder_mutations-tests.exe",
+      "bytes": 3016192,
+      "sha256": "945149bfa747216b308e49d76bb341bac8d88c7c15dd3e2685b25a30f29d7378"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-protocol-test-canonical_sync_v2_fuzz_seeds-tests.exe",
+      "bytes": 733696,
+      "sha256": "d4be27d84d4073d56bb96029ee35492f0741aa40d94a87f1f204aff12951f93d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-protocol-test-ordered_dialog_bounds-tests.exe",
+      "bytes": 1110016,
+      "sha256": "4bd798a154f2156bddfd247a2bf510c274aebaec0b57f53176808093e8288230"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-ratchet-lib-kilogram_ratchet-tests.exe",
+      "bytes": 4743168,
+      "sha256": "4fd66ffc4cbb680e00d038adaa0fb38154fd06d9f20b63662bfc319503121aae"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 9707008,
+      "sha256": "0c49b463a4cd37cff1e230f62bb2e6b5185980e386d31ad56d358494195ec880"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s1_root_review-tests.exe",
+      "bytes": 6340096,
+      "sha256": "367589903dca49308fde5787df7f3edc36e01cdc438abbaacabfd7a236460764"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s2_root_review-tests.exe",
+      "bytes": 6592512,
+      "sha256": "770e17e6806511234c81e6a1b72c63256f19f28de3a3b7a438c08a6b696ea2cb"
+    }
+  ]
+}

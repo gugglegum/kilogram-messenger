@@ -755,3 +755,51 @@ edits/commit/push. Повторять отклонённый callback не по�
 с mandatory capture/F link и37 differential comparisons. Следующий dispatch — только
 публикация6 принятых документов и manifest с baseline e136c59b…; затем root проверяет
 remote/tree и поручает implementation. Root меняет в plan только статус/ссылку review2.
+
+S3 docs publication independently verified root: commit
+`e6f9b8ff6c7e9305d7216a94b142f0220b0c4a25`, единственный parent e136c59b…,
+exact7 changed paths/blobs,6 raw documents+manifest MATCH. Manifest raw9c1565e4…,
+blob37297cd… совпали, HEAD/master/origin/master и actual remote совпали; дерево/index
+после публикации чистые. development-environment.md clean53074ff… исключён.
+Callback исполнителя после прямого human grant успешно пришёл автоматически.
+
+Следующее поручение — [S3 implementation](tasks/long-lived-dialog-a3-protocol-s3-implementation-task.md)
+тому же OD1 GPT-6.1 Sol Max/default без Fast. Разрешён принятый libraries/closed-writer/
+test-only component slice; production activation/migration остаются future. Сначала
+implementation/evidence review, затем exact accepted commit/push. Frozen plan/reviews
+не менять; новые task/README/coordination принадлежат implementation scope.
+
+S3 implementation запросила read-budget seam после сохранённого atomic-2 FAIL.
+Root сверил actual call graph и разрешил
+[bound2-specific budget amendment1](tasks/long-lived-dialog-a3-protocol-s3-read-budget-amendment-1.md):
+40*(limit+2)+3 при прежнем unbound8*(limit+2)+2. Текущий unconditional source/proof lookup
+в unbound пути должен быть исправлен, stats полные, mode authenticated, max2 candidates/
+parents без recursive history scan. H2 count2+sources+receipt markers остаётся exact;
+cardinality не подменяет semantic evidence checks. Это разрешение узкой resource
+поправки, не acceptance ещё незавершённой реализации.
+
+S3 provenance config seam: pinned build не экспортирует experimental config2.
+Root сверил SessionConfig source/default features и сохранённый compile-10 FAIL;
+разрешён [pure owner-origin config negative](tasks/long-lived-dialog-a3-protocol-s3-provenance-test-clarification-1.md)
+с positive config1 control и явными zero-call/write boundaries. Public serde V2 reject
+не объявлять actual config2-pickle regression; feature/private-pickle/native patches
+не нужны. Categories, assertions и checkpoint restores учитывать честно отдельно.
+
+S3 time budget: root прочитал исходные contract/plan и actual final evidence.
+N01/N02/bounded-final суммарно880.2077191s; вместе с семью relevant regression commands
+1070.9790861s. Исходный aggregate600s превышен, per-case PASS его не заменяет.
+Разрешена явная [time budget amendment1](tasks/long-lived-dialog-a3-protocol-s3-time-budget-amendment-1.md):
+финальный aggregate≤1200s, каждый длинный N01/N02≤600s, тот же verification profile,
+counts/limits/assertions без сокращения. Не повторять successful heavy runs только
+ради поправки; source/EXE correspondence и полнота матрицы ещё требуют code review.
+
+S3 implementation review завершён:
+[review1/acceptance](tasks/long-lived-dialog-a3-protocol-s3-implementation-review-1.md).
+Root проверил182 submitted artifact hashes и6 frozen protected artifacts; mismatches0.
+55 executor tests PASS, source reuse N01 ограничен неизменным driver/dependencies.
+Дополнительный root native probe32 schedules PASS:2146 packet calls,704 restores,
+203 sending DH rotations; strict Clippy/fmt PASS. Aggregate с root runner1142.4500004s
+в пределах принятого1200s. Component scope принят без blocking findings; следующий
+dispatch — exact allowlisted commit/push от baseline e6f9b8ff…, затем independent
+remote/tree verification. Production actor/Active2/ALPN2/offline/migration остаются
+в следующем scope, автоматически не запускаются.

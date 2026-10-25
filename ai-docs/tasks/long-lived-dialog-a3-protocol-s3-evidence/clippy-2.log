@@ -1,0 +1,65 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking tokio-util v0.7.19
+    Checking kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+    Checking kilogram-sync-capability v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-sync-capability)
+    Checking tokio-rustls v0.26.4
+    Checking tower v0.5.3
+    Checking rustls-platform-verifier v0.7.0
+    Checking noq-proto v1.2.0
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Checking backon v1.6.0
+    Checking kilogram-publication-conflict v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-publication-conflict)
+    Checking kilogram-ticket-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-ticket-store)
+    Checking kilogram-mailbox-provisioning v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-provisioning)
+    Checking kilogram-peer-capability-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-capability-store)
+    Checking kilogram-peer-reenrollment-staging v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-staging)
+    Checking tower-http v0.6.11
+    Checking kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+    Checking kilogram-offline v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-offline)
+    Checking h2 v0.4.19
+    Checking n0-future v0.3.2
+    Checking kilogram-peer-reenrollment v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment)
+    Checking tokio-stream v0.1.19
+    Checking n0-watcher v1.0.0
+error: the loop variable `role` is used to index `guards`
+   --> crates\kilogram-ratchet\src\ordered_v2\tests.rs:196:17
+    |
+196 |     for role in 0..2 {
+    |                 ^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+    = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator and enumerate()
+    |
+196 -     for role in 0..2 {
+196 +     for (role, <item>) in guards.iter().enumerate() {
+    |
+
+    Checking kilogram-peer-reenrollment-acceptance v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-acceptance)
+error: could not compile `kilogram-ratchet` (lib test) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: large size difference between variants
+   --> crates\kilogram-protocol\src\ordered_dialog_v2\authority.rs:482:1
+    |
+482 | / pub enum MixedReceipt {
+483 | |     Legacy(VerifiedReceipt1),
+    | |     ------------------------ the second-largest variant contains at least 120 bytes
+484 | |     Current(VerifiedReceipt2),
+    | |     ------------------------- the largest variant contains at least 352 bytes
+485 | | }
+    | |_^ the entire enum is at least 352 bytes
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#large_enum_variant
+    = note: `-D clippy::large-enum-variant` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::large_enum_variant)]`
+help: consider boxing the large fields or introducing indirection in some other way to reduce the total size of the enum
+    |
+484 -     Current(VerifiedReceipt2),
+484 +     Current(Box<VerifiedReceipt2>),
+    |
+
+error: could not compile `kilogram-protocol` (lib) due to 1 previous error
+error: could not compile `kilogram-protocol` (lib test) due to 1 previous error

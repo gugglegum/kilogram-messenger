@@ -17,6 +17,7 @@ mod scale;
 mod tests;
 #[path = "history_writer.rs"]
 mod writer;
+pub(super) use writer::protocol2;
 
 #[derive(Clone, Debug)]
 pub struct HistoryPage {
@@ -224,13 +225,19 @@ impl IndexedDialogVault {
                 .max_candidates
                 .max(candidates.iter().flatten().count());
         }
+        // Mode selection uses already validated root cardinality, with no hidden read.
+        let point_bound = if w.history2_bound_view(context)? {
+            40 * (limit as u64 + 2) + 3
+        } else {
+            8 * (limit as u64 + 2) + 2
+        };
         stats.point_gets = w.history_gets;
         stats.nodes_read = w.tree.reads;
         stats.values_read = w.values_read;
         stats.returned_payload_bytes = items.iter().map(|r| r.text.len()).sum();
         stats.app_buffer_bound_bytes =
             (w.history_buffer_peak + 1024 * 1024 + stats.returned_payload_bytes + 16384) as u64;
-        if stats.max_candidates > 2 || stats.point_gets > 8 * (limit as u64 + 2) + 2 {
+        if stats.max_candidates > 2 || stats.point_gets > point_bound {
             return Err(Error::Bound("history read work"));
         }
         let page = HistoryPage {
@@ -329,7 +336,8 @@ impl<
         if identity.incarnation != self.root.incarnation
             || identity.init.scope.context != self.root.contexts[usize::from(c)]
             || identity.view_id()? != heads.view
-            || self.root.roots[identity_key(c)?.slot()?].count != 1
+            || self.root.roots[identity_key(c)?.slot()?].count
+                != self.history2_control_count(c, &identity.init)?
             || self.root.roots[heads_key(c)?.slot()?].count != 1
         {
             return Err(Error::Integrity("history persisted scope/view"));
@@ -364,6 +372,10 @@ impl<
         if binding.view != *view || (binding.kind != 3 && !projection.text.is_empty()) {
             return Err(Error::Integrity("history projection view/kind"));
         }
+        if self.history2_bound_view(c)? {
+            let source = self.hrequired(Key::hash(c, Namespace::Event, id)?)?;
+            self.history2_source_check(c, id, &binding, &source)?;
+        }
         Ok(Some((binding, projection.text)))
     }
     fn history_candidate(
@@ -386,8 +398,10 @@ impl<
         if binding.role != role || binding.ordinal != n {
             return Err(Error::Integrity("history candidate slot"));
         }
-        let source = self.hrequired(Key::hash(c, Namespace::Event, id)?)?;
-        binding.verify_source(id, &source)?;
+        if !self.history2_bound_view(c)? {
+            let source = self.hrequired(Key::hash(c, Namespace::Event, id)?)?;
+            binding.verify_source(id, &source)?;
+        }
         if n > 0 && binding.previous != Some(id_value(&self.hrequired(lane(c, role, n - 1)?)?)?) {
             return Err(Error::Integrity("history previous Lane"));
         }
