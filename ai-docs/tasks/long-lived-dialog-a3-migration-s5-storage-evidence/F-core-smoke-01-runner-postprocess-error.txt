@@ -1,0 +1,9 @@
+Runner postprocessing failure after the actual harness passed.
+Original tool/process exit: 1.
+Exact error: The property 'Sum' cannot be found on this object. Verify that the property exists.
+
+F-core-smoke-01.log records the actual M01/M08.core PASS on both real d9b branches.
+F-core-smoke-01.json was already written with wrapper exit0, 58.1637998s charged F.
+The subsequent StrictMode ledger aggregation failed for the empty C set.
+The runner now sums initialized doubles explicitly; no test rerun was performed.
+Original log, source snapshot, image hashes and case JSON are retained unchanged.

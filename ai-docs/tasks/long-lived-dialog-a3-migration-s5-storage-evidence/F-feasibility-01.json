@@ -1,0 +1,22 @@
+{
+  "case": "F-feasibility-01",
+  "contributing_set": "F",
+  "kind": "charged-short-real-d9b-feasibility",
+  "fixture_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\feasibility-01",
+  "elapsed_seconds": 13.8950435,
+  "exit_code": 0,
+  "error": null,
+  "executable": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-baseline\\kilogram-cli.exe",
+    "bytes": 61531648,
+    "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+  },
+  "script": {
+    "path": "scripts/test-ordered-dialog-process.ps1",
+    "sha256": "de23a08dca8e8cf444a1e0dd66602db6d970b61db357c440130e4cc11b72b071"
+  },
+  "messages_per_lane": 2,
+  "burst": 1,
+  "preexisting_exact_path_processes": [],
+  "expected_large511_gate": "not_run"
+}

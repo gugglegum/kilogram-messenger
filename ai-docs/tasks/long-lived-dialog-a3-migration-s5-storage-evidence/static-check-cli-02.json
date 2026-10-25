@@ -1,0 +1,8 @@
+{
+  "case": "static-check-cli-02",
+  "kind": "static-build",
+  "contributing_set": "compile-static-separate",
+  "elapsed_seconds": 32.1049158,
+  "exit_code": 0,
+  "reason": "Compile full real-source fence/copy/Ready/capacity regression and private owner facts"
+}

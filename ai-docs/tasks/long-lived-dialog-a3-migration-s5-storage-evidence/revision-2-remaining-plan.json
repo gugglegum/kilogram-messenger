@@ -1,0 +1,16 @@
+{
+  "baseline": "3547cf528f15c15a21cdb9e30b1d7ca35a01297a",
+  "charged": {
+    "F": 924.16879,
+    "P": 0,
+    "C": 237.4011677
+  },
+  "remaining_F": 275.83121000000006,
+  "remaining_plan": {
+    "F_process_estimate": 185,
+    "F_owner_cached_runner_estimate": 75,
+    "C_final_recovery_and_invariants_estimate": 50
+  },
+  "static_compile_precache": "before final F cases, excluded as static-only; every cached wrapper compile still charged",
+  "trigger": "If final owner leaves insufficient forecast for process, callback root before long run; no budget reset"
+}

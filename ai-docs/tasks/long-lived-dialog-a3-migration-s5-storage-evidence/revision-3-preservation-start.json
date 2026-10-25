@@ -1,0 +1,889 @@
+{
+  "baseline": "3547cf528f15c15a21cdb9e30b1d7ca35a01297a",
+  "files": [
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "bytes": 95502,
+      "sha256": "f1b7f90b8f9e882dab1ad2422ac7d81a7a950b93d8647f0c6de1fe40067d4d28"
+    },
+    {
+      "path": "ai-docs/development-environment.md",
+      "bytes": 440717,
+      "sha256": "53074ff3734dacd9906ee03cc5c7ded952dedd99d207581f692ff900b9a79f8f"
+    },
+    {
+      "path": "ai-docs/next-stage-plan.md",
+      "bytes": 4490,
+      "sha256": "dc0c2db5e6a4f4c4793d55e66efd84fe5a2d5328ac5847713cb2e00ff2addc93"
+    },
+    {
+      "path": "ai-docs/README.md",
+      "bytes": 159458,
+      "sha256": "47f6fbc6ab73286658176cf6f58bdfe37e57f398837094959c053fe59db66d48"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-contract.md",
+      "bytes": 109805,
+      "sha256": "f87c5c8b0b307863078cf3e2e85f3d13a05392d1d654affd5f2a40a3943ad2ad"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-candidate-files-2.json",
+      "bytes": 70347,
+      "sha256": "240e13d9e3a7d7f73782d28b5bdbd1e3a7bf5c8e60634254ed0bc7a560d2bc79"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-candidate-files.json",
+      "bytes": 49828,
+      "sha256": "3b5c1b85601e9d59415195d3975721ee086e3ff93fbe679ec7061dd7fcb950a1"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-component-regression-01-source-files.json",
+      "bytes": 6449,
+      "sha256": "423725dec18e74a637696224c4be87e5a747951c64d044a2f56f88747a5c1b2d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-component-regression-01.json",
+      "bytes": 3868,
+      "sha256": "251813d1d8bd370cb7c53a7c507a14f90098f847a21063106ba84a952787d4ee"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-component-regression-01.log",
+      "bytes": 5306,
+      "sha256": "28f7dd4d9e55632f0646e71bdad09efd8bf9e747d5ce58733b6c7b253011110a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-native-regression-01-source-files.json",
+      "bytes": 6449,
+      "sha256": "423725dec18e74a637696224c4be87e5a747951c64d044a2f56f88747a5c1b2d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-native-regression-01.json",
+      "bytes": 3918,
+      "sha256": "6763dc165880e0a2659e45f7bf76ca75298ade224795c2aaaf6a15b9e42ee191"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-native-regression-01.log",
+      "bytes": 2265,
+      "sha256": "f0a4eff261a19fe4874ccfdc405127d553ae9ead23e489eaa4c2a5f7242a0c33"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-ordered-recovery-01-source-files.json",
+      "bytes": 6449,
+      "sha256": "423725dec18e74a637696224c4be87e5a747951c64d044a2f56f88747a5c1b2d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-ordered-recovery-01.json",
+      "bytes": 3850,
+      "sha256": "11cd019fc81720ba5d1c128ec1c8c4e43ea57273e95530a8a1ac612be91992bf"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-ordered-recovery-01.log",
+      "bytes": 2698,
+      "sha256": "b6f0504fbb646eb1fc195a28728e44621be84fb551440f626a175445d2ee4071"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-ordered-recovery-r2-01-source-files.json",
+      "bytes": 6449,
+      "sha256": "2b29f44e6049b4d3b6183b86bb7ef8880ef8eaf9e2a0338f4b2df1cd615a8e01"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-ordered-recovery-r2-01.json",
+      "bytes": 3942,
+      "sha256": "b2556e2c3c8965eed0566b6d9fb91958193f8fdf8d3e24ff5aecb8548684a4e6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-ordered-recovery-r2-01.log",
+      "bytes": 3052,
+      "sha256": "ca6bf678b6d516995a572e909eb36b27b69b09228f2d943378c51b7de5130cdf"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-ordered-recovery-r2-02-source-files.json",
+      "bytes": 6449,
+      "sha256": "4365bd63a7f7d9369a2c2a91a4e0712539b95c5add4e452e0bcc528ab1070a0e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-ordered-recovery-r2-02.json",
+      "bytes": 3942,
+      "sha256": "92fb1af6caf2f76f3c74dbaa82faaa1813ffbe78ab9e2fe8131835f9a4e30338"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-ordered-recovery-r2-02.log",
+      "bytes": 3052,
+      "sha256": "aadccc34c3c9f44ff02ae8094d10c72c19a3bc37502bdd654a701b37c135f933"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-runtime6-regression-01-source-files.json",
+      "bytes": 6449,
+      "sha256": "423725dec18e74a637696224c4be87e5a747951c64d044a2f56f88747a5c1b2d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-runtime6-regression-01.json",
+      "bytes": 3854,
+      "sha256": "ba868fc3af6ed6b408cba0a552cea2758dd6a713ce2b704c28f6cc01ecb3ff76"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-runtime6-regression-01.log",
+      "bytes": 3827,
+      "sha256": "a108a5402047e0f6267c55475643f21e78269fb1c5e9c0fc1894f5e4883b7e36"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-storage-invariants-01-source-files.json",
+      "bytes": 6449,
+      "sha256": "681e9af0ec7659ba587168becf8ef588452fe28c7fb0d9fb62a7688e30da5463"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-storage-invariants-01.json",
+      "bytes": 3859,
+      "sha256": "9734859d08499414c021025b2bc28a755c9e57b7e1a6e6a7701ff79d02ed4a8b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-storage-invariants-01.log",
+      "bytes": 2627,
+      "sha256": "add559a6bc66167a072ab527a75ef503f461272958d6ef77b381eeb040a61de9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-storage-invariants-r2-01-source-files.json",
+      "bytes": 6449,
+      "sha256": "38c5c393b3116cb398e342cc0a160aa2011b6102b7c54da4a1172ce244039c77"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-storage-invariants-r2-01.json",
+      "bytes": 3936,
+      "sha256": "6543df3b8a382711ddd6e1635df9a7536a2a000a88dc22621a14f124077d4a7c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-storage-invariants-r2-01.log",
+      "bytes": 2529,
+      "sha256": "2b57ae1d2e3ef3a8b139ec53ffe65e0b4c7304528634b3f3c961a28af7dd7182"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-storage-invariants-r2-02-source-files.json",
+      "bytes": 6449,
+      "sha256": "4365bd63a7f7d9369a2c2a91a4e0712539b95c5add4e452e0bcc528ab1070a0e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-storage-invariants-r2-02.json",
+      "bytes": 3936,
+      "sha256": "dfca913be665be165dbd12e0b39a051ad11067927e6dc5ab4a34d91195a974e1"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/C-storage-invariants-r2-02.log",
+      "bytes": 2529,
+      "sha256": "e4a9f16ffd5cdb96ff36955d20978dcc97fb75a1a88f6f355a7bdc9bfda5d845"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/contributing-cases-submission-1.json",
+      "bytes": 82702,
+      "sha256": "91f20a90adb1318afaa3795128f99a6b35ecf02e756056b7bf19823aac006d16"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/diff-check-revision-2.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-capacity-versions-01-source-files.json",
+      "bytes": 6449,
+      "sha256": "9ef8fef259aad0d7eb8192f19b9051ac7df96ecad76d2a4657470a27d0ae65b9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-capacity-versions-01.json",
+      "bytes": 3916,
+      "sha256": "80dcf5d6fa3efce3f0e78c1d177d6f2021cb83e12a64c6ca54823145d0da740d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-capacity-versions-01.log",
+      "bytes": 6552,
+      "sha256": "fb45dde520c87fb55e2c407796e27fae0aeacf58529c77de80835336576d149e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-core-quota-02-source-files.json",
+      "bytes": 5703,
+      "sha256": "f3cc21da92545f2d3aef0f2fdc142b9bd8fcb267e46ed13cc9051000a93c7ca1"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-core-quota-02.json",
+      "bytes": 2521,
+      "sha256": "ffd429cff9bbe4808bdcac8b95c9ae32e486710658b64070d5dcc86ecd4cb7a9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-core-quota-02.log",
+      "bytes": 2632,
+      "sha256": "3c982b47b0612d83c224945c8bbf8aabb6a9f10953ab5c13e262c372398833b9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-core-smoke-01-runner-postprocess-error.txt",
+      "bytes": 596,
+      "sha256": "71284a31a15d94aea0637b65c4570e847f55550234b67cc666e5b1e9273a50ee"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-core-smoke-01-source-files.json",
+      "bytes": 4968,
+      "sha256": "bf2c00917992e37f3905e2db10f3b1fb862a50ed974afb71d053ef0d099111a7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-core-smoke-01.json",
+      "bytes": 2521,
+      "sha256": "3ec9b1e6d7f52347f2bfffda83e037b43406518bf28cbaaaeefce24e077ff9aa"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-core-smoke-01.log",
+      "bytes": 9379,
+      "sha256": "ff0433c79eeb8530c6202901a004e03d90d8fdbafb632639ec2ea15cc515dbfa"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-feasibility-01.json",
+      "bytes": 835,
+      "sha256": "4c6f3c5c4bc33dfaade1035673020cd639992a9f708262d7deec01fd2f40776d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-feasibility-01.log",
+      "bytes": 3351,
+      "sha256": "0a364b1ed24e0ae035fcd823f94faf5a4b0746f053950f11f2806abf763ae043"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-partial-origins-01-source-files.json",
+      "bytes": 6449,
+      "sha256": "fcd8718492f067137728ccffcb62277cc134304ecb6624f0b1040765c2fe9a3b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-partial-origins-01.json",
+      "bytes": 4077,
+      "sha256": "2af05992579c2eca251bb40ae6c878a17b2a8f74de2442fecbe0109e2474f136"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-partial-origins-01.log",
+      "bytes": 3003,
+      "sha256": "f303c8314ab5ae8eeebdd6ec063c536eae25b3e532a4b37e43dc29bfbc6d2e8b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-partial-origins-02-source-files.json",
+      "bytes": 6449,
+      "sha256": "681e9af0ec7659ba587168becf8ef588452fe28c7fb0d9fb62a7688e30da5463"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-partial-origins-02.json",
+      "bytes": 3912,
+      "sha256": "ac7c306c12b4ebf0004cd10a144e0b4ebe876f4efab24c7b48e320003f665e27"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-partial-origins-02.log",
+      "bytes": 4215,
+      "sha256": "64da029ea17fc2ded59e8e563ec04b7a18bea20b1b9005993990fee247a87ff2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-process-controls-final-r2-02-runner.txt",
+      "bytes": 7367,
+      "sha256": "a7dbb73ad8e71d2d6da540c2567752fa411902da23926c768641d568dd25ffd8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-process-controls-final-r2-02-source-files.json",
+      "bytes": 6449,
+      "sha256": "4365bd63a7f7d9369a2c2a91a4e0712539b95c5add4e452e0bcc528ab1070a0e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-process-controls-final-r2-02.json",
+      "bytes": 4269,
+      "sha256": "161273a518d6e2880567ebda99d697a1bdb74b84fd85a19e4d312325bcb0412e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-process-controls-final-r2-02.log",
+      "bytes": 10775,
+      "sha256": "e3a2b2ce6421af5fd81289a791b0f60f29d3b7b9a1ba88ec006230125fe97647"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-process-final-04-source-files.json",
+      "bytes": 6449,
+      "sha256": "423725dec18e74a637696224c4be87e5a747951c64d044a2f56f88747a5c1b2d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-process-final-04.json",
+      "bytes": 3871,
+      "sha256": "b6a9b426b4de19a16e0e250c67b0a34304f45b03be781f915dbac04d7c1757c2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-process-final-04.log",
+      "bytes": 13017,
+      "sha256": "e4746d97e5cdf7db7370d9acddcd64b56db8d707ed895a437de7f62c907cd07a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-process-final-r2-01-source-files.json",
+      "bytes": 6449,
+      "sha256": "4365bd63a7f7d9369a2c2a91a4e0712539b95c5add4e452e0bcc528ab1070a0e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-process-final-r2-01.json",
+      "bytes": 4098,
+      "sha256": "a0bdb6208ecee9c024ba6224b8e09d605505b49272332a56e3538421fa072026"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-process-final-r2-01.log",
+      "bytes": 5001,
+      "sha256": "bd52dcc5dbdbd7ff6efa4ff0c1dc6a50aab8fdff581d57246a8a806edbc0f44a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-process-kills-01-source-files.json",
+      "bytes": 6449,
+      "sha256": "9ef8fef259aad0d7eb8192f19b9051ac7df96ecad76d2a4657470a27d0ae65b9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-process-kills-01.json",
+      "bytes": 3905,
+      "sha256": "7bce100949d4a4159fcf9b1a0463ccc8c51b441cb49c018716554392ce109fb3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-process-kills-01.log",
+      "bytes": 6658,
+      "sha256": "74721f8c55252b28471ca601f37a9c5bd94114cf9447aeba66018871ba8638c9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-renewed-obligations-01-source-files.json",
+      "bytes": 6449,
+      "sha256": "435a2a76ecbf52ef70c08b3f16d37d04b9f6ab8b3ca59666b3a622b6a464bfe9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-renewed-obligations-01.json",
+      "bytes": 4086,
+      "sha256": "04296dd56fe4a9a54f94495f67f84faef5a67dde10656734890cd17913cb0bcb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-renewed-obligations-01.log",
+      "bytes": 2824,
+      "sha256": "40edac246af503d3430edabb35c26e858456a52c0d26d13f578f7064feb2a48e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-renewed-obligations-02-source-files.json",
+      "bytes": 6449,
+      "sha256": "9ef8fef259aad0d7eb8192f19b9051ac7df96ecad76d2a4657470a27d0ae65b9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-renewed-obligations-02.json",
+      "bytes": 3920,
+      "sha256": "e44b80d1bd672c01a5256dd14219410b8b93f49fda5cc020be369ec7d837e210"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-renewed-obligations-02.log",
+      "bytes": 3022,
+      "sha256": "9dbfd7f390871924d7790c67feb58410ead42befd3296cc778bf7a3340b9bcf0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-seed-recovery-r2-01-source-files.json",
+      "bytes": 6449,
+      "sha256": "2b29f44e6049b4d3b6183b86bb7ef8880ef8eaf9e2a0338f4b2df1cd615a8e01"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-seed-recovery-r2-01.json",
+      "bytes": 3979,
+      "sha256": "7a79621c6801d7caf7deec4c2bd3e4d0c9c88d035b5fe9438bf7a213fd5cd22b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-seed-recovery-r2-01.log",
+      "bytes": 3132,
+      "sha256": "40100a25b740606103f4e28ec60b4d97667bb368b1a1b4c2ed55ba0f596bdfeb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-source-smoke-01.json",
+      "bytes": 693,
+      "sha256": "2a8217d2640e4aef6eab2b2dfc5afdc6ef4d6b5b4335a515d5dfad0d7260daa5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-source-smoke-01.log",
+      "bytes": 10741,
+      "sha256": "91630edb169c4fb3e29e4f87a10e381badb697abe79ea61ced02086d4b378918"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-storage-final-01-source-files.json",
+      "bytes": 6449,
+      "sha256": "681e9af0ec7659ba587168becf8ef588452fe28c7fb0d9fb62a7688e30da5463"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-storage-final-01.json",
+      "bytes": 3892,
+      "sha256": "ce2f036253820b2fd80e09df22f35c1146f640e6e4efba2567af6c741f2b5b4e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-storage-final-01.log",
+      "bytes": 4057,
+      "sha256": "d21e6c43f92ec216edec9a257c08c715413c13f7eae326f4e2e674e1912375b4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-storage-final-02-source-files.json",
+      "bytes": 6449,
+      "sha256": "9ef8fef259aad0d7eb8192f19b9051ac7df96ecad76d2a4657470a27d0ae65b9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-storage-final-02.json",
+      "bytes": 3892,
+      "sha256": "9bce324f84df3c3e2b07af49513e6921d9d19c86116da9a95ebca5626326c012"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-storage-final-02.log",
+      "bytes": 4248,
+      "sha256": "7a9e6a1d8206fd6b845c1e66ef877333618e95b8df9ae1d697cfd876ad5c6a67"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-storage-final-03-source-files.json",
+      "bytes": 6449,
+      "sha256": "423725dec18e74a637696224c4be87e5a747951c64d044a2f56f88747a5c1b2d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-storage-final-03.json",
+      "bytes": 3892,
+      "sha256": "a60a4b7db8276609aefbb909874737679918c0c70a8ab45a95049b35fd6f63a7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-storage-final-03.log",
+      "bytes": 4248,
+      "sha256": "0e93a2d3e6b3c30e3022bab3d15555ca6ab6e6ca0b8f1a6dea396a6d9ab0a150"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-storage-final-r2-01-source-files.json",
+      "bytes": 6449,
+      "sha256": "38c5c393b3116cb398e342cc0a160aa2011b6102b7c54da4a1172ce244039c77"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-storage-final-r2-01.json",
+      "bytes": 3969,
+      "sha256": "99bf9c670eecf199da69a7e9cc63827dd22e3d3522e2a3b36e5e8e36b1397806"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-storage-final-r2-01.log",
+      "bytes": 5012,
+      "sha256": "0a09524ca3aceae9424699dd041700b4d4688d658f3ba38a96f413e9372db0bd"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-storage-final-r2-02-source-files.json",
+      "bytes": 6449,
+      "sha256": "4365bd63a7f7d9369a2c2a91a4e0712539b95c5add4e452e0bcc528ab1070a0e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-storage-final-r2-02.json",
+      "bytes": 3969,
+      "sha256": "7d62aadfa21c1a0e67120f6abaaba1cce73fcdde9428cba29260fce87bffb5e1"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-storage-final-r2-02.log",
+      "bytes": 4919,
+      "sha256": "8c15ec051c57dbab0538a2442032f845bbb92df909f104fc90bd773b245263b1"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-two-context-01-source-files.json",
+      "bytes": 6449,
+      "sha256": "9ef8fef259aad0d7eb8192f19b9051ac7df96ecad76d2a4657470a27d0ae65b9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-two-context-01.json",
+      "bytes": 3897,
+      "sha256": "a779e826ce9b351fd9b2fa685a9e75c8d6732c97acba545c95c9cbd68fdccb08"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-two-context-01.log",
+      "bytes": 3104,
+      "sha256": "6768407a16d6472a39375c0444e0363bd9971dd19684df698de023c0ec84d36c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-two-context-final-02-source-files.json",
+      "bytes": 6449,
+      "sha256": "423725dec18e74a637696224c4be87e5a747951c64d044a2f56f88747a5c1b2d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-two-context-final-02.json",
+      "bytes": 3909,
+      "sha256": "766a93435253d933e7d035c46c127a17beb44efc6c0d2b1f9c9a2ba02cfa034e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/F-two-context-final-02.log",
+      "bytes": 3341,
+      "sha256": "1e4325fa2b4a26b0020ad01c66597afcf32f45b82f28028b978c10830a29fe3a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/final-source-correspondence-revision-2.json",
+      "bytes": 18135,
+      "sha256": "efdf597a1509724d1af240cdf1f81a96a023c7a862244dd460f0c9fac4189338"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/final-source-correspondence.json",
+      "bytes": 19653,
+      "sha256": "4eb0644d928f507646d02159f57598d722cacd90a81115e2acdbd17372628db6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/fmt-final.json",
+      "bytes": 68,
+      "sha256": "9f74296bf9fb07f5b92532738566b8e15e597ee493dfe099ccf758096bf6deb5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/fmt-revision-2.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/protected-files-final.json",
+      "bytes": 2337,
+      "sha256": "d8406fd14a4fe47bc2819d3814c81d9976b7b31cdeb73ac001be486db05625e0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/protected-files-revision-2.json",
+      "bytes": 31529,
+      "sha256": "94c8b7b1de7ffe64f75bb77a7a02d48c4ac9ed6f6ff9cfa4790cbdae6542425d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/revision-2-controls-forecast.json",
+      "bytes": 398,
+      "sha256": "56c8c6ded4e7646bc34bd230f5a4cb5fa3cade75cd2e1e3dade31bdfb22fb190"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/revision-2-preservation-start.json",
+      "bytes": 27716,
+      "sha256": "166d941e4c1a708cad4397a6049cad806839a888fb7bd8629e774915704e1730"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/revision-2-process-forecast.json",
+      "bytes": 374,
+      "sha256": "9cb52f12ead7bdde665d04498e796f646ca5bf54f979fdf89f5939728b7c712f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/revision-2-remaining-plan.json",
+      "bytes": 580,
+      "sha256": "61fb04bf117e624787aca187ddb18c89b502f56291ad72b0777aec17830b1b69"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/source-reader-smoke-source-files.json",
+      "bytes": 3022,
+      "sha256": "cb2f57a7519eb887a875e8a7fb5b90f96bab0855dbf9e2eda6c4f30b9540f542"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-04.json",
+      "bytes": 133,
+      "sha256": "ca1dd98923931ace836aa0c806b7aaa2f7df151e5b1cf6c59ea64a008af99447"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-04.log",
+      "bytes": 2138,
+      "sha256": "3f95332abb99ade25da00889297fec7bd2fb904f96fbd4c36bcae62e2ccd5778"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-cli-01.json",
+      "bytes": 276,
+      "sha256": "0d13a0595e4f0c972547bb6fd48db5906497e1de0a8092b8b61c00b20cb963de"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-cli-01.log",
+      "bytes": 9356,
+      "sha256": "9dd9c9bb5d1be246962717d2f697131fdd7d60703d847f16ec1d46cd785bcc91"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-cli-02.json",
+      "bytes": 271,
+      "sha256": "43db38b8bea18f6a8642e4ae9ea56336829697d7a1271cda7576f9ec3ba49a1a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-cli-02.log",
+      "bytes": 9721,
+      "sha256": "e43fb85bdb513885a5ac415bb0431fb63e75c97c97f2115c22ce92f24b5d2f7e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-cli-03.json",
+      "bytes": 109,
+      "sha256": "4e1a5327c42211a171bea37c62a65c3eafa12e54917c58936cab8b34ea9f3ef3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-cli-03.log",
+      "bytes": 4427,
+      "sha256": "d7f722f99b174bf6b3abaebe97ede132b9104dbfbc22e161ddc93d5ca9db8f99"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-state-01.json",
+      "bytes": 313,
+      "sha256": "d212a1736a827011901eea23905285821643582c0d972200e11976a58b8be2a3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-state-01.log",
+      "bytes": 2595,
+      "sha256": "b042dd9040e398489385ca98f8139b649dcfeac57c2af32529d46ced2b2e28e0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-state-02.json",
+      "bytes": 274,
+      "sha256": "61a901dcc39ec2f7479c3797c40aeed7ba91e08e487fec8b9ba0ca148fe17064"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-state-02.log",
+      "bytes": 1724,
+      "sha256": "0bfc4ea89eaad20b8d3226148665613dc7d024353562a159dc1f6c015d6966ae"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-state-03.json",
+      "bytes": 275,
+      "sha256": "b3834f18927bdaf0576c44ddc5e0fdad327285623b18ab7b44a3e99527f280f1"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-state-03.log",
+      "bytes": 2547,
+      "sha256": "b7f009dd4a28b36b935834adecd2794c7af562e6f44bba324b6d6ebcfc6caf51"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-state-04.json",
+      "bytes": 289,
+      "sha256": "e2d677cff7e801411e863c89a70271fd43c435e28b22d570194523e0c980af4f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-state-04.log",
+      "bytes": 2212,
+      "sha256": "67ea9613b7400b498857d5749a546e7952af5771ac65644875adc065a476c7dd"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-state-05.json",
+      "bytes": 268,
+      "sha256": "fd6ff75cde6c79270a74f6d896fa407120998497f466e9d4297d5f64ced26b11"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-state-05.log",
+      "bytes": 695,
+      "sha256": "615349db488c661df941c5a5c1626837b130e3abdb967cc9ad89017e2d724f81"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-state-06.json",
+      "bytes": 115,
+      "sha256": "9d848c87c5cadb7a27cf7d7384a86aa641f55acc1611f48efaa8a01a90e59ecf"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-check-state-06.log",
+      "bytes": 1198,
+      "sha256": "32562784d9aaa6232a524fec91a38ad80ee7c16665636e7ba7d3fa6bff6c3c92"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-clippy-01.log",
+      "bytes": 7716,
+      "sha256": "462141368a09df80d796931541fa2feb664653d4d2b7ebc10af6279e719c2fd3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-clippy-02.log",
+      "bytes": 3931,
+      "sha256": "6c871910b7f18d30bf66dada86adaebd97f0a7ec11c7a5a95158881a25059530"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-clippy-03.log",
+      "bytes": 256,
+      "sha256": "bd5f23cc8d80040295f8f2871ab5b5cbb1b0003ff6b31b4f107989a342bdacbf"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-clippy-04.log",
+      "bytes": 650,
+      "sha256": "097ae7fcfd9479ac61e9d35a1114aad13e8930924b9e6e451e6b04f1df6cbf2f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-clippy-05.log",
+      "bytes": 354,
+      "sha256": "1237161d0815d00acae6a77d98c548449beee330eaefbf8e4495e55ffd243717"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-clippy-final-06.log",
+      "bytes": 650,
+      "sha256": "b42c5d310e2488713620c1695b7df4f3e85502702f825484f24074db9c07094f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-clippy-r2-01.json",
+      "bytes": 526,
+      "sha256": "fdcb1b293259bc690d3de0aee2bfaf5044da32ab174f020ce0056e513bd5b514"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-clippy-r2-01.log",
+      "bytes": 1388,
+      "sha256": "7baa12b8f4d8035e0af373b611e18edb75ff73c4f49689e9db87136c24f6a8b0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-clippy-r2-02.json",
+      "bytes": 464,
+      "sha256": "6dd2845ce98471de35b0df97f4801cf2cc93efde0a2f6dcc9217338a1c7305e1"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-clippy-r2-02.log",
+      "bytes": 1840,
+      "sha256": "00e91fa0e6339524e1d00e862ba9b99eba6bf1282b056ea8ce37a81af5720aa0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-clippy-r2-03.json",
+      "bytes": 461,
+      "sha256": "33ae333354fd66d3deba83d018a31452fe87f4005a53fc19e7b5c80e297f4365"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-clippy-r2-03.log",
+      "bytes": 174,
+      "sha256": "c0a86df5d043c16ad2dad8856e1c0dd772fdb6a9f9f10d1101f0f3550288d990"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-compile-candidate-r2-01.log",
+      "bytes": 3015,
+      "sha256": "4adb562fb37b5c8624fc28b3748b893c50521a295f820d5673ba77d6f7bd5994"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-compile-candidate-r2-02.log",
+      "bytes": 1373,
+      "sha256": "c3b47b278b809a7d20b676de3643d5f3ba0c435cc57eb12dabfe97642bfc4e95"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-compile-candidate-r2-03.log",
+      "bytes": 667,
+      "sha256": "30d691dd4c5cfbd63f59c188ba7a189f3e39263edb9aa6bb5a6dd04ae09d1bb6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-compile-state-r2-01.log",
+      "bytes": 574,
+      "sha256": "17c554de6492b1392dde7bbffe7780edac5875ebc9b1a7824c25614aba67cdc0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-field-images-01.json",
+      "bytes": 1736,
+      "sha256": "adf25e4fefb8f45141b842aa17fe459c22afe9064b9eec37b9ab16c677aa2297"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-field-images-01.log",
+      "bytes": 3396,
+      "sha256": "64e8e56dab99c92507333b95ad62a8b7af65d0460dd0db628a818d1b786ca686"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-field-images-02.json",
+      "bytes": 1736,
+      "sha256": "d7989cecacf07ff04838e0c1e5f64f319b496cacb5be71d735146990ff054055"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-field-images-02.log",
+      "bytes": 2386,
+      "sha256": "a925cf1fad2e679d586456d343648456e93bd09f95ed392f09b51b867fe40550"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-field-images-03.json",
+      "bytes": 1736,
+      "sha256": "1117463df082f9b95dff4ea3330016fa6565bc02a08d93f86b026ab6b7a6e2cc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-field-images-03.log",
+      "bytes": 1992,
+      "sha256": "86d539269a2063e022993e351851f8ba07ede50dac461e8bcff16b9e605b4047"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-field-images-final-04.json",
+      "bytes": 1735,
+      "sha256": "5a775e5947d2f5de4f72a5785b3416c394008dae0ade45705f457ccb16988d8a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-field-images-final-04.log",
+      "bytes": 2385,
+      "sha256": "14f7329da863f088672f100f9ec4a0658833f00c57e52db32f1e438a518527a3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-field-images-r2-01.json",
+      "bytes": 189075,
+      "sha256": "24c5ef27145d10804db424fef23fbd6f372637d68149984fa0b746e478ccff7f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-field-images-r2-01.log",
+      "bytes": 650,
+      "sha256": "b6687b523df5894b6a0628e2bc378b95495993581268e41db15158be0653b691"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-field-images-r2-02.json",
+      "bytes": 189074,
+      "sha256": "f23140bdd2327fd2b068d0d37a8aa80f4fec20603f067bf1a8d2bd94b603e688"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-field-images-r2-02.log",
+      "bytes": 650,
+      "sha256": "cdc658b4692016083819cffe9dad1f30e12e418f1a2f340db367976b8001804d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-harness-03.log",
+      "bytes": 3885,
+      "sha256": "d737af9aa779e47a4ff4851d410c19fd80c0fd5855dff9b8e1becff54d634ba8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-harness-04.log",
+      "bytes": 2775,
+      "sha256": "0c0d758991459f4bd765d8ba153f15acbc5f79f6a82d623458a9cde324bc791d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-harness-06.log",
+      "bytes": 2479,
+      "sha256": "7ff2245ef97ddde663be65fcc4bf7ea40af820a52f43ba1f418c972166bb7ce7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-harness-cli-01.json",
+      "bytes": 303,
+      "sha256": "c0b6ce71e216f342b09e322b0403029434624e56d38bb0f879ca99193d7095bc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-harness-cli-01.log",
+      "bytes": 11075,
+      "sha256": "c40e86bb6a660b082a1906045b66588b90c025ff04dded41b3b5f47d355c918f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-harness-cli-02.json",
+      "bytes": 113,
+      "sha256": "03adfca1b0e1f78668efd4c88ac8eba538ee400577f46e64a43f1fdb89757ed8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-harness-cli-02.log",
+      "bytes": 1965,
+      "sha256": "4f7f63b751c7668140ecc84d66332a9edefde266ffa57ca286da9a073fd2b9e9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-harness-cli-05.log",
+      "bytes": 1707,
+      "sha256": "83df46544cca12e15caaf303e31fe4bd86016a1673292da848901105fc0a99eb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-harness-cli-07.log",
+      "bytes": 1707,
+      "sha256": "da268fc54b2804447e662e944760c795705ed1de802a934f765861e874ef19ca"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-harness-final-08.log",
+      "bytes": 2775,
+      "sha256": "243588352e3f464c34bc3f21c64a90802d4e3b790cc9f24fdd6d18c5450ac00b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/static-harness-final-r2-01.log",
+      "bytes": 1061,
+      "sha256": "94bcc43673fc453e81f94e76a19a73b88ac4160922878e8a09c23139545c731c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/validation-final.json",
+      "bytes": 3020,
+      "sha256": "ecffd28a54afeb1315fb7351c34d5308844be87606ba6f966837c3d3c72afb68"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/validation-revision-2.json",
+      "bytes": 2621,
+      "sha256": "cea0d6688657fdc70e1069102e222e4a1adfcc5dcc9c1ff2421b0eb76ee6663d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-implementation-review-1.md",
+      "bytes": 10353,
+      "sha256": "22704cb4578b9c6c604d0567118c99d7ed1dcb61dc8009831e196ba057933244"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-implementation-review-2.md",
+      "bytes": 9006,
+      "sha256": "bb07f171f3a82b8bf6d864cac40af286374b33461be91697cd1b634aa31299d1"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-implementation-revision-2.md",
+      "bytes": 17946,
+      "sha256": "d21473a5c0efdf01338d691165916065bb2070c6f6135e7b967befbc3f5b60b9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-implementation.md",
+      "bytes": 16658,
+      "sha256": "4288cd20d4fb89f967203333e26436f647fb970d495d4b0b8a147c2f98eaa85b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-task.md",
+      "bytes": 9423,
+      "sha256": "2b5eebd8dd381a1218f208434ee46b7b90adf879b91188e2e80539f67ade523b"
+    }
+  ],
+  "revision2_ledger_sha256": "cc17fa755698e791e1d2bf59fccdea6c2004aaf515926ed6d495911787a851c9",
+  "source_backup": ".tmp/migration-s5-revision3/submission2-source",
+  "budget_amendment_review": "long-lived-dialog-a3-migration-s5-storage-implementation-review-2.md",
+  "budget_amendment_review_sha256": "bb07f171f3a82b8bf6d864cac40af286374b33461be91697cd1b634aa31299d1"
+}

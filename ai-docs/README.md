@@ -26,10 +26,18 @@ queue/pending/debt. Полный F содержит19 cases; итог F с suppo
 
 Пользователь поручил **S5: existing L1 migration/handoff**. Завершён
 [контрактный этап S5](tasks/long-lived-dialog-a3-migration-s5-task.md) на опубликованной
-базе `0c1baa887008f784a86fd7ebabdcd5145fb4d1c0`; код S5 ещё не реализуется.
+базе `0c1baa887008f784a86fd7ebabdcd5145fb4d1c0`.
 [Review2 контракта](tasks/long-lived-dialog-a3-migration-s5-contract-review-2.md)
-закрыл R1–R4 и принял контракт. Следуют exact documentation publication, independent
-remote verification и отдельная bounded implementation assignment; whole S5 ещё открыт.
+закрыл R1–R4 и принял контракт; whole S5 ещё открыт.
+
+Контракт опубликован commit `3547cf528f15c15a21cdb9e30b1d7ca35a01297a`; root сверил
+все9 paths/blobs и actual remote. На2026-10-26 принят
+[S5.1 storage migration core](tasks/long-lived-dialog-a3-migration-s5-storage-implementation-review-3.md):
+preflight/fence/copy/Ready, recovery, provenance и bounded administration; R1–R4 закрыты.
+Исполнителю поручена exact публикация по
+[allowlist](tasks/long-lived-dialog-a3-migration-s5-storage-accepted-files.json).
+Root ещё должен проверить commit/push. Ready означает готовность хранилища;
+live indexed L1/handoff/whole P5 остаются следующими частями S5.
 Исполнитель прежний, GPT-6.1 Sol Max без Fast; сначала review контракта, затем
 реализации, после приёмки exact commit/push. Whole A3, самостоятельный onboarding
 и пользовательский MVP остаются открыты. M1.2.63 не запускается автоматически.

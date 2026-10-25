@@ -1,0 +1,44 @@
+{
+  "baseline": "3547cf528f15c15a21cdb9e30b1d7ca35a01297a",
+  "R4_case": "F-fork-final-r3-01",
+  "test_result": "1/1 targeted Rust test; Init+Confirm real captures and 4 negative witnesses; Ready/history/reopen retain block/native/readables, zero Native calls",
+  "case_elapsed_seconds": 54.8614242,
+  "charged_elapsed_seconds": {
+    "F": 1236.2886627999999,
+    "P": 0.0,
+    "C": 279.32572980000003
+  },
+  "ceilings_seconds": {
+    "F": 1320,
+    "P": 2400,
+    "C": 600
+  },
+  "remaining_seconds": {
+    "F": 83.71133720000012,
+    "P": 2400.0,
+    "C": 320.67427019999997
+  },
+  "budget_authority": {
+    "scope": "R4 verification only",
+    "review": "long-lived-dialog-a3-migration-s5-storage-implementation-review-2.md",
+    "review_sha256": "bb07f171f3a82b8bf6d864cac40af286374b33461be91697cd1b634aa31299d1",
+    "original_F": 1200,
+    "additional_F": 120,
+    "rule": "Explicit root amendment before R4 execution; cumulative contributors retained, no reset or retroactive PASS"
+  },
+  "revision2_contributors_retained": 38,
+  "protected_file_count": 180,
+  "all_prior_protected_match": true,
+  "source_comparison": "final-source-correspondence-revision-3.json",
+  "final_case_files": 33,
+  "field_build_inputs": 439,
+  "all_sources_images_match": true,
+  "strict_clippy": "static-clippy-r3-02.json",
+  "fmt_exit_code": 0,
+  "diff_check_exit_code": 0,
+  "json_evidence_parsed": 103,
+  "index_empty": true,
+  "live_processes": [],
+  "full_owner_process_twoC_511_100k_P5": "not rerun",
+  "commit_push": "not performed; stop for review"
+}

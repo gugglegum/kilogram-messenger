@@ -1,0 +1,85 @@
+{
+  "case": "C-storage-invariants-01",
+  "contributing_set": "C",
+  "elapsed_seconds": 22.9346462,
+  "exit_code": 0,
+  "error": null,
+  "filter": "migration_s5_",
+  "source_manifest": "C-storage-invariants-01-source-files.json",
+  "seed_case": null,
+  "executable_inventory": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 67880960,
+      "sha256": "ffaaf32b93888d26b3c48c451daf613688520b9fa6847c26a70d14e196dbceb0"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 42190848,
+      "sha256": "cf7a7cc18436cbb75b403c6a29b813af9d09ac05cf10933007f66f28a42b87cd"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 8756224,
+      "sha256": "2625a07b5819ea856c58d30913aedcc0cf8ed69590cf7a61f5c9af6762e6a600"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 36701184,
+      "sha256": "a6f4e0b374854c5d880470b238ec0699a9d4e401bc0122c663005a2d706f1519"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-ratchet-lib-kilogram_ratchet-tests.exe",
+      "bytes": 4753408,
+      "sha256": "9a02cff63f8bab15ace30f304732b9b8ec009cd49112a2bf6ba10e42299ae992"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-ratchet-test-a3_s3_root_review-tests.exe",
+      "bytes": 3369472,
+      "sha256": "8d7a03fc84ec53c46fb2ecc6ec7846f1d4a52e4193a941afe7f37d1b195cf65d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 10520576,
+      "sha256": "99b6ad22eafc3565307ef97556b9ddce1fa11b7ded335fd45150a9ca65890781"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s1_root_review-tests.exe",
+      "bytes": 6648320,
+      "sha256": "e92f81a0484289449a4c7e6ebc55909016cb16600db2b5c53af850f246b2089d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s2_root_review-tests.exe",
+      "bytes": 6900224,
+      "sha256": "3aa2d406a7fa548c76d2c226ee203a1b192c256acb43051bf4a7565f4b71c7a6"
+    }
+  ],
+  "field_images_before_after_equal": [
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+      "bytes": 67689472,
+      "sha256": "28fbb8984505c9589005f591d0da1d5eb70f6892ab9eb65eb168115dedb0ed58"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-l1-control-peer.exe",
+      "bytes": 67689472,
+      "sha256": "28fbb8984505c9589005f591d0da1d5eb70f6892ab9eb65eb168115dedb0ed58"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "bytes": 61531648,
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+      "bytes": 66188800,
+      "sha256": "d5d8c8c118925dfde67e37fdb32aa5a120293cde258e93843dd1939fddb15560"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-predecessor-s3/kilogram-state-predecessor.exe",
+      "bytes": 5344768,
+      "sha256": "6932db6bc228cdd38fc358792cc5cd41fcfd1e5445c087a7c0f535ce4f0c1e4e"
+    }
+  ],
+  "rule": "Complete runner elapsed includes cached compilation, staging, fixtures/copies/recovery and cleanup; failures retained"
+}

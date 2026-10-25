@@ -1,0 +1,8 @@
+{
+  "remaining_F": 112.59590540000022,
+  "forecast_seconds": 105,
+  "selection": "common migration_s5_process_ filter; three already-passing tests skipped; capacity and six-kill tests run",
+  "missing_fixture_parameter_in_failed_attempt": true,
+  "product_and_original_runner_sources_unchanged": true,
+  "runner_sha256": "a7dbb73ad8e71d2d6da540c2567752fa411902da23926c768641d568dd25ffd8"
+}

@@ -1,0 +1,8 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 19.15s
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_state-14343bb0786bf4fb.exe)
+  Executable tests\a3_s1_root_review.rs (target\verification\deps\a3_s1_root_review-7a29c7e78acb4c1a.exe)
+  Executable tests\a3_s2_root_review.rs (target\verification\deps\a3_s2_root_review-8814bd0417c2cb08.exe)

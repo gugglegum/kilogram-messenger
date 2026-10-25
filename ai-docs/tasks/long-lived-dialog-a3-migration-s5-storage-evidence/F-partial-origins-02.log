@@ -1,0 +1,70 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 0.86s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 24 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+running 1 test
+test migration_s5_process_real_d9b_partial_control_peer_origins ... M04 actual_d9b_phase=0 role=1 remote_holds=after-offer origin_pid=55856 peer_pid=12396 both_alive=true
+M04 partial phase=0 actual_queued=true migration_crypto=0 storage_ready=true root=E:\AI-Projects\kilogram-p2p-messenger\.tmp/migration-s5-storage\partial-after-offer-Ga8Jy5
+M04 actual_d9b_phase=1 role=0 remote_holds=after-grant origin_pid=41400 peer_pid=32320 both_alive=true
+M04 partial phase=1 actual_queued=true migration_crypto=0 storage_ready=true root=E:\AI-Projects\kilogram-p2p-messenger\.tmp/migration-s5-storage\partial-after-grant-e39dzm
+M04 actual_d9b_phase=2 role=1 remote_holds=before-init-commit origin_pid=12304 peer_pid=52784 both_alive=true
+M04 partial phase=2 actual_queued=true migration_crypto=0 storage_ready=true root=E:\AI-Projects\kilogram-p2p-messenger\.tmp/migration-s5-storage\partial-before-init-commit-DObhB1
+M04 actual_d9b_phase=3 role=0 remote_holds=before-confirm-commit origin_pid=61008 peer_pid=50480 both_alive=true
+M04 partial phase=3 actual_queued=false migration_crypto=0 storage_ready=true root=E:\AI-Projects\kilogram-p2p-messenger\.tmp/migration-s5-storage\partial-before-confirm-commit-o1klY7
+M04 actual_d9b_phase=3 role=1 remote_holds=after-receive-confirm origin_pid=43432 peer_pid=22992 both_alive=true
+M04 partial phase=3 actual_queued=false migration_crypto=0 storage_ready=true root=E:\AI-Projects\kilogram-p2p-messenger\.tmp/migration-s5-storage\partial-after-receive-confirm-yVMmZ4
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 34.85s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17696 13.37
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=64416
+target_gib=68.81
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

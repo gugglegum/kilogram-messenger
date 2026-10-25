@@ -1,0 +1,67 @@
+{
+  "baseline": "3547cf528f15c15a21cdb9e30b1d7ca35a01297a",
+  "checks": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-task.md",
+      "bytes": 9423,
+      "sha256": "2b5eebd8dd381a1218f208434ee46b7b90adf879b91188e2e80539f67ade523b",
+      "matches": true
+    },
+    {
+      "path": "ai-docs/README.md",
+      "bytes": 159458,
+      "sha256": "47f6fbc6ab73286658176cf6f58bdfe37e57f398837094959c053fe59db66d48",
+      "matches": true
+    },
+    {
+      "path": "ai-docs/next-stage-plan.md",
+      "bytes": 4490,
+      "sha256": "dc0c2db5e6a4f4c4793d55e66efd84fe5a2d5328ac5847713cb2e00ff2addc93",
+      "matches": true
+    },
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "bytes": 95502,
+      "sha256": "f1b7f90b8f9e882dab1ad2422ac7d81a7a950b93d8647f0c6de1fe40067d4d28",
+      "matches": true
+    },
+    {
+      "path": "ai-docs/development-environment.md",
+      "bytes": 440717,
+      "sha256": "53074ff3734dacd9906ee03cc5c7ded952dedd99d207581f692ff900b9a79f8f",
+      "matches": true
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-contract.md",
+      "bytes": 109805,
+      "sha256": "f87c5c8b0b307863078cf3e2e85f3d13a05392d1d654affd5f2a40a3943ad2ad",
+      "matches": true
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-contract-review-1.md",
+      "bytes": 9708,
+      "sha256": "91f5f1aeae2ba4016c97ad9dbba3c3b9953f614c39e54a76dafc7ddd858ac347",
+      "matches": true
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-contract-review-2.md",
+      "bytes": 4828,
+      "sha256": "225944c8846b3d017060bec263fd69f5d0b7a9dbae728cbd4c662fca0ce603f4",
+      "matches": true
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-contract-accepted-files.json",
+      "bytes": 3141,
+      "sha256": "4f02708e998c552d7c36158812fc0151f9111040392729f75e13f3c4c8022568",
+      "matches": true
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-provenance-decision-1.md",
+      "bytes": 10230,
+      "sha256": "13e734968a3bb6d2710a8d99437cea0a137f257d8be3eedff764398879907bba",
+      "matches": true
+    }
+  ],
+  "all_match": true,
+  "commit_push": "not performed; awaiting root implementation review"
+}

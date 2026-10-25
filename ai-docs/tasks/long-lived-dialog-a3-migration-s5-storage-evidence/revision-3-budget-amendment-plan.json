@@ -1,0 +1,19 @@
+{
+  "baseline": "3547cf528f15c15a21cdb9e30b1d7ca35a01297a",
+  "authority": "long-lived-dialog-a3-migration-s5-storage-implementation-review-2.md",
+  "authority_sha256": "bb07f171f3a82b8bf6d864cac40af286374b33461be91697cd1b634aa31299d1",
+  "previous_ceiling_F": 1200,
+  "additional_F": 120,
+  "amended_ceiling_F": 1320,
+  "charged_before_R4": {
+    "C": 279.32572980000003,
+    "P": 0,
+    "F": 1181.4272386
+  },
+  "available_F": 138.5727614,
+  "targeted_only": "migration_s5_r4_old_engine_genesis_role_forks_remain_archivable",
+  "forecast_complete_runner_seconds": 85,
+  "static_build_and_compile_only_preparation": "separate; no tests or fixtures",
+  "no_full_owner_process_twoC_511_100k_P5": true,
+  "no_budget_reset": true
+}

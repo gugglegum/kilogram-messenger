@@ -1,0 +1,98 @@
+{
+  "baseline": "3547cf528f15c15a21cdb9e30b1d7ca35a01297a",
+  "head_matches": true,
+  "staged_paths": [],
+  "diff_check_exit": 0,
+  "broken_report_links": [],
+  "final_live_fixed_processes": [],
+  "protected_files_match": true,
+  "final_source_snapshots": [
+    {
+      "snapshot": "F-process-final-04-source-files.json",
+      "exact_current_source": true,
+      "different_or_missing_paths": []
+    },
+    {
+      "snapshot": "F-storage-final-03-source-files.json",
+      "exact_current_source": true,
+      "different_or_missing_paths": []
+    },
+    {
+      "snapshot": "F-two-context-final-02-source-files.json",
+      "exact_current_source": true,
+      "different_or_missing_paths": []
+    }
+  ],
+  "fmt": {
+    "command": "cargo fmt --all -- --check",
+    "exit_code": 0
+  },
+  "strict_clippy": {
+    "exit_code": 0,
+    "log": "static-clippy-final-06.log",
+    "arguments": [
+      "--locked",
+      "--offline",
+      "--profile",
+      "verification",
+      "-p",
+      "kilogram-cli",
+      "-p",
+      "kilogram-state",
+      "-p",
+      "kilogram-ratchet",
+      "--all-targets",
+      "--",
+      "-D",
+      "warnings"
+    ]
+  },
+  "build": "static-field-images-final-04.log plus static-harness-final-08.log; locked/offline/verification/Jobs12/BelowNormal",
+  "charged_seconds": {
+    "F": 811.4327066,
+    "C": 193.62922289999997,
+    "P": 0
+  },
+  "ceilings_seconds": {
+    "F": 1200,
+    "C": 600,
+    "P": 2400
+  },
+  "frozen_s3_archive_sha256": "f43ebc77e8d3a170661f30ceb90e5eca9affc6f106a67c5b6754aa3b27d54abb",
+  "fixed_images": [
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+      "bytes": 67693056,
+      "sha256": "62b2bb9a7f4e2793b30274593fe501e2863c884b07d204d4731753c31a8fafba"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-l1-control-peer.exe",
+      "bytes": 67693056,
+      "sha256": "62b2bb9a7f4e2793b30274593fe501e2863c884b07d204d4731753c31a8fafba"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "bytes": 61531648,
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+      "bytes": 66188800,
+      "sha256": "d5d8c8c118925dfde67e37fdb32aa5a120293cde258e93843dd1939fddb15560"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-predecessor-s3/kilogram-state-predecessor.exe",
+      "bytes": 5344768,
+      "sha256": "6932db6bc228cdd38fc358792cc5cd41fcfd1e5445c087a7c0f535ce4f0c1e4e"
+    }
+  ],
+  "commit_push": "not performed; stop for implementation review",
+  "deferred": [
+    "live indexed L1 owner and handshake completion",
+    "ALPN1/2 existing-origin handoff P/A/K/Committed",
+    "mixed live ingress/receipts and escrow release",
+    "new indexed cursor handoff/P5",
+    "full511",
+    "S2 100k"
+  ]
+}

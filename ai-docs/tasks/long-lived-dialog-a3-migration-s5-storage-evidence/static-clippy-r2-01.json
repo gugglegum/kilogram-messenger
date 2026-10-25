@@ -1,0 +1,24 @@
+{
+  "baseline": "3547cf528f15c15a21cdb9e30b1d7ca35a01297a",
+  "kind": "static-no-test-execution",
+  "effective_cargo_argv": [
+    "clippy",
+    "--jobs",
+    "12",
+    "--locked",
+    "--offline",
+    "--profile",
+    "verification",
+    "-p",
+    "kilogram-state",
+    "-p",
+    "kilogram-cli",
+    "--all-targets",
+    "--",
+    "-D",
+    "warnings"
+  ],
+  "priority": "BelowNormal",
+  "source_binding": "static-field-images-r2-01.json; no Rust source changes since that build",
+  "exit_code": 101
+}

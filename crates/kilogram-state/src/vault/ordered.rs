@@ -51,23 +51,57 @@ pub struct OrderedVault {
     pub commits: u64,
 }
 
+enum OrderedProfile {
+    Missing,
+    Other,
+    Verified(VaultManifestIndex),
+}
+
 impl EncryptedStateVault {
     pub fn is_ordered_profile(&self) -> Result<bool, StateError> {
-        let Some(manifest) = self.load_manifest()? else {
-            return Ok(false);
+        Ok(matches!(
+            self.bounded_ordered_profile()?,
+            OrderedProfile::Verified(_)
+        ))
+    }
+
+    // Recovery and profile dispatch share one bounded, authenticated metadata
+    // read. Inspect borrowed ciphertext before either copying or decrypting it.
+    fn bounded_ordered_profile(&self) -> Result<OrderedProfile, StateError> {
+        let tx = self.database.begin_read().map_err(vault_database_error)?;
+        let meta = tx.open_table(META_TABLE).map_err(vault_database_error)?;
+        for (name, cap) in [(MANIFEST_KEY, 256), (GENERATION_KEY, 1024)] {
+            if meta
+                .get(name)
+                .map_err(vault_database_error)?
+                .is_some_and(|raw| raw.value().len() > cap)
+            {
+                return Err(StateError::OrderedState("recovery metadata cap"));
+            }
+        }
+        let Some(raw) = meta.get(MANIFEST_KEY).map_err(vault_database_error)? else {
+            return Ok(OrderedProfile::Missing);
         };
+        let manifest = postcard::from_bytes(raw.value())?;
         validate_manifest(&manifest)?;
         if manifest.schema_version != ORDERED_VAULT_SCHEMA_VERSION {
-            return Ok(false);
+            return Ok(OrderedProfile::Other);
         }
-        let index = self
-            .load_manifest_index()?
+        let raw = meta
+            .get(MANIFEST_INDEX_KEY)
+            .map_err(vault_database_error)?
             .ok_or(StateError::VaultManifestIndexMissing)?;
+        if raw.value().len() > INDEX_CAP + 41 {
+            return Err(StateError::OrderedState("index recovery cap"));
+        }
+        let index = self.decrypt_manifest_index(raw.value())?;
         if self.manifest_for_index_schema(&index, ORDERED_VAULT_SCHEMA_VERSION)? != manifest {
             return Err(StateError::VaultManifestMismatch);
         }
-        self.load_generation(&manifest)?;
-        Ok(true)
+        if let Some(raw) = meta.get(GENERATION_KEY).map_err(vault_database_error)? {
+            self.decode_generation(&manifest, raw.value())?;
+        }
+        Ok(OrderedProfile::Verified(index))
     }
 
     pub(super) fn reject_ordered_writer(&self) -> Result<(), StateError> {
@@ -80,6 +114,12 @@ impl EncryptedStateVault {
 
 pub(crate) fn has_ordered_fence(root: &Path) -> Result<bool, StateError> {
     let path = root.join("ratchet/account.pickle");
+    match fs::metadata(&path) {
+        Ok(meta) if meta.len() != ORDERED_ACCOUNT_FENCE.len() as u64 => return Ok(false),
+        Ok(_) => {}
+        Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(false),
+        Err(source) => return Err(StateError::Io { path, source }),
+    }
     match fs::read(&path) {
         Ok(raw) => Ok(raw == ORDERED_ACCOUNT_FENCE),
         Err(error) if error.kind() == io::ErrorKind::NotFound => Ok(false),
@@ -447,13 +487,20 @@ fn primary_test_checkpoint(root: &Path, delta: &PendingVaultDelta) -> Result<(),
         return Ok(());
     }
     let hit = path.with_extension("primary-hit");
-    io_at(&hit, fs::write(&hit, b"readable-primary"))?;
-    io_at(&hit, File::open(&hit))?
-        .sync_all()
-        .map_err(|source| StateError::Io {
-            path: hit.clone(),
-            source,
-        })?;
+    let mut marker = io_at(
+        &hit,
+        NamedTempFile::new_in(
+            hit.parent()
+                .ok_or(StateError::OrderedState("primary marker parent"))?,
+        ),
+    )?;
+    io_at(&hit, marker.write_all(b"readable-primary"))?;
+    io_at(&hit, marker.as_file().sync_all())?;
+    io_at(&hit, marker.persist(&hit).map_err(|error| error.error))?;
+    sync_directory(
+        hit.parent()
+            .ok_or(StateError::OrderedState("marker parent"))?,
+    )?;
     while io_at(&path, fs::read(&path))? == b"readable-primary" {
         std::thread::sleep(std::time::Duration::from_millis(20));
     }
@@ -497,7 +544,7 @@ fn hex_component(value: &str, n: usize) -> bool {
 fn ordinal(value: &str) -> bool {
     value.len() == 20 && value.bytes().all(|b| b.is_ascii_digit())
 }
-fn record_cap(path: &str) -> Option<u64> {
+pub(super) fn record_cap(path: &str) -> Option<u64> {
     const K: u64 = 1024;
     match path {
         MODE_PATH => return Some(64),
@@ -559,7 +606,7 @@ fn record_cap(path: &str) -> Option<u64> {
 /// Reserve both complete lifetime lanes when a context is installed. Actual
 /// permanent records are charged within that reservation, never borrowed from
 /// another context's prepaid capacity or from pending/head/commit reserves.
-fn validate_reservations(index: &VaultManifestIndex) -> Result<(), StateError> {
+pub(super) fn validate_reservations(index: &VaultManifestIndex) -> Result<(), StateError> {
     let mut contexts = BTreeMap::<String, (u64, u64, u64, u64, u64, u64)>::new();
     let mut base = 0_u64;
     let mut auth = 0_u64;
@@ -697,37 +744,121 @@ pub(crate) fn recover_ordered_journal(root: &Path) -> Result<(), StateError> {
     if !path_exists(&root.join(STATE_VAULT_FILE))? {
         return Ok(());
     }
-    let vault = EncryptedStateVault::open_existing(root)?;
-    if vault.load_manifest()?.is_none() {
-        return Ok(());
+    let vault = EncryptedStateVault::open_existing_cache(root, Some(64 * 1024 * 1024))?;
+    match vault.bounded_ordered_profile()? {
+        OrderedProfile::Missing => Ok(()),
+        OrderedProfile::Other => Err(StateError::OrderedState("v2 journal over a legacy profile")),
+        OrderedProfile::Verified(index) => restore_verified_shadow(&vault, &index),
     }
-    if !vault.is_ordered_profile()? {
-        return Err(StateError::OrderedState("v2 journal over a legacy profile"));
-    }
-    vault.verify()?;
-    restore_shadow(&vault)
 }
 fn restore_shadow(vault: &EncryptedStateVault) -> Result<(), StateError> {
-    let records = vault.load_records()?;
-    let expected: BTreeSet<_> = records.iter().map(|r| r.relative_path.as_str()).collect();
-    // Startup/recovery scan only; normal commits touch their explicit receipts.
-    let current = collect_legacy_records(&vault.root)?
-        .into_iter()
-        .map(|r| (r.relative_path.clone(), r))
-        .collect::<BTreeMap<_, _>>();
-    for record in current.values() {
-        if !expected.contains(record.relative_path.as_str())
-            && removable_path(&record.relative_path)
+    let OrderedProfile::Verified(index) = vault.bounded_ordered_profile()? else {
+        return Err(StateError::OrderedState("OD1 recovery schema"));
+    };
+    restore_verified_shadow(vault, &index)
+}
+fn restore_verified_shadow(
+    vault: &EncryptedStateVault,
+    index: &VaultManifestIndex,
+) -> Result<(), StateError> {
+    // Validate the authenticated bounded index and each primary row before changing
+    // any derived shadow. Neither primary nor filesystem bodies accumulate in RAM.
+    validate_reservations(index)?;
+    {
+        let tx = vault.database.begin_read().map_err(vault_database_error)?;
+        let rows = tx.open_table(RECORD_TABLE).map_err(vault_database_error)?;
+        if redb::ReadableTableMetadata::len(&rows).map_err(vault_database_error)?
+            != index.entries.len() as u64
         {
-            let path = vault.root.join(path_from_vault(&record.relative_path)?);
-            io_at(&path, fs::remove_file(&path))?;
+            return Err(StateError::VaultManifestMismatch);
         }
     }
-    for record in records {
-        if classify_record_kind(&record.relative_path) != StateRecordKind::DeviceIdentity
-            && current.get(&record.relative_path) != Some(&record)
-        {
-            vault.restore_legacy_record(&record)?;
+    for entry in &index.entries {
+        read_primary(vault, entry)?;
+    }
+    let expected = index
+        .entries
+        .iter()
+        .map(|e| e.relative_path.as_str())
+        .collect::<BTreeSet<_>>();
+    remove_stale_shadows(
+        &vault.root,
+        &vault.root.join("runtime/od1/contexts"),
+        &expected,
+        0,
+    )?;
+    for entry in &index.entries {
+        let record = read_primary(vault, entry)?;
+        if classify_record_kind(&record.relative_path) != StateRecordKind::DeviceIdentity {
+            let path = vault.root.join(path_from_vault(&record.relative_path)?);
+            crate::reject_relative_symlinks(&vault.root, Path::new(&record.relative_path))?;
+            let same = if path_exists(&path)?
+                && io_at(&path, fs::metadata(&path))?.len() == record.content.len() as u64
+            {
+                io_at(&path, fs::read(&path))? == record.content
+            } else {
+                false
+            };
+            if !same {
+                vault.restore_legacy_record(&record)?;
+            }
+        }
+    }
+    Ok(())
+}
+fn read_primary(
+    vault: &EncryptedStateVault,
+    entry: &VaultManifestIndexEntry,
+) -> Result<VaultRecord, StateError> {
+    let cap =
+        record_cap(&entry.relative_path).ok_or(StateError::OrderedState("unknown recovery row"))?;
+    if entry.content_len > cap {
+        return Err(StateError::OrderedState("recovery row cap"));
+    }
+    let tx = vault.database.begin_read().map_err(vault_database_error)?;
+    let table = tx.open_table(RECORD_TABLE).map_err(vault_database_error)?;
+    let key = vault.record_key(&entry.relative_path);
+    let raw = table
+        .get(key.as_slice())
+        .map_err(vault_database_error)?
+        .ok_or(StateError::VaultManifestMismatch)?;
+    if raw.value().len() as u64 > cap + 512 {
+        return Err(StateError::OrderedState("recovery envelope cap"));
+    }
+    let record = vault.decrypt_record(raw.value(), &key)?;
+    if manifest_index_entry_for_record(&record)? != *entry {
+        return Err(StateError::VaultManifestMismatch);
+    }
+    Ok(record)
+}
+fn remove_stale_shadows(
+    root: &Path,
+    dir: &Path,
+    expected: &BTreeSet<&str>,
+    depth: usize,
+) -> Result<(), StateError> {
+    if !path_exists(dir)? {
+        return Ok(());
+    }
+    if depth > 8 {
+        return Err(StateError::OrderedState("shadow directory depth"));
+    }
+    reject_symlink(dir)?;
+    for entry in io_at(dir, fs::read_dir(dir))? {
+        let entry = io_at(dir, entry)?;
+        let path = entry.path();
+        reject_symlink(&path)?;
+        if io_at(&path, entry.file_type())?.is_dir() {
+            remove_stale_shadows(root, &path, expected, depth + 1)?;
+        } else {
+            let relative = path
+                .strip_prefix(root)
+                .map_err(|_| StateError::OrderedState("shadow scope"))?
+                .to_string_lossy()
+                .replace('\\', "/");
+            if removable_path(&relative) && !expected.contains(relative.as_str()) {
+                io_at(&path, fs::remove_file(&path))?;
+            }
         }
     }
     Ok(())
@@ -742,6 +873,119 @@ mod tests {
             StateDirectoryLock::acquire(root)?,
             vec![OrderedMutation::put(CLAIM, b"claim".to_vec())],
         )
+    }
+    fn primary_digest(vault: &EncryptedStateVault) -> Result<[u8; 32], StateError> {
+        let tx = vault.database.begin_read().map_err(vault_database_error)?;
+        let mut digest = blake3::Hasher::new();
+        let meta = tx.open_table(META_TABLE).map_err(vault_database_error)?;
+        for row in meta.iter().map_err(vault_database_error)? {
+            let (key, value) = row.map_err(vault_database_error)?;
+            digest.update(&(key.value().len() as u64).to_le_bytes());
+            digest.update(key.value().as_bytes());
+            digest.update(&(value.value().len() as u64).to_le_bytes());
+            digest.update(value.value());
+        }
+        let rows = tx.open_table(RECORD_TABLE).map_err(vault_database_error)?;
+        for row in rows.iter().map_err(vault_database_error)? {
+            let (key, value) = row.map_err(vault_database_error)?;
+            digest.update(key.value());
+            digest.update(&(value.value().len() as u64).to_le_bytes());
+            digest.update(value.value());
+        }
+        Ok(*digest.finalize().as_bytes())
+    }
+    fn replace_index(vault: &EncryptedStateVault, raw: &[u8]) -> Result<(), StateError> {
+        let tx = vault.database.begin_write().map_err(vault_database_error)?;
+        {
+            let mut meta = tx.open_table(META_TABLE).map_err(vault_database_error)?;
+            meta.insert(MANIFEST_INDEX_KEY, raw)
+                .map_err(vault_database_error)?;
+        }
+        tx.commit().map_err(vault_database_error)
+    }
+    #[test]
+    fn ordered_recovery_caps_index_before_decryption_or_shadow_mutation() -> Result<(), StateError>
+    {
+        // Local persistence-corruption fixture, not a Native/Head provenance origin.
+        let tmp = io_at(Path::new("."), tempfile::tempdir())?;
+        let root = tmp.path().join("profile");
+        let mut store = create(&root)?;
+        let head = "runtime/od1/contexts/0000000000000000000000000000000000000000000000000000000000000000/head";
+        store.commit(
+            store.generation(),
+            vec![OrderedMutation::put(head, b"primary".to_vec())],
+        )?;
+        let generation = store.generation();
+        let valid_digest = primary_digest(&store.vault)?;
+        let original = store
+            .vault
+            .load_metadata(MANIFEST_INDEX_KEY)?
+            .ok_or(StateError::VaultManifestIndexMissing)?;
+        let mut oversized = original.clone();
+        oversized.resize(INDEX_CAP + 42, 0);
+        assert_eq!(oversized[0], VAULT_MANIFEST_INDEX_VERSION);
+        replace_index(&store.vault, &oversized)?;
+        let corrupt_digest = primary_digest(&store.vault)?;
+        let shadow = root.join(head);
+        io_at(&shadow, fs::write(&shadow, b"stale-shadow"))?;
+        let stale = root.join(head.replace("/head", "/queue/stale"));
+        let parent = stale
+            .parent()
+            .ok_or(StateError::OrderedState("test shadow parent"))?;
+        io_at(&stale, fs::create_dir_all(parent))?;
+        io_at(&stale, fs::write(&stale, b"stale-queue"))?;
+        prepare_journal(&root)?;
+        let journal = active_directory(&root).join(crate::MANIFEST_FILE);
+        let journal_before = io_at(&journal, fs::read(&journal))?;
+        let manifest: TransactionManifest =
+            serde_json::from_slice(&journal_before).map_err(|source| {
+                StateError::InvalidManifest {
+                    path: journal.clone(),
+                    source,
+                }
+            })?;
+        assert_eq!(manifest.version, 2);
+        assert!(
+            active_directory(&root)
+                .join(crate::PREPARED_MARKER)
+                .exists()
+        );
+        assert!(matches!(
+            store.vault.is_ordered_profile(),
+            Err(StateError::OrderedState("index recovery cap"))
+        ));
+        drop(store);
+        assert!(matches!(
+            StateDirectoryLock::acquire(&root),
+            Err(StateError::OrderedState("index recovery cap"))
+        ));
+        let vault = EncryptedStateVault::open_existing_cache(&root, Some(64 * 1024 * 1024))?;
+        assert_eq!(primary_digest(&vault)?, corrupt_digest);
+        assert_eq!(io_at(&shadow, fs::read(&shadow))?, b"stale-shadow");
+        assert_eq!(io_at(&stale, fs::read(&stale))?, b"stale-queue");
+        assert_eq!(io_at(&journal, fs::read(&journal))?, journal_before);
+        assert!(
+            active_directory(&root)
+                .join(crate::PREPARED_MARKER)
+                .exists()
+        );
+        // Restore only this disposable test's deliberately corrupted index. The
+        // unchanged genuine prepared journal must now recover from the primary.
+        replace_index(&vault, &original)?;
+        drop(vault);
+        let lease = StateDirectoryLock::acquire(&root)?;
+        assert!(!active_directory(&root).exists());
+        assert_eq!(io_at(&shadow, fs::read(&shadow))?, b"primary");
+        assert!(!stale.exists());
+        let store = OrderedVault::open(lease)?;
+        assert_eq!(store.generation(), generation);
+        assert_eq!(primary_digest(&store.vault)?, valid_digest);
+        assert_eq!(store.get(head)?.as_deref(), Some(b"primary".as_slice()));
+        println!(
+            "R1 real_prepared_v2=true ciphertext_bytes={} supported_prefix=true cap_before_decrypt=true primary_shadow_journal_unchanged=true valid_recovery=true",
+            oversized.len()
+        );
+        Ok(())
     }
     #[test]
     fn ordered_primary_is_atomic_fenced_and_reopens_after_failed_trial() -> Result<(), StateError> {

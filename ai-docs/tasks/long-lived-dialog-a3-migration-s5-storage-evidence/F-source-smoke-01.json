@@ -1,0 +1,17 @@
+{
+  "case": "F-source-smoke-01",
+  "contributing_set": "F",
+  "scope": "M01.source only; production source/Native/fold/receipt/projection verification, not migration Ready/live handoff",
+  "elapsed_seconds": 28.5004332,
+  "exit_code": 0,
+  "error": null,
+  "source_manifest": "source-reader-smoke-source-files.json",
+  "seed_case": "F-feasibility-01",
+  "fixture_generation_charged_once": true,
+  "executable": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+    "bytes": 40748544,
+    "sha256": "39ea17438b8a88a1c436288895e954895bcb2120beb5afa66c065aa2386c7bd6"
+  },
+  "pre_stage_processes": []
+}

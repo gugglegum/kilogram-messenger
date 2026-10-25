@@ -1,0 +1,85 @@
+{
+  "case": "F-renewed-obligations-01",
+  "contributing_set": "F",
+  "elapsed_seconds": 43.1415887,
+  "exit_code": 1,
+  "error": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+  "filter": "migration_s5_process_actual_renewed_pending_and_undelivered",
+  "source_manifest": "F-renewed-obligations-01-source-files.json",
+  "seed_case": "F-feasibility-01",
+  "executable_inventory": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 67885056,
+      "sha256": "f6fa7035b0491a99effa6bee59888a71a4b940f130ef6d1e1d49c116b7913b4f"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 42216448,
+      "sha256": "13b484a9eaab677215a949f7d348ed3e35f88354cd162eadfd81e2a999b6e8b0"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 9430528,
+      "sha256": "1b11e63028915f2d2675c3238cee6aaa4fa044ad80b3d27af20ba5d7718e822b"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 36701184,
+      "sha256": "79d2215370f5e83eb7833280f4efc1f6009e3611881a0ceec927f1766b776e6c"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-ratchet-lib-kilogram_ratchet-tests.exe",
+      "bytes": 4753408,
+      "sha256": "9a02cff63f8bab15ace30f304732b9b8ec009cd49112a2bf6ba10e42299ae992"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-ratchet-test-a3_s3_root_review-tests.exe",
+      "bytes": 3369472,
+      "sha256": "8d7a03fc84ec53c46fb2ecc6ec7846f1d4a52e4193a941afe7f37d1b195cf65d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 10955776,
+      "sha256": "1bc434512983802771ddb6457a2a9c98cd6af5a2b2e26c4c7499376edee918ac"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s1_root_review-tests.exe",
+      "bytes": 7079424,
+      "sha256": "518e1ae45ac65dfb680fcd83b1545f254ebb64ace5703daf682ba858819fc8b0"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s2_root_review-tests.exe",
+      "bytes": 7327744,
+      "sha256": "e7fbf8b6d3abc50acce2f3a7c922f702bc0f9c6740ec0b156e012e6b87fac64c"
+    }
+  ],
+  "field_images_before_after_equal": [
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+      "bytes": 67690496,
+      "sha256": "a0c6412fece2722c3a6779c32e7547288cc8ff25623039fca3c5ea14bd54c39d"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-l1-control-peer.exe",
+      "bytes": 67690496,
+      "sha256": "a0c6412fece2722c3a6779c32e7547288cc8ff25623039fca3c5ea14bd54c39d"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "bytes": 61531648,
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+      "bytes": 66188800,
+      "sha256": "d5d8c8c118925dfde67e37fdb32aa5a120293cde258e93843dd1939fddb15560"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-predecessor-s3/kilogram-state-predecessor.exe",
+      "bytes": 5344768,
+      "sha256": "6932db6bc228cdd38fc358792cc5cd41fcfd1e5445c087a7c0f535ce4f0c1e4e"
+    }
+  ],
+  "rule": "Complete runner elapsed includes cached compilation, staging, fixtures/copies/recovery and cleanup; failures retained"
+}

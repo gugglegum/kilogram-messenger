@@ -1,6 +1,6 @@
-# Текущая точка: A3-S4 опубликован; контракт S5 принят
+# Текущая точка: S5.1 storage core принят; поручен exact commit/push
 
-Актуально на2026-10-25. Принят fresh runtime двух процессов, перезапуски и
+Актуально на2026-10-26. Принят fresh runtime двух процессов, перезапуски и
 offline-доставка: [итоговое review S4](tasks/long-lived-dialog-a3-runtime-s4-implementation-review-5.md).
 Полный P подтвердил1640 Text и точную историю после direct/own-relay restart;
 F и выбранные component проверки пройдены. Это не завершение whole A3/MVP.
@@ -9,9 +9,18 @@ F и выбранные component проверки пройдены. Это не
 [задача на контракт](tasks/long-lived-dialog-a3-migration-s5-task.md), baseline
 `0c1baa887008f784a86fd7ebabdcd5145fb4d1c0`.
 [Review2](tasks/long-lived-dialog-a3-migration-s5-contract-review-2.md) принял
-исправленный контракт: R1–R4 закрыты. Сейчас exact documentation commit/push,
-затем independent remote verification и отдельное поручение первой части реализации
-(storage migration core). Product implementation/build/migration ещё не начаты.
+исправленный контракт: R1–R4 закрыты. Contract commit
+`3547cf528f15c15a21cdb9e30b1d7ca35a01297a` опубликован; root независимо сверил
+all9 accepted paths/blobs, sole parent и actual remote master.
+[S5.1 review3](tasks/long-lived-dialog-a3-migration-s5-storage-implementation-review-3.md)
+принимает production preflight, Root7/fence/copy/Ready, provenance/credits,
+offline administration и focused integrity/version/kill checks. R1–R4 закрыты.
+Исполнителю поручен один exact commit/push по accepted manifest, parent3547cf5;
+root проверяет опубликованный diff/remote. После этого поручается S5.2 indexed L1
+owner/transport/history/receipt continuation; existing handoff и whole P5 ещё впереди.
+Текущая Ready — storage only. C279.3257298/600, F1236.2886628/1320 (явная поправка
+review2 +120 только на R4), P0/2400. Для следующих live cuts нужен отдельный root
+план проверок и бюджета; этот ledger не сбрасывать и не расходовать молча.
 Каждая логическая часть сдаётся на review до commit/push; whole S5/P5 пока открыт.
 Ниже сохранён отложенный recovery API-retirement план. Он не является текущим
 приоритетом и не должен автоматически запускаться после S4.

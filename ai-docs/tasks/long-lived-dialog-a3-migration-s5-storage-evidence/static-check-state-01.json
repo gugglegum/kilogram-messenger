@@ -1,0 +1,8 @@
+{
+  "case": "static-check-state-01",
+  "kind": "static-build",
+  "contributing_set": "compile-static-separate",
+  "elapsed_seconds": 3.5736296,
+  "exit_code": 101,
+  "command": "invoke-cargo-friendly.ps1 check --locked --offline --profile verification --package kilogram-state; CargoJobs12 BelowNormal"
+}

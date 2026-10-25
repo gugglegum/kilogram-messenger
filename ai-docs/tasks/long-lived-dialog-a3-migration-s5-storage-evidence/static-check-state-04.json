@@ -1,0 +1,8 @@
+{
+  "case": "static-check-state-04",
+  "kind": "static-build",
+  "contributing_set": "compile-static-separate",
+  "elapsed_seconds": 3.5519259,
+  "exit_code": 101,
+  "reason": "Wire closed Root7 copy/Ready/capacity operations and offline repository, with digest scratch overlay"
+}

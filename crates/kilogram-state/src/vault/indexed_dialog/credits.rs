@@ -120,6 +120,54 @@ pub(super) struct Ledger {
     grant: Option<Grant>,
 }
 impl Ledger {
+    pub(super) fn migration_unfunded(quota: u64) -> Self {
+        Self {
+            quota,
+            repair_free: 0,
+            outstanding: 0,
+            pending: 0,
+            head: None,
+            grant: None,
+        }
+    }
+    pub(super) fn migration_ready(
+        &mut self,
+        ordinary: u64,
+        head: Option<u64>,
+        fund: bool,
+    ) -> Result<()> {
+        if self.repair_free != 0
+            || self.outstanding != 0
+            || self.grant.is_some()
+            || self.pending != ordinary
+            || self.head != head
+            || ordinary > 64
+        {
+            return Err(Error::Integrity("migration one-time funding"));
+        }
+        if fund {
+            self.repair_free = REPAIR_POOL;
+        }
+        Ok(())
+    }
+    pub(super) fn migration_import_pending(&mut self, ordinal: u64, head: bool) -> Result<()> {
+        if ordinal >= 512 || self.repair_free != 0 || self.outstanding != 0 || self.grant.is_some()
+        {
+            return Err(Error::Integrity("legacy pending import"));
+        }
+        if head {
+            if self.head.replace(ordinal).is_some() {
+                return Err(Error::Conflict);
+            }
+        } else {
+            self.pending = self
+                .pending
+                .checked_add(1)
+                .filter(|n| *n <= 64)
+                .ok_or(Error::Quota)?;
+        }
+        Ok(())
+    }
     pub(super) fn runtime_state(&self) -> RuntimeRepairState {
         RuntimeRepairState {
             repair_free: self.repair_free,

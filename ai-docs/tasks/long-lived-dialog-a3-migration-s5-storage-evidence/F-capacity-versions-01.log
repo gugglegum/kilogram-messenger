@@ -1,0 +1,100 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1.00s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 25 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+running 1 test
+test migration_s5_process_capacity_crash_and_predecessor_fences ... version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: stale generation
+
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: indexed bound: ReadyNeedsProfileUpdate
+
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe reason=Error: unsupported state vault schema version 5
+
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe reason=Error: integrity blocked: anchor version/layout
+
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: CreationConflict
+
+M09 actual_root7_corruption=schema-relabel refused=true
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: integrity blocked: anchor missing
+
+M09 actual_root7_corruption=missing-anchor refused=true
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: integrity blocked: sentinel digest
+
+M09 actual_root7_corruption=cipher-anchor refused=true
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: unknown field `account`, expected one of `version`, `profile_mode`, `state_dir`, `ipc_file`, `locator_directory`, `enabled_contexts`, `bind` at line 1 column 10
+
+M08/M09 capacity point=capacity-staged parent_alive_killed=true pid=544 archived_S3/exact_S4/d9b_root7_fences PASS root=E:\AI-Projects\kilogram-p2p-messenger\.tmp/migration-s5-storage\capacity-version-mJ1N86
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: stale generation
+
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: indexed bound: ReadyNeedsProfileUpdate
+
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe reason=Error: unsupported state vault schema version 5
+
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe reason=Error: integrity blocked: anchor version/layout
+
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: CreationConflict
+
+M09 actual_root7_corruption=schema-relabel refused=true
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: integrity blocked: anchor missing
+
+M09 actual_root7_corruption=missing-anchor refused=true
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: integrity blocked: sentinel digest
+
+M09 actual_root7_corruption=cipher-anchor refused=true
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: unknown field `account`, expected one of `version`, `profile_mode`, `state_dir`, `ipc_file`, `locator_directory`, `enabled_contexts`, `bind` at line 1 column 10
+
+M08/M09 capacity point=capacity-committed parent_alive_killed=true pid=58540 archived_S3/exact_S4/d9b_root7_fences PASS root=E:\AI-Projects\kilogram-p2p-messenger\.tmp/migration-s5-storage\capacity-version-anHLe0
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 4 filtered out; finished in 16.54s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17696 13.38
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=64416
+target_gib=68.82
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

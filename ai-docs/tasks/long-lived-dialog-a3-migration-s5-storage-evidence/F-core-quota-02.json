@@ -1,0 +1,53 @@
+{
+  "case": "F-core-quota-02",
+  "contributing_set": "F",
+  "elapsed_seconds": 23.1492125,
+  "exit_code": 0,
+  "error": null,
+  "filter": "migration_s5_real_fence_copy_ready_reopen_and_capacity",
+  "source_manifest": "F-core-quota-02-source-files.json",
+  "seed_case": "F-feasibility-01",
+  "executable_inventory": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 67873280,
+      "sha256": "f30b29967a16fc1ae49e88e23bbd78d96fa36ad468248dc6c075e5b981ef037b"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 41741824,
+      "sha256": "bdbfca8261b61ae99338909f78a1aca6fb5a356056b8d99be05198cf27338db3"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 36684288,
+      "sha256": "c235fd290aaa7b7aa7fc59f1f1d3fb086f886dd0ccbde857b17acba10c400550"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-ratchet-lib-kilogram_ratchet-tests.exe",
+      "bytes": 4277248,
+      "sha256": "6d93b7e6ffd1f0739aebcc8f88d5571ebe32bf13541ccd4f69d6a8977de26754"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-ratchet-test-a3_s3_root_review-tests.exe",
+      "bytes": 2905088,
+      "sha256": "b37e2616009b63b7cbb289f455bcf5205ec2d47f21cd4cbc19fa78d6f43d13ef"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 10486272,
+      "sha256": "bfa4c74a57b4f0402de7b4bba909e535b0fb837de58903ad563be73f274301ea"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s1_root_review-tests.exe",
+      "bytes": 6713856,
+      "sha256": "ecfd46610a86f1e09b419fb4157e1599f2df6251cc15a77ae34563926a59d209"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s2_root_review-tests.exe",
+      "bytes": 6968832,
+      "sha256": "41861dac57bbadf3fdfbd22d42d623e219cbfd4ef686b390f95b6dbe40952269"
+    }
+  ],
+  "rule": "Complete runner elapsed includes cached compilation, staging, fixtures/copies/recovery and cleanup; failures retained"
+}

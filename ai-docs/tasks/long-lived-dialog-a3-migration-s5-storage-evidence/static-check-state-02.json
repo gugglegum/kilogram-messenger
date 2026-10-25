@@ -1,0 +1,8 @@
+{
+  "case": "static-check-state-02",
+  "kind": "static-build",
+  "contributing_set": "compile-static-separate",
+  "elapsed_seconds": 3.0432356,
+  "exit_code": 101,
+  "reason": "Repair explicit nested module paths and legacy error/import references from attempt01"
+}

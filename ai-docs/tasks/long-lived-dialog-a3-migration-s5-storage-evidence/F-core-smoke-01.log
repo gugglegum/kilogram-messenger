@@ -1,0 +1,217 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+warning: field `inventory_digest` is never read
+  --> crates\kilogram-state\src\vault\indexed_dialog\migration7\source.rs:43:9
+   |
+36 | pub(super) struct Inventory {
+   |                   --------- field in this struct
+...
+43 |     pub inventory_digest: Id,
+   |         ^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+   Compiling kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+warning: `kilogram-state` (lib) generated 1 warning
+   Compiling kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+warning: struct `ReadableMeta` is never constructed
+ --> apps\kilogram-cli\src\ordered_dialog\storage_migration\fold.rs:9:19
+  |
+9 | pub(super) struct ReadableMeta {
+  |                   ^^^^^^^^^^^^
+  |
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: associated function `of` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\fold.rs:17:12
+   |
+16 | impl ReadableMeta {
+   | ----------------- associated function in this implementation
+17 |     pub fn of(event: &Event) -> Result<Self> {
+   |            ^^
+
+warning: function `lane` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\fold.rs:26:4
+   |
+26 | fn lane(old:&Lane) -> g2::Lane {
+   |    ^^^^
+
+warning: function `fold` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\fold.rs:30:15
+   |
+30 | pub(super) fn fold(old:&Guard, lanes:&[Vec<ReadableMeta>;2]) -> Result<g2::ImportedL1> {
+   |               ^^^^
+
+warning: struct `ContextOrigin` is never constructed
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:12:19
+   |
+12 | pub(super) struct ContextOrigin {
+   |                   ^^^^^^^^^^^^^
+
+warning: struct `PendingOrigin` is never constructed
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:22:19
+   |
+22 | pub(super) struct PendingOrigin {
+   |                   ^^^^^^^^^^^^^
+
+warning: struct `VerifiedSource` is never constructed
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:30:19
+   |
+30 | pub(super) struct VerifiedSource {
+   |                   ^^^^^^^^^^^^^^
+
+warning: function `required` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:36:4
+   |
+36 | fn required(source:&dyn LegacyRead,path:&str)->Result<Zeroizing<Vec<u8>>> {Ok(source.required(path)?)}
+   |    ^^^^^^^^
+
+warning: function `credential` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:37:4
+   |
+37 | fn credential(source:&dyn LegacyRead,id:Id,spec:&Spec,role:u64)->Result<Credentials> {
+   |    ^^^^^^^^^^
+
+warning: function `control` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:42:4
+   |
+42 | fn control(source:&dyn LegacyRead,c:Id,id:Id)->Result<Zeroizing<Vec<u8>>> {
+   |    ^^^^^^^
+
+warning: function `selected_native` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:46:4
+   |
+46 | fn selected_native(source:&dyn LegacyRead,device:&DeviceState,nonce:Id,spec:&Spec,head:&Head)->Result<Option<PrivateState>> {
+   |    ^^^^^^^^^^^^^^^
+
+warning: function `event` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:81:4
+   |
+81 | fn event(source:&dyn LegacyRead,spec:&Spec,head:&Head,role:u64,n:u64,id:Id)->Result<Event> {
+   |    ^^^^^
+
+warning: function `projection` is never used
+   --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:103:15
+    |
+103 | pub(super) fn projection(source:&dyn LegacyRead,device:&DeviceState,head:&Head,id:Id)->Result<(String,[u8;16])> {
+    |               ^^^^^^^^^^
+
+warning: function `projection_raw` is never used
+   --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:107:15
+    |
+107 | pub(super) fn projection_raw(device:&DeviceState,head:&Head,id:Id,raw:&[u8])->Result<(String,[u8;16])> {
+    |               ^^^^^^^^^^^^^^
+
+warning: function `receipt` is never used
+   --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:117:4
+    |
+117 | fn receipt(source:&dyn LegacyRead,spec:&Spec,head:&Head,m:&fold::ReadableMeta)->Result<Option<Id>> {
+    |    ^^^^^^^
+
+warning: associated items `facts` and `verify` are never used
+   --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:129:12
+    |
+128 | impl VerifiedSource {
+    | ------------------- associated items in this implementation
+129 |     pub fn facts(&self,source:&dyn LegacyRead)->Result<kilogram_state::indexed_dialog::migration7::MigrationOriginFacts> {
+    |            ^^^^^
+...
+142 |     pub fn verify(source:&dyn LegacyRead,account:AccountId,expected_device:DeviceId)->Result<Self> {
+    |            ^^^^^^
+
+warning: fields `request` and `original` are never read
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\fold.rs:13:9
+   |
+ 9 | pub(super) struct ReadableMeta {
+   |                   ------------ fields in this struct
+...
+13 |     pub request: [u8;16],
+   |         ^^^^^^^
+14 |     pub original: Id,
+   |         ^^^^^^^^
+   |
+   = note: `ReadableMeta` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `queue` is never read
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:18:9
+   |
+12 | pub(super) struct ContextOrigin {
+   |                   ------------- field in this struct
+...
+18 |     pub queue: usize,
+   |         ^^^^^
+
+warning: fields `event`, `original`, `admission`, and `quarantined` are never read
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:23:9
+   |
+22 | pub(super) struct PendingOrigin {
+   |                   ------------- fields in this struct
+23 |     pub event: Id,
+   |         ^^^^^
+24 |     pub ordinal: u64,
+25 |     pub original: Id,
+   |         ^^^^^^^^
+26 |     pub admission: Id,
+   |         ^^^^^^^^^
+27 |     pub head: bool,
+28 |     pub quarantined: bool,
+   |         ^^^^^^^^^^^
+
+warning: `kilogram-cli` (lib) generated 16 warnings
+warning: `kilogram-cli` (lib test) generated 3 warnings
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 36.68s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 1 test
+test ordered_dialog::storage_migration::tests::migration_s5_real_fence_copy_ready_reopen_and_capacity ... case=M01/M08.core side=one fence/copy/Ready/reopen/capacity/profile-CAS PASS rows=56 zero_native_calls=true
+case=M01/M08.core side=two fence/copy/Ready/reopen/capacity/profile-CAS PASS rows=56 zero_native_calls=true
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 21 filtered out; finished in 6.66s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17651 13.28
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=64369
+target_gib=68.59
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

@@ -1,0 +1,8 @@
+{
+  "case": "static-check-cli-01",
+  "kind": "static-build",
+  "contributing_set": "compile-static-separate",
+  "elapsed_seconds": 26.7589401,
+  "exit_code": 0,
+  "reason": "Compile bounded source reader and production Native/fold verifier before Root7 integration"
+}

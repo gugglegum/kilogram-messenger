@@ -1,0 +1,154 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-identity v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-identity)
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Checking kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+    Checking kilogram-sync-capability v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-sync-capability)
+    Checking kilogram-publication-conflict v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-publication-conflict)
+    Checking kilogram-mailbox-provisioning v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-provisioning)
+    Checking kilogram-peer-capability-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-capability-store)
+    Checking kilogram-peer-reenrollment-staging v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-staging)
+    Checking kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+    Checking kilogram-offline v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-offline)
+    Checking kilogram-peer-reenrollment v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment)
+    Checking kilogram-peer-reenrollment-acceptance v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-acceptance)
+error: this `if` statement can be collapsed
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\copy.rs:663:17
+    |
+663 | /                 if let Some(c) = c {
+664 | |                     if !matches!(entry.kind, 9 | 15) {
+665 | |                         self.put(
+666 | |                             old_key(c, Namespace::Control, &entry.path)?,
+...   |
+672 | |                 }
+    | |_________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+    = note: `-D clippy::collapsible-if` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+    |
+663 ~                 if let Some(c) = c
+664 ~                     && !matches!(entry.kind, 9 | 15) {
+665 |                         self.put(
+...
+670 |                         )?;
+671 ~                     }
+    |
+
+error: this `if` statement can be collapsed
+  --> crates\kilogram-state\src\vault\indexed_dialog\migration7\load.rs:81:9
+   |
+81 | /         if let Some(candidate) = recovery {
+82 | |             if candidate.paths()? != value[11] {
+83 | |                 return Err(Error::Conflict);
+84 | |             }
+85 | |         }
+   | |_________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+help: collapse nested if block
+   |
+81 ~         if let Some(candidate) = recovery
+82 ~             && candidate.paths()? != value[11] {
+83 |                 return Err(Error::Conflict);
+84 ~             }
+   |
+
+error: the loop variable `c` is only used to index `total`
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\preview.rs:139:18
+    |
+139 |         for c in 0..facts.contexts.len() {
+    |                  ^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+    = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator
+    |
+139 -         for c in 0..facts.contexts.len() {
+139 +         for <item> in total.iter_mut().take(facts.contexts.len()) {
+    |
+
+error: this `if` statement can be collapsed
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\preview.rs:221:13
+    |
+221 | /             if let Some((c, _, head)) = produced.pending {
+222 | |                 if head {
+223 | |                     heads[usize::from(c)] = true;
+224 | |                 }
+225 | |             }
+    | |_____________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+221 ~             if let Some((c, _, head)) = produced.pending
+222 ~                 && head {
+223 |                     heads[usize::from(c)] = true;
+224 ~                 }
+    |
+
+error: large size difference between variants
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\preview.rs:327:1
+    |
+327 | / pub enum MigrationInput {
+328 | |     Legacy(V4Source),
+    | |     ---------------- the second-largest variant contains at least 488 bytes
+329 | |     Indexed(MigrationRepository),
+    | |     ---------------------------- the largest variant contains at least 5808 bytes
+330 | | }
+    | |_^ the entire enum is at least 5808 bytes
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#large_enum_variant
+    = note: `-D clippy::large-enum-variant` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::large_enum_variant)]`
+help: consider boxing the large fields or introducing indirection in some other way to reduce the total size of the enum
+    |
+329 -     Indexed(MigrationRepository),
+329 +     Indexed(Box<MigrationRepository>),
+    |
+
+error: this `if` statement can be collapsed
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\source.rs:240:9
+    |
+240 | /         if let Some((identity, _)) = saved {
+241 | |             if identity.fields(9)?[2].fixed::<32>()? != *blake3::hash(&index_cipher).as_bytes() {
+242 | |                 return Err(Error::Integrity("retained source index changed"));
+243 | |             }
+244 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+240 ~         if let Some((identity, _)) = saved
+241 ~             && identity.fields(9)?[2].fixed::<32>()? != *blake3::hash(&index_cipher).as_bytes() {
+242 |                 return Err(Error::Integrity("retained source index changed"));
+243 ~             }
+    |
+
+error: this `if` statement can be collapsed
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\source.rs:251:9
+    |
+251 | /         if let Some((identity, _)) = saved {
+252 | |             if identity.fields(9)?[4].fixed::<32>()? != *blake3::hash(&generation_raw).as_bytes() {
+253 | |                 return Err(Error::Integrity("retained source generation changed"));
+254 | |             }
+255 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+251 ~         if let Some((identity, _)) = saved
+252 ~             && identity.fields(9)?[4].fixed::<32>()? != *blake3::hash(&generation_raw).as_bytes() {
+253 |                 return Err(Error::Integrity("retained source generation changed"));
+254 ~             }
+    |
+
+    Checking kilogram-peer-reenrollment-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-runtime)
+error: could not compile `kilogram-state` (lib) due to 7 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `kilogram-state` (lib test) due to 7 previous errors

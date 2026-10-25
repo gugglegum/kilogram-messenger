@@ -1,0 +1,56 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+warning: methods `migration_ready` and `migration_import_pending` are never used
+   --> crates\kilogram-state\src\vault\indexed_dialog\credits.rs:126:19
+    |
+122 | impl Ledger {
+    | ----------- methods in this implementation
+...
+126 |     pub(super) fn migration_ready(&mut self,ordinary:u64,head:Option<u64>,fund:bool)->Result<()> {
+    |                   ^^^^^^^^^^^^^^^
+...
+133 |     pub(super) fn migration_import_pending(&mut self,ordinal:u64,head:bool)->Result<()> {
+    |                   ^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `inventory_digest` is never read
+  --> crates\kilogram-state\src\vault\indexed_dialog\migration7\source.rs:43:9
+   |
+36 | pub(super) struct Inventory {
+   |                   --------- field in this struct
+...
+43 |     pub inventory_digest: Id,
+   |         ^^^^^^^^^^^^^^^^
+
+warning: associated function `resume` is never used
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\source.rs:144:19
+    |
+140 | impl Inventory {
+    | -------------- associated function in this implementation
+...
+144 |     pub(super) fn resume(vault:&EncryptedStateVault,identity:&Value,mode:&[u8])->Result<Self> {
+    |                   ^^^^^^
+
+warning: method `backend` is never used
+  --> crates\kilogram-state\src\vault\indexed_dialog\migration7\records.rs:37:19
+   |
+19 | impl MigrationConfig {
+   | -------------------- method in this implementation
+...
+37 |     pub(super) fn backend(&self,retained:u64)->Config {Config{logical_quota:self.logical_quota,physical_quota:self.physical_capacity...
+   |                   ^^^^^^^
+
+warning: associated function `hash` is never used
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\records.rs:139:12
+    |
+137 | impl Effective {
+    | -------------- associated function in this implementation
+138 |     pub fn raw(&self)->Result<Vec<u8>> {codec::record(7,&a([u(7),b(self.mid),u(self.revision),b(self.identity),b(self.initial),a(se...
+139 |     pub fn hash(raw:&[u8])->Id {let mut h=blake3::Hasher::new();h.update(b"kg:od2:effective-migration-config\0");h.update(raw);*h.f...
+    |            ^^^^
+
+warning: `kilogram-state` (lib) generated 5 warnings
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 5.47s

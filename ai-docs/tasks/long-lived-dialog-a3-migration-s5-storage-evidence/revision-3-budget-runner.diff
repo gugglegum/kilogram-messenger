@@ -1,0 +1,24 @@
+warning: in the working copy of '.tmp\migration-s5-revision3\submission2-source\scripts\invoke-migration-s5-case.ps1', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'scripts/invoke-migration-s5-case.ps1', LF will be replaced by CRLF the next time Git touches it
+diff --git "a/.tmp\\migration-s5-revision3\\submission2-source\\scripts\\invoke-migration-s5-case.ps1" b/scripts/invoke-migration-s5-case.ps1
+index 7986312..ef5536b 100644
+--- "a/.tmp\\migration-s5-revision3\\submission2-source\\scripts\\invoke-migration-s5-case.ps1"
++++ b/scripts/invoke-migration-s5-case.ps1
+@@ -16,6 +16,8 @@ $clock=[Diagnostics.Stopwatch]::StartNew()
+ $ledgerPath=Join-Path $evidence 'contributing-cases.json'
+ $previousCases=@()
+ if(Test-Path -LiteralPath $ledgerPath){$previousCases=@((Get-Content -LiteralPath $ledgerPath -Raw|ConvertFrom-Json).cases)}
++$fCeiling=1320
++$budgetAmendment=[ordered]@{scope='R4 verification only';review='long-lived-dialog-a3-migration-s5-storage-implementation-review-2.md';review_sha256='bb07f171f3a82b8bf6d864cac40af286374b33461be91697cd1b634aa31299d1';original_F=1200;additional_F=120;rule='Explicit root amendment before R4 execution; cumulative contributors retained, no reset or retroactive PASS'}
+ $caseExit=0;$caseError=$null
+ $previousOffline=$env:CARGO_NET_OFFLINE
+ $previousFixture=$env:KILOGRAM_S5_FIXTURE_DIR
+@@ -79,6 +81,6 @@ foreach($entry in $cases){
+     if($entry.contributing_set -eq 'C'){$ct+=[double]$entry.elapsed_seconds}
+     elseif($entry.contributing_set -eq 'F'){$ft+=[double]$entry.elapsed_seconds}
+ }
+-[ordered]@{baseline='3547cf528f15c15a21cdb9e30b1d7ca35a01297a';status='implementation-in-progress';ceilings_seconds=@{C=600;F=1200;P=2400};charged_elapsed_seconds=@{C=[double]$ct;F=[double]$ft;P=0};cases=$cases;large511='not_run';wholeP5='not_run';scope='S5.1 storage only; live indexed L1/handoff pending'} | ConvertTo-Json -Depth 14 | Set-Content -LiteralPath (Join-Path $evidence 'contributing-cases.json') -Encoding utf8
+-if($ct -gt 600 -or $ft -gt 1200){throw 'Contributing ceiling exceeded: preserve evidence and callback root before more runs.'}
++[ordered]@{baseline='3547cf528f15c15a21cdb9e30b1d7ca35a01297a';status='implementation-in-progress';ceilings_seconds=@{C=600;F=$fCeiling;P=2400};budget_amendment=$budgetAmendment;charged_elapsed_seconds=@{C=[double]$ct;F=[double]$ft;P=0};cases=$cases;large511='not_run';wholeP5='not_run';scope='S5.1 R4 storage repair only; live indexed L1/handoff pending'} | ConvertTo-Json -Depth 14 | Set-Content -LiteralPath (Join-Path $evidence 'contributing-cases.json') -Encoding utf8
++if($ct -gt 600 -or $ft -gt $fCeiling){throw 'Contributing ceiling exceeded: preserve evidence and callback root before more runs.'}
+ exit $caseExit

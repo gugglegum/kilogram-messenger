@@ -1,0 +1,73 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1.08s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 5 tests
+test ordered_dialog::storage_migration::tests::migration_s5_fold_negatives_and_context_scoped_history ... M01/M10 fold dependency/seen/genesis negatives and C1-only history decoder PASS
+ok
+test ordered_dialog::storage_migration::tests::migration_s5_io_poison_reopen_and_capacity_refusals ... M08 point=before_write old_generation=25 reopened_generation=25 old/new/poison/CAS/Ready PASS
+M08 point=after_write old_generation=25 reopened_generation=25 old/new/poison/CAS/Ready PASS
+M08 point=after_sync old_generation=25 reopened_generation=25 old/new/poison/CAS/Ready PASS
+ok
+test ordered_dialog::storage_migration::tests::migration_s5_real_d9b_source_native_fold_and_history ... case=M01.source side=one source_id=82cbca9e0ab18b9fdff10615b8882d6a0711a8b126a42af900026da94b5e4b06 rows=56 phase=3 readable=3/3 receipts=4 zero_native_calls=true
+case=M01.source side=two source_id=05259d8a06cf838363ea8e663fd28cc8e157ea14b8795e0b24e8c315729dd80e rows=56 phase=3 readable=3/3 receipts=4 zero_native_calls=true
+ok
+test ordered_dialog::storage_migration::tests::migration_s5_real_fence_copy_ready_reopen_and_capacity ... case=M01/M08.core side=one fence/copy/Ready/reopen/capacity/profile-CAS PASS rows=56 zero_native_calls=true
+case=M01/M08.core side=two fence/copy/Ready/reopen/capacity/profile-CAS PASS rows=56 zero_native_calls=true
+ok
+test ordered_dialog::storage_migration::tests::migration_s5_source_failures_and_quota_before_fence ... M01/M08/M11 primary-vs-shadow, mandatory O/R, need-1-before-Fence, actual primary corruption PASS
+ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 20 filtered out; finished in 35.11s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17696 13.38
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=64416
+target_gib=68.82
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

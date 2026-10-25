@@ -1,0 +1,10 @@
+{
+  "baseline": "3547cf528f15c15a21cdb9e30b1d7ca35a01297a",
+  "charged_F": 1000.2806836,
+  "remaining_F": 199.71931640000003,
+  "planned_only_remaining_F_group": "migration_s5_process_",
+  "previous_whole_runner_seconds": 174.911958,
+  "conservative_forecast_seconds": 185,
+  "no_separate_two_context_repeat": true,
+  "no_source_changes_after_final_owner": true
+}

@@ -1,0 +1,8 @@
+{
+  "case": "static-check-state-03",
+  "kind": "static-build",
+  "contributing_set": "compile-static-separate",
+  "elapsed_seconds": 5.8402426,
+  "exit_code": 0,
+  "reason": "Compile Root7 discriminator/namespaces, authenticated escrow and atomic fence foundation"
+}

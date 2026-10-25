@@ -1,0 +1,93 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+warning: unused import: `b`
+ --> crates\kilogram-state\src\vault\indexed_dialog\migration7\preview.rs:3:28
+  |
+3 | use super::{codec::{self,a,b},copy::{self,MigrationProjection,ProducedRows},records::*,source::*,LegacyRead,MigrationRepository};
+  |                            ^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `LegacyRead`
+ --> crates\kilogram-state\src\vault\indexed_dialog\migration7\preview.rs:3:98
+  |
+3 | use super::{codec::{self,a,b},copy::{self,MigrationProjection,ProducedRows},records::*,source::*,LegacyRead,MigrationRepository};
+  |                                                                                                  ^^^^^^^^^^
+
+warning: field `inventory_digest` is never read
+  --> crates\kilogram-state\src\vault\indexed_dialog\migration7\source.rs:44:9
+   |
+37 | pub(super) struct Inventory {
+   |                   --------- field in this struct
+...
+44 |     pub inventory_digest: Id,
+   |         ^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `kilogram-state` (lib) generated 3 warnings (run `cargo fix --lib -p kilogram-state` to apply 1 suggestion)
+    Checking kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+    Checking kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+warning: unused import: `LegacyRead`
+ --> apps\kilogram-cli\src\ordered_dialog\storage_migration.rs:8:82
+  |
+8 | use kilogram_state::{StateDirectoryLock,indexed_dialog::{self as db,migration7::{LegacyRead,MigrationInput,MigrationConfig,MigrationP...
+  |                                                                                  ^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+error[E0609]: no field `head` on type `CreditReport`
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\tests.rs:87:127
+   |
+87 | ...erved[c]+ready.credits.repair_free[c]+if ready.credits.head[c].is_none(){64*1024}else{0});
+   |                                                           ^^^^ unknown field
+   |
+   = note: available fields are: `used`, `reserved`, `repair_free`, `grant_unissued`, `pending`, `head_in_use`
+
+warning: field `original` is never read
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\fold.rs:14:9
+   |
+ 9 | pub(super) struct ReadableMeta {
+   |                   ------------ field in this struct
+...
+14 |     pub original: Id,
+   |         ^^^^^^^^
+   |
+   = note: `ReadableMeta` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `queue` and `receipt_refs` are never read
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:18:9
+   |
+12 | pub(super) struct ContextOrigin {
+   |                   ------------- fields in this struct
+...
+18 |     pub queue: usize,
+   |         ^^^^^
+19 |     pub receipt_refs: BTreeMap<Id,Id>,
+   |         ^^^^^^^^^^^^
+
+warning: fields `event`, `original`, `admission`, and `quarantined` are never read
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:23:9
+   |
+22 | pub(super) struct PendingOrigin {
+   |                   ------------- fields in this struct
+23 |     pub event: Id,
+   |         ^^^^^
+24 |     pub ordinal: u64,
+25 |     pub original: Id,
+   |         ^^^^^^^^
+26 |     pub admission: Id,
+   |         ^^^^^^^^^
+27 |     pub head: bool,
+28 |     pub quarantined: bool,
+   |         ^^^^^^^^^^^
+
+warning: `kilogram-cli` (lib) generated 4 warnings
+For more information about this error, try `rustc --explain E0609`.
+warning: `kilogram-cli` (lib test) generated 1 warning (1 duplicate)
+error: could not compile `kilogram-cli` (lib test) due to 1 previous error; 1 warning emitted
+warning: build failed, waiting for other jobs to finish...

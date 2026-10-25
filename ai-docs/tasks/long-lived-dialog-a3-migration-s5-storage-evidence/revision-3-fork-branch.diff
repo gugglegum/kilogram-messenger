@@ -1,0 +1,59 @@
+diff --git "a/.tmp\\migration-s5-revision3\\submission2-source\\apps\\kilogram-cli\\src\\ordered_dialog\\storage_migration\\provenance.rs" b/apps/kilogram-cli/src/ordered_dialog/storage_migration/provenance.rs
+index a21f57c..3dd55ee 100644
+--- "a/.tmp\\migration-s5-revision3\\submission2-source\\apps\\kilogram-cli\\src\\ordered_dialog\\storage_migration\\provenance.rs"
++++ b/apps/kilogram-cli/src/ordered_dialog/storage_migration/provenance.rs
+@@ -165,12 +165,48 @@ fn archived_context(source: &dyn LegacyRead, spec: &Spec, head: &Head) -> Result
+                                 "fork Ready scope"
+                             );
+                         }
+-                        "Init" | "Confirm" | "ordinal" | "pending ordinal" | "author sequence" => {
+-                            let role = match reason {
+-                                "Init" => 0,
+-                                "Confirm" => 1,
+-                                _ => 1 - head.role,
+-                            };
++                        "Init" | "Confirm" => {
++                            let role = u64::from(reason == "Confirm");
++                            let event =
++                                Event::parse(proof, spec.peers[role as usize].cert.device_id())?;
++                            let core = &event.core;
++                            let selected = if role == 0 { head.offer } else { head.grant }
++                                .context("fork genesis selected control")?;
++                            ensure!(
++                                head.phase == 3
++                                    && head.role == 1 - role
++                                    && core.c == spec.c
++                                    && Some(core.d) == head.d
++                                    && Some(core.e) == head.e
++                                    && (role == 0 || head.sid.as_ref() == Some(&core.sid))
++                                    && core.kind == role + 1
++                                    && core.n == 0
++                                    && core.request.as_slice() == &selected[..16]
++                                    && core.parents.is_empty(),
++                                "fork genesis capture scope"
++                            );
++                            let saved: Id =
++                                required(source, &engine::ordinal_path(spec.c, role, 0))?
++                                    .as_slice()
++                                    .try_into()?;
++                            if position == 2 {
++                                ensure!(
++                                    core.role == role
++                                        && event.id()? == saved
++                                        && required(source, &engine::event_path(spec.c, saved))?
++                                            .as_slice()
++                                            == proof,
++                                    "fork original saved genesis"
++                                );
++                            } else {
++                                // The old writer durably captures a distinct
++                                // signed conflict before its Guard checks role.
++                                // It is evidence, never a readable Event origin.
++                                ensure!(event.id()? != saved, "fork distinct genesis conflict");
++                            }
++                        }
++                        "ordinal" | "pending ordinal" | "author sequence" => {
++                            let role = 1 - head.role;
+                             let event =
+                                 Event::parse(proof, spec.peers[role as usize].cert.device_id())?;
+                             ensure!(

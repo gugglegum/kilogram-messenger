@@ -233,6 +233,16 @@ impl<'a, T: redb::ReadableTable<&'static [u8], &'static [u8]>> Tree<'a, T> {
             plan_bytes: 0,
         }
     }
+    /// Isolated scratch overlay for Root7's digest excluding its own checkpoints.
+    /// Normal append/range/allocator paths do not use or mutate this fork.
+    pub fn fork_for_digest(&self) -> Self {
+        let mut result = Self::new(self.table, self.crypto);
+        result.changed = self.changed.clone();
+        result.decoded = self.decoded.clone();
+        result.pending_scopes = self.pending_scopes.clone();
+        result.plan_bytes = self.plan_bytes;
+        result
+    }
     fn address(&self, scope: u8, p: Id, bits: u16) -> Id {
         let mut bytes = Vec::with_capacity(34);
         bytes.extend(bits.to_be_bytes());

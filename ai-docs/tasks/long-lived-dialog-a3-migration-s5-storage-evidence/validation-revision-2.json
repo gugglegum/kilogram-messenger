@@ -1,0 +1,76 @@
+{
+  "baseline": "3547cf528f15c15a21cdb9e30b1d7ca35a01297a",
+  "final_cases": [
+    {
+      "case": "C-ordered-recovery-r2-02",
+      "elapsed_seconds": 27.2427722,
+      "exit_code": 0,
+      "source_manifest": "C-ordered-recovery-r2-02-source-files.json",
+      "file_count": 33,
+      "different_current_files": [],
+      "interpretation": "pass"
+    },
+    {
+      "case": "C-storage-invariants-r2-02",
+      "elapsed_seconds": 14.6817899,
+      "exit_code": 0,
+      "source_manifest": "C-storage-invariants-r2-02-source-files.json",
+      "file_count": 33,
+      "different_current_files": [],
+      "interpretation": "pass"
+    },
+    {
+      "case": "F-storage-final-r2-02",
+      "elapsed_seconds": 76.1118936,
+      "exit_code": 0,
+      "source_manifest": "F-storage-final-r2-02-source-files.json",
+      "file_count": 33,
+      "different_current_files": [],
+      "interpretation": "pass"
+    },
+    {
+      "case": "F-process-final-r2-01",
+      "elapsed_seconds": 87.123411,
+      "exit_code": 1,
+      "source_manifest": "F-process-final-r2-01-source-files.json",
+      "file_count": 33,
+      "different_current_files": [],
+      "interpretation": "3 process scenarios passed; 2 stopped at missing FixtureDirectory precondition and are completed by the exact-source controls case. Full failed attempt retained/charged."
+    },
+    {
+      "case": "F-process-controls-final-r2-02",
+      "elapsed_seconds": 94.023144,
+      "exit_code": 0,
+      "source_manifest": "F-process-controls-final-r2-02-source-files.json",
+      "file_count": 33,
+      "different_current_files": [],
+      "interpretation": "pass"
+    }
+  ],
+  "final_process_coverage": "5/5 scenarios on identical final sources/images: 3 passed in full attempt, missing-fixture 2 completed in focused controls case; full failed attempt retained",
+  "charged_elapsed_seconds": {
+    "P": 0.0,
+    "F": 1181.4272386,
+    "C": 279.32572980000003
+  },
+  "remaining_seconds": {
+    "P": 2400.0,
+    "F": 18.57276139999999,
+    "C": 320.67427019999997
+  },
+  "submission1_contributors_retained": 29,
+  "all_prior_protected_files_match": true,
+  "protected_file_count": 124,
+  "final_build_input_count": 439,
+  "all_final_sources_and_images_match": true,
+  "strict_clippy_record": "static-clippy-r2-03.json",
+  "fmt_exit_code": 0,
+  "diff_check_exit_code": 0,
+  "json_evidence_parsed": 92,
+  "index_empty": true,
+  "live_cargo_rustc_kilogram": [],
+  "large511": "not_run",
+  "wholeP5": "not_run",
+  "scale100k": "not_run",
+  "commit_push": "not performed; stop for review"
+}

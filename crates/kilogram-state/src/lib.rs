@@ -959,6 +959,11 @@ fn recover(root: &Path) -> Result<(), StateError> {
         return remove_tree_if_present(&active);
     }
     let manifest_path = active.join(MANIFEST_FILE);
+    if vault::has_ordered_fence(root)?
+        && io_at(&manifest_path, fs::metadata(&manifest_path))?.len() > 1024
+    {
+        return Err(StateError::OrderedState("ordered journal manifest cap"));
+    }
     let raw = io_at(&manifest_path, fs::read(&manifest_path))?;
     if vault::has_indexed_anchor(root)? {
         return Err(StateError::OrderedWriterRequired);

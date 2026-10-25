@@ -1,0 +1,45 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Checking kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+    Checking kilogram-offline v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-offline)
+error[E0282]: type annotations needed
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\admin.rs:102:13
+    |
+102 |             Ok(contexts)
+    |             ^^ cannot infer type of the type parameter `E` declared on the enum `Result`
+    |
+help: consider specifying the generic arguments
+    |
+102 |             Ok::<Vec<MigrationContextStatus>, E>(contexts)
+    |               ++++++++++++++++++++++++++++++++++
+
+error[E0283]: type annotations needed
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\admin.rs:102:13
+    |
+102 |             Ok(contexts)
+    |             ^^ cannot infer type of the type parameter `E` declared on the enum `Result`
+103 |         })?;
+    |           - type must be known at this point
+    |
+note: multiple `impl`s satisfying `types::Error: From<_>` found
+   --> crates\kilogram-state\src\vault\indexed_dialog\types.rs:58:13
+    |
+ 58 |     State(#[from] crate::StateError),
+    |             ^^^^
+...
+ 62 |     Io(#[from] std::io::Error),
+    |          ^^^^
+    = note: and another `impl` found in the `core` crate: `impl<T> From<T> for T;`
+help: consider specifying the generic arguments
+    |
+102 |             Ok::<Vec<MigrationContextStatus>, E>(contexts)
+    |               ++++++++++++++++++++++++++++++++++
+
+Some errors have detailed explanations: E0282, E0283.
+For more information about an error, try `rustc --explain E0282`.
+error: could not compile `kilogram-state` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `kilogram-state` (lib test) due to 2 previous errors

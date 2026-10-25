@@ -26,6 +26,8 @@ mod history_codec;
 mod history_cursor;
 #[path = "indexed_dialog/history_types.rs"]
 mod history_types;
+#[path = "indexed_dialog/migration7.rs"]
+pub mod migration7;
 #[cfg(test)]
 #[path = "indexed_dialog/profile.rs"]
 mod profile;
@@ -219,6 +221,7 @@ fn open(key: &Id, aad: &[u8], raw: &[u8], cap: usize) -> Result<Zeroizing<Vec<u8
 enum RootLayout {
     Component5,
     Runtime6,
+    Migrated7,
 }
 
 #[derive(Clone)]
@@ -242,6 +245,7 @@ impl Root {
         match self.layout {
             RootLayout::Component5 => out.push(5),
             RootLayout::Runtime6 => out.extend_from_slice(b"\x06KGOD2RT\0\x00\x01"),
+            RootLayout::Migrated7 => out.extend_from_slice(b"\x07KGOD2MG\0\x00\x01"),
         }
         for id in [
             self.incarnation,
@@ -273,6 +277,7 @@ impl Root {
         let layout = match r.byte()? {
             5 => RootLayout::Component5,
             6 if r.take(10)? == b"KGOD2RT\0\x00\x01" => RootLayout::Runtime6,
+            7 if r.take(10)? == b"KGOD2MG\0\x00\x01" => RootLayout::Migrated7,
             _ => return Err(Error::Integrity("anchor version/layout")),
         };
         let incarnation = r.id()?;
@@ -338,7 +343,7 @@ impl Root {
         }
         match self.layout {
             RootLayout::Component5 => {
-                if [21, 22, 45, 46]
+                if [21, 22, 23, 45, 46, 47, 51]
                     .into_iter()
                     .any(|s| self.roots[s] != Summary::default())
                 {
@@ -357,6 +362,21 @@ impl Root {
                     return Err(Error::Integrity("runtime profile root"));
                 }
             }
+            RootLayout::Migrated7 => {
+                if self.roots[22].count != 1
+                    || self.roots[22].used[1] != 0
+                    || self.roots[22].reserved[1] != 0
+                    || self.roots[51].count < 5
+                    || self.roots[51].used[1] != 0
+                    || self.roots[51].reserved[1] != 0
+                    || [17, 18, 19, 41, 42, 43, 46]
+                        .into_iter()
+                        .chain(52..ROOTS)
+                        .any(|s| self.roots[s] != Summary::default())
+                {
+                    return Err(Error::Integrity("migrated root layout"));
+                }
+            }
         }
         let (used, reserved) = self.totals()?;
         for c in 0..2 {
@@ -367,7 +387,7 @@ impl Root {
                     v.checked_add(self.roots[c * 24 + Namespace::Native as usize].used[c])
                 })
                 .ok_or(Error::Bound("control budget"))?;
-            if self.layout == RootLayout::Runtime6 {
+            if matches!(self.layout, RootLayout::Runtime6 | RootLayout::Migrated7) {
                 control = control
                     .checked_add(self.roots[c * 24 + 21].used[c])
                     .and_then(|v| v.checked_add(self.roots[c * 24 + 21].reserved[c]))
@@ -375,12 +395,70 @@ impl Root {
                     .and_then(|v| v.checked_add(self.roots[22].reserved[c]))
                     .ok_or(Error::Bound("runtime control budget"))?;
             }
+            if self.layout == RootLayout::Migrated7 {
+                control = control
+                    .checked_add(self.roots[c * 24 + 15].reserved[c])
+                    .and_then(|n| {
+                        n.checked_add(if self.roots[c * 24 + 23].count == 1 {
+                            4096 + 585
+                        } else {
+                            0
+                        })
+                    })
+                    .ok_or(Error::Bound("migration control budget"))?;
+            }
             if control > 4 * 1024 * 1024 {
                 return Err(Error::Quota);
             }
         }
         Ok(())
     }
+}
+
+fn read_root<M: ReadableTable<&'static str, &'static [u8]>>(
+    meta: &M,
+    master: &Id,
+    expected: RootLayout,
+) -> Result<Root> {
+    let manifest = meta
+        .get(MANIFEST_KEY)
+        .map_err(db)?
+        .ok_or(Error::Integrity("manifest missing"))?;
+    if manifest.value().len() > 256 {
+        return Err(Error::Integrity("sentinel cap"));
+    }
+    let manifest: VaultManifest =
+        postcard::from_bytes(manifest.value()).map_err(|_| Error::Integrity("schema sentinel"))?;
+    if manifest.schema_version == 4 && expected == RootLayout::Runtime6 {
+        return Err(Error::ExistingStateRequiresMigration);
+    }
+    if manifest.schema_version != 5 || manifest.record_count != 0 || manifest.plaintext_bytes != 0 {
+        return Err(Error::OwnerMismatch);
+    }
+    let anchor = meta
+        .get(ANCHOR)
+        .map_err(db)?
+        .ok_or(Error::Integrity("anchor missing"))?;
+    let raw = anchor.value();
+    if raw.len() < 73 || raw.len() > 32 * 1024 {
+        return Err(Error::Integrity("anchor envelope"));
+    }
+    if *blake3::hash(raw).as_bytes() != manifest.snapshot_id {
+        return Err(Error::Integrity("sentinel digest"));
+    }
+    let incarnation: Id = raw[..32]
+        .try_into()
+        .map_err(|_| Error::Integrity("incarnation"))?;
+    let derived = Zeroizing::new(blake3::derive_key(
+        "kilogram a3 v5 value encryption",
+        master,
+    ));
+    let plain = open(&derived, &root_aad(incarnation), &raw[32..], 32 * 1024)?;
+    let root = Root::decode(&plain)?;
+    if root.incarnation != incarnation {
+        return Err(Error::Integrity("incarnation binding"));
+    }
+    Ok(root)
 }
 
 pub struct IndexedDialogVault {
@@ -399,6 +477,7 @@ struct LoadedCore {
 }
 enum CommitInput {
     Runtime2(Box<RuntimeOperation>),
+    Migration7(Box<migration7::Operation>),
     Protocol2 {
         context: u8,
         operation: Box<HistoryProtocol2Operation>,
@@ -573,45 +652,7 @@ impl IndexedDialogVault {
         let root = {
             let tx = database.begin_read().map_err(db)?;
             let meta = tx.open_table(META_TABLE).map_err(db)?;
-            let manifest = meta
-                .get(MANIFEST_KEY)
-                .map_err(db)?
-                .ok_or(Error::Integrity("manifest missing"))?;
-            let manifest: VaultManifest = postcard::from_bytes(manifest.value())
-                .map_err(|_| Error::Integrity("schema sentinel"))?;
-            if manifest.schema_version == 4 && expected_layout == RootLayout::Runtime6 {
-                return Err(Error::ExistingStateRequiresMigration);
-            }
-            if manifest.schema_version != 5
-                || manifest.record_count != 0
-                || manifest.plaintext_bytes != 0
-            {
-                return Err(Error::OwnerMismatch);
-            }
-            let anchor = meta
-                .get(ANCHOR)
-                .map_err(db)?
-                .ok_or(Error::Integrity("anchor missing"))?;
-            let raw = anchor.value();
-            if raw.len() < 32 + 41 || raw.len() > 32 * 1024 {
-                return Err(Error::Integrity("anchor envelope"));
-            }
-            if *blake3::hash(raw).as_bytes() != manifest.snapshot_id {
-                return Err(Error::Integrity("sentinel digest"));
-            }
-            let incarnation: Id = raw[..32]
-                .try_into()
-                .map_err(|_| Error::Integrity("incarnation"))?;
-            let derived = Zeroizing::new(blake3::derive_key(
-                "kilogram a3 v5 value encryption",
-                &key.master_key.0,
-            ));
-            let plain = open(&derived, &root_aad(incarnation), &raw[32..], 32 * 1024)?;
-            let root = Root::decode(&plain)?;
-            if root.incarnation != incarnation {
-                return Err(Error::Integrity("incarnation binding"));
-            }
-            root
+            read_root(&meta, &key.master_key.0, expected_layout)?
         };
         if root.account != owner.account || root.claim != owner.claim {
             return Err(Error::OwnerMismatch);
@@ -621,8 +662,10 @@ impl IndexedDialogVault {
         }
         // Configuration cannot confiscate previously committed obligations.
         let mut checked = root.clone();
-        for c in 0..2 {
-            checked.ledger[c].quota = config.logical_quota[c];
+        if root.layout != RootLayout::Migrated7 {
+            for c in 0..2 {
+                checked.ledger[c].quota = config.logical_quota[c];
+            }
         }
         checked.check()?;
         let root = checked;
@@ -820,7 +863,7 @@ impl IndexedDialogVault {
         self.commit_with_gate(expected, id, digest, input, input_buffer_bound, None)
     }
     fn component_writer(&self) -> Result<()> {
-        if self.root.layout == RootLayout::Runtime6 {
+        if self.root.layout != RootLayout::Component5 {
             return Err(Error::RuntimeWriterRequired);
         }
         Ok(())
@@ -840,8 +883,15 @@ impl IndexedDialogVault {
         if id == [0; 32] {
             return Err(Error::Bound("commit ID"));
         }
-        if (self.root.layout == RootLayout::Runtime6) != matches!(&input, CommitInput::Runtime2(_))
-        {
+        let purpose_matches = match self.root.layout {
+            RootLayout::Component5 => !matches!(
+                &input,
+                CommitInput::Runtime2(_) | CommitInput::Migration7(_)
+            ),
+            RootLayout::Runtime6 => matches!(&input, CommitInput::Runtime2(_)),
+            RootLayout::Migrated7 => matches!(&input, CommitInput::Migration7(_)),
+        };
+        if !purpose_matches {
             return Err(Error::RuntimeWriterRequired);
         }
         if matches!(&input, CommitInput::Runtime2(_))
@@ -857,8 +907,28 @@ impl IndexedDialogVault {
         let mut w = Work::new(&nodes, &values, &self.crypto, self.root.clone());
         match &input {
             CommitInput::Runtime2(op) => w.runtime_check(op, id == self.root.commit_id)?,
+            CommitInput::Migration7(op) => {
+                w.migration_check_input(op, id == self.root.commit_id)?
+            }
             CommitInput::Protocol2 { .. } => {}
             CommitInput::Generic { mutations, credits } => {
+                if mutations.iter().any(|m| match m {
+                    Mutation::Put { key, .. } => matches!(
+                        key.namespace,
+                        Namespace::Migration | Namespace::LegacyBudget
+                    ),
+                    Mutation::Retire { key, replacement } => {
+                        matches!(
+                            key.namespace,
+                            Namespace::Migration | Namespace::LegacyBudget
+                        ) || matches!(
+                            replacement.namespace,
+                            Namespace::Migration | Namespace::LegacyBudget
+                        )
+                    }
+                }) {
+                    return Err(Error::RuntimeWriterRequired);
+                }
                 w.history_guard_generic(mutations, credits)?
             }
             CommitInput::History { context, operation } => {
@@ -891,6 +961,7 @@ impl IndexedDialogVault {
         }
         match input {
             CommitInput::Runtime2(op) => w.runtime_apply(*op)?,
+            CommitInput::Migration7(op) => w.migration_apply(*op)?,
             CommitInput::Protocol2 { context, operation } => {
                 w.history2_apply(context, *operation)?
             }
@@ -1336,7 +1407,7 @@ impl<
         {
             return Err(Error::Integrity("value digest/length"));
         }
-        if key.namespace.global()
+        if key.namespace.author()
             && (plain.len() != 64 || plain[..32] != self.root.contexts[usize::from(owner)])
         {
             return Err(Error::Integrity("author scope"));
@@ -1356,7 +1427,7 @@ impl<
             .verified_values
             .copy(key.slot()? as u8, key.bytes, root)?;
         if let (Some(version), Some(value)) = (version, value.as_ref())
-            && key.namespace.global()
+            && key.namespace.author()
             && (value.len() != 64
                 || version.owner > 1
                 || value[..32] != self.root.contexts[usize::from(version.owner)])
@@ -1408,6 +1479,13 @@ impl<
         Ok(())
     }
     fn put(&mut self, key: Key, value: &[u8], reserved: u64, internal: bool) -> Result<()> {
+        if matches!(
+            key.namespace,
+            Namespace::Migration | Namespace::LegacyBudget
+        ) && self.root.layout != RootLayout::Migrated7
+        {
+            return Err(Error::RuntimeWriterRequired);
+        }
         let cap = match key.namespace {
             Namespace::Event | Namespace::Auth => 16 * 1024,
             Namespace::Projection | Namespace::Queue => 8 * 1024,
@@ -1454,7 +1532,7 @@ impl<
                 return Err(Error::Conflict);
             }
         }
-        if key.namespace.global()
+        if key.namespace.author()
             && (value.len() != 64 || value[..32] != self.root.contexts[usize::from(key.context)])
         {
             return Err(Error::Bound("author context/EventId value"));

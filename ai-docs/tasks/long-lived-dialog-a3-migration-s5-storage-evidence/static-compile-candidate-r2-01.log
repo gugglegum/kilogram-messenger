@@ -1,0 +1,48 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+   Compiling kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+   Compiling kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error[E0277]: the trait bound `AccountId: Ord` is not satisfied
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:67:22
+   |
+67 |             && peers.contains(&snapshot.account_id()),
+   |                      ^^^^^^^^ the trait `Ord` is not implemented for `AccountId`
+   |
+note: required by a bound in `BTreeSet::<T, A>::contains`
+  --> /rustc/88d9e12ae178fab0fb5cc050a94da85685d449ea/library\alloc\src\collections\btree\set.rs:606:4
+
+error[E0277]: the trait bound `AccountId: Ord` is not satisfied
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:67:31
+   |
+67 |             && peers.contains(&snapshot.account_id()),
+   |                      -------- ^^^^^^^^^^^^^^^^^^^^^^ the trait `Ord` is not implemented for `AccountId`
+   |                      |
+   |                      required by a bound introduced by this call
+   |
+note: required by a bound in `BTreeSet::<T, A>::contains`
+  --> /rustc/88d9e12ae178fab0fb5cc050a94da85685d449ea/library\alloc\src\collections\btree\set.rs:606:4
+
+error[E0277]: the trait bound `AccountId: Ord` is not satisfied
+   --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:548:19
+    |
+548 |             peers.insert(spec.peers[(1 - role) as usize].cert.account_id());
+    |                   ^^^^^^ the trait `Ord` is not implemented for `AccountId`
+    |
+note: required by a bound in `BTreeSet::<T, A>::insert`
+   --> /rustc/88d9e12ae178fab0fb5cc050a94da85685d449ea/library\alloc\src\collections\btree\set.rs:900:4
+
+error[E0599]: no variant, associated function, or constant named `BlockedIntegrity` found for enum `MigrationStage` in the current scope
+   --> apps\kilogram-cli\src\ordered_dialog\storage_migration\tests.rs:413:57
+    |
+413 | ... == MigrationStage::BlockedIntegrity && status.credits.repair_free == [0, 0] && !cfg.output_profile.exists(), "resumed source ca...
+    |                        ^^^^^^^^^^^^^^^^ variant, associated function, or constant not found in `MigrationStage`
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `kilogram-cli` (lib) due to 3 previous errors
+warning: build failed, waiting for other jobs to finish...
+Some errors have detailed explanations: E0277, E0599.
+For more information about an error, try `rustc --explain E0277`.
+error: could not compile `kilogram-cli` (lib test) due to 4 previous errors

@@ -1043,3 +1043,36 @@ Executor поручается только exact docs commit/push по accepted 
 Root сверяет actual remote/diff и затем отдельно поручает storage migration core.
 Implementation ещё не начат; whole S5/A3/MVP не закрыты. Human standing publication
 и callback authorization сохраняются; повторный запрос пользователю не требуется.
+
+### 2026-10-25: S5 contract published and S5.1 implementation assigned
+
+Contract commit3547cf528f15c15a21cdb9e30b1d7ca35a01297a, sole parent0c1baa8,
+normal fast-forward push. Root independently verified all9 accepted path/blob/raw
+hashes, clean worktree/index, protected development-environment and actual GitHub
+master (compare identical/ahead0/behind0). Publication is complete.
+
+The same GPT-6.1 Sol Max executor, no Fast, receives
+[S5.1 storage task](tasks/long-lived-dialog-a3-migration-s5-storage-task.md).
+Product implementation is now authorized only for storage migration core, its
+offline admin path and focused evidence. No live handoff/whole P5/511/100k yet.
+Root-owned dirty task/navigation are preserved; executor submits code/evidence for
+review before commit/push and sends the authorized callback to this root chat.
+
+### 2026-10-26: S5.1 storage accepted after reviews; exact publication assigned
+
+[Review3](tasks/long-lived-dialog-a3-migration-s5-storage-implementation-review-3.md)
+accepts revision3 after R1 bounded recovery, R2 static archival scope, R3 final-source
+evidence and R4 authentic blocked-fork compatibility repairs. Root independently
+verified 227 listed candidate files plus manifest, source/build/image correspondence,
+preserved historical evidence and cumulative contributors. Process coverage is the
+documented same-candidate 3+2 scenarios, not one passing aggregate or whole P5.
+
+Current C279.3257298/600, F1236.2886628/1320, P0/2400; review2 explicitly added120s
+for R4 before its sole54.8614242s targeted run. No reset of prior contributors.
+Storage Ready retains history/keys/debts/block; live runtime remains unavailable.
+
+The same executor is assigned one exact allowlisted commit and ordinary push,
+sole parent3547cf528f15c15a21cdb9e30b1d7ca35a01297a. Root froze publication via
+[accepted manifest](tasks/long-lived-dialog-a3-migration-s5-storage-accepted-files.json).
+No product/evidence changes during publication, no S5.2 before root verifies remote.
+Human standing publication and callback authorization remains in force.

@@ -1,5 +1,6 @@
 //! Filesystem-free, byte-oriented Olm trials for explicitly negotiated OD1.
 //! Callers own ordering, authentication and the atomic persistence boundary.
+use std::sync::atomic::{AtomicU64, Ordering};
 use thiserror::Error;
 use vodozemac::{
     Curve25519PublicKey,
@@ -12,6 +13,27 @@ use vodozemac::{
 pub const MAX_INNER: usize = 8 * 1024;
 pub const MAX_OLM: usize = 12 * 1024;
 const MAX_PICKLE: usize = 128 * 1024;
+
+// Process counters distinguish persistence restore from packet crypto/constructors.
+// They carry no keys or protocol state and cannot grant persistence authority.
+static NATIVE_CALLS: [AtomicU64; 5] = [const { AtomicU64::new(0) }; 5];
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct NativeCallCounts {
+    pub fresh_account: u64,
+    pub outbound_session: u64,
+    pub inbound_session: u64,
+    pub encrypt: u64,
+    pub decrypt: u64,
+}
+pub fn native_call_counts() -> NativeCallCounts {
+    NativeCallCounts {
+        fresh_account: NATIVE_CALLS[0].load(Ordering::Relaxed),
+        outbound_session: NATIVE_CALLS[1].load(Ordering::Relaxed),
+        inbound_session: NATIVE_CALLS[2].load(Ordering::Relaxed),
+        encrypt: NATIVE_CALLS[3].load(Ordering::Relaxed),
+        decrypt: NATIVE_CALLS[4].load(Ordering::Relaxed),
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum NativeFailure {
@@ -76,6 +98,7 @@ impl Packet {
 impl OrderedAccount {
     /// Only fresh construction can generate an OTK; there is no refill API.
     pub fn fresh(receiver: bool) -> (Self, Option<[u8; 32]>) {
+        NATIVE_CALLS[0].fetch_add(1, Ordering::Relaxed);
         let mut account = Account::new();
         let otk = if receiver {
             account.generate_one_time_keys(1);
@@ -111,6 +134,7 @@ impl OrderedAccount {
     }
 
     pub fn outbound(&self, peer: [u8; 32], otk: [u8; 32]) -> Result<OrderedSession, NativeFailure> {
+        NATIVE_CALLS[1].fetch_add(1, Ordering::Relaxed);
         self.0
             .create_outbound_session(
                 SessionConfig::version_1(),
@@ -128,6 +152,7 @@ impl OrderedAccount {
         peer: [u8; 32],
         packet: &Packet,
     ) -> Result<(OrderedSession, Vec<u8>), NativeFailure> {
+        NATIVE_CALLS[2].fetch_add(1, Ordering::Relaxed);
         let OlmMessage::PreKey(prekey) = packet.decode()? else {
             return Err(NativeFailure::Input("Init must be PreKey"));
         };
@@ -184,6 +209,7 @@ impl OrderedSession {
         Ok(Self(session))
     }
     pub fn encrypt(&mut self, plaintext: &[u8]) -> Result<Packet, NativeFailure> {
+        NATIVE_CALLS[3].fetch_add(1, Ordering::Relaxed);
         if plaintext.len() > MAX_INNER {
             return Err(NativeFailure::Operational("inner length"));
         }
@@ -199,6 +225,7 @@ impl OrderedSession {
         Ok(Packet { kind, bytes })
     }
     pub fn decrypt(&mut self, packet: &Packet) -> Result<Vec<u8>, NativeFailure> {
+        NATIVE_CALLS[4].fetch_add(1, Ordering::Relaxed);
         if packet.kind != 1 {
             return Err(NativeFailure::Input("selected session requires Normal"));
         }

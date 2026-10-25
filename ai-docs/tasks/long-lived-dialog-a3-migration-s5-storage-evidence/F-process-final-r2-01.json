@@ -1,0 +1,85 @@
+{
+  "case": "F-process-final-r2-01",
+  "contributing_set": "F",
+  "elapsed_seconds": 87.123411,
+  "exit_code": 1,
+  "error": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+  "filter": "migration_s5_process_",
+  "source_manifest": "F-process-final-r2-01-source-files.json",
+  "seed_case": null,
+  "executable_inventory": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 67884544,
+      "sha256": "e81a09406c452d2ce045b685ffbb56d52d4711fe56ee491c3e94146ec5147b41"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 42399744,
+      "sha256": "c3fd069d3cbc7d22596305cf23a5aea80214212df3c1d77933d23138fc81c629"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 9430528,
+      "sha256": "1c21eae3b97e61d9a79cf99b18769cba37f097e4d9c3652e22c0125de7bd4f33"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 36692480,
+      "sha256": "4d4988fc7f65607c999c27411025a63613acc3f8a0dcccfcde52807de827cfda"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-ratchet-lib-kilogram_ratchet-tests.exe",
+      "bytes": 4277760,
+      "sha256": "e335af0b46587400a84d45ef3c8fa86bed70896446f3425aa5d680b30a803496"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-ratchet-test-a3_s3_root_review-tests.exe",
+      "bytes": 2905600,
+      "sha256": "36e7e009ddcf59e117d3bbd22fa6b6fcb6d90ce996b43a559a979a54c83b79c0"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 10577920,
+      "sha256": "cba1f3c088a03b01ac61e70090369ae6bfbfddb6fec0a89f51c3d712680f76b9"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s1_root_review-tests.exe",
+      "bytes": 6639616,
+      "sha256": "eb6f3ed5d62f6c593c5d2022ca9aea0a292870279de55517020e3eebcc6d20ff"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s2_root_review-tests.exe",
+      "bytes": 6891008,
+      "sha256": "8ef056a1d486c57b6c78d0d503706cc41ad6364b107dbff42a05175693cc9f19"
+    }
+  ],
+  "field_images_before_after_equal": [
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+      "bytes": 67716096,
+      "sha256": "a92c85cad15d16b104bd947edeb18a551dfc45c032fea7d9a6abdbf7e1613ca7"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-l1-control-peer.exe",
+      "bytes": 67716096,
+      "sha256": "a92c85cad15d16b104bd947edeb18a551dfc45c032fea7d9a6abdbf7e1613ca7"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "bytes": 61531648,
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+      "bytes": 66188800,
+      "sha256": "d5d8c8c118925dfde67e37fdb32aa5a120293cde258e93843dd1939fddb15560"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-predecessor-s3/kilogram-state-predecessor.exe",
+      "bytes": 5344768,
+      "sha256": "6932db6bc228cdd38fc358792cc5cd41fcfd1e5445c087a7c0f535ce4f0c1e4e"
+    }
+  ],
+  "rule": "Complete runner through log/inventory/ledger aggregation; includes cached compilation, staging, fixtures/copies/recovery and cleanup; final timing serialization excluded; failures retained"
+}

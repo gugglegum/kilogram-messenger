@@ -1,0 +1,72 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Checking kilogram-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-store)
+    Checking kilogram-peer-history-recovery v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery)
+    Checking kilogram-runtime-ipc v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-runtime-ipc)
+    Checking kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+    Checking kilogram-peer-history-recovery-consent v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-consent)
+    Checking kilogram-session v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-session)
+    Checking kilogram-rollout v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-rollout)
+    Checking kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+    Checking kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: unused import: `LegacyRead`
+   --> apps\kilogram-cli\src\ordered_dialog\storage_migration\tests.rs:459:22
+    |
+459 |         migration7::{LegacyRead, MigrationRepository},
+    |                      ^^^^^^^^^^
+    |
+    = note: `-D unused-imports` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unused_imports)]`
+
+error: this expression creates a reference which is immediately dereferenced by the compiler
+   --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:221:33
+    |
+221 |     let envelope = wire::decode(&raw, 8192)?;
+    |                                 ^^^^ help: change this to: `raw`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_borrow
+    = note: `-D clippy::needless-borrow` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_borrow)]`
+
+error: this `if` statement can be collapsed
+   --> apps\kilogram-cli\src\ordered_dialog\storage_migration.rs:139:5
+    |
+139 | /     if let Err(error) = &result {
+140 | |         if repo
+141 | |             .status()
+142 | |             .is_ok_and(|s| s.storage_stage != MigrationStage::Ready)
+...   |
+155 | |     }
+    | |_____^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+    = note: `-D clippy::collapsible-if` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+    |
+139 ~     if let Err(error) = &result
+140 ~         && repo
+141 |             .status()
+...
+153 |                 .context("persist migration blocked checkpoint")?;
+154 ~         }
+    |
+
+error: could not compile `kilogram-cli` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: `panic` should not be present in production code
+   --> apps\kilogram-cli\src\ordered_dialog\storage_migration\tests.rs:238:44
+    |
+238 |               repo.copy_batch(&facts, |_, _| panic!(
+    |  ____________________________________________^
+239 | |                 "closed copy must reject before mapper"
+240 | |             ))
+    | |_____________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#panic
+    = note: requested on the command line with `-D clippy::panic`
+
+error: could not compile `kilogram-cli` (lib test) due to 4 previous errors

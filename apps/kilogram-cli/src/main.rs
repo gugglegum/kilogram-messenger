@@ -4115,6 +4115,7 @@ async fn run_command(command: Command) -> Result<()> {
             )
         }
         Command::RuntimeFromProfile { profile_file } => {
+            kilogram_cli::ordered_dialog::storage_migration::reject_indexed_runtime(&profile_file)?;
             if ordered2_cli::is_launch(&profile_file)? {
                 return kilogram_cli::ordered_dialog::runtime2::runtime::run(
                     kilogram_cli::ordered_dialog::runtime2::config::Profile2::load(&profile_file)?,

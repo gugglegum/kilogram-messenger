@@ -117,13 +117,54 @@ pub enum Command {
         slot: u8,
     },
     StorageUpgrade {
+        #[command(flatten)]
+        access: StorageAccess,
         #[arg(long)]
-        state_dir: PathBuf,
+        config_file: PathBuf,
+        #[arg(long, conflicts_with = "resume", required_unless_present = "resume")]
+        check: bool,
+        #[arg(long, conflicts_with = "check", required_unless_present = "check")]
+        resume: bool,
+        #[arg(long)]
+        expected_profile_hash: Option<String>,
+    },
+    StorageUpgradeStatus(StorageAccess),
+    StorageUpgradePause(StorageAccess),
+    StorageHistory {
+        #[command(flatten)]
+        access: StorageAccess,
+        #[arg(long)]
+        context: String,
+        #[arg(long, default_value_t = 0)]
+        offset: usize,
+        #[arg(long, default_value_t = 8)]
+        limit: usize,
+    },
+    StorageIncreaseCapacity {
+        #[command(flatten)]
+        access: StorageAccess,
+        #[arg(long)]
+        config_file: PathBuf,
+        #[arg(long)]
+        expected_root_generation: u64,
+        #[arg(long)]
+        expected_config_revision: u64,
+        #[arg(long)]
+        expected_config_hash: String,
     },
     Upgrade {
         #[arg(long)]
         state_dir: PathBuf,
     },
+}
+#[derive(Debug, Args)]
+pub struct StorageAccess {
+    #[arg(long)]
+    state_dir: PathBuf,
+    #[arg(long)]
+    expect_account: AccountId,
+    #[arg(long)]
+    expect_device: DeviceId,
 }
 #[derive(Debug, Args)]
 pub struct Ceremony2 {
@@ -146,6 +187,11 @@ impl Command {
             Self::Context2Import { state_dir, .. } | Self::Enrollment2Resume { state_dir, .. } => {
                 Some(state_dir)
             }
+            Self::StorageUpgrade { access, .. }
+            | Self::StorageUpgradeStatus(access)
+            | Self::StorageUpgradePause(access)
+            | Self::StorageHistory { access, .. }
+            | Self::StorageIncreaseCapacity { access, .. } => Some(&access.state_dir),
             _ => None,
         }
     }
@@ -262,6 +308,92 @@ fn json(value: &Value) -> serde_json::Value {
     }
 }
 pub async fn run(command: Command, lease: Option<StateDirectoryLock>) -> Result<()> {
+    use kilogram_cli::ordered_dialog::storage_migration as migration;
+    let command = match command {
+        Command::StorageUpgrade {
+            access,
+            config_file,
+            check,
+            expected_profile_hash,
+            ..
+        } => {
+            let config = migration::load_config(&config_file)?;
+            let output = migration::upgrade(
+                lease.context("migration lifetime lease")?,
+                access.expect_account,
+                access.expect_device,
+                &config,
+                check,
+                expected_profile_hash.as_deref().map(parse_id).transpose()?,
+            )?;
+            println!("{output}");
+            return Ok(());
+        }
+        Command::StorageUpgradeStatus(access) => {
+            println!(
+                "{}",
+                migration::status(
+                    lease.context("migration lease")?,
+                    access.expect_account,
+                    access.expect_device
+                )?
+            );
+            return Ok(());
+        }
+        Command::StorageUpgradePause(access) => {
+            println!(
+                "{}",
+                migration::pause(
+                    lease.context("migration lease")?,
+                    access.expect_account,
+                    access.expect_device
+                )?
+            );
+            return Ok(());
+        }
+        Command::StorageHistory {
+            access,
+            context,
+            offset,
+            limit,
+        } => {
+            println!(
+                "{}",
+                migration::history(
+                    lease.context("migration lease")?,
+                    access.expect_account,
+                    access.expect_device,
+                    parse_id(&context)?,
+                    offset,
+                    limit
+                )?
+            );
+            return Ok(());
+        }
+        Command::StorageIncreaseCapacity {
+            access,
+            config_file,
+            expected_root_generation,
+            expected_config_revision,
+            expected_config_hash,
+        } => {
+            let config = migration::load_config(&config_file)?;
+            println!(
+                "{}",
+                migration::increase_capacity(
+                    lease.context("migration lease")?,
+                    access.expect_account,
+                    access.expect_device,
+                    &config,
+                    expected_root_generation,
+                    expected_config_revision,
+                    parse_id(&expected_config_hash)?
+                )?
+            );
+            return Ok(());
+        }
+        other => other,
+    };
     if let Command::Consent2Create(args) | Command::Context2Create(args) = &command {
         ensure!(
             args.credentials.len() == 2 && args.accounts.len() == 2,
@@ -488,7 +620,13 @@ pub async fn run(command: Command, lease: Option<StateDirectoryLock>) -> Result<
         Command::Sync2 { ipc_file, slot } => {
             call(&ipc_file, a([u(2), u(7), u(u64::from(slot))])).await?
         }
-        Command::StorageUpgrade { .. } => bail!("UnsupportedMigration: successor S5"),
+        Command::StorageUpgrade { .. }
+        | Command::StorageUpgradeStatus(_)
+        | Command::StorageUpgradePause(_)
+        | Command::StorageHistory { .. }
+        | Command::StorageIncreaseCapacity { .. } => {
+            unreachable!("offline migration dispatched under original lease")
+        }
         Command::Upgrade { .. } => bail!("UnsupportedHandoff: successor S5"),
     };
     println!("{}", json(&result));

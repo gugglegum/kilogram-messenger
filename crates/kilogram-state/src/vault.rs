@@ -537,7 +537,10 @@ impl EncryptedStateVault {
     }
 
     pub fn open_existing(state_directory: impl AsRef<Path>) -> Result<Self, StateError> {
-        let requested = state_directory.as_ref();
+        Self::open_existing_cache(state_directory.as_ref(), None)
+    }
+
+    fn open_existing_cache(requested: &Path, cache: Option<usize>) -> Result<Self, StateError> {
         let root = io_at(requested, fs::canonicalize(requested))?;
         let database_path = root.join(STATE_VAULT_FILE);
         let key_path = root.join(STATE_VAULT_KEY_FILE);
@@ -550,7 +553,14 @@ impl EncryptedStateVault {
         }
         reject_symlink(&key_path)?;
         let loaded_key = load_master_key(&key_path)?;
-        let database = Database::open(&database_path).map_err(vault_database_error)?;
+        let database = if let Some(cache) = cache {
+            let mut builder = Database::builder();
+            builder.set_cache_size(cache);
+            builder.open(&database_path)
+        } else {
+            Database::open(&database_path)
+        }
+        .map_err(vault_database_error)?;
         Ok(Self {
             root,
             database,
@@ -1186,7 +1196,15 @@ impl EncryptedStateVault {
         let Some(encoded) = self.load_metadata(GENERATION_KEY)? else {
             return Ok(1);
         };
-        let generation: VaultGenerationRecord = postcard::from_bytes(&encoded)?;
+        self.decode_generation(manifest, &encoded)
+    }
+
+    fn decode_generation(
+        &self,
+        manifest: &VaultManifest,
+        encoded: &[u8],
+    ) -> Result<u64, StateError> {
+        let generation: VaultGenerationRecord = postcard::from_bytes(encoded)?;
         if generation.version != MIRROR_METADATA_VERSION {
             return Err(StateError::UnsupportedVaultMirrorMetadataVersion(
                 generation.version,

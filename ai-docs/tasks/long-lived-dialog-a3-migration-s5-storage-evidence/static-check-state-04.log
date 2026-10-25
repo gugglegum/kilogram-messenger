@@ -1,0 +1,38 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+warning: unused import: `Value`
+ --> crates\kilogram-state\src\vault\indexed_dialog\migration7\operations.rs:2:26
+  |
+2 | use super::{codec::{self,Value,a,b,opt,u},records::*,copy::CopyItem};
+  |                          ^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused imports: `Value`, `a`, `b`, and `self`
+ --> crates\kilogram-state\src\vault\indexed_dialog\migration7\admin.rs:2:21
+  |
+2 | use super::{codec::{self,Value,a,b},records::*,copy::MigrationProjection,Operation,LegacyEntry,MigrationRepository,MigrationStage};
+  |                     ^^^^ ^^^^^ ^ ^
+
+error[E0277]: `&zeroize::Zeroizing<Vec<u8>>` is not an iterator
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\copy.rs:156:84
+    |
+156 |                 let mut raw=self.root.contexts[usize::from(c)].to_vec();raw.extend(&item.body);
+    |                                                                             ------ ^^^^^^^^^^ `&zeroize::Zeroizing<Vec<u8>>` is not an iterator
+    |                                                                             |
+    |                                                                             required by a bound introduced by this call
+    |
+    = help: the trait `Iterator` is not implemented for `&zeroize::Zeroizing<Vec<u8>>`
+    = note: required for `&zeroize::Zeroizing<Vec<u8>>` to implement `IntoIterator`
+note: required by a bound in `extend`
+   --> /rustc/88d9e12ae178fab0fb5cc050a94da85685d449ea/library\core\src\iter\traits\collect.rs:416:4
+help: consider dereferencing here
+    |
+156 |                 let mut raw=self.root.contexts[usize::from(c)].to_vec();raw.extend(&*item.body);
+    |                                                                                     +
+
+For more information about this error, try `rustc --explain E0277`.
+warning: `kilogram-state` (lib) generated 2 warnings
+error: could not compile `kilogram-state` (lib) due to 1 previous error; 2 warnings emitted

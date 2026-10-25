@@ -1,0 +1,10 @@
+{
+  "case": "static-harness-cli-01",
+  "kind": "compile-and-stage-only",
+  "contributing_set": "compile-static-separate",
+  "elapsed_seconds": 57.7546291,
+  "exit_code": 0,
+  "error": null,
+  "source_manifest": "source-reader-smoke-source-files.json",
+  "native_CIM_exact_stable_images": []
+}

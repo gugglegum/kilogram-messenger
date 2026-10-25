@@ -1,0 +1,183 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-crypto v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-crypto)
+    Checking kilogram-identity v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-identity)
+    Checking kilogram-mailbox v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox)
+    Checking iroh-relay v1.1.0
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Checking kilogram-ticket-publication v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ticket-publication)
+    Checking kilogram-ticket-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-ticket-store)
+    Checking kilogram-mailbox-client v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-client)
+    Checking kilogram-sync-capability v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-sync-capability)
+    Checking kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+    Checking kilogram-publication-conflict v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-publication-conflict)
+    Checking kilogram-mailbox-provisioning v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-provisioning)
+    Checking kilogram-peer-capability-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-capability-store)
+    Checking kilogram-peer-reenrollment-staging v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-staging)
+    Checking iroh v1.1.0
+    Checking kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+    Checking kilogram-peer-reenrollment v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment)
+warning: constant `MODE5` is never used
+  --> crates\kilogram-state\src\vault\indexed_dialog\migration7\source.rs:12:18
+   |
+12 | pub(super) const MODE5: &[u8] = b"kilogram:ordered-dialog:v2\0";
+   |                  ^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `backend` is never read
+  --> crates\kilogram-state\src\vault\indexed_dialog\migration7\source.rs:33:16
+   |
+30 | pub struct V4Source {
+   |            -------- field in this struct
+...
+33 |     pub(super) backend: backend::BackendControl,
+   |                ^^^^^^^
+
+warning: multiple fields are never read
+  --> crates\kilogram-state\src\vault\indexed_dialog\migration7\source.rs:37:9
+   |
+36 | pub(super) struct Inventory {
+   |                   --------- fields in this struct
+37 |     pub identity: Value,
+   |         ^^^^^^^^
+...
+41 |     pub manifest_raw: Vec<u8>,
+   |         ^^^^^^^^^^^^
+42 |     pub mode_raw: Vec<u8>,
+   |         ^^^^^^^^
+43 |     pub inventory_digest: Id,
+   |         ^^^^^^^^^^^^^^^^
+44 |     pub backing_digest: Id,
+   |         ^^^^^^^^^^^^^^
+45 |     pub backing_entries: u64,
+   |         ^^^^^^^^^^^^^^^
+46 |     pub backing_bytes: u64,
+   |         ^^^^^^^^^^^^^
+
+warning: function `hex` is never used
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\source.rs:114:15
+    |
+114 | pub(super) fn hex(raw: &[u8]) -> String { raw.iter().map(|x|format!("{x:02x}")).collect() }
+    |               ^^^
+
+    Checking kilogram-peer-reenrollment-acceptance v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-acceptance)
+warning: `kilogram-state` (lib) generated 4 warnings
+    Checking kilogram-peer-reenrollment-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-runtime)
+    Checking kilogram-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-store)
+    Checking kilogram-peer-history-recovery v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery)
+    Checking kilogram-runtime-ipc v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-runtime-ipc)
+    Checking kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+    Checking kilogram-peer-history-recovery-consent v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-consent)
+    Checking kilogram-session v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-session)
+    Checking kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+    Checking kilogram-rollout v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-rollout)
+    Checking kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+warning: unused import: `Value`
+ --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:6:66
+  |
+6 | use kilogram_protocol::ordered_dialog_v1::{self as wire,Event,Id,Value,a,b,u};
+  |                                                                  ^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `ReadableMeta` is never constructed
+ --> apps\kilogram-cli\src\ordered_dialog\storage_migration\fold.rs:9:19
+  |
+9 | pub(super) struct ReadableMeta {
+  |                   ^^^^^^^^^^^^
+  |
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: associated function `of` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\fold.rs:17:12
+   |
+16 | impl ReadableMeta {
+   | ----------------- associated function in this implementation
+17 |     pub fn of(event: &Event) -> Result<Self> {
+   |            ^^
+
+warning: function `lane` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\fold.rs:26:4
+   |
+26 | fn lane(old:&Lane) -> g2::Lane {
+   |    ^^^^
+
+warning: function `fold` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\fold.rs:30:15
+   |
+30 | pub(super) fn fold(old:&Guard, lanes:&[Vec<ReadableMeta>;2]) -> Result<g2::ImportedL1> {
+   |               ^^^^
+
+warning: struct `ContextOrigin` is never constructed
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:12:19
+   |
+12 | pub(super) struct ContextOrigin {
+   |                   ^^^^^^^^^^^^^
+
+warning: struct `PendingOrigin` is never constructed
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:22:19
+   |
+22 | pub(super) struct PendingOrigin {
+   |                   ^^^^^^^^^^^^^
+
+warning: struct `VerifiedSource` is never constructed
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:30:19
+   |
+30 | pub(super) struct VerifiedSource {
+   |                   ^^^^^^^^^^^^^^
+
+warning: function `required` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:36:4
+   |
+36 | fn required(source:&dyn LegacyRead,path:&str)->Result<Zeroizing<Vec<u8>>> {Ok(source.required(path)?)}
+   |    ^^^^^^^^
+
+warning: function `credential` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:37:4
+   |
+37 | fn credential(source:&dyn LegacyRead,id:Id,spec:&Spec,role:u64)->Result<Credentials> {
+   |    ^^^^^^^^^^
+
+warning: function `control` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:42:4
+   |
+42 | fn control(source:&dyn LegacyRead,c:Id,id:Id)->Result<Zeroizing<Vec<u8>>> {
+   |    ^^^^^^^
+
+warning: function `selected_native` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:46:4
+   |
+46 | fn selected_native(source:&dyn LegacyRead,device:&DeviceState,nonce:Id,spec:&Spec,head:&Head)->Result<Option<PrivateState>> {
+   |    ^^^^^^^^^^^^^^^
+
+warning: function `event` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:81:4
+   |
+81 | fn event(source:&dyn LegacyRead,spec:&Spec,head:&Head,role:u64,n:u64,id:Id)->Result<Event> {
+   |    ^^^^^
+
+warning: function `projection` is never used
+   --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:100:15
+    |
+100 | pub(super) fn projection(source:&dyn LegacyRead,device:&DeviceState,head:&Head,id:Id)->Result<(String,[u8;16])> {
+    |               ^^^^^^^^^^
+
+warning: function `receipt` is never used
+   --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:111:4
+    |
+111 | fn receipt(source:&dyn LegacyRead,spec:&Spec,head:&Head,m:&fold::ReadableMeta)->Result<Option<Id>> {
+    |    ^^^^^^^
+
+warning: associated function `verify` is never used
+   --> apps\kilogram-cli\src\ordered_dialog\storage_migration\provenance.rs:123:12
+    |
+122 | impl VerifiedSource {
+    | ------------------- associated function in this implementation
+123 |     pub fn verify(source:&dyn LegacyRead,account:AccountId,expected_device:DeviceId)->Result<Self> {
+    |            ^^^^^^
+
+warning: `kilogram-cli` (lib) generated 16 warnings (run `cargo fix --lib -p kilogram-cli` to apply 1 suggestion)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 26.36s

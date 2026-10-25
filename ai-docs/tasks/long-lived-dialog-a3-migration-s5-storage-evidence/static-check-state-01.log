@@ -1,0 +1,52 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+error[E0583]: file not found for module `codec`
+ --> crates\kilogram-state\src\vault\indexed_dialog\migration7.rs:2:1
+  |
+2 | pub mod codec;
+  | ^^^^^^^^^^^^^^
+  |
+  = help: to create the module `codec`, create file "crates\kilogram-state\src\vault\indexed_dialog\codec.rs" or "crates\kilogram-state\src\vault\indexed_dialog\codec\mod.rs"
+  = note: if there is a `mod codec` elsewhere in the crate already, import it with `use crate::...` instead
+
+error[E0583]: file not found for module `source`
+ --> crates\kilogram-state\src\vault\indexed_dialog\migration7.rs:3:1
+  |
+3 | mod source;
+  | ^^^^^^^^^^^
+  |
+  = help: to create the module `source`, create file "crates\kilogram-state\src\vault\indexed_dialog\source.rs" or "crates\kilogram-state\src\vault\indexed_dialog\source\mod.rs"
+  = note: if there is a `mod source` elsewhere in the crate already, import it with `use crate::...` instead
+
+error[E0425]: cannot find function `reject_relative_symlinks` in this scope
+   --> crates\kilogram-state\src\vault\ordered.rs:736:13
+    |
+736 |             reject_relative_symlinks(&vault.root,Path::new(&record.relative_path))?;
+    |             ^^^^^^^^^^^^^^^^^^^^^^^^ not found in this scope
+    |
+help: consider importing this function
+    |
+  3 + use crate::reject_relative_symlinks;
+    |
+
+error[E0599]: no variant, associated function, or constant named `VaultManifestMissing` found for enum `StateError` in the current scope
+   --> crates\kilogram-state\src\vault\ordered.rs:712:59
+    |
+712 |     let manifest=vault.load_manifest()?.ok_or(StateError::VaultManifestMissing)?;
+    |                                                           ^^^^^^^^^^^^^^^^^^^^ variant, associated function, or constant not found in `StateError`
+    |
+   ::: crates\kilogram-state\src\lib.rs:59:1
+    |
+ 59 | pub enum StateError {
+    | ------------------- variant, associated function, or constant `VaultManifestMissing` not found for this enum
+    |
+help: there is a variant with a similar name
+    |
+712 |     let manifest=vault.load_manifest()?.ok_or(StateError::VaultManifestIndexMissing)?;
+    |                                                                        +++++
+
+Some errors have detailed explanations: E0425, E0583, E0599.
+For more information about an error, try `rustc --explain E0425`.
+error: could not compile `kilogram-state` (lib) due to 4 previous errors

@@ -1,6 +1,6 @@
 //! Debug-only process scheduler. It delays real committed network records;
 //! it never creates credentials, sessions, decoded messages or receiver state.
-use anyhow::{Result, ensure};
+use anyhow::{Context, Result, ensure};
 use kilogram_protocol::ordered_dialog_v1::{Frame, Id};
 use serde::Deserialize;
 use std::{path::PathBuf, time::Duration};
@@ -126,8 +126,10 @@ pub fn checkpoint(name: &str) -> Result<()> {
         return Ok(());
     }
     let hit = path.with_extension("hit");
-    std::fs::write(&hit, name.as_bytes())?;
-    std::fs::File::open(&hit)?.sync_all()?;
+    let mut marker = tempfile::NamedTempFile::new_in(hit.parent().context("marker parent")?)?;
+    std::io::Write::write_all(marker.as_file_mut(), name.as_bytes())?;
+    marker.as_file().sync_all()?;
+    marker.persist(&hit)?;
     // The acceptance parent kills the real child at the durable marker. A
     // release is useful for injected-error tests without killing the process.
     while load()?.pause_point.as_deref() == Some(name) {

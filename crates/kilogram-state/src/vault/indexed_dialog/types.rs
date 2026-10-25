@@ -125,12 +125,20 @@ pub enum Namespace {
     Admission = 20,
     Runtime = 21,
     RuntimeProfile = 22,
+    Migration = 23,
+    LegacyBudget = 24,
 }
 impl Namespace {
     pub(crate) fn mutable(self) -> bool {
         matches!(
             self,
-            Self::Request | Self::Current | Self::Native | Self::Runtime | Self::RuntimeProfile
+            Self::Request
+                | Self::Current
+                | Self::Native
+                | Self::Runtime
+                | Self::RuntimeProfile
+                | Self::Migration
+                | Self::LegacyBudget
         )
     }
     pub(crate) fn numeric(self) -> bool {
@@ -149,6 +157,9 @@ impl Namespace {
         )
     }
     pub(crate) fn global(self) -> bool {
+        self.author() || self == Self::Migration
+    }
+    pub(crate) fn author(self) -> bool {
         matches!(self, Self::Author0 | Self::Author1 | Self::Author2)
     }
 }
@@ -200,6 +211,18 @@ impl Key {
     pub(crate) fn slot(self) -> Result<usize> {
         if self.context > 1 {
             return Err(Error::Bound("context"));
+        }
+        if self.namespace == Namespace::Migration {
+            if self.context != 0 {
+                return Err(Error::Bound("global migration owner"));
+            }
+            return Ok(51);
+        }
+        if self.namespace == Namespace::LegacyBudget {
+            if self.bytes != [0; 32] {
+                return Err(Error::Bound("legacy budget singleton"));
+            }
+            return Ok(usize::from(self.context) * 24 + 23);
         }
         if self.namespace == Namespace::RuntimeProfile && self.context != 0 {
             return Err(Error::Bound("runtime profile slot"));

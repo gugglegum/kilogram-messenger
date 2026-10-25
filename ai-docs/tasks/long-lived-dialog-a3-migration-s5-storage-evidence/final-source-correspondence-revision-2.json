@@ -1,0 +1,408 @@
+{
+  "baseline": "3547cf528f15c15a21cdb9e30b1d7ca35a01297a",
+  "current_sources": [
+    {
+      "path": "apps/kilogram-cli/src/main.rs",
+      "bytes": 1755687,
+      "sha256": "21f12aaa290313c86205655d11ebae6c3e7008185955c9f3e01577113b46c376"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+      "bytes": 371,
+      "sha256": "e61a238344c569f8bbcf11f8987b41b361d3450294bf6445bfb5075808d61b47"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration.rs",
+      "bytes": 9820,
+      "sha256": "0964255d6159dd2f93b588921d667168d69f66e24a9076614773b73d5c67abd4"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration/fold.rs",
+      "bytes": 6883,
+      "sha256": "4f0f8fa8ab4d35305955a036bcb5b0116648cf765bc8f63b7bacdccd23b691a1"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration/provenance.rs",
+      "bytes": 39897,
+      "sha256": "df2d94dd99a3184acc2850c1d5653f2f9a439147af27de10fc1825b4aa3f7dac"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration/tests.rs",
+      "bytes": 37701,
+      "sha256": "822ed3b73a5aabc0cbc7d621665a6635e322a919b49d1af03e33ff1147af3300"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/test_support.rs",
+      "bytes": 5745,
+      "sha256": "49aaf630594a58dd2252f97b5511f3dc50bc0376cb7f30a90155f638743d0d6c"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered2_cli.rs",
+      "bytes": 19029,
+      "sha256": "24d6453cd7e8b9c923df036340f50fe7d8db52f89fc029b95c3ddc149bef1049"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/migration_s5_process.rs",
+      "bytes": 48095,
+      "sha256": "7c8570b06cd58bdc446d31fbe1b3f388d839ee760e6ab74f266d7aaad1737326"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 194144,
+      "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126"
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/ordered.rs",
+      "bytes": 11324,
+      "sha256": "c0c6a1e1439b7108659f3a6d8132b85eef1532426288228429fac1f3bfb0db5e"
+    },
+    {
+      "path": "crates/kilogram-state/src/lib.rs",
+      "bytes": 68607,
+      "sha256": "9e348f4ee779cc4ea1a084d30bee44880ab7307e9ec6b38eae012dfb059c93c4"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault.rs",
+      "bytes": 155310,
+      "sha256": "4941ef006f405c47f56e79fa01f63e15a3624cfbed7f1801168dc2d00a689c8e"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/authenticated_index.rs",
+      "bytes": 20011,
+      "sha256": "b627e651864e46e75577cf77a939f97ce9a42a49c80aa31e68788a84dc439a84"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "bytes": 57743,
+      "sha256": "16308a4d7e6ee0a4f335f0fdf7a097cd2520b1fa5f3813a5c06a7830b8830a1a"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "bytes": 26632,
+      "sha256": "1d8f9be1a35184d56fab07db9c2b33ca8d5bb1a41c3a356b333fd6fe0833dd57"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7.rs",
+      "bytes": 4099,
+      "sha256": "20895323670a69887fbd2986602a275ae0fb2452f6a601eed96d14ea932c68ea"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/admin.rs",
+      "bytes": 21063,
+      "sha256": "d9a48545c1a9c6340e6b908501d5e38edb2c6c3ccf7f9ba224ee033b7c31c9fb"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/codec.rs",
+      "bytes": 7701,
+      "sha256": "66a4a6cf565c407d7e0f8f3317b3576edf766f96c00da93c73e0b1e017e3f4b7"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/copy.rs",
+      "bytes": 29714,
+      "sha256": "80f24131c2bd67479bfe36078005cd5f9def632f783ba9d92eedc95efa893058"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/fence.rs",
+      "bytes": 14975,
+      "sha256": "fb988ed77bac232b0cf92a697be1514b735432674ce0f2ac236f37efeb116536"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/load.rs",
+      "bytes": 5490,
+      "sha256": "875e1ebae7621323d473c45d31963fede375c12e1137e05a32301451e3182c4b"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/operations.rs",
+      "bytes": 18985,
+      "sha256": "0e7ccc08fae8da85788f7fa12766cdb78518bfcf7efffc621cd53d9370b0da15"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/preview.rs",
+      "bytes": 14298,
+      "sha256": "61df4b3455519b687cb34fb45f6f37fa755529a695fbd805ff7f950d88b9820a"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/records.rs",
+      "bytes": 31715,
+      "sha256": "32a8aa0d72f2327cb08d0c1bc05a76264b30c27d961e250e4573a85c5a1ac918"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/source.rs",
+      "bytes": 17988,
+      "sha256": "180cd7f293da8a209d7861a71ea5f39ef0eb9786f0bca338eb1a946e5073362d"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/tests.rs",
+      "bytes": 5761,
+      "sha256": "4b8be83c9c33652fa865ef64e5ca821d91ffc46f7baeec1c8a16e333547ed80c"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "bytes": 11298,
+      "sha256": "f942a538c62208a98ac623a2ebab7dfe443b80af2be3b5c051842bb5395965ed"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/ordered.rs",
+      "bytes": 45384,
+      "sha256": "421c53d9bd57dcbe4946ec92b3a146b097e4bc2c6d4fdf50d06c95d3bb4c7993"
+    },
+    {
+      "path": "scripts/invoke-cargo-friendly.ps1",
+      "bytes": 1103,
+      "sha256": "14abfe0cd8fcec63b956aa915b1f35430949b723d9b0e559aa8aef67d43fd803"
+    },
+    {
+      "path": "scripts/invoke-migration-s5-case.ps1",
+      "bytes": 6896,
+      "sha256": "8cb121c3f146d6afa6f4faddef1287622c348f008e3240d65e3415cc9f811647"
+    },
+    {
+      "path": "scripts/run-cargo-tests-stable.ps1",
+      "bytes": 10839,
+      "sha256": "c2cba5140b56c99a6482884e049426ba0ed54e90b572aebf01ace45e65cd06c3"
+    },
+    {
+      "path": "scripts/stage-migration-s5-images.ps1",
+      "bytes": 5064,
+      "sha256": "20e35e2b7a1b2af417e0bbdb21a4fea9adaaaf9f16b54f1285bbdf698b556bf8"
+    }
+  ],
+  "final_cases": [
+    {
+      "case": "C-ordered-recovery-r2-02",
+      "elapsed_seconds": 27.2427722,
+      "exit_code": 0,
+      "source_manifest": "C-ordered-recovery-r2-02-source-files.json",
+      "file_count": 33,
+      "different_current_files": [],
+      "interpretation": "pass"
+    },
+    {
+      "case": "C-storage-invariants-r2-02",
+      "elapsed_seconds": 14.6817899,
+      "exit_code": 0,
+      "source_manifest": "C-storage-invariants-r2-02-source-files.json",
+      "file_count": 33,
+      "different_current_files": [],
+      "interpretation": "pass"
+    },
+    {
+      "case": "F-storage-final-r2-02",
+      "elapsed_seconds": 76.1118936,
+      "exit_code": 0,
+      "source_manifest": "F-storage-final-r2-02-source-files.json",
+      "file_count": 33,
+      "different_current_files": [],
+      "interpretation": "pass"
+    },
+    {
+      "case": "F-process-final-r2-01",
+      "elapsed_seconds": 87.123411,
+      "exit_code": 1,
+      "source_manifest": "F-process-final-r2-01-source-files.json",
+      "file_count": 33,
+      "different_current_files": [],
+      "interpretation": "3 process scenarios passed; 2 stopped at missing FixtureDirectory precondition and are completed by the exact-source controls case. Full failed attempt retained/charged."
+    },
+    {
+      "case": "F-process-controls-final-r2-02",
+      "elapsed_seconds": 94.023144,
+      "exit_code": 0,
+      "source_manifest": "F-process-controls-final-r2-02-source-files.json",
+      "file_count": 33,
+      "different_current_files": [],
+      "interpretation": "pass"
+    }
+  ],
+  "final_field_build": "static-field-images-r2-02.json",
+  "field_build_input_count": 439,
+  "field_build_current_differences": [],
+  "images": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-migration\\kilogram-cli.exe",
+      "bytes": 67716096,
+      "sha256": "a92c85cad15d16b104bd947edeb18a551dfc45c032fea7d9a6abdbf7e1613ca7",
+      "matches_build_stage": true
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-migration\\kilogram-l1-control-peer.exe",
+      "bytes": 67716096,
+      "sha256": "a92c85cad15d16b104bd947edeb18a551dfc45c032fea7d9a6abdbf7e1613ca7",
+      "matches_build_stage": true
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "bytes": 61531648,
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+      "matches_build_stage": true
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+      "bytes": 66188800,
+      "sha256": "d5d8c8c118925dfde67e37fdb32aa5a120293cde258e93843dd1939fddb15560",
+      "matches_build_stage": true
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-predecessor-s3/kilogram-state-predecessor.exe",
+      "bytes": 5344768,
+      "sha256": "6932db6bc228cdd38fc358792cc5cd41fcfd1e5445c087a7c0f535ce4f0c1e4e",
+      "matches_build_stage": true
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-relay.exe",
+      "bytes": 17057280,
+      "sha256": "b8723b8cb546a0ceccf3179415d580b073f0a36d2f9a458ecfd15c66bf2c6317",
+      "matches_build_stage": true
+    }
+  ],
+  "revision_source_deltas": [
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration/provenance.rs",
+      "submission1_sha256": "0cd7958cf32dd3437b1bbbd6e226b37a0b39960cd27f8934d72efeb2d7f1d6da",
+      "current_sha256": "df2d94dd99a3184acc2850c1d5653f2f9a439147af27de10fc1825b4aa3f7dac"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration/tests.rs",
+      "submission1_sha256": "c6314efc3639b36bb5e290af244ee95cd8b0b15e3e0e59a80e0d187c1167806b",
+      "current_sha256": "822ed3b73a5aabc0cbc7d621665a6635e322a919b49d1af03e33ff1147af3300"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault.rs",
+      "submission1_sha256": "70cc1daff62e96ec214a8b1799f8482393b4ef0d170ef85c61aa702b699e10a9",
+      "current_sha256": "4941ef006f405c47f56e79fa01f63e15a3624cfbed7f1801168dc2d00a689c8e"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/ordered.rs",
+      "submission1_sha256": "0cc5f9f3d24b9eb17d7047a527f5b115be8d2fb7a8993cc4f92a2784091f8fbf",
+      "current_sha256": "421c53d9bd57dcbe4946ec92b3a146b097e4bc2c6d4fdf50d06c95d3bb4c7993"
+    },
+    {
+      "path": "scripts/invoke-migration-s5-case.ps1",
+      "submission1_sha256": "2406b46e52e705f9f00c5295fe7defd8215a5dd14cb02f60a5277272b9adbda0",
+      "current_sha256": "8cb121c3f146d6afa6f4faddef1287622c348f008e3240d65e3415cc9f811647"
+    },
+    {
+      "path": "scripts/stage-migration-s5-images.ps1",
+      "submission1_sha256": "f6bc928eec99e806f466d2a8bd0afc20ff5af5fd4645fd313229933ee2186347",
+      "current_sha256": "20e35e2b7a1b2af417e0bbdb21a4fea9adaaaf9f16b54f1285bbdf698b556bf8"
+    }
+  ],
+  "reused_shared_cases": [
+    {
+      "case": "C-runtime6-regression-01",
+      "source_manifest": "C-runtime6-regression-01-source-files.json",
+      "historical_exit_code": 0,
+      "different_current_files": [
+        {
+          "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration/provenance.rs",
+          "snapshot_sha256": "0cd7958cf32dd3437b1bbbd6e226b37a0b39960cd27f8934d72efeb2d7f1d6da",
+          "current_sha256": "df2d94dd99a3184acc2850c1d5653f2f9a439147af27de10fc1825b4aa3f7dac"
+        },
+        {
+          "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration/tests.rs",
+          "snapshot_sha256": "c6314efc3639b36bb5e290af244ee95cd8b0b15e3e0e59a80e0d187c1167806b",
+          "current_sha256": "822ed3b73a5aabc0cbc7d621665a6635e322a919b49d1af03e33ff1147af3300"
+        },
+        {
+          "path": "crates/kilogram-state/src/vault.rs",
+          "snapshot_sha256": "70cc1daff62e96ec214a8b1799f8482393b4ef0d170ef85c61aa702b699e10a9",
+          "current_sha256": "4941ef006f405c47f56e79fa01f63e15a3624cfbed7f1801168dc2d00a689c8e"
+        },
+        {
+          "path": "crates/kilogram-state/src/vault/ordered.rs",
+          "snapshot_sha256": "0cc5f9f3d24b9eb17d7047a527f5b115be8d2fb7a8993cc4f92a2784091f8fbf",
+          "current_sha256": "421c53d9bd57dcbe4946ec92b3a146b097e4bc2c6d4fdf50d06c95d3bb4c7993"
+        },
+        {
+          "path": "scripts/invoke-migration-s5-case.ps1",
+          "snapshot_sha256": "2406b46e52e705f9f00c5295fe7defd8215a5dd14cb02f60a5277272b9adbda0",
+          "current_sha256": "8cb121c3f146d6afa6f4faddef1287622c348f008e3240d65e3415cc9f811647"
+        },
+        {
+          "path": "scripts/stage-migration-s5-images.ps1",
+          "snapshot_sha256": "f6bc928eec99e806f466d2a8bd0afc20ff5af5fd4645fd313229933ee2186347",
+          "current_sha256": "20e35e2b7a1b2af417e0bbdb21a4fea9adaaaf9f16b54f1285bbdf698b556bf8"
+        }
+      ],
+      "branch_reason": "Indexed Component5/Runtime6 subjects unchanged; direct read_root/anchor path does not call changed V4 ordered helper; generation validation body unchanged; V4 recovery and actual version fences rerun."
+    },
+    {
+      "case": "C-component-regression-01",
+      "source_manifest": "C-component-regression-01-source-files.json",
+      "historical_exit_code": 0,
+      "different_current_files": [
+        {
+          "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration/provenance.rs",
+          "snapshot_sha256": "0cd7958cf32dd3437b1bbbd6e226b37a0b39960cd27f8934d72efeb2d7f1d6da",
+          "current_sha256": "df2d94dd99a3184acc2850c1d5653f2f9a439147af27de10fc1825b4aa3f7dac"
+        },
+        {
+          "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration/tests.rs",
+          "snapshot_sha256": "c6314efc3639b36bb5e290af244ee95cd8b0b15e3e0e59a80e0d187c1167806b",
+          "current_sha256": "822ed3b73a5aabc0cbc7d621665a6635e322a919b49d1af03e33ff1147af3300"
+        },
+        {
+          "path": "crates/kilogram-state/src/vault.rs",
+          "snapshot_sha256": "70cc1daff62e96ec214a8b1799f8482393b4ef0d170ef85c61aa702b699e10a9",
+          "current_sha256": "4941ef006f405c47f56e79fa01f63e15a3624cfbed7f1801168dc2d00a689c8e"
+        },
+        {
+          "path": "crates/kilogram-state/src/vault/ordered.rs",
+          "snapshot_sha256": "0cc5f9f3d24b9eb17d7047a527f5b115be8d2fb7a8993cc4f92a2784091f8fbf",
+          "current_sha256": "421c53d9bd57dcbe4946ec92b3a146b097e4bc2c6d4fdf50d06c95d3bb4c7993"
+        },
+        {
+          "path": "scripts/invoke-migration-s5-case.ps1",
+          "snapshot_sha256": "2406b46e52e705f9f00c5295fe7defd8215a5dd14cb02f60a5277272b9adbda0",
+          "current_sha256": "8cb121c3f146d6afa6f4faddef1287622c348f008e3240d65e3415cc9f811647"
+        },
+        {
+          "path": "scripts/stage-migration-s5-images.ps1",
+          "snapshot_sha256": "f6bc928eec99e806f466d2a8bd0afc20ff5af5fd4645fd313229933ee2186347",
+          "current_sha256": "20e35e2b7a1b2af417e0bbdb21a4fea9adaaaf9f16b54f1285bbdf698b556bf8"
+        }
+      ],
+      "branch_reason": "Indexed Component5/Runtime6 subjects unchanged; direct read_root/anchor path does not call changed V4 ordered helper; generation validation body unchanged; V4 recovery and actual version fences rerun."
+    },
+    {
+      "case": "C-native-regression-01",
+      "source_manifest": "C-native-regression-01-source-files.json",
+      "historical_exit_code": 0,
+      "different_current_files": [
+        {
+          "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration/provenance.rs",
+          "snapshot_sha256": "0cd7958cf32dd3437b1bbbd6e226b37a0b39960cd27f8934d72efeb2d7f1d6da",
+          "current_sha256": "df2d94dd99a3184acc2850c1d5653f2f9a439147af27de10fc1825b4aa3f7dac"
+        },
+        {
+          "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration/tests.rs",
+          "snapshot_sha256": "c6314efc3639b36bb5e290af244ee95cd8b0b15e3e0e59a80e0d187c1167806b",
+          "current_sha256": "822ed3b73a5aabc0cbc7d621665a6635e322a919b49d1af03e33ff1147af3300"
+        },
+        {
+          "path": "crates/kilogram-state/src/vault.rs",
+          "snapshot_sha256": "70cc1daff62e96ec214a8b1799f8482393b4ef0d170ef85c61aa702b699e10a9",
+          "current_sha256": "4941ef006f405c47f56e79fa01f63e15a3624cfbed7f1801168dc2d00a689c8e"
+        },
+        {
+          "path": "crates/kilogram-state/src/vault/ordered.rs",
+          "snapshot_sha256": "0cc5f9f3d24b9eb17d7047a527f5b115be8d2fb7a8993cc4f92a2784091f8fbf",
+          "current_sha256": "421c53d9bd57dcbe4946ec92b3a146b097e4bc2c6d4fdf50d06c95d3bb4c7993"
+        },
+        {
+          "path": "scripts/invoke-migration-s5-case.ps1",
+          "snapshot_sha256": "2406b46e52e705f9f00c5295fe7defd8215a5dd14cb02f60a5277272b9adbda0",
+          "current_sha256": "8cb121c3f146d6afa6f4faddef1287622c348f008e3240d65e3415cc9f811647"
+        },
+        {
+          "path": "scripts/stage-migration-s5-images.ps1",
+          "snapshot_sha256": "f6bc928eec99e806f466d2a8bd0afc20ff5af5fd4645fd313229933ee2186347",
+          "current_sha256": "20e35e2b7a1b2af417e0bbdb21a4fea9adaaaf9f16b54f1285bbdf698b556bf8"
+        }
+      ],
+      "branch_reason": "Ratchet/ordered_v2/protocol subjects unchanged; static CLI verification adds no Native operations."
+    }
+  ],
+  "generation_validation_body_equal_after_argument_normalization": true,
+  "historical_note": "All earlier cases remain charged/preserved; differing snapshots do not replace final exact-source cases. C-storage-invariants-01 predates records/preview and is superseded by final rerun."
+}

@@ -13,4 +13,5 @@ mod repair_tests;
 pub mod runtime;
 pub mod runtime2;
 pub mod state;
+pub mod storage_migration;
 pub(crate) mod test_support;

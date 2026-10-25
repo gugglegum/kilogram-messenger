@@ -1,0 +1,8 @@
+{
+  "case": "static-check-state-05",
+  "kind": "static-build",
+  "contributing_set": "compile-static-separate",
+  "elapsed_seconds": 3.5751572,
+  "exit_code": 0,
+  "reason": "Repair extend iterator and add current Head/Native/pending/Ready integrity checks"
+}
