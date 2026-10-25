@@ -1,6 +1,24 @@
 # Память проекта Kilogram
 
-Актуально на: 2026-10-24.
+Актуально на: 2026-10-25.
+
+Текущая опубликованная ревизия — `7f82036ee5803edd64be98b73572604250f5961c`: S3
+components приняты и опубликованы, root независимо сверил194 changed paths/blobs
+и GitHub master; дерево после публикации чистое. Пользователь разрешил
+[A3-S4: два процесса, перезапуски и offline-доставку](tasks/long-lived-dialog-a3-runtime-s4-task.md).
+Прежний OD1 исполнитель на GPT-6.1 Sol Max без Fast сначала готовит integration
+contract. Реализация — после root review, публикация — после implementation review.
+Whole A3 и пользовательский MVP пока открыты; ниже сохранена история этапов.
+
+[S4 contract](tasks/long-lived-dialog-a3-runtime-s4-contract.md) получен и
+[проверен root](tasks/long-lived-dialog-a3-runtime-s4-contract-review-1.md).
+Fresh production scope поддержан; перед приёмкой нужны R1–R3: отказ прежнего schema5
+writer, согласованный endpoint/locator crash lifecycle и explicit local route config.
+Замечания R1–R3 [закрыты повторным review](tasks/long-lived-dialog-a3-runtime-s4-contract-review-2.md):
+приняты authenticated RuntimeRoot6 discriminator, locator rotation после restart
+и explicit Minimal/operator route config. Сначала exact commit/push принятой
+документации, затем root verification и поручение реализации S4; product code ещё
+не начат. Existing L1 migration/handoff остаётся обязательным successor S5.
 
 Текущая компактная передача состояния, границы active/dormant/planned,
 корректировки архитектурного аудита и три ближайших product-приоритета:

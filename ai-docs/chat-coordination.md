@@ -803,3 +803,51 @@ Root проверил182 submitted artifact hashes и6 frozen protected artifact
 dispatch — exact allowlisted commit/push от baseline e6f9b8ff…, затем independent
 remote/tree verification. Production actor/Active2/ALPN2/offline/migration остаются
 в следующем scope, автоматически не запускаются.
+
+2026-10-25: S3 опубликован commit `7f82036ee5803edd64be98b73572604250f5961c`,
+sole parent e6f9b8ff…. Root сверил194 changed paths/blobs,193 raw files+self manifest,
+clean index/worktree. Независимый SSH remote query встретил DNS failure; GitHub
+connector compare exact SHA→master подтвердил identical/ahead0/behind0/files0.
+Это network failure, не отказ approval review. Callback исполнителя сработал.
+
+Пользователь прямо разрешил следующий этап: диалог двух процессов с перезапусками
+и offline-доставкой, contract review→implementation review→accepted commit/push.
+Поручение прежнему OD1 GPT-6.1 Sol Max без Fast:
+[S4 task](tasks/long-lived-dialog-a3-runtime-s4-task.md). Первая сдача только contract
+и regression matrix; фактический runtime path обязателен в будущей реализации.
+Fresh/existing границы, current local Root2 policy и whole-A3 acceptance mapping
+должны быть видимы до code edits. Новые чаты/subagents не создаются.
+
+S4 contract dispatch выполнен; `wait_threads` подтвердил active/inProgress turn
+`01a17091-02bb-7292-be3a-a439fd8332a4` в прежнем OD1. Task9900 bytes, SHA256
+`7c99018a8bd4c5cb7a7aed121b77612917749ebef9d8f6e6662ede45aecf44bd`;
+local links и diff whitespace PASS. Переданы model gpt-6.1-sol/thinking max,
+с сохранением обычного режима без Fast. Callback root поручен со ссылкой на прямое
+human разрешение исполнителю; первое поручение не разрешает product implementation.
+
+S4 draft получен автоматическим callback:71101 bytes/711 lines, SHA256
+`9bf73fc65d8e838472c82b46ed06aad8da3e1060a8373e85a6904699e54262e0`.
+[Root review1](tasks/long-lived-dialog-a3-runtime-s4-contract-review-1.md) поддержал
+fresh production S4 / mandatory migration S5, но требует R1 schema5 predecessor fence,
+R2 locator/actual endpoint recovery и R3 explicit route/URL-only semantics. Новый
+marker в unused root сам по себе не распознаётся старым S3 writer; exact old locator
+не соответствует новому ephemeral endpoint. Contract-only repair, без Rust/tests/
+fixtures/commit/push, затем повторное review.
+
+Review1 dispatch доставлен прежнему OD1; wait_threads подтвердил active turn
+`01a170b2-9044-7d73-b7e7-ff83650dfdf9`, GPT-6.1 Sol Max/default без Fast.
+Review13626 bytes, SHA256
+`f2631bb7a48de92a06a205f2c0d016c719f37acc978c944ce9aeccc9e298d9c1`;
+local links/diff PASS. Запрошены disposition/hash и автоматический callback после
+адресной доработки. Product implementation по-прежнему не разрешена.
+
+S4 contract repair получен callback:97748 bytes/952 lines,
+SHA256 `b1c4f5ee185ce0b719a47a624b00ea45649a341cc3044ba3c62e34c887f6f906` до status edit.
+[Root review2](tasks/long-lived-dialog-a3-runtime-s4-contract-review-2.md) принимает
+контракт, закрывает R1–R3: authenticated RuntimeRoot6/predecessor refusal, per-restart
+actual endpoint/locator lifecycle, explicit Minimal routes/URL-only RelayOnly.
+Уточнены pre-admission caps,64/64 scheduling, clean post-staging abort и actual
+verification profile. Новая runtime matrix ещё не запускалась, product edits нет.
+Root изменил только status/reference в contract; final accepted hash фиксирует manifest.
+Следующий dispatch — exact7-path documentation publication с sole parent7f82036…,
+обычный push origin/master, callback; root проверяет remote/tree до implementation.

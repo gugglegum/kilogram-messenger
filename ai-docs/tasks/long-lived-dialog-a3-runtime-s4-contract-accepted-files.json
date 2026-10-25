@@ -1,0 +1,64 @@
+{
+  "format_version": 1,
+  "accepted_date": "2026-10-25",
+  "baseline_head": "7f82036ee5803edd64be98b73572604250f5961c",
+  "branch": "master",
+  "remote": "origin",
+  "destination_ref": "refs/heads/master",
+  "decision": "A3-S4 fresh production runtime integration contract accepted after R1-R3 review; implementation not started",
+  "review": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-contract-review-2.md",
+  "review_sha256": "33844c4d2c749f5d4d84865f4398abb419eeb7c8a60d812dd1e63f36b25d034d",
+  "publication": "One documentation commit with exact baseline parent, then ordinary non-force push origin/master; no changes during publication",
+  "commit_subject": "docs: accept two-process offline runtime integration contract",
+  "excluded_clean_file": "ai-docs/development-environment.md",
+  "excluded_clean_sha256": "53074ff3734dacd9906ee03cc5c7ded952dedd99d207581f692ff900b9a79f8f",
+  "excluded_dirty_paths": [],
+  "self_note": "Commit this manifest too; its SHA256 and Git blob are pinned separately in root dispatch",
+  "listed_file_count": 6,
+  "source_config_test_file_count": 0,
+  "documentation_file_count": 6,
+  "files": [
+    {
+      "path": "ai-docs/README.md",
+      "sha256": "f52d7a7faf7bd711da9554c49ea310bdc08a266e93ed5cddb3665380063a3dd4",
+      "bytes": 158017,
+      "git_blob": "6236eef09ec5ae07f0f6b00823bd2de7c268d201",
+      "category": "documentation"
+    },
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "sha256": "d631bf60f35ee43a6e1a6067b06da561aced06028ba361e4ed3dd327dd414b74",
+      "bytes": 78899,
+      "git_blob": "2c6129c2500042a3cd080c767f92e89213f6cc57",
+      "category": "documentation"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-task.md",
+      "sha256": "7c99018a8bd4c5cb7a7aed121b77612917749ebef9d8f6e6662ede45aecf44bd",
+      "bytes": 9900,
+      "git_blob": "881c738f7411612435309c865d9ba6a10813b7e1",
+      "category": "documentation"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-contract.md",
+      "sha256": "5e21324167573281e1668cd6091c5a6e63ff72b0894009c57c0a122b6b0a688c",
+      "bytes": 97759,
+      "git_blob": "5863cc8596c0973cab4a75442e7dc3a55d2714fa",
+      "category": "documentation"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-contract-review-1.md",
+      "sha256": "f2631bb7a48de92a06a205f2c0d016c719f37acc978c944ce9aeccc9e298d9c1",
+      "bytes": 13626,
+      "git_blob": "57716847b41d9d69fa470bd82d83159b518df256",
+      "category": "documentation"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-contract-review-2.md",
+      "sha256": "33844c4d2c749f5d4d84865f4398abb419eeb7c8a60d812dd1e63f36b25d034d",
+      "bytes": 8138,
+      "git_blob": "768ac6abe6b4fa3a0eaf52455e633508cd8906c3",
+      "category": "documentation"
+    }
+  ]
+}
