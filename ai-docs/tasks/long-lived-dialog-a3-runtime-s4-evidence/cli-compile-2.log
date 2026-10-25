@@ -1,0 +1,224 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+warning: field `id` is never read
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_source_v2.rs:487:9
+    |
+486 | pub(in crate::vault::indexed_dialog) struct RuntimeReadyFields {
+    |                                             ------------------ field in this struct
+487 |     pub id: Id,
+    |         ^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `id` and `endpoint` are never read
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_source_v2.rs:507:9
+    |
+506 | pub(in crate::vault::indexed_dialog) struct RuntimeLocatorFields {
+    |                                             -------------------- fields in this struct
+507 |     pub id: Id,
+    |         ^^
+...
+511 |     pub endpoint: Id,
+    |         ^^^^^^^^
+
+   Compiling kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+warning: `kilogram-state` (lib) generated 2 warnings
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+warning: unused import: `Duration`
+ --> apps\kilogram-cli\src\ordered_dialog\runtime2\owner.rs:6:60
+  |
+6 | use std::{sync::{Arc,atomic::{AtomicBool,Ordering}},time::{Duration,Instant}};
+  |                                                            ^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `ordered::OrderedSession`
+ --> apps\kilogram-cli\src\ordered_dialog\runtime2\handshake.rs:4:24
+  |
+4 | use kilogram_ratchet::{ordered::OrderedSession,ordered_v2::Guard2};
+  |                        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `auth` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\mod.rs:20:4
+   |
+20 | fn auth(xs: &[&wire::RootVerifiedCredential]) -> Vec<db::HistoryAuth> {
+   |    ^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `key`, `account`, `session`, `guard`, and `reservation` are never read
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\native.rs:7:9
+   |
+ 6 | pub(super) struct Native2 {
+   |                   ------- fields in this struct
+ 7 |     pub key: Zeroizing<Id>,
+   |         ^^^
+ 8 |     pub account: OrderedAccount,
+   |         ^^^^^^^
+ 9 |     pub session: Option<OrderedSession>,
+   |         ^^^^^^^
+10 |     pub guard: Option<Guard2>,
+   |         ^^^^^
+11 |     pub reservation: Option<(Id,Id,Id,u8)>,
+   |         ^^^^^^^^^^^
+
+warning: associated items `fresh`, `fork`, `guard`, `guard_mut`, `payload`, and `seal` are never used
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\native.rs:14:12
+   |
+13 | impl Native2 {
+   | ------------ associated items in this implementation
+14 |     pub fn fresh(receiver:bool)->Result<(Self,Option<Id>)>{
+   |            ^^^^^
+...
+19 |     pub fn fork(&self)->Self{Self{key:Zeroizing::new(*self.key),account:self.account.fork(),session:self.session.as_ref().map(Ordere...
+   |            ^^^^
+20 |     pub fn guard(&self)->Result<&Guard2>{self.guard.as_ref().context("NeedHandshake")}
+   |            ^^^^^
+21 |     pub fn guard_mut(&mut self)->Result<&mut Guard2>{self.guard.as_mut().context("NeedHandshake")}
+   |            ^^^^^^^^^
+...
+28 |     fn payload(&self,head:&db::RuntimeHead)->Result<Value>{
+   |        ^^^^^^^
+...
+38 |     pub fn seal(&self,profile:&db::RuntimeProfile,head:&db::RuntimeHead,device:&DeviceEncryptionIdentity)->Result<Vec<u8>>{
+   |            ^^^^
+
+warning: fields `binding`, `generation`, and `pair` are never read
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\owner.rs:12:9
+   |
+10 | pub(super) struct Lease2 {
+   |                   ------ fields in this struct
+11 |     pub connection:Connection,
+12 |     pub binding:Id,
+   |         ^^^^^^^
+13 |     pub generation:u64,
+   |         ^^^^^^^^^^
+...
+20 |     pub pair:Vec<u8>,
+   |         ^^^^
+   |
+   = note: `Lease2` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: variant `Peer` is never constructed
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\owner.rs:54:40
+   |
+54 | pub(super) enum Purpose2 {Import,Local,Peer}
+   |                 --------               ^^^^
+   |                 |
+   |                 variant in this enum
+   |
+   = note: `Purpose2` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: fields `encryption` and `next_connection` are never read
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\owner.rs:58:16
+   |
+55 | pub struct Owner2 {
+   |            ------ fields in this struct
+...
+58 |     pub(super) encryption:DeviceEncryptionIdentity,
+   |                ^^^^^^^^^^
+...
+64 |     pub(super) next_connection:u64,
+   |                ^^^^^^^^^^^^^^^
+
+warning: methods `native` and `seen` are never used
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\owner.rs:110:19
+    |
+ 66 | impl Owner2 {
+    | ----------- methods in this implementation
+...
+110 |     pub(super) fn native(&mut self,c:u8,s:&db::RuntimeSnapshot)->Result<Native2>{
+    |                   ^^^^^^
+...
+113 |     pub(super) fn seen(&mut self,c:u8,event:&kilogram_ratchet::ordered_v2::EventMeta)->Result<kilogram_ratchet::ordered_v2::SeenObs...
+    |                   ^^^^
+
+warning: field `consent` is never read
+ --> apps\kilogram-cli\src\ordered_dialog\runtime2\policy.rs:6:9
+  |
+4 | pub(super) struct Current2 {
+  |                   -------- field in this struct
+5 |     pub peers: [wire::RootVerifiedCredential;2],
+6 |     pub consent: wire::ParsedConsent2,
+  |         ^^^^^^^
+
+warning: function `pair_credentials` is never used
+ --> apps\kilogram-cli\src\ordered_dialog\runtime2\handshake.rs:6:15
+  |
+6 | pub(super) fn pair_credentials(selection:&db::RuntimeSelection)->Result<[wire::RootVerifiedCredential;2]>{
+  |               ^^^^^^^^^^^^^^^^
+
+warning: function `selection` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\handshake.rs:15:15
+   |
+15 | pub(super) fn selection(s:&db::RuntimeSnapshot,chosen:&db::RuntimeSelection,sid:Option<String>)->Result<wire::StaticSelection2>{
+   |               ^^^^^^^^^
+
+warning: function `proof` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\handshake.rs:22:4
+   |
+22 | fn proof(chosen:&mut db::RuntimeSelection,c:Id)->Result<()> {
+   |    ^^^^^
+
+warning: methods `offer`, `grant`, `init`, `receive_genesis`, `ready`, and `accept_ready` are never used
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\handshake.rs:26:19
+    |
+ 25 | impl Owner2 {
+    | ----------- methods in this implementation
+ 26 |     pub(super) fn offer(&mut self,c:u8)->Result<(Vec<u8>,Vec<u8>)>{
+    |                   ^^^^^
+...
+ 39 |     pub(super) fn grant(&mut self,c:u8,offer_raw:Vec<u8>,pair:Vec<u8>)->Result<Vec<u8>>{
+    |                   ^^^^^
+...
+ 63 |     pub(super) fn init(&mut self,c:u8,grant_raw:Vec<u8>)->Result<Vec<u8>>{
+    |                   ^^^^
+...
+ 81 |     pub(super) fn receive_genesis(&mut self,c:u8,raw:Vec<u8>)->Result<Vec<u8>>{
+    |                   ^^^^^^^^^^^^^^^
+...
+110 |     pub(super) fn ready(&mut self,c:u8)->Result<Vec<u8>>{
+    |                   ^^^^^
+...
+120 |     pub(super) fn accept_ready(&mut self,c:u8,raw:Vec<u8>)->Result<()> {
+    |                   ^^^^^^^^^^^^
+
+warning: multiple methods are never used
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\data.rs:9:19
+    |
+  8 | impl Owner2 {
+    | ----------- methods in this implementation
+  9 |     pub(super) fn trial_send(&mut self,c:u8,s:&db::RuntimeSnapshot,private:&mut Native2,selected:&wire::StaticSelection2,chosen:&db...
+    |                   ^^^^^^^^^^
+...
+ 37 |     pub(super) fn trial_receive(&mut self,c:u8,s:&db::RuntimeSnapshot,private:&mut Native2,selected:&wire::StaticSelection2,chosen:...
+    |                   ^^^^^^^^^^^^^
+...
+ 71 |     pub(super) fn materialize(&mut self,c:u8)->Result<bool>{
+    |                   ^^^^^^^^^^^
+...
+ 85 |     pub(super) fn credential(&mut self,c:u8,id:Id,supplied:&BTreeMap<Id,Vec<u8>>)->Result<wire::RootVerifiedCredential>{
+    |                   ^^^^^^^^^^
+...
+ 89 |     pub(super) fn ingest(&mut self,c:u8,raw:Vec<u8>,supplied:&BTreeMap<Id,Vec<u8>>,head:bool,grant:Option<Id>)->Result<Id>{
+    |                   ^^^^^^
+...
+105 |     pub(super) fn drain(&mut self,c:u8)->Result<bool>{
+    |                   ^^^^^
+...
+124 |     pub(super) fn acknowledge(&mut self,c:u8,raw:Vec<u8>,supplied:&BTreeMap<Id,Vec<u8>>)->Result<()> {
+    |                   ^^^^^^^^^^^
+
+warning: `kilogram-cli` (lib) generated 15 warnings (run `cargo fix --lib -p kilogram-cli` to apply 2 suggestions)
+warning: `kilogram-cli` (lib test) generated 15 warnings (15 duplicates)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 26.93s
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_cli-c27fdb1e57f101dc.exe)
+  Executable unittests src\main.rs (target\verification\deps\kilogram_cli-5208c69577fdba00.exe)
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_protocol-0503bf865d9eb51e.exe)
+  Executable tests\canonical_decoder_mutations.rs (target\verification\deps\canonical_decoder_mutations-fbf793d76b2ddbd9.exe)
+  Executable tests\canonical_sync_v2_decoder_mutations.rs (target\verification\deps\canonical_sync_v2_decoder_mutations-af2940d23e6ebb60.exe)
+  Executable tests\canonical_sync_v2_fuzz_seeds.rs (target\verification\deps\canonical_sync_v2_fuzz_seeds-48fb76451cec2816.exe)
+  Executable tests\ordered_dialog_bounds.rs (target\verification\deps\ordered_dialog_bounds-2b9a58cc8b0b1011.exe)
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_transport_iroh-06158975b943fdcc.exe)
+  Executable tests\local_relay_transport.rs (target\verification\deps\local_relay_transport-ddb967e0672e7f04.exe)

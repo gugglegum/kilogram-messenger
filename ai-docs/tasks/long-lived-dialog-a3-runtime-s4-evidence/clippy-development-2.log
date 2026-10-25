@@ -1,0 +1,33 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-store)
+    Checking kilogram-peer-history-recovery v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery)
+    Checking kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+    Checking kilogram-runtime-ipc v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-runtime-ipc)
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Checking kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+    Checking kilogram-peer-history-recovery-consent v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-consent)
+    Checking kilogram-session v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-session)
+    Checking kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+error: this `if` statement can be collapsed
+  --> crates\kilogram-transport-iroh\src\ordered2.rs:40:9
+   |
+40 | /         if policy != RoutePolicy::DirectOnly {
+41 | |             if let Some(relay)=&f.relay { addr=addr.with_relay_url(relay.parse::<RelayUrl>()?); }
+42 | |         }
+   | |_________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+   = note: `-D clippy::collapsible-if` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+   |
+40 ~         if policy != RoutePolicy::DirectOnly
+41 ~             && let Some(relay)=&f.relay { addr=addr.with_relay_url(relay.parse::<RelayUrl>()?); }
+   |
+
+    Checking kilogram-rollout v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-rollout)
+error: could not compile `kilogram-transport-iroh` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `kilogram-transport-iroh` (lib test) due to 1 previous error

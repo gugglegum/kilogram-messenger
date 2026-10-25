@@ -1,0 +1,48 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+   Compiling kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+   Compiling kilogram-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-store)
+   Compiling kilogram-peer-history-recovery v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery)
+   Compiling kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+   Compiling kilogram-runtime-ipc v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-runtime-ipc)
+   Compiling kilogram-peer-history-recovery-consent v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-consent)
+   Compiling kilogram-session v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-session)
+   Compiling kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+   Compiling kilogram-rollout v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-rollout)
+   Compiling kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+warning: fields `disable_ack`, `suspend_prefix`, and `hold_window64` are never read
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\hooks.rs:12:27
+   |
+ 7 | pub(super) struct Schedule2 {
+   |                   --------- fields in this struct
+...
+12 |     #[serde(default)] pub disable_ack:bool,
+   |                           ^^^^^^^^^^^
+13 |     #[serde(default)] pub suspend_prefix:bool,
+   |                           ^^^^^^^^^^^^^^
+...
+16 |     #[serde(default)] pub hold_window64:bool,
+   |                           ^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `kilogram-cli` (lib) generated 1 warning
+warning: `kilogram-cli` (lib test) generated 1 warning (1 duplicate)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 41.21s
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_cli-c27fdb1e57f101dc.exe)
+  Executable unittests src\main.rs (target\verification\deps\kilogram_cli-5208c69577fdba00.exe)
+  Executable tests\runtime2_process.rs (target\verification\deps\runtime2_process-8a491d5b6a41fd04.exe)
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_protocol-0503bf865d9eb51e.exe)
+  Executable tests\canonical_decoder_mutations.rs (target\verification\deps\canonical_decoder_mutations-fbf793d76b2ddbd9.exe)
+  Executable tests\canonical_sync_v2_decoder_mutations.rs (target\verification\deps\canonical_sync_v2_decoder_mutations-af2940d23e6ebb60.exe)
+  Executable tests\canonical_sync_v2_fuzz_seeds.rs (target\verification\deps\canonical_sync_v2_fuzz_seeds-48fb76451cec2816.exe)
+  Executable tests\ordered_dialog_bounds.rs (target\verification\deps\ordered_dialog_bounds-2b9a58cc8b0b1011.exe)
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_runtime_ipc-eb3ed3ea81eef6f5.exe)
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_state-c93ef8da6fd2a59e.exe)
+  Executable tests\a3_s1_root_review.rs (target\verification\deps\a3_s1_root_review-6877e8aa215c8702.exe)
+  Executable tests\a3_s2_root_review.rs (target\verification\deps\a3_s2_root_review-d5c50350a2edce5e.exe)
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_transport_iroh-06158975b943fdcc.exe)
+  Executable tests\local_relay_transport.rs (target\verification\deps\local_relay_transport-ddb967e0672e7f04.exe)

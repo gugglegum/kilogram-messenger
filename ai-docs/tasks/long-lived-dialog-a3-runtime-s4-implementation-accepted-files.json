@@ -1,0 +1,3183 @@
+{
+  "status": "root-accepted-for-exact-commit-and-push",
+  "date": "2026-10-25",
+  "scope": "A3-S4 fresh two-process runtime; final implementation review5",
+  "baseline": "9547ed171c64bf5ea529b4ba487acf6aa1a61b5b",
+  "expected_commit_parent": "9547ed171c64bf5ea529b4ba487acf6aa1a61b5b",
+  "branch": "master",
+  "remote": "origin",
+  "remote_branch": "master",
+  "review": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-review-5.md",
+  "executor_manifest_sha256": "01540c0bba5a294139cee055afe0835a168fa3b81919b67a5c42162c1a950fe2",
+  "self_excluded": true,
+  "self_path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-accepted-files.json",
+  "rule": "Stage only these paths plus this manifest. Verify exact staged and committed normalized blobs and sole parent. No further edits or extra files. One normal commit and normal fast-forward push.",
+  "file_count": 527,
+  "commit_file_count_including_self": 528,
+  "total_bytes": null,
+  "unchanged_development_environment_excluded": "ai-docs/development-environment.md",
+  "files": [
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "bytes": 90173,
+      "sha256": "796ee46599347b7992ad7dcef54b29bb37bace358d1defcaca682bca9b499dcb",
+      "git_blob": "be393bbcbc03df2ec8245493351db71ad37bf739"
+    },
+    {
+      "path": "ai-docs/next-stage-plan.md",
+      "bytes": 3643,
+      "sha256": "2ef9a7f8269c7996b3ab1b2db709f182bdf59d2c0b4ae59f331a2eb6bcc98ff1",
+      "git_blob": "317a14b63357ab0cfb3b5652677d195ea29ba860"
+    },
+    {
+      "path": "ai-docs/README.md",
+      "bytes": 158546,
+      "sha256": "1a0bb1067c0038443ec925762ba956ecdbb5f55c678e821c589db17e9dd45a69",
+      "git_blob": "865b5abc6715d241a789204e6c2e5cfb75e3b6a4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/actual-owner-f01-f02-f09-2-result.json",
+      "bytes": 1628,
+      "sha256": "e1b53ad90f6e352d02049ba84ca703c51aecba836044f4c1cbc8ce267d503679",
+      "git_blob": "43a5cb1e4fab82579db15556b7fe5c20a197fefe"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/actual-owner-f01-f02-f09-2-source.json",
+      "bytes": 9074,
+      "sha256": "6ad722ad9855ce129748b7cad38bee1788510a1c31314e59d99530617ef8f64f",
+      "git_blob": "6e1c27b616c0baa196e44fdf52bd9690e82aeddf"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/actual-owner-f01-f02-f09-2.log",
+      "bytes": 31993,
+      "sha256": "5e13199cc08ce058d351290a9096ce8519f811edae0b2e40fa17b19be4081a91",
+      "git_blob": "67527646c659b6159e2269dd2fa1d607e15d10f5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/actual-owner-f01-f09-1-result.json",
+      "bytes": 1684,
+      "sha256": "9c267f9f09ede1becc553c41eadc498f80b6c0a2115f6a40f09a091e01fc628c",
+      "git_blob": "0f8175aabd1cefd08d586c0dd3122b55498fbc92"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/actual-owner-f01-f09-1-source.json",
+      "bytes": 8890,
+      "sha256": "e0fde50a988eb14ebaeca7403c0f5acd9bde1ffbe2d1c37e0a32b9a0ec6203ed",
+      "git_blob": "26ea86625e51896b693d67d8f28d492f408faff2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/actual-owner-f01-f09-1.log",
+      "bytes": 3311,
+      "sha256": "a58ab4e93049c5a03aaa97b8254861d65c9b553098573a827bd4ee36c1ffc1c1",
+      "git_blob": "35c34bdfab59cbaa39e3bb2fe09bc380cd5d3b33"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/actual-owner-matrix-compile-1-result.json",
+      "bytes": 351,
+      "sha256": "2fd1a8a4f5918d7c1c089a67793571f37ad5f4f7a968a9be8384268003d2efc7",
+      "git_blob": "e8ed88cce9ec10a2ed28d3e5909afe58e9e4a0f2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/actual-owner-matrix-compile-1-source.json",
+      "bytes": 8890,
+      "sha256": "77f918222635a104aae34d33c4253d495ecf2d843213ee3ef629cfff57e1cd61",
+      "git_blob": "07123af79dd2463f322abdc04dc4764a9cfc9726"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/actual-owner-matrix-compile-1.log",
+      "bytes": 1801,
+      "sha256": "50d1ead41c39247e5e1550d0fa2fc1dc51f5a626c4cbae022c43a4cf1798def4",
+      "git_blob": "cf8a9d3f05e71c16585c960497642add398cb870"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/admission-quarantine-compile-1-result.json",
+      "bytes": 294,
+      "sha256": "cbba6f2b02bec4fcfe5a236788399b3f60ee1710251b80ebbf685e25502af4ac",
+      "git_blob": "169ffe4702d7dc9d45fcc82694719b872f29549f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/admission-quarantine-compile-1-source.json",
+      "bytes": 7566,
+      "sha256": "30efe57618370f2be9145b8fcf0cc2726e3240e1c4ffbdd2ff075462b8804167",
+      "git_blob": "3883611cea9a0c5ba184f88628111247dceaf124"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/admission-quarantine-compile-1.log",
+      "bytes": 2709,
+      "sha256": "f2756c07db8d0480dccced36ce37dec0d6a9dde15dcc3658d6ab11f401b005ad",
+      "git_blob": "6c69840cfe5adde12a3eeb1008f46554929be616"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/admission-quarantine-compile-2-result.json",
+      "bytes": 293,
+      "sha256": "61da7cbbec34e0ad64805e5cbf68cbb6d36b4b81af492fee2662b43c5f54dafa",
+      "git_blob": "f22b866da41daf7dd3df7f407adb1a2ad45a043d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/admission-quarantine-compile-2-source.json",
+      "bytes": 7566,
+      "sha256": "ac3ee4f72e66302643791991ddf2b943b8112d154dd043d2c0862ee5ed009591",
+      "git_blob": "7947aaec865ba11a254db252253584598d4317ee"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/admission-quarantine-compile-2.log",
+      "bytes": 1260,
+      "sha256": "72b51970d937bf7a4666771803f19e6e4823b2fbcab31ece37ab7386c55d5de8",
+      "git_blob": "ae92fad033dde3f2fa11286296242839152b3a92"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/assert-frozen-product.mjs",
+      "bytes": 2119,
+      "sha256": "c25716f6a0ce1f4ae0ba3659afedd83ead89723900c24896397461317347a123",
+      "git_blob": "0da283109b8e454f36a98c11e29742a03abd5bdc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/atomic-grant-compile-1-result.json",
+      "bytes": 325,
+      "sha256": "b12ae6456f1ff360714ea036a45e8557e0bfab461929864274ce7c2af94cc021",
+      "git_blob": "45c02b2083dc2c748d1ca86d6d17047bd4aa77a6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/atomic-grant-compile-1-source.json",
+      "bytes": 8697,
+      "sha256": "47c18b67a63e1a4afb502a55f35295af4e977325a19706a93569e157ceb0b6a8",
+      "git_blob": "292f7b7b02125193923962fa36f7ed9cb84f45f0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/atomic-grant-compile-1.log",
+      "bytes": 1891,
+      "sha256": "ef1254d07821194ebabb4c8c66878c0cf9343b174d5b7df459d6f24098be5ca0",
+      "git_blob": "faa98212d5bbcc4f000c028d3f138e158d2f7822"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/baseline-l1-control.ps1",
+      "bytes": 579,
+      "sha256": "278b6f08d90233dbb86f635b96203690081be849a8124499d40305c937398cb4",
+      "git_blob": "7875fa5ac34b01a39ba8c613f47b7c17f719c130"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/baseline.json",
+      "bytes": 2917,
+      "sha256": "3d8dbff0e59fe31d22d03da28a125dfddbef1a760cb87b5e17e85767546b1ef2",
+      "git_blob": "f8dd491f62042f71c4f5e169996446788b841058"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/batch4-images.json",
+      "bytes": 401,
+      "sha256": "69f538a3beac647c12161ae9e9b7dda96ea610e5a44edc1e82cc72e60eb5ae27",
+      "git_blob": "a4d0e89b3997b570b75961287d8d5e44fd538a1e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/bootstrap-controller-compile-1-result.json",
+      "bytes": 325,
+      "sha256": "463ac8a271b716809cd9d0a9aaecb37706b09e1dee822c8274421adc146e7968",
+      "git_blob": "bc357bbb3b5cf22949e0971f9c6d2384f519f13f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/bootstrap-controller-compile-1-source.json",
+      "bytes": 8696,
+      "sha256": "c31e1fa6c2bd362363e084093db4f748f64495f2d0d723d3c35be1cf7d41498a",
+      "git_blob": "38fea185e67347aa7009be1c312a3dbfce0a7c84"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/bootstrap-controller-compile-1.log",
+      "bytes": 1088,
+      "sha256": "b8a5fd49c8333b7ec0307c141a2afabc06d0187b62ec02eb7e5b042582610b78",
+      "git_blob": "45114a913598499f5eef614979a81e1221668d11"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/build-review-artifacts.mjs",
+      "bytes": 14616,
+      "sha256": "3b97a7d4fb53d998c5ed88f725c7584d41c3ab674df5a020c9cc15a69bd32a8f",
+      "git_blob": "37b6e90d0020702f28116b41cfdc47052a268ed9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/burst-1-cli.json",
+      "bytes": 482,
+      "sha256": "7f8a1ef09d35b3668356546f461144c6ddffff648f3e970552a9f113dcda4d22",
+      "git_blob": "40ddd3d6d7663a817a1cbaa8a7a0c759746392cd"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/burst-1-result.json",
+      "bytes": 1062,
+      "sha256": "47bfee1334dddce59eb0ae52009274e85bad82b9bd386b3d8a46d30b2726bdbd",
+      "git_blob": "bbb5245cb2dd89c810a0e1a9496624a6cae1ec1d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/burst-1-source.json",
+      "bytes": 8696,
+      "sha256": "c31e1fa6c2bd362363e084093db4f748f64495f2d0d723d3c35be1cf7d41498a",
+      "git_blob": "38fea185e67347aa7009be1c312a3dbfce0a7c84"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/burst-1.log",
+      "bytes": 34273,
+      "sha256": "d877349c9c848a108b4737d4a7ce5ade7bc86d6422ef579fa384b84251df4593",
+      "git_blob": "0aae235af895db08faea96a66b4fba4f2dc2bcfc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cached-compile-1-result.json",
+      "bytes": 293,
+      "sha256": "158c58c49633b43b534828c56fe36f4dae289d56d9e2e0e35e5ac35a4dc1f642",
+      "git_blob": "718a580eab40c884a76d2556a6dafaabe8dd2b2b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cached-compile-1-source.json",
+      "bytes": 7001,
+      "sha256": "173c82e0a920af7e42c3867a24913edf41712655eea3220775966426aff33528",
+      "git_blob": "51bac655e807802c06f20990f508ddeb074d3c88"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cached-compile-1.log",
+      "bytes": 2168,
+      "sha256": "bd25a150d27c4286bb92d4f00abc7ac7dd26b19004e835f0930edcd6a85858f8",
+      "git_blob": "bfaffdcc94fb4db1c335c29af7ba758a2b77a50c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/capture-component-source-reuse.mjs",
+      "bytes": 4207,
+      "sha256": "38434e81aaff8925382a1bdb86e9759ef5c0b373c5fa9d7daef2ae820ba6293b",
+      "git_blob": "20c414756367245c614b773fae74519600d46361"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/capture-controller-repair-diff.mjs",
+      "bytes": 4040,
+      "sha256": "2c152def3a63a04d0d0410c5fba679ed3ba1e5a5b98cbd5821dce3f380717294",
+      "git_blob": "7e26c4dde219ebde5025199d8bf316683ec93101"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/capture-narrow-repair-diff.mjs",
+      "bytes": 5047,
+      "sha256": "8e76f2c1a6418429443217f7c67866a9d2a8a8c0f4ec71ff47d3748f7252a6c5",
+      "git_blob": "0638730b5964adea09418f39a6231899123866db"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/capture-relay-helper-repair.mjs",
+      "bytes": 6736,
+      "sha256": "23f2aa1399f23036d7f26c633632444afcaf0b5de1728caf3ad05e8f29f81236",
+      "git_blob": "73b3661607c6a603d3bc76960915a58d0cc18a3b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-and-relay-before-f-1-result.json",
+      "bytes": 299,
+      "sha256": "d2f51f2357f1474ef71dff1bbc6232f575dca6408b35e0d26e81f99931f6a80a",
+      "git_blob": "1626ded10b2646c00c1959e4b1af9cfbf70b71a8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-and-relay-before-f-1-source.json",
+      "bytes": 9260,
+      "sha256": "74ae4d76984c95f9ebdef9bc9fe2b86b6bbcd431aa6d044312a77bae4d8203a4",
+      "git_blob": "f69c34ae4f08f4b075d254178b65c13b8ceafa3c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-and-relay-before-f-1.log",
+      "bytes": 163,
+      "sha256": "c4eb6c971cf15007770af6fbc72d61db1d0a5a3d712da77340caf1809ce2f375",
+      "git_blob": "4bf755e61350b32d3be56db5f8c2b79ab9997b41"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-build-1-result.json",
+      "bytes": 268,
+      "sha256": "1ddff69db8ce493dd413dfcafcb3e85919b54b0bdf300ec09bbfb616c12477e4",
+      "git_blob": "b3d5d076ac25bca3b41b3532ed5076eae5e661a3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-build-1-source.json",
+      "bytes": 6642,
+      "sha256": "3f77fa57519258a778185f6b13123b60ae4a6554b7827c343ffe11200bee01b1",
+      "git_blob": "527565ad71e1f6acb3ba49420b9433b1e50b9ed8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-build-1.log",
+      "bytes": 2810,
+      "sha256": "081e4a78a2b916b75b4d473b19159f6fc31ca320e1654629bec622ca8a2cafa4",
+      "git_blob": "a1c3ad7f72a38ad97bd40081b3ebc4679dbc1ddd"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-compile-1-result.json",
+      "bytes": 329,
+      "sha256": "0a55a296ad1b6ea53829ef44a518f46491723924f14f7c286e003d2509ccdd7e",
+      "git_blob": "ed0ec11188039e6fc9e4811aade92d9c7c9cc693"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-compile-1-source.json",
+      "bytes": 5410,
+      "sha256": "3cf914ba2d09fc460b4dbc5673e79b9e4cf895fc4fabda76ba98c914ddc3e51f",
+      "git_blob": "c2057d3a253fb961b7777ccd22b6272e2c8c46f7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-compile-1.log",
+      "bytes": 6706,
+      "sha256": "13aaf3e1cbef7cc61bc9ea35b60cfd52970c782ae8b7a93a1a51fbe86e28307e",
+      "git_blob": "c93d0a5db54bc9eb0c10603c6eeb94ff5d568bfc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-compile-2-result.json",
+      "bytes": 328,
+      "sha256": "825f0e9ff3e011b73400570f1f9da2d4a223ee4abde7e23fe8ee2a1c198dbd76",
+      "git_blob": "dd4d9848bf92d3cd45c02039cd64a4d609d8b552"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-compile-2-source.json",
+      "bytes": 5410,
+      "sha256": "9b571650ce0d916c804d42c2bbb3b79ce299f3cb5689abfed7bb6bcbc1531542",
+      "git_blob": "e9d75dbb692b15c21cfd10afd514db06afe455c3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-compile-2.log",
+      "bytes": 10120,
+      "sha256": "3186db216e1b3036523d089ed4b36d9e977aa31eccb27c32b46b9567a19717b7",
+      "git_blob": "e61be677c18754db9c40b0a52bdae81ce17f9b48"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-compile-3-result.json",
+      "bytes": 353,
+      "sha256": "749e7d58295053f01a2fe859677a1eb93e4c39e8d3ae8d89b73d1ddb0d20c944",
+      "git_blob": "706125752cc066fdebaacde7d1cbfe423e2f4f51"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-compile-3-source.json",
+      "bytes": 5976,
+      "sha256": "725afc8405d907009337d7bc20ff59f74da69c8e1f451d536d1c0fb0f47b9041",
+      "git_blob": "f5e749f60537d4629d1d627b6a5fa00ba935cf06"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-compile-3.log",
+      "bytes": 4097,
+      "sha256": "35fe38ef8ee95e56a3575b530f25892a4f75be7d6243370486f4369165567160",
+      "git_blob": "216eb4e976fccaf69e4275bf43989878f7ee2ada"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-compile-4-result.json",
+      "bytes": 380,
+      "sha256": "85b4252e6644ae25b8abd3865b47c7a581ee56998f2f9177657bf9c4e64f5f72",
+      "git_blob": "99b3635148dfbb891c5eeca2f77bb873a777e31b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-compile-4-source.json",
+      "bytes": 6642,
+      "sha256": "6aa32c285ee0973121f9b2112d06b5b97c25957aa4cb50e3d321bd025d094f4d",
+      "git_blob": "e6bb4a7ed5c418d513abaa47c3d356c417b9d10a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/cli-compile-4.log",
+      "bytes": 4597,
+      "sha256": "6ee085fd4a1727d099962924a9941072e87ba3d5d42b6a857decbcd5a2538e3d",
+      "git_blob": "8060ba9a969339dfad26a514321b9868e545e8d6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-1-result.json",
+      "bytes": 407,
+      "sha256": "50b1a30f515a74682432858e3e8839ef611f2fa29524ed5f7a3e62a247fda42b",
+      "git_blob": "678446131cd97ee20d8728dc136ebc7725b3ab09"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-1-source.json",
+      "bytes": 8697,
+      "sha256": "d9deea10a6059019527713dd1eaf47d5cd3de23ee06303cff5c43e2e5bf23dd1",
+      "git_blob": "ba23e62bdae75ea59697f6e1dba2ca11bb167fe3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-1.log",
+      "bytes": 3822,
+      "sha256": "4d33541859b4112e99e19eceb131be6c5290946df9d8c45395b733afadabbbea",
+      "git_blob": "ce4fa11160fa2af4d6d0c8e2e15066d73441f0cc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-2-result.json",
+      "bytes": 406,
+      "sha256": "144bf924b46c3ac7905aedb464f2e071b4d24dc6234798ef76c92176f919ba31",
+      "git_blob": "1167400114f90ce6ef657073bd3ae717188f588d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-2-source.json",
+      "bytes": 9074,
+      "sha256": "0789b04865c8e7f516baa40466fc72fcea3ba4c84b28a22b5c7dca4bcca6ad9d",
+      "git_blob": "3808ea1c639b3533196fcc606180753f5b09b2cb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-2.log",
+      "bytes": 2242,
+      "sha256": "91060cb9cc07d4dbc075199afe2078a34f5ae2ae9138fe0c834683a08697d8d4",
+      "git_blob": "d5a271686ec44ed276528c50fedbe598749b03d8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-3-result.json",
+      "bytes": 406,
+      "sha256": "7282e9f6b8a0bdf40309a6789756339a1a85155b3b39c5671c46616e990af713",
+      "git_blob": "75403809e481132266df5c563d56aa13fa06e4bd"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-3-source.json",
+      "bytes": 9074,
+      "sha256": "6ad722ad9855ce129748b7cad38bee1788510a1c31314e59d99530617ef8f64f",
+      "git_blob": "6e1c27b616c0baa196e44fdf52bd9690e82aeddf"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-3.log",
+      "bytes": 15994,
+      "sha256": "42d1097d89139e1bceea04aac3f6be2a07e94985aa8a925cec3b264c1e50a86d",
+      "git_blob": "c1fe0df313e4a40ed01f5b960d77f414ee612b92"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-4-result.json",
+      "bytes": 407,
+      "sha256": "66abd87c590de8058f20272692e87b8f9929e7a8aaa3e736217d06640e9edb8f",
+      "git_blob": "a63b994a245a2449b1449d744922721fb32a5fb8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-4-source.json",
+      "bytes": 9078,
+      "sha256": "3f14a15b976d43d4652b909102a021734647a5d06cda974f73fd6f23f5a74d1a",
+      "git_blob": "063880df7c00f5fec8163941e576d974a90c5e4d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-4.log",
+      "bytes": 5484,
+      "sha256": "04347de3a2b228f80afb05ce20c57c841a8a0190ccd32b3410dab786052b7b68",
+      "git_blob": "33dac7bed0928910dcbdd9ad94c737988f931397"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-5-result.json",
+      "bytes": 407,
+      "sha256": "1da1c1d68495c0ae397e5d40714df071a98970afe8a81d9299acf5f079c11d76",
+      "git_blob": "b0b812b41a9846279856ffd908a00ed061062dc3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-5-source.json",
+      "bytes": 9078,
+      "sha256": "929238d5e891c302d870df1e30ca43327e6a9e37a52876629ef5662aa2dc6418",
+      "git_blob": "dfbf87dd92737c02a7ab7608badfc8735f2d02c4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-5.log",
+      "bytes": 3563,
+      "sha256": "456f5f89729805944cfa3b41e919af21f6c47805f65817430b13210211a24025",
+      "git_blob": "86f4f320f2dc25d20b2a993473a16bccac16eae3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-6-result.json",
+      "bytes": 406,
+      "sha256": "ed8ab6fa275fe6b292487e95de9c9c9461d297b9cfca77559d16d4b5ca4068d3",
+      "git_blob": "d355c50002415d4bfbb421d5953f05fbe049066e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-6-source.json",
+      "bytes": 9078,
+      "sha256": "cf951f640022b1ca44b2c951b3a5ca28f0f25fac3dc389b82b2074bee8424f6d",
+      "git_blob": "487214f136a353b16475f1ca185990594b1167ea"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-6.log",
+      "bytes": 979,
+      "sha256": "c501c6c4409fedaab62b8b1c33e2f204ec2f43cd01de29ea247cc38cf46b6eac",
+      "git_blob": "36fbf7d8b02338be808081ab22034ffd9f5142e4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-7-result.json",
+      "bytes": 406,
+      "sha256": "4ca6dbc4fa1896126eaf5817e4539b03ab22607fe9facdd89959db80570c7e51",
+      "git_blob": "20adc722784fba6b7db1c4dde08c3e3b1ccd1302"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-7-source.json",
+      "bytes": 9260,
+      "sha256": "74ae4d76984c95f9ebdef9bc9fe2b86b6bbcd431aa6d044312a77bae4d8203a4",
+      "git_blob": "f69c34ae4f08f4b075d254178b65c13b8ceafa3c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-7.log",
+      "bytes": 3853,
+      "sha256": "9d9d87f3be9c07e220113d4b4584575abd09fd113ab33e4be9a1ec90fa5d0208",
+      "git_blob": "632e2a9e5e49c49ee9f3f9ad694414dba883704d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-8-result.json",
+      "bytes": 404,
+      "sha256": "9b96dd18e77831b37e9dc28af2a279b04f60c4a5cf5225a4329b7a8daf1da64f",
+      "git_blob": "93469b562af998fb8b9d106230c12149340f5b72"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-8-source.json",
+      "bytes": 9260,
+      "sha256": "d681f8fac10e847f4d59661f6c3308d52aaa78c69d65a5d119cc67ff5c269189",
+      "git_blob": "11066c8457761fb8c9f18f63522ba817c41ec687"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-8.log",
+      "bytes": 255,
+      "sha256": "fd760ac772a5e4b2e599ea3591ebd83c22238daa687d495d4adb67a957f6b5a8",
+      "git_blob": "13cfd015d628c9fc1d25513875df2f19ecd29fa2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-fix-1-result.json",
+      "bytes": 406,
+      "sha256": "4da327700fc6012eb57ae3c7f98cc41430ca00f0ac4415874ec674e523d20c15",
+      "git_blob": "484dd2d4d98d9d32b2557779b8b935015fdba72e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-fix-1-source.json",
+      "bytes": 9078,
+      "sha256": "98b709efe5505212f2adca1d5520eb69292bf2b223061e036c3b235c1c15e97c",
+      "git_blob": "65654891af84fbf29732294c04a3f6b842a0d21a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-fix-1.log",
+      "bytes": 11597,
+      "sha256": "309d429085d04362de5888657d4d6839cd9830e70aed1b5402b1263c6905f0fb",
+      "git_blob": "0c1dec76977c5b68cf6f127a468ad6e0743e7b60"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-fix-2-result.json",
+      "bytes": 405,
+      "sha256": "b7c86de8b91c0f7ae3fb017b154f051f1a9e47cad9c5a44bb86a7cfd583e3055",
+      "git_blob": "156790103aed9d30d157076a0278df1d5d703c2c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-fix-2-source.json",
+      "bytes": 9078,
+      "sha256": "98b709efe5505212f2adca1d5520eb69292bf2b223061e036c3b235c1c15e97c",
+      "git_blob": "65654891af84fbf29732294c04a3f6b842a0d21a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/clippy-development-fix-2.log",
+      "bytes": 16834,
+      "sha256": "1199e2e47b14fb298d178068e0077a31c41698efcbf94044e5d1242113d89941",
+      "git_blob": "cb1c98376aa34bf61a48b2f1342c22a51b3602a3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/collect-diagnostic-attribution.mjs",
+      "bytes": 5606,
+      "sha256": "e8e90f381cba4045329fdc9e62ab33ed3e400372274d34752966cefb0e19eb55",
+      "git_blob": "4ee4cc62d3c757daf47bd5555abb8fa05e72c42b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/collect-process-metrics.mjs",
+      "bytes": 6168,
+      "sha256": "23d59f491a395abcc24981f38938542c4045f9f600ed20d07f0b5dd79f6d8d75",
+      "git_blob": "57f24c968b77e925544ed1fa3ba379e0f8db582a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/component-source-reuse.json",
+      "bytes": 16875,
+      "sha256": "b62d08556d66f58f0d1a1b253827b22b8ac1433cee594550f9c1e7854feeff9d",
+      "git_blob": "31f2386c06c071cfda7b17815030f5901852e99f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/components-aggregate.json",
+      "bytes": 6914,
+      "sha256": "a7ee852be9c9c2c62c84b6da7a3fab87df386515e0abadb4124c9ac3cd72aca7",
+      "git_blob": "040dc23dad1ae5240353dd1821ab83cf0588fe8b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/controller-schedule-clippy-1-result.json",
+      "bytes": 404,
+      "sha256": "18fe313985165856628cdb7206b7bde49cfe27817fc12fb7209dd901cc94b628",
+      "git_blob": "52a4d919f7fb5ca21ec211143d62215526725b13"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/controller-schedule-clippy-1-source.json",
+      "bytes": 10026,
+      "sha256": "6faa9efaac3c3383760ab9b7e92bc10e90e20602e9edcd82d689ceb8b9fc7d86",
+      "git_blob": "e695dcc1e9ce01e965c493ba7b6b03cce49a6927"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/controller-schedule-clippy-1.log",
+      "bytes": 255,
+      "sha256": "89856f23fbf742c933e46e72233192334a979e1930dac7ff78ecb1d2c3ad03e9",
+      "git_blob": "99886613e91e63749d22900d23e703d7c189622c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/controller-schedule-clippy-2-result.json",
+      "bytes": 404,
+      "sha256": "d23ef3bd20fdc2241e70b29dfe8d1688542cce1e6ac1f2668a53df509b6fad29",
+      "git_blob": "30dcaf84743d87cf40fe98db333b30c5f0b0113c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/controller-schedule-clippy-2-source.json",
+      "bytes": 10026,
+      "sha256": "9b785ac1ca3be8e7478f9f354425f748b95a81889dd0aa4a0f97c6fb5b05d665",
+      "git_blob": "e91c4ac96e3df8314d855daf75d0735bb105830f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/controller-schedule-clippy-2.log",
+      "bytes": 255,
+      "sha256": "a6a520b8eaa1eb8cc43bb442e655e0163516ad6fb990a2397cbed1231fa4223b",
+      "git_blob": "42659addb64d2f6ba00cbc69283c89b288427ab6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/controller-schedule-lock-controls-1-result.json",
+      "bytes": 1634,
+      "sha256": "97291d25d036563bc56af41ef708c09e636b6959505d524e4ae7030a0f622d81",
+      "git_blob": "2415c48fc3bdfe582e8ac2eaaad4e52997f108e5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/controller-schedule-lock-controls-1-source.json",
+      "bytes": 10026,
+      "sha256": "9b785ac1ca3be8e7478f9f354425f748b95a81889dd0aa4a0f97c6fb5b05d665",
+      "git_blob": "e91c4ac96e3df8314d855daf75d0735bb105830f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/controller-schedule-lock-controls-1.log",
+      "bytes": 5285,
+      "sha256": "8a6b7373adf256c0990530f36ec02b24b1a6ca8737b625105aad37bd0bfac1f9",
+      "git_blob": "4ddd715ddae7853a5a2852fdace8f8230b38d46c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/controller-schedule-repair-diff.json",
+      "bytes": 2096,
+      "sha256": "70fbedddd97b53d8a57c4f6646cff5c69e6260b3fba6b5196efebf19b8fcb06f",
+      "git_blob": "f346f57b0b4a3f2d07243d8671fa4b2550e463f5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/controller-schedule-repair.patch",
+      "bytes": 8857,
+      "sha256": "8e66c7bb3f8c2b96ed482957878f590adf8a5311e95cc1490ac9de38d8102f6f",
+      "git_blob": "843a98919d34e975001bb780c9c8c64026ef58c4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/credential-cache-compile-1-result.json",
+      "bytes": 325,
+      "sha256": "4fef5355a62255e5d07f69fb1e8338bf030169e41dbf3130552a4c747ce672e1",
+      "git_blob": "bfb7da9369c017774fe8f431e3dd37f023a19ac6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/credential-cache-compile-1-source.json",
+      "bytes": 8144,
+      "sha256": "66452be0e8110acef247602871839c8619088f888fcd96683f8939ea69ccbfaa",
+      "git_blob": "0d153e998e8de155dee04c982f84c8353fd5c74f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/credential-cache-compile-1.log",
+      "bytes": 1482,
+      "sha256": "02b71fc276bd8efdc842212fabb601ca2c4b74ba9689f5215699b6d0e507bae5",
+      "git_blob": "7df632dba08a5671ae73212b1d7a5a9beb762926"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/current-consent-actor-compile-1-result.json",
+      "bytes": 270,
+      "sha256": "a7c4c7f5071a1f5047394ff1a6af36c0dc786923c171b6898fe2c2b2bfdef1a7",
+      "git_blob": "22ecfaf26869ed7c2a1dd7bc32a2109a49d6bade"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/current-consent-actor-compile-1-source.json",
+      "bytes": 8890,
+      "sha256": "4a38b24ae2dd749814b49e54021bfae95a574cfd694d2baf8e4424145b2c58f0",
+      "git_blob": "11ae8722ce16a2121dcf070a4a3c3ec968a6e5a9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/current-consent-actor-compile-1.log",
+      "bytes": 948,
+      "sha256": "fdd16d83c0356395dfc757020266bb9c6da4e2cfd55f55827748c237a8218b99",
+      "git_blob": "5e5c7e566ce3645e1d7bf1601018b6ff9e8e6dfb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/development-ledger.json",
+      "bytes": 302265,
+      "sha256": "56c6472b898e278258d038c0e59c09cc456bbf3c8a38d6943178c71922db07fd",
+      "git_blob": "58bb20b060cf5c11e7c2c1856b53796d58fefe38"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-after-cli-build-1-result.json",
+      "bytes": 300,
+      "sha256": "7a91ab206d51402ddee21f54f37e1337c696f20996a0efe23765fff08d7493b2",
+      "git_blob": "351d6ecc51e2a9700c20eaea43091d956a7824a6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-after-cli-build-1-source.json",
+      "bytes": 9836,
+      "sha256": "e24b4447751ee25821afe5c98d81baaf5f8d75b72dfe17864875298fc5aacb20",
+      "git_blob": "5187680f7186112ebd8ad77cbe8aa7bdfa599083"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-after-cli-build-1.log",
+      "bytes": 372,
+      "sha256": "fe3b4bd04f36fbf9e8c6f32921400e8aea280a1660095baf2abb2787e6fd15b3",
+      "git_blob": "7ada986343c5ef6efaf4a34929ab79d18d932112"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-after-image-1.json",
+      "bytes": 527,
+      "sha256": "f194b016886682f77599f0af71c67c5a8e3c4ddead1a955a99f79f010788fae8",
+      "git_blob": "590657f8a166d32c0f51f12f836082f66c9e9785"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-attribution-2.json",
+      "bytes": 50139,
+      "sha256": "d900fb8113a68df3aae01bdc1db6997048a07c34ad8d93c02358c04807a5f1c6",
+      "git_blob": "f08a650c81049ede3561352344716cc661d2d107"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-attribution.json",
+      "bytes": 39747,
+      "sha256": "f1ebacce2d44b3a0d6364b827f659cfa7709e8eb1ac33d081a8e4b6b3d78fee9",
+      "git_blob": "ef9db889b8ef1ea3c5e61fe4985154bde9c5af95"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-cli-build-1-result.json",
+      "bytes": 300,
+      "sha256": "5b1ffdc2a2509c9d6868ab9f1375d14dc0658824b6543962960f31ff2bce8e8b",
+      "git_blob": "a49eda8045a85a9e8c8671c9708a5d1d827ab40f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-cli-build-1-source.json",
+      "bytes": 9836,
+      "sha256": "8288c20a027b09ca09c11b1ff69a904fd37fa4ca0c8a404cdc181e7b0151f946",
+      "git_blob": "ec501e17dee4c1d088d9e1fe78f485cf21041919"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-cli-build-1.log",
+      "bytes": 1558,
+      "sha256": "0eeaacdef57341598b4673f8449a81f66390bb30bde4f7e64cb06654d46d7797",
+      "git_blob": "4e68a32267fe391ca7baa99aa4bd5fd4bf124f92"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-cli-build-2-result.json",
+      "bytes": 299,
+      "sha256": "a1a33e1d5b5996f934417af6e7ac8df03297bcee7d5c0c8254d8672437995926",
+      "git_blob": "f8dfb9320811199870061c8f31a2f2afb8dda8ef"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-cli-build-2-source.json",
+      "bytes": 9836,
+      "sha256": "8288c20a027b09ca09c11b1ff69a904fd37fa4ca0c8a404cdc181e7b0151f946",
+      "git_blob": "ec501e17dee4c1d088d9e1fe78f485cf21041919"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-cli-build-2.log",
+      "bytes": 163,
+      "sha256": "fb080f61ee57cab64df5b6f13d5aaddebafd1d3f71150c892f49ef6adcb948fc",
+      "git_blob": "1aa34d82e2a272a007a6a106701037b401f53813"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-comparison.json",
+      "bytes": 6928,
+      "sha256": "0baf84b08d23c6e5e9c9241f667f1d6b17498a8af75cb2c241dcc20b842a2e86",
+      "git_blob": "a63ff16c82fd08e4ff10393748e38da27a4150ab"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-costs-64-duplex-1-result.json",
+      "bytes": 1656,
+      "sha256": "6294d11774b137317a33eca422183a3aebd31b3e84b010996f8e054b061c362e",
+      "git_blob": "cb86db81b6def110ccc75b8f7a1e667558ccda8e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-costs-64-duplex-1-source.json",
+      "bytes": 9836,
+      "sha256": "8288c20a027b09ca09c11b1ff69a904fd37fa4ca0c8a404cdc181e7b0151f946",
+      "git_blob": "ec501e17dee4c1d088d9e1fe78f485cf21041919"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-costs-64-duplex-1.log",
+      "bytes": 14832,
+      "sha256": "79f30d41ecc58efdbdcc93c846e4f6cf59a0cc6e53ed3489d1c0250301d4b50e",
+      "git_blob": "be83ae39469fb03644ed185429c3752a57b2c135"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-costs-64-duplex-2-result.json",
+      "bytes": 1656,
+      "sha256": "1fa6f43db638944efc1d22661f1d785c1aea63690cce80af863161c9373b8f39",
+      "git_blob": "846fdffaa524e36d6a0c37cd842bd7aca0225994"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-costs-64-duplex-2-source.json",
+      "bytes": 9836,
+      "sha256": "e24b4447751ee25821afe5c98d81baaf5f8d75b72dfe17864875298fc5aacb20",
+      "git_blob": "5187680f7186112ebd8ad77cbe8aa7bdfa599083"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-costs-64-duplex-2.log",
+      "bytes": 14943,
+      "sha256": "14f31a472d7033acdb155974aa5bd3c643671f66fd4dea82e58c987f554c3dca",
+      "git_blob": "571f656e8196cfa07acff2a34357ad716d11f68a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-image-2.json",
+      "bytes": 606,
+      "sha256": "82a3dccb226e800a07bdc2ef1e350c95bfe063ec6e14b33abf43ace04e01f668",
+      "git_blob": "b7bd0ac4e5ef734f6a9a97abb7245affc5aca25a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-image.json",
+      "bytes": 463,
+      "sha256": "28caad89955539f924901f99305c5acf78f9c901de0e9899b355571476831746",
+      "git_blob": "19a31d64329c0faa02058c6d78ce03a631453045"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-instrument-clippy-1-result.json",
+      "bytes": 405,
+      "sha256": "406142eb6524bad8ca3ec2b939395fb4dc20fc4370cbbcb970cc3ada1687cae1",
+      "git_blob": "f1e9a40996e5acc8e0df8c72dff14c0bd01642a4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-instrument-clippy-1-source.json",
+      "bytes": 9836,
+      "sha256": "8288c20a027b09ca09c11b1ff69a904fd37fa4ca0c8a404cdc181e7b0151f946",
+      "git_blob": "ec501e17dee4c1d088d9e1fe78f485cf21041919"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-instrument-clippy-1.log",
+      "bytes": 256,
+      "sha256": "1d17926301efeae961431c5fd189b0a450d7607d599834e944409b037b83594d",
+      "git_blob": "75c0d955d72941757b868f58705a31e8b50c7bbc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-instrumentation-basis.json",
+      "bytes": 1762,
+      "sha256": "4fb2143a1e9274c63bd9c60bfe998e019d669212337d6350e542a7939966e0e1",
+      "git_blob": "48812b535d07fee53b3c06f170aef5a8e7bb872b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-controller-compile-2-result.json",
+      "bytes": 325,
+      "sha256": "25cddf4d2c98e3f8c1a7045fa8d691977d9f553ccb4c89a406023516ee1eefdd",
+      "git_blob": "2f4ed9a5fe6ddb784feb58fd232e4543aeef5f2b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-controller-compile-2-source.json",
+      "bytes": 8513,
+      "sha256": "da2313a5e6831549c6cbe4c2361bad6aa2adfe206a8bb966ffdf9b8a5d5d558b",
+      "git_blob": "f23aac3c69194901e550d8cbe913958fe78d16ff"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-controller-compile-2.log",
+      "bytes": 1088,
+      "sha256": "ae04fffc8cc474abfdef01eb65ae28f019df8d8a27e9522349aeeb57a70b7356",
+      "git_blob": "29c59d664340bb3bb60fcd461e402456cf7045d0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-final-aggregate.json",
+      "bytes": 3042,
+      "sha256": "9c9b8f6df4055f9efc20780e0e703af8682ce9618d2dc8f1d94c0ac3197583c0",
+      "git_blob": "528bd1a1add29b5268c89074b1c04bf6cd0e30f8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-final-f08-f11-state-supplement-1-result.json",
+      "bytes": 2511,
+      "sha256": "83b3903a124072b5c84deb73e6cfb29c4e5ddca924bb61a2e2a4f5b78bad1370",
+      "git_blob": "c3af31de423a09ab61091e63abd4a60756ebe403"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-final-f08-f11-state-supplement-1-source.json",
+      "bytes": 9260,
+      "sha256": "1a105eb156a54edf9c609f403ea1ad054944580a8596c052205b205f3b3521de",
+      "git_blob": "45b763b9354f61a36049e02da97bdac1d23fd10f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-final-f08-f11-state-supplement-1.log",
+      "bytes": 7731,
+      "sha256": "9f2a3bf2eee12751119ac9eddf71ef0a7c51f9a3fe1cd3affe1bd070444b6a8c",
+      "git_blob": "bac145f3ffe9a80b8aead89e6ff696a0f591c568"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-final-f08-f11-state-supplement-2-result.json",
+      "bytes": 2511,
+      "sha256": "26fd4ef5d78a8988f4ea79480380bedef8c4e9bfde3a2cbcff5f7259b2891bf4",
+      "git_blob": "d2994ebcd967d2a1c1672c67eea910463daa1d07"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-final-f08-f11-state-supplement-2-source.json",
+      "bytes": 9467,
+      "sha256": "040157b111dc8e160052003a3adf4f27971a4de7c5aec90c0c9d8df475d57e9e",
+      "git_blob": "d020c5b2766d273889164c710c7d6ea0618b805e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-final-f08-f11-state-supplement-2.log",
+      "bytes": 16637,
+      "sha256": "3cdd76b05b1a50a279805c4ff12bac8971bcbb2c5ffa596ae1183cd356cc0606",
+      "git_blob": "4b92cceb14ecca764a15fb331cab49e03a20364d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-final-idle-read-supplement-1-result.json",
+      "bytes": 2589,
+      "sha256": "63782ccdaeed029972694ce3b3f2c72095e8f870798a600ecaef7915d590dfbc",
+      "git_blob": "1bc5c1f7fd63c074ecd9cec7c96ed949152b833f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-final-idle-read-supplement-1-source.json",
+      "bytes": 9467,
+      "sha256": "c22a8e0925125df0465eb02f865a68ae6be519f21ca1138ef602072f955e3350",
+      "git_blob": "023eb3a8dd1b0b7080f8695cb5804fb75c3beb77"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-final-idle-read-supplement-1.log",
+      "bytes": 34833,
+      "sha256": "0c703eb4c6f88e85e8132286cb0561bcb8d2d90f62d4d3f47de607919ebfbf29",
+      "git_blob": "8983f81753df313372fe76e318be9a6450a0bf39"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-full-final-1-result.json",
+      "bytes": 2408,
+      "sha256": "6dda5dc4c8cadae1403b5bea55c7cd2ff8d5a4a3fbbb2698c8d3c38ac84470ac",
+      "git_blob": "639e5031dac66a1a135c09658c411e36c24f15a7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-full-final-1-source.json",
+      "bytes": 9260,
+      "sha256": "c08a6ffb93154de41f9ce73d851a17c93ffc65c6a6f376df604b60be2c2d06da",
+      "git_blob": "1db04bf13d7cfa8d0f1aea3af9cd9fb2ca55f7a0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-full-final-1.log",
+      "bytes": 86558,
+      "sha256": "7ec366e329b3f78db262946a6ec656f277ce1051882c518b2a8d7af093b3d817",
+      "git_blob": "6e4b9055ec7302f35d31883ecda26a0673c4607e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-full-final-2-batch4-result.json",
+      "bytes": 2408,
+      "sha256": "8b3cfa6ab933b18707dabb26ba708ce6de91d63f5d063dc84743ed6cc97e92ef",
+      "git_blob": "c26613672ca1c2ea29caf4fc64cc2b21a3e019d6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-full-final-2-batch4-source.json",
+      "bytes": 9467,
+      "sha256": "c0af001b55a3772e00001d86969269f0a6851fe27c6d2659f72a8d51ff6b7750",
+      "git_blob": "d0d9db6fd02612780e17d955120897a2963da08a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-full-final-2-batch4.log",
+      "bytes": 96001,
+      "sha256": "ef1730bd58d401362a8fff473a235c4f28e749e0c41ad20900ed6dd0cf95fdc4",
+      "git_blob": "c63492444bbb92b905bb2b54fe3e7ad7dc124a02"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-full-review2-frozen-1-result.json",
+      "bytes": 2408,
+      "sha256": "85af0b72f118765a5c4b17c620ddf019fc03030d9f29754c4df0dda5a2385c17",
+      "git_blob": "bc3fa20c13cc9615a6aa6ba074e8864e0ecd0000"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-full-review2-frozen-1-source.json",
+      "bytes": 9836,
+      "sha256": "d56efdd77778f847e14cbdaf3080aa2f466d886e85bafaeab6330dbe3cb3050b",
+      "git_blob": "7da3008811099a9b2eebf0a152750e888606085f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-full-review2-frozen-1.log",
+      "bytes": 78074,
+      "sha256": "1cbb41bfacd32a824d7fdf579473a0c1c49ead25241428fb18dac0c60a03dc48",
+      "git_blob": "5962645ee863d026607f74f8b606c7127540af5c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-full-review3-frozen-1-result.json",
+      "bytes": 2408,
+      "sha256": "e2bda3cf7b15edd64ed0be9b074efba7ece96738d35db93d60273d51ffd9b872",
+      "git_blob": "192c8debeff81a2b0fde53fcc6fe05688fe6a149"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-full-review3-frozen-1-source.json",
+      "bytes": 10026,
+      "sha256": "9b785ac1ca3be8e7478f9f354425f748b95a81889dd0aa4a0f97c6fb5b05d665",
+      "git_blob": "e91c4ac96e3df8314d855daf75d0735bb105830f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-full-review3-frozen-1.log",
+      "bytes": 80855,
+      "sha256": "ef342815950f3d8aae8752a606793bc364c6450f77bd2c5480ee6dcd10d993a6",
+      "git_blob": "e204f0c24c30d5ba47031b2c5d0fb5eb11e8b302"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-kill-controller-compile-1-result.json",
+      "bytes": 327,
+      "sha256": "dd388db77f0b729fd7dea2f510ac9ae4404c436f039974a3457460bbad88e8ce",
+      "git_blob": "228940bdb422295fecdab8603b16b8c2ad1b18c0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-kill-controller-compile-1-source.json",
+      "bytes": 8325,
+      "sha256": "be4e12bae617410ea7a3cc4d6e7417f274755eb1d69abc5b2e354785995f3d51",
+      "git_blob": "5816d05cfef9dc12f60e37d98aa08932891f7554"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-kill-controller-compile-1.log",
+      "bytes": 1455,
+      "sha256": "6be7c01cf00cd4f36aa7d97778b22d4122feb73e74b1990185388e25b918fbed",
+      "git_blob": "0cff84b045bd156b9756cd752a43c4888f26d7f8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-kills-1-result.json",
+      "bytes": 1080,
+      "sha256": "c062c8ef3f79cac5737fda84a614d6e9de13aab2ec24c0f4dec1bf425100fcf5",
+      "git_blob": "3f74dac8afce545f76caae402538bcf024718dfe"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-kills-1-source.json",
+      "bytes": 8513,
+      "sha256": "45d055edff427ab45ec3f962a848f65f9968a84e3d828e45cfdc7f90cf2a9165",
+      "git_blob": "2ff69cbff19548885a0a2f34784ed708d89a9910"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-kills-1.log",
+      "bytes": 16888,
+      "sha256": "80e25a3d46ef09f9f0c264891ae56f135cad2e98a2359f7e0ce4d70506effa47",
+      "git_blob": "3ea6e149d61c3b9fe208a5fee2096c0c28db82a5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-owner-eligibility-r1-guards-1-result.json",
+      "bytes": 2552,
+      "sha256": "2b18c8fac0d22ed3f25d6825746f48dfa7673efa5a0a0001b5ce4dfe112dd9cd",
+      "git_blob": "c7da44492961ba4d2854914fef7f23860030d8d7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-owner-eligibility-r1-guards-1-source.json",
+      "bytes": 9836,
+      "sha256": "e24b4447751ee25821afe5c98d81baaf5f8d75b72dfe17864875298fc5aacb20",
+      "git_blob": "5187680f7186112ebd8ad77cbe8aa7bdfa599083"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-owner-eligibility-r1-guards-1.log",
+      "bytes": 47961,
+      "sha256": "68cdcd1c5a2de65e9fd28e21317f93c4e616b8469904e3e9aa873272a5dcc979",
+      "git_blob": "385be89466a9464f293f505636b06d0b0b6d3e5d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-policy-1-cli.json",
+      "bytes": 244,
+      "sha256": "cb3b2ce5d6d869bd1ffb6d3d991f1f4d68edd97668666a8df5e8fb9d5ba174b2",
+      "git_blob": "43f409601d9f1730824881016b8c8d64dfd20ee6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-policy-1-result.json",
+      "bytes": 1069,
+      "sha256": "d5c686dd540a2cdb23cae0b0c48a8f33d2d09dd0dc5550ce1bf515995ee184f9",
+      "git_blob": "c60eb52589eeddfc8f1569cd3a55ae1ccf543e65"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-policy-1-source.json",
+      "bytes": 8324,
+      "sha256": "ef9ed2df8617a6f4e8b77d59f3ab156954d53322408533d8c3fb4f75c7282234",
+      "git_blob": "e1410676827759fb17c0ce3536ff6a09fd941a8f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-policy-1.log",
+      "bytes": 6273,
+      "sha256": "8e048c4e5ddeab7b1df5c50547048eef0e6070857b49fa33a08e7dfa2ddac917",
+      "git_blob": "86d5745bcbc9d49de5e614b4ff60d0549c40a4d8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-policy-2-cli.json",
+      "bytes": 234,
+      "sha256": "f8af6713ce74b48c3b68135edfa6be40370b7d8cecf43001e24629edfc158737",
+      "git_blob": "1aa7b636df8e4fbd3f20c6045dfd9094aefcd031"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-policy-2-result.json",
+      "bytes": 1071,
+      "sha256": "2a32088e2365d2ef95449800c6147364c7167dfde17e60cdfd8b42ce0d3c5678",
+      "git_blob": "cf2d2c637aceb7760e7849cb6266c11a2fb61440"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-policy-2-source.json",
+      "bytes": 8513,
+      "sha256": "b05253206444d280035046e4d55c40567511080df4eceda7de1583d8f6c18cc6",
+      "git_blob": "47f7f75be0c7e57a4722f3cebf3a4eeaf69955b4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-policy-2.log",
+      "bytes": 9656,
+      "sha256": "8a733d3589466da3d766ce630e1d7e7f7ff3ed6216b9c05cae9ecd5cb98422c1",
+      "git_blob": "6b60d2d1181e3affc0fa3ef22ebf4d808021a15a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-policy-controller-compile-1-result.json",
+      "bytes": 324,
+      "sha256": "be0ad84a05dded17651b5fd874d1ea463c6c5175e435830426080ed3e23b81a2",
+      "git_blob": "3e342d98b9efb26a34539b396f55dca950651bbb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-policy-controller-compile-1-source.json",
+      "bytes": 8324,
+      "sha256": "ef9ed2df8617a6f4e8b77d59f3ab156954d53322408533d8c3fb4f75c7282234",
+      "git_blob": "e1410676827759fb17c0ce3536ff6a09fd941a8f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-policy-controller-compile-1.log",
+      "bytes": 1768,
+      "sha256": "bd512b3e5ddb94fc742ab02428880babf2c4fd42161916395e03a1fd9e5e9e47",
+      "git_blob": "230d18da77499b705ffad96d06e223bf497fce93"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f09-batch4-final-1-result.json",
+      "bytes": 1654,
+      "sha256": "4243caa8bceb5a222a4afdcda6a443623c9ed88802274e410bb35bf99079e690",
+      "git_blob": "cbf70e2c647b77c08fd52c4b51b8dcbb1bc62afd"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f09-batch4-final-1-source.json",
+      "bytes": 9467,
+      "sha256": "820338cdef7e4e2defb58d9f4c9b570cb87cd8e7f63e79db90656e340395860e",
+      "git_blob": "9d03fe4b2515bd67a2fe8f4e86a49448c0723815"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f09-batch4-final-1.log",
+      "bytes": 5894,
+      "sha256": "831d11fc8f1897384f27c0b3cff84b7eebeed65fc844283f14b2b49b094e197b",
+      "git_blob": "86e54fbe9d60ef5807a100900ded5a38b63bdaba"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f09-controller-repair-1-result.json",
+      "bytes": 1654,
+      "sha256": "2c34546f09395ea2f0d08409ce8734f001247df2b48a89e1b0239cd44c9609da",
+      "git_blob": "b0045aea21866099018578f26c0592b0a4a83c1c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f09-controller-repair-1-source.json",
+      "bytes": 10026,
+      "sha256": "9b785ac1ca3be8e7478f9f354425f748b95a81889dd0aa4a0f97c6fb5b05d665",
+      "git_blob": "e91c4ac96e3df8314d855daf75d0735bb105830f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f09-controller-repair-1.log",
+      "bytes": 5973,
+      "sha256": "e7b81060cf2d4a478daa3b8846b62ca28c03111dbb554d6570c97fa52fd0722a",
+      "git_blob": "143b100d411562cbf84f764051ca819147570f93"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/final-1-images.json",
+      "bytes": 816,
+      "sha256": "ae0c93e7ec09215921013878cdba0e7c6a9d84585ba9f8268e50ac412d279839",
+      "git_blob": "931c668f1693c91b1b397d33bf562872e989b08f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/final-images.json",
+      "bytes": 915,
+      "sha256": "912092f26d2b5cceaedcea2272165dadcb6ec320ccedfb2621437f0aa9c14f0a",
+      "git_blob": "76a3d5c8bd459b82372507e37c6edd1864715e13"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/final-process-metrics.json",
+      "bytes": 25243,
+      "sha256": "a6922160660b36afcb601d8815d66bc3ef055b40ca6b6b4e10509c402ce307c6",
+      "git_blob": "2b85817be6dbd8c95dc1f85893bdad700fa577f9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/final-review4-clippy-1-result.json",
+      "bytes": 404,
+      "sha256": "7ca7f54c943dc7de3171958d7d14a08d40136fab3bce6440845ed2b2e768992e",
+      "git_blob": "54b34fba6efc0af8b64446d1c1a0bd5690655cd5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/final-review4-clippy-1-source.json",
+      "bytes": 10026,
+      "sha256": "477846e482a8f8bf781cd2bd9b3114c9a00d577b3bb02e1926051d7973244bcf",
+      "git_blob": "d71f11eee64510a16b77b8370e257dd4827fffbc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/final-review4-clippy-1.log",
+      "bytes": 255,
+      "sha256": "3530730cd0392b0034e6e18c06a8f591389f1b13f331407db40d3dec09a52635",
+      "git_blob": "272609b07ca10c9e3e72efcbb0d35474283cf5c4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/final-source-correspondence.json",
+      "bytes": 14889,
+      "sha256": "377996854504cd5a7ea90af05036a84acb3bc42144f83ee9d937253c83e0a659",
+      "git_blob": "9adcd1acd62216f1dfe3ce5602fc4510f76a0185"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/final-static-source-correspondence.json",
+      "bytes": 326,
+      "sha256": "333a33aa149da8fc9f573948322210b17065bb9752950a6883c3b4f3b5b2ae05",
+      "git_blob": "3c24c1bad530f160dd93194875c5a948c3769bc9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/final-suite-summary.json",
+      "bytes": 11304,
+      "sha256": "81981b182013b856fd2dcf7e0638c65b74d64422f795c6fdef90f9433d337a86",
+      "git_blob": "d68d1960665835e97e36001cb31770a63bc46a95"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/full-F09-controller-failure-1.json",
+      "bytes": 4199,
+      "sha256": "0a6b2b0746074dfa2757782d6352f1453675ea5301c09603093e3c9846b183d7",
+      "git_blob": "13121290693921a2058b03f9120749e59e1c6dc9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/gated-runtime-compile-1-result.json",
+      "bytes": 351,
+      "sha256": "b2cac84c2158994c3ab0b8a2ad589e32a2b5075874def18b4a0c9168c58c0c61",
+      "git_blob": "cfb3f32cdf1d49f65102a87bbfc9605054d23076"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/gated-runtime-compile-1-source.json",
+      "bytes": 8697,
+      "sha256": "59b6ff2e336a2c6235391bb4f31f693e6edf0620e3a6c28ca043ebe6e975ef04",
+      "git_blob": "3c7c9d61f9c8b6c96ea90e6458575c4205c0f764"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/gated-runtime-compile-1.log",
+      "bytes": 2097,
+      "sha256": "79395b3e3a225be42c5b79565592bb6821937394da6fda1024c746f8c7bd3e70",
+      "git_blob": "647f83e42d21b76a8f52c035f829ecce80e4f8bc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/hook-barrier-cli-build-1-result.json",
+      "bytes": 300,
+      "sha256": "8233d8cb26749de631f8e9f6d1fd26aa09af2a889a058df708cfd13cbce0b859",
+      "git_blob": "ae624c0ec603d15e4471412179cb42cca6b69cfc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/hook-barrier-cli-build-1-source.json",
+      "bytes": 9260,
+      "sha256": "c8ca4066bae1facf9c5e37fb4a718ecdfecb0e30fa50b047c5d56a05b5813ecf",
+      "git_blob": "cc4757c452d577b75d4522a8c32338e6b203085b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/hook-barrier-cli-build-1.log",
+      "bytes": 256,
+      "sha256": "7bd0b349b1db67f2eeaf884eecb318f03fe85f96089f22aed6378b0a00d18ce4",
+      "git_blob": "3cb536f2dda14032937400e023f6b2e3767c91fd"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/idle-read-cli-build-1-result.json",
+      "bytes": 298,
+      "sha256": "03bf35d4da487724f95dd24b9441a589cf839373ea54756c1bca0cb9cca621bc",
+      "git_blob": "a3f7bb2cc8efc30d48a1962783168866bbaea988"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/idle-read-cli-build-1-source.json",
+      "bytes": 9467,
+      "sha256": "6e546b3bca0484c8c43331c40cd1b17b4da5503f0ccb1743b5e1a7a5a1b688c6",
+      "git_blob": "a578414998ad4320be5ee2ab7887684531289d55"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/idle-read-cli-build-1.log",
+      "bytes": 1121,
+      "sha256": "4b467814b44d6002b7faac232e133b85908efe6af66634367bbf0c87ff06b5a5",
+      "git_blob": "1c7443369a7b9c31363cc4b2450b02fb87e4c337"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/idle-read-cli-build-2-result.json",
+      "bytes": 300,
+      "sha256": "caf9ddbe0ba4e6fe944466c421ac8fdfa64f228c88fafb207b4ff7ed470b83bc",
+      "git_blob": "51d7158925c837e8da48dceca273fceddc046480"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/idle-read-cli-build-2-source.json",
+      "bytes": 9467,
+      "sha256": "0b6554bdb662d17ead7b91682ed4e29fc3b48d4553a48454b00136211fdc32f2",
+      "git_blob": "1419775e1e105a8af7e7c69364aef142aa47c9a6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/idle-read-cli-build-2.log",
+      "bytes": 727,
+      "sha256": "6b76bb2d1eb9ffa10a5e4d727f1987e0a8878ff55bf806995001bbc0cb3af1e4",
+      "git_blob": "33e5d4f1a21f86537b468a4e41cf0c04e18f9bb0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/idle-read-cli-build-3-result.json",
+      "bytes": 300,
+      "sha256": "d5fc50f288ae50e9a19d79665045f02af308b19127253a4e3f5350e443aad1dd",
+      "git_blob": "874105e6fbfde3a6c59c9d6b613268dda5a7509e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/idle-read-cli-build-3-source.json",
+      "bytes": 9467,
+      "sha256": "c22a8e0925125df0465eb02f865a68ae6be519f21ca1138ef602072f955e3350",
+      "git_blob": "023eb3a8dd1b0b7080f8695cb5804fb75c3beb77"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/idle-read-cli-build-3.log",
+      "bytes": 650,
+      "sha256": "29049343a3b7b021d14339376fa0cc6488e3a33530bf74fedea10908ca7b3863",
+      "git_blob": "0b87996684ac30134a7217beb6a16e29aa82dd98"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/idle-read-images.json",
+      "bytes": 288,
+      "sha256": "900ef1805e41afba71dc1366a16ff796436789ce99387658b9e1f046275d442d",
+      "git_blob": "fbf738afbe3fa6626d9ad767a615edb99505fe39"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/implementation-files.json",
+      "bytes": 145642,
+      "sha256": "01540c0bba5a294139cee055afe0835a168fa3b81919b67a5c42162c1a950fe2",
+      "git_blob": "5eb5b598155f455d5b19f5719ae2100d3d5473b8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/integration-compile-1-result.json",
+      "bytes": 293,
+      "sha256": "5129bdd6da2fb84314777b69929812728923b9aed8f42153202ca56e7528d766",
+      "git_blob": "eecbb3ad9817d2945026aeaf4219810a61f2bad7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/integration-compile-1-source.json",
+      "bytes": 7565,
+      "sha256": "acad8c02618fb9026d96b0590c3e9aa7085757383c79510e794c4d4c72a29d56",
+      "git_blob": "46b304e29d630b6c4194d28c37f2e95ba63d5249"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/integration-compile-1.log",
+      "bytes": 1260,
+      "sha256": "cf46d06dce84a263abc80bd6dfe9f3b8a41615e5bbed81b2de56c20cef7899ae",
+      "git_blob": "74c82506e33e39878b96d867fd720d6c77e2dce8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/live-compile-1-result.json",
+      "bytes": 293,
+      "sha256": "4f5b00378c07d5c0562832188118cd4a03b336b06074fdee13cea3d5780dab50",
+      "git_blob": "2f7bbc22f315fba0073724f0a3033fbca6c5217c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/live-compile-1-source.json",
+      "bytes": 7185,
+      "sha256": "c16214f1a87d4e7ee7f3893ea060926b94d47c2b7fa0a16a14548290aeb82966",
+      "git_blob": "ab7d731f5bdf7fedddd175f30719503e2c762379"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/live-compile-1.log",
+      "bytes": 982,
+      "sha256": "9c90af27f97d3b47ff425215df2bc314349c3e7b8619da0dec013c9ef34d7682",
+      "git_blob": "a4e348b1170fa1772b498c50a6a9cf37c023b860"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/matrix-and-p-controller-compile-1-result.json",
+      "bytes": 303,
+      "sha256": "78e67b6e5fefeea52953d1dbb6caa2beb5faa43f7891872da59f454c28f79934",
+      "git_blob": "2a7df22b16df1b57825241f1817236c04fb02c0b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/matrix-and-p-controller-compile-1-source.json",
+      "bytes": 8890,
+      "sha256": "921411b1e6fadea0f52414d7924f7900603848d6d2040cf3730e3cdcb2b044c1",
+      "git_blob": "ef6f9e0eecf5ee09ff5770cf644c832def91bcff"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/matrix-and-p-controller-compile-1.log",
+      "bytes": 1027,
+      "sha256": "257390ce265b747f14c3ea3430e0e5c803298f0228d91bab5c496906dc9a5874",
+      "git_blob": "41b5aad23d000781f5b66b7f6f4b5364afee4f44"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/matrix-and-p-controller-compile-2-result.json",
+      "bytes": 302,
+      "sha256": "aa04c002bcb0090df3c1d63007694a1390c6a59802185d3745f33db587b1f066",
+      "git_blob": "adfdfbba0e0599bdfc677c6b172285930f8e5177"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/matrix-and-p-controller-compile-2-source.json",
+      "bytes": 8890,
+      "sha256": "98874dad493a4f87cd45c0a2cd883f18afc0d54f1caa26bcbbe39082b354c396",
+      "git_blob": "8af41f7e62eaabe94d4135a913de5287fd19e10e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/matrix-and-p-controller-compile-2.log",
+      "bytes": 776,
+      "sha256": "2241ae813846dc82e6eaf0fc64574a0d68db5d6b8a6dd0fc8cb1f00da6dd4811",
+      "git_blob": "31be7c4dbe50c03ce7bbec2ce89fc86b117c4399"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/native-batch4-cli-build-1-result.json",
+      "bytes": 300,
+      "sha256": "f21ef0bbf31d557f5d8720d026640505060135ef4657a72ece1f2eff2011ae44",
+      "git_blob": "909d588e17fdd7f4d83a39c2214d1d6ed69d8d11"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/native-batch4-cli-build-1-source.json",
+      "bytes": 9467,
+      "sha256": "820338cdef7e4e2defb58d9f4c9b570cb87cd8e7f63e79db90656e340395860e",
+      "git_blob": "9d03fe4b2515bd67a2fe8f4e86a49448c0723815"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/native-batch4-cli-build-1.log",
+      "bytes": 256,
+      "sha256": "59572fbe3ee956451972e5414bc2f6ff704f443f9eafb4c784eb81d5a16b4f87",
+      "git_blob": "4ce6bfb74123befc2309cb56ce06a4be74944764"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/native-batch4-compile-1-result.json",
+      "bytes": 302,
+      "sha256": "5cbb41eb60a444984f5e69c3f459592a6643fe84cb1a20f096fe3d9f139c452c",
+      "git_blob": "ad6ddd41cd473cf8e9292c2e547e825a2220e09b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/native-batch4-compile-1-source.json",
+      "bytes": 9467,
+      "sha256": "cd2d9ae93c2b4eceb992e78bb0da9dcab78ca019f811a5977ae5b81ccb980b27",
+      "git_blob": "5daff4fc41b4052e391b1da4c0a8c2e3960729c6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/native-batch4-compile-1.log",
+      "bytes": 1761,
+      "sha256": "205f588ae053b8aa8ec1a67d7666e0763176a0dd896892cd8f1124f7287dabcc",
+      "git_blob": "a21e04bd5edc768d7de6f8a743a8e67082214852"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/owner-root-counter-r1-clippy-1-result.json",
+      "bytes": 406,
+      "sha256": "d1777790cf143509b53b3a82582e58dcc7967d0a5fc4cd0fada39d58c1e7656a",
+      "git_blob": "2549aedf937e110e4bd9f268423b4aa3bbe2e289"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/owner-root-counter-r1-clippy-1-source.json",
+      "bytes": 9836,
+      "sha256": "f8261a80548fda422cf737035711dedeb240b3ce54ab93a6df5a1e12ea3a5e16",
+      "git_blob": "5aeb9ca4e866cb9fc86faa4f048034ba125f4736"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/owner-root-counter-r1-clippy-1.log",
+      "bytes": 1466,
+      "sha256": "778f97de3d6a500629c0596ab1d0890f73b35cb9da1b3144a0274b2ef397899f",
+      "git_blob": "72c2230eb33f61dc3de0b45fa93b3f58872c29ed"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/owner-root-counter-r1-clippy-2-result.json",
+      "bytes": 405,
+      "sha256": "460b0b0e28734cc4ac140dcea0210c3ea07b92e6c1ca2e9cfa46c671e2d55f51",
+      "git_blob": "872c96462aee863791232789e9d42d54a0eb26fa"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/owner-root-counter-r1-clippy-2-source.json",
+      "bytes": 9836,
+      "sha256": "e24b4447751ee25821afe5c98d81baaf5f8d75b72dfe17864875298fc5aacb20",
+      "git_blob": "5187680f7186112ebd8ad77cbe8aa7bdfa599083"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/owner-root-counter-r1-clippy-2.log",
+      "bytes": 372,
+      "sha256": "70c32fa9fecfcd6d69ebad58abc27b3c48a8bbef52323c8f701757fc44c1544d",
+      "git_blob": "68ef95a6e28c9fbae3a293019b7360e6a515b3f3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/owner-root-counter-r1-diff.json",
+      "bytes": 2084,
+      "sha256": "d4bea6f449bf9c207411b4b18829aa4eb8ecea1b69c3900b82d0fb79def2f219",
+      "git_blob": "82c639e6afcfe85fce4ce9b72298dc758466e087"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/owner-root-counter-r1.patch",
+      "bytes": 7149,
+      "sha256": "0632b53c1a0caccd3072a1e1d58a94105eda0ceccd36589e2fa112434f0ccd0d",
+      "git_blob": "d5eed4f49b77c490ce1864b197a4e9e9e8fddb80"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/owner-root-counter-repair.md",
+      "bytes": 3250,
+      "sha256": "6026f9d13dc283d3d9fb950df8ba1a08ac4785f12ff824139e0dcb2745fcf41f",
+      "git_blob": "633c9e33796c2bbec7326bb0bd5f4959714755f0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-budget-correction-stop-1.json",
+      "bytes": 579,
+      "sha256": "588ab55211e2ab186a3943e0b260b3f196877324fe1184f179ee7778458f3207",
+      "git_blob": "ff9a37af2b85ec203992a13e0ded603a24f9f5d1"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-controller-compile-1-result.json",
+      "bytes": 327,
+      "sha256": "8516b6d3f69d4855c220edc221404c6cc0cfcce52a2bedb5e452358cbf3196fe",
+      "git_blob": "d4e769a23e73cf939768ad2cbd6a6b3de51dff59"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-controller-compile-1-source.json",
+      "bytes": 7939,
+      "sha256": "018175951d9a27d4e27da8f397d428a1a0f2d20941b05dbe8ac43134fefc4ae1",
+      "git_blob": "e9f6ea6e0f2700cb095fcef79fbb5be6636bb28e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-controller-compile-1.log",
+      "bytes": 908,
+      "sha256": "0d3be2ca64e1d005a70c9ac1937065e28ff234c5227ba6e979e33adc3bc3767b",
+      "git_blob": "25aa2284d82f2ad135d6df7e857dc023a2dc557a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-controller-compile-2-result.json",
+      "bytes": 327,
+      "sha256": "61b3c87cd1df2279c00e7408471a9351dd85fcabd7cfa105c5fbd3ab1dcc5ab6",
+      "git_blob": "f062807e7c18c3f309fab4800684e567b7de3375"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-controller-compile-2-source.json",
+      "bytes": 7939,
+      "sha256": "ff7faced91a3030c36e1d4678b77235e603b1d815b8183d019131add35eeaa60",
+      "git_blob": "f57982b8b2a83abef7761db1338802959864077b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-controller-compile-2.log",
+      "bytes": 1615,
+      "sha256": "07f712f8d3533d66614888b13b7915cedff55f7c854554a8258c9723f4c06c75",
+      "git_blob": "c9a2c73dc6eaa6ef7012eb668bf0eb1f054bef73"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-controller-compile-3-result.json",
+      "bytes": 322,
+      "sha256": "4f7e81d10a81f8faf867a747e5a1b10e96d2857b58dc82ee0f8f2de70b2f2b74",
+      "git_blob": "a3d0ac576afd3f9dc839f8550afa7de1ceb25cc4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-controller-compile-3-source.json",
+      "bytes": 7939,
+      "sha256": "0a884ac9a35ab8d11a39846a8d5cf35baa78824c5133ddb8d725a20b2b3643ff",
+      "git_blob": "203b503a54300b692883b4fa475625cdae1dd732"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-controller-compile-3.log",
+      "bytes": 1087,
+      "sha256": "3e1eadd48e930089af7c0c3e5f2455cbde5c444df434621f0b939aabc3efbbf3",
+      "git_blob": "23a1d4ce45f840514e62c01d4c3c9f3366cc5c10"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-controller-compile-4-result.json",
+      "bytes": 325,
+      "sha256": "727967531bed9a6022badb0dd1fca59e3162ff3b47b3250b8bc0c985658dd2a3",
+      "git_blob": "4e150b21ea94ea4e3bfb477f5dea64d6ea08f3c9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-controller-compile-4-source.json",
+      "bytes": 8144,
+      "sha256": "bec31268a4aaecf3b669c83fc0e3a603db3fab0a0f3dcccf51012fe4870ef406",
+      "git_blob": "fb9790bc47561aaa318568e4e3971a44bf2c22b9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-controller-compile-4.log",
+      "bytes": 1088,
+      "sha256": "2d404c5e25a948e24f6e7adf50465d075e26c9962ade1f63e59da215d6f95bb9",
+      "git_blob": "8661f5fca7627c643d4db73aa160d683af90491c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-direct-public-artifacts.json",
+      "bytes": 7224,
+      "sha256": "89b4cdd837d9c30d168af591632216629ced5daf38c1ee2c9666822c2c2ee1c8",
+      "git_blob": "561619461e4fe7b869267a3f7d202d935997cd55"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-final-1-result.json",
+      "bytes": 1651,
+      "sha256": "42efb2d3fa22eb6bb3865914fe9683577c6e0e044a2e92b4d945045b3b96f14a",
+      "git_blob": "02f07d3e78f03b5875adf82168e84983a74bf217"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-final-1-source.json",
+      "bytes": 9467,
+      "sha256": "a773716b7a0f03a7eb8b542437ec6870870c64b38e2c60f69b8eeb24c0ba2627",
+      "git_blob": "825ac3759a02580ae5e7218f44df7a6331076ed2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-final-1.log",
+      "bytes": 136954,
+      "sha256": "41adf2ec7ac23b59d50626b37527544891c5d1604971393d00d5bba927ff62cf",
+      "git_blob": "831897849bb5b7899d3b96f9c8366266c559d2b3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-final-2-batch4-result.json",
+      "bytes": 1651,
+      "sha256": "a004304b4548bb9b057d83a04e310213931e676a67930ea7927d353eda2ccc6c",
+      "git_blob": "75b308bd14e6905589d8a2609215d4360fe7b414"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-final-2-batch4-source.json",
+      "bytes": 9467,
+      "sha256": "ce08c7973b7fac3a7826188b35e3277cb820e683e259b0442b9e5a096c4af499",
+      "git_blob": "364df230d5c334da3eb03442c9d871393bcad326"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-final-2-batch4.log",
+      "bytes": 76909,
+      "sha256": "f5cf41353a3fe3c6c3b38f0b41bc4874f945587597e20efd76e2bddd5b2618d8",
+      "git_blob": "4187045da7310f5f1371cac98fe4f7bcbf935395"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-final-3-idle-read-result.json",
+      "bytes": 1651,
+      "sha256": "086474fa1e52eb5c2fc3f31752ab60c21619d664c86fbb3636f32efc752ca530",
+      "git_blob": "ad8fb474ccd5c56f1b0807f748a2af989492cfaf"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-final-3-idle-read-source.json",
+      "bytes": 9467,
+      "sha256": "6b4e10474711d5450fb0c08bb5e8ba8b3ea0211faf01231e242cd67782762991",
+      "git_blob": "81012357d320e9e9fa435b9d151044a34f20d6c7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-final-3-idle-read.log",
+      "bytes": 148354,
+      "sha256": "0e3d9ca96a615840243a4ab2aa4488b529e65371082a5ea557eadcbe843728e7",
+      "git_blob": "fbf2052bd834a025f55af76242591230ad67de78"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-final-4-contract-budget-result.json",
+      "bytes": 1652,
+      "sha256": "9e13bea957dfbd5995344f1a964cfc80eca95e5154902a1fd4754c0484dfb1dd",
+      "git_blob": "d1f11ec6a1530bfaadda282a860c3eb300704ce0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-final-4-contract-budget-source.json",
+      "bytes": 9467,
+      "sha256": "8af176a0b21fb063d11f8ed5274ddae3a48ed24f33a6ce13cf02c1efb9be21cc",
+      "git_blob": "f8f3ef0d24c053cad89d59ab11fd95beba04fb8d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-final-4-contract-budget.log",
+      "bytes": 399414,
+      "sha256": "591ea8a768c36a79aa8185a0bc1d12abac69dd7acbf70b058cc4e5aaf4d28b06",
+      "git_blob": "283c0823bda6ba7e50f1a1f31242791ef15c93f3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-review2-exception-1-direct-public-artifacts.json",
+      "bytes": 6085,
+      "sha256": "ed727b4233afb511476c76b3b447957f13ec1615c5117409eafcf9d985fe5495",
+      "git_blob": "d7b698b47835d49d5044734020fc015b0d0fd766"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-review2-exception-1-relay-public-artifacts.json",
+      "bytes": 6106,
+      "sha256": "048bb1324c04baf3ba45dcb4e879bdaafe999ab7d237ede8962c9f095620a176",
+      "git_blob": "7ae0d7b85d00372d5eee4f045c46f04ae00ecd62"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-review2-exception-1-result.json",
+      "bytes": 2449,
+      "sha256": "411cb992394005d8da2f386d2f89183bca20120a04dec3ecf397213f5c23c0a9",
+      "git_blob": "49b7cde996c07333b2fed9527ac687af2c1e9eb0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-review2-exception-1-source.json",
+      "bytes": 10026,
+      "sha256": "9b785ac1ca3be8e7478f9f354425f748b95a81889dd0aa4a0f97c6fb5b05d665",
+      "git_blob": "e91c4ac96e3df8314d855daf75d0735bb105830f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-review2-exception-1.log",
+      "bytes": 340406,
+      "sha256": "67961d646d2913fe004459f791052a4b52906eef51f3ac32ff32b2ae71111640",
+      "git_blob": "49d3a45548701765bac9a8287e92a8c22543de29"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-review4-relay-repair-1-direct-public-artifacts.json",
+      "bytes": 6088,
+      "sha256": "254c2e5b1c004cd92fd6a7111e0d0ec221bc5c6b97ab2c1f405d16fd15db1884",
+      "git_blob": "7c88a54d8550d435744f72561957ba62ab31c06e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-review4-relay-repair-1-relay-public-artifacts.json",
+      "bytes": 6221,
+      "sha256": "7931e5d96bf30fdf042254d3b140bc10f2dabbbbea4b1028e4e18347664a39fd",
+      "git_blob": "df5d433e06ff7a2ac7b733a6c643df933302efc0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-review4-relay-repair-1-result.json",
+      "bytes": 2449,
+      "sha256": "7e7ee248e7d6513e99f718a4d6f19dbb6a27447f5f56139a98bdc0d9983b2b9e",
+      "git_blob": "d6920b7d2deba1952e490286798cc35098fbfeaa"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-review4-relay-repair-1-source.json",
+      "bytes": 10026,
+      "sha256": "477846e482a8f8bf781cd2bd9b3114c9a00d577b3bb02e1926051d7973244bcf",
+      "git_blob": "d71f11eee64510a16b77b8370e257dd4827fffbc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-review4-relay-repair-1.log",
+      "bytes": 355127,
+      "sha256": "14e259b71c273ba3e98299784354da7d3b4170f78c235f658394cd2262746aed",
+      "git_blob": "260682e0216210f3121a639857dc1297af9056d6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-process-1-cli.json",
+      "bytes": 507,
+      "sha256": "a6539233a6d906abc67d7fbe007b04180d689b02b715dbfbc74479f583186a95",
+      "git_blob": "3edf8d66014e6475c4b82ac0562c61d0e0dec95b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-process-1-result.json",
+      "bytes": 1071,
+      "sha256": "a7f389162bb1d223e334b25cb6365150aa3cce1cc6aac383f42e5d78e309cd9d",
+      "git_blob": "18c1b91ad54459ee60494862fb87f116d6d2003f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-process-1-source.json",
+      "bytes": 7939,
+      "sha256": "0a884ac9a35ab8d11a39846a8d5cf35baa78824c5133ddb8d725a20b2b3643ff",
+      "git_blob": "203b503a54300b692883b4fa475625cdae1dd732"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-process-1.log",
+      "bytes": 72911,
+      "sha256": "ea7f116a5df4fd41d4911c52b84ed9666a429a582aac575915f23b634341d1ce",
+      "git_blob": "33a7fa56cf1940347bfde5da7dc3d0bda220eb0a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-process-2-cli.json",
+      "bytes": 237,
+      "sha256": "fe10de75933db6b5085414ad64bf086e227b8fd43a7dbb33eae299e5abc457b0",
+      "git_blob": "79792dbe894138ed993991a5320aa0579bf49cdc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-process-2-result.json",
+      "bytes": 1071,
+      "sha256": "b3a96e306f8802fd9cdb777749a738d55bbe78fcc14c094d0676b413d6df31d9",
+      "git_blob": "7771e8affe97fe5ef943d7cf241b152ae407fff2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-process-2-source.json",
+      "bytes": 8144,
+      "sha256": "bec31268a4aaecf3b669c83fc0e3a603db3fab0a0f3dcccf51012fe4870ef406",
+      "git_blob": "fb9790bc47561aaa318568e4e3971a44bf2c22b9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-process-2.log",
+      "bytes": 76123,
+      "sha256": "d6eb798e65350f517957bd56dd332dd1bd6ba2c19dddf632e72b22ecb281bded",
+      "git_blob": "6376153d3b73464aeb9c0a0665e2cf6abfbfb106"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/predecessor-build-1.log",
+      "bytes": 14461,
+      "sha256": "cee5d2b967816174f3c7d18919cfacadee971b5e85e7881e2a469b1fb2f0d7fc",
+      "git_blob": "6adcf22855153a3987fc308f0206b7df8a6432a1"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/predecessor-build-2.log",
+      "bytes": 287,
+      "sha256": "03ce67b729bb91b7c7eb2a558c5232145058bcd97175f8d1f8dc5edee3845c04",
+      "git_blob": "dd157f305bc3e68ad66908ba43238882f5131106"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/predecessor-build-3.log",
+      "bytes": 287,
+      "sha256": "8245b574b5bd2466361d24d627fb5b8dbc87ace5b8527124ae2d9508b12f6ff2",
+      "git_blob": "45a32e4622c1233e00e004df4a35b535eecf4332"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/predecessor-build-4.log",
+      "bytes": 287,
+      "sha256": "8fbfe0de35de85abd4df8adf0a9ccba9aaeef8d35ad160208731f19aedea4f42",
+      "git_blob": "81b0854254c36f6a948ea4de406faae6b87dd8bd"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/predecessor-probe.rs",
+      "bytes": 3452,
+      "sha256": "69d7c6df4458a919d2b719d8594265c9dafdb3d7a678ca9f6956058bfd8270c9",
+      "git_blob": "d8684cbe1e60a993fe74fc7a55603536ffbac9dc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/predecessor-source.json",
+      "bytes": 299,
+      "sha256": "6d5237163221741b25c97fbe8a1c6793354c53333599a93276761f26a982875e",
+      "git_blob": "8c8937364f677d408858c2e6afd7e707e664f09b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/prepaid-compile-1-result.json",
+      "bytes": 293,
+      "sha256": "b88210ed29fce60b9b33dd93e74d2423beaea476ffde13fc19a705e5bce077f9",
+      "git_blob": "b7bf29a45eb53afe19f89b76db0de3be395013cb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/prepaid-compile-1-source.json",
+      "bytes": 7001,
+      "sha256": "ff8e1b0535684e44dfc2f05539fe259239036a5f02e76d396df2ec27ed5e94c8",
+      "git_blob": "095d8ae2dbfe0b6a2e037e245878bf4be2e23e80"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/prepaid-compile-1.log",
+      "bytes": 1260,
+      "sha256": "656cec01e00732a34fb7e63b436c2953799a9e0c49fa3aeaf0618e3e0d3bf8a2",
+      "git_blob": "447ebc069a657ddfe35955c35ebe390e767ae55f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-compile-1-result.json",
+      "bytes": 270,
+      "sha256": "ba08ce98530606d0b2c7d7acfcd95233fa107a82a969016d9557173d639a75cf",
+      "git_blob": "1821e1d297881e3bb9754ebc59fd403f0f7507a9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-compile-1-source.json",
+      "bytes": 6816,
+      "sha256": "d08ab16d1e85b28b196cd7cdbe8fd9af8d42d9ef383ab4252ec992a49fc541b6",
+      "git_blob": "872cc6eb00cd27986c1c12e316890cbbbb01cf0a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-compile-1.log",
+      "bytes": 3208,
+      "sha256": "5f62e09367f3d36b91334e31244eb37f20ab8561ba7af227b0c9ee6b546cef2e",
+      "git_blob": "cc4a2dd300785c82b87f066ddb99da8d54218989"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-compile-2-result.json",
+      "bytes": 269,
+      "sha256": "b6961887ba81fc9d27aecd951e46ef04705c22aad224a652aa85c26e932d3405",
+      "git_blob": "25e9177cabc6b153f7794f6f79ebfe74b254524b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-compile-2-source.json",
+      "bytes": 7001,
+      "sha256": "11b4248cc54cef1690286fae971f0073b1ed1a8933acaea08f033e56e48deb4b",
+      "git_blob": "af31aa4ec82dd48b1d8b85f1b63c219ded0631f5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-compile-2.log",
+      "bytes": 554,
+      "sha256": "0441f2bf819e97c989274098cd71ba334220ec8e6a752923607908d84b4e5848",
+      "git_blob": "76cb4cfbceb76950647f3fcd539e931a7c317999"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-1-cli.json",
+      "bytes": 321,
+      "sha256": "e77d840355a1714a5fc05ff45a7da831b6f1a0bafbfbaa841dbea671bda23870",
+      "git_blob": "6453a7bdb981f1f4df8940d9b37482d3e897c711"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-1-result.json",
+      "bytes": 1073,
+      "sha256": "87cd6fdd3d0caff0f7eae1b8f896e9bfe26f17c079121d8b9ac8558653b86580",
+      "git_blob": "729861c3ba5849a413a0a4a61fca4d58422195bc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-1-source.json",
+      "bytes": 6816,
+      "sha256": "d08ab16d1e85b28b196cd7cdbe8fd9af8d42d9ef383ab4252ec992a49fc541b6",
+      "git_blob": "872cc6eb00cd27986c1c12e316890cbbbb01cf0a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-1.log",
+      "bytes": 2632,
+      "sha256": "ddf4bc1fa914918a6508a0535aa72f18bb3260957d71d74af01a6c35a84d9d32",
+      "git_blob": "a7af6527f5aa600ed5b6fa6e5ee198cad1573938"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-2-result.json",
+      "bytes": 1073,
+      "sha256": "0864990c4ce931164f0226b9ab88f7cb2898893bb037d8e068f1abe93b544943",
+      "git_blob": "5bad6392ed6e67739c946f939bce2f56fc059d28"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-2-source.json",
+      "bytes": 6816,
+      "sha256": "a4141a4494b8a7e999d44e7dc936c269639c7dffe37e55f71d91dfdb13a54a33",
+      "git_blob": "d02d307a989536923435582610619abb3e9673d2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-2.log",
+      "bytes": 3090,
+      "sha256": "bf6b8824041497ff6e8f329fa29613d6216323f99a31d71c333c37ee889e96b8",
+      "git_blob": "7d708224eae436053d402ee0abb100074a184683"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-3-native-result.json",
+      "bytes": 1073,
+      "sha256": "6a3072bb621be72ba048b9c8b297cb717461bac381246b7deee3055ba83414a2",
+      "git_blob": "e0e8776a999821facc1c64e01f9d79e459fb2fb2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-3-native-source.json",
+      "bytes": 6816,
+      "sha256": "a4141a4494b8a7e999d44e7dc936c269639c7dffe37e55f71d91dfdb13a54a33",
+      "git_blob": "d02d307a989536923435582610619abb3e9673d2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-3-native.log",
+      "bytes": 2828,
+      "sha256": "8a81ba3314060c2dcbb8d617d2e7e6fd454b2280c780100372a0ceb602900572",
+      "git_blob": "affef0e12d09a7e515c83c6953ac8b7752354367"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-4-cli.json",
+      "bytes": 321,
+      "sha256": "1087d160f1b4f286d2df06d908628e2fbfbaaa1aaa63b99c8d6a0afcb0022e54",
+      "git_blob": "a1323efbd7e9a1597fba15886858f325cefafa7b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-4-native-result.json",
+      "bytes": 1073,
+      "sha256": "a81e3ba46deb306d8b176a5fea4c23e2866fced598b38e6dacfa36ddac60b501",
+      "git_blob": "9f29099fb455fbaa57cceb5fe2d02b0cd9002bd5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-4-native-source.json",
+      "bytes": 7001,
+      "sha256": "11b4248cc54cef1690286fae971f0073b1ed1a8933acaea08f033e56e48deb4b",
+      "git_blob": "af31aa4ec82dd48b1d8b85f1b63c219ded0631f5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-4-native.log",
+      "bytes": 8962,
+      "sha256": "a1d3d50a61ad3005a2deaec6f90b8ad0092579dee0d4cbdcbd9e04ca3e2e1a51",
+      "git_blob": "efd8711e236e5aa3261c36709b144d0ea7e98c94"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-5-cli.json",
+      "bytes": 321,
+      "sha256": "090702df9494b7dba503dfbaacddae1f1f2d45fe2c587079629a5070e649c5ef",
+      "git_blob": "7a1b061ade4ae70c3e2128208f96c17a5a6714e7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-5-native-result.json",
+      "bytes": 1074,
+      "sha256": "ed2f9468cbe6bd7d83faf541817b92296562a58f8624e5e2c0d00a8551a1bfa3",
+      "git_blob": "6eeb914c544067abb93aec39842596eed75f985f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-5-native-source.json",
+      "bytes": 7001,
+      "sha256": "ff8e1b0535684e44dfc2f05539fe259239036a5f02e76d396df2ec27ed5e94c8",
+      "git_blob": "095d8ae2dbfe0b6a2e037e245878bf4be2e23e80"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-5-native.log",
+      "bytes": 4315,
+      "sha256": "7cc6a6bfe09ba384c65af9eb7d2ae751a562e3e26b19a0db49d66777d2af2670",
+      "git_blob": "f1f72a7f1ded70387a18c7c1abfe3d2d08f4af5f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-6-cli.json",
+      "bytes": 320,
+      "sha256": "af0fc793921d949afb4a5dde838162d2334df31bd65aa549de71886d85599017",
+      "git_blob": "c425903501e701fe972499043355f6c353010755"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-6-native-result.json",
+      "bytes": 1072,
+      "sha256": "0897e4e3cfdf765b4561e19f2581c671bc35a74b33104284df8c76a65b137c9b",
+      "git_blob": "8d16c4e9bc3d23a3b88d334f19725406dcaca58c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-6-native-source.json",
+      "bytes": 7001,
+      "sha256": "173c82e0a920af7e42c3867a24913edf41712655eea3220775966426aff33528",
+      "git_blob": "51bac655e807802c06f20990f508ddeb074d3c88"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-6-native.log",
+      "bytes": 8511,
+      "sha256": "edacdc5e1950aa6a2eed3cca3ace44003f02102bc785a4aedfd5acdedac00daf",
+      "git_blob": "c1f258bd922bf75b024f44db70bda1c122a4d8e7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-7-cli.json",
+      "bytes": 281,
+      "sha256": "75fd7cb96ba03d8f732e1266574a1300fef357669e3b16afdde0eb8847bfaacc",
+      "git_blob": "ee6d30f174f7e4ac1d8eacb9f9389e95642d5f4d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-7-result.json",
+      "bytes": 1072,
+      "sha256": "561dcea39c9c95b638476c1551b3b5065d2a38b27de373fc4b769bf7a16c9dc8",
+      "git_blob": "6a90e47fed7cadd5bc403e9ca5fdb787e23da21d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-7-source.json",
+      "bytes": 7565,
+      "sha256": "acad8c02618fb9026d96b0590c3e9aa7085757383c79510e794c4d4c72a29d56",
+      "git_blob": "46b304e29d630b6c4194d28c37f2e95ba63d5249"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/process-smoke-7.log",
+      "bytes": 8800,
+      "sha256": "9224d5d79943694f542e29d4be15c5c66c1d533db782b3e1f65c2710ceb9753b",
+      "git_blob": "8d092d3705a4dea7c7911b7ac8b45cc63c72e1ca"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/protected-inputs-final.json",
+      "bytes": 4530,
+      "sha256": "5fdaf692589fb35b4dfc445173a59d8996ed6bfbc41d7d4e2547312f2fa44dbd",
+      "git_blob": "e4229920cd4b297eee9d1b7cdabe011427c5f906"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/README.md",
+      "bytes": 7573,
+      "sha256": "f59067dcbc6f878c4930cfcbb9097d16a1eaf8f106a46077cd9501d45e27dd76",
+      "git_blob": "d4d371635c320dcb0ae41923e0d49aa074b1cec7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/recovery-compile-1-result.json",
+      "bytes": 295,
+      "sha256": "959e863a97ec939315aeafb7a2afac1ad0a80dd431d8c15101b0dbf340264e5d",
+      "git_blob": "cd268b533eb7a21d8620a204d44c5a45322798a7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/recovery-compile-1-source.json",
+      "bytes": 7185,
+      "sha256": "dfa228d6aacae402273e0f32b5f3301b50a91193728576a7ba9b25134a1852d4",
+      "git_blob": "57514c5aa4373daf988f162b1499176e69c3298d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/recovery-compile-1.log",
+      "bytes": 1378,
+      "sha256": "79bb3253da621fdee72d62642164edbfcef87a5d8beb5e9f308268522d0587aa",
+      "git_blob": "98ab3647403d1b1e26b221b38cfbec779e9a55d8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/recovery-compile-2-result.json",
+      "bytes": 292,
+      "sha256": "052c01ec61eff1a4c4d1793dd5b72536c59749dd7c3b781ccbc09f9e152dc488",
+      "git_blob": "a0fb568c0ac5f5c1d6f370dc08d792f964fc8314"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/recovery-compile-2-source.json",
+      "bytes": 7373,
+      "sha256": "0f8227f9d7dd6925c1c0540400baf137e9cc7bc6711b37148b3c7431739b9390",
+      "git_blob": "3314bf6c534f420d904b92409f63763a1a8653e2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/recovery-compile-2.log",
+      "bytes": 1260,
+      "sha256": "e5f25c6b85d8ca6157fd21cf917b5c4488dd1b7da0ce6971e6bee9c8b8d6e63c",
+      "git_blob": "180eb5aeaca650d41a90a561d1fe9c37d10ea0e2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regression-selector-correction-stop-1.json",
+      "bytes": 342,
+      "sha256": "e5160c3a1a9e5fab125e8fe5265a5648c46d00c23ad6471d02b468005340018f",
+      "git_blob": "769d6a20da27144334a3fd626fff2ef193a0ceb6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-cli-history-byte-final-1-result.json",
+      "bytes": 1665,
+      "sha256": "bb26ed6410d6bec99bb6cf87a931d401081bbc16bf7e8254671f868f9109b7d7",
+      "git_blob": "a365491a45c019ce06500c2e623b06ba9d4fd594"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-cli-history-byte-final-1-source.json",
+      "bytes": 9467,
+      "sha256": "8af176a0b21fb063d11f8ed5274ddae3a48ed24f33a6ce13cf02c1efb9be21cc",
+      "git_blob": "f8f3ef0d24c053cad89d59ab11fd95beba04fb8d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-cli-history-byte-final-1.log",
+      "bytes": 5756,
+      "sha256": "2ee452823f45837326e473fcfd04d4770fe90f4262a91ac05e21ac48e0f66b6a",
+      "git_blob": "dce2267f74aaae91540c3dbf2763b05a656ad246"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-cli-s3-authority-final-1-result.json",
+      "bytes": 1642,
+      "sha256": "3a5ad529ff913394436afca6f66518931d1a7bf37169ba9ae86d0f6998f53f89",
+      "git_blob": "fba9d764f9683781b985c855e91d6377410190e9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-cli-s3-authority-final-1-source.json",
+      "bytes": 9467,
+      "sha256": "8af176a0b21fb063d11f8ed5274ddae3a48ed24f33a6ce13cf02c1efb9be21cc",
+      "git_blob": "f8f3ef0d24c053cad89d59ab11fd95beba04fb8d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-cli-s3-authority-final-1.log",
+      "bytes": 5209,
+      "sha256": "a709c66d342024fd25807aec52bc5694fe0737ff5f020649ae8c76fe14847428",
+      "git_blob": "665238a5cadec44533941304248f901b82f89dc1"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-cli-s3-failure-final-1-result.json",
+      "bytes": 1611,
+      "sha256": "39d1d72306e9f25bc5b44fba07922a6fb6c028357f8d29b5ac513f650bdcbdad",
+      "git_blob": "e65fbb2298d1767e3e71598ed4b904453b9d94ce"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-cli-s3-failure-final-1-source.json",
+      "bytes": 9467,
+      "sha256": "8af176a0b21fb063d11f8ed5274ddae3a48ed24f33a6ce13cf02c1efb9be21cc",
+      "git_blob": "f8f3ef0d24c053cad89d59ab11fd95beba04fb8d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-cli-s3-failure-final-1.log",
+      "bytes": 3636,
+      "sha256": "fbd861d101a5bcdcd1ddbbf3818a2e65ddac564684ce16c61e160175021d9b57",
+      "git_blob": "9c7b35c9903f432a6e75e18daacfad5dcbb34b24"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-ipc-final-1-result.json",
+      "bytes": 545,
+      "sha256": "0a6fff9ec24716cbf0bc93950742bc56854c755998436e3ce6d634e176693b59",
+      "git_blob": "b66ce04d84fbbe42501ba355f5bc4dab9e0e0de3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-ipc-final-1-source.json",
+      "bytes": 9467,
+      "sha256": "a773716b7a0f03a7eb8b542437ec6870870c64b38e2c60f69b8eeb24c0ba2627",
+      "git_blob": "825ac3759a02580ae5e7218f44df7a6331076ed2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-ipc-final-1.log",
+      "bytes": 5825,
+      "sha256": "07cbea6718d3c87505a3abbd54c282a386973ea0924373a8e08b0f648839cdf7",
+      "git_blob": "395f0fa85eca905044047ce34f4f8ab8aa7d8caa"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-ordered-codec-final-1-result.json",
+      "bytes": 1635,
+      "sha256": "5af2ddc376a793402f8ab3abe0f265a731f895fa95c5703bdc931af2a364817c",
+      "git_blob": "f8b5357a4b554eed581d4af306edbb2829e651b9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-ordered-codec-final-1-source.json",
+      "bytes": 9467,
+      "sha256": "a773716b7a0f03a7eb8b542437ec6870870c64b38e2c60f69b8eeb24c0ba2627",
+      "git_blob": "825ac3759a02580ae5e7218f44df7a6331076ed2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-ordered-codec-final-1.log",
+      "bytes": 4730,
+      "sha256": "e4da6ad7f703a969f7504e7495f4844c88f880582ac280907fc2462089699e3b",
+      "git_blob": "5140bb79d04385ed851e24556382e7772992eb02"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-protocol-ipc-final-1-result.json",
+      "bytes": 1924,
+      "sha256": "83946b4f86d0f910c36a3bd01d0ca196dc555f96e1cf68f1b1b7b3dee999d163",
+      "git_blob": "0363801c99c91902bed2c6ccf2e80da8c36be6ef"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-protocol-ipc-final-1-source.json",
+      "bytes": 9467,
+      "sha256": "a773716b7a0f03a7eb8b542437ec6870870c64b38e2c60f69b8eeb24c0ba2627",
+      "git_blob": "825ac3759a02580ae5e7218f44df7a6331076ed2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-protocol-ipc-final-1.log",
+      "bytes": 4130,
+      "sha256": "ce764fc430d6ec174f594003984845f3f4c0401c8f6b88e4226bbcab4d00fef2",
+      "git_blob": "e86f87177a33319eb842a2a0e25ae56e942c4886"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-runtime-foundation-final-1-result.json",
+      "bytes": 1064,
+      "sha256": "4c78a430df6eb9ce10c6565829ede6ad8bff53ea73052b1ebdc480c20aab325f",
+      "git_blob": "fb1a5faff63a8c66bbe458ac73410842cac8b6c0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-runtime-foundation-final-1-source.json",
+      "bytes": 9467,
+      "sha256": "8af176a0b21fb063d11f8ed5274ddae3a48ed24f33a6ce13cf02c1efb9be21cc",
+      "git_blob": "f8f3ef0d24c053cad89d59ab11fd95beba04fb8d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-runtime-foundation-final-1.log",
+      "bytes": 2814,
+      "sha256": "512407d1a4a6f9426e05ded0b9ef2dd7546447cca3c0a6fbafe6a7ee34a1c166",
+      "git_blob": "6c387140f81c4f1049eee04782550962d9ad2c9f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-state-component-final-1-result.json",
+      "bytes": 1058,
+      "sha256": "080adcaff409cb8aa6e0fb9c321bc796774ea6bb77d2dd3043e399bae6e32a29",
+      "git_blob": "66ab1e2cdec4d678e442913db59f3e6788a9dfd4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-state-component-final-1-source.json",
+      "bytes": 9467,
+      "sha256": "6b4e10474711d5450fb0c08bb5e8ba8b3ea0211faf01231e242cd67782762991",
+      "git_blob": "81012357d320e9e9fa435b9d151044a34f20d6c7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-state-component-final-1.log",
+      "bytes": 5416,
+      "sha256": "bcf02832774436e652f5362197fb5d673d8c636a80872b12bbc599bb64eb97ee",
+      "git_blob": "facff985f7141f74dcc451555c55ce29ce217768"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-state-history-final-1-result.json",
+      "bytes": 1046,
+      "sha256": "4aeafd81032e243d0178f02351c81a2460ca481eeff5d19ba1b08e67698a74fa",
+      "git_blob": "4d64b0171a98313cba4233dd8d0aa590fedcb7f6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-state-history-final-1-source.json",
+      "bytes": 9467,
+      "sha256": "ce08c7973b7fac3a7826188b35e3277cb820e683e259b0442b9e5a096c4af499",
+      "git_blob": "364df230d5c334da3eb03442c9d871393bcad326"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-state-history-final-1.log",
+      "bytes": 5064,
+      "sha256": "b74c1acad7bb296cc4d64d7ec6f1279b0d7a024624cb394f9fc0b5e07e8309ca",
+      "git_blob": "70b211554b4689f89ba92e6ecde34946ccffefa3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-state-s3-final-1-result.json",
+      "bytes": 1045,
+      "sha256": "a5891ea188c7190fa7d68175eac22acba55a5eaa4acb997d525c057d6060b380",
+      "git_blob": "1f39a25494141b798cc52be00b9538e4bc6be9a6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-state-s3-final-1-source.json",
+      "bytes": 9467,
+      "sha256": "ce08c7973b7fac3a7826188b35e3277cb820e683e259b0442b9e5a096c4af499",
+      "git_blob": "364df230d5c334da3eb03442c9d871393bcad326"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-state-s3-final-1.log",
+      "bytes": 5914,
+      "sha256": "bc190e920a6cc3c26679efa6669f6cb5f04f0d8794f151c3610c41967cea9141",
+      "git_blob": "6a1c9c6653593685cf2ee895ac95c84a4fe273c5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-wire-bound-final-1-result.json",
+      "bytes": 1684,
+      "sha256": "02e58bb12d7caea94185dac678772bebb1226a438ff2e97354801c3478057622",
+      "git_blob": "dfdd705d025284b32306bb9cecf94c3dcbde11fe"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-wire-bound-final-1-source.json",
+      "bytes": 9467,
+      "sha256": "8af176a0b21fb063d11f8ed5274ddae3a48ed24f33a6ce13cf02c1efb9be21cc",
+      "git_blob": "f8f3ef0d24c053cad89d59ab11fd95beba04fb8d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-wire-bound-final-1.log",
+      "bytes": 3421,
+      "sha256": "73886962c57c1871895ee65fbcee3248868ca00944ada693f3c41099923721c6",
+      "git_blob": "1d013d830ade47e2cb7074b8ea1db39e11963342"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/remaining-f-1-images.json",
+      "bytes": 816,
+      "sha256": "9ed65434036df12a4b3e2e476d72beb2c1f8dec7d8760129bdc6bfff60fa04c6",
+      "git_blob": "71c91549ff2aa29a1f2d81f2c0be3166d67fcb06"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/remaining-f-compile-1-result.json",
+      "bytes": 304,
+      "sha256": "3f4072ea1fb32278bb1176096d5c640437103ec195b4f994e0fee80a750e03b4",
+      "git_blob": "da30ab1c8d5fc6dd082f2645c1295a3962356f97"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/remaining-f-compile-1-source.json",
+      "bytes": 9260,
+      "sha256": "855c55ded48573dad27ea9fb92420efabde837b51d67ab05d4c3ab18ac49523e",
+      "git_blob": "196453ace6722b683e7f44175937e6239df7ba6c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/remaining-f-compile-1.log",
+      "bytes": 2840,
+      "sha256": "161a49ab767e043263fe75aee187f1899a4569dea156796c5e9248df5e9ac649",
+      "git_blob": "548a9f5a25d6c3e075561d3513b31a5226579459"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/remaining-f-components-1-result.json",
+      "bytes": 317,
+      "sha256": "5bebf095072b79f9a5c44368b765473e803875e054b5ca1b0f527ef48aa9b0c6",
+      "git_blob": "6abd974f7a32debdd1cb6083db84edcf843f7bbb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/remaining-f-components-1-source.json",
+      "bytes": 9260,
+      "sha256": "74ae4d76984c95f9ebdef9bc9fe2b86b6bbcd431aa6d044312a77bae4d8203a4",
+      "git_blob": "f69c34ae4f08f4b075d254178b65c13b8ceafa3c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/remaining-f-components-1.log",
+      "bytes": 3737,
+      "sha256": "d02d5ae41d796a6300231301a5ed7a7b05b3b7344cf03c304fb1b46a2a26a66a",
+      "git_blob": "85df2fa4797a2caf81ab780fdfb862a05bdee3aa"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/remaining-f-components-2-result.json",
+      "bytes": 1629,
+      "sha256": "fa15c2edf254b9b8bf41341443037e612493d52d9e39c59a4889e483948797fd",
+      "git_blob": "e9a44e3a299f7a6ea803269a89f7de9e036cce13"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/remaining-f-components-2-source.json",
+      "bytes": 9260,
+      "sha256": "9d202ccbb597fb6510c58781b5c3d5d7a1bfa72a59e5ef88b3dd5be4f57964c5",
+      "git_blob": "ae8cfa202a2f708aa4ea7df1c8b754e87a955f03"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/remaining-f-components-2.log",
+      "bytes": 39507,
+      "sha256": "c3a2045f0a5be0896678e5e6e31bb0459649125ff290ded350dae1c3491e8ef1",
+      "git_blob": "b3019751df0e7a60622800c7ef24de3e1531fea7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/remaining-f-process-1-result.json",
+      "bytes": 1756,
+      "sha256": "c9a2b65ad1b0bbef215780450a3b83dba365e378e6dee3405f106d405683dd3a",
+      "git_blob": "68757796f74a35c36db810e214ba9179b5c61ba3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/remaining-f-process-1-source.json",
+      "bytes": 9260,
+      "sha256": "d681f8fac10e847f4d59661f6c3308d52aaa78c69d65a5d119cc67ff5c269189",
+      "git_blob": "11066c8457761fb8c9f18f63522ba817c41ec687"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/remaining-f-process-1.log",
+      "bytes": 25432,
+      "sha256": "1dae53f4499073219ad9655a0dabe513047411f05fa8ac21d8d06ee082cd9fbc",
+      "git_blob": "d5a81cd319ef7d49b24a618ee54fece051553127"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/resources-compile-1-result.json",
+      "bytes": 325,
+      "sha256": "ed13e6257a4c1d3cd503ac0d036f565140a0d19faf8f523f8440100a90569e86",
+      "git_blob": "b330e7cdc713c7d3967bc94f40a051784f0bdf84"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/resources-compile-1-source.json",
+      "bytes": 8513,
+      "sha256": "b05253206444d280035046e4d55c40567511080df4eceda7de1583d8f6c18cc6",
+      "git_blob": "47f7f75be0c7e57a4722f3cebf3a4eeaf69955b4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/resources-compile-1.log",
+      "bytes": 1088,
+      "sha256": "80bcb3da0026c86cf86f2ccfaa130276bcde041525f20d745a8addbb06969876",
+      "git_blob": "925c82242d4ed64dcc6c40f61aaf7f9887b80bf0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review2-full-P-metrics.json",
+      "bytes": 23305,
+      "sha256": "2c157be1fa1b2265846f897e95a6c580d481538629575509a65a9850271702ab",
+      "git_blob": "021925a5e7006766381a56c48fcf80b8275a2269"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review2-P-relay-failure-1.json",
+      "bytes": 4833,
+      "sha256": "403303d80708aa5c047deebe8b8bb533b73638d4bb210228f7e18a8f1eae459f",
+      "git_blob": "3353ec8bf51a28e3ae052417bd894fdd130baf70"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review2-production-freeze.json",
+      "bytes": 12059,
+      "sha256": "2363c9212fb6ddc91f6748e5f2451d74ac751423f1436d1fe2a6054960bdc669",
+      "git_blob": "0b7b8aeca981d30de10a01e37881a1d910fe6825"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review3-complete-F.json",
+      "bytes": 9436,
+      "sha256": "a8e9587f06e1af26870e550ccb8b7427da5340424764422b5252a68dd2e4caa5",
+      "git_blob": "ae2180e60ab017480945f1e68394756a26c23fb5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review3-verification-start.json",
+      "bytes": 1736,
+      "sha256": "cb6c9201577976d29ba7d121dc9a666bcb1d3ec19fcd73cbbca046ee4cbccbbc",
+      "git_blob": "299c157895cd39cf5137b14bcd56802e193c2dcb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-full-P-cleanup.json",
+      "bytes": 1515,
+      "sha256": "53632477ed1058265f50ac5a791a4a5f07274c83e891fcaafa6f47acdfc81dc8",
+      "git_blob": "753adb9d474cbc9c2be6ab84378eb43469a98677"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-full-P-metrics.json",
+      "bytes": 39161,
+      "sha256": "c5eb48c35d18a0f21bd79e63518bc4605db605d6cb7b08071dc344a02ceff48f",
+      "git_blob": "4002827cab41a5922dc86028b7986f3cf87bba57"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-old-helper-startup.json",
+      "bytes": 940,
+      "sha256": "876eed5f2d8337d0fb049feccc38ab932d848c24fc524f6752b12a4f93300889",
+      "git_blob": "f1ebbfa68904119199177ae1b941b85dbd5d59f8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-own-relay-smoke-1-result.json",
+      "bytes": 1646,
+      "sha256": "3a72f08c9ccd6fea0fc610ce205a31a4a1c785f811b32df6ec4286d102a75d2b",
+      "git_blob": "db81a3739f13ae126f552ad0d8aa2da183f60bbc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-own-relay-smoke-1-source.json",
+      "bytes": 10026,
+      "sha256": "0818538f6e03366eca34679b502511e7904121df762c25ad7b5972156750ce91",
+      "git_blob": "4e82a379b5f04e6c8a8a642244741909aacee484"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-own-relay-smoke-1.log",
+      "bytes": 7577,
+      "sha256": "6bfa77a9982571f5faece3ea186757d28f3a94b8ddda61aa1f68abf1ce54b013",
+      "git_blob": "3c7c2a669496c8c2a1c946c1a3ac0a564bc0380e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-relay-build-1-result.json",
+      "bytes": 279,
+      "sha256": "5d004fac8b7b88adc92ab53d20b52f0f7ce5e5a7cb940fae3cd853321f87c51f",
+      "git_blob": "bc34be37e24ce960b803cf9f00a2bacf3fde6c1f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-relay-build-1-source.json",
+      "bytes": 10026,
+      "sha256": "0818538f6e03366eca34679b502511e7904121df762c25ad7b5972156750ce91",
+      "git_blob": "4e82a379b5f04e6c8a8a642244741909aacee484"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-relay-build-1.log",
+      "bytes": 590,
+      "sha256": "4df2f9d7b25efe7e54dadf043fde23874367b981ef7f9731abae9767e75462fb",
+      "git_blob": "06622b60ab7c79168f2dd7195439c308d216e505"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-relay-clippy-1-result.json",
+      "bytes": 405,
+      "sha256": "384ca47073b818053b170b800adfdb497f33f8a2cf03fb9c0359e218f4cfdd3c",
+      "git_blob": "2107e193a3a5b28d66e627835289a5b648b7065a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-relay-clippy-1-source.json",
+      "bytes": 10026,
+      "sha256": "afad62c9425fec2ddda2680d4bad672b6ae15a801795f6000b20a3dd573106ba",
+      "git_blob": "31312d952f73572996694e3b8be5d33ab1b7a8c0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-relay-clippy-1.log",
+      "bytes": 372,
+      "sha256": "add47d1a239e0461a31024c93c54873a2977f23904e73aae0ae286c44b71613c",
+      "git_blob": "0752227069c8039b5ab3dd010fb5c1e1ffa46c39"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-relay-clippy-2-result.json",
+      "bytes": 404,
+      "sha256": "c5abd9a8c5367a915fa6d1f2f25980b69f9a00e613f13f80390a59ca926e07e9",
+      "git_blob": "c9bb627b805f19428166cbe67a09c9e37b8d8cf9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-relay-clippy-2-source.json",
+      "bytes": 10026,
+      "sha256": "4937fb264aca150cafb0149634a383ba8b30fb3072a4d8d9094291480da9a92f",
+      "git_blob": "6f409c1d61a1718f35471759fcda3ad48084c503"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-relay-clippy-2.log",
+      "bytes": 255,
+      "sha256": "d81dafa361a9ff7b8c50ed0f518e76f93f4165e228270243cfb15ed0c4775eb3",
+      "git_blob": "803f6ae2f9df07ac1c33640aa0bc51f4d53a2c43"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-relay-clippy-3-result.json",
+      "bytes": 404,
+      "sha256": "35bdbce44d2ef6b72e559533744b0cb1ed607dc2ca8c3582e8a0b57f20a9bf87",
+      "git_blob": "e82296b0f27c8a31eaf75cc9c72cc97da74bb084"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-relay-clippy-3-source.json",
+      "bytes": 10026,
+      "sha256": "0818538f6e03366eca34679b502511e7904121df762c25ad7b5972156750ce91",
+      "git_blob": "4e82a379b5f04e6c8a8a642244741909aacee484"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-relay-clippy-3.log",
+      "bytes": 255,
+      "sha256": "5afa748c6de84cd4287c68bd2b318ac9afaac869733d5a2c7fd078556d7f4a69",
+      "git_blob": "b071304445060da54f8396f2f3bfe40870eca01b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-relay-helper.patch",
+      "bytes": 14128,
+      "sha256": "e399233bec2f5a5914c037cf51396bb2cd554c23dbee6e57cdff0da5ed4c858c",
+      "git_blob": "f8fb105322fd2ac187be09cf9aa3b43aebd33072"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-relay-image.json",
+      "bytes": 525,
+      "sha256": "fa4449f1767d07da0eea279db8632328e0f505c2ca017b2cbd08b86e7936c6eb",
+      "git_blob": "09626f8cdf3d8542c4f6fc71751ce25714241188"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-relay-smoke-evidence.json",
+      "bytes": 9580,
+      "sha256": "7c3bd3e8250f5fe48f32fcd548633120f9f23e7459b066228994fd33f970d5ca",
+      "git_blob": "dee4b81807d6b4a648ecfa69a1e5c86f8c189d76"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-relay-source-correspondence.json",
+      "bytes": 1898,
+      "sha256": "f3762cb456551098df9ca9944f7c4e4e0c04d9f8194c06452aa8058aded98b69",
+      "git_blob": "38e658ac396f3fe532dcd43a32ce96b1172502f4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/review4-replacement-verification-start.json",
+      "bytes": 9482,
+      "sha256": "b93596b1e592770dbe998bb77ca37ea8495548ccefbbe2509ebe5c0c13a58598",
+      "git_blob": "485eff6a4c2fd500ede07a82043ef837cd70158f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/root-documents-reference.json",
+      "bytes": 2202,
+      "sha256": "2b1722f08d459ee7c0f94ab43dbe7279a71be4e5a9868a307b1c918039345800",
+      "git_blob": "c063e86e2017a6de629354edc23637a3d9594e1d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/run-check.ps1",
+      "bytes": 3174,
+      "sha256": "3fe6ee952874a88d55ed0f89c0550a8d7c4c6eeffb3a26e3444ebc704ffd8e8d",
+      "git_blob": "ecb467a940d3afef3f56e9ea8f79c79b87cde9cc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/safety-compile-1-result.json",
+      "bytes": 380,
+      "sha256": "4e70f398e006ae04405d81c2ea5e16e1952cdd83122e08285282297d1f2f3ae9",
+      "git_blob": "cfe7a07bf603480694b08daaba378d860a71a26d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/safety-compile-1-source.json",
+      "bytes": 7185,
+      "sha256": "492db2f343d7484fb8e14a96a54a336268dad30c79e5fc064b05dba91cec539b",
+      "git_blob": "eafce2e2ed37d9b509f911a3c6f5313431442da1"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/safety-compile-1.log",
+      "bytes": 3866,
+      "sha256": "2dff7b26e52817da22cc081ada46323e8a88834b17ce4df941a186073243038b",
+      "git_blob": "661763de245985b57595f0ab166c6c679ddb0093"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-boundaries-1-result.json",
+      "bytes": 1045,
+      "sha256": "c2bda9d63481032d6fe6508f096b59f045dc54c08177d8a33ed7a533e15e90bd",
+      "git_blob": "1623c2e8fef760b6038554c10aebd661b6dcc6e4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-boundaries-1-source.json",
+      "bytes": 8697,
+      "sha256": "59b6ff2e336a2c6235391bb4f31f693e6edf0620e3a6c28ca043ebe6e975ef04",
+      "git_blob": "3c7c9d61f9c8b6c96ea90e6458575c4205c0f764"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-boundaries-1.log",
+      "bytes": 3570,
+      "sha256": "9e342e1d1a94709c43173ed036c5f7f3a3d9715163767a90109eacf438e830a4",
+      "git_blob": "8597f48c090ca1689e5baca363755ac31cb6c497"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-boundaries-2-result.json",
+      "bytes": 1045,
+      "sha256": "493a2aa4e977dafe6416ff298611130942a7be85e541a199f72b204dbc991bf0",
+      "git_blob": "c29ff8f4b6cecdc2e0d477a832386885e2959ad7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-boundaries-2-source.json",
+      "bytes": 8697,
+      "sha256": "dd5e664e3f31f81acc39ad1a0a9b34025b09f4b0949d957bc999b64e3c87447b",
+      "git_blob": "b050f7e5dc43d4dd906278db71bcc308d8e54f97"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-boundaries-2.log",
+      "bytes": 3728,
+      "sha256": "6e0043f13d11442cafd246036708db273bd1b4c21bf2c1683a745187d6b06ce1",
+      "git_blob": "0a06005e48ed7ad0fd75e55df4c38a15acd069f6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-compile-1-result.json",
+      "bytes": 272,
+      "sha256": "fbb179ba071e7221ed3b6f6b4b2d5dc53094b81fa207b7d94f70d585c93a5b4e",
+      "git_blob": "89944b2fe1fde6a4da48afa2a9c7e4126d278a59"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-compile-1-source.json",
+      "bytes": 945,
+      "sha256": "b2e867d78fa19b5807e0bf2836dae6d8b9f963414dfebbd571a7a0741043a17d",
+      "git_blob": "e9978847561d7a8d618299b47038733f2c0417b5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-compile-1.log",
+      "bytes": 2247,
+      "sha256": "07c05030b7b96826f2be78d2a8f120351cdd7a3f5ac96ef84519c963d1c7be1a",
+      "git_blob": "e365012e70eeac3f9b07f3b4fa0d76d9c78e38ad"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-compile-2-result.json",
+      "bytes": 271,
+      "sha256": "a9850602247e235b6722114d31dd5b784e3eb7477e79e59b81b12142d45b2a59",
+      "git_blob": "f0c83faa445852f2d5a6458b9ca1a3b505cc56cb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-compile-2-source.json",
+      "bytes": 945,
+      "sha256": "a961cb9b8d3af76993ddec73d23d540571344ef4f78055e56d9acfa1273d408d",
+      "git_blob": "c57b85b9eb737e1e43f7599d6a115d959d26d1cd"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-compile-2.log",
+      "bytes": 573,
+      "sha256": "6f1677fcae6c6534a00732b49af98ded6ef5c77eb77ced6844e2e909e1087206",
+      "git_blob": "f4d8d9d4df07ccf800d888a37bc7fe9bcf29e627"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-compile-3-result.json",
+      "bytes": 271,
+      "sha256": "801bbb0cfbffd2e31167ce2e3d413aa4616fcd95b51b023bd18b77a3c9bd711c",
+      "git_blob": "1c07689c10844b68ebbb7c12037057ee85a05951"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-compile-3-source.json",
+      "bytes": 2111,
+      "sha256": "461117549a6c6bd3016d224bbd34641d7e37c33729ae782c9810d06e6c56b42c",
+      "git_blob": "a11a779d70c64ba8ab36f01d8ea38a877e874477"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-compile-3.log",
+      "bytes": 2109,
+      "sha256": "316f3ea1c94ad03e3518fe9d8c73178b3380a3f7263e3d23668bbc379281407f",
+      "git_blob": "7e5fd71a1cfe98448a6627e94bbdcf466129daca"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-compile-4-result.json",
+      "bytes": 271,
+      "sha256": "5410861f28b9ab8c6ff687ac09d8de5d344070cd7bd482b8183061a61410ae39",
+      "git_blob": "ee4556f5255a64df7ba26f686e86f1eb95365cd6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-compile-4-source.json",
+      "bytes": 2497,
+      "sha256": "5a93672329c33f4d03be60e3097f217702f5bfca7c49972b621f86613a9f8bcc",
+      "git_blob": "62c6fb8c17c44dc502746ff34ffa0df8dc62f8a7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-compile-4.log",
+      "bytes": 1524,
+      "sha256": "83be9c752dea2296f46428c4160f66a24e8ee18fe5c721e55f742ef24a53104e",
+      "git_blob": "f352bfb483c885b60149f825cad01818ebb10143"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-fence-retry-compile-1-result.json",
+      "bytes": 271,
+      "sha256": "de36fd3621955e529b36d08ea35afd94399b6081ce3650909352321aa353479a",
+      "git_blob": "17cb93fea4a5d33ae2f908837fb46aaff604e29c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-fence-retry-compile-1-source.json",
+      "bytes": 8697,
+      "sha256": "dd5e664e3f31f81acc39ad1a0a9b34025b09f4b0949d957bc999b64e3c87447b",
+      "git_blob": "b050f7e5dc43d4dd906278db71bcc308d8e54f97"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-fence-retry-compile-1.log",
+      "bytes": 573,
+      "sha256": "159a8aa82bd442f619dbef7a674ad6629023031075176ab7abe05da777978453",
+      "git_blob": "537ff7d58a0471dad2e30084373280506d662270"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-root-1-result.json",
+      "bytes": 1044,
+      "sha256": "37accc1b5043afc877dd2e9ebad046581941ed37986e30556a060614659f986a",
+      "git_blob": "bf81aab6f0f123aead59a4c69918a7e2f6625870"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-root-1-source.json",
+      "bytes": 1525,
+      "sha256": "b3316922515a150757ceec16dba3b27e9eab97046743a1ddcd32f20dc7f93226",
+      "git_blob": "caec112ac483f65dd717c5d4b838bd8b83f7f739"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/state-root-1.log",
+      "bytes": 2657,
+      "sha256": "912554c915e033e35964744e62fce2ac2987232643dca172e4067e82f5f4aca2",
+      "git_blob": "bb36cc6e734c5f6dda19f1e9d51ad15694f44670"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/static-final-1.json",
+      "bytes": 122,
+      "sha256": "ad24c17b7bc044880b3878b2d75b8e1bea44d2b2ac5bd7c367c484e573345139",
+      "git_blob": "742d2efc3767db185317a4653eb31f99682b41e2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/static-final-review3-1.json",
+      "bytes": 340,
+      "sha256": "8b2dcc65be999cb49453de0dce447c2b5d0edc39e6162bd9a87649190b069dfd",
+      "git_blob": "8cd1b4a3ce43d0ad63073c4cde0f64efb277fecb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/static-final-review3-1.log",
+      "bytes": 96,
+      "sha256": "0ff62ddda58b86e5d407d0a8c59026de79e3370b76db71a54cde591ca8e71fbc",
+      "git_blob": "efce17c92114252c8000a6c5d453c7b61de715a4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/static-final-review4-1.json",
+      "bytes": 484,
+      "sha256": "c4f5903d8113457b80054f4b023294621dfe343d6c7b718d7009d09fe0d115af",
+      "git_blob": "b2d1ff196423a26946155879b99062bbb73d37f7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/static-final-review4-1.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/static-final-review4-2.json",
+      "bytes": 756,
+      "sha256": "d60f1410c46b2f74f909aa23abc9a5ae0bab30182e344ffd7cc4be9089e92360",
+      "git_blob": "ea3a87dce5bc0cbe621fbe4016a097aa3badfa14"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/static-final-review4-2.log",
+      "bytes": 149,
+      "sha256": "9ff65ea816e687899a804feeb4a8ecc3f5ec8d6867176b171eb278ba2f120be2",
+      "git_blob": "9d0e35f04d2125c3c93c38b776f13dff5bf3480f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/static-review-candidate-1.json",
+      "bytes": 333,
+      "sha256": "74a83489e084a9d2452e83dff7ba2272ab77fbe0cfe8e14e2e98c5e0a46c0541",
+      "git_blob": "57e876c3e3a307d6449c0649bf7216ecb029359f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/static-review-candidate-1.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-batch4-1-result.json",
+      "bytes": 405,
+      "sha256": "8ac4a02982e2a01161b51087bd2eb72a28171d0e4cdb37eb48675abccdbf0313",
+      "git_blob": "7f17de3d65d68ee3cc0b25399e0c46c809bffccb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-batch4-1-source.json",
+      "bytes": 9467,
+      "sha256": "820338cdef7e4e2defb58d9f4c9b570cb87cd8e7f63e79db90656e340395860e",
+      "git_blob": "9d03fe4b2515bd67a2fe8f4e86a49448c0723815"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-batch4-1.log",
+      "bytes": 311,
+      "sha256": "7baa139d9610814b53522be43ad70db6dfc5e61fc5f01e5839537fc614b24bfb",
+      "git_blob": "1087dc9effee3b766d3716fd1116d5f298302fde"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-final-1-result.json",
+      "bytes": 405,
+      "sha256": "5701db5596041ff775eaaba5ef77eee4da3c61909208bd470f6f43b16c09375d",
+      "git_blob": "16555819b7fbe9bdb8b2a854a1256fbf63941f94"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-final-1-source.json",
+      "bytes": 9260,
+      "sha256": "c08a6ffb93154de41f9ce73d851a17c93ffc65c6a6f376df604b60be2c2d06da",
+      "git_blob": "1db04bf13d7cfa8d0f1aea3af9cd9fb2ca55f7a0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-final-1.log",
+      "bytes": 256,
+      "sha256": "0f596e557d67bb944ad9c93a41c9ace37364796f970345d7fa89672620348f37",
+      "git_blob": "685163be2f5ebc35d669a511dc3ca7b6a4dc6838"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-final-2-result.json",
+      "bytes": 404,
+      "sha256": "78d551f8d8843e83deda7bad35b7cbb13a6c7e210b72e4a5c397c105921969cb",
+      "git_blob": "0f5a41a7997ff7dce05c48dc15ccdb42dbeec64a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-final-2-source.json",
+      "bytes": 9467,
+      "sha256": "f4c15daf06c950dba3692511d718784dbb2a7573071a26dc140dcf15e0ee6b83",
+      "git_blob": "303448ef5a247d504e4e5edb8882c51c87b8dd54"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-final-2.log",
+      "bytes": 1279,
+      "sha256": "a1d22e415b96fcf93113d9d5d659a9a62fedce857cd8fd1464a2b7e1dbdf5500",
+      "git_blob": "6f0e0417a4431137a9d1c2e4e4df5ccc1dd0c25b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-final-3-result.json",
+      "bytes": 404,
+      "sha256": "c4486bcfc3ac44caa95778ae0d780ad5bf7116ba87f7c78a0a8dd7c2db880825",
+      "git_blob": "b709d14814682dccb41fd8efb72779a4874c2263"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-final-3-source.json",
+      "bytes": 9467,
+      "sha256": "a773716b7a0f03a7eb8b542437ec6870870c64b38e2c60f69b8eeb24c0ba2627",
+      "git_blob": "825ac3759a02580ae5e7218f44df7a6331076ed2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-final-3.log",
+      "bytes": 255,
+      "sha256": "6ecb35fbcceb0d9194ecb6388ffd64969f3949311cb852c04612ad52bbeea755",
+      "git_blob": "4b97e691d7f709087ea5b329707a012a6eef7437"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-idle-read-1-result.json",
+      "bytes": 405,
+      "sha256": "1d0c419c6786969ff122939720178a293bb2e12967c76897b66a60e325548f49",
+      "git_blob": "dba17f830e052d8f1b66933ed9470160df11bb52"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-idle-read-1-source.json",
+      "bytes": 9467,
+      "sha256": "c22a8e0925125df0465eb02f865a68ae6be519f21ca1138ef602072f955e3350",
+      "git_blob": "023eb3a8dd1b0b7080f8695cb5804fb75c3beb77"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-idle-read-1.log",
+      "bytes": 650,
+      "sha256": "7fa375e7d28aa5d6b524993fc97d8c10567dfacb6ff6c6d7e5f15f081c677a06",
+      "git_blob": "1de1cfebee2f7cf1d5a0b554b27139c99dc47f51"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-review-candidate-1-result.json",
+      "bytes": 404,
+      "sha256": "34ad151b05fe0aa8e2875e6fcc956736d85b8b9e23bc19544e899eae11f18902",
+      "git_blob": "c55acd8cdfb5e5b5ec3e692b564a17a81ce27dab"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-review-candidate-1-source.json",
+      "bytes": 9467,
+      "sha256": "8af176a0b21fb063d11f8ed5274ddae3a48ed24f33a6ce13cf02c1efb9be21cc",
+      "git_blob": "f8f3ef0d24c053cad89d59ab11fd95beba04fb8d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/strict-clippy-review-candidate-1.log",
+      "bytes": 255,
+      "sha256": "2c8f6ff05626165f81d5e9817219b1fa15c67afb1b8ecb15331fa8cf804e4843",
+      "git_blob": "7962f9a4c207652420239dade8f9a86054115c42"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/watch-public-artifacts.mjs",
+      "bytes": 3135,
+      "sha256": "44b1e02a2787d7ae589a7931a33b9064f19cfad012cba7e0bab5133056c77766",
+      "git_blob": "bbd60c54cd6c6d082a58fe40037f4c49d118a990"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-review-1.md",
+      "bytes": 8765,
+      "sha256": "056ded682bb33292cc5b4fa85ca465926b516258244cbe6d6ddf5ac9063e94e3",
+      "git_blob": "6e7923df0bbb91fd946084ca0d266d3371518e94"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-review-2.md",
+      "bytes": 4962,
+      "sha256": "442180cd12f759374eff495cfc5e052582429b97044eb764162db983ef422efd",
+      "git_blob": "fa18d69ae28b536b7393aad6da14636b43db535d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-review-3.md",
+      "bytes": 6067,
+      "sha256": "53e8df6ab9dc4480e445fad625f2e385ef3507a15b14b4225bb06f84abfd475c",
+      "git_blob": "ebf9b72c9efb516a986e50a363b2a10676f7426e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-review-4.md",
+      "bytes": 8280,
+      "sha256": "30548dfb409b4fec9c85eec3181a7ba0c92ccb4728cfd90ece4d547c7e4129ac",
+      "git_blob": "4e7d163eb3fe602748582d8978d8e1aab219e534"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-review-5.md",
+      "bytes": 5810,
+      "sha256": "d74b88d35db9c41d94c26ec584389a2e96b2c24c9da9c492d13ec911dccdeeb0",
+      "git_blob": "931fe71cc487cbfc055e6bd0baf51bb7e1b1bfd6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-task.md",
+      "bytes": 11598,
+      "sha256": "0e2bdef16c84291a20bfa5d2128a5304263bfb6f0092caea3585bd3e5d98b865",
+      "git_blob": "f30d240c4858c66ab4b4eb2c0900e757aa75621c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation.md",
+      "bytes": 20153,
+      "sha256": "2b0df1da1087036b483f31170cea961474106e31e6bf2529815d959fad04f13d",
+      "git_blob": "e073e34cdfcf5b92ebc5d05c0d43717151068696"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-time-accounting-clarification-1.md",
+      "bytes": 6287,
+      "sha256": "b786c5df22bc7366b49a0503af74316b8c5a62f19c10c3848d8fa6996342bade",
+      "git_blob": "2bedb297d1a377971bcc8fe3d2586299950d9e48"
+    },
+    {
+      "path": "apps/kilogram-cli/src/main.rs",
+      "bytes": 1755586,
+      "sha256": "4b05deefe84d651bf4b3157939217e9c9fb014ab08d99f737637db6087f32a50",
+      "git_blob": "1b08bab7dc20f6688aff0518c96440bb9d8cbb32"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_cli.rs",
+      "bytes": 14548,
+      "sha256": "8d7b8d2eaabb07e66d32354471d715dba33789ebfc557e847812469ff02d2805",
+      "git_blob": "d1448140f0f99d6564f5fb70d906286eec6ae173"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+      "bytes": 344,
+      "sha256": "e93bf25b5733ea37df44d1bf3321abfe92ba014458c835c9515159c5b9872fe6",
+      "git_blob": "c5ee7924cacba222ce720efac631bd36d41f3aa9"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/admin.rs",
+      "bytes": 10791,
+      "sha256": "fde5d2fb6c7e1a4a7820f281a540288db0caa62890040516c734d7be1a73f97a",
+      "git_blob": "dfc42f29a274b4722627b7716e135a9ae235c0d8"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/admission.rs",
+      "bytes": 15522,
+      "sha256": "2790675cca208dbe6fdd550583afde26cec8a55593f49f4130f29b11b076f2f5",
+      "git_blob": "dcd5c76e707a446e3e6d7166dda73bd464bda91e"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/config.rs",
+      "bytes": 3062,
+      "sha256": "fa7db21102aa8d9943d04a4f1a3ce63bb9b92376b043dd361268d070d7a8a01c",
+      "git_blob": "833232f978d38b443d5c36c86484f9fbbf4c60f5"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/data.rs",
+      "bytes": 27225,
+      "sha256": "e7855d4ab88958319d2043546e3762c0fe9732cf6b1e62b3778a207f8fc2e7fa",
+      "git_blob": "0e48001e34ac80550bad1d3f3cabd469f9a4ca41"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/handshake.rs",
+      "bytes": 21322,
+      "sha256": "1f5a1d791425f42b1d5dd199a0f73e92c4b89316f082aa0ff9c226b764148b8d",
+      "git_blob": "dd8d38d743c337136d65e5ada7a39f4bcc854752"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/hooks.rs",
+      "bytes": 6226,
+      "sha256": "0c7ad43e8910b52b86ecf6174d1aede9dc0ad63e3f7d344134d13946d41f7f55",
+      "git_blob": "8fbf0a30cb0b75ebfe2eb026960aea5f83718e64"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/mod.rs",
+      "bytes": 1068,
+      "sha256": "a39213568f43332d0e4c35e81a89de90162ab8587ed185324d6d9ae14c41c887",
+      "git_blob": "e886cb5921e9b7fa8a25df197dab2e988757dfe2"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/native.rs",
+      "bytes": 7524,
+      "sha256": "36586d5192168b95c1a78842f03897d43064f404a03582392e7fddd10233b930",
+      "git_blob": "052ee2cd621fbec366b718465033196c95ce51a2"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/network.rs",
+      "bytes": 26788,
+      "sha256": "ef035cb03b701687b97740209aa6763eecef96676d025eadedb88b7aaff6d9d7",
+      "git_blob": "b99fa19f588927c0c3879e54e0dad7944c9a96b5"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/owner.rs",
+      "bytes": 35879,
+      "sha256": "dd7cbf6fe26789e3d85a8dcd159b594e7bf7f1bdccd157b3223b3c985ffcafa7",
+      "git_blob": "652d079226a72351244a3e7aceced47aee802ad2"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/policy.rs",
+      "bytes": 3302,
+      "sha256": "084d3c30712baf6e04e34239a7ed9ae14185c723d92251db16f39af9df61004c",
+      "git_blob": "9b7e565fa547e0847c7ac3c2e59f2729204b844b"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/public_import.rs",
+      "bytes": 2622,
+      "sha256": "fc8e1ae4f8b75624336e9e3aa5eaa00a2d6025737729e6e2e636dc4fd4668e4f",
+      "git_blob": "ab3dde99e9122aa9054002d0c52946dbe20a7826"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/resources.rs",
+      "bytes": 1966,
+      "sha256": "d3aae105c2a5345626c3aa815fc733fd5ef680160aa47d6b10fd3768b93d7176",
+      "git_blob": "d4da96c8a4f3abab0d613dec2c716bdb7c1f5809"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/runtime_tests.rs",
+      "bytes": 26928,
+      "sha256": "b3cdf994484f627a91ff8f322eaeb84b700fcb3fee73fbc3a86773e95cf1ada1",
+      "git_blob": "49543df8dfcea5989236ae4e7aeb1deba99de768"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/runtime.rs",
+      "bytes": 52986,
+      "sha256": "c31e4f7049a8fc693b3c2e638ee92d1bd223288275aabd110f05fae51fe795d4",
+      "git_blob": "67a4e9daa81bdeff827871125ba937bac73cc9df"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/timing.rs",
+      "bytes": 3402,
+      "sha256": "282be4685fb233c53ae3f4c12480ae80724c6085f9a814678c72362428fe52b8",
+      "git_blob": "136512d6324a9a14331e01edc43096c461a0d70a"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/window.rs",
+      "bytes": 1797,
+      "sha256": "0190f813a1a40855d7f0c5d885f929d980fc2cd1fc5ed25c4ee25910e16c3078",
+      "git_blob": "ecfa89482ce669d356573e112a77e47dea082e23"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered2_cli.rs",
+      "bytes": 14631,
+      "sha256": "ade1b7233313dfdbdd05eaf6e6ee8739ec9983a65206fe76e4f9a8d43710f610",
+      "git_blob": "b16f8e28e3ac721826abf504baab1abd3287f429"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process.rs",
+      "bytes": 26125,
+      "sha256": "de11bb4fec16880bec709068cb3af2cf838b0e014c2ab59f2bc8810cf39b5465",
+      "git_blob": "014f3fbfe03e2c1a3513ab901a61d0626802670d"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process/bootstrap.rs",
+      "bytes": 5702,
+      "sha256": "a08be842ce8eb9ffd48eb5129dbea35112ae3cdb2501464f2fe4424414204c95",
+      "git_blob": "15c5105e2d4b2a8259249041b293118e0d95fb6f"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process/diagnostic.rs",
+      "bytes": 3541,
+      "sha256": "1c0ec095fed8c0aa78167c95931307fabc9c4b1715d9e24f6eb337f4af8b709b",
+      "git_blob": "b5ad4232cd57b1eab49e0bff47b3b3015d023fa5"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process/faults.rs",
+      "bytes": 30465,
+      "sha256": "805cc33aab20b3d1afc8b87307bc59349fc5411f21da81227944f6ceac66de76",
+      "git_blob": "6ab1373102ba7ca733bc8726b983b704c8c48f57"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process/lifecycle.rs",
+      "bytes": 11161,
+      "sha256": "e0242c101f4560499e3bdf85a254e3d502418a3409e63fea8b8820a9744eba93",
+      "git_blob": "13a45323ad3b66e542d0e4d555cedd187658b3e8"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process/positive.rs",
+      "bytes": 26254,
+      "sha256": "03e2906297bcff22c1ca37399a37d8883765b559134785daa2226fae14d6a622",
+      "git_blob": "3926c0d6a0f4bb4bb7f77888b7642389888084c7"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process/schedule_control.rs",
+      "bytes": 6921,
+      "sha256": "c72c175cde68682588d50a1f25a143eeb72d919eada6e7b9b8732bbeb00de1bc",
+      "git_blob": "84f13ae27d4ce2ad5fc0539f48d95b2ee15b70e1"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process/versions.rs",
+      "bytes": 8164,
+      "sha256": "429afd785fcec008e5d7e7d0a9c68288b01899bf72a8581849fa159bf6b19b64",
+      "git_blob": "85d093b47c147466f43d5164723964717d2c4db3"
+    },
+    {
+      "path": "crates/kilogram-identity/src/account.rs",
+      "bytes": 118339,
+      "sha256": "622ad37de7cd9749c837e56cad298ab4a1a20cfc8b7becb9ef5d247adf170683",
+      "git_blob": "2f135ab9714d304786c6d50b26ddcb961d2a2b14"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2.rs",
+      "bytes": 13309,
+      "sha256": "923efc145f6e618e70139990729b7436fbfab7fbae6e956963e19db6762f17c0",
+      "git_blob": "02bc4d325f6d88345b36b6ec1aaed93ad5847276"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/mode.rs",
+      "bytes": 19288,
+      "sha256": "2f56488b238ceb9ccde3e0b6ce8f79997d44973c866681cbc9e87b3aed71de34",
+      "git_blob": "9e687f2d84e3e4045a7270a6ada9fe578d1b7aa9"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/runtime_locator.rs",
+      "bytes": 5405,
+      "sha256": "a40b2f2c2109796ec55a147a30c0cf6c7a8bdf63ae94e44174640ee4a4efe0c4",
+      "git_blob": "319e7705b27463bf6e0153cf4496de98865ce78d"
+    },
+    {
+      "path": "crates/kilogram-runtime-ipc/src/lib.rs",
+      "bytes": 113243,
+      "sha256": "d46ff13bf5aa3e81ae017abde90f339e7b1824b2aaa3a80724123b59e6b94a09",
+      "git_blob": "ad647aa1c8bb4d026ae55ae5098979f39077b491"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "bytes": 54692,
+      "sha256": "edce9f682075eab9967266d13df4c3c7248afea6d48ff26a6f5e2869c26e3ed6",
+      "git_blob": "1d7925a176c43f2f9c755b1ecbeefeb10bc0a3d6"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/backend.rs",
+      "bytes": 10604,
+      "sha256": "2014b24cad312f4c3d813671dcd4e52dcdad53d88cb16874fd7096a8367821e8",
+      "git_blob": "07bd825a0e239c794a88eae4e33c2d5780e3440d"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "bytes": 25227,
+      "sha256": "13dd5fa43b3f383d11204482052a49584b467eb693f9bae827723126d0f47e45",
+      "git_blob": "d64fdefcef2fd65674518a78fd8091578bf0de61"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs",
+      "bytes": 4213,
+      "sha256": "78eef97b75501dc57a26c3d119ed7402a3e9c94e8b6e7912faa45dd1b3ec13a0",
+      "git_blob": "d004d4d0313f9c5ab88414b440a53f77de29849f"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_protocol2.rs",
+      "bytes": 51343,
+      "sha256": "41f43a8dec03c5b719630a57e152f02a28a40d1ed1d56d1434a750f384a2e7ee",
+      "git_blob": "0228b5f9a85cdf8475c449e44752f45ef9723a02"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_source_v2.rs",
+      "bytes": 17037,
+      "sha256": "bd8f77cb1c8176bce68ff7a935e9a5c95a435616bcaf03e1ec87d4471a72efe7",
+      "git_blob": "caad15c2d1d35a35673d56769f8794a6de884883"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "bytes": 47159,
+      "sha256": "2cda5e9820bdc7761b2940c84973d7afb873974820cccc7aac059f8fa150b2b3",
+      "git_blob": "875a90aff121ecb07093225c6fe9bb541c812038"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "bytes": 19701,
+      "sha256": "30568ad241aa53ed33c926395212380e8fd0375e11d805130f73ae5a2515b903",
+      "git_blob": "b1e265a2a1b663db2352e7b8204fe7328cdeb74f"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/profile.rs",
+      "bytes": 5373,
+      "sha256": "0cba0795af099e1976516f23ee92cb5be22701d8bf0fb3eca3cd1accca7e059d",
+      "git_blob": "554325509a4e59faa016219110f00b867a5455b9"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2_ops.rs",
+      "bytes": 38163,
+      "sha256": "56fbd03c2a8e05cf64954a901bc0e6175b112c2dee8f6bba06b881f4baf82623",
+      "git_blob": "89a6c7ac4504c28210e8265a4b6eff83b6627679"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2_read.rs",
+      "bytes": 11237,
+      "sha256": "eadb5b0c18043d1e14b5553a33742cfc51ed30846671d93b9da82ee7287b5798",
+      "git_blob": "0725b66e7514cd98b2db96abf6f0987b1a9ceeec"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2_tests.rs",
+      "bytes": 13823,
+      "sha256": "90fef50b38d49b4c4ecbb2aff497751592f13abf83ec17d235938ffbe3919e17",
+      "git_blob": "00dd27fe141ae9a60db60af589e64a7f936d5cf1"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2.rs",
+      "bytes": 26509,
+      "sha256": "cbca9aec835e4ba896f20a78bac13585fef5e4611b26fe9a8e18cb2d0b042e26",
+      "git_blob": "2b7a89ed69c1c337ce58ee86d3e1d91e6530fade"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "bytes": 10571,
+      "sha256": "6a462d658aead8facd8f2fb077d3d4ed6ccfaeed3670f174bc05ac95cd58c040",
+      "git_blob": "4f36c53d63d09fb05869a3abdfdfc61d63dbddf1"
+    },
+    {
+      "path": "crates/kilogram-transport-iroh/examples/s4_loopback_relay.rs",
+      "bytes": 1992,
+      "sha256": "27cb3b53ee64ba538afa8411422a12b3b2dc9ad89aafa9ae3e94d91aefa1885f",
+      "git_blob": "d1b8efdf7d6c76f3179006cde0207d6636b5e649"
+    },
+    {
+      "path": "crates/kilogram-transport-iroh/src/lib.rs",
+      "bytes": 26118,
+      "sha256": "6cd5c8b90abf49179c0a40a5c278de9834001ccdd2ee133df7cf0f2622661b40",
+      "git_blob": "ec43900d55f114aa9b1dd8c73928d8b539c272df"
+    },
+    {
+      "path": "crates/kilogram-transport-iroh/src/ordered2.rs",
+      "bytes": 9781,
+      "sha256": "3622cd1b63b5fe723aee0f2d21e4a2737ac760aadb500c68f41763c662958206",
+      "git_blob": "f4bb8628654229666a6c4862ee169b47b6acb099"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+[
+  {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/run-check.ps1",
+    "bytes": 3111,
+    "sha256": "ac4bdf34e9bfa6c8c1df07b7177d765d31e057fd91b149a85f03d0923c2eed30"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+    "bytes": 52017,
+    "sha256": "68e8fd2d5da87fefcf9875132dffb37f1dcd8337dafb3a1209ec70484276b7d6"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/history_protocol2.rs",
+    "bytes": 51141,
+    "sha256": "8ffae73c713d8274c8e5281ccdabb88e10f3e51ab03f17417118790a26a512c3"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/history_source_v2.rs",
+    "bytes": 16868,
+    "sha256": "319129d11464571be1aae780c3c380f7d391942d546064c38e78fc742e5d12f9"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+    "bytes": 46846,
+    "sha256": "e970cc699ed36bca8ea1e780553b0cd5c13dc77051c504757e8def2565bed938"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+    "bytes": 18431,
+    "sha256": "4dc60a4e7b3278364a1186dfb593ad540e364ff321427f3cbe969ac11b3ede09"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/profile.rs",
+    "bytes": 5373,
+    "sha256": "0cba0795af099e1976516f23ee92cb5be22701d8bf0fb3eca3cd1accca7e059d"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2_ops.rs",
+    "bytes": 28027,
+    "sha256": "7681bc2c31c81d29eca85209c1afcd99a2e110866bb283a1612a20ffaabcdf12"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2_tests.rs",
+    "bytes": 4694,
+    "sha256": "41e74c4452ae945ddc4444b9395227de1326d883a8f769a6e417307b39e7f0fa"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2.rs",
+    "bytes": 15722,
+    "sha256": "bae924657d3b808d760eeeeab850e46b842ad7d0fb8a3097698db2f1c765d9a2"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+    "bytes": 10537,
+    "sha256": "98d33e4b40ebe6fb3b0685077bc8d7bd29434dbd0d2af8b6ce44e30186e6111d"
+  }
+]

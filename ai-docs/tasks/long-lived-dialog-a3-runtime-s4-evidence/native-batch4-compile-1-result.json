@@ -1,0 +1,16 @@
+{
+  "mode": "compile",
+  "packages": [
+    "kilogram-cli",
+    "kilogram-transport-iroh"
+  ],
+  "filter": "a3_s4_",
+  "skip": [],
+  "exit_code": 0,
+  "seconds": 28.6285864,
+  "profile": "verification",
+  "offline": true,
+  "jobs": 12,
+  "priority": "BelowNormal",
+  "executables": []
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+    "bytes": 66776064,
+    "sha256": "c55607b8b67391c75d774d016ac5641821b2f9ee2aef29c58c092b504c91d959",
+    "source": "p-controller-compile-3-source.json"
+  },
+  {
+    "path": "target/compatibility/long-lived-dialog-runtime/kilogram-relay.exe",
+    "bytes": 19725824,
+    "sha256": "8df42171e9ed0f9aaa6a2480df82c0794933343a33b731ba9f42a8efcca3bb81",
+    "source": "p-controller-compile-3-source.json"
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "mode": "run",
+  "packages": [
+    "kilogram-runtime-ipc"
+  ],
+  "filter": "tests::",
+  "skip": [],
+  "exit_code": 0,
+  "seconds": 12.0329939,
+  "profile": "verification",
+  "offline": true,
+  "jobs": 12,
+  "priority": "BelowNormal",
+  "executables": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-runtime-ipc-lib-kilogram_runtime_ipc-tests.exe",
+      "bytes": 5088256,
+      "sha256": "9454addb5c1ef4a35b1bb5b12b3f97a4bd5c6ae4d567e575a3fa1a29d1fecca0"
+    }
+  ]
+}

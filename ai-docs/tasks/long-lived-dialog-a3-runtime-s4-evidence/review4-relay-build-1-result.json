@@ -1,0 +1,15 @@
+{
+  "mode": "build",
+  "packages": [
+    "kilogram-transport-iroh"
+  ],
+  "filter": "a3_s4_",
+  "skip": [],
+  "exit_code": 0,
+  "seconds": 17.3859968,
+  "profile": "verification",
+  "offline": true,
+  "jobs": 12,
+  "priority": "BelowNormal",
+  "executables": []
+}

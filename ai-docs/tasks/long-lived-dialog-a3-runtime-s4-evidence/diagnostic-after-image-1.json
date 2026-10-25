@@ -1,0 +1,9 @@
+{
+  "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-runtime\\kilogram-cli.exe",
+  "bytes": 66188800,
+  "sha256": "d5d8c8c118925dfde67e37fdb32aa5a120293cde258e93843dd1939fddb15560",
+  "source": "diagnostic-after-cli-build-1-source.json",
+  "basis": "diagnostic-instrumentation-basis.json",
+  "environment": "KILOGRAM_TEST_OD2_TIMINGS=1",
+  "scope": "remove per-turn installed disk read + R1 Auto relay loopback; same diagnostic controller/polling/native batch/profile/caps"
+}

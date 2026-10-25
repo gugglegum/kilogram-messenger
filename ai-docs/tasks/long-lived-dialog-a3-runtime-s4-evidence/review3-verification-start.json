@@ -1,0 +1,53 @@
+{
+  "utc": "2026-10-25T11:03:59.293Z",
+  "root_review": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-review-3.md",
+    "bytes": 6067,
+    "sha256": "53e8df6ab9dc4480e445fad625f2e385ef3507a15b14b4225bb06f84abfd475c"
+  },
+  "product_source_count": 42,
+  "images": [
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+      "bytes": 66188800,
+      "sha256": "d5d8c8c118925dfde67e37fdb32aa5a120293cde258e93843dd1939fddb15560"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-relay.exe",
+      "bytes": 19725824,
+      "sha256": "69cad3e0e39b5c23a163b0d2a99b15d42faf0a2433bb909397a64cda81eb7aa5"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-predecessor-s3/kilogram-state-predecessor.exe",
+      "bytes": 5344768,
+      "sha256": "6932db6bc228cdd38fc358792cc5cd41fcfd1e5445c087a7c0f535ce4f0c1e4e"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "bytes": 61531648,
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    }
+  ],
+  "F_contributing_before_full": [
+    {
+      "name": "f-owner-eligibility-r1-guards-1",
+      "seconds": 185.5564679
+    },
+    {
+      "name": "controller-schedule-lock-controls-1",
+      "seconds": 22.3189717
+    },
+    {
+      "name": "f09-controller-repair-1",
+      "seconds": 35.3227291
+    }
+  ],
+  "F_subtotal_seconds": 243.1981687,
+  "F_ceiling_seconds": 1200,
+  "new_full_F_max_remaining_seconds": 956.8018313,
+  "F_run": "f-full-review3-frozen-1",
+  "P_unused_one_attempt": "p-full-review2-exception-1",
+  "P_runner_ceiling": 3000,
+  "P_controller": 2950,
+  "sequential_stable_runners": true
+}

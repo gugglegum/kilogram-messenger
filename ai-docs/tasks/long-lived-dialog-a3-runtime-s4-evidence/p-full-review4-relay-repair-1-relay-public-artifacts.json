@@ -1,0 +1,98 @@
+{
+  "run": "p-full-review4-relay-repair-1",
+  "kind": "relay",
+  "captured_utc": "2026-10-25T12:46:06.607Z",
+  "scope": "Public artifacts only; no IPC token, vault, Root/Device key or Native checkpoint read. Actual route/endpoint assertions belong to P controller.",
+  "files": [
+    {
+      "path": ".tmp/a3-s4/process/P-i8jQD9/profile0.json",
+      "bytes": 1071,
+      "sha256": "9435578dfaea81ecd7f43cc48a6e2a9cb24ec8c6fc364e14b6dba0ed483fdc3c",
+      "public_config": {
+        "account": "249f0c4eac12e21e4a30dda17d28f859a49303ad53b53d3246fc5055c445f70f",
+        "claim": "3d35e152e434417c3aa1533bf90f6b63e80bcbf2f214ad25c4131e8b6aee3768",
+        "contexts": [
+          "cdd4aa7c3b4455d20a1ffe62a058da9398302b8ce4c038b6cf59872c9e895b0b",
+          "0b3cc1c3be532d09c7ad4414e5a1a4988a503a5c5ae499fd083cbf0586a4a473"
+        ],
+        "device": "5ce3bc06c7a9b58ac6fdc9585f670c7e32ac5385e806b5563cca3c2e8c6e8a0a",
+        "enabled": [
+          0,
+          1
+        ],
+        "ipc_file": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-i8jQD9\\ipc0.json",
+        "locator_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-i8jQD9\\locators0",
+        "logical_quota": [
+          17179869184,
+          17179869184
+        ],
+        "physical_quota": 51539607552,
+        "profile_mode": "ordered-dialog-v2",
+        "route": {
+          "bind": null,
+          "policy": "relay-only",
+          "relay": "http://127.0.0.1:41917/"
+        },
+        "state_dir": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-i8jQD9\\state0",
+        "version": 2
+      }
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-i8jQD9/profile1.json",
+      "bytes": 1071,
+      "sha256": "db23cbbaa62ab3d3a24e63fc9b61cdf8c77883c30015058cebe4466698e00d2a",
+      "public_config": {
+        "account": "e68bb9637d10c30c0cda6a771c108e78e519b90bf1c48291d4ccc1c4fe707ad1",
+        "claim": "20e30a691682418a9daa2ba63a596ca077692ea9cefa0b096975026a45786459",
+        "contexts": [
+          "cdd4aa7c3b4455d20a1ffe62a058da9398302b8ce4c038b6cf59872c9e895b0b",
+          "0b3cc1c3be532d09c7ad4414e5a1a4988a503a5c5ae499fd083cbf0586a4a473"
+        ],
+        "device": "c7e287421ed96bfea47be65da2eb17822e2498a9c972ebaf51eecbc209f5e5c3",
+        "enabled": [
+          0,
+          1
+        ],
+        "ipc_file": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-i8jQD9\\ipc1.json",
+        "locator_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-i8jQD9\\locators1",
+        "logical_quota": [
+          17179869184,
+          17179869184
+        ],
+        "physical_quota": 51539607552,
+        "profile_mode": "ordered-dialog-v2",
+        "route": {
+          "bind": null,
+          "policy": "relay-only",
+          "relay": "http://127.0.0.1:41917/"
+        },
+        "state_dir": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-i8jQD9\\state1",
+        "version": 2
+      }
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-i8jQD9/locators0/0b3cc1c3be532d09c7ad4414e5a1a4988a503a5c5ae499fd083cbf0586a4a473.locator",
+      "bytes": 242,
+      "sha256": "41bdf8c6cffd35766bc56bbd44b1d2f0fa33984a1366864d84a206d763ab603a",
+      "signed_public_locator_hex": "828a0258200b3cc1c3be532d09c7ad4414e5a1a4988a503a5c5ae499fd083cbf0586a4a4735820f472d34dcef5671ac36ba3f44a967a7d9e02802e3b7c37c84416cd48ad6030b25820b92785d1204efacee0be7d53fa48224f6240485d801fbc05720be57b859f16615820bbb0ba57cf21af62eb3b40784522d2c4e99b240c12bb9d6c5cfe8858c89f29ca808157687474703a2f2f3132372e302e302e313a34313931372f061a6addfa011a6ade08115840a86e348c81b189d1a16aecc0d2a145339f8b953ecc261d0454b231b1ae5a3a630e47524b50b6ba12485f0979560a181e32d50779179f26a65b9d4157fcdf4900"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-i8jQD9/locators0/cdd4aa7c3b4455d20a1ffe62a058da9398302b8ce4c038b6cf59872c9e895b0b.locator",
+      "bytes": 242,
+      "sha256": "18d29538aac1d432eb37b72d96948a3f275b2d99fe39bf03d81ba738778d1bc5",
+      "signed_public_locator_hex": "828a025820cdd4aa7c3b4455d20a1ffe62a058da9398302b8ce4c038b6cf59872c9e895b0b5820f472d34dcef5671ac36ba3f44a967a7d9e02802e3b7c37c84416cd48ad6030b25820b92785d1204efacee0be7d53fa48224f6240485d801fbc05720be57b859f16615820bbb0ba57cf21af62eb3b40784522d2c4e99b240c12bb9d6c5cfe8858c89f29ca808157687474703a2f2f3132372e302e302e313a34313931372f061a6addfa011a6ade08115840ebbeb63b8aa41ca036de857f53a09202f28304a9468b0e701d3e684c0d25d4277c16b04db4975c960929da688d79b5ea1a85243b513ecb2bc13bd0a46bc0760a"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-i8jQD9/locators1/0b3cc1c3be532d09c7ad4414e5a1a4988a503a5c5ae499fd083cbf0586a4a473.locator",
+      "bytes": 242,
+      "sha256": "4a8d8cfc13de6ecf5e367a21a341ce8b5f59e7e2f001da2efd1632673b439339",
+      "signed_public_locator_hex": "828a0258200b3cc1c3be532d09c7ad4414e5a1a4988a503a5c5ae499fd083cbf0586a4a4735820b92785d1204efacee0be7d53fa48224f6240485d801fbc05720be57b859f16615820f472d34dcef5671ac36ba3f44a967a7d9e02802e3b7c37c84416cd48ad6030b258205a611269de998e90c4858f78460af0450ea10d92ad102b4d60728e848e9f4ab1808157687474703a2f2f3132372e302e302e313a34313931372f071a6addfa061a6ade081658401f7f1634136e26082b6e8580e730770851d057893a6087fa47d51a598701fe8fa8c59d3ac205c24553da83d9fdfd6fbf232ff06f167a9a803cdb2363cc3f5e04"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-i8jQD9/locators1/cdd4aa7c3b4455d20a1ffe62a058da9398302b8ce4c038b6cf59872c9e895b0b.locator",
+      "bytes": 242,
+      "sha256": "845a9130c2b3d5bcbdf4c0f1224eb5d21717a831a719479ab255361075781bdb",
+      "signed_public_locator_hex": "828a025820cdd4aa7c3b4455d20a1ffe62a058da9398302b8ce4c038b6cf59872c9e895b0b5820b92785d1204efacee0be7d53fa48224f6240485d801fbc05720be57b859f16615820f472d34dcef5671ac36ba3f44a967a7d9e02802e3b7c37c84416cd48ad6030b258205a611269de998e90c4858f78460af0450ea10d92ad102b4d60728e848e9f4ab1808157687474703a2f2f3132372e302e302e313a34313931372f071a6addfa061a6ade081658400a7ce15c20d4cd16a5badedde3d2262b22d7af2978cfe0b9c8e3110d8fe0e4141d4325a2590e7d7a944803c3abc00b1affbad681bddf6cd045e8dca87adacb09"
+    }
+  ]
+}

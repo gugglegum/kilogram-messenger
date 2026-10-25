@@ -1,0 +1,108 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 20.78s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 1 test
+test faults::a3_s4_f_parent_kills_fresh_native_queue_ingress_receipt ... fixture=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91 cli_sha256_external_manifest_required=true
+process_start pid=51596 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile0.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile0.1.stderr.log
+private_bytes pid=51596 bytes=10993664
+process_start pid=43452 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile1.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile1.1.stderr.log
+private_bytes pid=43452 bytes=11034624
+process_exit pid=51596 kill=true status=exit code: 1
+F_parent_kill point=PrepareOffer.committed node=0 marker={"pid":51596,"point":"PrepareOffer.committed","public":{"generation":6},"slot":0} recovered={"active":false,"counts":{"debt":0,"pending":0,"queued":0,"receipts":[0,0],"sources":0},"credits":{"grant_unissued":[0,0],"head_in_use":[false,false],"pending":[0,0],"repair_free":[67108864,67108864],"reserved":[858434,797481],"used":[9917,4749]},"generation":6,"grant":null,"native_generation":1,"native_hash":"aaa9475df8b6adbb20469b524b753a7a4a54603a73e0dc614c30e45f5eae4950","offer":"ba554979b88236e9f4ad78885e63e879aaa95decd6f4961c6491e7a0e79cf88f","phase":1,"q":null,"ready":[null,null],"sequence":0,"sid":null}
+process_start pid=56492 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile0.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile0.2.stderr.log
+process_exit pid=43452 kill=true status=exit code: 1
+F_parent_kill point=ReserveGrant.committed node=1 marker={"pid":43452,"point":"ReserveGrant.committed","public":{"generation":7},"slot":0} recovered={"active":false,"counts":{"debt":0,"pending":0,"queued":0,"receipts":[0,0],"sources":0},"credits":{"grant_unissued":[0,0],"head_in_use":[false,false],"pending":[0,0],"repair_free":[67108864,67108864],"reserved":[856755,797481],"used":[11596,4749]},"generation":7,"grant":"5f21d880f9f8a7278b861dbd07e8ee2090562f3ed9c000be26d50cecd30a5c5a","native_generation":1,"native_hash":"b94c37ed89884fc63ebb9e9a4dc6b69bb4581c30d7a7504da3a8e801961bd4f6","offer":"ba554979b88236e9f4ad78885e63e879aaa95decd6f4961c6491e7a0e79cf88f","phase":2,"q":"abaa4fffc74028f0cd3d46632077f8e75ba966f528be80ecc7f11a64d530412b","ready":[null,null],"sequence":0,"sid":null}
+process_start pid=58212 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile1.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile1.2.stderr.log
+process_exit pid=56492 kill=true status=exit code: 1
+F_parent_kill point=Genesis.committed node=0 marker={"pid":56492,"point":"Genesis.committed","public":{"generation":9},"slot":0} recovered={"active":false,"counts":{"debt":0,"pending":0,"queued":0,"receipts":[0,0],"sources":1},"credits":{"grant_unissued":[0,0],"head_in_use":[false,false],"pending":[0,0],"repair_free":[67108864,67108864],"reserved":[857842,797481],"used":[21987,4749]},"generation":9,"grant":"5f21d880f9f8a7278b861dbd07e8ee2090562f3ed9c000be26d50cecd30a5c5a","native_generation":2,"native_hash":"c1faeb95bec818414c501f8ad3f19bc8fd9c5be6036def5d8612c2c2f6e83400","offer":"ba554979b88236e9f4ad78885e63e879aaa95decd6f4961c6491e7a0e79cf88f","phase":3,"q":"abaa4fffc74028f0cd3d46632077f8e75ba966f528be80ecc7f11a64d530412b","ready":[null,null],"sequence":1,"sid":"4OZcm6eCzNKcCuS6rKSB0zendE68qz26cdWAY+nYesA"}
+process_start pid=6500 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile0.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile0.3.stderr.log
+private_bytes pid=6500 bytes=11374592
+process_exit pid=58212 kill=true status=exit code: 1
+F_parent_kill point=Genesis.committed node=1 marker={"pid":58212,"point":"Genesis.committed","public":{"generation":10},"slot":0} recovered={"active":false,"counts":{"debt":0,"pending":0,"queued":0,"receipts":[0,0],"sources":2},"credits":{"grant_unissued":[0,0],"head_in_use":[false,false],"pending":[0,0],"repair_free":[67108864,67108864],"reserved":[857842,797481],"used":[28474,4749]},"generation":10,"grant":"5f21d880f9f8a7278b861dbd07e8ee2090562f3ed9c000be26d50cecd30a5c5a","native_generation":2,"native_hash":"b4ffcf6974c40ecf99b1bf83effcb75edb6ec5a9fdd5151e683896ea9105bab9","offer":"ba554979b88236e9f4ad78885e63e879aaa95decd6f4961c6491e7a0e79cf88f","phase":3,"q":"abaa4fffc74028f0cd3d46632077f8e75ba966f528be80ecc7f11a64d530412b","ready":[null,null],"sequence":1,"sid":"4OZcm6eCzNKcCuS6rKSB0zendE68qz26cdWAY+nYesA"}
+process_start pid=49408 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile1.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile1.3.stderr.log
+private_bytes pid=49408 bytes=11300864
+process_exit pid=6500 kill=true status=exit code: 1
+F_parent_kill point=Ready.committed node=0 marker={"pid":6500,"point":"Ready.committed","public":{"generation":13},"slot":0} recovered={"active":false,"counts":{"debt":0,"pending":0,"queued":0,"receipts":[0,0],"sources":2},"credits":{"grant_unissued":[0,0],"head_in_use":[false,false],"pending":[0,0],"repair_free":[67108864,67108864],"reserved":[857552,797481],"used":[28265,4749]},"generation":13,"grant":"5f21d880f9f8a7278b861dbd07e8ee2090562f3ed9c000be26d50cecd30a5c5a","native_generation":3,"native_hash":"dda83a686d4a5af7c224b07931767919ffd992c057a76ba1115e37416413c1d1","offer":"ba554979b88236e9f4ad78885e63e879aaa95decd6f4961c6491e7a0e79cf88f","phase":3,"q":"abaa4fffc74028f0cd3d46632077f8e75ba966f528be80ecc7f11a64d530412b","ready":["651d69ca068bbc2ddc51ae1a83fb06c08da75b9f8167806a1e0eba1ae416160f",null],"sequence":1,"sid":"4OZcm6eCzNKcCuS6rKSB0zendE68qz26cdWAY+nYesA"}
+process_exit pid=49408 kill=true status=exit code: 1
+process_start pid=54468 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile0.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile0.4.stderr.log
+private_bytes pid=54468 bytes=11255808
+process_start pid=32588 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile1.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile1.4.stderr.log
+private_bytes pid=32588 bytes=11194368
+process_exit pid=54468 kill=true status=exit code: 1
+F_parent_kill point=Ready.committed node=0 marker={"pid":54468,"point":"Ready.committed","public":{"generation":17},"slot":0} recovered={"active":true,"counts":{"debt":0,"pending":0,"queued":1,"receipts":[0,0],"sources":2},"credits":{"grant_unissued":[0,0],"head_in_use":[false,false],"pending":[0,0],"repair_free":[67108864,67108864],"reserved":[988334,797481],"used":[29898,4749]},"generation":17,"grant":"5f21d880f9f8a7278b861dbd07e8ee2090562f3ed9c000be26d50cecd30a5c5a","native_generation":3,"native_hash":"dda83a686d4a5af7c224b07931767919ffd992c057a76ba1115e37416413c1d1","offer":"ba554979b88236e9f4ad78885e63e879aaa95decd6f4961c6491e7a0e79cf88f","phase":3,"q":"abaa4fffc74028f0cd3d46632077f8e75ba966f528be80ecc7f11a64d530412b","ready":["651d69ca068bbc2ddc51ae1a83fb06c08da75b9f8167806a1e0eba1ae416160f","c36b3b908142693d45da08cd22a4690f87ce72c8d17ea4f967cae116c512eb61"],"sequence":1,"sid":"4OZcm6eCzNKcCuS6rKSB0zendE68qz26cdWAY+nYesA"}
+process_start pid=18136 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile0.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile0.5.stderr.log
+private_bytes pid=18136 bytes=11272192
+private_bytes pid=32588 bytes=12406784
+process_exit pid=18136 kill=true status=exit code: 1
+F_parent_kill point=Queue.committed node=0 marker={"pid":18136,"point":"Queue.committed","public":{"generation":22},"slot":0} recovered={"active":true,"counts":{"debt":0,"pending":0,"queued":1,"receipts":[1,0],"sources":3},"credits":{"grant_unissued":[0,0],"head_in_use":[false,false],"pending":[0,0],"repair_free":[67108864,67108864],"reserved":[988302,797481],"used":[37465,4749]},"generation":22,"grant":"5f21d880f9f8a7278b861dbd07e8ee2090562f3ed9c000be26d50cecd30a5c5a","native_generation":4,"native_hash":"c0a86043b8e356ab7228823554dfd68a57ebd3701d7fd8122fc520817c44e777","offer":"ba554979b88236e9f4ad78885e63e879aaa95decd6f4961c6491e7a0e79cf88f","phase":3,"q":"abaa4fffc74028f0cd3d46632077f8e75ba966f528be80ecc7f11a64d530412b","ready":["651d69ca068bbc2ddc51ae1a83fb06c08da75b9f8167806a1e0eba1ae416160f","c36b3b908142693d45da08cd22a4690f87ce72c8d17ea4f967cae116c512eb61"],"sequence":2,"sid":"4OZcm6eCzNKcCuS6rKSB0zendE68qz26cdWAY+nYesA"}
+process_start pid=17548 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile0.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile0.6.stderr.log
+process_exit pid=17548 kill=true status=exit code: 1
+F_parent_kill point=Materialize.committed node=0 marker={"pid":17548,"point":"Materialize.committed","public":{"generation":24},"slot":0} recovered={"active":true,"counts":{"debt":1,"pending":0,"queued":0,"receipts":[1,0],"sources":4},"credits":{"grant_unissued":[0,0],"head_in_use":[false,false],"pending":[0,0],"repair_free":[67108864,67108864],"reserved":[983171,797481],"used":[41932,4749]},"generation":24,"grant":"5f21d880f9f8a7278b861dbd07e8ee2090562f3ed9c000be26d50cecd30a5c5a","native_generation":5,"native_hash":"2632f8c42c9f27698216ac981998844af2ef3186746fb6b02de620d3faf7965d","offer":"ba554979b88236e9f4ad78885e63e879aaa95decd6f4961c6491e7a0e79cf88f","phase":3,"q":"abaa4fffc74028f0cd3d46632077f8e75ba966f528be80ecc7f11a64d530412b","ready":["651d69ca068bbc2ddc51ae1a83fb06c08da75b9f8167806a1e0eba1ae416160f","c36b3b908142693d45da08cd22a4690f87ce72c8d17ea4f967cae116c512eb61"],"sequence":3,"sid":"4OZcm6eCzNKcCuS6rKSB0zendE68qz26cdWAY+nYesA"}
+process_start pid=58748 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile0.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile0.7.stderr.log
+private_bytes pid=58748 bytes=11780096
+private_bytes pid=32588 bytes=12767232
+process_exit pid=32588 kill=true status=exit code: 1
+F_parent_kill point=AcceptPending.committed node=1 marker={"pid":32588,"point":"AcceptPending.committed","public":{"generation":26},"slot":0} recovered={"active":true,"counts":{"debt":0,"pending":1,"queued":0,"receipts":[2,0],"sources":4},"credits":{"grant_unissued":[0,0],"head_in_use":[false,false],"pending":[1,0],"repair_free":[67108864,67108864],"reserved":[1052249,797481],"used":[44244,4749]},"generation":26,"grant":"5f21d880f9f8a7278b861dbd07e8ee2090562f3ed9c000be26d50cecd30a5c5a","native_generation":4,"native_hash":"3d6b8b9d87028a7e134fd06c6cbc5294442e6f75951da368cf6d4cb360f5288a","offer":"ba554979b88236e9f4ad78885e63e879aaa95decd6f4961c6491e7a0e79cf88f","phase":3,"q":"abaa4fffc74028f0cd3d46632077f8e75ba966f528be80ecc7f11a64d530412b","ready":["651d69ca068bbc2ddc51ae1a83fb06c08da75b9f8167806a1e0eba1ae416160f","c36b3b908142693d45da08cd22a4690f87ce72c8d17ea4f967cae116c512eb61"],"sequence":1,"sid":"4OZcm6eCzNKcCuS6rKSB0zendE68qz26cdWAY+nYesA"}
+process_start pid=37752 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile1.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile1.5.stderr.log
+process_exit pid=37752 kill=true status=exit code: 1
+F_parent_kill point=Drain.committed node=1 marker={"pid":37752,"point":"Drain.committed","public":{"generation":28},"slot":0} recovered={"active":true,"counts":{"debt":0,"pending":0,"queued":0,"receipts":[3,0],"sources":5},"credits":{"grant_unissued":[0,0],"head_in_use":[false,false],"pending":[0,0],"repair_free":[67108864,67108864],"reserved":[857230,797481],"used":[49049,4749]},"generation":28,"grant":"5f21d880f9f8a7278b861dbd07e8ee2090562f3ed9c000be26d50cecd30a5c5a","native_generation":5,"native_hash":"0d89087aafa44aaa878bfd55b20b7e3b4378d5f35d4a61d0a485620deab41e4d","offer":"ba554979b88236e9f4ad78885e63e879aaa95decd6f4961c6491e7a0e79cf88f","phase":3,"q":"abaa4fffc74028f0cd3d46632077f8e75ba966f528be80ecc7f11a64d530412b","ready":["651d69ca068bbc2ddc51ae1a83fb06c08da75b9f8167806a1e0eba1ae416160f","c36b3b908142693d45da08cd22a4690f87ce72c8d17ea4f967cae116c512eb61"],"sequence":1,"sid":"4OZcm6eCzNKcCuS6rKSB0zendE68qz26cdWAY+nYesA"}
+process_start pid=21448 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile1.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile1.6.stderr.log
+private_bytes pid=21448 bytes=11202560
+process_exit pid=58748 kill=true status=exit code: 1
+F_parent_kill point=Acknowledge.committed node=0 marker={"pid":58748,"point":"Acknowledge.committed","public":{"generation":31},"slot":0} recovered={"active":true,"counts":{"debt":0,"pending":0,"queued":0,"receipts":[3,0],"sources":5},"credits":{"grant_unissued":[0,0],"head_in_use":[false,false],"pending":[0,0],"repair_free":[67108864,67108864],"reserved":[857230,797481],"used":[48968,4749]},"generation":31,"grant":"5f21d880f9f8a7278b861dbd07e8ee2090562f3ed9c000be26d50cecd30a5c5a","native_generation":6,"native_hash":"b2937a56f15c3d8276a0b3eaa87c4908b87a2bd0c17a0bdd9f9d353aa56658e9","offer":"ba554979b88236e9f4ad78885e63e879aaa95decd6f4961c6491e7a0e79cf88f","phase":3,"q":"abaa4fffc74028f0cd3d46632077f8e75ba966f528be80ecc7f11a64d530412b","ready":["651d69ca068bbc2ddc51ae1a83fb06c08da75b9f8167806a1e0eba1ae416160f","c36b3b908142693d45da08cd22a4690f87ce72c8d17ea4f967cae116c512eb61"],"sequence":4,"sid":"4OZcm6eCzNKcCuS6rKSB0zendE68qz26cdWAY+nYesA"}
+process_start pid=52796 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile0.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-kill-Yi7b91\profile0.8.stderr.log
+private_bytes pid=52796 bytes=11628544
+private_bytes pid=21448 bytes=12464128
+process_exit pid=52796 kill=false status=exit code: 0
+process_exit pid=21448 kill=false status=exit code: 0
+S4_F_KILLS_PASS fault_window_kills=11 offline_stop_kill=1 source_bytes_exact=true constructors_accounts=2 sessions=2 delivered_after_receipt_only=true
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 105.21s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17101 12.52
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=63819
+target_gib=67.83
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

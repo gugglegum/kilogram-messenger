@@ -1,0 +1,91 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+   Compiling kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+   Compiling kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+warning: function `cold` is never used
+ --> apps\kilogram-cli\tests\runtime2_process\faults.rs:6:4
+  |
+6 | fn cold(node:&Node)->Result<db::RuntimeRepository>{ensure!(node.child.is_none(),"cold inspection requires a stopped application");let...
+  |    ^^^^
+  |
+  = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: function `freeze` is never used
+ --> apps\kilogram-cli\tests\runtime2_process\faults.rs:7:4
+  |
+7 | fn freeze(node:&Node)->Result<serde_json::Value>{let mut r=cold(node)?;let s=r.snapshot(0)?;Ok(serde_json::json!({"generation":s.root...
+  |    ^^^^^^
+
+warning: `kilogram-cli` (test "runtime2_process") generated 2 warnings
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 33.51s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 1 test
+test faults::a3_s4_f_policy_renewal_post_staging_real_close ... fixture=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-policy-L4O7JH cli_sha256_external_manifest_required=true
+process_start pid=41912 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-policy-L4O7JH\profile0.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-policy-L4O7JH\profile0.1.stderr.log
+private_bytes pid=41912 bytes=11165696
+process_start pid=57328 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-policy-L4O7JH\profile1.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-policy-L4O7JH\profile1.1.stderr.log
+private_bytes pid=57328 bytes=11288576
+active_progress seconds=0.219 phases=[[(Number(0), Bool(false)), (Number(0), Bool(false))], [(Number(0), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=1.555 phases=[[(Number(1), Bool(false)), (Number(1), Bool(false))], [(Number(0), Bool(false)), (Number(2), Bool(false))]]
+active_progress seconds=2.234 phases=[[(Number(1), Bool(false)), (Number(3), Bool(false))], [(Number(2), Bool(false)), (Number(2), Bool(false))]]
+active_progress seconds=2.784 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(2), Bool(false)), (Number(3), Bool(false))]]
+private_bytes pid=41912 bytes=12607488
+active_progress seconds=3.504 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(3), Bool(false))]]
+active_progress seconds=4.432 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(3), Bool(true))]]
+private_bytes pid=57328 bytes=12664832
+active_progress seconds=5.464 phases=[[(Number(3), Bool(false)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]
+active_progress seconds=5.733 phases=[[(Number(3), Bool(true)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]
+private_bytes pid=41912 bytes=12779520
+F01_case=clock_failure refusal=ClockBlocked: injected fallible clock protected_unchanged=true
+F01_case=clock_backward refusal=ClockBlocked protected_unchanged=true
+F01_case=authority_read_failure refusal=AuthorityReadFailure: verification provider unavailable protected_unchanged=true
+F09_exact_retry_before_current_permission=true conflict_explicit=true
+F01_case=consent_not_before refusal=ConsentExpired/NotYetValid protected_unchanged=true
+private_bytes pid=57328 bytes=12730368
+private_bytes pid=41912 bytes=12935168
+F01_case=consent_expiry refusal=ConsentExpired/NotYetValid protected_unchanged=true
+private_bytes pid=41912 bytes=13017088
+F01_case=lower_revision valid_Root_signature=true refused=true
+
+thread 'faults::a3_s4_f_policy_renewal_post_staging_real_close' (55972) panicked at apps\kilogram-cli\tests\runtime2_process\faults.rs:59:120:
+called `Result::unwrap_err()` on an `Ok` value: ()
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+FAILED
+
+failures:
+
+failures:
+    faults::a3_s4_f_policy_renewal_post_staging_real_close
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 27.36s
+
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:285
+Line |
+ 285 |              throw "Stable test executable failed with exit code ${tes …
+     |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Stable test executable failed with exit code 101:
+     | E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+

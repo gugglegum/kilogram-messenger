@@ -1,0 +1,89 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 5.04s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+skipping_unchanged_test=runtime2::runtime::tests::
+skipping_unchanged_test=bootstrap::
+skipping_unchanged_test=faults::
+skipping_unchanged_test=lifecycle::a3_s4_f12
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 20 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 2 tests
+test lifecycle::a3_s4_f11_repeated_locator_kills_export_retry_b_only ... fixture=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-locator-95PmTU cli_sha256_external_manifest_required=true
+process_start pid=49244 profile=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-locator-95PmTU\profile0.json stderr=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-locator-95PmTU\profile0.1.stderr.log
+private_bytes pid=49244 bytes=11202560
+process_start pid=49592 profile=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-locator-95PmTU\profile1.json stderr=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-locator-95PmTU\profile1.1.stderr.log
+private_bytes pid=49592 bytes=11169792
+active_progress seconds=0.230 phases=[[(Number(0), Bool(false)), (Number(0), Bool(false))], [(Number(0), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=1.608 phases=[[(Number(1), Bool(false)), (Number(1), Bool(false))], [(Number(2), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=2.327 phases=[[(Number(3), Bool(false)), (Number(1), Bool(false))], [(Number(2), Bool(false)), (Number(2), Bool(false))]]
+active_progress seconds=2.921 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(2), Bool(false))]]
+private_bytes pid=49244 bytes=12365824
+active_progress seconds=3.657 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(3), Bool(false))]]
+active_progress seconds=4.612 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(false))]]
+private_bytes pid=49592 bytes=12554240
+active_progress seconds=5.623 phases=[[(Number(3), Bool(true)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]
+active_progress seconds=5.897 phases=[[(Number(3), Bool(true)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]
+process_exit pid=49592 kill=true status=exit code: 1
+process_start pid=4748 profile=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-locator-95PmTU\profile1.json stderr=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-locator-95PmTU\profile1.2.stderr.log
+process_exit pid=4748 kill=true status=exit code: 1
+F11_actual_locator_kill marker={"pid":4748,"point":"locator_committed","public":{"endpoint":"82a617932f9f6c19d8f4205c2294e4b789ea143932bf981b15b8d5c14f77e1ac","ips":["127.0.0.1:60989"],"relay":null,"revision":2},"slot":0}
+process_start pid=54936 profile=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-locator-95PmTU\profile1.json stderr=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-locator-95PmTU\profile1.3.stderr.log
+process_exit pid=54936 kill=true status=exit code: 1
+F11_actual_locator_kill marker={"pid":54936,"point":"locator_committed","public":{"endpoint":"a5d12c56dd20212d328951f4c83f97574b56f33e36b3916612493a1be2d5ddb6","ips":["127.0.0.1:55279"],"relay":null,"revision":3},"slot":0}
+process_start pid=56212 profile=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-locator-95PmTU\profile1.json stderr=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-locator-95PmTU\profile1.4.stderr.log
+private_bytes pid=56212 bytes=11448320
+private_bytes pid=49244 bytes=12541952
+process_exit pid=56212 kill=false status=exit code: 0
+process_start pid=59220 profile=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-locator-95PmTU\profile1.json stderr=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-locator-95PmTU\profile1.5.stderr.log
+private_bytes pid=59220 bytes=10850304
+Error: inspect runtime IPC descriptor E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-locator-95PmTU\ipc1.json
+
+Caused by:
+    Не удается найти указанный файл. (os error 2)
+FAILED
+test versions::a3_s4_f08_baseline_l1_small_history_and_version_bypass_gates ... fixture=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-versions-phq5eP cli_sha256_external_manifest_required=true
+Error: baseline L1 helper failed: process_evidence_directory=E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-versions-phq5eP\fresh-L1-d9b
+
+FAILED
+
+failures:
+
+failures:
+    lifecycle::a3_s4_f11_repeated_locator_kills_export_retry_b_only
+    versions::a3_s4_f08_baseline_l1_small_history_and_version_bypass_gates
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 11 filtered out; finished in 43.79s
+
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:285
+Line |
+ 285 |              throw "Stable test executable failed with exit code ${tes …
+     |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Stable test executable failed with exit code 101:
+     | E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+

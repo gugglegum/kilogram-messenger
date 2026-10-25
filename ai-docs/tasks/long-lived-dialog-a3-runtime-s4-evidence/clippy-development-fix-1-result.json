@@ -1,0 +1,20 @@
+{
+  "mode": "clippy",
+  "packages": [
+    "kilogram-cli",
+    "kilogram-state",
+    "kilogram-protocol",
+    "kilogram-identity",
+    "kilogram-runtime-ipc",
+    "kilogram-transport-iroh"
+  ],
+  "filter": "a3_s4_",
+  "skip": [],
+  "exit_code": 101,
+  "seconds": 3.8651986,
+  "profile": "verification",
+  "offline": true,
+  "jobs": 12,
+  "priority": "BelowNormal",
+  "executables": []
+}

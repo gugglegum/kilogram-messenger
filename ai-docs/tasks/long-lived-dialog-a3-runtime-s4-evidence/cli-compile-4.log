@@ -1,0 +1,83 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+warning: field `id` is never read
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_source_v2.rs:487:9
+    |
+486 | pub(in crate::vault::indexed_dialog) struct RuntimeReadyFields {
+    |                                             ------------------ field in this struct
+487 |     pub id: Id,
+    |         ^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `id` and `endpoint` are never read
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_source_v2.rs:507:9
+    |
+506 | pub(in crate::vault::indexed_dialog) struct RuntimeLocatorFields {
+    |                                             -------------------- fields in this struct
+507 |     pub id: Id,
+    |         ^^
+...
+511 |     pub endpoint: Id,
+    |         ^^^^^^^^
+
+warning: `kilogram-state` (lib) generated 2 warnings
+   Compiling kilogram-runtime-ipc v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-runtime-ipc)
+warning: `kilogram-state` (lib test) generated 2 warnings (2 duplicates)
+   Compiling kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+warning: unused import: `Duration`
+ --> apps\kilogram-cli\src\ordered_dialog\runtime2\owner.rs:6:60
+  |
+6 | use std::{sync::{Arc,atomic::{AtomicBool,Ordering}},time::{Duration,Instant}};
+  |                                                            ^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `ordered::OrderedSession`
+ --> apps\kilogram-cli\src\ordered_dialog\runtime2\handshake.rs:4:24
+  |
+4 | use kilogram_ratchet::{ordered::OrderedSession,ordered_v2::Guard2};
+  |                        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `fork` is never used
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\native.rs:19:12
+   |
+13 | impl Native2 {
+   | ------------ method in this implementation
+...
+19 |     pub fn fork(&self)->Self{Self{key:Zeroizing::new(*self.key),account:self.account.fork(),session:self.session.as_ref().map(Ordere...
+   |            ^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `valid` and `deadline` are never read
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\admission.rs:20:9
+   |
+16 | pub(super) struct Link2 {
+   |                   ----- fields in this struct
+...
+20 |     pub valid:Arc<AtomicBool>,
+   |         ^^^^^
+21 |     pub deadline:Instant,
+   |         ^^^^^^^^
+   |
+   = note: `Link2` has a derived impl for the trait `Clone`, but this is intentionally ignored during dead code analysis
+
+warning: `kilogram-cli` (lib) generated 4 warnings (run `cargo fix --lib -p kilogram-cli` to apply 2 suggestions)
+warning: `kilogram-cli` (lib test) generated 4 warnings (4 duplicates)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 31.50s
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_cli-c27fdb1e57f101dc.exe)
+  Executable unittests src\main.rs (target\verification\deps\kilogram_cli-5208c69577fdba00.exe)
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_protocol-0503bf865d9eb51e.exe)
+  Executable tests\canonical_decoder_mutations.rs (target\verification\deps\canonical_decoder_mutations-fbf793d76b2ddbd9.exe)
+  Executable tests\canonical_sync_v2_decoder_mutations.rs (target\verification\deps\canonical_sync_v2_decoder_mutations-af2940d23e6ebb60.exe)
+  Executable tests\canonical_sync_v2_fuzz_seeds.rs (target\verification\deps\canonical_sync_v2_fuzz_seeds-48fb76451cec2816.exe)
+  Executable tests\ordered_dialog_bounds.rs (target\verification\deps\ordered_dialog_bounds-2b9a58cc8b0b1011.exe)
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_runtime_ipc-eb3ed3ea81eef6f5.exe)
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_state-c93ef8da6fd2a59e.exe)
+  Executable tests\a3_s1_root_review.rs (target\verification\deps\a3_s1_root_review-6877e8aa215c8702.exe)
+  Executable tests\a3_s2_root_review.rs (target\verification\deps\a3_s2_root_review-d5c50350a2edce5e.exe)
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_transport_iroh-06158975b943fdcc.exe)
+  Executable tests\local_relay_transport.rs (target\verification\deps\local_relay_transport-ddb967e0672e7f04.exe)

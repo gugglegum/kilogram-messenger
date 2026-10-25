@@ -1,0 +1,17 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+warning: method `read` is never used
+   --> crates\kilogram-state\src\vault\indexed_dialog\runtime2.rs:534:8
+    |
+383 | impl RuntimeRepository {
+    | ---------------------- method in this implementation
+...
+534 |     fn read<T: DeserializeOwned>(&mut self, c: u8, name: &[u8], size: usize) -> Result<T> {
+    |        ^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `kilogram-state` (lib) generated 1 warning
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 26.45s

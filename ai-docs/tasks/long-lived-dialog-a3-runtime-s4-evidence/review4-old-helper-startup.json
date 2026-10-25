@@ -1,0 +1,16 @@
+{
+  "scope": "one standalone old-helper startup on fresh control files; no P DB open",
+  "fixture": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s4\\relay-old-startup-220f656981e3402ebd0389868f97e9b6",
+  "fixed_helper": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-runtime\\kilogram-relay.exe",
+  "helper_sha256": "69cad3e0e39b5c23a163b0d2a99b15d42faf0a2433bb909397a64cda81eb7aa5",
+  "pid": 35116,
+  "exited_within5s": true,
+  "exit_code": 1,
+  "elapsed_seconds": 0.0804791,
+  "ready_exists": true,
+  "ready": "http://127.0.0.1:23522/",
+  "stderr": "Error: Отказано в доступе. (os error 5)\n",
+  "original_source_archive": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s4\\relay-helper-review4-original\\s4_loopback_relay.rs",
+  "original_source_sha256": "91dd991948f4c2bd8e1159c988c147571ad02cf56b43544cdaa3b39ca2f60ba1",
+  "no_other_process_killed": true
+}

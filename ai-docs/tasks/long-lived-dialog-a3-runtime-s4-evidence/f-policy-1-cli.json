@@ -1,0 +1,6 @@
+{
+  "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+  "bytes": 66825216,
+  "sha256": "245c2d07bcb51ad50fb2ac0ea9f8ff49b3564a60d716dc56dbb07e49add4e407",
+  "source": "f-policy-controller-compile-1-source.json"
+}

@@ -1,0 +1,31 @@
+{
+  "helper_source": {
+    "path": "crates/kilogram-transport-iroh/examples/s4_loopback_relay.rs",
+    "old_sha256": "91dd991948f4c2bd8e1159c988c147571ad02cf56b43544cdaa3b39ca2f60ba1",
+    "new_sha256": "27cb3b53ee64ba538afa8411422a12b3b2dc9ad89aafa9ae3e94d91aefa1885f"
+  },
+  "helper_image": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-runtime\\kilogram-relay.exe",
+    "bytes": 17057280,
+    "sha256": "b8723b8cb546a0ceccf3179415d580b073f0a36d2f9a458ecfd15c66bf2c6317",
+    "old_sha256": "69cad3e0e39b5c23a163b0d2a99b15d42faf0a2433bb909397a64cda81eb7aa5",
+    "source": "review4-relay-build-1-source.json",
+    "scope": "only local relay readiness writable temporary+sync+atomic publish; CLI d5d8c8 unchanged",
+    "controller": "review4-relay-clippy-3-source.json"
+  },
+  "controller": {
+    "path": "apps/kilogram-cli/tests/runtime2_process/positive.rs",
+    "old_sha256": "3729a84afd4bf4157f0a73763b274ba82690ec8516b0015f9478684b74dc5c37",
+    "new_sha256": "101a081987b0c91cac7d4d75b28729217ead985b988133002148277be6a5d2e9"
+  },
+  "patch": {
+    "path": "review4-relay-helper.patch",
+    "bytes": 14128,
+    "sha256": "e399233bec2f5a5914c037cf51396bb2cd554c23dbee6e57cdff0da5ed4c858c"
+  },
+  "application_source_files_unchanged": 41,
+  "mechanical_frozen_set_note": "The original42-file classifier included this standalone helper example. Exactly that explicitly authorized helper path differs; all41 application/transport/crypto/state sources stay frozen.",
+  "application_CLI_predecessor_L1_images_identical": true,
+  "exercised_F_paths_unchanged": "Only positive.rs Relay/P-start diagnostics/new smoke and standalone example differ. F process/actor/state/route functions and shared positive::hit/selected are unchanged. No full F repetition requested by review4.",
+  "runtime_transport_scenario_timeouts_counts_gates_unchanged": true
+}

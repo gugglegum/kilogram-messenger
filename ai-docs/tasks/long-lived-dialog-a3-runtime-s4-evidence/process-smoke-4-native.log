@@ -1,0 +1,54 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 0.88s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 1 test
+test a3_s4_process_smoke_fresh_offline_restart_readable ... fixture=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\smoke-EQChOC cli_sha256_external_manifest_required=true
+process_start pid=19824 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\smoke-EQChOC\profile1.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\smoke-EQChOC\profile1.1.stderr.log
+process_start pid=41912 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\smoke-EQChOC\profile0.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\smoke-EQChOC\profile0.1.stderr.log
+active_progress seconds=2.758 phases=[[(Number(0), Bool(false)), (Number(0), Bool(false))], [(Number(0), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=17.053 phases=[[(Number(1), Bool(false)), (Number(0), Bool(false))], [(Number(0), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=20.382 phases=[[(Number(1), Bool(false)), (Number(1), Bool(false))], [(Number(2), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=25.892 phases=[[(Number(3), Bool(false)), (Number(1), Bool(false))], [(Number(2), Bool(false)), (Number(2), Bool(false))]]
+active_progress seconds=29.756 phases=[[(Number(3), Bool(false)), (Number(1), Bool(false))], [(Number(3), Bool(false)), (Number(2), Bool(false))]]
+active_progress seconds=32.048 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(2), Bool(false))]]
+active_progress seconds=35.888 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(3), Bool(false))]]
+active_progress seconds=42.021 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(false))]]
+Error: Active2 deadline; fixture \\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\smoke-EQChOC; states=[Object {"backend": Object {"growth_bytes": Number(3145728), "growth_nanos": Number(185376900), "last_failure": Null, "last_requested_length": Number(6295552), "length": Number(6295552), "max_growth": Number(3145728), "physical_quota": Number(51539607552), "read_bytes": Number(2834761), "reads": Number(22), "set_len_calls": Number(1), "sync_calls": Number(14), "sync_nanos": Number(63828700), "write_bytes": Number(7708736), "writes": Number(206)}, "contexts": Array [Object {"active": Bool(false), "blocked": Null, "context": String("da676a116c36c5474bbb242e6ea33c9424781405a0ee1fcd4b4dc4ef401349b9"), "counts": Object {"debt": Number(0), "pending": Number(0), "queued": Number(0), "receipts": Array [Number(0), Number(0)], "sources": Number(2)}, "d": String("f79f421f8c2ca1955a72b86d4ac4138ee0ffad8f7740c726cb9917b957e777a0"), "e": String("fb1b03a6202c533b3917c4cac18d518452a1d454d2c748175edfd141ff1ca0c7"), "native_generation": Number(3), "own_locator_revision": Number(1), "peer_locator_revision": Number(1), "phase": Number(3), "q": String("c0833c1be9d3c0023ae10fe0c4bbc1ad85ef3d4425faded070db2b37fa28bb48"), "role": Number(0), "sid": String("CMy++ntQ5mSTet1bCIY8uXUXwwaFrBoiObFrN9+upF4"), "slot": Number(0)}, Object {"active": Bool(false), "blocked": Null, "context": String("23e2b3145dcf4ff45c73228748962ab99429384c7ddf53477a9fccfbfa8b2990"), "counts": Object {"debt": Number(0), "pending": Number(0), "queued": Number(0), "receipts": Array [Number(0), Number(0)], "sources": Number(2)}, "d": String("9955c98688db63fd76478fcd75f8086e6b54ce4fbeecec516e88e71317b6b159"), "e": String("2b8c4392c79ff8a0a5f9b626616e1790c948781116124a68087cf5a916b72bc9"), "native_generation": Number(3), "own_locator_revision": Number(1), "peer_locator_revision": Number(1), "phase": Number(3), "q": String("31aff9c333f91123aa87d30bd5527e77374afea187bc993102c39d9e59e810e7"), "role": Number(0), "sid": String("0Dker57LYZirz7Ka+9TeyHa1Zmh6+4GMfNef1qH4aUc"), "slot": Number(1)}], "root_generation": Number(15), "stats": Object {"aborted_packet_calls": Number(0), "admissions": Number(2), "committed_decrypt": Number(2), "committed_encrypt": Number(2), "materialized": Number(0), "max_native_bytes": Number(2163), "max_ram_refs": Array [Number(0), Number(0)], "packet_attempts": Number(4), "ram_refs": Array [Number(0), Number(0)], "readable": Number(0)}, "version": Number(2), "window": Array [Array [Number(64), Number(64)], Array [Number(0), Number(0)], Array [Number(0), Number(0)]]}, Object {"backend": Object {"growth_bytes": Number(3145728), "growth_nanos": Number(186471900), "last_failure": Null, "last_requested_length": Number(6295552), "length": Number(6295552), "max_growth": Number(3145728), "physical_quota": Number(51539607552), "read_bytes": Number(2834761), "reads": Number(22), "set_len_calls": Number(1), "sync_calls": Number(13), "sync_nanos": Number(64131500), "write_bytes": Number(6426368), "writes": Number(180)}, "contexts": Array [Object {"active": Bool(true), "blocked": Null, "context": String("da676a116c36c5474bbb242e6ea33c9424781405a0ee1fcd4b4dc4ef401349b9"), "counts": Object {"debt": Number(0), "pending": Number(0), "queued": Number(0), "receipts": Array [Number(0), Number(0)], "sources": Number(2)}, "d": String("f79f421f8c2ca1955a72b86d4ac4138ee0ffad8f7740c726cb9917b957e777a0"), "e": String("fb1b03a6202c533b3917c4cac18d518452a1d454d2c748175edfd141ff1ca0c7"), "native_generation": Number(2), "own_locator_revision": Number(1), "peer_locator_revision": Number(1), "phase": Number(3), "q": String("c0833c1be9d3c0023ae10fe0c4bbc1ad85ef3d4425faded070db2b37fa28bb48"), "role": Number(1), "sid": String("CMy++ntQ5mSTet1bCIY8uXUXwwaFrBoiObFrN9+upF4"), "slot": Number(0)}, Object {"active": Bool(false), "blocked": Null, "context": String("23e2b3145dcf4ff45c73228748962ab99429384c7ddf53477a9fccfbfa8b2990"), "counts": Object {"debt": Number(0), "pending": Number(0), "queued": Number(0), "receipts": Array [Number(0), Number(0)], "sources": Number(2)}, "d": String("9955c98688db63fd76478fcd75f8086e6b54ce4fbeecec516e88e71317b6b159"), "e": String("2b8c4392c79ff8a0a5f9b626616e1790c948781116124a68087cf5a916b72bc9"), "native_generation": Number(2), "own_locator_revision": Number(1), "peer_locator_revision": Number(1), "phase": Number(3), "q": String("31aff9c333f91123aa87d30bd5527e77374afea187bc993102c39d9e59e810e7"), "role": Number(1), "sid": String("0Dker57LYZirz7Ka+9TeyHa1Zmh6+4GMfNef1qH4aUc"), "slot": Number(1)}], "root_generation": Number(14), "stats": Object {"aborted_packet_calls": Number(0), "admissions": Number(2), "committed_decrypt": Number(2), "committed_encrypt": Number(2), "materialized": Number(0), "max_native_bytes": Number(3048), "max_ram_refs": Array [Number(0), Number(0)], "packet_attempts": Number(4), "ram_refs": Array [Number(0), Number(0)], "readable": Number(0)}, "version": Number(2), "window": Array [Array [Number(64), Number(64)], Array [Number(0), Number(0)], Array [Number(0), Number(0)]]}]
+FAILED
+
+failures:
+
+failures:
+    a3_s4_process_smoke_fresh_offline_restart_readable
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 67.56s
+
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:285
+Line |
+ 285 |              throw "Stable test executable failed with exit code ${tes …
+     |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Stable test executable failed with exit code 101:
+     | E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+

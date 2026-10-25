@@ -10,6 +10,8 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    #[command(flatten)]
+    Runtime2(crate::ordered2_cli::Command),
     Shutdown {
         #[arg(long)]
         ipc_file: PathBuf,
@@ -119,6 +121,7 @@ pub enum Command {
 impl Command {
     pub fn state_directory(&self) -> Option<&Path> {
         match self {
+            Self::Runtime2(command) => command.state_directory(),
             Self::CredentialsExport { state_dir, .. }
             | Self::Inspect { state_dir }
             | Self::ContextCreate { state_dir, .. }
@@ -169,8 +172,12 @@ async fn ipc(path: &Path, value: Value) -> Result<Value> {
     }
 }
 pub async fn run(command: Command, lease: Option<StateDirectoryLock>) -> Result<()> {
+    if let Command::Runtime2(command) = command {
+        return crate::ordered2_cli::run(command, lease).await;
+    }
     let mut store = lease.map(OrderedVault::open).transpose()?;
     match command {
+        Command::Runtime2(_) => unreachable!("runtime2 dispatch before V4 open"),
         Command::Shutdown { ipc_file } => {
             ensure!(
                 matches!(

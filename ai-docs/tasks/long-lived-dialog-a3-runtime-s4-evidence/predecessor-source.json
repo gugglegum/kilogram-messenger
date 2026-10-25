@@ -1,0 +1,7 @@
+{
+  "predecessor_commit": "7f82036ee5803edd64be98b73572604250f5961c",
+  "archive": ".tmp/a3-s4/predecessor-s3.zip",
+  "bytes": 8392155,
+  "sha256": "f43ebc77e8d3a170661f30ceb90e5eca9affc6f106a67c5b6754aa3b27d54abb",
+  "note": "Source snapshot only; not a test run or production state copy"
+}

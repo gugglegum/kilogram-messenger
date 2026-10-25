@@ -1,0 +1,97 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 5.56s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 20 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 2 tests
+test schedule_control::lock_controls::a3_s4_controller_schedule_lock_persistent_preserves_original ... controller_schedule_persist_retry attempt=1 os_error=Some(5)
+controller_schedule_persist_retry attempt=2 os_error=Some(5)
+controller_schedule_persist_retry attempt=3 os_error=Some(5)
+controller_schedule_persist_retry attempt=4 os_error=Some(5)
+controller_schedule_persist_retry attempt=5 os_error=Some(5)
+controller_schedule_persist_retry attempt=6 os_error=Some(5)
+controller_schedule_persist_retry attempt=7 os_error=Some(5)
+controller_schedule_persist_retry attempt=8 os_error=Some(5)
+controller_schedule_persist_retry attempt=9 os_error=Some(5)
+controller_schedule_persist_retry attempt=10 os_error=Some(5)
+controller_schedule_persist_retry attempt=11 os_error=Some(5)
+controller_schedule_persist_retry attempt=12 os_error=Some(5)
+controller_schedule_persist_retry attempt=13 os_error=Some(5)
+controller_schedule_persist_retry attempt=14 os_error=Some(5)
+controller_schedule_persist_retry attempt=15 os_error=Some(5)
+controller_schedule_persist_retry attempt=16 os_error=Some(5)
+controller_schedule_persist_retry attempt=17 os_error=Some(5)
+controller_schedule_persist_retry attempt=18 os_error=Some(5)
+controller_schedule_persist_retry attempt=19 os_error=Some(5)
+controller_schedule_persist_retry attempt=20 os_error=Some(5)
+controller_schedule_persist_retry attempt=21 os_error=Some(5)
+controller_schedule_persist_retry attempt=22 os_error=Some(5)
+controller_schedule_persist_retry attempt=23 os_error=Some(5)
+controller_schedule_persist_retry attempt=24 os_error=Some(5)
+controller_schedule_persist_retry attempt=25 os_error=Some(5)
+S4_SCHEDULE_PERSISTENT_PASS micros=505717 os_error=Some(5) original_bytes_exact=true persistent_error_retained=true
+ok
+test schedule_control::lock_controls::a3_s4_controller_schedule_lock_release_exact_atomic ... controller_schedule_persist_retry attempt=1 os_error=Some(5)
+S4_SCHEDULE_RELEASE_PASS attempts=2 micros=21092 exact_old_and_new_bytes=true atomic_persist_only=true
+ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 14 filtered out; finished in 0.54s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17276 13.12
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=63994
+target_gib=68.43
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

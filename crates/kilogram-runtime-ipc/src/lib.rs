@@ -1982,6 +1982,22 @@ impl RuntimeIpcServer {
         account_id: AccountId,
         identity: &DeviceIdentity,
     ) -> Result<(Self, mpsc::Receiver<RuntimeIpcWork>)> {
+        Self::start_inner(descriptor_path, account_id, identity, false).await
+    }
+    /// Fresh OD2 has a smaller queue/wire cap and pre-authentication connection bound.
+    pub async fn start_ordered2(
+        descriptor_path: PathBuf,
+        account_id: AccountId,
+        identity: &DeviceIdentity,
+    ) -> Result<(Self, mpsc::Receiver<RuntimeIpcWork>)> {
+        Self::start_inner(descriptor_path, account_id, identity, true).await
+    }
+    async fn start_inner(
+        descriptor_path: PathBuf,
+        account_id: AccountId,
+        identity: &DeviceIdentity,
+        ordered2: bool,
+    ) -> Result<(Self, mpsc::Receiver<RuntimeIpcWork>)> {
         let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0))
             .await
             .context("bind authenticated runtime IPC loopback listener")?;
@@ -1992,9 +2008,19 @@ impl RuntimeIpcServer {
         getrandom::fill(&mut token).context("generate runtime IPC bearer token")?;
         let descriptor = RuntimeIpcDescriptor::new(address, token, account_id, identity)?;
         publish_descriptor(&descriptor_path, &descriptor)?;
-        let (sender, receiver) = mpsc::channel(REQUEST_CHANNEL_CAPACITY);
+        let (sender, receiver) = mpsc::channel(if ordered2 {
+            16
+        } else {
+            REQUEST_CHANNEL_CAPACITY
+        });
         let (changes, change_receiver) = watch::channel(0_u64);
-        let accept_task = tokio::spawn(run_accept_loop(listener, token, sender, change_receiver));
+        let accept_task = tokio::spawn(run_accept_loop(
+            listener,
+            token,
+            sender,
+            change_receiver,
+            ordered2,
+        ));
         Ok((
             Self {
                 descriptor_path,
@@ -2082,7 +2108,9 @@ async fn run_accept_loop(
     expected_token: [u8; 32],
     sender: mpsc::Sender<RuntimeIpcWork>,
     changes: watch::Receiver<u64>,
+    ordered2: bool,
 ) {
+    let permits = std::sync::Arc::new(tokio::sync::Semaphore::new(16));
     loop {
         let Ok((stream, remote)) = listener.accept().await else {
             return;
@@ -2090,14 +2118,24 @@ async fn run_accept_loop(
         if !remote.ip().is_loopback() {
             continue;
         }
+        let permit = if ordered2 {
+            match permits.clone().try_acquire_owned() {
+                Ok(p) => Some(p),
+                Err(_) => continue,
+            }
+        } else {
+            None
+        };
         let connection_sender = sender.clone();
         let connection_changes = changes.clone();
         tokio::spawn(async move {
+            let _permit = permit;
             let _ = serve_connection(
                 stream,
                 expected_token,
                 connection_sender,
                 connection_changes,
+                ordered2,
             )
             .await;
         });
@@ -2109,10 +2147,21 @@ async fn serve_connection(
     expected_token: [u8; 32],
     sender: mpsc::Sender<RuntimeIpcWork>,
     mut changes: watch::Receiver<u64>,
+    ordered2: bool,
 ) -> Result<()> {
-    let request: RuntimeIpcRequest = timeout(IO_TIMEOUT, read_frame(&mut stream))
-        .await
-        .context("runtime IPC client request timed out")??;
+    let request: RuntimeIpcRequest = timeout(
+        IO_TIMEOUT,
+        read_frame_limited(
+            &mut stream,
+            if ordered2 {
+                32 * 1024 + 128
+            } else {
+                MAX_FRAME_BYTES
+            },
+        ),
+    )
+    .await
+    .context("runtime IPC client request timed out")??;
     ensure!(
         request.version == IPC_VERSION,
         "unsupported runtime IPC request"
@@ -2121,32 +2170,49 @@ async fn serve_connection(
         request.token == expected_token,
         "runtime IPC authentication failed"
     );
-    let response = match request.command {
-        RuntimeIpcCommand::WaitForChange {
-            after_revision,
-            timeout_milliseconds,
-        } => wait_for_change(&mut changes, after_revision, timeout_milliseconds).await,
-        command => {
-            let (response_sender, response_receiver) = oneshot::channel();
-            timeout(
-                IO_TIMEOUT,
-                sender.send(RuntimeIpcWork {
-                    command,
-                    response: response_sender,
-                }),
-            )
-            .await
-            .context("runtime IPC actor queue timed out")?
-            .context("runtime IPC actor stopped")?;
-            timeout(IO_TIMEOUT, response_receiver)
+    let response = if ordered2
+        && !matches!(
+            &request.command,
+            RuntimeIpcCommand::OrderedDialog { .. } | RuntimeIpcCommand::Shutdown
+        ) {
+        RuntimeIpcResponse::Error {
+            message: "UnsupportedProfile: ordinary IPC forbidden in runtime2".into(),
+        }
+    } else {
+        match request.command {
+            RuntimeIpcCommand::WaitForChange {
+                after_revision,
+                timeout_milliseconds,
+            } => wait_for_change(&mut changes, after_revision, timeout_milliseconds).await,
+            command => {
+                let (response_sender, response_receiver) = oneshot::channel();
+                timeout(
+                    IO_TIMEOUT,
+                    sender.send(RuntimeIpcWork {
+                        command,
+                        response: response_sender,
+                    }),
+                )
                 .await
-                .context("runtime IPC actor response timed out")?
-                .context("runtime IPC actor dropped its response")?
+                .context("runtime IPC actor queue timed out")?
+                .context("runtime IPC actor stopped")?;
+                timeout(IO_TIMEOUT, response_receiver)
+                    .await
+                    .context("runtime IPC actor response timed out")?
+                    .context("runtime IPC actor dropped its response")?
+            }
         }
     };
-    timeout(IO_TIMEOUT, write_frame(&mut stream, &response))
-        .await
-        .context("runtime IPC client response timed out")??;
+    timeout(
+        IO_TIMEOUT,
+        write_frame_limited(
+            &mut stream,
+            &response,
+            if ordered2 { 48 * 1024 } else { MAX_FRAME_BYTES },
+        ),
+    )
+    .await
+    .context("runtime IPC client response timed out")??;
     Ok(())
 }
 
@@ -2243,11 +2309,15 @@ fn load_descriptor(path: &Path) -> Result<RuntimeIpcDescriptor> {
 }
 
 async fn write_frame<T: Serialize>(stream: &mut TcpStream, value: &T) -> Result<()> {
+    write_frame_limited(stream, value, MAX_FRAME_BYTES).await
+}
+async fn write_frame_limited<T: Serialize>(
+    stream: &mut TcpStream,
+    value: &T,
+    cap: usize,
+) -> Result<()> {
     let encoded = postcard::to_allocvec(value).context("encode runtime IPC frame")?;
-    ensure!(
-        encoded.len() <= MAX_FRAME_BYTES,
-        "runtime IPC frame is too large"
-    );
+    ensure!(encoded.len() <= cap, "runtime IPC frame is too large");
     let length = u32::try_from(encoded.len()).context("runtime IPC frame length overflow")?;
     stream
         .write_all(&length.to_be_bytes())
@@ -2261,6 +2331,9 @@ async fn write_frame<T: Serialize>(stream: &mut TcpStream, value: &T) -> Result<
 }
 
 async fn read_frame<T: DeserializeOwned>(stream: &mut TcpStream) -> Result<T> {
+    read_frame_limited(stream, MAX_FRAME_BYTES).await
+}
+async fn read_frame_limited<T: DeserializeOwned>(stream: &mut TcpStream, cap: usize) -> Result<T> {
     let mut encoded_length = [0_u8; 4];
     stream
         .read_exact(&mut encoded_length)
@@ -2268,7 +2341,7 @@ async fn read_frame<T: DeserializeOwned>(stream: &mut TcpStream) -> Result<T> {
         .context("read runtime IPC frame length")?;
     let length = usize::try_from(u32::from_be_bytes(encoded_length))
         .context("runtime IPC frame length conversion")?;
-    if length > MAX_FRAME_BYTES {
+    if length > cap {
         bail!("runtime IPC frame is too large");
     }
     let mut encoded = vec![0_u8; length];

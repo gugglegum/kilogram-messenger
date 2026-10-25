@@ -1,0 +1,103 @@
+{
+  "run": "f-full-review2-frozen-1",
+  "result": {
+    "mode": "run",
+    "packages": [
+      "kilogram-cli",
+      "kilogram-transport-iroh",
+      "kilogram-state"
+    ],
+    "filter": "a3_s4_f",
+    "skip": [],
+    "exit_code": 1,
+    "seconds": 365.2830575,
+    "profile": "verification",
+    "offline": true,
+    "jobs": 12,
+    "priority": "BelowNormal",
+    "executables": [
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+        "bytes": 67757568,
+        "sha256": "55da4d5e537ad43b3d5ecffc96d07fb9af160ff5331bbce2cafe5f1323197259"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+        "bytes": 40600576,
+        "sha256": "96140b58bbd140217ba07609cd0581f351375d87624d355f35315839a5469a2e"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+        "bytes": 36447744,
+        "sha256": "3567d441630122c22aeb37cf88e0c751870b32edf9b07edcaee3c0d7a2234f71"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+        "bytes": 10486272,
+        "sha256": "bfa4c74a57b4f0402de7b4bba909e535b0fb837de58903ad563be73f274301ea"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s1_root_review-tests.exe",
+        "bytes": 6713856,
+        "sha256": "ecfd46610a86f1e09b419fb4157e1599f2df6251cc15a77ae34563926a59d209"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s2_root_review-tests.exe",
+        "bytes": 6968832,
+        "sha256": "41861dac57bbadf3fdfbd22d42d623e219cbfd4ef686b390f95b6dbe40952269"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+        "bytes": 29934592,
+        "sha256": "27221780b0d4b991c2a1c28f9eb417f5d87533e14365c912ffb09bf1bd168cb7"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+        "bytes": 33994240,
+        "sha256": "18496712474a236da6167744ee2f37f12595f291f9fb306957f7638325d1d894"
+      }
+    ]
+  },
+  "error_line": 307,
+  "error": "Error: Отказано в доступе. (os error 5)",
+  "case": "test faults::a3_s4_f09_actual_trial_operational_failure_rollback ... fixture=E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\F-operational-C7STN1 cli_sha256_external_manifest_required=true",
+  "schedules": [
+    {
+      "path": ".tmp/a3-s4/process/F-operational-C7STN1/schedule0.json",
+      "bytes": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "debug_schedule": {}
+    },
+    {
+      "path": ".tmp/a3-s4/process/F-operational-C7STN1/schedule1.json",
+      "bytes": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "debug_schedule": {}
+    }
+  ],
+  "child_observations": [
+    {
+      "path": ".tmp/a3-s4/process/F-operational-C7STN1/profile0.1.stderr.log",
+      "bytes": 4741,
+      "sha256": "3faae53ec26e187b13c3e5c0ce3058d3963fdebaf75917b5c85e3b7c807aa7bf",
+      "last_committed_readable_ordinals": [],
+      "committed_calls": 5
+    },
+    {
+      "path": ".tmp/a3-s4/process/F-operational-C7STN1/profile1.1.stderr.log",
+      "bytes": 4455,
+      "sha256": "3df43a424779475c2775a78e548965866217813af5e7f00792b4827c24ad3649",
+      "last_committed_readable_ordinals": [
+        {
+          "role": 0,
+          "n": 1
+        }
+      ],
+      "committed_calls": 5
+    }
+  ],
+  "classification": "unclassified Windows controller file access after first Text; first atomic debug-schedule replacement is a hypothesis, not yet proved; no product IO failure inferred",
+  "product_frozen": true,
+  "new_P_started": false,
+  "silent_rerun": false
+}

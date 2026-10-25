@@ -1,0 +1,22 @@
+[
+  {
+    "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+    "bytes": 66840576,
+    "sha256": "1efa40396a51f3df72d3c2d996a4ebefd0d855812ec4e9512813b1b6f7b73ba0"
+  },
+  {
+    "path": "target/compatibility/long-lived-dialog-runtime/kilogram-relay.exe",
+    "bytes": 19725824,
+    "sha256": "69cad3e0e39b5c23a163b0d2a99b15d42faf0a2433bb909397a64cda81eb7aa5"
+  },
+  {
+    "path": "target/compatibility/long-lived-dialog-predecessor-s3/kilogram-state-predecessor.exe",
+    "bytes": 5344768,
+    "sha256": "6932db6bc228cdd38fc358792cc5cd41fcfd1e5445c087a7c0f535ce4f0c1e4e"
+  },
+  {
+    "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+    "bytes": 61531648,
+    "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+  }
+]

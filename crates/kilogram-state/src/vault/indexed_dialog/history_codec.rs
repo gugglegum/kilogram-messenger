@@ -55,6 +55,18 @@ struct JsonPage<'a> {
     cursor: String,
     items: Vec<JsonRow<'a>>,
 }
+pub(super) fn row_json_bytes(row: &super::HistoryRow) -> Result<usize> {
+    serde_json::to_vec(&JsonRow {
+        id: hex(&row.id),
+        role: row.role,
+        ordinal: row.ordinal,
+        sequence: row.sequence,
+        request: hex(&row.request),
+        text: &row.text,
+    })
+    .map(|raw| raw.len())
+    .map_err(|_| Error::Bound("history JSON row"))
+}
 impl HistoryPage {
     fn check_encoding_input(&self) -> Result<()> {
         if self.items.len() > 32

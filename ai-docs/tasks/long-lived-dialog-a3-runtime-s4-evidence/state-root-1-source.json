@@ -1,0 +1,42 @@
+[
+  {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/run-check.ps1",
+    "bytes": 3111,
+    "sha256": "ac4bdf34e9bfa6c8c1df07b7177d765d31e057fd91b149a85f03d0923c2eed30"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+    "bytes": 51843,
+    "sha256": "8a1fc1fefe062a2dd8881533656e7a5bcc57b80b137f18c80c9212607118bd28"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/history_protocol2.rs",
+    "bytes": 49326,
+    "sha256": "f7cb67372d0718c71844d75154dbd1b6d2f298136f71020e8fde578877b9b3a0"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+    "bytes": 18002,
+    "sha256": "ce1bc3f3b3b095647125a4902bdd7bc60472bcbc5af375b1ccc0546c2be776f8"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/profile.rs",
+    "bytes": 5373,
+    "sha256": "0cba0795af099e1976516f23ee92cb5be22701d8bf0fb3eca3cd1accca7e059d"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2_tests.rs",
+    "bytes": 4307,
+    "sha256": "6e6bb24c510f8462ac6e0766d0f4a06ceaa524a07b2cf9c7cf3163e684d0c09d"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2.rs",
+    "bytes": 13804,
+    "sha256": "1fb8c81d42e8b8b0d7d79851fdacacacd56d3b210021b1a93726158cf7900163"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+    "bytes": 10537,
+    "sha256": "98d33e4b40ebe6fb3b0685077bc8d7bd29434dbd0d2af8b6ce44e30186e6111d"
+  }
+]

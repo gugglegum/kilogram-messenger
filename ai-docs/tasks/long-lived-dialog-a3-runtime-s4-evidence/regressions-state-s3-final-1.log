@@ -1,0 +1,81 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 7.51s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 9 tests
+test vault::indexed_dialog::history::writer::protocol2::storage_tests::a3_s3_a02_resolver_inputs_missing_roles_and_integrity ... a3_s3_A02=8 exact_missing_auth_categories=4 inputs_checked_hash_sorted_used=true root_credits_native_unchanged=true
+ok
+test vault::indexed_dialog::history::writer::protocol2::storage_tests::a3_s3_bound2_and_unbound_budget_separation ... history_read mode=bound2 tag=before-reopen limit=1 rows=8 pages=8 observed_max_point_gets=106 candidate_loads=3 max_candidates=2 elapsed_seconds=0.123609
+history_read mode=bound2 tag=before-reopen limit=32 rows=8 pages=1 observed_max_point_gets=241 candidate_loads=8 max_candidates=2 elapsed_seconds=0.025696
+history_read mode=unbound tag=before-reopen limit=1 rows=8 pages=8 observed_max_point_gets=26 candidate_loads=3 max_candidates=2 elapsed_seconds=0.049356
+history_read mode=unbound tag=before-reopen limit=32 rows=8 pages=1 observed_max_point_gets=60 candidate_loads=8 max_candidates=2 elapsed_seconds=0.011042
+history_read mode=bound2 tag=after-reopen limit=1 rows=8 pages=8 observed_max_point_gets=106 candidate_loads=3 max_candidates=2 elapsed_seconds=0.126167
+history_read mode=bound2 tag=after-reopen limit=32 rows=8 pages=1 observed_max_point_gets=241 candidate_loads=8 max_candidates=2 elapsed_seconds=0.025183
+history_read mode=unbound tag=after-reopen limit=1 rows=8 pages=8 observed_max_point_gets=26 candidate_loads=3 max_candidates=2 elapsed_seconds=0.049625
+history_read mode=unbound tag=after-reopen limit=32 rows=8 pages=1 observed_max_point_gets=60 candidate_loads=8 max_candidates=2 elapsed_seconds=0.010849
+ok
+test vault::indexed_dialog::history::writer::protocol2::storage_tests::a3_s3_mandatory_evidence_fail_closed_after_reopen ... a3_s3_required_evidence_negatives=8 missing_R_duplicate_ack_calls=2 no_partial_page_or_cursor=true noninitial_parent_covered=true
+ok
+test vault::indexed_dialog::history::writer::protocol2::storage_tests::a3_s3_s01_s02_stateful_source_receipt_rejections ... a3_s3_S01=8 S02=8 D05_same_raw_writer_rejects=8 structural_only=true native_calls=0
+ok
+test vault::indexed_dialog::history::writer::protocol2::storage_tests::a3_s3_s03_s04_atomic_retry_and_shared_fences ... a3_s3_S03=6 S04_direct=3 S04_ambiguous_in_S05=1 C2_genesis=2 C1_base_sources=10 cross_C_unchanged=true
+ok
+test vault::indexed_dialog::history::writer::protocol2::storage_tests::a3_s3_s05_faults_capacity_and_ambiguous_retry ... a3_s3_storage_fault=before_write root_outcome=old exact_retry_duplicate=false next_native_trial=0
+a3_s3_storage_fault=before_sync root_outcome=new exact_retry_duplicate=true next_native_trial=0
+a3_s3_storage_fault=after_sync root_outcome=new exact_retry_duplicate=true next_native_trial=0
+a3_s3_S05=4 S04_ambiguous=1 configured_capacity_open_refusal=1 funded_obligation_preserved=true
+ok
+test vault::indexed_dialog::history::writer::protocol2::storage_tests::a3_s3_s06_closed_writer_bypasses_rejected ... a3_s3_S06=6 bound2_bypasses=0 cross_C_unchanged=true
+ok
+test vault::indexed_dialog::history::writer::protocol2::storage_tests::a3_s3_s07_genesis_normalization_and_fragment_correspondence ... a3_s3_S07_positive_genesis=2 unbound_compatibility_vectors=2 signed_prefix_negatives_in_C09=2 corruption_fragment_vectors=1 HPB1_predicate_unchanged=true
+ok
+test vault::indexed_dialog::history::writer::protocol2::tests::a3_s3_differential_37_state_reader ... a3_s3_D01_D09_state=37 field_comparisons=19 matching_rejects=18 native_calls=0
+ok
+
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 79 filtered out; finished in 19.29s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17274  13.1
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=63992
+target_gib=68.41
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

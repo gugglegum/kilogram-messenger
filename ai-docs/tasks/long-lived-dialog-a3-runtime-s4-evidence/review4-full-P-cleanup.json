@@ -1,0 +1,20 @@
+{
+  "utc": "2026-10-25T12:47:56.4619455Z",
+  "scope": "Native Windows token; exact fixed CLI/relay and selected stable harness executable paths only",
+  "images": [
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-runtime\\kilogram-cli.exe",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-runtime\\kilogram-relay.exe",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s1_root_review-tests.exe",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s2_root_review-tests.exe",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-transport-iroh-test-local_relay_transport-tests.exe"
+  ],
+  "owned_processes": [],
+  "owned_count": 0,
+  "exit_code": 0,
+  "runner_seconds": 2003.5355583
+}

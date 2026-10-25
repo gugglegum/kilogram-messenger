@@ -1,0 +1,117 @@
+{
+  "captured_utc": "2026-10-25T09:17:44.242Z",
+  "phase": "P complete one-way640 and duplex direct; before route rotation",
+  "scope": "public profile/locators/context/credential only; no IPC token, vault, Root/Device key or Native checkpoint",
+  "files": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s4\\process\\P-vVyEbW\\profile0.json",
+      "bytes": 1060,
+      "sha256": "beed582a94c38aa3192ed83aaeb20b206feea4ba06158ca4eeea13d1dda35596",
+      "public_config": {
+        "version": 2,
+        "profile_mode": "ordered-dialog-v2",
+        "state_dir": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-vVyEbW\\state0",
+        "account": "6b3740c0ab4f257ceedf4940a7bb64295d4125d74794671fb1bf8e5b3d829156",
+        "claim": "0f640ff1c4f942dfd94d9af3ace6ef5056ce8e8674aa9125af8d81ac5722642b",
+        "device": "b6068856d377623b77359af3c1498ca83c14d7a6e27bc8ffabb758614f6d9e46",
+        "contexts": [
+          "35babb8a785fce162e5c91658719e528a97e64e6119b069a6e66b78bdbc71473",
+          "e96f02c28d4baf074eed4ea239f96e07d2919024600173189868098c6762df29"
+        ],
+        "enabled": [
+          0,
+          1
+        ],
+        "ipc_file": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-vVyEbW\\ipc0.json",
+        "locator_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-vVyEbW\\locators0",
+        "route": {
+          "policy": "direct-only",
+          "bind": "127.0.0.1:0",
+          "relay": null
+        },
+        "logical_quota": [
+          17179869184,
+          17179869184
+        ],
+        "physical_quota": 51539607552
+      }
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s4\\process\\P-vVyEbW\\profile1.json",
+      "bytes": 1060,
+      "sha256": "83a516c432a6200a9c4f94e5bbb31a3b00a23d8fdce80243df1449bea5dcee33",
+      "public_config": {
+        "version": 2,
+        "profile_mode": "ordered-dialog-v2",
+        "state_dir": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-vVyEbW\\state1",
+        "account": "38a82a110aabd94b41f1b39d6b6b647a7339622e385771987c4ab7c36fc20380",
+        "claim": "8952674bd9bb72c0a75a35afd90213c9ef2d13e6d329e5924a6057675c7d07c3",
+        "device": "b6bdf9a963c2fca1849e910b0902817fdcdfd2cfaada40b3c1b182e7e874ec6c",
+        "contexts": [
+          "35babb8a785fce162e5c91658719e528a97e64e6119b069a6e66b78bdbc71473",
+          "e96f02c28d4baf074eed4ea239f96e07d2919024600173189868098c6762df29"
+        ],
+        "enabled": [
+          0,
+          1
+        ],
+        "ipc_file": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-vVyEbW\\ipc1.json",
+        "locator_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-vVyEbW\\locators1",
+        "route": {
+          "policy": "direct-only",
+          "bind": "127.0.0.1:0",
+          "relay": null
+        },
+        "logical_quota": [
+          17179869184,
+          17179869184
+        ],
+        "physical_quota": 51539607552
+      }
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s4\\process\\P-vVyEbW\\context0.bin",
+      "bytes": 1038,
+      "sha256": "a11dd4c6724bad90b78bb460a655250841e0a4f5b67887d5e85768cc290e4be1"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s4\\process\\P-vVyEbW\\context1.bin",
+      "bytes": 1038,
+      "sha256": "4642e98985f99bd0325389622cbb70f86f1ad0fc9ed0558225f7838c257830aa"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s4\\process\\P-vVyEbW\\credential0.bin",
+      "bytes": 272,
+      "sha256": "ff217fd8d002b43384a666e938e9c76b5214bd9306e756b6e4d1d0ec6753438e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s4\\process\\P-vVyEbW\\credential1.bin",
+      "bytes": 272,
+      "sha256": "709e4b95b242d4a9002ae1ce6c2f0e2f36c2c0254d4c358eb3b906dc232163a9"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s4\\process\\P-vVyEbW\\locators0\\35babb8a785fce162e5c91658719e528a97e64e6119b069a6e66b78bdbc71473.locator",
+      "bytes": 228,
+      "sha256": "a3e55e44ffc655e3f7933567dd10f24dd7f15b271a02190089c4a84f425f74cd",
+      "signed_public_locator_hex": "828a02582035babb8a785fce162e5c91658719e528a97e64e6119b069a6e66b78bdbc7147358202f5d3f9b669296ff75ac93b80074f33e83ed5bc04b1cf09d55af8e2e53c4c076582055f184377922ba2d96da538dca564fcc2c008b9738b7c9fe9ad17a875b9966df582066c4295be600bfe563afe4d164dc864e24ada8d3bb6cd3ee1e8982a4da418d8e818304447f00000119cf9380031a6addc7541a6addd564584061eca500e9e834266d2be2951302c789b28900acb3a2264cfeaafaa01a6d7c970527c29c3ffda01a65541811fed8b3f29ba8b6cfa853998345163e4333c3c502"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s4\\process\\P-vVyEbW\\locators0\\e96f02c28d4baf074eed4ea239f96e07d2919024600173189868098c6762df29.locator",
+      "bytes": 228,
+      "sha256": "258b7962a33d9a9ec3877a9be3348c8549e312e6f1848e370791f8a70755bc07",
+      "signed_public_locator_hex": "828a025820e96f02c28d4baf074eed4ea239f96e07d2919024600173189868098c6762df2958202f5d3f9b669296ff75ac93b80074f33e83ed5bc04b1cf09d55af8e2e53c4c076582055f184377922ba2d96da538dca564fcc2c008b9738b7c9fe9ad17a875b9966df582066c4295be600bfe563afe4d164dc864e24ada8d3bb6cd3ee1e8982a4da418d8e818304447f00000119cf9380031a6addc7541a6addd56458401c4db36603b0903e778f2ccd044b5ea9d7b3e68d3e0d19e59bf4a407016388d21846c9f7e98e41e663e24bfee2c652edc41619de613de7277c27045d90bc7900"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s4\\process\\P-vVyEbW\\locators1\\35babb8a785fce162e5c91658719e528a97e64e6119b069a6e66b78bdbc71473.locator",
+      "bytes": 228,
+      "sha256": "77c3f021ae6259b7624cda010dc9c2ced8e7b73445b214aee3c64e1bbbca7488",
+      "signed_public_locator_hex": "828a02582035babb8a785fce162e5c91658719e528a97e64e6119b069a6e66b78bdbc71473582055f184377922ba2d96da538dca564fcc2c008b9738b7c9fe9ad17a875b9966df58202f5d3f9b669296ff75ac93b80074f33e83ed5bc04b1cf09d55af8e2e53c4c076582034fa06887c1a1c6fc5693c579ddd4f4dc894cda70956ca50b22e94fb3e0adb38818304447f00000119ee8980031a6addc7581a6addd56858404bc41c390bb097da9e9ffac53808c41ea1ec0c6c985debe1d70fb12286b218f0b26773ed770632e29cca27a5079fbba68dde115342ef7837fc675ef7d0015e05"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s4\\process\\P-vVyEbW\\locators1\\e96f02c28d4baf074eed4ea239f96e07d2919024600173189868098c6762df29.locator",
+      "bytes": 228,
+      "sha256": "b9f8a024fb82d68812aba9f5c762180def135beb6b59c39637691ce444fe7874",
+      "signed_public_locator_hex": "828a025820e96f02c28d4baf074eed4ea239f96e07d2919024600173189868098c6762df29582055f184377922ba2d96da538dca564fcc2c008b9738b7c9fe9ad17a875b9966df58202f5d3f9b669296ff75ac93b80074f33e83ed5bc04b1cf09d55af8e2e53c4c076582034fa06887c1a1c6fc5693c579ddd4f4dc894cda70956ca50b22e94fb3e0adb38818304447f00000119ee8980031a6addc7591a6addd569584084354979aa38ae11b19301b7db801bee9755c253d9300a2e5ee09f0e2e3b18625f0ce9fc45189043350a70f73f3507e8db3e6396b1ee6cd5b696a692d060410b"
+    }
+  ]
+}

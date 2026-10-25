@@ -1,0 +1,267 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+    Checking kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: this looks like an `else if` but the `else` is missing
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\data.rs:14:46
+   |
+14 |         if n>1{parents.extend(g.own().last);}if n>0 &&g.peer().next>1{parents.extend(g.peer().last);}parents.sort();parents.dedup();
+   |                                              ^
+   |
+   = note: to remove this lint, add the missing `else` or add a new line before the second `if`
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#possible_missing_else
+   = note: `-D clippy::possible-missing-else` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::possible_missing_else)]`
+
+error: this looks like you are trying to use `.. != ..`, but you really are doing `.. = (! ..)`
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\runtime.rs:44:41
+   |
+44 |             receive_turn[usize::from(c)]=!receive_turn[usize::from(c)];
+   |                                         ^^
+   |
+   = note: to remove this lint, use either `!=` or `= !`
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#suspicious_assignment_formatting
+   = note: `-D clippy::suspicious-assignment-formatting` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::suspicious_assignment_formatting)]`
+
+error: this looks like you are trying to use `.. != ..`, but you really are doing `.. = (! ..)`
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\runtime.rs:249:140
+    |
+249 | ...e|owner|owner.live_window(c,first)).await?}else{None};send_live=!send_live;
+    |                                                                   ^^
+    |
+    = note: to remove this lint, use either `!=` or `= !`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#suspicious_assignment_formatting
+
+error: used `expect()` on an `Option` value
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\owner.rs:62:106
+   |
+62 | ...ref(&self)->&Self::Target{self.inner.as_ref().expect("owner repository is available outside recovery")}}
+   |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: if this value is `None`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#expect_used
+   = note: requested on the command line with `-D clippy::expect-used`
+
+error: used `expect()` on an `Option` value
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\owner.rs:63:87
+   |
+63 | ... self)->&mut Self::Target{self.inner.as_mut().expect("owner repository is available outside recovery")}}
+   |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: if this value is `None`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#expect_used
+
+error: this `if` statement can be collapsed
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\owner.rs:255:9
+    |
+255 |         if result.is_err() &&c<2{if let Some(lease)=self.leases[usize::from(c)].take(){lease.invalidate();}}
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+    = note: `-D clippy::collapsible-if` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+    |
+255 -         if result.is_err() &&c<2{if let Some(lease)=self.leases[usize::from(c)].take(){lease.invalidate();}}
+255 +         if result.is_err() &&c<2&& let Some(lease)=self.leases[usize::from(c)].take(){lease.invalidate();}
+    |
+
+error: the loop variable `role` is used to index `peers`
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\handshake.rs:53:21
+   |
+53 |         for role in 0..2{if let Some(raw)=&s.head.ready[role]{
+   |                     ^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+   = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator and enumerate()
+   |
+53 -         for role in 0..2{if let Some(raw)=&s.head.ready[role]{
+53 +         for (role, <item>) in peers.iter().enumerate(){if let Some(raw)=&s.head.ready[role]{
+   |
+
+error: this function has too many arguments (10/7)
+ --> apps\kilogram-cli\src\ordered_dialog\runtime2\data.rs:9:5
+  |
+9 |     pub(super) fn trial_send(&mut self,c:u8,s:&db...lt<(wire::ParsedEvent2,db::HistoryReadable2)>{
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^...^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#too_many_arguments
+  = note: `-D clippy::too-many-arguments` implied by `-D warnings`
+  = help: to override `-D warnings` add `#[allow(clippy::too_many_arguments)]`
+
+error: this `if` statement can be collapsed
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\data.rs:70:9
+   |
+70 | / ...   if s.head.phase==3 {
+71 | | ...       if let Some((outcome,old))=self.repository.request(c,request)?{ensure!(old==text,"RequestIdConflict");return Ok(outcome);}
+72 | | ...   }
+   | |_______^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+help: collapse nested if block
+   |
+70 ~         if s.head.phase==3
+71 ~             && let Some((outcome,old))=self.repository.request(c,request)?{ensure!(old==text,"RequestIdConflict");return Ok(outcome);}
+   |
+
+error: very complex type used. Consider factoring parts into `type` definitions
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\network.rs:63:63
+   |
+63 |     pub(super) fn delivery_items(&mut self,c:u8,body:&Value)->Result<(Vec<Vec<u8>>,BTreeMap<Id,Vec<u8>>)> {
+   |                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#type_complexity
+   = note: `-D clippy::type-complexity` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::type_complexity)]`
+
+error: very complex type used. Consider factoring parts into `type` definitions
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\network.rs:180:79
+    |
+180 |     pub(super) fn prefix_items(&mut self,c:u8,body:&Value,plan:&PrefixPlan2)->Result<(Vec<Vec<u8>>,BTreeMap<Id,Vec<u8>>)> {
+    |                                                                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#type_complexity
+
+error: very complex type used. Consider factoring parts into `type` definitions
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\network.rs:211:58
+    |
+211 |     pub(super) fn ack_items(&mut self,c:u8,body:&Value)->Result<(Vec<Vec<u8>>,BTreeMap<Id,Vec<u8>>)> {
+    |                                                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#type_complexity
+
+error: used `expect()` on a `Result` value
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\resources.rs:15:89
+   |
+15 | ...::mpsc::Sender<super::runtime::Job2>){*self.mailbox.lock().expect("mailbox registration")=Some(sender.downgrade());}
+   |                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: if this value is an `Err`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\resources.rs:18:20
+   |
+18 | ...   let queued=self.mailbox.lock().expect("mailbox sample").as_ref().and_then(|s|s.upgrade()).map_or(0,|s|s.max_capacity()-s.capac...
+   |                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: if this value is an `Err`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#expect_used
+
+error: useless conversion to the same type: `&str`
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\hooks.rs:50:74
+   |
+50 | ...::NativeFailure::Operational("verification failure after actual Native trial".into()).into());
+   |                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: consider removing `.into()`: `"verification failure after actual Native trial"`
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#useless_conversion
+   = note: `-D clippy::useless-conversion` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::useless_conversion)]`
+
+error: used `expect()` on a `Result` value
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\runtime.rs:27:14
+   |
+27 |       let join=std::thread::Builder::new().name("kilogram-od2-owner".into()).spawn(move||{
+   |  ______________^
+28 | |         let mut next=0;let mut receive_turn=[false;2];
+29 | |         let mut retry_at=[Instant::now();2];let mut last_error:[Option<String>;2]=[None,None];
+30 | |         while !stop.load(Ordering::Acquire){
+...  |
+56 | |         owner.invalidate();
+57 | |     }).expect("spawn OD2 owner");
+   | |________________________________^
+   |
+   = note: if this value is an `Err`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#expect_used
+
+error: this `if` statement can be collapsed
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\runtime.rs:35:13
+   |
+35 | ...   if owner.needs_reopen{if let Err(e)=owner.recover(){eprintln!("od2_recovery_failed {e:#}");stop.store(true,Ordering::Release);break;}}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+help: collapse nested if block
+   |
+35 -             if owner.needs_reopen{if let Err(e)=owner.recover(){eprintln!("od2_recovery_failed {e:#}");stop.store(true,Ordering::Release);break;}}
+35 +             if owner.needs_reopen&& let Err(e)=owner.recover(){eprintln!("od2_recovery_failed {e:#}");stop.store(true,Ordering::Release);break;}
+   |
+
+error: this `if` statement can be collapsed
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\runtime.rs:52:13
+   |
+52 | ...   if owner.needs_reopen{if let Err(e)=owner.recover(){eprintln!("od2_recovery_failed {e:#}");stop.store(true,Ordering::Release);break;}}
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+help: collapse nested if block
+   |
+52 -             if owner.needs_reopen{if let Err(e)=owner.recover(){eprintln!("od2_recovery_failed {e:#}");stop.store(true,Ordering::Release);break;}}
+52 +             if owner.needs_reopen&& let Err(e)=owner.recover(){eprintln!("od2_recovery_failed {e:#}");stop.store(true,Ordering::Release);break;}
+   |
+
+error: very complex type used. Consider factoring parts into `type` definitions
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\runtime.rs:233:30
+    |
+233 |     let mut pending_delivery:Option<([u8;16],Vec<Id>,Vec<Id>,window::RefPermit2,Instant)>=None;
+    |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#type_complexity
+
+error: length comparison to zero
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\runtime.rs:253:24
+    |
+253 | ...   if live.bodies.len()>0{live_cursor=wire::ParsedEvent2::parse(&items.last().context("live tail")?.raw)?.core().n.checked_add(1...
+    |          ^^^^^^^^^^^^^^^^^^^ help: using `!is_empty` is clearer and more explicit: `!live.bodies.is_empty()`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#len_zero
+    = note: `-D clippy::len-zero` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::len_zero)]`
+
+error: this `if` statement can be collapsed
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\runtime.rs:328:13
+    |
+328 | / ...   if let Ok(Some((id,raw)))=publication {
+329 | | ...       if replace_public(&directory.join(format!("{}.locator",hex(&id))),&raw).is_ok(){let _=publication_handle.call(move|owne...
+330 | | ...   }
+    | |_______^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+328 ~             if let Ok(Some((id,raw)))=publication
+329 ~                 && replace_public(&directory.join(format!("{}.locator",hex(&id))),&raw).is_ok(){let _=publication_handle.call(move|owner|owner.mark_exported(c,&raw)).await;}
+    |
+
+error: used `expect()` on an `Option` value
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\runtime.rs:405:264
+    |
+405 | ...eue_sequence),opt(o.event.map(b)),u(u64::from(delivery.expect("existing request")))])))},
+    |                                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#expect_used
+
+error: could not compile `kilogram-cli` (lib) due to 22 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: enclosing `Ok` and `?` operator are unneeded
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\runtime_tests.rs:104:41
+    |
+104 |     let receipt=pair.handles[1].call(|o|Ok(o.repository.receipt(0,0,1)?.context("actual readable receipt")?)).await?;
+    |                                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_question_mark
+    = note: `-D clippy::needless-question-mark` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_question_mark)]`
+help: remove the enclosing `Ok` and `?` operator
+    |
+104 -     let receipt=pair.handles[1].call(|o|Ok(o.repository.receipt(0,0,1)?.context("actual readable receipt")?)).await?;
+104 +     let receipt=pair.handles[1].call(|o|o.repository.receipt(0,0,1)?.context("actual readable receipt")).await?;
+    |
+
+error: could not compile `kilogram-cli` (lib test) due to 23 previous errors

@@ -1,0 +1,282 @@
+{
+  "P": {
+    "names": [
+      "p-full-review4-relay-repair-1"
+    ],
+    "missing": [],
+    "ceiling_seconds": 3000,
+    "runner_seconds": 2003.5355583,
+    "complete": true,
+    "pass": true,
+    "observed_passed": 1,
+    "runs": [
+      {
+        "name": "p-full-review4-relay-repair-1",
+        "seconds": 2003.5355583,
+        "exit_code": 0,
+        "source": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-review4-relay-repair-1-source.json",
+          "bytes": 10026,
+          "sha256": "477846e482a8f8bf781cd2bd9b3114c9a00d577b3bb02e1926051d7973244bcf"
+        },
+        "result": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-review4-relay-repair-1-result.json",
+          "bytes": 2449,
+          "sha256": "7e7ee248e7d6513e99f718a4d6f19dbb6a27447f5f56139a98bdc0d9983b2b9e"
+        }
+      }
+    ],
+    "authorization": "Root review4 explicitly authorizes one replacement runner3000/controller2950 attempt after helper repair/smoke; prior review2 attempt1901.2816169s and P4 remain FAIL. All substantive gates unchanged.",
+    "original_target_seconds": 2400,
+    "original_target_met": true,
+    "exception_used": false
+  },
+  "F": {
+    "names": [
+      "f-owner-eligibility-r1-guards-1",
+      "controller-schedule-lock-controls-1",
+      "f09-controller-repair-1",
+      "f-full-review3-frozen-1"
+    ],
+    "missing": [],
+    "ceiling_seconds": 1200,
+    "runner_seconds": 620.4258161,
+    "complete": true,
+    "pass": true,
+    "observed_passed": 36,
+    "runs": [
+      {
+        "name": "f-owner-eligibility-r1-guards-1",
+        "seconds": 185.5564679,
+        "exit_code": 0,
+        "source": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-owner-eligibility-r1-guards-1-source.json",
+          "bytes": 9836,
+          "sha256": "e24b4447751ee25821afe5c98d81baaf5f8d75b72dfe17864875298fc5aacb20"
+        },
+        "result": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-owner-eligibility-r1-guards-1-result.json",
+          "bytes": 2552,
+          "sha256": "2b18c8fac0d22ed3f25d6825746f48dfa7673efa5a0a0001b5ce4dfe112dd9cd"
+        }
+      },
+      {
+        "name": "controller-schedule-lock-controls-1",
+        "seconds": 22.3189717,
+        "exit_code": 0,
+        "source": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/controller-schedule-lock-controls-1-source.json",
+          "bytes": 10026,
+          "sha256": "9b785ac1ca3be8e7478f9f354425f748b95a81889dd0aa4a0f97c6fb5b05d665"
+        },
+        "result": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/controller-schedule-lock-controls-1-result.json",
+          "bytes": 1634,
+          "sha256": "97291d25d036563bc56af41ef708c09e636b6959505d524e4ae7030a0f622d81"
+        }
+      },
+      {
+        "name": "f09-controller-repair-1",
+        "seconds": 35.3227291,
+        "exit_code": 0,
+        "source": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f09-controller-repair-1-source.json",
+          "bytes": 10026,
+          "sha256": "9b785ac1ca3be8e7478f9f354425f748b95a81889dd0aa4a0f97c6fb5b05d665"
+        },
+        "result": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f09-controller-repair-1-result.json",
+          "bytes": 1654,
+          "sha256": "2c34546f09395ea2f0d08409ce8734f001247df2b48a89e1b0239cd44c9609da"
+        }
+      },
+      {
+        "name": "f-full-review3-frozen-1",
+        "seconds": 377.2276474,
+        "exit_code": 0,
+        "source": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-full-review3-frozen-1-source.json",
+          "bytes": 10026,
+          "sha256": "9b785ac1ca3be8e7478f9f354425f748b95a81889dd0aa4a0f97c6fb5b05d665"
+        },
+        "result": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-full-review3-frozen-1-result.json",
+          "bytes": 2408,
+          "sha256": "e2bda3cf7b15edd64ed0be9b074efba7ece96738d35db93d60273d51ffd9b872"
+        }
+      }
+    ]
+  },
+  "components": {
+    "names": [
+      "regressions-ordered-codec-final-1",
+      "regressions-ipc-final-1",
+      "regressions-state-s3-final-1",
+      "regressions-state-history-final-1",
+      "regressions-state-component-final-1",
+      "regressions-runtime-foundation-final-1",
+      "regressions-wire-bound-final-1",
+      "regressions-cli-s3-failure-final-1",
+      "regressions-cli-s3-authority-final-1",
+      "regressions-cli-history-byte-final-1"
+    ],
+    "missing": [],
+    "ceiling_seconds": 600,
+    "runner_seconds": 370.29006570000007,
+    "complete": true,
+    "pass": true,
+    "observed_passed": 109,
+    "runs": [
+      {
+        "name": "regressions-ordered-codec-final-1",
+        "seconds": 29.2757868,
+        "exit_code": 0,
+        "source": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-ordered-codec-final-1-source.json",
+          "bytes": 9467,
+          "sha256": "a773716b7a0f03a7eb8b542437ec6870870c64b38e2c60f69b8eeb24c0ba2627"
+        },
+        "result": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-ordered-codec-final-1-result.json",
+          "bytes": 1635,
+          "sha256": "5af2ddc376a793402f8ab3abe0f265a731f895fa95c5703bdc931af2a364817c"
+        }
+      },
+      {
+        "name": "regressions-ipc-final-1",
+        "seconds": 12.0329939,
+        "exit_code": 0,
+        "source": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-ipc-final-1-source.json",
+          "bytes": 9467,
+          "sha256": "a773716b7a0f03a7eb8b542437ec6870870c64b38e2c60f69b8eeb24c0ba2627"
+        },
+        "result": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-ipc-final-1-result.json",
+          "bytes": 545,
+          "sha256": "0a6fff9ec24716cbf0bc93950742bc56854c755998436e3ce6d634e176693b59"
+        }
+      },
+      {
+        "name": "regressions-state-s3-final-1",
+        "seconds": 67.2118916,
+        "exit_code": 0,
+        "source": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-state-s3-final-1-source.json",
+          "bytes": 9467,
+          "sha256": "ce08c7973b7fac3a7826188b35e3277cb820e683e259b0442b9e5a096c4af499"
+        },
+        "result": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-state-s3-final-1-result.json",
+          "bytes": 1045,
+          "sha256": "a5891ea188c7190fa7d68175eac22acba55a5eaa4acb997d525c057d6060b380"
+        }
+      },
+      {
+        "name": "regressions-state-history-final-1",
+        "seconds": 25.338331,
+        "exit_code": 0,
+        "source": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-state-history-final-1-source.json",
+          "bytes": 9467,
+          "sha256": "ce08c7973b7fac3a7826188b35e3277cb820e683e259b0442b9e5a096c4af499"
+        },
+        "result": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-state-history-final-1-result.json",
+          "bytes": 1046,
+          "sha256": "4aeafd81032e243d0178f02351c81a2460ca481eeff5d19ba1b08e67698a74fa"
+        }
+      },
+      {
+        "name": "regressions-state-component-final-1",
+        "seconds": 103.8950724,
+        "exit_code": 0,
+        "source": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-state-component-final-1-source.json",
+          "bytes": 9467,
+          "sha256": "6b4e10474711d5450fb0c08bb5e8ba8b3ea0211faf01231e242cd67782762991"
+        },
+        "result": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-state-component-final-1-result.json",
+          "bytes": 1058,
+          "sha256": "080adcaff409cb8aa6e0fb9c321bc796774ea6bb77d2dd3043e399bae6e32a29"
+        }
+      },
+      {
+        "name": "regressions-runtime-foundation-final-1",
+        "seconds": 16.7009748,
+        "exit_code": 0,
+        "source": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-runtime-foundation-final-1-source.json",
+          "bytes": 9467,
+          "sha256": "8af176a0b21fb063d11f8ed5274ddae3a48ed24f33a6ce13cf02c1efb9be21cc"
+        },
+        "result": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-runtime-foundation-final-1-result.json",
+          "bytes": 1064,
+          "sha256": "4c78a430df6eb9ce10c6565829ede6ad8bff53ea73052b1ebdc480c20aab325f"
+        }
+      },
+      {
+        "name": "regressions-wire-bound-final-1",
+        "seconds": 15.3775345,
+        "exit_code": 0,
+        "source": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-wire-bound-final-1-source.json",
+          "bytes": 9467,
+          "sha256": "8af176a0b21fb063d11f8ed5274ddae3a48ed24f33a6ce13cf02c1efb9be21cc"
+        },
+        "result": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-wire-bound-final-1-result.json",
+          "bytes": 1684,
+          "sha256": "02e58bb12d7caea94185dac678772bebb1226a438ff2e97354801c3478057622"
+        }
+      },
+      {
+        "name": "regressions-cli-s3-failure-final-1",
+        "seconds": 44.5757018,
+        "exit_code": 0,
+        "source": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-cli-s3-failure-final-1-source.json",
+          "bytes": 9467,
+          "sha256": "8af176a0b21fb063d11f8ed5274ddae3a48ed24f33a6ce13cf02c1efb9be21cc"
+        },
+        "result": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-cli-s3-failure-final-1-result.json",
+          "bytes": 1611,
+          "sha256": "39d1d72306e9f25bc5b44fba07922a6fb6c028357f8d29b5ac513f650bdcbdad"
+        }
+      },
+      {
+        "name": "regressions-cli-s3-authority-final-1",
+        "seconds": 22.7773371,
+        "exit_code": 0,
+        "source": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-cli-s3-authority-final-1-source.json",
+          "bytes": 9467,
+          "sha256": "8af176a0b21fb063d11f8ed5274ddae3a48ed24f33a6ce13cf02c1efb9be21cc"
+        },
+        "result": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-cli-s3-authority-final-1-result.json",
+          "bytes": 1642,
+          "sha256": "3a5ad529ff913394436afca6f66518931d1a7bf37169ba9ae86d0f6998f53f89"
+        }
+      },
+      {
+        "name": "regressions-cli-history-byte-final-1",
+        "seconds": 33.1044418,
+        "exit_code": 0,
+        "source": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-cli-history-byte-final-1-source.json",
+          "bytes": 9467,
+          "sha256": "8af176a0b21fb063d11f8ed5274ddae3a48ed24f33a6ce13cf02c1efb9be21cc"
+        },
+        "result": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/regressions-cli-history-byte-final-1-result.json",
+          "bytes": 1665,
+          "sha256": "bb26ed6410d6bec99bb6cf87a931d401081bbc16bf7e8254671f868f9109b7d7"
+        }
+      }
+    ]
+  }
+}

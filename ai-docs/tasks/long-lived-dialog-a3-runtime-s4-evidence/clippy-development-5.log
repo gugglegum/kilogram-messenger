@@ -1,0 +1,52 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: this looks like you are trying to use `.. *= ..`, but you really are doing `.. = (* ..)`
+  --> apps\kilogram-cli\tests\runtime2_process\lifecycle.rs:88:115
+   |
+88 | ...   for c in 0..2{let old=locator(&pair.nodes[0],&pair.contexts[c])?;let mut f=old.fields().clone();f.endpoint=*endpoints[c].id()....
+   |                                                                                                                 ^^
+   |
+   = note: to remove this lint, use either `*=` or `= *`
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#suspicious_assignment_formatting
+   = note: `-D clippy::suspicious-assignment-formatting` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::suspicious_assignment_formatting)]`
+
+error: this looks like an `else if` but the `else` is missing
+   --> apps\kilogram-cli\tests\runtime2_process\positive.rs:172:58
+    |
+172 |             if through==256{pair.restarted(true).await?;}if through==512{pair.restarted(false).await?;}
+    |                                                          ^
+    |
+    = note: to remove this lint, add the missing `else` or add a new line before the second `if`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#possible_missing_else
+    = note: `-D clippy::possible-missing-else` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::possible_missing_else)]`
+
+error: this looks like an `else if` but the `else` is missing
+   --> apps\kilogram-cli\tests\runtime2_process\positive.rs:261:149
+    |
+261 | ...it "){calls+=number(line,"calls").context("committed calls")?;}if line.starts_with("od2_native_attempt "){attempts+=1;}
+    |                                                                   ^
+    |
+    = note: to remove this lint, add the missing `else` or add a new line before the second `if`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#possible_missing_else
+
+error: the loop variable `c` is used to index `endpoints`
+  --> apps\kilogram-cli\tests\runtime2_process\lifecycle.rs:88:18
+   |
+88 | ...   for c in 0..2{let old=locator(&pair.nodes[0],&pair.contexts[c])?;let mut f=old.fields().clone();f.endpoint=*endpoints[c].id()....
+   |                ^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+   = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator and enumerate()
+   |
+88 -         for c in 0..2{let old=locator(&pair.nodes[0],&pair.contexts[c])?;let mut f=old.fields().clone();f.endpoint=*endpoints[c].id().as_bytes();f.ips=endpoints[c].addr().ip_addrs().copied().collect();f.revision+=10;
+88 +         for (c, <item>) in endpoints.iter().enumerate().take(2){let old=locator(&pair.nodes[0],&pair.contexts[c])?;let mut f=old.fields().clone();f.endpoint=*endpoints[c].id().as_bytes();f.ips=endpoints[c].addr().ip_addrs().copied().collect();f.revision+=10;
+   |
+
+error: could not compile `kilogram-cli` (test "runtime2_process") due to 4 previous errors
+warning: build failed, waiting for other jobs to finish...

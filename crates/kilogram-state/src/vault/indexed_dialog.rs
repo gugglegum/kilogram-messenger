@@ -29,6 +29,8 @@ mod history_types;
 #[cfg(test)]
 #[path = "indexed_dialog/profile.rs"]
 mod profile;
+#[path = "indexed_dialog/runtime2.rs"]
+mod runtime2;
 #[path = "authenticated_index.rs"]
 mod tree;
 #[path = "indexed_dialog/types.rs"]
@@ -61,6 +63,7 @@ pub use history_types::{
     HistoryRequestOutcome, HistoryRow, HistoryScope, HistorySeen, PreparedReadable,
 };
 use redb::{Database, Durability, ReadableDatabase, ReadableTable, TableDefinition};
+pub use runtime2::*;
 use std::{
     collections::{BTreeMap, BTreeSet},
     fs,
@@ -212,8 +215,15 @@ fn open(key: &Id, aad: &[u8], raw: &[u8], cap: usize) -> Result<Zeroizing<Vec<u8
         .map_err(|_| Error::Integrity("AEAD"))
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RootLayout {
+    Component5,
+    Runtime6,
+}
+
 #[derive(Clone)]
 struct Root {
+    layout: RootLayout,
     incarnation: Id,
     account: Id,
     claim: Id,
@@ -229,7 +239,10 @@ struct Root {
 impl Root {
     fn encode(&self) -> Zeroizing<Vec<u8>> {
         let mut out = Zeroizing::new(Vec::with_capacity(8192));
-        out.push(5);
+        match self.layout {
+            RootLayout::Component5 => out.push(5),
+            RootLayout::Runtime6 => out.extend_from_slice(b"\x06KGOD2RT\0\x00\x01"),
+        }
         for id in [
             self.incarnation,
             self.account,
@@ -257,9 +270,11 @@ impl Root {
             return Err(Error::Integrity("anchor cap"));
         }
         let mut r = Reader::new(raw);
-        if r.byte()? != 5 {
-            return Err(Error::Integrity("anchor version"));
-        }
+        let layout = match r.byte()? {
+            5 => RootLayout::Component5,
+            6 if r.take(10)? == b"KGOD2RT\0\x00\x01" => RootLayout::Runtime6,
+            _ => return Err(Error::Integrity("anchor version/layout")),
+        };
         let incarnation = r.id()?;
         let account = r.id()?;
         let claim = r.id()?;
@@ -282,6 +297,7 @@ impl Root {
         ];
         r.end()?;
         let result = Self {
+            layout,
             incarnation,
             account,
             claim,
@@ -320,15 +336,45 @@ impl Root {
         {
             return Err(Error::Integrity("anchor identity/generation"));
         }
+        match self.layout {
+            RootLayout::Component5 => {
+                if [21, 22, 45, 46]
+                    .into_iter()
+                    .any(|s| self.roots[s] != Summary::default())
+                {
+                    return Err(Error::Integrity("component runtime slots"));
+                }
+            }
+            RootLayout::Runtime6 => {
+                if self.roots[22].count != 1
+                    || self.roots[22].used[1] != 0
+                    || self.roots[22].reserved[1] != 0
+                    || [17, 18, 19, 23, 41, 42, 43, 46, 47]
+                        .into_iter()
+                        .chain(50..ROOTS)
+                        .any(|s| self.roots[s] != Summary::default())
+                {
+                    return Err(Error::Integrity("runtime profile root"));
+                }
+            }
+        }
         let (used, reserved) = self.totals()?;
         for c in 0..2 {
             self.ledger[c].check(used[c], reserved[c])?;
-            let control = self.roots[c * 24 + Namespace::Control as usize].used[c]
+            let mut control = self.roots[c * 24 + Namespace::Control as usize].used[c]
                 .checked_add(self.roots[c * 24 + Namespace::Current as usize].used[c])
                 .and_then(|v| {
                     v.checked_add(self.roots[c * 24 + Namespace::Native as usize].used[c])
                 })
                 .ok_or(Error::Bound("control budget"))?;
+            if self.layout == RootLayout::Runtime6 {
+                control = control
+                    .checked_add(self.roots[c * 24 + 21].used[c])
+                    .and_then(|v| v.checked_add(self.roots[c * 24 + 21].reserved[c]))
+                    .and_then(|v| v.checked_add(self.roots[22].used[c]))
+                    .and_then(|v| v.checked_add(self.roots[22].reserved[c]))
+                    .ok_or(Error::Bound("runtime control budget"))?;
+            }
             if control > 4 * 1024 * 1024 {
                 return Err(Error::Quota);
             }
@@ -345,7 +391,14 @@ pub struct IndexedDialogVault {
     backend: backend::BackendControl,
     poisoned: bool,
 }
+struct LoadedCore {
+    vault: EncryptedStateVault,
+    crypto: Crypto,
+    root: Root,
+    backend: backend::BackendControl,
+}
 enum CommitInput {
+    Runtime2(Box<RuntimeOperation>),
     Protocol2 {
         context: u8,
         operation: Box<HistoryProtocol2Operation>,
@@ -366,6 +419,15 @@ enum CommitInput {
 }
 impl IndexedDialogVault {
     pub fn create(lease: StateDirectoryLock, claim: CreationClaim, config: Config) -> Result<Self> {
+        Self::create_inner(lease, claim, config, None, None)
+    }
+    fn create_inner(
+        lease: StateDirectoryLock,
+        claim: CreationClaim,
+        config: Config,
+        enrollment: Option<RuntimeEnrollment>,
+        mut bootstrap_hook: Option<&mut dyn FnMut(RuntimeBootstrapPoint) -> Result<()>>,
+    ) -> Result<Self> {
         for entry in fs::read_dir(lease.root())? {
             if entry?.file_name() != crate::LOCK_FILE {
                 return Err(Error::CreationConflict);
@@ -382,6 +444,9 @@ impl IndexedDialogVault {
             &lease.root().join("ratchet/account.pickle"),
             ORDERED_ACCOUNT_FENCE,
         )?;
+        if let Some(hook) = bootstrap_hook.as_mut() {
+            hook(RuntimeBootstrapPoint::Fenced)?;
+        }
         let key = load_or_create_master_key(&lease.root().join(STATE_VAULT_KEY_FILE))?;
         let config = account_external(lease.root(), config)?;
         let (backend, control) =
@@ -392,6 +457,11 @@ impl IndexedDialogVault {
         let mut incarnation = [0; 32];
         getrandom::fill(&mut incarnation).map_err(|_| Error::Bound("random"))?;
         let root = Root {
+            layout: if enrollment.is_some() {
+                RootLayout::Runtime6
+            } else {
+                RootLayout::Component5
+            },
             incarnation,
             account: claim.account,
             claim: claim.claim,
@@ -407,7 +477,9 @@ impl IndexedDialogVault {
                 credits::Ledger::new(config.logical_quota[1])?,
             ],
         };
-        root.check()?;
+        if root.layout == RootLayout::Component5 {
+            root.check()?;
+        }
         let crypto = Crypto::new(&key.master_key.0, incarnation, root.contexts, root.account);
         let vault = EncryptedStateVault {
             root: lease.root().to_path_buf(),
@@ -416,7 +488,7 @@ impl IndexedDialogVault {
             key_protection: key.protection,
             key_load_outcome: key.load_outcome,
         };
-        let result = Self {
+        let mut result = Self {
             vault,
             _lease: lease,
             crypto,
@@ -430,11 +502,63 @@ impl IndexedDialogVault {
             tx.open_table(NODES).map_err(db)?;
             tx.open_table(VALUES).map_err(db)?;
         }
+        if let Some(enrollment) = enrollment {
+            result.root = result.bootstrap_runtime(&tx, enrollment)?;
+        }
         result.write_anchor(&tx, &result.root)?;
+        if let Some(hook) = bootstrap_hook.as_mut() {
+            hook(RuntimeBootstrapPoint::Staged)?;
+        }
         tx.commit().map_err(db)?;
         Ok(result)
     }
     pub fn open(lease: StateDirectoryLock, owner: ExpectedOwner, config: Config) -> Result<Self> {
+        Self::open_inner(lease, owner, config, RootLayout::Component5)
+    }
+    fn open_inner(
+        lease: StateDirectoryLock,
+        owner: ExpectedOwner,
+        config: Config,
+        expected_layout: RootLayout,
+    ) -> Result<Self> {
+        let loaded = Self::load_borrowed(&lease, owner, config, expected_layout)?;
+        Ok(Self::from_loaded(lease, loaded))
+    }
+    fn from_loaded(lease: StateDirectoryLock, loaded: LoadedCore) -> Self {
+        Self {
+            vault: loaded.vault,
+            _lease: lease,
+            crypto: loaded.crypto,
+            root: loaded.root,
+            backend: loaded.backend,
+            poisoned: false,
+        }
+    }
+    fn into_owner_lease(self) -> (StateDirectoryLock, ExpectedOwner) {
+        let Self {
+            vault,
+            _lease,
+            crypto,
+            root,
+            backend,
+            ..
+        } = self;
+        let owner = ExpectedOwner {
+            account: root.account,
+            claim: root.claim,
+        };
+        drop(vault);
+        drop(crypto);
+        drop(root);
+        drop(backend);
+        (_lease, owner)
+    }
+    fn load_borrowed(
+        lease: &StateDirectoryLock,
+        owner: ExpectedOwner,
+        config: Config,
+        expected_layout: RootLayout,
+    ) -> Result<LoadedCore> {
         if !super::ordered::has_ordered_fence(lease.root())? {
             return Err(Error::OwnerMismatch);
         }
@@ -455,6 +579,9 @@ impl IndexedDialogVault {
                 .ok_or(Error::Integrity("manifest missing"))?;
             let manifest: VaultManifest = postcard::from_bytes(manifest.value())
                 .map_err(|_| Error::Integrity("schema sentinel"))?;
+            if manifest.schema_version == 4 && expected_layout == RootLayout::Runtime6 {
+                return Err(Error::ExistingStateRequiresMigration);
+            }
             if manifest.schema_version != 5
                 || manifest.record_count != 0
                 || manifest.plaintext_bytes != 0
@@ -489,6 +616,9 @@ impl IndexedDialogVault {
         if root.account != owner.account || root.claim != owner.claim {
             return Err(Error::OwnerMismatch);
         }
+        if root.layout != expected_layout {
+            return Err(Error::UnsupportedRuntimeProfile);
+        }
         // Configuration cannot confiscate previously committed obligations.
         let mut checked = root.clone();
         for c in 0..2 {
@@ -509,13 +639,11 @@ impl IndexedDialogVault {
             key_protection: key.protection,
             key_load_outcome: key.load_outcome,
         };
-        Ok(Self {
+        Ok(LoadedCore {
             vault,
-            _lease: lease,
             crypto,
             root,
             backend: control,
-            poisoned: false,
         })
     }
     fn write_anchor(&self, tx: &redb::WriteTransaction, root: &Root) -> Result<usize> {
@@ -640,6 +768,7 @@ impl IndexedDialogVault {
         mutations: Vec<Mutation>,
         credits: Vec<CreditAction>,
     ) -> Result<CommitReport> {
+        self.component_writer()?;
         if self.poisoned {
             return Err(Error::ReopenRequired);
         }
@@ -688,11 +817,38 @@ impl IndexedDialogVault {
         input: CommitInput,
         input_buffer_bound: usize,
     ) -> Result<CommitReport> {
+        self.commit_with_gate(expected, id, digest, input, input_buffer_bound, None)
+    }
+    fn component_writer(&self) -> Result<()> {
+        if self.root.layout == RootLayout::Runtime6 {
+            return Err(Error::RuntimeWriterRequired);
+        }
+        Ok(())
+    }
+    fn commit_with_gate(
+        &mut self,
+        expected: u64,
+        id: Id,
+        digest: Id,
+        input: CommitInput,
+        input_buffer_bound: usize,
+        mut gate: Option<&mut dyn FnMut() -> Result<()>>,
+    ) -> Result<CommitReport> {
         if self.poisoned {
             return Err(Error::ReopenRequired);
         }
         if id == [0; 32] {
             return Err(Error::Bound("commit ID"));
+        }
+        if (self.root.layout == RootLayout::Runtime6) != matches!(&input, CommitInput::Runtime2(_))
+        {
+            return Err(Error::RuntimeWriterRequired);
+        }
+        if matches!(&input, CommitInput::Runtime2(_))
+            && id == self.root.commit_id
+            && digest != self.root.request_digest
+        {
+            return Err(Error::Conflict);
         }
         let managed_history = !matches!(&input, CommitInput::Generic { .. });
         let tx = self.vault.database.begin_read().map_err(db)?;
@@ -700,6 +856,7 @@ impl IndexedDialogVault {
         let values = tx.open_table(VALUES).map_err(db)?;
         let mut w = Work::new(&nodes, &values, &self.crypto, self.root.clone());
         match &input {
+            CommitInput::Runtime2(op) => w.runtime_check(op, id == self.root.commit_id)?,
             CommitInput::Protocol2 { .. } => {}
             CommitInput::Generic { mutations, credits } => {
                 w.history_guard_generic(mutations, credits)?
@@ -733,6 +890,7 @@ impl IndexedDialogVault {
             return Err(Error::StaleGeneration);
         }
         match input {
+            CommitInput::Runtime2(op) => w.runtime_apply(*op)?,
             CommitInput::Protocol2 { context, operation } => {
                 w.history2_apply(context, *operation)?
             }
@@ -787,8 +945,18 @@ impl IndexedDialogVault {
         }
         w.root.check()?;
         w.tree.seal_changes()?;
+        // Runtime's bounded IPC/QUIC queues, two prefetch windows and crypto caches
+        // retain a separate 32 MiB arena while this single writer is in flight.
+        let runtime_buffers = if self.root.layout == RootLayout::Runtime6 {
+            32 * 1024 * 1024
+        } else {
+            0
+        };
         if managed_history
-            && w.buffer_bound_bytes().max(w.history_buffer_peak) + input_buffer_bound + MAX_PLAN
+            && w.buffer_bound_bytes().max(w.history_buffer_peak)
+                + input_buffer_bound
+                + MAX_PLAN
+                + runtime_buffers
                 > 192 * 1024 * 1024
         {
             return Err(Error::Bound("history app-owned buffers"));
@@ -804,7 +972,8 @@ impl IndexedDialogVault {
             changed_nodes: w.tree.changed.len() as u64,
             app_buffer_bound_bytes: (w.buffer_bound_bytes().max(w.history_buffer_peak)
                 + input_buffer_bound
-                + MAX_PLAN) as u64,
+                + MAX_PLAN
+                + runtime_buffers) as u64,
             duplicate,
         };
         if duplicate {
@@ -958,12 +1127,21 @@ impl IndexedDialogVault {
                         .map_err(db)?;
                 }
                 checkpoint("before_commit");
+                if let Some(check) = gate.as_mut()
+                    && let Err(error) = check()
+                {
+                    tx.abort().map_err(db)?;
+                    return Err(error);
+                }
                 tx.commit().map_err(db)?;
                 checkpoint("after_commit");
                 Ok(())
             })()
         );
         if let Err(e) = write_result {
+            if matches!(e, Error::PolicyRejected(_)) {
+                return Err(e);
+            }
             self.poisoned = true;
             let stats = self.backend.stats()?;
             if stats.last_failure.as_deref() == Some("ConfiguredCapacity") {

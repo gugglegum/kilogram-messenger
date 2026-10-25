@@ -1,0 +1,14 @@
+{
+  "utc": "2026-10-25T09:45:32.6843984Z",
+  "fmt": "PASS",
+  "powershell_syntax": "PASS",
+  "node_syntax": "PASS",
+  "diff_check": "PASS",
+  "seconds": 3.553763,
+  "commands": [
+    "cargo fmt --all -- --check",
+    "Parser.ParseFile on evidence/*.ps1",
+    "node --check evidence/*.mjs",
+    "git diff --check"
+  ]
+}

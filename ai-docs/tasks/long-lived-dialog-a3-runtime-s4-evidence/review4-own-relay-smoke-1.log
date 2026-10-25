@@ -1,0 +1,102 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 7.60s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 20 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 1 test
+test positive::a3_s4_relay_smoke_exact_b_only_after_rebind ... fixture=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\relay-smoke-Gkw8fl cli_sha256_external_manifest_required=true
+process_start pid=26208 profile=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\relay-smoke-Gkw8fl\profile0.json stderr=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\relay-smoke-Gkw8fl\profile0.1.stderr.log
+private_bytes pid=26208 bytes=11255808
+process_start pid=39784 profile=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\relay-smoke-Gkw8fl\profile1.json stderr=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\relay-smoke-Gkw8fl\profile1.1.stderr.log
+private_bytes pid=39784 bytes=11186176
+active_progress seconds=0.606 phases=[[(Number(0), Bool(false)), (Number(0), Bool(false))], [(Number(0), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=1.644 phases=[[(Number(1), Bool(false)), (Number(1), Bool(false))], [(Number(2), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=2.255 phases=[[(Number(3), Bool(false)), (Number(1), Bool(false))], [(Number(2), Bool(false)), (Number(2), Bool(false))]]
+active_progress seconds=2.768 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(2), Bool(false))]]
+active_progress seconds=3.397 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(3), Bool(false))]]
+private_bytes pid=26208 bytes=12558336
+active_progress seconds=3.961 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(false))]]
+active_progress seconds=4.358 phases=[[(Number(3), Bool(true)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(false))]]
+private_bytes pid=39784 bytes=13025280
+active_progress seconds=5.168 phases=[[(Number(3), Bool(true)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]
+operator_relay pid=16112 url=http://127.0.0.1:3753/
+process_exit pid=26208 kill=false status=exit code: 0
+process_exit pid=39784 kill=false status=exit code: 0
+process_start pid=41096 profile=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\relay-smoke-Gkw8fl\profile0.json stderr=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\relay-smoke-Gkw8fl\profile0.2.stderr.log
+private_bytes pid=41096 bytes=12177408
+process_start pid=37572 profile=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\relay-smoke-Gkw8fl\profile1.json stderr=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\relay-smoke-Gkw8fl\profile1.2.stderr.log
+private_bytes pid=37572 bytes=12341248
+relay_smoke_locator node=0 slot=0 endpoint=e501a39c3fd72c6fa56c53a050f5f799c2751e4e4152f2ef5a51009deea04e01 revision=2 ips=0 relay=http://127.0.0.1:3753/
+relay_smoke_locator node=0 slot=1 endpoint=e501a39c3fd72c6fa56c53a050f5f799c2751e4e4152f2ef5a51009deea04e01 revision=2 ips=0 relay=http://127.0.0.1:3753/
+relay_smoke_locator node=1 slot=0 endpoint=a33ad255b5d1b6a47ca04080e052dd573c5f6b8bea9f6f1b79c04613619fc949 revision=2 ips=0 relay=http://127.0.0.1:3753/
+relay_smoke_locator node=1 slot=1 endpoint=a33ad255b5d1b6a47ca04080e052dd573c5f6b8bea9f6f1b79c04613619fc949 revision=2 ips=0 relay=http://127.0.0.1:3753/
+active_progress seconds=0.852 phases=[[(Number(3), Bool(true)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]
+private_bytes pid=41096 bytes=12898304
+history node=0 slot=0 rows=1 pages=1 seconds=0.048
+history node=1 slot=0 rows=1 pages=1 seconds=0.022
+process_exit pid=41096 kill=false status=exit code: 0
+process_exit pid=37572 kill=false status=exit code: 0
+S4_RELAY_SMOKE_PASS actual_own_relay=true signed_URL_only_empty_IP=true B_only_Text=1 exact_event=6e7a647c5064f84eba2039a44e484d5ab4ec5ce42a510bd9352b8b82bdc611ea receipt_status=2 A_new_send_or_open=false selection_unchanged=true accounts=4 sessions=4 successful_packet_calls=10 children_clean=true seconds=24.181521
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 16 filtered out; finished in 24.18s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17276 13.12
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=63994
+target_gib=68.43
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

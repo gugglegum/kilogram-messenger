@@ -1,0 +1,221 @@
+{
+  "F_runs": [
+    {
+      "name": "f-owner-eligibility-r1-guards-1",
+      "mode": "run",
+      "packages": [
+        "kilogram-cli",
+        "kilogram-transport-iroh",
+        "kilogram-state"
+      ],
+      "filter": "a3_s4_f",
+      "skip": [
+        "faults::a3_s4_f_parent",
+        "faults::a3_s4_f_backend",
+        "faults::a3_s4_f_exact",
+        "versions::",
+        "lifecycle::a3_s4_f11"
+      ],
+      "exit_code": 0,
+      "seconds": 185.5564679,
+      "profile": "verification",
+      "offline": true,
+      "jobs": 12,
+      "priority": "BelowNormal",
+      "executables": [
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+          "bytes": 67757568,
+          "sha256": "55da4d5e537ad43b3d5ecffc96d07fb9af160ff5331bbce2cafe5f1323197259"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+          "bytes": 40600576,
+          "sha256": "96140b58bbd140217ba07609cd0581f351375d87624d355f35315839a5469a2e"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+          "bytes": 36447744,
+          "sha256": "5f9c16200d3c1515db25f3c2919d8388f55dd2ec5ede953f080f36018cc16468"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+          "bytes": 10486272,
+          "sha256": "bfa4c74a57b4f0402de7b4bba909e535b0fb837de58903ad563be73f274301ea"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s1_root_review-tests.exe",
+          "bytes": 6713856,
+          "sha256": "ecfd46610a86f1e09b419fb4157e1599f2df6251cc15a77ae34563926a59d209"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s2_root_review-tests.exe",
+          "bytes": 6968832,
+          "sha256": "41861dac57bbadf3fdfbd22d42d623e219cbfd4ef686b390f95b6dbe40952269"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+          "bytes": 29934592,
+          "sha256": "27221780b0d4b991c2a1c28f9eb417f5d87533e14365c912ffb09bf1bd168cb7"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+          "bytes": 33994240,
+          "sha256": "18496712474a236da6167744ee2f37f12595f291f9fb306957f7638325d1d894"
+        }
+      ]
+    },
+    {
+      "name": "controller-schedule-lock-controls-1",
+      "mode": "run",
+      "packages": [
+        "kilogram-cli",
+        "kilogram-transport-iroh"
+      ],
+      "filter": "a3_s4_controller_schedule_lock_",
+      "skip": [],
+      "exit_code": 0,
+      "seconds": 22.3189717,
+      "profile": "verification",
+      "offline": true,
+      "jobs": 12,
+      "priority": "BelowNormal",
+      "executables": [
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+          "bytes": 67757568,
+          "sha256": "55da4d5e537ad43b3d5ecffc96d07fb9af160ff5331bbce2cafe5f1323197259"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+          "bytes": 40600576,
+          "sha256": "96140b58bbd140217ba07609cd0581f351375d87624d355f35315839a5469a2e"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+          "bytes": 36490240,
+          "sha256": "0e98d19a8d716d5b548a4e9ad8da4d11724fa5cf198e748cd90b38fc99caddee"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+          "bytes": 29934592,
+          "sha256": "27221780b0d4b991c2a1c28f9eb417f5d87533e14365c912ffb09bf1bd168cb7"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+          "bytes": 33994240,
+          "sha256": "18496712474a236da6167744ee2f37f12595f291f9fb306957f7638325d1d894"
+        }
+      ]
+    },
+    {
+      "name": "f09-controller-repair-1",
+      "mode": "run",
+      "packages": [
+        "kilogram-cli",
+        "kilogram-transport-iroh"
+      ],
+      "filter": "a3_s4_f09_actual_trial_operational_failure_rollback",
+      "skip": [],
+      "exit_code": 0,
+      "seconds": 35.3227291,
+      "profile": "verification",
+      "offline": true,
+      "jobs": 12,
+      "priority": "BelowNormal",
+      "executables": [
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+          "bytes": 67757568,
+          "sha256": "55da4d5e537ad43b3d5ecffc96d07fb9af160ff5331bbce2cafe5f1323197259"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+          "bytes": 40600576,
+          "sha256": "96140b58bbd140217ba07609cd0581f351375d87624d355f35315839a5469a2e"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+          "bytes": 36490240,
+          "sha256": "0e98d19a8d716d5b548a4e9ad8da4d11724fa5cf198e748cd90b38fc99caddee"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+          "bytes": 29934592,
+          "sha256": "27221780b0d4b991c2a1c28f9eb417f5d87533e14365c912ffb09bf1bd168cb7"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+          "bytes": 33994240,
+          "sha256": "18496712474a236da6167744ee2f37f12595f291f9fb306957f7638325d1d894"
+        }
+      ]
+    },
+    {
+      "name": "f-full-review3-frozen-1",
+      "mode": "run",
+      "packages": [
+        "kilogram-cli",
+        "kilogram-transport-iroh",
+        "kilogram-state"
+      ],
+      "filter": "a3_s4_f",
+      "skip": [],
+      "exit_code": 0,
+      "seconds": 377.2276474,
+      "profile": "verification",
+      "offline": true,
+      "jobs": 12,
+      "priority": "BelowNormal",
+      "executables": [
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+          "bytes": 67757568,
+          "sha256": "55da4d5e537ad43b3d5ecffc96d07fb9af160ff5331bbce2cafe5f1323197259"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+          "bytes": 40600576,
+          "sha256": "96140b58bbd140217ba07609cd0581f351375d87624d355f35315839a5469a2e"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+          "bytes": 36490240,
+          "sha256": "0e98d19a8d716d5b548a4e9ad8da4d11724fa5cf198e748cd90b38fc99caddee"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+          "bytes": 10486272,
+          "sha256": "bfa4c74a57b4f0402de7b4bba909e535b0fb837de58903ad563be73f274301ea"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s1_root_review-tests.exe",
+          "bytes": 6713856,
+          "sha256": "ecfd46610a86f1e09b419fb4157e1599f2df6251cc15a77ae34563926a59d209"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s2_root_review-tests.exe",
+          "bytes": 6968832,
+          "sha256": "41861dac57bbadf3fdfbd22d42d623e219cbfd4ef686b390f95b6dbe40952269"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+          "bytes": 29934592,
+          "sha256": "27221780b0d4b991c2a1c28f9eb417f5d87533e14365c912ffb09bf1bd168cb7"
+        },
+        {
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+          "bytes": 33994240,
+          "sha256": "18496712474a236da6167744ee2f37f12595f291f9fb306957f7638325d1d894"
+        }
+      ]
+    }
+  ],
+  "F_runner_seconds": 620.4258161,
+  "F_ceiling": 1200,
+  "full_F_tests": 19,
+  "full_F_image": "d5d8c8c118925dfde67e37fdb32aa5a120293cde258e93843dd1939fddb15560",
+  "P_exception_unused_before_this_command": true,
+  "root_authority": "implementation-review-2 + appended acceptance implementation-review-3",
+  "P_only_new_attempt": "p-full-review2-exception-1"
+}

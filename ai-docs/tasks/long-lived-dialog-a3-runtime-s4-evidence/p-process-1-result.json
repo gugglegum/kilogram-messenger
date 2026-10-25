@@ -1,0 +1,31 @@
+{
+  "mode": "run",
+  "packages": [
+    "kilogram-cli"
+  ],
+  "filter": "a3_s4_p_full_real_dialogue_offline_two_contexts",
+  "skip": [],
+  "exit_code": 1,
+  "seconds": 343.1840845,
+  "profile": "verification",
+  "offline": true,
+  "jobs": 12,
+  "priority": "BelowNormal",
+  "executables": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 67286016,
+      "sha256": "9eaeef0f1eddeabd60eea61dae3a68f4c79b8647ed3eb6ace6e9f2f9a2127a5d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 15753216,
+      "sha256": "4bb4411499ce96c47219d5289e757a166002179b1b4d3b861d04703b7dda7f67"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 4973056,
+      "sha256": "1e596c6745c400080e8e503c8b4643721c108049c7c059a264cb54c7545439fb"
+    }
+  ]
+}

@@ -1,0 +1,192 @@
+[
+  {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/run-check.ps1",
+    "bytes": 3111,
+    "sha256": "ac4bdf34e9bfa6c8c1df07b7177d765d31e057fd91b149a85f03d0923c2eed30"
+  },
+  {
+    "path": "apps/kilogram-cli/src/main.rs",
+    "bytes": 1754374,
+    "sha256": "a448d5972e21405815d1e97ab9c1a066bea6e3e674084ab79fe69154a81162c5"
+  },
+  {
+    "path": "apps/kilogram-cli/src/ordered_cli.rs",
+    "bytes": 14526,
+    "sha256": "b5aa793fd2eb5139b36441feedd73ac0c932a624347a3b3c3c5cf17e119a463b"
+  },
+  {
+    "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+    "bytes": 344,
+    "sha256": "e93bf25b5733ea37df44d1bf3321abfe92ba014458c835c9515159c5b9872fe6"
+  },
+  {
+    "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/admin.rs",
+    "bytes": 6548,
+    "sha256": "0adc2ff237547e19de39858d8d51af8ebd7e0eae4abbafa530fe2c74b806179b"
+  },
+  {
+    "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/admission.rs",
+    "bytes": 9130,
+    "sha256": "03c0875487c19a13e1f930fd8075415986ca409d1a660a3dd0ad59fe41070729"
+  },
+  {
+    "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/config.rs",
+    "bytes": 1936,
+    "sha256": "4de4c533fb635bf440d7a666571d908649c57c81d31955aed7fe164c4604696e"
+  },
+  {
+    "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/data.rs",
+    "bytes": 11922,
+    "sha256": "252faf10e542f5b7ee76e1309530eab222ee76163bc7b84104a273e02e113842"
+  },
+  {
+    "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/handshake.rs",
+    "bytes": 11265,
+    "sha256": "b3eb6a66104d76bec985cbab91d993cb6e833c9ca4c216fe6ad54ddae63db48b"
+  },
+  {
+    "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/mod.rs",
+    "bytes": 864,
+    "sha256": "8ff20184ec6e6b0b44748654d283d793933dadcd1701e0365bfd6bedb78e5d2e"
+  },
+  {
+    "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/native.rs",
+    "bytes": 5084,
+    "sha256": "c604d7887ae5a5cecc5dc7f15b89c05a702051fa4f07681b71b4eb46991e2594"
+  },
+  {
+    "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/network.rs",
+    "bytes": 14841,
+    "sha256": "ba371f6134c0f99547f2edc4c5c814ff484af7abe53dc934489c3fbcf1dfd954"
+  },
+  {
+    "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/owner.rs",
+    "bytes": 12237,
+    "sha256": "eda1126165519bec5414a7ec1f187be9f41926e56fbb534ac8e5a83d59905b7d"
+  },
+  {
+    "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/policy.rs",
+    "bytes": 2500,
+    "sha256": "bcdfd334993c3815e9a1bc6864b94af3ae6f3b7f2325621b3a69b8067f0a5c55"
+  },
+  {
+    "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/runtime.rs",
+    "bytes": 24551,
+    "sha256": "1081ee571046970cee8eb5d3025e151cbb8358f4b4655b2699e056186e1dcc04"
+  },
+  {
+    "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/window.rs",
+    "bytes": 1422,
+    "sha256": "65bc1507118ab9f1ea6073f3bfc5a6b2fcbce5c247171e4c8ecebd26547d58bf"
+  },
+  {
+    "path": "apps/kilogram-cli/src/ordered2_cli.rs",
+    "bytes": 8175,
+    "sha256": "9756d81ea54db343ab84e3b3032f9b9034b6480eb67ed7acb7b43c0b4aa7c3c3"
+  },
+  {
+    "path": "apps/kilogram-cli/tests/runtime2_process.rs",
+    "bytes": 12376,
+    "sha256": "64b37b133e9f6a524ff0f5f6d0a0fe30832919a02370e8c6a8120499116567a6"
+  },
+  {
+    "path": "crates/kilogram-identity/src/account.rs",
+    "bytes": 118339,
+    "sha256": "622ad37de7cd9749c837e56cad298ab4a1a20cfc8b7becb9ef5d247adf170683"
+  },
+  {
+    "path": "crates/kilogram-protocol/src/ordered_dialog_v2.rs",
+    "bytes": 13309,
+    "sha256": "923efc145f6e618e70139990729b7436fbfab7fbae6e956963e19db6762f17c0"
+  },
+  {
+    "path": "crates/kilogram-protocol/src/ordered_dialog_v2/mode.rs",
+    "bytes": 19271,
+    "sha256": "4c93d9aa13e802ecb5fa49fd8446da33bc6146eba55d3f3c3fa8be8f1b805c65"
+  },
+  {
+    "path": "crates/kilogram-protocol/src/ordered_dialog_v2/runtime_locator.rs",
+    "bytes": 4564,
+    "sha256": "af4c5c7cc716ce625b48115c4a1866c353473a608b3c986d812eab0805adc307"
+  },
+  {
+    "path": "crates/kilogram-runtime-ipc/src/lib.rs",
+    "bytes": 112651,
+    "sha256": "0efc7ecc7a466ec4b8c11c0c5317449f11faa2aef4ef33d942704ba9ea8e1405"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+    "bytes": 52017,
+    "sha256": "68e8fd2d5da87fefcf9875132dffb37f1dcd8337dafb3a1209ec70484276b7d6"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+    "bytes": 25107,
+    "sha256": "97b14100555d3c78c3f377385b7363091013ef2f38cf05b248d36836be2048fc"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs",
+    "bytes": 4167,
+    "sha256": "068d1dc6a41a69549aac97ed410fcb9233d16fa0b679a41b8603a9e1274a82f6"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/history_protocol2.rs",
+    "bytes": 51141,
+    "sha256": "8ffae73c713d8274c8e5281ccdabb88e10f3e51ab03f17417118790a26a512c3"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/history_source_v2.rs",
+    "bytes": 16718,
+    "sha256": "810580ece5ef5811433e57974a8ed3a9e88750fa039c17ee06297365a9f9d6bd"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+    "bytes": 47092,
+    "sha256": "eae1b145303c3637988358bd9d2e956861b70f60f23ab67402134c9c005648bd"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+    "bytes": 19373,
+    "sha256": "21a8afa50f19265d6d8b20b1b124b40982e99a4883c9caec3fadcd026d2b24a3"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/profile.rs",
+    "bytes": 5373,
+    "sha256": "0cba0795af099e1976516f23ee92cb5be22701d8bf0fb3eca3cd1accca7e059d"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2_ops.rs",
+    "bytes": 27953,
+    "sha256": "7890be1bff10ed123b290f943d3e10a2470f3185b5fb690edef9108ebe26305d"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2_read.rs",
+    "bytes": 8019,
+    "sha256": "3f8f9e477c30ba637817b38072d0555293f07cc58b1abb9f070a8a9773c52b85"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2_tests.rs",
+    "bytes": 4694,
+    "sha256": "41e74c4452ae945ddc4444b9395227de1326d883a8f769a6e417307b39e7f0fa"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2.rs",
+    "bytes": 17100,
+    "sha256": "2f1a7bf0a17f49da472b0f995bd3b1ffd5857d4512d96b37b1f000013a55b735"
+  },
+  {
+    "path": "crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+    "bytes": 10537,
+    "sha256": "98d33e4b40ebe6fb3b0685077bc8d7bd29434dbd0d2af8b6ce44e30186e6111d"
+  },
+  {
+    "path": "crates/kilogram-transport-iroh/src/lib.rs",
+    "bytes": 26118,
+    "sha256": "6cd5c8b90abf49179c0a40a5c278de9834001ccdd2ee133df7cf0f2622661b40"
+  },
+  {
+    "path": "crates/kilogram-transport-iroh/src/ordered2.rs",
+    "bytes": 4657,
+    "sha256": "f26b13bbcf670baebc1262571aa1a9689c4e96f4a14a53243822e43816ad2016"
+  }
+]

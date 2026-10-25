@@ -1,0 +1,47 @@
+{
+  "utc": "2026-10-25T09:52:05.227Z",
+  "root_authorization": "bounded <=300s diagnostic after P4 failure; no full P or gate/cap relaxation",
+  "P4_image": {
+    "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+    "bytes": 66893312,
+    "sha256": "43f7fade4d28a046b451b8eb35f7502144035f4c402b317d7fa0ca576604fbfc",
+    "archived_path": ".tmp/a3-s4/p4-frozen-image/kilogram-cli.exe"
+  },
+  "files": [
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/mod.rs",
+      "bytes": 1056,
+      "sha256": "a29800e47a9ae6ca28f3a98e270953fa33de059b1fd8a2c4c399cfb9e708f4ee"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/runtime.rs",
+      "bytes": 52424,
+      "sha256": "b8b0dedc8450dc41c901c95cbbce1158517a0167f993102ef133b6e8e34c3377"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/owner.rs",
+      "bytes": 35381,
+      "sha256": "dc4eb165c3662df1ecc6a7ca2abde098f7be0882d2a2674a6b772753d8079648"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/data.rs",
+      "bytes": 26193,
+      "sha256": "3f39b6a4cc31da839a9cc5f95c617560f40ec77456f0aa0a15596d77e394fae3"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/native.rs",
+      "bytes": 7396,
+      "sha256": "db822398aa5225247da405d5e02c56911f3c47a4fd215f29e6cf50416959217d"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/network.rs",
+      "bytes": 25926,
+      "sha256": "0139b1e57941f27f783780612e0b89faefbb6dde2c6d5d73cc02d38d85e56314"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/hooks.rs",
+      "bytes": 6076,
+      "sha256": "480a70127b63e20db41536fa68bee355efac4f47eda897b8a94a66d1e13dbf6b"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "mode": "compile",
+  "packages": [
+    "kilogram-cli"
+  ],
+  "filter": "a3_s4_",
+  "skip": [],
+  "exit_code": 0,
+  "seconds": 40.0726396,
+  "profile": "verification",
+  "offline": true,
+  "jobs": 12,
+  "priority": "BelowNormal",
+  "executables": []
+}

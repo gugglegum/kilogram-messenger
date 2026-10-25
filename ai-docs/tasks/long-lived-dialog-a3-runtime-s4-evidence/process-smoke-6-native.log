@@ -1,0 +1,75 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 0.89s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 1 test
+test a3_s4_process_smoke_fresh_offline_restart_readable ... fixture=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\smoke-wbp3KO cli_sha256_external_manifest_required=true
+process_start pid=47196 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\smoke-wbp3KO\profile0.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\smoke-wbp3KO\profile0.1.stderr.log
+process_start pid=35348 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\smoke-wbp3KO\profile1.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\smoke-wbp3KO\profile1.1.stderr.log
+active_progress seconds=0.212 phases=[[(Number(0), Bool(false)), (Number(0), Bool(false))], [(Number(0), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=1.083 phases=[[(Number(1), Bool(false)), (Number(1), Bool(false))], [(Number(0), Bool(false)), (Number(2), Bool(false))]]
+active_progress seconds=1.746 phases=[[(Number(1), Bool(false)), (Number(3), Bool(false))], [(Number(2), Bool(false)), (Number(2), Bool(false))]]
+active_progress seconds=2.417 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(2), Bool(false)), (Number(3), Bool(false))]]
+active_progress seconds=2.903 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(3), Bool(false))]]
+active_progress seconds=3.699 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(3), Bool(true))]]
+active_progress seconds=4.444 phases=[[(Number(3), Bool(false)), (Number(3), Bool(true))], [(Number(3), Bool(false)), (Number(3), Bool(true))]]
+active_progress seconds=4.642 phases=[[(Number(3), Bool(false)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]
+active_progress seconds=4.900 phases=[[(Number(3), Bool(true)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]
+process_exit pid=35348 kill=true status=exit code: 1
+process_exit pid=47196 kill=true status=exit code: 1
+process_start pid=61080 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\smoke-wbp3KO\profile0.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\smoke-wbp3KO\profile0.2.stderr.log
+process_start pid=61168 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\smoke-wbp3KO\profile1.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\smoke-wbp3KO\profile1.2.stderr.log
+active_progress seconds=0.206 phases=[[(Number(3), Bool(true)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]
+final_node=0 {"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":561152,"max_growth":0,"physical_quota":51539607552,"read_bytes":622921,"reads":152,"set_len_calls":0,"sync_calls":18,"sync_nanos":40382500,"write_bytes":1287808,"writes":318},"contexts":[{"active":true,"blocked":null,"context":"8ddfd5bb7bf685559bb79a7c7eee5a0d0c529bd5cdb22cf5c1782ed86c8dbe9c","counts":{"debt":0,"pending":0,"queued":0,"receipts":[12,4],"sources":18},"d":"beab5d00428a324f1e1c7935c7edb99f5c6ac595866dd2a7f1808dc515933aee","e":"4d783145d604cfe5121adc6bf970c513d3fced7e5bd803098bb7c525c135ef47","native_generation":19,"own_locator_revision":2,"peer_locator_revision":2,"phase":3,"q":"ea42116bcb3dc46a154988906287a6117dba29d5a792d4b5053a3858a8da1f77","role":0,"sid":"mT4s6ncubHLO73/6DZdr6Jk9FvY58CgSSdD6wW4yM+4","slot":0},{"active":true,"blocked":null,"context":"708b6bc085c377ea87359e4ac82b79fdbfdcc32640dcf207e80d5341e22acf40","counts":{"debt":0,"pending":0,"queued":0,"receipts":[4,4],"sources":10},"d":"106bbdc117db50b8f13effb82fdd5915218b1dbda8c8aaf0d7cc8f5dd7fb8f55","e":"18eb44317a95ce3bcd7b3b409fa96f1b09887f1c68ffb30d2c9410a2bc924222","native_generation":11,"own_locator_revision":2,"peer_locator_revision":2,"phase":3,"q":"6e42916310e3457de92ad697edacb40018f4c0a5cda68fde94e6b83daf4eebc4","role":0,"sid":"qbRJ2nBXnN80yowY+rnrj6+Kvp3UK3V4/vJbBpkio+Q","slot":1}],"root_generation":95,"stats":{"aborted_packet_calls":0,"admissions":2,"committed_decrypt":0,"committed_encrypt":0,"materialized":0,"max_native_bytes":0,"max_ram_refs":[0,0],"packet_attempts":0,"ram_refs":[0,0],"readable":0},"version":2,"window":[[64,64],[0,0],[8,0]]}
+final_node=1 {"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":561152,"max_growth":0,"physical_quota":51539607552,"read_bytes":491849,"reads":120,"set_len_calls":0,"sync_calls":29,"sync_nanos":76104900,"write_bytes":2577472,"writes":632},"contexts":[{"active":true,"blocked":null,"context":"8ddfd5bb7bf685559bb79a7c7eee5a0d0c529bd5cdb22cf5c1782ed86c8dbe9c","counts":{"debt":0,"pending":0,"queued":0,"receipts":[12,4],"sources":18},"d":"beab5d00428a324f1e1c7935c7edb99f5c6ac595866dd2a7f1808dc515933aee","e":"4d783145d604cfe5121adc6bf970c513d3fced7e5bd803098bb7c525c135ef47","native_generation":18,"own_locator_revision":2,"peer_locator_revision":2,"phase":3,"q":"ea42116bcb3dc46a154988906287a6117dba29d5a792d4b5053a3858a8da1f77","role":1,"sid":"mT4s6ncubHLO73/6DZdr6Jk9FvY58CgSSdD6wW4yM+4","slot":0},{"active":true,"blocked":null,"context":"708b6bc085c377ea87359e4ac82b79fdbfdcc32640dcf207e80d5341e22acf40","counts":{"debt":0,"pending":0,"queued":0,"receipts":[4,4],"sources":10},"d":"106bbdc117db50b8f13effb82fdd5915218b1dbda8c8aaf0d7cc8f5dd7fb8f55","e":"18eb44317a95ce3bcd7b3b409fa96f1b09887f1c68ffb30d2c9410a2bc924222","native_generation":10,"own_locator_revision":2,"peer_locator_revision":2,"phase":3,"q":"6e42916310e3457de92ad697edacb40018f4c0a5cda68fde94e6b83daf4eebc4","role":1,"sid":"qbRJ2nBXnN80yowY+rnrj6+Kvp3UK3V4/vJbBpkio+Q","slot":1}],"root_generation":87,"stats":{"aborted_packet_calls":0,"admissions":2,"committed_decrypt":8,"committed_encrypt":0,"materialized":0,"max_native_bytes":3176,"max_ram_refs":[0,0],"packet_attempts":8,"ram_refs":[0,0],"readable":8},"version":2,"window":[[64,64],[0,0],[0,0]]}
+process_exit pid=61080 kill=false status=exit code: 0
+process_exit pid=61168 kill=false status=exit code: 0
+S4_SMOKE_PASS real_processes=2 contexts=2 text=24 genesis=4 offline_text=8 restarts=both history=readable
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 66.37s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17085 12.34
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=63063
+target_gib=67.39
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

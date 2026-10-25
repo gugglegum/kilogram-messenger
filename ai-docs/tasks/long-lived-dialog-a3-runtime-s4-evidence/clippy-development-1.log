@@ -1,0 +1,48 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-crypto v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-crypto)
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Checking kilogram-ticket-publication v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ticket-publication)
+    Checking kilogram-identity v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-identity)
+    Checking kilogram-mailbox v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox)
+    Checking kilogram-ticket-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-ticket-store)
+    Checking kilogram-mailbox-client v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-client)
+    Checking kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+    Checking kilogram-sync-capability v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-sync-capability)
+    Checking kilogram-publication-conflict v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-publication-conflict)
+    Checking kilogram-mailbox-provisioning v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-provisioning)
+    Checking kilogram-peer-capability-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-capability-store)
+    Checking kilogram-peer-reenrollment-staging v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-staging)
+    Checking kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+    Checking kilogram-offline v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-offline)
+    Checking kilogram-peer-reenrollment v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment)
+    Checking kilogram-peer-reenrollment-acceptance v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-acceptance)
+    Checking kilogram-peer-reenrollment-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-runtime)
+error: `panic` should not be present in production code
+  --> crates\kilogram-state\src\vault\indexed_dialog\runtime2_tests.rs:71:65
+   |
+71 |     let duplicate = repo.commit(1, [21; 32], operation, &mut || panic!("duplicate must not stage"))?;
+   |                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#panic
+   = note: requested on the command line with `-D clippy::panic`
+
+error: `panic` should not be present in production code
+   --> crates\kilogram-state\src\vault\indexed_dialog\runtime2_tests.rs:144:151
+    |
+144 | ...t:[43;16],text:"stale capture".into()},&mut||panic!("stale capture must not stage")),Err(Error::StaleGeneration)));
+    |                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#panic
+
+error: `panic` should not be present in production code
+   --> crates\kilogram-state\src\vault\indexed_dialog\runtime2_tests.rs:153:44
+    |
+153 |     let failure=match repo.reopen(){Ok(_)=>panic!("capacity should prevent reopen"),Err(failure)=>failure};
+    |                                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#panic
+
+error: could not compile `kilogram-state` (lib test) due to 3 previous errors
+warning: build failed, waiting for other jobs to finish...

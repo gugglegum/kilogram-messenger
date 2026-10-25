@@ -1,0 +1,71 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error[E0277]: the trait bound `!: iroh::endpoint::ToSocketAddr` is not satisfied
+   --> apps\kilogram-cli\tests\runtime2_process\versions.rs:50:160
+    |
+ 50 | ..._transports().bind_addr("127.0.0.1:0".parse()?)?.alpns(vec![kilogram_protocol::ordered_dialog_v1::ALPN.to_vec()]).bind().await?;
+    |                  --------- ^^^^^^^^^^^^^^^^^^^^^^ the trait `iroh::endpoint::ToSocketAddr` is not implemented for `!`
+    |                  |
+    |                  required by a bound introduced by this call
+    |
+    = help: the following other types implement trait `iroh::endpoint::ToSocketAddr`:
+              &T
+              (&str, u16)
+              (std::net::IpAddr, u16)
+              (std::net::Ipv4Addr, u16)
+              (std::net::Ipv6Addr, u16)
+              (std::string::String, u16)
+              std::net::SocketAddr
+              std::net::SocketAddrV4
+            and 3 others
+note: required by a bound in `iroh::endpoint::Builder::bind_addr`
+   --> C:\Users\Paul\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\iroh-1.1.0\src\endpoint.rs:365:12
+    |
+363 |     pub fn bind_addr<A>(self, addr: A) -> Result<Self, InvalidSocketAddr>
+    |            --------- required by a bound in this associated function
+364 |     where
+365 |         A: ToSocketAddr,
+    |            ^^^^^^^^^^^^ required by this bound in `Builder::bind_addr`
+
+error[E0277]: the trait bound `!: iroh::endpoint::ToSocketAddr` is not satisfied
+  --> apps\kilogram-cli\tests\runtime2_process\versions.rs:50:22
+   |
+50 | ...nt=iroh::Endpoint::builder(iroh::endpoint::presets::Minimal).clear_address_lookup().clear_ip_transports().clear_relay_transports().bind_addr("127.0.0.1:0".parse()?)?.a...
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `iroh::endpoint::ToSocketAddr` is not implemented for `!`
+   |
+   = help: the following other types implement trait `iroh::endpoint::ToSocketAddr`:
+             &T
+             (&str, u16)
+             (std::net::IpAddr, u16)
+             (std::net::Ipv4Addr, u16)
+             (std::net::Ipv6Addr, u16)
+             (std::string::String, u16)
+             std::net::SocketAddr
+             std::net::SocketAddrV4
+           and 3 others
+
+error[E0277]: the trait bound `!: std::str::FromStr` is not satisfied
+  --> apps\kilogram-cli\tests\runtime2_process\versions.rs:50:174
+   |
+50 | ...sports().bind_addr("127.0.0.1:0".parse()?)?.alpns(vec![kilogram_protocol::ordered_dialog_v1::ALPN.to_vec()]).bind().await?;
+   |                                     ^^^^^ the trait `std::str::FromStr` is not implemented for `!`
+   |
+   = help: the following other types implement trait `std::str::FromStr`:
+             argon2::algorithm::Algorithm
+             argon2::params::AssociatedData
+             argon2::params::KeyId
+             arrayvec::array_string::ArrayString<CAP>
+             asn1_rs::asn1_types::oid::Oid<'_>
+             bip39::Mnemonic
+             bitcoin_hashes::hash160::Hash
+             bitcoin_hashes::hmac::Hmac<T>
+           and 182 others
+note: required by a bound in `core::str::<impl str>::parse`
+  --> /rustc/88d9e12ae178fab0fb5cc050a94da85685d449ea/library\core\src\str\mod.rs:2781:4
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `kilogram-cli` (test "runtime2_process") due to 3 previous errors
+warning: build failed, waiting for other jobs to finish...

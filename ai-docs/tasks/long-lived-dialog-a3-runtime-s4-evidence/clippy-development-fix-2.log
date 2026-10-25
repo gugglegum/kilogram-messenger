@@ -1,0 +1,270 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-identity v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-identity)
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Checking kilogram-mailbox-client v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-client)
+    Checking kilogram-ticket-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-ticket-store)
+    Checking kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+    Checking kilogram-sync-capability v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-sync-capability)
+    Checking kilogram-publication-conflict v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-publication-conflict)
+    Checking kilogram-mailbox-provisioning v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-provisioning)
+    Checking kilogram-peer-capability-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-capability-store)
+    Checking kilogram-peer-reenrollment-staging v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-staging)
+    Checking kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+    Checking kilogram-offline v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-offline)
+    Checking kilogram-peer-reenrollment v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment)
+    Checking kilogram-peer-reenrollment-acceptance v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-acceptance)
+    Checking kilogram-peer-reenrollment-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-runtime)
+    Checking kilogram-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-store)
+    Checking kilogram-peer-history-recovery v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery)
+    Checking kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+    Checking kilogram-runtime-ipc v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-runtime-ipc)
+    Checking kilogram-peer-history-recovery-consent v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-consent)
+    Checking kilogram-session v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-session)
+    Checking kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+    Checking kilogram-rollout v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-rollout)
+    Checking kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+       Fixed apps\kilogram-cli\src\ordered_dialog\runtime2\owner.rs (1 fix)
+       Fixed apps\kilogram-cli\src\ordered_dialog\runtime2\runtime.rs (4 fixes)
+       Fixed apps\kilogram-cli\src\ordered_dialog\runtime2\runtime_tests.rs (1 fix)
+       Fixed apps\kilogram-cli\src\ordered_dialog\runtime2\data.rs (1 fix)
+warning: this function has too many arguments (10/7)
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\data.rs:9:5
+   |
+ 9 | /     pub(super) fn trial_send(
+10 | |         &mut self,
+11 | |         c: u8,
+12 | |         s: &db::RuntimeSnapshot,
+...  |
+19 | |         text: String,
+20 | |     ) -> Result<(wire::ParsedEvent2, db::HistoryReadable2)> {
+   | |___________________________________________________________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#too_many_arguments
+   = note: `-D clippy::too-many-arguments` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::too_many_arguments)]`
+   = note: the `clippy::too_many_arguments` lint ignores `-D warnings`
+
+warning: the loop variable `role` is used to index `peers`
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\handshake.rs:142:21
+    |
+142 |         for role in 0..2 {
+    |                     ^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+    = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+    = note: the `clippy::needless_range_loop` lint ignores `-D warnings`
+help: consider using an iterator and enumerate()
+    |
+142 -         for role in 0..2 {
+142 +         for (role, <item>) in peers.iter().enumerate() {
+    |
+
+warning: very complex type used. Consider factoring parts into `type` definitions
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\network.rs:163:10
+    |
+163 |     ) -> Result<(Vec<Vec<u8>>, BTreeMap<Id, Vec<u8>>)> {
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#type_complexity
+    = note: `-D clippy::type-complexity` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::type_complexity)]`
+    = note: the `clippy::type_complexity` lint ignores `-D warnings`
+
+warning: very complex type used. Consider factoring parts into `type` definitions
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\network.rs:578:10
+    |
+578 |     ) -> Result<(Vec<Vec<u8>>, BTreeMap<Id, Vec<u8>>)> {
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#type_complexity
+
+warning: very complex type used. Consider factoring parts into `type` definitions
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\network.rs:680:10
+    |
+680 |     ) -> Result<(Vec<Vec<u8>>, BTreeMap<Id, Vec<u8>>)> {
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#type_complexity
+
+warning: very complex type used. Consider factoring parts into `type` definitions
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\runtime.rs:724:31
+    |
+724 |     let mut pending_delivery: Option<([u8; 16], Vec<Id>, Vec<Id>, window::RefPermit2, Instant)> =
+    |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#type_complexity
+
+warning: `kilogram-cli` (lib test) generated 6 warnings
+warning: `kilogram-cli` (lib) generated 6 warnings (6 duplicates)
+warning: this function has too many arguments (11/7)
+   --> apps\kilogram-cli\src\ordered2_cli.rs:158:1
+    |
+158 | / pub fn create_profile(
+159 | |     state_dir: PathBuf,
+160 | |     profile_file: PathBuf,
+161 | |     ipc_file: PathBuf,
+...   |
+169 | |     bind: String,
+170 | | ) -> Result<()> {
+    | |_______________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#too_many_arguments
+    = note: `-D clippy::too-many-arguments` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::too_many_arguments)]`
+    = note: the `clippy::too_many_arguments` lint ignores `-D warnings`
+
+warning: `kilogram-cli` (bin "kilogram-cli" test) generated 1 warning
+warning: `kilogram-cli` (bin "kilogram-cli") generated 1 warning (1 duplicate)
+       Fixed apps\kilogram-cli\tests\runtime2_process\positive.rs (2 fixes)
+warning: this looks like you are trying to use `.. *= ..`, but you really are doing `.. = (* ..)`
+  --> apps\kilogram-cli\tests\runtime2_process\lifecycle.rs:88:115
+   |
+88 | ...   for c in 0..2{let old=locator(&pair.nodes[0],&pair.contexts[c])?;let mut f=old.fields().clone();f.endpoint=*endpoints[c].id()....
+   |                                                                                                                 ^^
+   |
+   = note: to remove this lint, use either `*=` or `= *`
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#suspicious_assignment_formatting
+   = note: `-D clippy::suspicious-assignment-formatting` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::suspicious_assignment_formatting)]`
+   = note: the `clippy::suspicious_assignment_formatting` lint ignores `-D warnings`
+
+warning: this looks like an `else if` but the `else` is missing
+   --> apps\kilogram-cli\tests\runtime2_process\positive.rs:172:58
+    |
+172 |             if through==256{pair.restarted(true).await?;}if through==512{pair.restarted(false).await?;}
+    |                                                          ^
+    |
+    = note: to remove this lint, add the missing `else` or add a new line before the second `if`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#possible_missing_else
+    = note: `-D clippy::possible-missing-else` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::possible_missing_else)]`
+    = note: the `clippy::possible_missing_else` lint ignores `-D warnings`
+
+warning: this looks like an `else if` but the `else` is missing
+   --> apps\kilogram-cli\tests\runtime2_process\positive.rs:261:149
+    |
+261 | ...it "){calls+=number(line,"calls").context("committed calls")?;}if line.starts_with("od2_native_attempt "){attempts+=1;}
+    |                                                                   ^
+    |
+    = note: to remove this lint, add the missing `else` or add a new line before the second `if`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#possible_missing_else
+
+warning: used `unwrap_err()` on a `Result` value
+  --> apps\kilogram-cli\tests\runtime2_process\bootstrap.rs:80:19
+   |
+80 | ...   let error=node.send(0,1).await.unwrap_err();ensure!(format!("{error:#}").contains("NeedHandshake"),"queue before history Init"...
+   |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: if this value is an `Ok`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unwrap_used
+   = note: requested on the command line with `-D clippy::unwrap-used`
+   = note: the `clippy::unwrap_used` lint ignores `-D warnings`
+
+warning: used `unwrap()` on an `Option` value
+  --> apps\kilogram-cli\tests\runtime2_process\faults.rs:26:30
+   |
+26 |     serde_json::Value::Array(s["contexts"].as_array().unwrap().iter().map(|c|serde_json::json!({"native":c["details"]["native_hash"]...
+   |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: if this value is `None`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unwrap_used
+
+warning: used `unwrap_err()` on a `Result` value
+   --> apps\kilogram-cli\tests\runtime2_process\faults.rs:197:19
+    |
+197 | ...   let error=pair.nodes[0].call(a([u(2),u(2),u(0),b(request),b("different exact body")])).await.unwrap_err();ensure!(format!("{e...
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unwrap_used
+
+warning: used `unwrap_err()` on a `Result` value
+   --> apps\kilogram-cli\tests\runtime2_process\faults.rs:212:76
+    |
+212 | ...   let before=protected(&pair.nodes[0].status().await?);let error=import_authority(&pair.nodes[0],&raw).await.unwrap_err();ensur...
+    |                                                                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unwrap_used
+
+warning: used `unwrap_err()` on a `Result` value
+   --> apps\kilogram-cli\tests\runtime2_process\faults.rs:233:19
+    |
+233 | ...   let error=import_authority(&pair.nodes[0],&forgotten).await.unwrap_err();ensure!(format!("{error:#}").contains("known revocat...
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unwrap_used
+
+warning: used `unwrap_err()` on a `Result` value
+   --> apps\kilogram-cli\tests\runtime2_process\faults.rs:298:19
+    |
+298 | ...   let error=pair.nodes[0].send(0,5).await.unwrap_err();ensure!(format!("{error:#}").contains("quota"),"configured logical quota...
+    |                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unwrap_used
+
+warning: the loop variable `c` is used to index `endpoints`
+  --> apps\kilogram-cli\tests\runtime2_process\lifecycle.rs:88:18
+   |
+88 | ...   for c in 0..2{let old=locator(&pair.nodes[0],&pair.contexts[c])?;let mut f=old.fields().clone();f.endpoint=*endpoints[c].id()....
+   |                ^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+   = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+   = note: the `clippy::needless_range_loop` lint ignores `-D warnings`
+help: consider using an iterator and enumerate()
+   |
+88 -         for c in 0..2{let old=locator(&pair.nodes[0],&pair.contexts[c])?;let mut f=old.fields().clone();f.endpoint=*endpoints[c].id().as_bytes();f.ips=endpoints[c].addr().ip_addrs().copied().collect();f.revision+=10;
+88 +         for (c, <item>) in endpoints.iter().enumerate().take(2){let old=locator(&pair.nodes[0],&pair.contexts[c])?;let mut f=old.fields().clone();f.endpoint=*endpoints[c].id().as_bytes();f.ips=endpoints[c].addr().ip_addrs().copied().collect();f.revision+=10;
+   |
+
+warning: used `unwrap()` on an `Option` value
+  --> apps\kilogram-cli\tests\runtime2_process\positive.rs:87:30
+   |
+87 |     serde_json::Value::Array(status["contexts"].as_array().unwrap().iter().map(|c|serde_json::json!({"d":c["d"],"e":c["e"],"sid":c["...
+   |                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: if this value is `None`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unwrap_used
+
+warning: used `unwrap()` on an `Option` value
+   --> apps\kilogram-cli\tests\runtime2_process\positive.rs:209:80
+    |
+209 |         ensure!(offline["window"][1].as_array().context("refs")?.iter().all(|n|n.as_u64().unwrap()<129),"offline RAM refs");
+    |                                                                                ^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unwrap_used
+
+warning: used `unwrap()` on a `Result` value
+  --> apps\kilogram-cli\tests\runtime2_process.rs:67:5
+   |
+67 | /     Path::new(env!("CARGO_MANIFEST_DIR"))
+68 | |         .join("../..")
+69 | |         .canonicalize()
+70 | |         .unwrap()
+   | |_________________^
+   |
+   = note: if this value is an `Err`, it will panic
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unwrap_used
+
+warning: used `unwrap()` on an `Option` value
+   --> apps\kilogram-cli\tests\runtime2_process.rs:463:21
+    |
+463 | /                     s["contexts"]
+464 | |                         .as_array()
+465 | |                         .unwrap()
+    | |_________________________________^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unwrap_used
+
+warning: `kilogram-cli` (test "runtime2_process") generated 14 warnings
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1m 05s

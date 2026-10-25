@@ -1,0 +1,10 @@
+{
+  "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-runtime\\kilogram-cli.exe",
+  "bytes": 66193408,
+  "sha256": "66f79751ba546a3e831a0a6d07d186a6190df687f657e049986ca74255416265",
+  "source": "diagnostic-cli-build-2-source.json",
+  "build_command": "run-check.ps1 -Mode build -Package kilogram-cli,kilogram-transport-iroh (default targets, same package selection as P4)",
+  "basis": "diagnostic-instrumentation-basis.json",
+  "environment": "KILOGRAM_TEST_OD2_TIMINGS=1",
+  "scope": "numerical instrumentation only; R1 route guard unchanged from P4"
+}

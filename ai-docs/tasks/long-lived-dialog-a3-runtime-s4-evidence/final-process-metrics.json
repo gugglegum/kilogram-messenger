@@ -1,0 +1,845 @@
+{
+  "run": "p-full-final-4-contract-budget",
+  "fixture": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s4\\process\\P-vVyEbW",
+  "controller": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-final-4-contract-budget.log",
+    "bytes": 399414,
+    "sha256": "591ea8a768c36a79aa8185a0bc1d12abac69dd7acbf70b058cc4e5aaf4d28b06"
+  },
+  "scope": "Aggregates existing public controller/child logs; no vault, IPC token, Root/Device key or Native checkpoint read. IO latencies are closed-writer elapsed, not whole materialize or history throughput.",
+  "whole_P_pass_line": null,
+  "successful_packet_calls": 3265,
+  "packet_attempts": 3266,
+  "attempted_minus_committed": 1,
+  "account_constructors": 4,
+  "session_constructors": 4,
+  "closed_writer_timings": {
+    "Locator": {
+      "successful": {
+        "count": 44,
+        "sum_ms": 1040.594,
+        "p50_ms": 14.966,
+        "p95_ms": 20.808,
+        "max_ms": 200.075
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "PrepareOffer": {
+      "successful": {
+        "count": 2,
+        "sum_ms": 28.161,
+        "p50_ms": 13.582,
+        "p95_ms": 14.579,
+        "max_ms": 14.579
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "Genesis": {
+      "successful": {
+        "count": 6,
+        "sum_ms": 557.741,
+        "p50_ms": 30.141,
+        "p95_ms": 226.818,
+        "max_ms": 226.818
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "Ready": {
+      "successful": {
+        "count": 8,
+        "sum_ms": 193.869,
+        "p50_ms": 24.638,
+        "p95_ms": 25.167,
+        "max_ms": 25.167
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "PeerHead": {
+      "successful": {
+        "count": 74,
+        "sum_ms": 1001.669,
+        "p50_ms": 12.835,
+        "p95_ms": 18.166,
+        "max_ms": 19.685
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "Queue": {
+      "successful": {
+        "count": 1640,
+        "sum_ms": 35361.969,
+        "p50_ms": 21.672,
+        "p95_ms": 24.677,
+        "max_ms": 38.89
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "Materialize": {
+      "successful": {
+        "count": 1291,
+        "sum_ms": 152385.021,
+        "p50_ms": 122.912,
+        "p95_ms": 160.817,
+        "max_ms": 359.891
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "Acknowledge": {
+      "successful": {
+        "count": 1527,
+        "sum_ms": 85340.938,
+        "p50_ms": 57.992,
+        "p95_ms": 69.325,
+        "max_ms": 83.441
+      },
+      "error": {
+        "count": 2,
+        "sum_ms": 97.313,
+        "p50_ms": 40.468,
+        "p95_ms": 56.845,
+        "max_ms": 56.845
+      }
+    },
+    "AcceptPending": {
+      "successful": {
+        "count": 1618,
+        "sum_ms": 32349.093,
+        "p50_ms": 19.652,
+        "p95_ms": 23.864,
+        "max_ms": 42.519
+      },
+      "error": {
+        "count": 1,
+        "sum_ms": 14.755,
+        "p50_ms": 14.755,
+        "p95_ms": 14.755,
+        "max_ms": 14.755
+      }
+    },
+    "Drain": {
+      "successful": {
+        "count": 1133,
+        "sum_ms": 158789.708,
+        "p50_ms": 141.024,
+        "p95_ms": 188.882,
+        "max_ms": 463.735
+      },
+      "error": {
+        "count": 1,
+        "sum_ms": 98.444,
+        "p50_ms": 98.444,
+        "p95_ms": 98.444,
+        "max_ms": 98.444
+      }
+    },
+    "AckProgress": {
+      "successful": {
+        "count": 134,
+        "sum_ms": 46573.727,
+        "p50_ms": 397.755,
+        "p95_ms": 587.539,
+        "max_ms": 609.336
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "Repair": {
+      "successful": {
+        "count": 54,
+        "sum_ms": 1055.88,
+        "p50_ms": 18.264,
+        "p95_ms": 24.848,
+        "max_ms": 55.17
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "ReserveGrant": {
+      "successful": {
+        "count": 2,
+        "sum_ms": 29.602,
+        "p50_ms": 14.489,
+        "p95_ms": 15.113,
+        "max_ms": 15.113
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    }
+  },
+  "distinct_bindings": 28,
+  "symmetric_bindings": 28,
+  "binding_profile_sets": {
+    "e7cd4195ed4375f7cdcddfcf2ae2c353992eff0357a2ac9f5f9f26371ede0377": [
+      "profile0",
+      "profile1"
+    ],
+    "a58a9cff3b9fae0c9a4cc00c5bc9aa97a7cf947b47a186304d350f855d144ff8": [
+      "profile0",
+      "profile1"
+    ],
+    "629a5c05c352f2953101930b29a6f5d2b0aa8c75f08fb67f442a2ac89bacded0": [
+      "profile0",
+      "profile1"
+    ],
+    "3a7a8b95491c7d8ca1071aecfee29ef40a7ae38a00d74564c9acc91f9a244c6b": [
+      "profile0",
+      "profile1"
+    ],
+    "724dc0cd56e38f8045f05a2f52d0e93ca8a9d04a3974ac51346ccde0b3a28e34": [
+      "profile0",
+      "profile1"
+    ],
+    "82c422b9ca319bed43d94bedfdcda7eeac8efaa475eda9cd7b604f59b8ac0c1f": [
+      "profile0",
+      "profile1"
+    ],
+    "91d6cf287b97e38747dba3860feb3ce082b2064f8d4477fa176b64c626a8140e": [
+      "profile0",
+      "profile1"
+    ],
+    "56e2762c11d9816bd3134ef6ee8228920e11a7d1504663ecbfc6ee8e239d4df6": [
+      "profile0",
+      "profile1"
+    ],
+    "9e140c224cfe1e7af2625626213395b0ef3ff524dfe226511a71248d9f1dac00": [
+      "profile0",
+      "profile1"
+    ],
+    "5d6f9696dae19296e72c4312e0f81b0f38f36395b164da10900158c3d02fb658": [
+      "profile0",
+      "profile1"
+    ],
+    "0310de52bf6a1f3db9a9f349e089ee0b06b93e46c87a2349d91bee8c9f6cd8e0": [
+      "profile0",
+      "profile1"
+    ],
+    "fdb32d6188726f3e52aad0a3bfa103e2234ca950945cf402ea9c81ece14430e3": [
+      "profile0",
+      "profile1"
+    ],
+    "03f25d8edb5e7884dc56414429b5a800e6b276174db2a366c6b06f3aa56c952f": [
+      "profile0",
+      "profile1"
+    ],
+    "9a1938231bf488f283ce512927d4d6fa4f0c8e36f05aa2f33ff19aeed789dccc": [
+      "profile0",
+      "profile1"
+    ],
+    "1f26f00e1b00fc04e3ee5299f643b390dcd67197433147c583823ef214cdd87b": [
+      "profile0",
+      "profile1"
+    ],
+    "677e2c0d343edb2a09c0f59c2c66393351a46ea411cfe95f1dd72a929250ec46": [
+      "profile0",
+      "profile1"
+    ],
+    "65c8d5984f0ab69b40798d1f2129afb494a3e1320147a1de1fc1315cc33d213c": [
+      "profile0",
+      "profile1"
+    ],
+    "068c86e04dd3a8b2683c188820b90604baf665b91d11962bdea27f3eed2596f4": [
+      "profile0",
+      "profile1"
+    ],
+    "11108798c179d6408b70c4712c8f63f3b6628cde6ebe30fa775053ae8ca50eeb": [
+      "profile0",
+      "profile1"
+    ],
+    "dcd31825ed5ab4be4772e65511b38547d094dfa8a0078d61d9a46cc835aac657": [
+      "profile0",
+      "profile1"
+    ],
+    "a20431ec5771d4863ed4cc325cc6b1988564107428c897313937ba58a8d287c2": [
+      "profile0",
+      "profile1"
+    ],
+    "25856c7304b56170ca68a8ad1eabe590f058fa515d746ab32c43302045cca823": [
+      "profile0",
+      "profile1"
+    ],
+    "4ddefd143e8571cf8fc265b9b435b08e792d1eb15283040e6ac628e8f19bdffa": [
+      "profile0",
+      "profile1"
+    ],
+    "29c669ba18924ab0d60d8015be19a5cfd0e157df533c62b92bb3a6e31e4839bb": [
+      "profile0",
+      "profile1"
+    ],
+    "bf04daf66c2cff359f37adf7fdb2a9b2b1151aa90af55fed8ff50ac3135952d7": [
+      "profile0",
+      "profile1"
+    ],
+    "68fa5ede8164a8ec42e8e1d89aed4fbfa910dae2bb0439d240538da173d5aede": [
+      "profile0",
+      "profile1"
+    ],
+    "53a9adf47d56c7399b203242e13ea546842aae255ffc5ddeb8948b02ac29632c": [
+      "profile0",
+      "profile1"
+    ],
+    "58ea7c8e9c871bfc483a3ac7991950d39bc3027446b6754c460eb09bb1d158d2": [
+      "profile0",
+      "profile1"
+    ]
+  },
+  "normal_C1_pages": [
+    {
+      "start": 4,
+      "count": 16
+    },
+    {
+      "start": 49,
+      "count": 16
+    },
+    {
+      "start": 85,
+      "count": 12
+    },
+    {
+      "start": 129,
+      "count": 5
+    },
+    {
+      "start": 161,
+      "count": 4
+    },
+    {
+      "start": 194,
+      "count": 4
+    },
+    {
+      "start": 198,
+      "count": 16
+    },
+    {
+      "start": 214,
+      "count": 16
+    },
+    {
+      "start": 245,
+      "count": 12
+    },
+    {
+      "start": 276,
+      "count": 13
+    },
+    {
+      "start": 310,
+      "count": 11
+    },
+    {
+      "start": 341,
+      "count": 12
+    },
+    {
+      "start": 372,
+      "count": 13
+    },
+    {
+      "start": 405,
+      "count": 12
+    },
+    {
+      "start": 437,
+      "count": 12
+    },
+    {
+      "start": 470,
+      "count": 11
+    },
+    {
+      "start": 501,
+      "count": 12
+    },
+    {
+      "start": 532,
+      "count": 13
+    },
+    {
+      "start": 565,
+      "count": 12
+    },
+    {
+      "start": 597,
+      "count": 12
+    },
+    {
+      "start": 4,
+      "count": 6
+    },
+    {
+      "start": 42,
+      "count": 16
+    },
+    {
+      "start": 74,
+      "count": 16
+    },
+    {
+      "start": 90,
+      "count": 16
+    },
+    {
+      "start": 106,
+      "count": 5
+    },
+    {
+      "start": 138,
+      "count": 16
+    },
+    {
+      "start": 154,
+      "count": 16
+    },
+    {
+      "start": 170,
+      "count": 16
+    },
+    {
+      "start": 186,
+      "count": 16
+    },
+    {
+      "start": 202,
+      "count": 16
+    },
+    {
+      "start": 218,
+      "count": 16
+    },
+    {
+      "start": 234,
+      "count": 16
+    },
+    {
+      "start": 250,
+      "count": 7
+    },
+    {
+      "start": 289,
+      "count": 16
+    },
+    {
+      "start": 314,
+      "count": 16
+    },
+    {
+      "start": 330,
+      "count": 16
+    },
+    {
+      "start": 346,
+      "count": 16
+    },
+    {
+      "start": 362,
+      "count": 16
+    },
+    {
+      "start": 378,
+      "count": 16
+    },
+    {
+      "start": 394,
+      "count": 16
+    },
+    {
+      "start": 410,
+      "count": 16
+    },
+    {
+      "start": 426,
+      "count": 16
+    },
+    {
+      "start": 442,
+      "count": 13
+    },
+    {
+      "start": 474,
+      "count": 16
+    },
+    {
+      "start": 490,
+      "count": 16
+    },
+    {
+      "start": 509,
+      "count": 4
+    },
+    {
+      "start": 545,
+      "count": 16
+    },
+    {
+      "start": 570,
+      "count": 16
+    },
+    {
+      "start": 586,
+      "count": 16
+    },
+    {
+      "start": 602,
+      "count": 16
+    },
+    {
+      "start": 618,
+      "count": 16
+    },
+    {
+      "start": 634,
+      "count": 7
+    },
+    {
+      "start": 746,
+      "count": 16
+    },
+    {
+      "start": 762,
+      "count": 16
+    },
+    {
+      "start": 778,
+      "count": 16
+    },
+    {
+      "start": 794,
+      "count": 16
+    },
+    {
+      "start": 810,
+      "count": 16
+    },
+    {
+      "start": 826,
+      "count": 16
+    },
+    {
+      "start": 842,
+      "count": 16
+    },
+    {
+      "start": 858,
+      "count": 16
+    },
+    {
+      "start": 874,
+      "count": 16
+    },
+    {
+      "start": 890,
+      "count": 16
+    }
+  ],
+  "full64_funded_heads": 1,
+  "actual_private_bytes_samples": 363,
+  "max_private_bytes_by_pid": {
+    "3364": 20688896,
+    "27268": 23154688,
+    "27764": 30625792,
+    "28292": 16470016,
+    "42900": 28311552,
+    "44096": 36786176,
+    "46824": 15802368,
+    "47240": 17809408,
+    "50736": 21114880,
+    "57544": 17227776,
+    "58580": 26435584
+  },
+  "final_statuses": [],
+  "history_measurements": [
+    "history node=0 slot=0 rows=640 pages=40 seconds=8.237"
+  ],
+  "phase_measurements": [
+    "active_progress seconds=0.634 phases=[[(Number(0), Bool(false)), (Number(0), Bool(false))], [(Number(0), Bool(false)), (Number(0), Bool(false))]]",
+    "active_progress seconds=1.730 phases=[[(Number(1), Bool(false)), (Number(1), Bool(false))], [(Number(2), Bool(false)), (Number(0), Bool(false))]]",
+    "active_progress seconds=2.332 phases=[[(Number(3), Bool(false)), (Number(1), Bool(false))], [(Number(2), Bool(false)), (Number(2), Bool(false))]]",
+    "active_progress seconds=2.850 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(2), Bool(false))]]",
+    "active_progress seconds=3.525 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(3), Bool(false))]]",
+    "active_progress seconds=4.382 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(false))]]",
+    "active_progress seconds=5.320 phases=[[(Number(3), Bool(true)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]",
+    "active_progress seconds=5.559 phases=[[(Number(3), Bool(true)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]",
+    "queue node=0 slot=0 through=64 seconds=12.890",
+    "queue node=0 slot=0 through=128 seconds=29.883",
+    "queue node=0 slot=0 through=192 seconds=48.718",
+    "queue node=0 slot=0 through=256 seconds=53.196",
+    "active_progress seconds=0.881 phases=[[(Number(3), Bool(true)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]",
+    "P02_checkpoint through=256 elapsed=286.460",
+    "queue node=0 slot=0 through=320 seconds=13.122",
+    "queue node=0 slot=0 through=384 seconds=21.226",
+    "queue node=0 slot=0 through=448 seconds=35.889",
+    "queue node=0 slot=0 through=512 seconds=46.133",
+    "active_progress seconds=0.877 phases=[[(Number(3), Bool(true)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]",
+    "P02_checkpoint through=512 elapsed=630.391",
+    "queue node=0 slot=0 through=576 seconds=13.505",
+    "queue node=0 slot=0 through=640 seconds=21.959",
+    "P02_checkpoint through=640 elapsed=800.136",
+    "P03_round=1 elapsed=844.126",
+    "queue node=1 slot=0 through=64 seconds=10.909",
+    "P03_round=2 elapsed=884.907",
+    "P03_round=3 elapsed=929.556",
+    "queue node=1 slot=0 through=128 seconds=11.411",
+    "P03_round=4 elapsed=977.459",
+    "P03_round=5 elapsed=1022.617",
+    "queue node=1 slot=0 through=192 seconds=13.614",
+    "P03_round=6 elapsed=1068.898",
+    "P03_round=7 elapsed=1083.690",
+    "P04_late_tail_before={\"own_first\":\"2b642ac854ad59f87119b23be7feacf5b150feb8e1623397687f4bf6f5e02921\",\"own_g\":8,\"own_index\":1,\"own_next\":657,\"peer_g\":7,\"peer_index\":0,\"peer_next\":194,\"rotate_due\":false}",
+    "queue node=1 slot=0 through=256 seconds=12.601",
+    "P03_round=8 elapsed=1192.563",
+    "P03_round=9 elapsed=1240.388",
+    "queue node=1 slot=0 through=320 seconds=12.003",
+    "P03_round=10 elapsed=1288.127",
+    "P03_round=11 elapsed=1336.008",
+    "queue node=1 slot=0 through=384 seconds=11.821",
+    "P03_round=12 elapsed=1386.093",
+    "P03_round=13 elapsed=1435.283",
+    "queue node=1 slot=0 through=448 seconds=11.326",
+    "P03_round=14 elapsed=1491.563",
+    "P03_round=15 elapsed=1540.653",
+    "queue node=1 slot=0 through=512 seconds=12.366",
+    "P03_round=16 elapsed=1590.972",
+    "P03_round=17 elapsed=1639.133",
+    "queue node=1 slot=0 through=576 seconds=11.814",
+    "P03_round=18 elapsed=1687.364",
+    "P03_round=19 elapsed=1736.880",
+    "queue node=1 slot=0 through=640 seconds=11.977",
+    "P03_round=20 elapsed=1790.887",
+    "queue node=0 slot=0 through=704 seconds=6.535",
+    "queue node=0 slot=0 through=768 seconds=23.963",
+    "queue node=0 slot=0 through=832 seconds=41.089",
+    "queue node=0 slot=0 through=896 seconds=58.776",
+    "P07_actual_overlap refs=[[64,64],[64,0],[64,2]] C2_sources=43",
+    "P07_C2_converged_with_C1_pending64 refs=[[64,64],[0,0],[64,31]] elapsed=2015.661",
+    "P06_restart_after_normal_page2={\"page\":2,\"pid\":27268,\"public\":{\"count\":16,\"start\":762},\"slot\":0}",
+    "P06_restart_after_normal_page5={\"page\":3,\"pid\":46824,\"public\":{\"count\":16,\"start\":810},\"slot\":0}"
+  ],
+  "child_log_artifacts": [
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/profile0.1.stderr.log",
+      "bytes": 176321,
+      "sha256": "858933a5c4d14c449bba6d2f79bdfc8ebffd815ed8c4a1b5b728161dd9d36819"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/profile0.2.stderr.log",
+      "bytes": 159880,
+      "sha256": "96073738b4cf91b4e0d1b37efac5c7ae688c5373266212c7e8072b607e62eb48"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/profile0.3.stderr.log",
+      "bytes": 701673,
+      "sha256": "19605ca4178261d7a138da5ba4bb69cf1999f4774549f0d64d74fbf32048ec89"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/profile0.4.stderr.log",
+      "bytes": 60595,
+      "sha256": "aa0edf0718306c233a23be38e17ef1a4d34c8372aad75220a012b01bae0a555b"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/profile0.5.stderr.log",
+      "bytes": 11370,
+      "sha256": "40a64dad2c43f4c8615bca5c7abf8030d979c2205cf6c390eb39afd63951d95b"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/profile1.1.stderr.log",
+      "bytes": 169002,
+      "sha256": "05bfca717d601cfbe4820307ac6443539e08b43faef63a32baab472e7c16810a"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/profile1.2.stderr.log",
+      "bytes": 169166,
+      "sha256": "6235cec78216068c984fdd00afb09e500bed4d55a8d0826b8a4b126d51abecb4"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/profile1.3.stderr.log",
+      "bytes": 602367,
+      "sha256": "dfd2e80f6fc660ed02f56bba566e3aa9ea195cb335ec990e4b0cc7c380fe91fc"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/profile1.4.stderr.log",
+      "bytes": 109336,
+      "sha256": "409f89c63152705da8e545fcd25b40a526ae78a80001f19ffd0fc5f983b6a12d"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/profile1.5.stderr.log",
+      "bytes": 34384,
+      "sha256": "a21d66228851f721bd6487a56c06eb91f18c985006ea5030e5eab5f30755d1b9"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/profile1.6.stderr.log",
+      "bytes": 65267,
+      "sha256": "00be1cc900ca846f15127781a53e5c1fef382d186e54bfcf848e47fb95fac2c1"
+    }
+  ],
+  "final_public_artifacts": [
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/profile0.json",
+      "bytes": 1060,
+      "sha256": "beed582a94c38aa3192ed83aaeb20b206feea4ba06158ca4eeea13d1dda35596",
+      "public_config": {
+        "version": 2,
+        "profile_mode": "ordered-dialog-v2",
+        "state_dir": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-vVyEbW\\state0",
+        "account": "6b3740c0ab4f257ceedf4940a7bb64295d4125d74794671fb1bf8e5b3d829156",
+        "claim": "0f640ff1c4f942dfd94d9af3ace6ef5056ce8e8674aa9125af8d81ac5722642b",
+        "device": "b6068856d377623b77359af3c1498ca83c14d7a6e27bc8ffabb758614f6d9e46",
+        "contexts": [
+          "35babb8a785fce162e5c91658719e528a97e64e6119b069a6e66b78bdbc71473",
+          "e96f02c28d4baf074eed4ea239f96e07d2919024600173189868098c6762df29"
+        ],
+        "enabled": [
+          0,
+          1
+        ],
+        "ipc_file": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-vVyEbW\\ipc0.json",
+        "locator_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-vVyEbW\\locators0",
+        "route": {
+          "policy": "direct-only",
+          "bind": "127.0.0.1:0",
+          "relay": null
+        },
+        "logical_quota": [
+          17179869184,
+          17179869184
+        ],
+        "physical_quota": 51539607552
+      }
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/profile1.json",
+      "bytes": 1060,
+      "sha256": "83a516c432a6200a9c4f94e5bbb31a3b00a23d8fdce80243df1449bea5dcee33",
+      "public_config": {
+        "version": 2,
+        "profile_mode": "ordered-dialog-v2",
+        "state_dir": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-vVyEbW\\state1",
+        "account": "38a82a110aabd94b41f1b39d6b6b647a7339622e385771987c4ab7c36fc20380",
+        "claim": "8952674bd9bb72c0a75a35afd90213c9ef2d13e6d329e5924a6057675c7d07c3",
+        "device": "b6bdf9a963c2fca1849e910b0902817fdcdfd2cfaada40b3c1b182e7e874ec6c",
+        "contexts": [
+          "35babb8a785fce162e5c91658719e528a97e64e6119b069a6e66b78bdbc71473",
+          "e96f02c28d4baf074eed4ea239f96e07d2919024600173189868098c6762df29"
+        ],
+        "enabled": [
+          0,
+          1
+        ],
+        "ipc_file": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-vVyEbW\\ipc1.json",
+        "locator_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-vVyEbW\\locators1",
+        "route": {
+          "policy": "direct-only",
+          "bind": "127.0.0.1:0",
+          "relay": null
+        },
+        "logical_quota": [
+          17179869184,
+          17179869184
+        ],
+        "physical_quota": 51539607552
+      }
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/context0.bin",
+      "bytes": 1038,
+      "sha256": "a11dd4c6724bad90b78bb460a655250841e0a4f5b67887d5e85768cc290e4be1"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/context1.bin",
+      "bytes": 1038,
+      "sha256": "4642e98985f99bd0325389622cbb70f86f1ad0fc9ed0558225f7838c257830aa"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/credential0.bin",
+      "bytes": 272,
+      "sha256": "ff217fd8d002b43384a666e938e9c76b5214bd9306e756b6e4d1d0ec6753438e"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/credential1.bin",
+      "bytes": 272,
+      "sha256": "709e4b95b242d4a9002ae1ce6c2f0e2f36c2c0254d4c358eb3b906dc232163a9"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/locators0/35babb8a785fce162e5c91658719e528a97e64e6119b069a6e66b78bdbc71473.locator",
+      "bytes": 228,
+      "sha256": "9c2a9e6814c15b9aa7d537f701c083d5d5e7cbcb338aa7b948a77fcc6bb2f7d4",
+      "signed_public_locator_hex": "828a02582035babb8a785fce162e5c91658719e528a97e64e6119b069a6e66b78bdbc7147358202f5d3f9b669296ff75ac93b80074f33e83ed5bc04b1cf09d55af8e2e53c4c076582055f184377922ba2d96da538dca564fcc2c008b9738b7c9fe9ad17a875b9966df582034839fd1a961073262b3587a391cfabc7fe781e7e95914db2d24d0d937ae1889818304447f00000119da4180051a6addcd8f1a6adddb9f58400913e43c7c4eb216af50f9b185c89f45f16358796f5bfdd7656edbb528f4107b73308c3cf68a17af5d8f44406c01880581c9c852c4bc21873a4795d203af9e0d"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/locators0/e96f02c28d4baf074eed4ea239f96e07d2919024600173189868098c6762df29.locator",
+      "bytes": 228,
+      "sha256": "1f51c0d55adc35e217c15516fff747d78a621d15e818798f9ad8401ec472a90b",
+      "signed_public_locator_hex": "828a025820e96f02c28d4baf074eed4ea239f96e07d2919024600173189868098c6762df2958202f5d3f9b669296ff75ac93b80074f33e83ed5bc04b1cf09d55af8e2e53c4c076582055f184377922ba2d96da538dca564fcc2c008b9738b7c9fe9ad17a875b9966df582034839fd1a961073262b3587a391cfabc7fe781e7e95914db2d24d0d937ae1889818304447f00000119da4180051a6addcd901a6adddba058401fcd859a3f45a4d95e08c307257e88b6dcfed06247e52b8855df273cd8e720e1c3592dc666fa368cfd57d0b4d7de3185235291e1bf360f823bb2978779d8b207"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/locators1/35babb8a785fce162e5c91658719e528a97e64e6119b069a6e66b78bdbc71473.locator",
+      "bytes": 228,
+      "sha256": "e66eb6dcc3584480c4ddd199fa25cb6d0d0885261d7d689cc18ece61daa1c838",
+      "signed_public_locator_hex": "828a02582035babb8a785fce162e5c91658719e528a97e64e6119b069a6e66b78bdbc71473582055f184377922ba2d96da538dca564fcc2c008b9738b7c9fe9ad17a875b9966df58202f5d3f9b669296ff75ac93b80074f33e83ed5bc04b1cf09d55af8e2e53c4c07658205361c52841d1dc323a27b6ba7c344dc69466507c0660c7dc40f5bd4dcbb8b0c5818304447f00000119ead680061a6addcd691a6adddb7958407b27e6ac6ee304de163c7b0d99937f6a77fd8564498dd2b15885fd0c78cf8039fa21dbd787fbdbfe8b47a938564e196fa9cdf9a23570e0be6ff41bb0f8f85308"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-vVyEbW/locators1/e96f02c28d4baf074eed4ea239f96e07d2919024600173189868098c6762df29.locator",
+      "bytes": 228,
+      "sha256": "9605ba5b7181f4ea5096ca6ae900e3ff59c0254dde56caed04afbdbb3d383ab7",
+      "signed_public_locator_hex": "828a025820e96f02c28d4baf074eed4ea239f96e07d2919024600173189868098c6762df29582055f184377922ba2d96da538dca564fcc2c008b9738b7c9fe9ad17a875b9966df58202f5d3f9b669296ff75ac93b80074f33e83ed5bc04b1cf09d55af8e2e53c4c07658205361c52841d1dc323a27b6ba7c344dc69466507c0660c7dc40f5bd4dcbb8b0c5818304447f00000119ead680061a6addcd691a6adddb795840a819934d51422ff6e4276731ca3b7f75608595ffc77b11e97f7b86b2d5704db2203cbe6af93b3b1e6a5bb2bb26d6208c0623fa9e5739ceeaf934679fa2f9160b"
+    }
+  ],
+  "timing_limitations": "P02/duplex phase elapsed includes that phase work. active_progress seconds measures its own activation wait, not all administrative setup. Queue lines measure each send-range segment. Closed-writer p50/p95 excludes prior crypto trial work. No whole-scenario time is presented as history speed."
+}

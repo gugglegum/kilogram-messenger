@@ -1,0 +1,79 @@
+{
+  "baseline": "9547ed171c64bf5ea529b4ba487acf6aa1a61b5b",
+  "parent": "7f82036ee5803edd64be98b73572604250f5961c",
+  "timestamp_utc": "2026-10-25T02:10:50.5682011Z",
+  "initial_status": [
+    " M ai-docs/README.md",
+    " M ai-docs/chat-coordination.md",
+    "?? ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-task.md"
+  ],
+  "protected_files": [
+    {
+      "path": "ai-docs/README.md",
+      "bytes": 158615,
+      "sha256": "7a6b354ae229e8693d5da74d04c7a145dc5df227800c490ceaa769e385aac0f1",
+      "root_owned": true
+    },
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "bytes": 80440,
+      "sha256": "6bd92713d098b601c7917814396f4335a4577a5d727bcfcc495289ca2e032f29",
+      "root_owned": true
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-task.md",
+      "bytes": 11598,
+      "sha256": "0e2bdef16c84291a20bfa5d2128a5304263bfb6f0092caea3585bd3e5d98b865",
+      "root_owned": true
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-contract.md",
+      "bytes": 97759,
+      "sha256": "5e21324167573281e1668cd6091c5a6e63ff72b0894009c57c0a122b6b0a688c",
+      "root_owned": false
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-contract-review-1.md",
+      "bytes": 13626,
+      "sha256": "f2631bb7a48de92a06a205f2c0d016c719f37acc978c944ce9aeccc9e298d9c1",
+      "root_owned": false
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-contract-review-2.md",
+      "bytes": 8138,
+      "sha256": "33844c4d2c749f5d4d84865f4398abb419eeb7c8a60d812dd1e63f36b25d034d",
+      "root_owned": false
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-contract-accepted-files.json",
+      "bytes": 2890,
+      "sha256": "15a804b51209aa00efb2a89858f07a118b2f7edfffe6765f661dc8349f6fffcc",
+      "root_owned": false
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-contract.md",
+      "bytes": 67816,
+      "sha256": "70af8abcbbf12d553a8a4ae0751292d8780eea94b0dea350e1d17d68f54b8941",
+      "root_owned": false
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-accepted-files.json",
+      "bytes": 63125,
+      "sha256": "66c1efd4c8575acabd3f81cb810243817c1cec7f83a98e58ccaba92ea0c71d81",
+      "root_owned": false
+    },
+    {
+      "path": "ai-docs/development-environment.md",
+      "bytes": 440717,
+      "sha256": "53074ff3734dacd9906ee03cc5c7ded952dedd99d207581f692ff900b9a79f8f",
+      "root_owned": false
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "bytes": 61531648,
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+      "root_owned": false
+    }
+  ],
+  "scope": "S4 fresh production; S5 excluded; no commit/push before implementation review"
+}

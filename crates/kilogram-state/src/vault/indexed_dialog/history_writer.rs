@@ -290,7 +290,25 @@ impl<
     fn history_fresh(&self, c: u8) -> Result<()> {
         let c = usize::from(c);
         let (used, reserved) = self.root.totals()?;
-        if self.root.roots[c * 24..c * 24 + 24]
+        // Runtime bootstrap precedes SID/history selection. Only its typed,
+        // prepaid metadata may exist; all history/native/credit state is pristine.
+        let runtime = self.root.layout == RootLayout::Runtime6;
+        let end = if runtime { 21 } else { 24 };
+        let metadata = if runtime {
+            self.root.roots[c * 24 + 21].used[c]
+                .checked_add(self.root.roots[22].used[c])
+                .ok_or(Error::Integrity("runtime bootstrap accounting"))?
+        } else {
+            0
+        };
+        let metadata_reserved = if runtime {
+            self.root.roots[c * 24 + 21].reserved[c]
+                .checked_add(self.root.roots[22].reserved[c])
+                .ok_or(Error::Integrity("runtime bootstrap reservation"))?
+        } else {
+            0
+        };
+        if self.root.roots[c * 24..c * 24 + end]
             .iter()
             .any(|s| *s != Summary::default())
             || self.root.roots[48..51]
@@ -300,8 +318,8 @@ impl<
                 .iter()
                 .any(|s| *s != Summary::default())
             || !self.root.ledger[c].is_pristine()
-            || used[c] != 0
-            || reserved[c] != 0
+            || used[c] != metadata
+            || reserved[c] != metadata_reserved
         {
             return Err(Error::ExistingStateRequiresMigration);
         }

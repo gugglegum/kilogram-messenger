@@ -1,0 +1,13 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 5.00s
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_cli-c27fdb1e57f101dc.exe)
+  Executable unittests src\main.rs (target\verification\deps\kilogram_cli-5208c69577fdba00.exe)
+  Executable tests\runtime2_process.rs (target\verification\deps\runtime2_process-8a491d5b6a41fd04.exe)
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_state-c93ef8da6fd2a59e.exe)
+  Executable tests\a3_s1_root_review.rs (target\verification\deps\a3_s1_root_review-6877e8aa215c8702.exe)
+  Executable tests\a3_s2_root_review.rs (target\verification\deps\a3_s2_root_review-d5c50350a2edce5e.exe)
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_transport_iroh-06158975b943fdcc.exe)
+  Executable tests\local_relay_transport.rs (target\verification\deps\local_relay_transport-ddb967e0672e7f04.exe)

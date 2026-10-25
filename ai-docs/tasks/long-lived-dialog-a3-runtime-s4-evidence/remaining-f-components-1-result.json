@@ -1,0 +1,16 @@
+{
+  "mode": "run",
+  "packages": [
+    "kilogram-cli",
+    "kilogram-transport-iroh"
+  ],
+  "filter": "runtime2::runtime::tests::",
+  "skip": [],
+  "exit_code": 1,
+  "seconds": 3.6096873,
+  "profile": "verification",
+  "offline": true,
+  "jobs": 12,
+  "priority": "BelowNormal",
+  "executables": []
+}

@@ -1,0 +1,256 @@
+{
+  "scope": "Root-authorized diagnostic before/after; not P acceptance. Same controller bytes, polling75ms,98 Text+4 genesis, verification/locked/offline/Jobs12/BelowNormal/watchdog280. Only owner installed loop removal + R1 route guard/test + removed timing enum label.",
+  "data_wall_seconds": {
+    "before": 58.240759,
+    "after": 57.562526,
+    "delta": -0.6782329999999988,
+    "percent_change": -1.1645332438061096
+  },
+  "data_cpu_seconds_sum": {
+    "before": 88.34375,
+    "after": 70.03125,
+    "delta": -18.3125,
+    "percent_change": -20.728687654757692
+  },
+  "owner_service_seconds_sum": {
+    "before": 108.4893818,
+    "after": 87.67411240000001,
+    "delta": -20.81526939999999,
+    "percent_change": -19.186457747886244
+  },
+  "runner_seconds": {
+    "before": 119.4238763,
+    "after": 122.8123687,
+    "delta": 3.38849239999999,
+    "percent_change": 2.837365948068782
+  },
+  "categories": {
+    "OwnerJob": {
+      "before": {
+        "count": 2376,
+        "elapsed_seconds": 62.4121265,
+        "max_ms": 1137.6708,
+        "average_ms": 26.26773000841751
+      },
+      "after": {
+        "count": 2326,
+        "elapsed_seconds": 61.272516100000004,
+        "max_ms": 1102.66,
+        "average_ms": 26.342440283748925
+      }
+    },
+    "OwnerInstalled": {
+      "before": {
+        "count": 17874,
+        "elapsed_seconds": 21.0315975,
+        "max_ms": 2.0279,
+        "average_ms": 1.1766586941926822
+      },
+      "after": {
+        "count": 0,
+        "elapsed_seconds": 0
+      }
+    },
+    "OwnerIdle": {
+      "before": {
+        "count": 15474,
+        "elapsed_seconds": 32.6369939,
+        "max_ms": 2.8891,
+        "average_ms": 2.109150439446814
+      },
+      "after": {
+        "count": 26108,
+        "elapsed_seconds": 55.517836,
+        "max_ms": 2.9938,
+        "average_ms": 2.1264683621878353
+      }
+    },
+    "Status": {
+      "before": {
+        "count": 234,
+        "elapsed_seconds": 7.840744,
+        "max_ms": 205.3173,
+        "average_ms": 33.50745299145299
+      },
+      "after": {
+        "count": 230,
+        "elapsed_seconds": 7.7442606000000005,
+        "max_ms": 212.3525,
+        "average_ms": 33.670698260869564
+      }
+    },
+    "Snapshot": {
+      "before": {
+        "count": 3752,
+        "elapsed_seconds": 12.541933700000001,
+        "max_ms": 4.7028,
+        "average_ms": 3.342732862473348
+      },
+      "after": {
+        "count": 3702,
+        "elapsed_seconds": 12.557848400000001,
+        "max_ms": 4.6918,
+        "average_ms": 3.392179470556456
+      }
+    },
+    "NativeFork": {
+      "before": {
+        "count": 598,
+        "elapsed_seconds": 0.059887,
+        "max_ms": 0.2786,
+        "average_ms": 0.10014548494983277
+      },
+      "after": {
+        "count": 596,
+        "elapsed_seconds": 0.061051299999999996,
+        "max_ms": 0.4669,
+        "average_ms": 0.10243506711409396
+      }
+    },
+    "NativeEncrypt": {
+      "before": {
+        "count": 102,
+        "elapsed_seconds": 0.0223107,
+        "max_ms": 0.7352,
+        "average_ms": 0.2187323529411765
+      },
+      "after": {
+        "count": 102,
+        "elapsed_seconds": 0.0223879,
+        "max_ms": 0.5208,
+        "average_ms": 0.2194892156862745
+      }
+    },
+    "NativeDecrypt": {
+      "before": {
+        "count": 102,
+        "elapsed_seconds": 0.0169258,
+        "max_ms": 1.0053,
+        "average_ms": 0.16593921568627454
+      },
+      "after": {
+        "count": 102,
+        "elapsed_seconds": 0.016993,
+        "max_ms": 1.0929,
+        "average_ms": 0.1665980392156863
+      }
+    },
+    "ClosedCommit": {
+      "before": {
+        "count": 490,
+        "elapsed_seconds": 18.2575604,
+        "max_ms": 264.4808,
+        "average_ms": 37.26032734693877
+      },
+      "after": {
+        "count": 498,
+        "elapsed_seconds": 18.9890817,
+        "max_ms": 267.3356,
+        "average_ms": 38.13068614457831
+      }
+    },
+    "MaterializeActive": {
+      "before": {
+        "count": 84,
+        "elapsed_seconds": 8.7999471,
+        "max_ms": 295.8571,
+        "average_ms": 104.76127500000001
+      },
+      "after": {
+        "count": 86,
+        "elapsed_seconds": 9.2951334,
+        "max_ms": 334.2261,
+        "average_ms": 108.0829465116279
+      }
+    },
+    "DrainActive": {
+      "before": {
+        "count": 64,
+        "elapsed_seconds": 16.179878799999997,
+        "max_ms": 442.73,
+        "average_ms": 252.81060624999995
+      },
+      "after": {
+        "count": 69,
+        "elapsed_seconds": 16.9617832,
+        "max_ms": 552.9216,
+        "average_ms": 245.8229449275362
+      }
+    },
+    "HooksLoad": {
+      "before": {
+        "count": 13369,
+        "elapsed_seconds": 1.1264001000000001,
+        "max_ms": 0.6935,
+        "average_ms": 0.08425462637444836
+      },
+      "after": {
+        "count": 13224,
+        "elapsed_seconds": 1.1327638,
+        "max_ms": 0.843,
+        "average_ms": 0.08565969449485783
+      }
+    },
+    "PublicRead": {
+      "before": {
+        "count": 13369,
+        "elapsed_seconds": 1.0619643,
+        "max_ms": 0.688,
+        "average_ms": 0.07943483431819882
+      },
+      "after": {
+        "count": 13224,
+        "elapsed_seconds": 1.0680679,
+        "max_ms": 0.8381,
+        "average_ms": 0.08076738505747126
+      }
+    },
+    "DebtPage": {
+      "before": {
+        "count": 7,
+        "elapsed_seconds": 3.1031679,
+        "max_ms": 872.6983,
+        "average_ms": 443.30969999999996
+      },
+      "after": {
+        "count": 9,
+        "elapsed_seconds": 3.3526416,
+        "max_ms": 903.1443,
+        "average_ms": 372.51573333333334
+      }
+    },
+    "MailboxQueue": {
+      "before": {
+        "count": 2376,
+        "elapsed_seconds": 149.9731296,
+        "max_ms": 1177.5473,
+        "average_ms": 63.120004040404034
+      },
+      "after": {
+        "count": 2326,
+        "elapsed_seconds": 152.5033473,
+        "max_ms": 1092.7655,
+        "average_ms": 65.56463770421324
+      }
+    },
+    "DataRound": {
+      "before": {
+        "count": 55,
+        "elapsed_seconds": 127.3308208,
+        "max_ms": 11613.9852,
+        "average_ms": 2315.1058327272726
+      },
+      "after": {
+        "count": 53,
+        "elapsed_seconds": 126.2814943,
+        "max_ms": 14498.2676,
+        "average_ms": 2382.669703773585
+      }
+    }
+  },
+  "acceptance_components_seconds": 370.2900657,
+  "additional_diagnostic_runner_seconds": 242.236245,
+  "components_plus_diagnostics_seconds": 612.5263107000001,
+  "accounting_note": "Diagnostics were separately requested by root after P failed, to attribute the bottleneck; they do not cover acceptance matrix. All actual time remains visible; combined370.290+119.424+122.812 is not claimed <=600.",
+  "conclusion": "OwnerInstalled repeated reads removed and process CPU reduced about20.7%; data wall improves only about1.2%, insufficient evidence to expect full P within2400. Native forks/hooks were not dominant. No new full P."
+}

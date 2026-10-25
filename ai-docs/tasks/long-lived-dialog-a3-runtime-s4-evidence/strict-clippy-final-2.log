@@ -1,0 +1,23 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: the borrowed expression implements the required traits
+   --> apps\kilogram-cli\tests\runtime2_process.rs:234:45
+    |
+234 |                     std::fs::read_to_string(&err)?
+    |                                             ^^^^ help: change this to: `err`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_borrows_for_generic_args
+    = note: `-D clippy::needless-borrows-for-generic-args` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_borrows_for_generic_args)]`
+
+error: the borrowed expression implements the required traits
+   --> apps\kilogram-cli\tests\runtime2_process.rs:252:41
+    |
+252 |                 std::fs::read_to_string(&err)?
+    |                                         ^^^^ help: change this to: `err`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_borrows_for_generic_args
+
+error: could not compile `kilogram-cli` (test "runtime2_process") due to 2 previous errors

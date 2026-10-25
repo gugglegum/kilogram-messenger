@@ -1,0 +1,540 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 30.49s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 3 tests
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=11003
+od2_commit_begin operation=Locator context=1 generation=4 native_calls=0
+od2_commit_end operation=Locator context=1 generation=5 ok=true micros=13004
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=10484
+od2_commit_begin operation=Locator context=1 generation=4 native_calls=0
+od2_commit_end operation=Locator context=1 generation=5 ok=true micros=10335
+od2_commit_begin operation=Locator context=0 generation=5 native_calls=0
+od2_commit_end operation=Locator context=0 generation=6 ok=true micros=11691
+od2_commit_begin operation=Locator context=1 generation=6 native_calls=0
+od2_commit_end operation=Locator context=1 generation=7 ok=true micros=11608
+od2_commit_begin operation=Locator context=0 generation=5 native_calls=0
+od2_commit_end operation=Locator context=0 generation=6 ok=true micros=11739
+od2_commit_begin operation=Locator context=1 generation=6 native_calls=0
+od2_commit_end operation=Locator context=1 generation=7 ok=true micros=11268
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_admitted context=170145909bfe65cdde355fdbf7792a18148bc09881cea2626326d31703da8e4f binding=ea0b1f0ced7aad1068734aa53fe2bbb0f8514076d29f656a4b0be2ab27a5f948 generation=1
+od2_admitted context=170145909bfe65cdde355fdbf7792a18148bc09881cea2626326d31703da8e4f binding=ea0b1f0ced7aad1068734aa53fe2bbb0f8514076d29f656a4b0be2ab27a5f948 generation=1
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_admitted context=170145909bfe65cdde355fdbf7792a18148bc09881cea2626326d31703da8e4f binding=17780e9fa8fb6e18ad4a9bbc8539c27ea5360f92e8ec790bb49b733d2ed7355b generation=2
+od2_admitted context=170145909bfe65cdde355fdbf7792a18148bc09881cea2626326d31703da8e4f binding=17780e9fa8fb6e18ad4a9bbc8539c27ea5360f92e8ec790bb49b733d2ed7355b generation=2
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=12656
+od2_commit_begin operation=Locator context=0 generation=4 native_calls=0
+od2_commit_end operation=Locator context=0 generation=5 ok=true micros=11767
+od2_commit_begin operation=Locator context=1 generation=5 native_calls=0
+od2_commit_end operation=Locator context=1 generation=6 ok=true micros=11661
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=11342
+od2_commit_begin operation=Locator context=0 generation=4 native_calls=0
+od2_commit_end operation=Locator context=0 generation=5 ok=true micros=12424
+od2_commit_begin operation=Locator context=1 generation=5 native_calls=0
+od2_commit_end operation=Locator context=1 generation=6 ok=true micros=11766
+od2_commit_begin operation=Locator context=0 generation=6 native_calls=0
+od2_commit_end operation=Locator context=0 generation=7 ok=true micros=12049
+od2_commit_begin operation=Locator context=1 generation=7 native_calls=0
+od2_commit_end operation=Locator context=1 generation=8 ok=true micros=11498
+od2_commit_begin operation=Locator context=0 generation=6 native_calls=0
+od2_commit_end operation=Locator context=0 generation=7 ok=true micros=11455
+od2_commit_begin operation=Locator context=1 generation=7 native_calls=0
+od2_commit_end operation=Locator context=1 generation=8 ok=true micros=11407
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_admitted context=59ecb96957579ce96ff7948e1a6951ce29315846a4be67e4bd7e6915107ef40e binding=2edd827cfc32d14771072bc0463d338ad8d59a25e48bfd8540246cd84c4de3f2 generation=1
+od2_admitted context=59ecb96957579ce96ff7948e1a6951ce29315846a4be67e4bd7e6915107ef40e binding=2edd827cfc32d14771072bc0463d338ad8d59a25e48bfd8540246cd84c4de3f2 generation=1
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 LeaseExpired/Closed
+od2_context_wait context=0 LeaseExpired/Closed
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+test ordered_dialog::runtime2::runtime::tests::a3_s4_f01_actual_expired_lease_and_connection_generation ... S4_F01_actual_cases=2 old_connection_generation=true actual_short_signed_locator_lease_expired=true current_Root2_still_valid=true native_calls=0
+od2_context_wait context=0 NeedAdmission
+ok
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=12483
+od2_commit_begin operation=Locator context=1 generation=4 native_calls=0
+od2_commit_end operation=Locator context=1 generation=5 ok=true micros=13522
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=12329
+od2_commit_begin operation=Locator context=1 generation=4 native_calls=0
+od2_commit_end operation=Locator context=1 generation=5 ok=true micros=11207
+od2_commit_begin operation=Locator context=0 generation=5 native_calls=0
+od2_commit_end operation=Locator context=0 generation=6 ok=true micros=15572
+od2_commit_begin operation=Locator context=1 generation=6 native_calls=0
+od2_commit_end operation=Locator context=1 generation=7 ok=true micros=12855
+od2_commit_begin operation=Locator context=0 generation=5 native_calls=0
+od2_commit_end operation=Locator context=0 generation=6 ok=true micros=14047
+od2_commit_begin operation=Locator context=1 generation=6 native_calls=0
+od2_commit_end operation=Locator context=1 generation=7 ok=true micros=12563
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_admitted context=eb44f2720c9c606f749ab3d53c14ae244f6c8d030dffe3a38dce6e0437abf217 binding=155f653757e523ca15469eb1d60ad2e22ffc18a6c00f26e47bc82e5c3a77707e generation=1
+od2_admitted context=eb44f2720c9c606f749ab3d53c14ae244f6c8d030dffe3a38dce6e0437abf217 binding=155f653757e523ca15469eb1d60ad2e22ffc18a6c00f26e47bc82e5c3a77707e generation=1
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_admitted context=7b3b5ec916baa05bc86f3c9cfd93363136d924b9d5246ed37c45ba648d99c659 binding=0160b4bf9bacf401d6bd8ed875ab5e8931948c0ff53bbbf44b12330cd996c015 generation=2
+od2_admitted context=7b3b5ec916baa05bc86f3c9cfd93363136d924b9d5246ed37c45ba648d99c659 binding=0160b4bf9bacf401d6bd8ed875ab5e8931948c0ff53bbbf44b12330cd996c015 generation=2
+od2_account_constructor context=0 role=0
+od2_commit_begin operation=PrepareOffer context=0 generation=7 native_calls=0
+od2_commit_end operation=PrepareOffer context=0 generation=8 ok=true micros=16231
+od2_account_constructor context=0 role=1 reserved_one=true
+od2_commit_begin operation=ReserveGrant context=0 generation=7 native_calls=0
+od2_commit_end operation=ReserveGrant context=0 generation=8 ok=true micros=17650
+od2_session_constructor context=0 role=0
+od2_native_attempt pid=50048 attempt=1 context=0 role=0 n=0 encrypt=1
+od2_packet_header context=0 encrypt=1 n=0 g=0 index=0 id=13a6c455dd7cb16f4680f13ff009224ac21c33ae6c9d560b538a1ce203895530
+od2_commit_begin operation=Genesis context=0 generation=8 native_calls=1
+od2_commit_end operation=Genesis context=0 generation=9 ok=true micros=28733
+od2_native_commit pid=50048 context=0 last_attempt=1 calls=1 encrypt=1 decrypt=0
+od2_native_attempt pid=50048 attempt=1 context=0 role=0 n=0 decrypt=1
+od2_session_constructor context=0 role=1
+od2_native_attempt pid=50048 attempt=2 context=0 role=1 n=0 encrypt=1
+od2_packet_header context=0 encrypt=1 n=0 g=0 index=0 id=a3045d1bafc74bcd18ff501ede3ab8cf99cc4ba3b91874058175f7b25221ecaf
+od2_commit_begin operation=Genesis context=0 generation=8 native_calls=2
+od2_commit_end operation=Genesis context=0 generation=9 ok=true micros=33956
+od2_native_commit pid=50048 context=0 last_attempt=2 calls=2 encrypt=1 decrypt=1
+od2_native_attempt pid=50048 attempt=2 context=0 role=1 n=0 decrypt=1
+od2_commit_begin operation=Genesis context=0 generation=9 native_calls=1
+od2_commit_end operation=Genesis context=0 generation=10 ok=true micros=34784
+od2_native_commit pid=50048 context=0 last_attempt=2 calls=1 encrypt=0 decrypt=1
+od2_commit_begin operation=Ready context=0 generation=10 native_calls=0
+od2_commit_end operation=Ready context=0 generation=11 ok=true micros=26025
+od2_commit_begin operation=Ready context=0 generation=9 native_calls=0
+od2_commit_end operation=Ready context=0 generation=10 ok=true micros=23416
+od2_commit_begin operation=Ready context=0 generation=11 native_calls=0
+od2_commit_end operation=Ready context=0 generation=12 ok=true micros=26560
+od2_commit_begin operation=Ready context=0 generation=10 native_calls=0
+od2_commit_end operation=Ready context=0 generation=11 ok=true micros=24607
+od2_account_constructor context=1 role=0
+od2_commit_begin operation=PrepareOffer context=1 generation=12 native_calls=0
+od2_commit_end operation=PrepareOffer context=1 generation=13 ok=true micros=13236
+od2_account_constructor context=1 role=1 reserved_one=true
+od2_commit_begin operation=ReserveGrant context=1 generation=11 native_calls=0
+od2_commit_end operation=ReserveGrant context=1 generation=12 ok=true micros=17565
+od2_session_constructor context=1 role=0
+od2_native_attempt pid=50048 attempt=3 context=1 role=0 n=0 encrypt=1
+od2_packet_header context=1 encrypt=1 n=0 g=0 index=0 id=39c929a057d3710feab6d3041a7e715da0df440fc53440ec7e129b4e699368c9
+od2_commit_begin operation=Genesis context=1 generation=13 native_calls=1
+od2_commit_end operation=Genesis context=1 generation=14 ok=true micros=26634
+od2_native_commit pid=50048 context=1 last_attempt=3 calls=1 encrypt=1 decrypt=0
+od2_native_attempt pid=50048 attempt=3 context=1 role=0 n=0 decrypt=1
+od2_session_constructor context=1 role=1
+od2_native_attempt pid=50048 attempt=4 context=1 role=1 n=0 encrypt=1
+od2_packet_header context=1 encrypt=1 n=0 g=0 index=0 id=58b877d5356f07fcb5368244a1ed1fbda06b593104a38af8b6d4df188b564e45
+od2_commit_begin operation=Genesis context=1 generation=12 native_calls=2
+od2_commit_end operation=Genesis context=1 generation=13 ok=true micros=36190
+od2_native_commit pid=50048 context=1 last_attempt=4 calls=2 encrypt=1 decrypt=1
+od2_native_attempt pid=50048 attempt=4 context=1 role=1 n=0 decrypt=1
+od2_commit_begin operation=Genesis context=1 generation=14 native_calls=1
+od2_commit_end operation=Genesis context=1 generation=15 ok=true micros=35750
+od2_native_commit pid=50048 context=1 last_attempt=4 calls=1 encrypt=0 decrypt=1
+od2_commit_begin operation=Ready context=1 generation=15 native_calls=0
+od2_commit_end operation=Ready context=1 generation=16 ok=true micros=27843
+od2_commit_begin operation=Ready context=1 generation=13 native_calls=0
+od2_commit_end operation=Ready context=1 generation=14 ok=true micros=26223
+od2_commit_begin operation=Ready context=1 generation=16 native_calls=0
+od2_commit_end operation=Ready context=1 generation=17 ok=true micros=29695
+od2_commit_begin operation=Ready context=1 generation=14 native_calls=0
+od2_commit_end operation=Ready context=1 generation=15 ok=true micros=28118
+od2_commit_begin operation=Queue context=0 generation=17 native_calls=0
+od2_commit_end operation=Queue context=0 generation=18 ok=true micros=16392
+od2_native_attempt pid=50048 attempt=5 context=0 role=0 n=1 encrypt=1
+od2_packet_header context=0 encrypt=1 n=1 g=1 index=0 id=0056fb30eb28061224ea0e58e44988db62909a7c440995909bffd0ddc85ce963
+od2_commit_begin operation=Materialize context=0 generation=18 native_calls=1
+od2_commit_end operation=Materialize context=0 generation=19 ok=true micros=42805
+od2_native_commit pid=50048 context=0 last_attempt=5 calls=1 encrypt=1 decrypt=0
+od2_commit_begin operation=AcceptPending context=0 generation=15 native_calls=0
+od2_commit_end operation=AcceptPending context=0 generation=16 ok=true micros=15854
+od2_native_attempt pid=50048 attempt=5 context=0 role=0 n=1 decrypt=1
+od2_commit_begin operation=Drain context=0 generation=16 native_calls=1
+od2_commit_end operation=Drain context=0 generation=17 ok=true micros=41051
+od2_native_commit pid=50048 context=0 last_attempt=5 calls=1 encrypt=0 decrypt=1
+od2_readable_commit context=0 role=0 n=1 g=1 index=0 id=0056fb30eb28061224ea0e58e44988db62909a7c440995909bffd0ddc85ce963 own_g=0 own_index=0 own_first=a3045d1bafc74bcd18ff501ede3ab8cf99cc4ba3b91874058175f7b25221ecaf rotate_due=true
+od2_commit_begin operation=Acknowledge context=0 generation=19 native_calls=0
+od2_commit_end operation=Acknowledge context=0 generation=20 ok=true micros=26109
+od2_commit_begin operation=Block context=0 generation=17 native_calls=0
+od2_commit_end operation=Block context=0 generation=18 ok=true micros=16000
+od2_context_wait context=0 NeedAdmission
+od2_commit_begin operation=Queue context=1 generation=20 native_calls=0
+od2_commit_end operation=Queue context=1 generation=21 ok=true micros=15513
+od2_native_attempt pid=50048 attempt=6 context=1 role=0 n=1 encrypt=1
+od2_packet_header context=1 encrypt=1 n=1 g=1 index=0 id=e9d4f1a07291aaeb1739e543472565920959a9abc5c84eeceb15479324adc801
+od2_commit_begin operation=Materialize context=1 generation=21 native_calls=1
+od2_commit_end operation=Materialize context=1 generation=22 ok=true micros=38685
+od2_native_commit pid=50048 context=1 last_attempt=6 calls=1 encrypt=1 decrypt=0
+od2_context_wait context=0 LeaseExpired/Closed
+od2_context_wait context=0 NeedAdmission
+od2_commit_begin operation=AcceptPending context=1 generation=18 native_calls=0
+od2_commit_end operation=AcceptPending context=1 generation=19 ok=true micros=18138
+od2_native_attempt pid=50048 attempt=6 context=1 role=0 n=1 decrypt=1
+od2_commit_begin operation=Drain context=1 generation=19 native_calls=1
+od2_context_wait context=0 NeedAdmission
+od2_commit_end operation=Drain context=1 generation=20 ok=true micros=41214
+od2_native_commit pid=50048 context=1 last_attempt=6 calls=1 encrypt=0 decrypt=1
+od2_readable_commit context=1 role=0 n=1 g=1 index=0 id=e9d4f1a07291aaeb1739e543472565920959a9abc5c84eeceb15479324adc801 own_g=0 own_index=0 own_first=58b877d5356f07fcb5368244a1ed1fbda06b593104a38af8b6d4df188b564e45 rotate_due=true
+od2_context_wait context=0 NeedAdmission
+od2_commit_begin operation=Queue context=1 generation=22 native_calls=0
+od2_commit_end operation=Queue context=1 generation=23 ok=true micros=17711
+od2_native_attempt pid=50048 attempt=7 context=1 role=0 n=2 encrypt=1
+od2_packet_header context=1 encrypt=1 n=2 g=1 index=1 id=5406bb6477c853b159f979fbc8401c380de6f8748563f30c51bb8d66521ec3d8
+od2_commit_begin operation=Materialize context=1 generation=23 native_calls=1
+od2_commit_end operation=Materialize context=1 generation=24 ok=true micros=42957
+od2_native_commit pid=50048 context=1 last_attempt=7 calls=1 encrypt=1 decrypt=0
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_commit_begin operation=AcceptPending context=1 generation=20 native_calls=0
+od2_commit_end operation=AcceptPending context=1 generation=21 ok=true micros=15562
+od2_native_attempt pid=50048 attempt=7 context=1 role=0 n=2 decrypt=1
+od2_commit_begin operation=Block context=1 generation=21 native_calls=0
+od2_commit_end operation=Block context=1 generation=22 ok=true micros=16025
+od2_context_wait context=1 invalid OD1 native input: ciphertext authentication
+od2_context_wait context=0 NeedAdmission
+test ordered_dialog::runtime2::runtime::tests::a3_s4_f02_f09_wrong_q_signed_fork_and_invalid_after_prefix ... S4_F02_F09_PASS wrong_Q_boundaries=4 signed_fork_pre_native=true C2_after_C1_block=true invalid_after_durable_prefix=true invalid_receipt_not_created=true
+ok
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=13384
+od2_commit_begin operation=Locator context=1 generation=4 native_calls=0
+od2_commit_end operation=Locator context=1 generation=5 ok=true micros=12132
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=12490
+od2_commit_begin operation=Locator context=1 generation=4 native_calls=0
+od2_commit_end operation=Locator context=1 generation=5 ok=true micros=14037
+od2_commit_begin operation=Locator context=0 generation=5 native_calls=0
+od2_commit_end operation=Locator context=0 generation=6 ok=true micros=13895
+od2_commit_begin operation=Locator context=1 generation=6 native_calls=0
+od2_commit_end operation=Locator context=1 generation=7 ok=true micros=13075
+od2_commit_begin operation=Locator context=0 generation=5 native_calls=0
+od2_commit_end operation=Locator context=0 generation=6 ok=true micros=14026
+od2_commit_begin operation=Locator context=1 generation=6 native_calls=0
+od2_commit_end operation=Locator context=1 generation=7 ok=true micros=14386
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=0 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_admitted context=73b50268f53e048a8fedc242fae20928d26c1437bc978714401272f9c76d1113 binding=504c5a88c9ad6690f956702b4026c4e47a99c5d85a20f5e7d49ac89b7f27598a generation=1
+od2_admitted context=73b50268f53e048a8fedc242fae20928d26c1437bc978714401272f9c76d1113 binding=504c5a88c9ad6690f956702b4026c4e47a99c5d85a20f5e7d49ac89b7f27598a generation=1
+od2_account_constructor context=0 role=0
+od2_commit_begin operation=PrepareOffer context=0 generation=7 native_calls=0
+od2_commit_end operation=PrepareOffer context=0 generation=8 ok=true micros=14620
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=1 NeedAdmission
+od2_context_wait context=0 LeaseExpired/Closed
+Error: OD2 consent version/suite/limits/permission
+test ordered_dialog::runtime2::runtime::tests::a3_s4_f02_old_offer_current_renewal_historical_support ... FAILED
+
+failures:
+
+failures:
+    ordered_dialog::runtime2::runtime::tests::a3_s4_f02_old_offer_current_renewal_historical_support
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 15 filtered out; finished in 36.91s
+
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:285
+Line |
+ 285 |              throw "Stable test executable failed with exit code ${tes …
+     |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Stable test executable failed with exit code 101:
+     | E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+

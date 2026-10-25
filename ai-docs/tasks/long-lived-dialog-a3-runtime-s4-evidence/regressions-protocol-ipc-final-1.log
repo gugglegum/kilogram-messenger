@@ -1,0 +1,47 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling matrix-pickle v0.2.3
+   Compiling kilogram-crypto v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-crypto)
+   Compiling tokio v1.53.3
+   Compiling vodozemac v0.10.0
+   Compiling kilogram-identity v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-identity)
+   Compiling kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+   Compiling kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+   Compiling kilogram-runtime-ipc v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-runtime-ipc)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 16.99s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-lib-kilogram_protocol-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_decoder_mutations-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_sync_v2_decoder_mutations-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-canonical_sync_v2_fuzz_seeds-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-test-ordered_dialog_bounds-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-runtime-ipc-lib-kilogram_runtime_ipc-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-lib-kilogram_protocol-tests.exe
+
+running 179 tests
+test canonical_account_recovery_policy_v1::tests::canonical_policy_transition_substitutions_fail_closed ... ok
+test canonical_account_recovery_policy_v1::tests::canonical_policy_transition_vectors_reach_joint_majority ... ok
+test canonical_account_recovery_v1::tests::canonical_account_recovery_substitutions_fail_closed ... ok
+test canonical_account_recovery_v1::tests::canonical_account_recovery_vectors_round_trip_and_reach_majority ... ok
+test canonical_account_v1::tests::account_collaboration_rejects_noncanonical_and_tampered_inputs ... ok
+test canonical_account_v1::tests::account_collaboration_vectors_match_bytes_and_signatures ... ok
+test canonical_account_v1::tests::authority_fixture_shape_remains_closed ... ok
+test canonical_authority_v1::tests::authority_session_round_trip_and_signatures_are_strict ... ok
+test canonical_authority_v1::tests::decoder_rejects_non_minimal_version_and_trailing_data ... ok
+test canonical_authority_v1::tests::golden_authority_vector_matches_bytes_and_signatures ... ok
+test canonical_authority_v1::tests::structural_rules_reject_ambiguous_or_incoherent_authority ... ok
+test canonical_device_link_v1::tests::authorization_rejects_wrong_request_signature_and_trailing_data ... ok
+test canonical_device_link_v1::tests::device_link_vector_matches_exact_bytes_and_signature ... ok
+test canonical_endpoint_announcement_transport_v1::tests::endpoint_announcement_transport_rejects_wrong_recipient_tampering_and_replay ... ok
+test canonical_endpoint_announcement_transport_v1::tests::endpoint_announcement_transport_vectors_open_acknowledge_and_round_trip ... 
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:285
+Line |
+ 285 |              throw "Stable test executable failed with exit code ${tes …
+     |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Stable test executable failed with exit code -1:
+     | E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-protocol-lib-kilogram_protocol-tests.exe
+
+

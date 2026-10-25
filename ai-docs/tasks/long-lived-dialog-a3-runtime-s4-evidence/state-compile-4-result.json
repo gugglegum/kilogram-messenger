@@ -1,0 +1,15 @@
+{
+  "mode": "compile",
+  "packages": [
+    "kilogram-state"
+  ],
+  "filter": "a3_s4_",
+  "skip": [],
+  "exit_code": 0,
+  "seconds": 7.4109855,
+  "profile": "verification",
+  "offline": true,
+  "jobs": 12,
+  "priority": "BelowNormal",
+  "executables": []
+}

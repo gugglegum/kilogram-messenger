@@ -851,3 +851,145 @@ verification profile. Новая runtime matrix ещё не запускалас
 Root изменил только status/reference в contract; final accepted hash фиксирует manifest.
 Следующий dispatch — exact7-path documentation publication с sole parent7f82036…,
 обычный push origin/master, callback; root проверяет remote/tree до implementation.
+
+S4 documentation publication независимо проверена root: commit
+`9547ed171c64bf5ea529b4ba487acf6aa1a61b5b`, sole parent7f82036…, exact7 changed paths/
+blobs,6 raw documents+manifest self MATCH. Manifest SHA15a804b5…/blob50d318c2…
+совпал; development-environment clean53074ff…; index/worktree после публикации чистые.
+GitHub connector compare exact9547ed1→master: identical/ahead0/behind0/files0.
+
+Следующее поручение прежнему OD1 GPT-6.1 Sol Max/default без Fast:
+[S4 implementation task](tasks/long-lived-dialog-a3-runtime-s4-implementation-task.md).
+Разрешён весь fresh production runtime и P/F matrix по принятому contract/review2;
+новые implementation-task/README/coordination относятся к этому изменению.
+Frozen contract/reviews/accepted manifests сохраняются. Следующая boundary —
+implementation review/repair, после приёмки exact commit/push; S5 не запускается.
+
+Implementation dispatch доставлен; wait_threads подтвердил active/inProgress turn
+`01a170d0-ab7a-7983-9ed9-18ba85c809d7` в прежнем OD1, model gpt-6.1-sol/thinking max.
+Task11598 bytes, SHA256
+`0e2bdef16c84291a20bfa5d2128a5304263bfb6f0092caea3585bd3e5d98b865`;
+links/diff/frozen contract-review-manifest checks PASS. Поручены full S4 matrix,
+callback и остановка до implementation review; commit/push кода ещё не разрешён.
+
+Во время S4 verification исполнитель запросил правило aggregate budgets после двух
+P FAIL на предыдущих candidate diffs. Root проверил contract/task hashes и actual
+result JSON:585.5830845s+317.1270524s=902.7101369s. Разрешено
+[time accounting clarification1](tasks/long-lived-dialog-a3-runtime-s4-time-accounting-clarification-1.md):
+старые development FAIL не вычитаются из final P ceiling2400s, остаются отдельными
+неизменными evidence. Собственные overhead финального runner входят в2400s; F1200/
+components600 и все counts/profiles/deadlines сохраняются. Это не budget amendment
+и не приёмка текущей P/F matrix; текущий P result на момент чтения ещё отсутствовал.
+
+Clarification6287 bytes/SHA256
+`b786c5df22bc7366b49a0503af74316b8c5a62f19c10c3848d8fa6996342bade` доставлено.
+После отправки появился p-full-final-3-idle-read-result.json: exit1,643.0040112s;
+tail сообщает stable EXE exit−1. Это не evidence достижения1410/2400s. Фактическую
+причину этой остановки сверить по итоговому report/commands; root её пока не
+классифицировал. Исполнитель остаётся active и сообщил переход к полному P с
+нормативным ceiling, без дальнейших production changes. Implementation не принят.
+
+Следующий callback уточнил P3: исполнитель сам выполнил controlled stop до получения
+полного адресного разъяснения; это не normative timeout. Появились log/source snapshot
+нового `p-full-final-4-contract-budget`, isolated fixture, controller2350s с запасом
+на overhead внутри runner ceiling2400s. Исполнитель подтвердил неизменный production
+CLI43f7fade…/counts/assertions и запрет склейки незавершённого P3 prefix с новым run.
+Root ждёт целый final result; controlled-stop evidence и F contributing source mapping
+проверяются при implementation review. Root-owned clarification/docs добавляются в
+будущий accepted publication manifest отдельно от own candidate allowlist исполнителя.
+
+### 2026-10-25: S4 implementation review, diagnosis and explicit one-run exception
+
+P4 завершился FAIL: controller2350.04s/runner2360.3300036s, relay и final history
+не выполнены. Root проверил исходники/метрики и записал
+[implementation review1](tasks/long-lived-dialog-a3-runtime-s4-implementation-review-1.md).
+R1: Auto+explicit relay ошибочно допускал non-loopback bind; исправление требует
+loopback для всех S4 IP policies. Два сопоставимых коротких diagnostic PASS выявили
+17874 лишних installed-record reads; их удаление уменьшило CPU88.34375→70.03125s,
+но data elapsed58.240759→57.562526s. Это не доказало прохождение прежнего P2400s.
+
+Root отдельно принял [review2](tasks/long-lived-dialog-a3-runtime-s4-implementation-review-2.md)
+(SHA256 `442180cd12f759374eff495cfc5e052582429b97044eb764162db983ef422efd`):
+**один** новый полный P с runner<=3000s/controller2950s как явное S4 exception,
+при всех прежних substantive gates/counts/profile/resource и protocol deadlines.
+Это новое решение после измерений; прежнее clarification1 лишь разделяло accounting.
+Если новый P занимает>2400s, итог обязан отметить исходный time target unmet и
+применение исключения. Старые FAIL/diagnostics остаются неизменными.
+
+Candidate CLI `d5d8c8c118925dfde67e37fdb32aa5a120293cde258e93843dd1939fddb15560`.
+Исполнитель01a1653c-0154-7611-8e8c-044fbe1e4d7a завершает guard/R1 checks; после PASS
+поручены frozen complete P и полный F с R1 на том же production image (F<=1200s,
+components<=600s). Независимые проверки допускаются параллельно с готовыми stable
+EXE/раздельными fixtures, без overwrite работающих EXE. Новых тихих reruns/изменений
+кода/расширений deadline нет. Обязателен callback с исходом, manifest и provenance.
+Callback diagnostic2 фактически получен root; direct human authorization действует.
+**Implementation ещё не принят; commit/push — только после отдельной приёмки root.**
+
+### 2026-10-25: F09 controller IO review before the unused full-P exception
+
+Guard/R1 selection passed 14 cases in185.5564679s. Subsequent complete F
+`f-full-review2-frozen-1` failed in365.2830575s: 5 actor and8 process cases passed,
+F09 returned unadorned Windows os5; the wrapper stopped before state/transport
+binaries. First schedule replacement is a hypothesis, not a proved fault site.
+Root independently verified both unchanged schedule files, production EXE d5d8c8
+and all42 production source hashes. This failed F remains FAIL; P has not begun.
+
+[Review3](tasks/long-lived-dialog-a3-runtime-s4-implementation-review-3.md) authorizes
+only bounded controller persist retry/error context plus deterministic lock controls
+and one real F09. Executor must return the exact patch/results to root before new
+complete F/P. Frozen product and substantive gates remain unchanged. Root-owned
+review3 belongs in the eventual explicit publication manifest. No implementation
+acceptance or commit/push yet.
+
+Review3 controller repair subsequently accepted for verification: exact8857-byte
+patch SHA8e66c7bb3f8c2b96ed482957878f590adf8a5311e95cc1490ac9de38d8102f6f,
+deterministic real-lock controls2/2 and one real F09 PASS, product42/images4 unchanged.
+Root authorized a single complete F, then on PASS the still-unused review2 full P,
+sequentially with no overwrite of live stable EXEs. Conservative F subtotal before
+the new full run is243.1981687s (guards+controls+targeted F09); aggregate<=1200s.
+Callback on failure or final candidate; final implementation/publication review
+still pending. Full decision and evidence pointers are in review3 above.
+
+### 2026-10-25: full F passed; full P failed at local relay helper readiness
+
+`f-full-review3-frozen-1` passed19 cases in377.2276474s; conservative F total
+620.4258161s. The one authorized `p-full-review2-exception-1` failed in1901.2816169s
+after direct catch-up/ACK, at RelayOnly rotation. Local relay helper published ready
+before read-only-file sync_all then exited os5; first runtime reached its15s relay
+registration timeout. No full P PASS:3287/3288 calls, B-only relay/final history not
+executed. Relay-config transition snapshot is not actual URL-only locator evidence.
+
+[Review4](tasks/long-lived-dialog-a3-runtime-s4-implementation-review-4.md) authorizes
+only local helper atomic writable-handle ready publication/controller liveness and
+a separate<=180s real own-relay smoke with B-only continuation. Product42/CLI remain
+frozen. Exact diff/hash/smoke callback required before any new complete P; the former
+one-run permission is consumed. F source reuse must be shown, not blindly repeated.
+Root-owned review4 belongs in the eventual exact publication manifest. Final
+implementation acceptance and commit/push remain pending.
+
+Review4 repair/smoke then passed root review: exact patch e399233b…14128B, helper
+b8723b8c…17057280B, CLI d5d8c8 unchanged. Focused real B-only relay continuation
+passed in50.2735936s runner/24.181521s controller with exact history/receipt and
+unchanged native constructor counts. Only positive controller/relay example changed.
+Root explicitly authorized one new complete P replacement attempt after that repair,
+with controller2950s/runner<=3000s and every substantive gate unchanged. Review2's
+failed attempt remains consumed/FAIL. F620.4258161s/component results are reused
+with source correspondence. Final report/manifest/callback required before acceptance
+and publication; no further silent reruns or product changes are authorized.
+
+### 2026-10-25: S4 final implementation accepted for exact publication
+
+Replacement complete P passed2003.5355583s runner/1979.794s controller, under the
+original2400s target. Root recounted actual logs:3288 committed/3288 attempts,
+4 Account/4 Session,24 bindings,63 normal pages,1 full64 head; exact final histories
+and624-row old cursor suffix, zero queues/pending/debt, B-only own-relay delivery.
+F620.4258161s/1200 and components370.2900657s/600 accepted with explicit source reuse.
+Root independently verified524 raw/Git-blob rows and all525 submitted changed paths,
+without extra or missing files; final current54 source rows match successful evidence.
+
+[Final review5](tasks/long-lived-dialog-a3-runtime-s4-implementation-review-5.md)
+accepts only fresh S4. Executor submission snapshots remain immutable; root updates
+README/next-stage/coordination and supplies a final exact accepted manifest including
+this acceptance. Executor is instructed to commit/push that list only, then root
+independently verifies committed blobs, sole parent and actual remote master.
+S5/whole A3/MVP remain open; no next implementation stage is launched automatically.

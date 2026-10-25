@@ -1,0 +1,53 @@
+{
+  "status": "Root-owned files preserved; separate reference for eventual accepted allowlist, no publication permission",
+  "files": [
+    {
+      "path": "ai-docs/README.md",
+      "bytes": 158615,
+      "sha256": "7a6b354ae229e8693d5da74d04c7a145dc5df227800c490ceaa769e385aac0f1",
+      "git_blob": "88eb83f3128e8a91b374854afa70f8c624f65279"
+    },
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "bytes": 89015,
+      "sha256": "2a4f12b23d66dd3adc1f482582ae1a3b2ca94e3b823b6d96d735f68e4343bc77",
+      "git_blob": "0c237d5dbfe5fe945a90a24ab4fe123925f8a3b9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-review-1.md",
+      "bytes": 8765,
+      "sha256": "056ded682bb33292cc5b4fa85ca465926b516258244cbe6d6ddf5ac9063e94e3",
+      "git_blob": "6e7923df0bbb91fd946084ca0d266d3371518e94"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-review-2.md",
+      "bytes": 4962,
+      "sha256": "442180cd12f759374eff495cfc5e052582429b97044eb764162db983ef422efd",
+      "git_blob": "fa18d69ae28b536b7393aad6da14636b43db535d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-review-3.md",
+      "bytes": 6067,
+      "sha256": "53e8df6ab9dc4480e445fad625f2e385ef3507a15b14b4225bb06f84abfd475c",
+      "git_blob": "ebf9b72c9efb516a986e50a363b2a10676f7426e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-review-4.md",
+      "bytes": 8280,
+      "sha256": "30548dfb409b4fec9c85eec3181a7ba0c92ccb4728cfd90ece4d547c7e4129ac",
+      "git_blob": "4e7d163eb3fe602748582d8978d8e1aab219e534"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-task.md",
+      "bytes": 11598,
+      "sha256": "0e2bdef16c84291a20bfa5d2128a5304263bfb6f0092caea3585bd3e5d98b865",
+      "git_blob": "f30d240c4858c66ab4b4eb2c0900e757aa75621c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-time-accounting-clarification-1.md",
+      "bytes": 6287,
+      "sha256": "b786c5df22bc7366b49a0503af74316b8c5a62f19c10c3848d8fa6996342bade",
+      "git_blob": "2bedb297d1a377971bcc8fe3d2586299950d9e48"
+    }
+  ]
+}

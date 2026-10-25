@@ -1,0 +1,819 @@
+{
+  "run": "p-full-review2-exception-1",
+  "fixture": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s4\\process\\P-beBVhC",
+  "controller": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/p-full-review2-exception-1.log",
+    "bytes": 340406,
+    "sha256": "67961d646d2913fe004459f791052a4b52906eef51f3ac32ff32b2ae71111640"
+  },
+  "scope": "Aggregates existing public controller/child logs; no vault, IPC token, Root/Device key or Native checkpoint read. IO latencies are closed-writer elapsed, not whole materialize or history throughput.",
+  "whole_P_pass_line": null,
+  "successful_packet_calls": 3287,
+  "packet_attempts": 3289,
+  "attempted_minus_committed": 2,
+  "account_constructors": 4,
+  "session_constructors": 4,
+  "closed_writer_timings": {
+    "Locator": {
+      "successful": {
+        "count": 44,
+        "sum_ms": 994.695,
+        "p50_ms": 13.359,
+        "p95_ms": 18.764,
+        "max_ms": 209.416
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "PrepareOffer": {
+      "successful": {
+        "count": 2,
+        "sum_ms": 22.201,
+        "p50_ms": 10.987,
+        "p95_ms": 11.214,
+        "max_ms": 11.214
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "Genesis": {
+      "successful": {
+        "count": 6,
+        "sum_ms": 525.265,
+        "p50_ms": 21.29,
+        "p95_ms": 227.068,
+        "max_ms": 227.068
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "Ready": {
+      "successful": {
+        "count": 8,
+        "sum_ms": 149.799,
+        "p50_ms": 17.988,
+        "p95_ms": 21.317,
+        "max_ms": 21.317
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "PeerHead": {
+      "successful": {
+        "count": 76,
+        "sum_ms": 920.343,
+        "p50_ms": 11.398,
+        "p95_ms": 15.862,
+        "max_ms": 17.675
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "Queue": {
+      "successful": {
+        "count": 1640,
+        "sum_ms": 30272.976,
+        "p50_ms": 18.423,
+        "p95_ms": 21.73,
+        "max_ms": 33.732
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "Materialize": {
+      "successful": {
+        "count": 1317,
+        "sum_ms": 120036.938,
+        "p50_ms": 95.453,
+        "p95_ms": 120.119,
+        "max_ms": 291.216
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "Acknowledge": {
+      "successful": {
+        "count": 1639,
+        "sum_ms": 75328.755,
+        "p50_ms": 47.679,
+        "p95_ms": 55.873,
+        "max_ms": 62.612
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "AcceptPending": {
+      "successful": {
+        "count": 1639,
+        "sum_ms": 27457.672,
+        "p50_ms": 16.474,
+        "p95_ms": 20.443,
+        "max_ms": 34.395
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "Drain": {
+      "successful": {
+        "count": 1165,
+        "sum_ms": 128063.767,
+        "p50_ms": 110.753,
+        "p95_ms": 144.841,
+        "max_ms": 369.579
+      },
+      "error": {
+        "count": 1,
+        "sum_ms": 117.832,
+        "p50_ms": 117.832,
+        "p95_ms": 117.832,
+        "max_ms": 117.832
+      }
+    },
+    "AckProgress": {
+      "successful": {
+        "count": 140,
+        "sum_ms": 36381.978,
+        "p50_ms": 299.735,
+        "p95_ms": 426.288,
+        "max_ms": 442.753
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "Repair": {
+      "successful": {
+        "count": 53,
+        "sum_ms": 859.422,
+        "p50_ms": 15.162,
+        "p95_ms": 20.882,
+        "max_ms": 42.634
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    },
+    "ReserveGrant": {
+      "successful": {
+        "count": 2,
+        "sum_ms": 24.555,
+        "p50_ms": 11.778,
+        "p95_ms": 12.777,
+        "max_ms": 12.777
+      },
+      "error": {
+        "count": 0,
+        "sum_ms": 0,
+        "p50_ms": null,
+        "p95_ms": null,
+        "max_ms": null
+      }
+    }
+  },
+  "distinct_bindings": 20,
+  "symmetric_bindings": 20,
+  "binding_profile_sets": {
+    "ef7d568c1bf9fe0c39ea3936b8e1c4f71f034a5e10ef00cab985225132566096": [
+      "profile0",
+      "profile1"
+    ],
+    "90921d8adad92f4caa03b5509bfe5cd25a9499e3367c871f9c3e27cc5d2d0a54": [
+      "profile0",
+      "profile1"
+    ],
+    "34457e9ec37353248cfc91be3a496d539959bedcbb7e11c08bb582486f97e2ed": [
+      "profile0",
+      "profile1"
+    ],
+    "aa3296f9311e22a4dfc23d86c13b04422dcc5a335061dd5afbf1d6ef63d9cd9e": [
+      "profile0",
+      "profile1"
+    ],
+    "6b356d54e7bc4bcad36db8a2f81f95928c6157ead57e4371ed39c66b66476b6a": [
+      "profile0",
+      "profile1"
+    ],
+    "5aa1bcf3c6f65992759adbc8e02f32b051ddb90bc81fd64a9eef7e219a6babf4": [
+      "profile0",
+      "profile1"
+    ],
+    "657516f07cad619a8f3033f5e805168d8b8f3eb16d15d788637a86a85c8aca3d": [
+      "profile0",
+      "profile1"
+    ],
+    "7fcb2a059e1042dfdded9d778c421396f976c0d2ec24d1df877536da318b97ef": [
+      "profile0",
+      "profile1"
+    ],
+    "d7aeb0797e46719f2b42b3ecca37b26b2dd31d57cdc1b95b82692b29bdb51393": [
+      "profile0",
+      "profile1"
+    ],
+    "85ad65d76305c0c28001fdd13bf9d85f31f50773bc9c7a6fa2b753790597b581": [
+      "profile0",
+      "profile1"
+    ],
+    "de2f755dd91a8e0f36bcf7233ad348ecd06fe50a50b94b385a2215050adb0343": [
+      "profile0",
+      "profile1"
+    ],
+    "816bc8beb412b2e1a1a6bae49285f35a9521d9c6dd72a85a27dad646f7cb905b": [
+      "profile0",
+      "profile1"
+    ],
+    "97e8d4e7a7c46846c04535c3f590620c6bf596f777fe214ad224f42078c743bf": [
+      "profile0",
+      "profile1"
+    ],
+    "261c130adebed041ef4dbfa9db7ef4e9506fa1ffba788cd1cf4e4ae8577e5d6f": [
+      "profile0",
+      "profile1"
+    ],
+    "30613ccdb76d07ab40bcdc34ea850ce435ec01c6f7da020c3922f50b44e37874": [
+      "profile0",
+      "profile1"
+    ],
+    "81b91412d176e0f3490e452b524645af4ad723399b075cd85b3f0906be54187c": [
+      "profile0",
+      "profile1"
+    ],
+    "ae924978ac71844b6d162ddd582d7f4b00cc4614214319d343c60ef693ee678f": [
+      "profile0",
+      "profile1"
+    ],
+    "09bc9f54283de40aa039cf627129a12485335dc8d814a4d47fbc1b30b8fd85e6": [
+      "profile0",
+      "profile1"
+    ],
+    "ee78791024fb013777d78999d3505e7ad5087e177c5a6b0b80a4f3901cfdd826": [
+      "profile0",
+      "profile1"
+    ],
+    "838cdd4f3e1d36d7120d81af42a166885d1c5b7a9289b7d1bd4cf7e8da14e87f": [
+      "profile0",
+      "profile1"
+    ]
+  },
+  "normal_C1_pages": [
+    {
+      "start": 5,
+      "count": 16
+    },
+    {
+      "start": 49,
+      "count": 16
+    },
+    {
+      "start": 85,
+      "count": 12
+    },
+    {
+      "start": 117,
+      "count": 12
+    },
+    {
+      "start": 149,
+      "count": 12
+    },
+    {
+      "start": 194,
+      "count": 4
+    },
+    {
+      "start": 198,
+      "count": 16
+    },
+    {
+      "start": 214,
+      "count": 16
+    },
+    {
+      "start": 245,
+      "count": 12
+    },
+    {
+      "start": 271,
+      "count": 16
+    },
+    {
+      "start": 304,
+      "count": 16
+    },
+    {
+      "start": 336,
+      "count": 16
+    },
+    {
+      "start": 368,
+      "count": 16
+    },
+    {
+      "start": 401,
+      "count": 16
+    },
+    {
+      "start": 437,
+      "count": 12
+    },
+    {
+      "start": 469,
+      "count": 12
+    },
+    {
+      "start": 501,
+      "count": 12
+    },
+    {
+      "start": 533,
+      "count": 12
+    },
+    {
+      "start": 565,
+      "count": 12
+    },
+    {
+      "start": 597,
+      "count": 12
+    },
+    {
+      "start": 1,
+      "count": 1
+    },
+    {
+      "start": 30,
+      "count": 16
+    },
+    {
+      "start": 62,
+      "count": 16
+    },
+    {
+      "start": 78,
+      "count": 1
+    },
+    {
+      "start": 110,
+      "count": 16
+    },
+    {
+      "start": 126,
+      "count": 16
+    },
+    {
+      "start": 142,
+      "count": 16
+    },
+    {
+      "start": 158,
+      "count": 16
+    },
+    {
+      "start": 174,
+      "count": 16
+    },
+    {
+      "start": 190,
+      "count": 16
+    },
+    {
+      "start": 206,
+      "count": 16
+    },
+    {
+      "start": 222,
+      "count": 16
+    },
+    {
+      "start": 238,
+      "count": 16
+    },
+    {
+      "start": 254,
+      "count": 3
+    },
+    {
+      "start": 289,
+      "count": 16
+    },
+    {
+      "start": 318,
+      "count": 16
+    },
+    {
+      "start": 334,
+      "count": 16
+    },
+    {
+      "start": 350,
+      "count": 16
+    },
+    {
+      "start": 366,
+      "count": 16
+    },
+    {
+      "start": 382,
+      "count": 16
+    },
+    {
+      "start": 398,
+      "count": 16
+    },
+    {
+      "start": 414,
+      "count": 16
+    },
+    {
+      "start": 430,
+      "count": 16
+    },
+    {
+      "start": 446,
+      "count": 6
+    },
+    {
+      "start": 478,
+      "count": 16
+    },
+    {
+      "start": 494,
+      "count": 16
+    },
+    {
+      "start": 510,
+      "count": 3
+    },
+    {
+      "start": 545,
+      "count": 16
+    },
+    {
+      "start": 574,
+      "count": 16
+    },
+    {
+      "start": 590,
+      "count": 16
+    },
+    {
+      "start": 606,
+      "count": 16
+    },
+    {
+      "start": 622,
+      "count": 16
+    },
+    {
+      "start": 638,
+      "count": 3
+    },
+    {
+      "start": 746,
+      "count": 16
+    },
+    {
+      "start": 762,
+      "count": 16
+    },
+    {
+      "start": 778,
+      "count": 16
+    },
+    {
+      "start": 794,
+      "count": 16
+    },
+    {
+      "start": 810,
+      "count": 16
+    },
+    {
+      "start": 826,
+      "count": 16
+    },
+    {
+      "start": 842,
+      "count": 16
+    },
+    {
+      "start": 858,
+      "count": 16
+    },
+    {
+      "start": 874,
+      "count": 16
+    },
+    {
+      "start": 890,
+      "count": 16
+    },
+    {
+      "start": 906,
+      "count": 16
+    },
+    {
+      "start": 922,
+      "count": 15
+    }
+  ],
+  "full64_funded_heads": 1,
+  "actual_private_bytes_samples": 295,
+  "max_private_bytes_by_pid": {
+    "19804": 28241920,
+    "25472": 16220160,
+    "38712": 30736384,
+    "41268": 29622272,
+    "42644": 27901952,
+    "46244": 23449600,
+    "50772": 17489920,
+    "50792": 20852736,
+    "54364": 20635648,
+    "57172": 36290560,
+    "57328": 17371136
+  },
+  "final_statuses": [],
+  "history_measurements": [
+    "history node=0 slot=0 rows=640 pages=40 seconds=5.930"
+  ],
+  "phase_measurements": [
+    "active_progress seconds=0.626 phases=[[(Number(0), Bool(false)), (Number(0), Bool(false))], [(Number(0), Bool(false)), (Number(0), Bool(false))]]",
+    "active_progress seconds=1.655 phases=[[(Number(1), Bool(false)), (Number(1), Bool(false))], [(Number(2), Bool(false)), (Number(0), Bool(false))]]",
+    "active_progress seconds=2.274 phases=[[(Number(3), Bool(false)), (Number(1), Bool(false))], [(Number(2), Bool(false)), (Number(2), Bool(false))]]",
+    "active_progress seconds=2.758 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(2), Bool(false))]]",
+    "active_progress seconds=3.422 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(3), Bool(false))]]",
+    "active_progress seconds=4.267 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(false))]]",
+    "active_progress seconds=4.686 phases=[[(Number(3), Bool(true)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(false))]]",
+    "active_progress seconds=5.145 phases=[[(Number(3), Bool(true)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]",
+    "active_progress seconds=5.356 phases=[[(Number(3), Bool(true)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]",
+    "queue node=0 slot=0 through=64 seconds=11.729",
+    "queue node=0 slot=0 through=128 seconds=23.643",
+    "queue node=0 slot=0 through=192 seconds=33.379",
+    "queue node=0 slot=0 through=256 seconds=43.957",
+    "active_progress seconds=0.861 phases=[[(Number(3), Bool(true)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]",
+    "P02_checkpoint through=256 elapsed=235.658",
+    "queue node=0 slot=0 through=320 seconds=10.263",
+    "queue node=0 slot=0 through=384 seconds=19.126",
+    "queue node=0 slot=0 through=448 seconds=30.124",
+    "queue node=0 slot=0 through=512 seconds=38.025",
+    "active_progress seconds=0.864 phases=[[(Number(3), Bool(true)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]",
+    "P02_checkpoint through=512 elapsed=507.376",
+    "queue node=0 slot=0 through=576 seconds=10.847",
+    "queue node=0 slot=0 through=640 seconds=19.491",
+    "P02_checkpoint through=640 elapsed=638.988",
+    "P03_round=1 elapsed=674.035",
+    "queue node=1 slot=0 through=64 seconds=8.175",
+    "P03_round=2 elapsed=705.605",
+    "P03_round=3 elapsed=741.922",
+    "queue node=1 slot=0 through=128 seconds=8.785",
+    "P03_round=4 elapsed=778.672",
+    "P03_round=5 elapsed=815.126",
+    "queue node=1 slot=0 through=192 seconds=8.730",
+    "P03_round=6 elapsed=854.894",
+    "P03_round=7 elapsed=866.693",
+    "P04_late_tail_before={\"own_first\":\"b5eb4b00e4d3c6a5c7288f38ac393ea009214af9870b311e4b27e98265fd5428\",\"own_g\":8,\"own_index\":1,\"own_next\":657,\"peer_g\":7,\"peer_index\":0,\"peer_next\":194,\"rotate_due\":false}",
+    "queue node=1 slot=0 through=256 seconds=9.395",
+    "P03_round=8 elapsed=940.432",
+    "P03_round=9 elapsed=972.258",
+    "queue node=1 slot=0 through=320 seconds=8.506",
+    "P03_round=10 elapsed=1004.774",
+    "P03_round=11 elapsed=1037.600",
+    "queue node=1 slot=0 through=384 seconds=8.693",
+    "P03_round=12 elapsed=1070.652",
+    "P03_round=13 elapsed=1102.891",
+    "queue node=1 slot=0 through=448 seconds=9.055",
+    "P03_round=14 elapsed=1146.119",
+    "P03_round=15 elapsed=1182.690",
+    "queue node=1 slot=0 through=512 seconds=9.152",
+    "P03_round=16 elapsed=1219.790",
+    "P03_round=17 elapsed=1256.366",
+    "queue node=1 slot=0 through=576 seconds=8.807",
+    "P03_round=18 elapsed=1293.223",
+    "P03_round=19 elapsed=1330.595",
+    "queue node=1 slot=0 through=640 seconds=9.264",
+    "P03_round=20 elapsed=1368.281",
+    "queue node=0 slot=0 through=704 seconds=5.326",
+    "queue node=0 slot=0 through=768 seconds=19.219",
+    "queue node=0 slot=0 through=832 seconds=33.026",
+    "queue node=0 slot=0 through=896 seconds=47.154",
+    "P07_actual_overlap refs=[[64,64],[64,31],[64,31]] C2_sources=41",
+    "P07_C2_converged_with_C1_pending64 refs=[[64,64],[0,0],[64,31]] elapsed=1535.585",
+    "P06_restart_after_normal_page2={\"page\":2,\"pid\":46244,\"public\":{\"count\":16,\"start\":762},\"slot\":0}",
+    "P06_restart_after_normal_page5={\"page\":3,\"pid\":25472,\"public\":{\"count\":16,\"start\":810},\"slot\":0}"
+  ],
+  "child_log_artifacts": [
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/profile0.1.stderr.log",
+      "bytes": 175580,
+      "sha256": "ebb604b73e05e48fea8db930041ac7907fd49892f19f9290ded9df8afc0723fd"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/profile0.2.stderr.log",
+      "bytes": 162415,
+      "sha256": "cf7ffb591f49b1c44992c98a310672b5d77434571941add00e39f50d6d619c1f"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/profile0.3.stderr.log",
+      "bytes": 700396,
+      "sha256": "de8f942e2b97cb83f38ec4aa329f871f2a8e75c9dad08aa311bcfcf2cc8973d3"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/profile0.4.stderr.log",
+      "bytes": 60874,
+      "sha256": "1f4a2ad181aa0593b5b643f8c9ea17d9585d9c72413e5e067efb3964a6479c71"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/profile0.5.stderr.log",
+      "bytes": 29738,
+      "sha256": "4bce4c56b04ffe92156879634495849a749999669ca9ef34fd13358df09b2050"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/profile0.6.stderr.log",
+      "bytes": 80,
+      "sha256": "45fdf7a697d37ef4cce79beef72bc95e0086dbb73bb3b2ba7767bae4ac1b2fff"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/profile1.1.stderr.log",
+      "bytes": 169853,
+      "sha256": "7af2bd07dfef0030843aecc81f5fc471caf91b0b1d065d2c3f9acac584a93184"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/profile1.2.stderr.log",
+      "bytes": 169928,
+      "sha256": "06bce403efa994c69c4dfcbb48bee9c7fa096603bdd2e24b11652a1cbb5a547c"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/profile1.3.stderr.log",
+      "bytes": 601441,
+      "sha256": "1533f2c9d45f26092f78c67b2b6f656104d7f5e801b105810c966aca7d4ec8bb"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/profile1.4.stderr.log",
+      "bytes": 108113,
+      "sha256": "b1552118706e804a62b044df3c227b503e51717ade204b05ff52fde258e9cc89"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/profile1.5.stderr.log",
+      "bytes": 35324,
+      "sha256": "271a185695417efb374f35de561c50affb09e8b031b18557908a390f3279eafb"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/profile1.6.stderr.log",
+      "bytes": 82426,
+      "sha256": "c7da7c527e4425e51dd322d1be15cae525b7061d96dbce3379d10fe7c14e763c"
+    }
+  ],
+  "final_public_artifacts": [
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/profile0.json",
+      "bytes": 1071,
+      "sha256": "9e8cfffb04cc9da554f9e2ee80117a75ba87eaaacbaa65f65542680ef3fdc7e1",
+      "public_config": {
+        "account": "e58e943a6b8f8f072be0f77c0345eb12b6ad6e3a3474949e53c1472ce7e8a405",
+        "claim": "93d9957034e4a223a466d3a60cfb35dbbd7bd9e9cd7d531a28714cb67f3ea1dd",
+        "contexts": [
+          "80fc508eb4a43e38c7442ac009f3d1737237073ce68b02505417339424d9ee5f",
+          "5077592066e65cc9c0e7f9225239d0c5961b390dff986257319bae45b25dc3c5"
+        ],
+        "device": "11e95903b75c1af525a964b13dd471cf875bcf42fa7b0244b0d8893feabaf040",
+        "enabled": [
+          0,
+          1
+        ],
+        "ipc_file": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-beBVhC\\ipc0.json",
+        "locator_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-beBVhC\\locators0",
+        "logical_quota": [
+          17179869184,
+          17179869184
+        ],
+        "physical_quota": 51539607552,
+        "profile_mode": "ordered-dialog-v2",
+        "route": {
+          "bind": null,
+          "policy": "relay-only",
+          "relay": "http://127.0.0.1:57214/"
+        },
+        "state_dir": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-beBVhC\\state0",
+        "version": 2
+      }
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/profile1.json",
+      "bytes": 1071,
+      "sha256": "657ced18f84ec52cc19ea64f0dad7ec5f10b3c89e131a8fe956a85431737a67c",
+      "public_config": {
+        "account": "1c31daefab20e535f641402041d7cd0f3fb57d25bf2aa2199feca90374961faa",
+        "claim": "6775feabc94adb1cc4f6bf8080eae354655904dc0f062643532e3ce728f701b0",
+        "contexts": [
+          "80fc508eb4a43e38c7442ac009f3d1737237073ce68b02505417339424d9ee5f",
+          "5077592066e65cc9c0e7f9225239d0c5961b390dff986257319bae45b25dc3c5"
+        ],
+        "device": "641d2bc620ebb601fa9a1e75e854051903c47d922961ea80be508058eddc2411",
+        "enabled": [
+          0,
+          1
+        ],
+        "ipc_file": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-beBVhC\\ipc1.json",
+        "locator_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-beBVhC\\locators1",
+        "logical_quota": [
+          17179869184,
+          17179869184
+        ],
+        "physical_quota": 51539607552,
+        "profile_mode": "ordered-dialog-v2",
+        "route": {
+          "bind": null,
+          "policy": "relay-only",
+          "relay": "http://127.0.0.1:57214/"
+        },
+        "state_dir": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\P-beBVhC\\state1",
+        "version": 2
+      }
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/context0.bin",
+      "bytes": 1038,
+      "sha256": "44fd5cda644e69de0148a562d06dac5204a2aef17c655e5a31c37e219b7517b6"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/context1.bin",
+      "bytes": 1038,
+      "sha256": "33b33f7e72e9d84e2237a8e583ce455a8a27afd2138f65fea4eeeb0b711e4600"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/credential0.bin",
+      "bytes": 272,
+      "sha256": "f9d995d1854c75b921349e9602a0a4324ebcfceb806ae13cd22e9dbe9b8b7481"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/credential1.bin",
+      "bytes": 272,
+      "sha256": "ddebedb2ace4d72102e7592424bf7e96fc9e6cd9d79342984a338b0bf1993052"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/locators1/5077592066e65cc9c0e7f9225239d0c5961b390dff986257319bae45b25dc3c5.locator",
+      "bytes": 228,
+      "sha256": "6090d08ff02474dc4ade8cff51a6de3dc6bc3665409ee8a4619b8301c843dc6b",
+      "signed_public_locator_hex": "828a0258205077592066e65cc9c0e7f9225239d0c5961b390dff986257319bae45b25dc3c55820b25cdd124ffca76d969d5578112b5a5e6a6d525e590a506c7e5aae9f3f49c5225820356f024f027baa88a096de1335b34e782755b2ec6bc4f01e6ea653e8f2fe00b158200738e0ae3a7085a6d5a3321ac9b094a8c7f9c38ea4b79c63bd3dc7cc47509b6c818304447f00000119eb3f80061a6addea3d1a6addf84d5840154d05bc6d94dd0ea7bfeb3246c32a99111ad281b28ea223052932e3824eb735110a0011e769ce4273cadd1254c85c6ebf169d9a70ab2bf14e9077e32e01090f"
+    },
+    {
+      "path": ".tmp/a3-s4/process/P-beBVhC/locators1/80fc508eb4a43e38c7442ac009f3d1737237073ce68b02505417339424d9ee5f.locator",
+      "bytes": 228,
+      "sha256": "42ab380b338500ee24f5ec4f873c17848b0977652db785b9c61ea1a4fc9f3804",
+      "signed_public_locator_hex": "828a02582080fc508eb4a43e38c7442ac009f3d1737237073ce68b02505417339424d9ee5f5820b25cdd124ffca76d969d5578112b5a5e6a6d525e590a506c7e5aae9f3f49c5225820356f024f027baa88a096de1335b34e782755b2ec6bc4f01e6ea653e8f2fe00b158200738e0ae3a7085a6d5a3321ac9b094a8c7f9c38ea4b79c63bd3dc7cc47509b6c818304447f00000119eb3f80061a6addea3d1a6addf84d58407d6e106ef25b3801892149e3300acbd709d3f5b91fd1a17c28d680ddd438c095c70c4544c85915dc8d6c51fae2b3e9cf1afd0cdd87a41e265ca0b8ef521ea003"
+    }
+  ],
+  "timing_limitations": "P02/duplex phase elapsed includes that phase work. active_progress seconds measures its own activation wait, not all administrative setup. Queue lines measure each send-range segment. Closed-writer p50/p95 excludes prior crypto trial work. No whole-scenario time is presented as history speed."
+}

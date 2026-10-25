@@ -1,0 +1,78 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+warning: field `id` is never read
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_source_v2.rs:487:9
+    |
+486 | pub(in crate::vault::indexed_dialog) struct RuntimeReadyFields {
+    |                                             ------------------ field in this struct
+487 |     pub id: Id,
+    |         ^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: fields `id` and `endpoint` are never read
+   --> crates\kilogram-state\src\vault\indexed_dialog\history_source_v2.rs:507:9
+    |
+506 | pub(in crate::vault::indexed_dialog) struct RuntimeLocatorFields {
+    |                                             -------------------- fields in this struct
+507 |     pub id: Id,
+    |         ^^
+...
+511 |     pub endpoint: Id,
+    |         ^^^^^^^^
+
+   Compiling kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+warning: `kilogram-state` (lib) generated 2 warnings
+   Compiling kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+warning: `kilogram-state` (lib test) generated 2 warnings (2 duplicates)
+warning: unused import: `Duration`
+ --> apps\kilogram-cli\src\ordered_dialog\runtime2\owner.rs:6:60
+  |
+6 | use std::{sync::{Arc,atomic::{AtomicBool,Ordering}},time::{Duration,Instant}};
+  |                                                            ^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` (part of `#[warn(unused)]`) on by default
+
+warning: unused import: `ordered::OrderedSession`
+ --> apps\kilogram-cli\src\ordered_dialog\runtime2\handshake.rs:4:24
+  |
+4 | use kilogram_ratchet::{ordered::OrderedSession,ordered_v2::Guard2};
+  |                        ^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+  --> apps\kilogram-cli\src\ordered_dialog\runtime2\runtime.rs:45:9
+   |
+45 |     let(mut send,mut receive)=connection.accept_bi().await?;
+   |         ----^^^^
+   |         |
+   |         help: remove this `mut`
+   |
+   = note: `#[warn(unused_mut)]` (part of `#[warn(unused)]`) on by default
+
+error[E0277]: `?` couldn't convert the error to `kilogram_state::indexed_dialog::Error`
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\runtime.rs:274:108
+    |
+274 | ...tion()?.map(|v|db::HistoryCursor::from_bytes(v.bytes()?)).transpose()?;b(owner.repository.history(c(&f[2])?,cursor.as_ref(),usiz...
+    |                                                   -------^ the trait `From<kilogram_protocol::ordered_dialog_v1::Error>` is not implemented for `kilogram_state::indexed_dialog::Error`
+    |                                                   |
+    |                                                   this can't be annotated with `?` because it has type `Result<_, kilogram_protocol::ordered_dialog_v1::Error>`
+    |
+    = note: the question mark operation (`?`) implicitly performs a conversion on the error value using the `From` trait
+help: `kilogram_state::indexed_dialog::Error` implements trait `From<T>`
+   --> crates\kilogram-state\src\vault\indexed_dialog\types.rs:58:13
+    |
+ 58 |     State(#[from] crate::StateError),
+    |             ^^^^ `From<StateError>`
+...
+ 62 |     Io(#[from] std::io::Error),
+    |          ^^^^ `From<std::io::Error>`
+
+For more information about this error, try `rustc --explain E0277`.
+warning: `kilogram-cli` (lib) generated 3 warnings
+error: could not compile `kilogram-cli` (lib) due to 1 previous error; 3 warnings emitted
+warning: build failed, waiting for other jobs to finish...
+warning: `kilogram-cli` (lib test) generated 3 warnings (3 duplicates)
+error: could not compile `kilogram-cli` (lib test) due to 1 previous error; 3 warnings emitted

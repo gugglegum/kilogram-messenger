@@ -1,0 +1,77 @@
+{
+  "names": [
+    "f-owner-eligibility-r1-guards-1",
+    "controller-schedule-lock-controls-1",
+    "f09-controller-repair-1",
+    "f-full-review3-frozen-1"
+  ],
+  "missing": [],
+  "ceiling_seconds": 1200,
+  "runner_seconds": 620.4258161,
+  "complete": true,
+  "pass": true,
+  "observed_passed": 36,
+  "runs": [
+    {
+      "name": "f-owner-eligibility-r1-guards-1",
+      "seconds": 185.5564679,
+      "exit_code": 0,
+      "source": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-owner-eligibility-r1-guards-1-source.json",
+        "bytes": 9836,
+        "sha256": "e24b4447751ee25821afe5c98d81baaf5f8d75b72dfe17864875298fc5aacb20"
+      },
+      "result": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-owner-eligibility-r1-guards-1-result.json",
+        "bytes": 2552,
+        "sha256": "2b18c8fac0d22ed3f25d6825746f48dfa7673efa5a0a0001b5ce4dfe112dd9cd"
+      }
+    },
+    {
+      "name": "controller-schedule-lock-controls-1",
+      "seconds": 22.3189717,
+      "exit_code": 0,
+      "source": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/controller-schedule-lock-controls-1-source.json",
+        "bytes": 10026,
+        "sha256": "9b785ac1ca3be8e7478f9f354425f748b95a81889dd0aa4a0f97c6fb5b05d665"
+      },
+      "result": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/controller-schedule-lock-controls-1-result.json",
+        "bytes": 1634,
+        "sha256": "97291d25d036563bc56af41ef708c09e636b6959505d524e4ae7030a0f622d81"
+      }
+    },
+    {
+      "name": "f09-controller-repair-1",
+      "seconds": 35.3227291,
+      "exit_code": 0,
+      "source": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f09-controller-repair-1-source.json",
+        "bytes": 10026,
+        "sha256": "9b785ac1ca3be8e7478f9f354425f748b95a81889dd0aa4a0f97c6fb5b05d665"
+      },
+      "result": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f09-controller-repair-1-result.json",
+        "bytes": 1654,
+        "sha256": "2c34546f09395ea2f0d08409ce8734f001247df2b48a89e1b0239cd44c9609da"
+      }
+    },
+    {
+      "name": "f-full-review3-frozen-1",
+      "seconds": 377.2276474,
+      "exit_code": 0,
+      "source": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-full-review3-frozen-1-source.json",
+        "bytes": 10026,
+        "sha256": "9b785ac1ca3be8e7478f9f354425f748b95a81889dd0aa4a0f97c6fb5b05d665"
+      },
+      "result": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/f-full-review3-frozen-1-result.json",
+        "bytes": 2408,
+        "sha256": "e2bda3cf7b15edd64ed0be9b074efba7ece96738d35db93d60273d51ffd9b872"
+      }
+    }
+  ],
+  "source_scope": "Root conservative accounting: guard185.5564679 + lock-controls22.3189717 + actualF09 repair35.3227291 + complete post-review3 F. All use frozen d5d8c8 product; controller-only changes are explicit. Earlier failed F365.2830575 remains development FAIL, not PASS."
+}

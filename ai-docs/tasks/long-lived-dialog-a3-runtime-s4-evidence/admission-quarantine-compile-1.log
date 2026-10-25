@@ -1,0 +1,58 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+error[E0428]: the name `ExistingStateRequiresMigration` is defined multiple times
+  --> crates\kilogram-state\src\vault\indexed_dialog\types.rs:94:5
+   |
+84 |     ExistingStateRequiresMigration,
+   |     ------------------------------ previous definition of the type `ExistingStateRequiresMigration` here
+...
+94 |     ExistingStateRequiresMigration,
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ `ExistingStateRequiresMigration` redefined here
+   |
+   = note: `ExistingStateRequiresMigration` must be defined only once in the type namespace of this enum
+
+error[E0004]: non-exhaustive patterns: `&types::Error::ExistingStateRequiresMigration` not covered
+  --> crates\kilogram-state\src\vault\indexed_dialog\types.rs:55:10
+   |
+55 | #[derive(Debug, thiserror::Error)]
+   |          ^^^^^ pattern `&types::Error::ExistingStateRequiresMigration` not covered
+   |
+note: `types::Error` defined here
+  --> crates\kilogram-state\src\vault\indexed_dialog\types.rs:56:10
+   |
+56 | pub enum Error {
+   |          ^^^^^
+...
+94 |     ExistingStateRequiresMigration,
+   |     ------------------------------ not covered
+   = note: the matched value is of type `&types::Error`
+
+error[E0004]: non-exhaustive patterns: `&types::Error::ExistingStateRequiresMigration` not covered
+  --> crates\kilogram-state\src\vault\indexed_dialog\types.rs:55:17
+   |
+55 | #[derive(Debug, thiserror::Error)]
+   |                 ^^^^^^^^^^^^^^^^ pattern `&types::Error::ExistingStateRequiresMigration` not covered
+   |
+note: `types::Error` defined here
+  --> crates\kilogram-state\src\vault\indexed_dialog\types.rs:56:10
+   |
+56 | pub enum Error {
+   |          ^^^^^
+...
+94 |     ExistingStateRequiresMigration,
+   |     ------------------------------ not covered
+   = note: the matched value is of type `&types::Error`
+   = note: this error originates in the derive macro `thiserror::Error` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: ensure that all possible cases are being handled by adding a match arm with a wildcard pattern or an explicit pattern as shown
+   |
+56 ~ pub enum Error,
+57 ~ &types::Error::ExistingStateRequiresMigration => todo!() {
+   |
+
+Some errors have detailed explanations: E0004, E0428.
+For more information about an error, try `rustc --explain E0004`.
+error: could not compile `kilogram-state` (lib) due to 3 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `kilogram-state` (lib test) due to 3 previous errors

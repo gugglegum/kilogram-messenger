@@ -1,0 +1,8 @@
+{
+  "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+  "bytes": 66830848,
+  "sha256": "11da9b8d78139f5d30925e2ed13a5d7bf343e3f7de428fe4c79fdd8de877c08e",
+  "source": "resources-compile-1-source.json",
+  "controller": "bootstrap-controller-compile-1-source.json",
+  "note": "Reused exact fixed CLI. Cargo single-package build uses a different linked feature closure from the CLI plus transport test build; no overwrite while children are active."
+}

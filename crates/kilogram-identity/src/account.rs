@@ -918,6 +918,13 @@ impl AccountRootState {
         self.identity.sign(&message).to_vec()
     }
 
+    /// Offline bilateral OD2 permission. This administrative signer is never loaded by runtime2.
+    pub fn sign_ordered_context_consent2(&self, payload: &[u8]) -> Vec<u8> {
+        let mut message = b"kg:od2:consent\0".to_vec();
+        message.extend_from_slice(payload);
+        self.identity.sign(&message).to_vec()
+    }
+
     /// Signs one canonical publication-conflict resolution payload under a
     /// protocol-specific domain. This does not expose a generic Root signer.
     pub fn sign_publication_conflict_resolution(&self, payload: &[u8]) -> Vec<u8> {

@@ -31,7 +31,7 @@ struct Control {
     stats: BackendStats,
     write_epoch: u64,
     grown_since_sync: bool,
-    #[cfg(test)]
+    #[cfg(any(test, debug_assertions))]
     fault: Option<(&'static str, u64)>,
 }
 #[derive(Clone, Debug, Default)]
@@ -54,7 +54,7 @@ impl BackendControl {
         c.stats.last_failure = None;
         Ok(())
     }
-    #[cfg(test)]
+    #[cfg(any(test, debug_assertions))]
     pub fn fail(&self, at: &'static str, n: u64) -> Result<()> {
         self.0
             .lock()
@@ -63,7 +63,7 @@ impl BackendControl {
         Ok(())
     }
     fn fault(&self, point: &str) -> io::Result<()> {
-        #[cfg(test)]
+        #[cfg(any(test, debug_assertions))]
         {
             let mut c = self.lock()?;
             if let Some((p, n)) = c.fault.as_mut()

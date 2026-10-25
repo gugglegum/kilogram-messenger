@@ -187,14 +187,14 @@ fn yes(ok: bool, why: &'static str) -> Result<()> {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub(super) struct Tail {
+pub(in crate::vault::indexed_dialog) struct Tail {
     pub g: u64,
     pub key: Id,
     pub index: u64,
     pub last: Id,
 }
 #[derive(Clone, Debug)]
-pub(super) struct EventFields {
+pub(in crate::vault::indexed_dialog) struct EventFields {
     #[cfg(test)]
     pub native_kind: u8,
     pub scope: HistoryScope,
@@ -216,7 +216,7 @@ pub(super) struct EventFields {
     pub core_offset: u16,
     pub core_len: u16,
 }
-pub(super) fn read_event2(raw: &[u8]) -> Result<EventFields> {
+pub(in crate::vault::indexed_dialog) fn read_event2(raw: &[u8]) -> Result<EventFields> {
     let v = read(raw, 16 * 1024)?;
     let f = v.fields(5)?;
     yes(f[0].uint()? == 2, "Event2 version")?;
@@ -307,7 +307,7 @@ pub(super) fn read_event2(raw: &[u8]) -> Result<EventFields> {
     })
 }
 #[derive(Clone, Debug)]
-pub(super) struct ReceiptFields {
+pub(in crate::vault::indexed_dialog) struct ReceiptFields {
     pub scope: HistoryScope,
     pub q: Id,
     pub format: u8,
@@ -317,7 +317,7 @@ pub(super) struct ReceiptFields {
     pub cert: Id,
     pub auth: Id,
 }
-pub(super) fn read_receipt2(raw: &[u8]) -> Result<ReceiptFields> {
+pub(in crate::vault::indexed_dialog) fn read_receipt2(raw: &[u8]) -> Result<ReceiptFields> {
     let v = read(raw, 1024)?;
     let f = v.fields(2)?;
     let t = f[0].fields(12)?;
@@ -346,11 +346,11 @@ pub(super) fn read_receipt2(raw: &[u8]) -> Result<ReceiptFields> {
     })
 }
 #[derive(Clone, Debug)]
-pub(super) struct AuthFields {
+pub(in crate::vault::indexed_dialog) struct AuthFields {
     pub id: Id,
     pub cert: Id,
 }
-pub(super) fn read_auth_bundle(raw: &[u8]) -> Result<AuthFields> {
+pub(in crate::vault::indexed_dialog) fn read_auth_bundle(raw: &[u8]) -> Result<AuthFields> {
     let v = read(raw, 16 * 1024)?;
     let f = v.fields(3)?;
     yes(f[0].uint()? == 1, "bundle version")?;
@@ -360,9 +360,17 @@ pub(super) fn read_auth_bundle(raw: &[u8]) -> Result<AuthFields> {
         cert: hash_parts(b"", &[f[1].bytes()?]),
     })
 }
+pub(in crate::vault::indexed_dialog) fn runtime_credential_parts(
+    raw: &[u8],
+) -> Result<(Id, &[u8])> {
+    let v = read(raw, 16 * 1024)?;
+    let f = v.fields(3)?;
+    yes(f[0].uint()? == 1, "credential version")?;
+    Ok((hash_parts(b"", &[f[1].bytes()?]), f[2].bytes()?))
+}
 
 #[derive(Clone, Debug)]
-pub(super) struct FreshFields {
+pub(in crate::vault::indexed_dialog) struct FreshFields {
     pub c: Id,
     pub certs: [Id; 2],
     pub q: Id,
@@ -373,7 +381,7 @@ pub(super) struct FreshFields {
     #[cfg(test)]
     pub transcript: Id,
 }
-pub(super) fn read_fresh_binding2(raw: &[u8]) -> Result<FreshFields> {
+pub(in crate::vault::indexed_dialog) fn read_fresh_binding2(raw: &[u8]) -> Result<FreshFields> {
     let v = read(raw, 16 * 1024)?;
     let f = v.fields(6)?;
     yes(f[0].uint()? == 2 && f[1].uint()? == 0, "fresh proof tag")?;
@@ -459,4 +467,119 @@ fn push_bytes(out: &mut Vec<u8>, raw: &[u8]) {
         }
     }
     out.extend(raw);
+}
+
+pub(in crate::vault::indexed_dialog) struct RuntimeOfferFields {
+    pub id: Id,
+    pub c: Id,
+    pub certs: [Id; 2],
+}
+pub(in crate::vault::indexed_dialog) fn read_runtime_offer(
+    raw: &[u8],
+) -> Result<RuntimeOfferFields> {
+    let v = read(raw, 1024)?;
+    let f = v.fields(4)?;
+    yes(f[0].uint()? == 2 && f[1].uint()? == 1, "runtime Offer tag")?;
+    f[3].fixed::<64>()?;
+    let body = f[2].fields(8)?;
+    for n in [0, 1, 2, 3, 4, 5] {
+        body[n].fixed::<32>()?;
+    }
+    yes(
+        body[6].uint()? == 1 && body[7].uint()? == 2,
+        "runtime Offer suite",
+    )?;
+    Ok(RuntimeOfferFields {
+        id: hash_parts(b"kg:od2:control-id\0", &[raw]),
+        c: body[0].fixed()?,
+        certs: [body[1].fixed()?, body[2].fixed()?],
+    })
+}
+pub(in crate::vault::indexed_dialog) struct RuntimeReadyFields {
+    pub d: Id,
+    pub e: Id,
+    pub sid: String,
+    pub genesis: [Id; 2],
+    pub role: u8,
+    pub q: Id,
+}
+pub(in crate::vault::indexed_dialog) fn read_runtime_ready(
+    raw: &[u8],
+) -> Result<RuntimeReadyFields> {
+    let v = read(raw, 1024)?;
+    let f = v.fields(4)?;
+    yes(f[0].uint()? == 2 && f[1].uint()? == 3, "runtime Ready tag")?;
+    f[3].fixed::<64>()?;
+    let b = f[2].fields(9)?;
+    yes(
+        b[5].uint()? <= 1 && b[6].uint()? == 1 && b[7].uint()? == 2,
+        "runtime Ready suite/role",
+    )?;
+    Ok(RuntimeReadyFields {
+        d: b[0].fixed()?,
+        e: b[1].fixed()?,
+        sid: b[2].sid()?,
+        genesis: [b[3].fixed()?, b[4].fixed()?],
+        role: b[5].uint()? as u8,
+        q: b[8].fixed()?,
+    })
+}
+pub(in crate::vault::indexed_dialog) struct RuntimeLocatorFields {
+    pub c: Id,
+    pub cert: Id,
+    pub peer_cert: Id,
+    pub revision: u64,
+    pub not_before: u64,
+    pub expires: u64,
+}
+pub(in crate::vault::indexed_dialog) fn read_runtime_locator(
+    raw: &[u8],
+) -> Result<RuntimeLocatorFields> {
+    let v = read(raw, 8192)?;
+    let f = v.fields(2)?;
+    f[1].fixed::<64>()?;
+    let b = f[0].fields(10)?;
+    yes(b[0].uint()? == 2, "runtime locator version")?;
+    let addresses = b[5].list()?;
+    yes(addresses.len() <= 16, "runtime locator address count")?;
+    let mut prior: Option<&[u8]> = None;
+    for address in addresses {
+        let a = address.fields(3)?;
+        let length = match a[0].uint()? {
+            4 => 4,
+            6 => 16,
+            _ => return Err(Error::Integrity("runtime IP family")),
+        };
+        yes(
+            a[1].bytes()?.len() == length && (1..=65535).contains(&a[2].uint()?),
+            "runtime IP tuple",
+        )?;
+        let encoded = &raw[address.start..address.end];
+        yes(prior.is_none_or(|old| old < encoded), "runtime IP order")?;
+        prior = Some(encoded);
+    }
+    let relay = b[6].optional()?;
+    if let Some(relay) = relay {
+        let url = relay.bytes()?;
+        yes(
+            !url.is_empty() && url.len() <= 2048 && std::str::from_utf8(url).is_ok(),
+            "runtime relay bytes",
+        )?;
+    }
+    let revision = b[7].uint()?;
+    let not_before = b[8].uint()?;
+    let expires = b[9].uint()?;
+    yes(
+        (!addresses.is_empty() || relay.is_some()) && revision > 0 && not_before < expires,
+        "runtime locator routes/interval",
+    )?;
+    b[4].fixed::<32>()?;
+    Ok(RuntimeLocatorFields {
+        c: b[1].fixed()?,
+        cert: b[2].fixed()?,
+        peer_cert: b[3].fixed()?,
+        revision,
+        not_before,
+        expires,
+    })
 }

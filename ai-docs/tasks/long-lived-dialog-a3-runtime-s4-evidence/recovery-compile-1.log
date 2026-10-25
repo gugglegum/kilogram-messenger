@@ -1,0 +1,20 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+   Compiling kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+   Compiling kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error[E0502]: cannot borrow `self.repository` as immutable because it is also borrowed as mutable
+   --> apps\kilogram-cli\src\ordered_dialog\runtime2\owner.rs:279:32
+    |
+279 | ...   self.repository.commit(self.repository.generation(),shared_admin::random()?,db::RuntimeOperation::PinAuthority{account,revisi...
+    |       --------------- ------ ^^^^^^^^^^^^^^^ immutable borrow occurs here
+    |       |               |
+    |       |               mutable borrow later used by call
+    |       mutable borrow occurs here
+
+For more information about this error, try `rustc --explain E0502`.
+error: could not compile `kilogram-cli` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `kilogram-cli` (lib test) due to 1 previous error

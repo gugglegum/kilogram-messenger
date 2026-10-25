@@ -120,6 +120,18 @@ pub(super) struct Ledger {
     grant: Option<Grant>,
 }
 impl Ledger {
+    pub(super) fn runtime_state(&self) -> RuntimeRepairState {
+        RuntimeRepairState {
+            repair_free: self.repair_free,
+            outstanding: self.outstanding,
+            pending: self.pending,
+            head: self.head,
+            grant: self
+                .grant
+                .as_ref()
+                .map(|g| (g.id, g.start, g.end, g.available)),
+        }
+    }
     pub(super) fn is_pristine(&self) -> bool {
         self.repair_free == REPAIR_POOL
             && self.outstanding == 0

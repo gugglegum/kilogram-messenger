@@ -1,0 +1,9 @@
+{
+  "reason": "Root clarified final-set ceiling: replaced prototype runs do not reduce2400s; stop incorrectly shortened1410s candidate, restart full normative P with same production source",
+  "pid": 50364,
+  "executable": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+  "root_thread": "01a164ec-589c-7b41-bc34-3ba158d1f22b",
+  "root_turn": "01a17243-ebf1-7ee0-9f6e-d9b81b312211",
+  "root_message": "msg_01c09940b6e18711016addc46e05388191afb83158f4d87105",
+  "utc": "2026-10-25T08:58:57.7483098Z"
+}

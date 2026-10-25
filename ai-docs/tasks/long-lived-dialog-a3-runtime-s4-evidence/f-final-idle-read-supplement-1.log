@@ -1,0 +1,405 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 22.00s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+skipping_unchanged_test=bootstrap::
+skipping_unchanged_test=lifecycle::
+skipping_unchanged_test=versions::
+skipping_unchanged_test=faults::a3_s4_f09
+skipping_unchanged_test=faults::a3_s4_f_backend
+skipping_unchanged_test=faults::a3_s4_f_exact
+skipping_unchanged_test=faults::a3_s4_f_parent
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 5 tests
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=11839
+od2_commit_begin operation=Locator context=1 generation=4 native_calls=0
+od2_commit_end operation=Locator context=1 generation=5 ok=true micros=14535
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=12773
+od2_commit_begin operation=Locator context=1 generation=4 native_calls=0
+od2_commit_end operation=Locator context=1 generation=5 ok=true micros=11608
+od2_commit_begin operation=Locator context=0 generation=5 native_calls=0
+od2_commit_end operation=Locator context=0 generation=6 ok=true micros=12191
+od2_commit_begin operation=Locator context=1 generation=6 native_calls=0
+od2_commit_end operation=Locator context=1 generation=7 ok=true micros=11618
+od2_commit_begin operation=Locator context=0 generation=5 native_calls=0
+od2_commit_end operation=Locator context=0 generation=6 ok=true micros=12156
+od2_commit_begin operation=Locator context=1 generation=6 native_calls=0
+od2_commit_end operation=Locator context=1 generation=7 ok=true micros=12401
+od2_admitted context=98540df53d2945c0949abe8ecd004ab43143c46a086353754d397015595307b5 binding=82671b12ac544d619138664ec7bd3a82114131427f2d6c9e8410c5abb804b88b generation=1
+od2_admitted context=98540df53d2945c0949abe8ecd004ab43143c46a086353754d397015595307b5 binding=82671b12ac544d619138664ec7bd3a82114131427f2d6c9e8410c5abb804b88b generation=1
+od2_admitted context=98540df53d2945c0949abe8ecd004ab43143c46a086353754d397015595307b5 binding=1e582c90f06d0e690e7a36ba4b54b3aeb44fd742fafae636e1eac9abbba2c867 generation=2
+od2_admitted context=98540df53d2945c0949abe8ecd004ab43143c46a086353754d397015595307b5 binding=1e582c90f06d0e690e7a36ba4b54b3aeb44fd742fafae636e1eac9abbba2c867 generation=2
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=11543
+od2_commit_begin operation=Locator context=0 generation=4 native_calls=0
+od2_commit_end operation=Locator context=0 generation=5 ok=true micros=11690
+od2_commit_begin operation=Locator context=1 generation=5 native_calls=0
+od2_commit_end operation=Locator context=1 generation=6 ok=true micros=11119
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=10982
+od2_commit_begin operation=Locator context=0 generation=4 native_calls=0
+od2_commit_end operation=Locator context=0 generation=5 ok=true micros=10779
+od2_commit_begin operation=Locator context=1 generation=5 native_calls=0
+od2_commit_end operation=Locator context=1 generation=6 ok=true micros=11013
+od2_commit_begin operation=Locator context=0 generation=6 native_calls=0
+od2_commit_end operation=Locator context=0 generation=7 ok=true micros=11146
+od2_commit_begin operation=Locator context=1 generation=7 native_calls=0
+od2_commit_end operation=Locator context=1 generation=8 ok=true micros=11417
+od2_commit_begin operation=Locator context=0 generation=6 native_calls=0
+od2_commit_end operation=Locator context=0 generation=7 ok=true micros=11393
+od2_commit_begin operation=Locator context=1 generation=7 native_calls=0
+od2_commit_end operation=Locator context=1 generation=8 ok=true micros=11155
+od2_admitted context=81af52e445385a1fa8a7877fa894b76d4aef674734f9bc1650e15176b7875bfe binding=41c7c4eb3a06f3bc3e813341f10fd08c28f3f3c4b7feee85e2d558324ad43ef7 generation=1
+od2_admitted context=81af52e445385a1fa8a7877fa894b76d4aef674734f9bc1650e15176b7875bfe binding=41c7c4eb3a06f3bc3e813341f10fd08c28f3f3c4b7feee85e2d558324ad43ef7 generation=1
+test ordered_dialog::runtime2::runtime::tests::a3_s4_f01_actual_expired_lease_and_connection_generation ... S4_F01_actual_cases=2 old_connection_generation=true actual_short_signed_locator_lease_expired=true current_Root2_still_valid=true native_calls=0
+ok
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=11809
+od2_commit_begin operation=Locator context=1 generation=4 native_calls=0
+od2_commit_end operation=Locator context=1 generation=5 ok=true micros=11353
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=12136
+od2_commit_begin operation=Locator context=1 generation=4 native_calls=0
+od2_commit_end operation=Locator context=1 generation=5 ok=true micros=11728
+od2_commit_begin operation=Locator context=0 generation=5 native_calls=0
+od2_commit_end operation=Locator context=0 generation=6 ok=true micros=11106
+od2_commit_begin operation=Locator context=1 generation=6 native_calls=0
+od2_commit_end operation=Locator context=1 generation=7 ok=true micros=11025
+od2_commit_begin operation=Locator context=0 generation=5 native_calls=0
+od2_commit_end operation=Locator context=0 generation=6 ok=true micros=11384
+od2_commit_begin operation=Locator context=1 generation=6 native_calls=0
+od2_commit_end operation=Locator context=1 generation=7 ok=true micros=11824
+od2_admitted context=f9121b5c96ec20b5b0d596f54f5366d7b6952ef4089ffd88bf706373d55aa4f5 binding=11edc341be7a47db3ced25555c44d293aea9772cddd6c79145bc0eeb4d7b7ed6 generation=1
+od2_admitted context=f9121b5c96ec20b5b0d596f54f5366d7b6952ef4089ffd88bf706373d55aa4f5 binding=11edc341be7a47db3ced25555c44d293aea9772cddd6c79145bc0eeb4d7b7ed6 generation=1
+od2_admitted context=ae68c2faa66323d320c696c6cb2fc5fda320ef180bd678679aae38cbf4352c7a binding=14715d32bedcc49a2bbb9f6c0813560da93717f08234e87639659bdf74ce6162 generation=2
+od2_admitted context=ae68c2faa66323d320c696c6cb2fc5fda320ef180bd678679aae38cbf4352c7a binding=14715d32bedcc49a2bbb9f6c0813560da93717f08234e87639659bdf74ce6162 generation=2
+od2_account_constructor context=0 role=0
+od2_commit_begin operation=PrepareOffer context=0 generation=7 native_calls=0
+od2_commit_end operation=PrepareOffer context=0 generation=8 ok=true micros=13966
+od2_account_constructor context=0 role=1 reserved_one=true
+od2_commit_begin operation=ReserveGrant context=0 generation=7 native_calls=0
+od2_commit_end operation=ReserveGrant context=0 generation=8 ok=true micros=15725
+od2_session_constructor context=0 role=0
+od2_native_attempt pid=59612 attempt=1 context=0 role=0 n=0 encrypt=1
+od2_packet_header context=0 encrypt=1 n=0 g=0 index=0 id=0d02868f1726723b65c14bb4b47b30db82ccb199799c070d609944712c70f5ad
+od2_commit_begin operation=Genesis context=0 generation=8 native_calls=1
+od2_commit_end operation=Genesis context=0 generation=9 ok=true micros=22787
+od2_native_commit pid=59612 context=0 last_attempt=1 calls=1 encrypt=1 decrypt=0
+od2_native_attempt pid=59612 attempt=1 context=0 role=0 n=0 decrypt=1
+od2_session_constructor context=0 role=1
+od2_native_attempt pid=59612 attempt=2 context=0 role=1 n=0 encrypt=1
+od2_packet_header context=0 encrypt=1 n=0 g=0 index=0 id=1e0fb53ece947484721cbd4d2bc687ba5bd007233701fdb9323802138416fa6e
+od2_commit_begin operation=Genesis context=0 generation=8 native_calls=2
+od2_commit_end operation=Genesis context=0 generation=9 ok=true micros=32588
+od2_native_commit pid=59612 context=0 last_attempt=2 calls=2 encrypt=1 decrypt=1
+od2_native_attempt pid=59612 attempt=2 context=0 role=1 n=0 decrypt=1
+od2_commit_begin operation=Genesis context=0 generation=9 native_calls=1
+od2_commit_end operation=Genesis context=0 generation=10 ok=true micros=29770
+od2_native_commit pid=59612 context=0 last_attempt=2 calls=1 encrypt=0 decrypt=1
+od2_commit_begin operation=Ready context=0 generation=10 native_calls=0
+od2_commit_end operation=Ready context=0 generation=11 ok=true micros=23836
+od2_commit_begin operation=Ready context=0 generation=9 native_calls=0
+od2_commit_end operation=Ready context=0 generation=10 ok=true micros=23865
+od2_commit_begin operation=Ready context=0 generation=11 native_calls=0
+od2_commit_end operation=Ready context=0 generation=12 ok=true micros=23400
+od2_commit_begin operation=Ready context=0 generation=10 native_calls=0
+od2_commit_end operation=Ready context=0 generation=11 ok=true micros=22948
+od2_account_constructor context=1 role=0
+od2_commit_begin operation=PrepareOffer context=1 generation=12 native_calls=0
+od2_commit_end operation=PrepareOffer context=1 generation=13 ok=true micros=14312
+od2_account_constructor context=1 role=1 reserved_one=true
+od2_commit_begin operation=ReserveGrant context=1 generation=11 native_calls=0
+od2_commit_end operation=ReserveGrant context=1 generation=12 ok=true micros=15688
+od2_session_constructor context=1 role=0
+od2_native_attempt pid=59612 attempt=3 context=1 role=0 n=0 encrypt=1
+od2_packet_header context=1 encrypt=1 n=0 g=0 index=0 id=692c977ea1f730fa1e9cb97904ef8ad69c0b3e513b82b02a54b200e061f2d0b6
+od2_commit_begin operation=Genesis context=1 generation=13 native_calls=1
+od2_commit_end operation=Genesis context=1 generation=14 ok=true micros=25489
+od2_native_commit pid=59612 context=1 last_attempt=3 calls=1 encrypt=1 decrypt=0
+od2_native_attempt pid=59612 attempt=3 context=1 role=0 n=0 decrypt=1
+od2_session_constructor context=1 role=1
+od2_native_attempt pid=59612 attempt=4 context=1 role=1 n=0 encrypt=1
+od2_packet_header context=1 encrypt=1 n=0 g=0 index=0 id=1ea90b0fff23d92dde1311cd737711a8c2f412c5f1692db2913bd45e4ca5a90f
+od2_commit_begin operation=Genesis context=1 generation=12 native_calls=2
+od2_commit_end operation=Genesis context=1 generation=13 ok=true micros=35899
+od2_native_commit pid=59612 context=1 last_attempt=4 calls=2 encrypt=1 decrypt=1
+od2_native_attempt pid=59612 attempt=4 context=1 role=1 n=0 decrypt=1
+od2_commit_begin operation=Genesis context=1 generation=14 native_calls=1
+od2_commit_end operation=Genesis context=1 generation=15 ok=true micros=28847
+od2_native_commit pid=59612 context=1 last_attempt=4 calls=1 encrypt=0 decrypt=1
+od2_commit_begin operation=Ready context=1 generation=15 native_calls=0
+od2_commit_end operation=Ready context=1 generation=16 ok=true micros=21501
+od2_commit_begin operation=Ready context=1 generation=13 native_calls=0
+od2_commit_end operation=Ready context=1 generation=14 ok=true micros=23610
+od2_commit_begin operation=Ready context=1 generation=16 native_calls=0
+od2_commit_end operation=Ready context=1 generation=17 ok=true micros=23859
+od2_commit_begin operation=Ready context=1 generation=14 native_calls=0
+od2_commit_end operation=Ready context=1 generation=15 ok=true micros=22434
+od2_commit_begin operation=Queue context=0 generation=17 native_calls=0
+od2_commit_end operation=Queue context=0 generation=18 ok=true micros=13003
+od2_native_attempt pid=59612 attempt=5 context=0 role=0 n=1 encrypt=1
+od2_packet_header context=0 encrypt=1 n=1 g=1 index=0 id=c8654b6adbf58dad8045ed933ec2483dd0e7a931dd35ae55fc5c78db96045e48
+od2_commit_begin operation=Materialize context=0 generation=18 native_calls=1
+od2_commit_end operation=Materialize context=0 generation=19 ok=true micros=33469
+od2_native_commit pid=59612 context=0 last_attempt=5 calls=1 encrypt=1 decrypt=0
+od2_commit_begin operation=AcceptPending context=0 generation=15 native_calls=0
+od2_commit_end operation=AcceptPending context=0 generation=16 ok=true micros=15125
+od2_native_attempt pid=59612 attempt=5 context=0 role=0 n=1 decrypt=1
+od2_commit_begin operation=Drain context=0 generation=16 native_calls=1
+od2_commit_end operation=Drain context=0 generation=17 ok=true micros=35891
+od2_native_commit pid=59612 context=0 last_attempt=5 calls=1 encrypt=0 decrypt=1
+od2_readable_commit context=0 role=0 n=1 g=1 index=0 id=c8654b6adbf58dad8045ed933ec2483dd0e7a931dd35ae55fc5c78db96045e48 own_g=0 own_index=0 own_first=1e0fb53ece947484721cbd4d2bc687ba5bd007233701fdb9323802138416fa6e rotate_due=true
+od2_commit_begin operation=Acknowledge context=0 generation=19 native_calls=0
+od2_commit_end operation=Acknowledge context=0 generation=20 ok=true micros=21197
+od2_commit_begin operation=Block context=0 generation=17 native_calls=0
+od2_commit_end operation=Block context=0 generation=18 ok=true micros=12725
+od2_commit_begin operation=Queue context=1 generation=20 native_calls=0
+od2_commit_end operation=Queue context=1 generation=21 ok=true micros=13986
+od2_native_attempt pid=59612 attempt=6 context=1 role=0 n=1 encrypt=1
+od2_packet_header context=1 encrypt=1 n=1 g=1 index=0 id=22fef0cbc5b9520d2920146953b70e239658b0dd6e429e685eb82a6ad6523440
+od2_commit_begin operation=Materialize context=1 generation=21 native_calls=1
+od2_commit_end operation=Materialize context=1 generation=22 ok=true micros=36567
+od2_native_commit pid=59612 context=1 last_attempt=6 calls=1 encrypt=1 decrypt=0
+od2_commit_begin operation=AcceptPending context=1 generation=18 native_calls=0
+od2_commit_end operation=AcceptPending context=1 generation=19 ok=true micros=15227
+od2_native_attempt pid=59612 attempt=6 context=1 role=0 n=1 decrypt=1
+od2_commit_begin operation=Drain context=1 generation=19 native_calls=1
+od2_commit_end operation=Drain context=1 generation=20 ok=true micros=35748
+od2_native_commit pid=59612 context=1 last_attempt=6 calls=1 encrypt=0 decrypt=1
+od2_readable_commit context=1 role=0 n=1 g=1 index=0 id=22fef0cbc5b9520d2920146953b70e239658b0dd6e429e685eb82a6ad6523440 own_g=0 own_index=0 own_first=1ea90b0fff23d92dde1311cd737711a8c2f412c5f1692db2913bd45e4ca5a90f rotate_due=true
+od2_commit_begin operation=Queue context=1 generation=22 native_calls=0
+od2_commit_end operation=Queue context=1 generation=23 ok=true micros=15111
+od2_native_attempt pid=59612 attempt=7 context=1 role=0 n=2 encrypt=1
+od2_packet_header context=1 encrypt=1 n=2 g=1 index=1 id=af931a0235cc2d9e82b809f4f7086c6e5de6450c1132aee415df2b813b171476
+od2_commit_begin operation=Materialize context=1 generation=23 native_calls=1
+od2_commit_end operation=Materialize context=1 generation=24 ok=true micros=224074
+od2_native_commit pid=59612 context=1 last_attempt=7 calls=1 encrypt=1 decrypt=0
+od2_commit_begin operation=AcceptPending context=1 generation=20 native_calls=0
+od2_commit_end operation=AcceptPending context=1 generation=21 ok=true micros=17638
+od2_native_attempt pid=59612 attempt=7 context=1 role=0 n=2 decrypt=1
+od2_commit_begin operation=Block context=1 generation=21 native_calls=0
+od2_commit_end operation=Block context=1 generation=22 ok=true micros=11731
+od2_context_wait context=1 invalid OD1 native input: ciphertext authentication
+test ordered_dialog::runtime2::runtime::tests::a3_s4_f02_f09_wrong_q_signed_fork_and_invalid_after_prefix ... S4_F02_F09_PASS wrong_Q_boundaries=4 signed_fork_pre_native=true C2_after_C1_block=true invalid_after_durable_prefix=true invalid_receipt_not_created=true
+ok
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=12692
+od2_commit_begin operation=Locator context=1 generation=4 native_calls=0
+od2_commit_end operation=Locator context=1 generation=5 ok=true micros=12943
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=11275
+od2_commit_begin operation=Locator context=1 generation=4 native_calls=0
+od2_commit_end operation=Locator context=1 generation=5 ok=true micros=13941
+od2_commit_begin operation=Locator context=0 generation=5 native_calls=0
+od2_commit_end operation=Locator context=0 generation=6 ok=true micros=11527
+od2_commit_begin operation=Locator context=1 generation=6 native_calls=0
+od2_commit_end operation=Locator context=1 generation=7 ok=true micros=11012
+od2_commit_begin operation=Locator context=0 generation=5 native_calls=0
+od2_commit_end operation=Locator context=0 generation=6 ok=true micros=11435
+od2_commit_begin operation=Locator context=1 generation=6 native_calls=0
+od2_commit_end operation=Locator context=1 generation=7 ok=true micros=11922
+od2_admitted context=d1f711e47756e85843e2397d7501317b152164d7378d9d9eceb04fcee730389f binding=fa1914df5bc2fbb4f2e3af114e6c25ed32a9cc42f4b139133e899e08c6fc2693 generation=1
+od2_admitted context=d1f711e47756e85843e2397d7501317b152164d7378d9d9eceb04fcee730389f binding=fa1914df5bc2fbb4f2e3af114e6c25ed32a9cc42f4b139133e899e08c6fc2693 generation=1
+od2_account_constructor context=0 role=0
+od2_commit_begin operation=PrepareOffer context=0 generation=7 native_calls=0
+od2_commit_end operation=PrepareOffer context=0 generation=8 ok=true micros=19703
+od2_commit_begin operation=RenewConsent context=0 generation=8 native_calls=0
+od2_commit_end operation=RenewConsent context=0 generation=9 ok=true micros=14651
+od2_commit_begin operation=RenewConsent context=0 generation=7 native_calls=0
+od2_commit_end operation=RenewConsent context=0 generation=8 ok=true micros=12712
+od2_admitted context=d1f711e47756e85843e2397d7501317b152164d7378d9d9eceb04fcee730389f binding=eea88a4a96e495f9100952b2f9b7534a2488be2395dfd7c0ab914927ddb28b6a generation=2
+od2_admitted context=d1f711e47756e85843e2397d7501317b152164d7378d9d9eceb04fcee730389f binding=eea88a4a96e495f9100952b2f9b7534a2488be2395dfd7c0ab914927ddb28b6a generation=2
+od2_commit_begin operation=HistoricalConsent context=0 generation=8 native_calls=0
+od2_commit_end operation=HistoricalConsent context=0 generation=9 ok=true micros=12666
+od2_account_constructor context=0 role=1 reserved_one=true
+od2_commit_begin operation=ReserveGrant context=0 generation=9 native_calls=0
+od2_commit_end operation=ReserveGrant context=0 generation=10 ok=true micros=15184
+od2_session_constructor context=0 role=0
+od2_native_attempt pid=59612 attempt=1 context=0 role=0 n=0 encrypt=1
+od2_packet_header context=0 encrypt=1 n=0 g=0 index=0 id=6463fe5d62541df4088b2acb0817a0d325336eee4987efd218545422d65c4c0c
+od2_commit_begin operation=Genesis context=0 generation=9 native_calls=1
+od2_commit_end operation=Genesis context=0 generation=10 ok=true micros=24590
+od2_native_commit pid=59612 context=0 last_attempt=1 calls=1 encrypt=1 decrypt=0
+od2_native_attempt pid=59612 attempt=1 context=0 role=0 n=0 decrypt=1
+od2_session_constructor context=0 role=1
+od2_native_attempt pid=59612 attempt=2 context=0 role=1 n=0 encrypt=1
+od2_packet_header context=0 encrypt=1 n=0 g=0 index=0 id=90c874769f16a2321390db11f8f605073ff908b5ec974f663106e3ac23ac196a
+od2_commit_begin operation=Genesis context=0 generation=10 native_calls=2
+od2_commit_end operation=Genesis context=0 generation=11 ok=true micros=34287
+od2_native_commit pid=59612 context=0 last_attempt=2 calls=2 encrypt=1 decrypt=1
+od2_native_attempt pid=59612 attempt=2 context=0 role=1 n=0 decrypt=1
+od2_commit_begin operation=Genesis context=0 generation=10 native_calls=1
+od2_commit_end operation=Genesis context=0 generation=11 ok=true micros=27316
+od2_native_commit pid=59612 context=0 last_attempt=2 calls=1 encrypt=0 decrypt=1
+od2_commit_begin operation=Ready context=0 generation=11 native_calls=0
+od2_commit_end operation=Ready context=0 generation=12 ok=true micros=23058
+od2_commit_begin operation=Ready context=0 generation=11 native_calls=0
+od2_commit_end operation=Ready context=0 generation=12 ok=true micros=24354
+od2_commit_begin operation=Ready context=0 generation=12 native_calls=0
+od2_commit_end operation=Ready context=0 generation=13 ok=true micros=23085
+od2_commit_begin operation=Ready context=0 generation=12 native_calls=0
+od2_commit_end operation=Ready context=0 generation=13 ok=true micros=24199
+test ordered_dialog::runtime2::runtime::tests::a3_s4_f02_old_offer_current_renewal_historical_support ... S4_F02_HISTORICAL_PASS old_offer_exact=true current_Hello_refs_renewed=true missing_support_pre_constructor=true explicit_support_exact_continuation=true
+ok
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=11676
+od2_commit_begin operation=Locator context=1 generation=4 native_calls=0
+od2_commit_end operation=Locator context=1 generation=5 ok=true micros=11744
+od2_commit_begin operation=Locator context=0 generation=3 native_calls=0
+od2_commit_end operation=Locator context=0 generation=4 ok=true micros=12457
+od2_commit_begin operation=Locator context=1 generation=4 native_calls=0
+od2_commit_end operation=Locator context=1 generation=5 ok=true micros=12225
+od2_commit_begin operation=Locator context=0 generation=5 native_calls=0
+od2_commit_end operation=Locator context=0 generation=6 ok=true micros=14569
+od2_commit_begin operation=Locator context=1 generation=6 native_calls=0
+od2_commit_end operation=Locator context=1 generation=7 ok=true micros=11885
+od2_commit_begin operation=Locator context=0 generation=5 native_calls=0
+od2_commit_end operation=Locator context=0 generation=6 ok=true micros=14387
+od2_commit_begin operation=Locator context=1 generation=6 native_calls=0
+od2_commit_end operation=Locator context=1 generation=7 ok=true micros=12116
+test ordered_dialog::runtime2::runtime::tests::a3_s4_f08_existing_origin_and_f12_actual_endpoint_mismatch ... S4_F08_F12_PASS valid_bilateral_existing_origin_refused_before_mutation=true actual_TLS_vs_current_signed_locator_endpoint_mismatch_pre_Hello=true native_calls=0
+ok
+test ordered_dialog::runtime2::runtime::tests::a3_s4_f12_explicit_route_table_url_only_and_no_defaults ... S4_F12_ROUTE_PASS direct_ip=true URL_only_empty_IP=true empty_empty_reject=true relay_None_missing_different_reject=true Auto_None_direct=true builder_Minimal_clear_all_explicit_transports_lookup0=true
+ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 43.08s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 1 test
+test faults::a3_s4_f_policy_renewal_post_staging_real_close ... fixture=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-policy-OsEaGP cli_sha256_external_manifest_required=true
+process_start pid=19560 profile=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-policy-OsEaGP\profile0.json stderr=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-policy-OsEaGP\profile0.1.stderr.log
+private_bytes pid=19560 bytes=11157504
+process_start pid=49280 profile=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-policy-OsEaGP\profile1.json stderr=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-policy-OsEaGP\profile1.1.stderr.log
+private_bytes pid=49280 bytes=11137024
+active_progress seconds=0.625 phases=[[(Number(0), Bool(false)), (Number(0), Bool(false))], [(Number(0), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=1.150 phases=[[(Number(1), Bool(false)), (Number(0), Bool(false))], [(Number(0), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=1.710 phases=[[(Number(1), Bool(false)), (Number(0), Bool(false))], [(Number(2), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=2.348 phases=[[(Number(3), Bool(false)), (Number(1), Bool(false))], [(Number(2), Bool(false)), (Number(2), Bool(false))]]
+active_progress seconds=2.884 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(2), Bool(false))]]
+private_bytes pid=19560 bytes=12242944
+active_progress seconds=3.535 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(3), Bool(false))]]
+active_progress seconds=4.301 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(false))]]
+private_bytes pid=49280 bytes=12582912
+active_progress seconds=5.086 phases=[[(Number(3), Bool(true)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(false))]]
+active_progress seconds=5.308 phases=[[(Number(3), Bool(true)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]
+active_progress seconds=5.538 phases=[[(Number(3), Bool(true)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]
+F01_case=clock_failure refusal=ClockBlocked: injected fallible clock protected_unchanged=true
+F01_case=clock_backward refusal=ClockBlocked protected_unchanged=true
+F01_case=authority_read_failure refusal=AuthorityReadFailure: verification provider unavailable protected_unchanged=true
+F09_exact_retry_before_current_permission=true conflict_explicit=true
+private_bytes pid=19560 bytes=12677120
+F01_case=consent_not_before refusal=ConsentExpired/NotYetValid protected_unchanged=true
+private_bytes pid=49280 bytes=12812288
+F01_case=consent_expiry refusal=ConsentExpired/NotYetValid protected_unchanged=true
+private_bytes pid=19560 bytes=12722176
+F01_case=lower_revision valid_Root_signature=true refused=true
+F01_case=same_revision_changed_bytes valid_Root_signature=true refused=true
+private_bytes pid=49280 bytes=12996608
+F01_case=post_staging_expiry clean_abort=true trial_calls_separate=true reusable=true
+process_exit pid=49280 kill=false status=exit code: 0
+private_bytes pid=19560 bytes=12955648
+process_start pid=1320 profile=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-policy-OsEaGP\profile1.json stderr=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\F-policy-OsEaGP\profile1.2.stderr.log
+private_bytes pid=1320 bytes=11403264
+private_bytes pid=19560 bytes=13365248
+private_bytes pid=19560 bytes=13365248
+wait=convergence seconds=10.137 node=0 contexts=[{"active":true,"blocked":null,"context":"9d8f0fd64481279b0e6018deb888aec10d973e58e7a895214b49a0be2780a07b","counts":{"debt":1,"pending":1,"queued":0,"receipts":[2,0],"sources":5},"d":"1f60de1d0094df66906b9173247bf6a085444fe58af450e6212ec73c6108f33c","details":{"current_consent":"1211badb376a229e9570aec791bf137bda6cb66f11fcbc8f76fd3d6ba5b8128b","grant":"713b3aec993ac999a8af4de5ea128b68f9bfba8a84e8c3c0301b8b79f51159b3","native":{"own_first":"1cdfa0f7f5d5404d17a4f8dffd48c4616b546520181996823928a4d73c6f7bc8","own_g":1,"own_index":2,"own_next":4,"peer_g":0,"peer_index":0,"peer_next":1,"rotate_due":false},"native_hash":"c4ef59cee0fe11cd64c217c1746d94d2166d16ae219d32d64ad327734fcdce99","offer":"92ddb987b4f743e84100f12d1327f3f474dd43ef5b15b65d421c3d0c2065246a","policy_generation":7,"readies":["973ead0b5b65a45eadab957089fa5014a3f06cd2701d649130586232d30463e1","30c85bc5c53a85c10b323f2f6b4698502e6c2e947d899ee81ba6c447d8e75b2a"],"selected_hash":"ffd8652445c115844fd4bdae2c09b9c112d0569f0030cec6774411761e85e2de","wall_high_water":1792917995},"e":"743bb083cf4545c763a1635e76566f2ffa73796f954850f84c69479820494670","file_exported":true,"native_generation":6,"own_locator_revision":1,"peer_locator_revision":2,"phase":3,"policy_error":null,"publication_ready":true,"q":"83d10a16497a03fdd826d3d693b0e2f73e232bca9392261f103e6b4aba9e44de","role":0,"sid":"xCjItAMW1ifq9/Gr7MM/gpBNIgdzgmU8DF4An6TX/zs","slot":0},{"active":true,"blocked":null,"context":"3995c5796cc9e81216f5126fc9ef70b6ba147f9b48890bc68bc5657c8d80aab4","counts":{"debt":0,"pending":0,"queued":0,"receipts":[0,0],"sources":2},"d":"c14c207ce4fcc363451f09018d170425e865b9be84f68bcdc05a045c9887c65a","details":{"current_consent":"d7e1624183953783cb876bc51d17e2b347a26094661ca4ded21f02d3e93b2e53","grant":"80d5af86853ffb129e09e27e0f5b0dda37f83796d3ae0a1cdd65f366321bbd4d","native":{"own_first":"c5819e0debf9737bc806bd5b8e32d3bfb6074d82cb16f709978329ea8ecf11ab","own_g":0,"own_index":0,"own_next":1,"peer_g":0,"peer_index":0,"peer_next":1,"rotate_due":true},"native_hash":"bcd3e731cd4434c4f3f3fdd7f168a30fc8c83577c5c07232f6c028c1f1448733","offer":"aed54c07d86c088a5a2c3b86e0c50483f2cb85883fd07dd6cf77120a7f57b6ca","policy_generation":7,"readies":["dbb782725a68cdf249d801987f1d99a127a250e167b813f4b615e545a4a6c3e9","e0fa13f80e555b4fd05309743c053220572b137368a7b36534711c583f64bc8d"],"selected_hash":"6d1cd03888401df1f84ff9b7d3729c8e6e46d0650d4f9ec11eca76bad542d716","wall_high_water":1792917995},"e":"d72af6195a316b01bd1326493ad95232d47450d00d1bf0b64aba13cb28339c6b","file_exported":true,"native_generation":3,"own_locator_revision":1,"peer_locator_revision":2,"phase":3,"policy_error":null,"publication_ready":true,"q":"4577e23a2cd209e5e0066afa7fcb50e84d0eeff248b7220099406f983f8e18fd","role":0,"sid":"If/lSEEahehk9qmqLd9geXEdFr8/GUNm8LI1QTfkK4g","slot":1}]
+private_bytes pid=19560 bytes=13471744
+private_bytes pid=1320 bytes=13115392
+F01_case=post_staging_actual_connection_close clean_abort=true reusable=true
+private_bytes pid=19560 bytes=13221888
+F01_case=own_revocation refusal=device 424bc8ca574e47a727333e8d2aa8cef87d342d7366a18330295adcb442dc633e has been permanently revoked by its account root protected_unchanged=true
+F01_case=peer_revocation refusal=device 424bc8ca574e47a727333e8d2aa8cef87d342d7366a18330295adcb442dc633e has been permanently revoked by its account root protected_unchanged=true
+process_exit pid=19560 kill=false status=exit code: 0
+process_exit pid=1320 kill=false status=exit code: 0
+S4_F_POLICY_PASS current_vs_historical=true monotonic_authority=true local_read_after_revoke=true clean_gates=2
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 52.28s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 4 tests
+test vault::indexed_dialog::runtime2::tests::a3_s4_f01_stale_captured_policy_is_a_closed_writer_refusal ... ok
+test vault::indexed_dialog::runtime2::tests::a3_s4_f10_future_layout_and_missing_marker_cold_open_refused ... a3_s4_F10_cold_case=0 authenticated_input=true refused_before_runtime_handle=true
+a3_s4_F10_cold_case=1 authenticated_input=true refused_before_runtime_handle=true
+a3_s4_F10_cold_case=2 authenticated_input=true refused_before_runtime_handle=true
+a3_s4_F10_cold_case=3 authenticated_input=true refused_before_runtime_handle=true
+a3_s4_F10_cold_case=4 authenticated_input=true refused_before_runtime_handle=true
+a3_s4_F10_cold_case=5 authenticated_input=true refused_before_runtime_handle=true
+ok
+test vault::indexed_dialog::runtime2::tests::a3_s4_f10_internal_component_purpose_retry_cannot_bypass_runtime ... ok
+test vault::indexed_dialog::runtime2::tests::a3_s4_f10_marker_binding_mismatch_cold_open_refused ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 84 filtered out; finished in 2.18s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17274  13.1
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=63992
+target_gib=68.41
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

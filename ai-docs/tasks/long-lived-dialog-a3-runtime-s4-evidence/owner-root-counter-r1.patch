@@ -1,0 +1,186 @@
+diff --git "a/.tmp\\a3-s4\\diagnostic-before-source\\apps\\kilogram-cli\\src\\ordered_dialog\\runtime2\\runtime.rs" b/apps/kilogram-cli/src/ordered_dialog/runtime2/runtime.rs
+index b729f74..67a4e9d 100644
+--- "a/.tmp\\a3-s4\\diagnostic-before-source\\apps\\kilogram-cli\\src\\ordered_dialog\\runtime2\\runtime.rs"
++++ b/apps/kilogram-cli/src/ordered_dialog/runtime2/runtime.rs
+@@ -87,22 +87,9 @@ fn owner_thread(mut owner: Owner2) -> Result<(Handle2, std::thread::JoinHandle<(
+                     timing::idle_sleep(Duration::from_millis(2));
+                     continue;
+                 }
+-                let installed = {
+-                    let _timing = timing::span(timing::Metric::OwnerInstalled);
+-                    owner.repository.installed(c)
+-                };
+-                match installed {
+-                    Ok(true) => {}
+-                    Ok(false) => {
+-                        timing::idle_sleep(Duration::from_millis(2));
+-                        continue;
+-                    }
+-                    Err(error) => {
+-                        eprintln!("od2_context_read_blocked context={c} {error}");
+-                        retry_at[usize::from(c)] = Instant::now() + Duration::from_secs(1);
+-                        continue;
+-                    }
+-                }
++                // Empty turns use poison-checked authenticated root/ledger counters.
++                // Nonempty work still loads its installed snapshot and checks phase,
++                // current policy/time/provider/lease before the closed commit gate.
+                 let result = if receive_turn[usize::from(c)] {
+                     owner.drain(c)
+                 } else {
+
+diff --git "a/.tmp\\a3-s4\\diagnostic-before-source\\apps\\kilogram-cli\\src\\ordered_dialog\\runtime2\\timing.rs" b/apps/kilogram-cli/src/ordered_dialog/runtime2/timing.rs
+index 77580e7..136512d 100644
+--- "a/.tmp\\a3-s4\\diagnostic-before-source\\apps\\kilogram-cli\\src\\ordered_dialog\\runtime2\\timing.rs"
++++ b/apps/kilogram-cli/src/ordered_dialog/runtime2/timing.rs
+@@ -18,7 +18,6 @@ metrics!(
+     MailboxSubmit,
+     MailboxQueue,
+     OwnerJob,
+-    OwnerInstalled,
+     OwnerIdle,
+     LeaseCheck,
+     Status,
+
+diff --git "a/.tmp\\a3-s4\\diagnostic-before-source\\crates\\kilogram-transport-iroh\\src\\ordered2.rs" b/crates/kilogram-transport-iroh/src/ordered2.rs
+index 0a12f4d..f4bb862 100644
+--- "a/.tmp\\a3-s4\\diagnostic-before-source\\crates\\kilogram-transport-iroh\\src\\ordered2.rs"
++++ b/crates/kilogram-transport-iroh/src/ordered2.rs
+@@ -23,12 +23,10 @@ impl RouteConfig2 {
+         }
+         if self.policy != RoutePolicy::RelayOnly {
+             let bind = self.bind.context("explicit IP bind required")?;
+-            if self.policy == RoutePolicy::DirectOnly || self.relay.is_none() {
+-                ensure!(
+-                    bind.ip().is_loopback(),
+-                    "S4 direct-only requires an explicit loopback bind"
+-                );
+-            }
++            ensure!(
++                bind.ip().is_loopback(),
++                "S4 IP transports require an explicit loopback bind"
++            );
+             if let SocketAddr::V6(addr) = bind {
+                 ensure!(
+                     addr.scope_id() == 0 && addr.flowinfo() == 0,
+@@ -132,6 +130,7 @@ pub async fn bind(config: &RouteConfig2) -> Result<Endpoint> {
+     }
+     Ok(endpoint)
+ }
++
+ pub fn binding(connection: &Connection, local: Id, dialer: bool) -> Result<Id> {
+     ensure!(connection.alpn() == wire::ALPN, "unsupported OD2 ALPN");
+     let remote = *connection.remote_id().as_bytes();
+@@ -174,3 +173,112 @@ pub async fn read(receive: &mut RecvStream) -> Result<ParsedFrame2> {
+     );
+     Ok(ParsedFrame2::parse(&raw)?)
+ }
++
++#[cfg(test)]
++mod route_tests {
++    use super::*;
++
++    #[test]
++    fn a3_s4_f12_auto_explicit_relay_loopback_bind_table() -> Result<()> {
++        let relay = Some("http://127.0.0.1:21002/".to_owned());
++        for bind in ["127.0.0.1:0", "[::1]:0"] {
++            let auto = RouteConfig2 {
++                policy: RoutePolicy::Auto,
++                bind: Some(bind.parse()?),
++                relay: relay.clone(),
++            };
++            ensure!(
++                auto.effective()? == RoutePolicy::Auto,
++                "Auto relay loopback"
++            );
++            let direct = RouteConfig2 {
++                policy: RoutePolicy::DirectOnly,
++                relay: None,
++                ..auto.clone()
++            };
++            ensure!(
++                direct.effective()? == RoutePolicy::DirectOnly,
++                "Direct loopback"
++            );
++            ensure!(
++                RouteConfig2 {
++                    relay: None,
++                    ..auto.clone()
++                }
++                .effective()?
++                    == RoutePolicy::DirectOnly,
++                "Auto None direct"
++            );
++            ensure!(
++                RouteConfig2 {
++                    relay: relay.clone(),
++                    ..direct
++                }
++                .effective()
++                .is_err(),
++                "DirectOnly relay accepted"
++            );
++            ensure!(
++                RouteConfig2 {
++                    policy: RoutePolicy::RelayOnly,
++                    ..auto
++                }
++                .effective()
++                .is_err(),
++                "RelayOnly IP accepted"
++            );
++        }
++        for bind in [
++            "0.0.0.0:0",
++            "[::]:0",
++            "192.168.1.9:0",
++            "[2001:db8::1]:0",
++            "[fe80::1]:0",
++        ] {
++            for policy in [RoutePolicy::DirectOnly, RoutePolicy::Auto] {
++                for url in [None, relay.clone()] {
++                    ensure!(
++                        RouteConfig2 {
++                            policy,
++                            bind: Some(bind.parse()?),
++                            relay: url
++                        }
++                        .effective()
++                        .is_err(),
++                        "non-loopback accepted before bind: {policy:?}/{bind}"
++                    );
++                }
++            }
++        }
++        ensure!(
++            RouteConfig2 {
++                policy: RoutePolicy::RelayOnly,
++                bind: None,
++                relay: relay.clone()
++            }
++            .effective()?
++                == RoutePolicy::RelayOnly,
++            "URL-only RelayOnly"
++        );
++        for policy in [
++            RoutePolicy::DirectOnly,
++            RoutePolicy::Auto,
++            RoutePolicy::RelayOnly,
++        ] {
++            ensure!(
++                RouteConfig2 {
++                    policy,
++                    bind: None,
++                    relay: None
++                }
++                .effective()
++                .is_err(),
++                "empty/empty accepted"
++            );
++        }
++        println!(
++            "S4_F12_R1_PASS Auto_explicit_relay_loopback_IPv4_IPv6=true wildcard_LAN_global_linklocal_rejected_before_bind=true prior_route_table_preserved=true"
++        );
++        Ok(())
++    }
++}

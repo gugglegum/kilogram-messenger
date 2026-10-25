@@ -1,0 +1,16 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+    Checking kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+error[E0433]: cannot find module or crate `kilogram_identity` in this scope
+   --> crates\kilogram-transport-iroh\src\ordered2.rs:182:22
+    |
+182 |         let signer = kilogram_identity::DeviceIdentity::generate()?;
+    |                      ^^^^^^^^^^^^^^^^^ use of unresolved module or unlinked crate `kilogram_identity`
+    |
+    = help: if you wanted to use a crate named `kilogram_identity`, use `cargo add kilogram_identity` to add it to your `Cargo.toml`
+
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+For more information about this error, try `rustc --explain E0433`.
+error: could not compile `kilogram-transport-iroh` (lib test) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...

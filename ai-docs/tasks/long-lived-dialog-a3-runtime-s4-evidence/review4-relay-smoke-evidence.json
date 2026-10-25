@@ -1,0 +1,156 @@
+{
+  "run": "review4-own-relay-smoke-1",
+  "result": {
+    "mode": "run",
+    "packages": [
+      "kilogram-cli",
+      "kilogram-transport-iroh"
+    ],
+    "filter": "a3_s4_relay_smoke_exact_b_only_after_rebind",
+    "skip": [],
+    "exit_code": 0,
+    "seconds": 50.2735936,
+    "profile": "verification",
+    "offline": true,
+    "jobs": 12,
+    "priority": "BelowNormal",
+    "executables": [
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+        "bytes": 67757568,
+        "sha256": "55da4d5e537ad43b3d5ecffc96d07fb9af160ff5331bbce2cafe5f1323197259"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+        "bytes": 40600576,
+        "sha256": "96140b58bbd140217ba07609cd0581f351375d87624d355f35315839a5469a2e"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+        "bytes": 36574720,
+        "sha256": "f521aaf579e8b17fa8043bf3b557a3f6413720044e52a594e3ef3692d2c3deb2"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+        "bytes": 29934592,
+        "sha256": "27221780b0d4b991c2a1c28f9eb417f5d87533e14365c912ffb09bf1bd168cb7"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+        "bytes": 33994240,
+        "sha256": "18496712474a236da6167744ee2f37f12595f291f9fb306957f7638325d1d894"
+      }
+    ]
+  },
+  "helper": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-runtime\\kilogram-relay.exe",
+    "bytes": 17057280,
+    "sha256": "b8723b8cb546a0ceccf3179415d580b073f0a36d2f9a458ecfd15c66bf2c6317",
+    "old_sha256": "69cad3e0e39b5c23a163b0d2a99b15d42faf0a2433bb909397a64cda81eb7aa5",
+    "source": "review4-relay-build-1-source.json",
+    "scope": "only local relay readiness writable temporary+sync+atomic publish; CLI d5d8c8 unchanged",
+    "controller": "review4-relay-clippy-3-source.json"
+  },
+  "source_correspondence": "review4-relay-source-correspondence.json",
+  "actual_asserted_locator_lines": [
+    "relay_smoke_locator node=0 slot=0 endpoint=e501a39c3fd72c6fa56c53a050f5f799c2751e4e4152f2ef5a51009deea04e01 revision=2 ips=0 relay=http://127.0.0.1:3753/",
+    "relay_smoke_locator node=0 slot=1 endpoint=e501a39c3fd72c6fa56c53a050f5f799c2751e4e4152f2ef5a51009deea04e01 revision=2 ips=0 relay=http://127.0.0.1:3753/",
+    "relay_smoke_locator node=1 slot=0 endpoint=a33ad255b5d1b6a47ca04080e052dd573c5f6b8bea9f6f1b79c04613619fc949 revision=2 ips=0 relay=http://127.0.0.1:3753/",
+    "relay_smoke_locator node=1 slot=1 endpoint=a33ad255b5d1b6a47ca04080e052dd573c5f6b8bea9f6f1b79c04613619fc949 revision=2 ips=0 relay=http://127.0.0.1:3753/"
+  ],
+  "pass_line": "S4_RELAY_SMOKE_PASS actual_own_relay=true signed_URL_only_empty_IP=true B_only_Text=1 exact_event=6e7a647c5064f84eba2039a44e484d5ab4ec5ce42a510bd9352b8b82bdc611ea receipt_status=2 A_new_send_or_open=false selection_unchanged=true accounts=4 sessions=4 successful_packet_calls=10 children_clean=true seconds=24.181521",
+  "public_artifacts": [
+    {
+      "path": ".tmp/a3-s4/process/relay-smoke-Gkw8fl/profile0.json",
+      "bytes": 1100,
+      "sha256": "a29234efcbdb109f1c67334b8f6d01753772a8cd102365cb77b28c1907c20033",
+      "public_config": {
+        "account": "cd10062814d9bb6650cb6a4fc4888cf18da6d24d4960e0da8185ad7d88518689",
+        "claim": "3f3cfd4838065b34607b3f04fea7a52899afd1aca4ae041d35c264d616995db1",
+        "contexts": [
+          "88257c116c1251aedd39fb972de573f68020c07e5a1eb9ad8553506208fb417b",
+          "3e2106dd35bc14079fcc3ae6a25d93b8d0f5514a9801a465c413df725605bd27"
+        ],
+        "device": "3bd76095d410b7aea820111445edc1c31f37b17524756b4992ef38f8457773e2",
+        "enabled": [
+          0,
+          1
+        ],
+        "ipc_file": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\relay-smoke-Gkw8fl\\ipc0.json",
+        "locator_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\relay-smoke-Gkw8fl\\locators0",
+        "logical_quota": [
+          17179869184,
+          17179869184
+        ],
+        "physical_quota": 51539607552,
+        "profile_mode": "ordered-dialog-v2",
+        "route": {
+          "bind": null,
+          "policy": "relay-only",
+          "relay": "http://127.0.0.1:3753/"
+        },
+        "state_dir": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\relay-smoke-Gkw8fl\\state0",
+        "version": 2
+      }
+    },
+    {
+      "path": ".tmp/a3-s4/process/relay-smoke-Gkw8fl/profile1.json",
+      "bytes": 1100,
+      "sha256": "1a39500814c4caacc16a565f3ee8f4eb90b62b5287b91a0e6f7f60b01113b899",
+      "public_config": {
+        "account": "7abab0f2bbc05d4cdf5a9916f778206f3dafc86f840d6d91ff6bbe4489eadd0b",
+        "claim": "c1509a77dd54dd4f69ce6bd6124dad3737ba1c08c9dd633d44659ee5a5c2817b",
+        "contexts": [
+          "88257c116c1251aedd39fb972de573f68020c07e5a1eb9ad8553506208fb417b",
+          "3e2106dd35bc14079fcc3ae6a25d93b8d0f5514a9801a465c413df725605bd27"
+        ],
+        "device": "83aa8bf78629f5165d3eb923a43225f18d4bc68f5e3270cb063ad3801c41f2d3",
+        "enabled": [
+          0,
+          1
+        ],
+        "ipc_file": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\relay-smoke-Gkw8fl\\ipc1.json",
+        "locator_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\relay-smoke-Gkw8fl\\locators1",
+        "logical_quota": [
+          17179869184,
+          17179869184
+        ],
+        "physical_quota": 51539607552,
+        "profile_mode": "ordered-dialog-v2",
+        "route": {
+          "bind": null,
+          "policy": "relay-only",
+          "relay": "http://127.0.0.1:3753/"
+        },
+        "state_dir": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\relay-smoke-Gkw8fl\\state1",
+        "version": 2
+      }
+    },
+    {
+      "path": ".tmp/a3-s4/process/relay-smoke-Gkw8fl/locators0/3e2106dd35bc14079fcc3ae6a25d93b8d0f5514a9801a465c413df725605bd27.locator",
+      "bytes": 241,
+      "sha256": "d9cc8ac710304c49915c2b5bd70a73b0e8d3dc0631b06ed4d610aff4f0348aea",
+      "signed_public_locator_hex": "828a0258203e2106dd35bc14079fcc3ae6a25d93b8d0f5514a9801a465c413df725605bd27582029aff2ca06ae6b1bdb1c883786d8d0741242d98277b3cf84b06dd1a57afe2e985820e706f437743a72ac331db4d85c8d8d1ae0bafde004f13bfaea1e7796e53b67445820e501a39c3fd72c6fa56c53a050f5f799c2751e4e4152f2ef5a51009deea04e01808156687474703a2f2f3132372e302e302e313a333735332f021a6addf0721a6addfe825840dad5b3e7d4228d58881d49d8cb384d893a65b7a2eaf8847be6e36c8c6b7841abbbf0c9ebb09073e7349877ddfcb7dc7600a40fbaac08a3b9f4c3af7207e4bc06"
+    },
+    {
+      "path": ".tmp/a3-s4/process/relay-smoke-Gkw8fl/locators0/88257c116c1251aedd39fb972de573f68020c07e5a1eb9ad8553506208fb417b.locator",
+      "bytes": 241,
+      "sha256": "a08d895812750f71d2589f381b0a4ad508fdeb13dac8ae86b67213ed81f30b07",
+      "signed_public_locator_hex": "828a02582088257c116c1251aedd39fb972de573f68020c07e5a1eb9ad8553506208fb417b582029aff2ca06ae6b1bdb1c883786d8d0741242d98277b3cf84b06dd1a57afe2e985820e706f437743a72ac331db4d85c8d8d1ae0bafde004f13bfaea1e7796e53b67445820e501a39c3fd72c6fa56c53a050f5f799c2751e4e4152f2ef5a51009deea04e01808156687474703a2f2f3132372e302e302e313a333735332f021a6addf0721a6addfe82584044b670873aafa0c4a3509a529b095dd55a10d8221fe696f09e37c0045a6d63bcd173c63436676bb45ac8f8495895c9516823b4be94ff4353f1112d7b1c692c0b"
+    },
+    {
+      "path": ".tmp/a3-s4/process/relay-smoke-Gkw8fl/locators1/3e2106dd35bc14079fcc3ae6a25d93b8d0f5514a9801a465c413df725605bd27.locator",
+      "bytes": 241,
+      "sha256": "30ea7e3b6ecc7bd5942dbc602ce5cf1ce089bffec3900a1aa2908e4495f241de",
+      "signed_public_locator_hex": "828a0258203e2106dd35bc14079fcc3ae6a25d93b8d0f5514a9801a465c413df725605bd275820e706f437743a72ac331db4d85c8d8d1ae0bafde004f13bfaea1e7796e53b6744582029aff2ca06ae6b1bdb1c883786d8d0741242d98277b3cf84b06dd1a57afe2e985820a33ad255b5d1b6a47ca04080e052dd573c5f6b8bea9f6f1b79c04613619fc949808156687474703a2f2f3132372e302e302e313a333735332f021a6addf0761a6addfe8658401c66e0e2b2c329cfb722ba0f6530b376e1d16f76ba49e08bb9ae62e37eae8bfdb1dad4f3366d42250ba1591a7abba15d36526056731efe922b226978f8ea8404"
+    },
+    {
+      "path": ".tmp/a3-s4/process/relay-smoke-Gkw8fl/locators1/88257c116c1251aedd39fb972de573f68020c07e5a1eb9ad8553506208fb417b.locator",
+      "bytes": 241,
+      "sha256": "178eade4ec03bb3b7bf3ae9c617dcd78dad8ea4d062b2e1211195db200ed0677",
+      "signed_public_locator_hex": "828a02582088257c116c1251aedd39fb972de573f68020c07e5a1eb9ad8553506208fb417b5820e706f437743a72ac331db4d85c8d8d1ae0bafde004f13bfaea1e7796e53b6744582029aff2ca06ae6b1bdb1c883786d8d0741242d98277b3cf84b06dd1a57afe2e985820a33ad255b5d1b6a47ca04080e052dd573c5f6b8bea9f6f1b79c04613619fc949808156687474703a2f2f3132372e302e302e313a333735332f021a6addf0751a6addfe855840ca1fb8b24fc571efe749b1ebdbcbe5dbd8d8d90b3837c58dbfbdabc2deb976bf8962f8d350b077059c6a331d5ea1531f509d62b3e0178f6a0baef6e63fd28303"
+    }
+  ],
+  "all_owned_fixed_application_relay_harness_processes_gone_native_CIM": true,
+  "no_private_vault_IPC_token_or_keys_read": true
+}

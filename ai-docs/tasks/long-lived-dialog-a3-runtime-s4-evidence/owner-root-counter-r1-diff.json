@@ -1,0 +1,55 @@
+{
+  "scope": "Exact probe1-to-probe2 delta only. No change to policy/provider/time/lease/closed writer, native batching, polling, profile, caps or protocol records.",
+  "controller_byte_identical": true,
+  "changed_rust_paths": [
+    "apps/kilogram-cli/src/ordered_dialog/runtime2/runtime.rs",
+    "apps/kilogram-cli/src/ordered_dialog/runtime2/timing.rs",
+    "crates/kilogram-transport-iroh/src/ordered2.rs"
+  ],
+  "files": [
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/runtime.rs",
+      "before": {
+        "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/runtime.rs",
+        "bytes": 53427,
+        "sha256": "1a0140ab66739ab3bbfdcd533a3d51b58234f54242af2a06bb6839ab4655c9af"
+      },
+      "after": {
+        "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/runtime.rs",
+        "bytes": 52986,
+        "sha256": "c31e4f7049a8fc693b3c2e638ee92d1bd223288275aabd110f05fae51fe795d4"
+      }
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/timing.rs",
+      "before": {
+        "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/timing.rs",
+        "bytes": 3422,
+        "sha256": "51329ffbc671f6ca875f1630ea9bfa3947850be7e17b5dbe1247f3adc88ad1e9"
+      },
+      "after": {
+        "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/timing.rs",
+        "bytes": 3402,
+        "sha256": "282be4685fb233c53ae3f4c12480ae80724c6085f9a814678c72362428fe52b8"
+      }
+    },
+    {
+      "path": "crates/kilogram-transport-iroh/src/ordered2.rs",
+      "before": {
+        "path": "crates/kilogram-transport-iroh/src/ordered2.rs",
+        "bytes": 6589,
+        "sha256": "ba30a37bc20b83ffdb093e454e2655af1cfafc628fa15f6b94af0e43895b59dd"
+      },
+      "after": {
+        "path": "crates/kilogram-transport-iroh/src/ordered2.rs",
+        "bytes": 9781,
+        "sha256": "3622cd1b63b5fe723aee0f2d21e4a2737ac760aadb500c68f41763c662958206"
+      }
+    }
+  ],
+  "patch": {
+    "path": "owner-root-counter-r1.patch",
+    "bytes": 7149,
+    "sha256": "0632b53c1a0caccd3072a1e1d58a94105eda0ceccd36589e2fa112434f0ccd0d"
+  }
+}

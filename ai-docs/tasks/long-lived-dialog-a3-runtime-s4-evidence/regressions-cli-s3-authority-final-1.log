@@ -1,0 +1,83 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 0.90s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 1 test
+test ordered_dialog::protocol2_component_tests::a3_s3_component_authority_atomic_reopen ... bound2_read tag=renewal-delivered-undelivered role=0 limit=1 pages=10 rows=10 observed_max_point_gets=106 candidate_loads=3 max_candidates=2 elapsed_seconds=0.255113
+bound2_read tag=renewal-delivered-undelivered role=0 limit=32 pages=1 rows=10 observed_max_point_gets=306 candidate_loads=10 max_candidates=2 elapsed_seconds=0.051816
+bound2_read tag=renewal-delivered-undelivered role=1 limit=1 pages=9 rows=9 observed_max_point_gets=106 candidate_loads=3 max_candidates=2 elapsed_seconds=0.236525
+bound2_read tag=renewal-delivered-undelivered role=1 limit=32 pages=1 rows=9 observed_max_point_gets=278 candidate_loads=9 max_candidates=2 elapsed_seconds=0.050086
+bound2_read tag=after-reopen role=0 limit=1 pages=10 rows=10 observed_max_point_gets=106 candidate_loads=3 max_candidates=2 elapsed_seconds=0.256881
+bound2_read tag=after-reopen role=0 limit=32 pages=1 rows=10 observed_max_point_gets=306 candidate_loads=10 max_candidates=2 elapsed_seconds=0.052391
+bound2_read tag=after-reopen role=1 limit=1 pages=9 rows=9 observed_max_point_gets=106 candidate_loads=3 max_candidates=2 elapsed_seconds=0.236119
+bound2_read tag=after-reopen role=1 limit=32 pages=1 rows=9 observed_max_point_gets=278 candidate_loads=9 max_candidates=2 elapsed_seconds=0.049570
+a3_s3_A01_positive_traces=2 A03_duplicate_traces=3 A04_bad_root_boundary=1 commit_attempts_after_bad_root=0
+A01 sources=12 text=10 native_calls=23 elapsed_seconds=7.347
+A01 role=0 SID=PwJ/MZ12Eu3CM52b55kYZlv3afXBgcUTSWfue6VI63I g_own=5 g_peer=4 native_generation=12 max_blob=4829 max_guard=343
+A01 role=0 indexed_seen_counts=[6, 5]
+A01 fixture=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../../.tmp/a3-s3\component-0-PORHh2
+A01 role=1 SID=PwJ/MZ12Eu3CM52b55kYZlv3afXBgcUTSWfue6VI63I g_own=4 g_peer=5 native_generation=11 max_blob=4808 max_guard=343
+A01 role=1 indexed_seen_counts=[6, 5]
+A01 fixture=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../../.tmp/a3-s3\component-1-mXEw2t
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 19 filtered out; finished in 7.37s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 13 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 10 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17274  13.1
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=63992
+target_gib=68.41
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

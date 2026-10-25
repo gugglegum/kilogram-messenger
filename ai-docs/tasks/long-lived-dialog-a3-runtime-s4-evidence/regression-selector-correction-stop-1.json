@@ -1,0 +1,6 @@
+{
+  "reason": "Overbroad tests:: selector included unrelated canonical recovery crypto tests; replace with scoped ordered_dialog selector",
+  "pid": 50304,
+  "executable": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-protocol-lib-kilogram_protocol-tests.exe",
+  "utc": "2026-10-25T07:55:36.0858633Z"
+}

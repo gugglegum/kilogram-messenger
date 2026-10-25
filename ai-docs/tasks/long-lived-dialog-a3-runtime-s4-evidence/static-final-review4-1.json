@@ -1,0 +1,9 @@
+{
+  "utc": "2026-10-25T12:50:30.4531617Z",
+  "status": "FAIL before checks: invoke-cargo-friendly CargoCommand ValidateSet does not accept fmt",
+  "exit_code": 1,
+  "tool_wall_seconds": 3.0297381,
+  "attempted_command": "./scripts/invoke-cargo-friendly.ps1 fmt -CargoJobs 12 -CargoArguments --all,--,--check",
+  "checks_executed": [],
+  "resolution": "Use ordinary cargo fmt --all -- --check; no network test harness is involved. Retain this failed invocation separately."
+}

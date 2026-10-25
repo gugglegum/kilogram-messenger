@@ -1,0 +1,83 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 0.52s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-runtime-ipc-lib-kilogram_runtime_ipc-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-runtime-ipc-lib-kilogram_runtime_ipc-tests.exe
+
+running 45 tests
+test peer_reenrollment_contract::tests::all_five_request_stages_round_trip_canonically ... ok
+test peer_reenrollment_contract::tests::descriptor_substitution_rejects_request_before_adapter_dispatch ... ok
+test peer_reenrollment_contract::tests::history_rewrap_is_explicit_and_independent_from_reenrollment ... ok
+test peer_reenrollment_contract::tests::implicit_approval_and_malformed_confirmation_fail_closed ... ok
+test peer_reenrollment_contract::tests::incomplete_acceptance_is_observable_but_never_restart_authority ... ok
+test peer_reenrollment_contract::tests::process_local_suppression_never_substitutes_for_durable_quarantine ... ok
+test peer_reenrollment_contract::tests::public_projection_contains_no_raw_identity_transport_or_message_fields ... ok
+test peer_reenrollment_contract::tests::signed_response_exact_binds_request_descriptor_and_current_device ... ok
+test peer_reenrollment_contract::tests::stage_skips_and_inconsistent_durable_claims_fail_closed ... ok
+test recipient_import_consumption_contract::tests::commit_response_consumes_only_the_exact_explicit_plan ... ok
+test recipient_import_consumption_contract::tests::descriptor_substitution_fails_before_future_adapter ... ok
+test recipient_import_consumption_contract::tests::evidence_requires_complete_exact_mutation_receipt ... ok
+test recipient_import_consumption_contract::tests::implicit_or_mismatched_commit_fails_closed ... ok
+test recipient_import_consumption_contract::tests::noncanonical_oversized_and_tampered_encodings_fail_closed ... ok
+test recipient_import_consumption_contract::tests::plan_and_commit_requests_round_trip_canonically ... ok
+test recipient_import_consumption_contract::tests::plan_exact_binds_evidence_nonce_and_short_expiry ... ok
+test recipient_import_consumption_contract::tests::signed_plan_response_exact_binds_request_descriptor_and_device ... ok
+test recipient_import_execution_contract::tests::all_five_request_stages_round_trip_canonically ... ok
+test recipient_import_execution_contract::tests::confirmation_is_separate_and_cannot_consume_the_intent ... ok
+test recipient_import_execution_contract::tests::descriptor_substitution_rejects_before_adapter_dispatch ... ok
+test recipient_import_execution_contract::tests::implicit_or_mismatched_confirmation_fails_closed ... ok
+test recipient_import_execution_contract::tests::mutation_nonce_confirmation_and_step_budget_are_exact_bound ... ok
+test recipient_import_execution_contract::tests::reordered_duplicated_or_oversized_membership_references_fail_closed ... ok
+test recipient_import_execution_contract::tests::response_stage_skip_and_binding_substitution_fail_closed ... ok
+test recipient_import_execution_contract::tests::signed_response_exact_binds_request_descriptor_and_device ... ok
+test tests::authenticated_loopback_round_trip_and_cleanup ... ok
+test tests::change_wait_is_long_polled_without_blocking_actor ... ok
+test tests::conversation_page_requires_exact_monotonic_continuation ... ok
+test tests::descriptor_rejects_non_loopback_addresses ... ok
+test tests::endpoint_candidate_quarantine_state_is_explicit ... ok
+test tests::history_cursor_text_round_trips_and_rejects_invalid_input ... ok
+test tests::launch_profile_rejects_relative_authority_paths ... ok
+test tests::launch_profile_rejects_unsafe_volunteer_storage_boundaries ... ok
+test tests::launch_profile_round_trip_is_bounded_no_clobber_and_outside_state ... ok
+test tests::launch_profile_round_trips_bounded_volunteer_storage_policy ... ok
+test tests::legacy_launch_profile_without_volunteer_field_remains_loadable ... ok
+test tests::mailbox_lifecycle_ipc_round_trips_without_capability_secrets ... ok
+test tests::old_instance_does_not_remove_replacement_descriptor ... ok
+test tests::peer_capability_page_is_bounded_monotonic_and_privacy_preserving ... ok
+test tests::request_id_text_round_trips ... ok
+test tests::version_32_request_is_rejected_before_actor_dispatch ... ok
+test tests::version_33_descriptor_signed_with_v14_domain_is_rejected ... ok
+test tests::version_33_request_is_rejected_before_actor_dispatch ... ok
+test tests::volunteer_provider_ipc_is_bounded_and_capability_free ... ok
+test tests::wrong_token_is_rejected_before_actor_dispatch ... ok
+
+test result: ok. 45 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.83s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17274  13.1
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=63992
+target_gib=68.41
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

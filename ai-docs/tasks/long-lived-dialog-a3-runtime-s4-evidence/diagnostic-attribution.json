@@ -1,0 +1,1435 @@
+{
+  "name": "diagnostic-costs-64-duplex-1",
+  "acceptance_P": false,
+  "watchdog_seconds": 280,
+  "fixture": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s4\\process\\diagnostic-costs-UeWpKz",
+  "controller": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-costs-64-duplex-1.log",
+    "bytes": 14832,
+    "sha256": "79f30d41ecc58efdbdcc93c846e4f6cf59a0cc6e53ed3489d1c0250301d4b50e"
+  },
+  "source": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/diagnostic-costs-64-duplex-1-source.json",
+    "bytes": 9836,
+    "sha256": "8288c20a027b09ca09c11b1ff69a904fd37fa4ca0c8a404cdc181e7b0151f946"
+  },
+  "image": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-runtime\\kilogram-cli.exe",
+    "bytes": 66193408,
+    "sha256": "66f79751ba546a3e831a0a6d07d186a6190df687f657e049986ca74255416265",
+    "source": "diagnostic-cli-build-2-source.json",
+    "build_command": "run-check.ps1 -Mode build -Package kilogram-cli,kilogram-transport-iroh (default targets, same package selection as P4)",
+    "basis": "diagnostic-instrumentation-basis.json",
+    "environment": "KILOGRAM_TEST_OD2_TIMINGS=1",
+    "scope": "numerical instrumentation only; R1 route guard unchanged from P4"
+  },
+  "summary_line": "S4_DIAGNOSTIC_DONE acceptance_P=false watchdog=280 text=98 genesis=4 setup_seconds=11.491168 one_way64_seconds=33.958756 duplex34_seconds=24.282002 data_elapsed_seconds=58.240759 history_seconds=4.765654 controller_seconds=75.553578 pids=[60688, 10952] cpu_before_ms=[Some(6296.875), Some(6203.125)] cpu_after_ms=[Some(52578.125), Some(48265.625)]",
+  "elapsed": {
+    "setup_seconds": 11.491168,
+    "one_way64_seconds": 33.958756,
+    "duplex34_seconds": 24.282002,
+    "data_elapsed_seconds": 58.240759,
+    "history_seconds": 4.765654,
+    "controller_seconds": 75.553578
+  },
+  "cpu": [
+    {
+      "pid": 60688,
+      "data_cpu_seconds": 46.28125
+    },
+    {
+      "pid": 10952,
+      "data_cpu_seconds": 42.0625
+    }
+  ],
+  "owner_service_seconds_sum": 108.4893818,
+  "nesting_rule": "OwnerJob, MaterializeTurn, DrainTurn, OwnerInstalled are disjoint owner service categories. Other spans are nested or async waiting and MUST NOT be added as independent wall time. Lifetime counters include startup/history, CPU delta covers data phase only. Closed-writer micros begin later than ClosedCommit span.",
+  "ranking": [
+    {
+      "metric": "MailboxQueue",
+      "count": 2376,
+      "elapsed_seconds": 149.9731296,
+      "max_ms": 1177.5473,
+      "average_ms": 63.120004040404034,
+      "fraction_of_owner_service": 1.3823761101014955
+    },
+    {
+      "metric": "ServerSession",
+      "count": 2,
+      "elapsed_seconds": 136.1250713,
+      "max_ms": 68104.9741,
+      "average_ms": 68062.53565,
+      "fraction_of_owner_service": 1.254731744632358
+    },
+    {
+      "metric": "DataRound",
+      "count": 55,
+      "elapsed_seconds": 127.3308208,
+      "max_ms": 11613.9852,
+      "average_ms": 2315.1058327272726,
+      "fraction_of_owner_service": 1.173670811718092
+    },
+    {
+      "metric": "ReadRound",
+      "count": 136,
+      "elapsed_seconds": 70.4600827,
+      "max_ms": 4609.9676,
+      "average_ms": 518.0888433823529,
+      "fraction_of_owner_service": 0.6494652428741188
+    },
+    {
+      "metric": "Rpc",
+      "count": 128,
+      "elapsed_seconds": 65.0676663,
+      "max_ms": 3355.2057,
+      "average_ms": 508.34114296875,
+      "fraction_of_owner_service": 0.5997606882851645
+    },
+    {
+      "metric": "OwnerJob",
+      "count": 2376,
+      "elapsed_seconds": 62.4121265,
+      "max_ms": 1137.6708,
+      "average_ms": 26.26773000841751,
+      "fraction_of_owner_service": 0.5752832716390315
+    },
+    {
+      "metric": "OwnerIdle",
+      "count": 15474,
+      "elapsed_seconds": 32.6369939,
+      "max_ms": 2.8891,
+      "average_ms": 2.109150439446814,
+      "fraction_of_owner_service": 0.30083122752202834
+    },
+    {
+      "metric": "TakeAck",
+      "count": 111,
+      "elapsed_seconds": 23.494416899999997,
+      "max_ms": 2998.7658,
+      "average_ms": 211.66141351351348,
+      "fraction_of_owner_service": 0.21655959790896326
+    },
+    {
+      "metric": "OwnerInstalled",
+      "count": 17874,
+      "elapsed_seconds": 21.0315975,
+      "max_ms": 2.0279,
+      "average_ms": 1.1766586941926822,
+      "fraction_of_owner_service": 0.1938585799923878
+    },
+    {
+      "metric": "ClosedCommit",
+      "count": 490,
+      "elapsed_seconds": 18.2575604,
+      "max_ms": 264.4808,
+      "average_ms": 37.26032734693877,
+      "fraction_of_owner_service": 0.16828891544112382
+    },
+    {
+      "metric": "DrainTurn",
+      "count": 8936,
+      "elapsed_seconds": 16.2298524,
+      "max_ms": 442.7359,
+      "average_ms": 1.8162323634735897,
+      "fraction_of_owner_service": 0.14959853333775747
+    },
+    {
+      "metric": "DrainActive",
+      "count": 64,
+      "elapsed_seconds": 16.179878799999997,
+      "max_ms": 442.73,
+      "average_ms": 252.81060624999995,
+      "fraction_of_owner_service": 0.149137902083612
+    },
+    {
+      "metric": "TakeDelivery",
+      "count": 6,
+      "elapsed_seconds": 14.877903,
+      "max_ms": 4201.3596,
+      "average_ms": 2479.6505,
+      "fraction_of_owner_service": 0.13713695066884415
+    },
+    {
+      "metric": "PushLive",
+      "count": 55,
+      "elapsed_seconds": 13.3830086,
+      "max_ms": 4209.2692,
+      "average_ms": 243.3274290909091,
+      "fraction_of_owner_service": 0.12335777361762051
+    },
+    {
+      "metric": "Snapshot",
+      "count": 3752,
+      "elapsed_seconds": 12.541933700000001,
+      "max_ms": 4.7028,
+      "average_ms": 3.342732862473348,
+      "fraction_of_owner_service": 0.11560517252389764
+    },
+    {
+      "metric": "AcknowledgeOperation",
+      "count": 134,
+      "elapsed_seconds": 12.1047694,
+      "max_ms": 166.8649,
+      "average_ms": 90.3341,
+      "fraction_of_owner_service": 0.11157561412152871
+    },
+    {
+      "metric": "Require",
+      "count": 2361,
+      "elapsed_seconds": 10.8230532,
+      "max_ms": 193.6549,
+      "average_ms": 4.58409707750953,
+      "fraction_of_owner_service": 0.09976140540603579
+    },
+    {
+      "metric": "MaterializeTurn",
+      "count": 8938,
+      "elapsed_seconds": 8.8158054,
+      "max_ms": 295.8594,
+      "average_ms": 0.9863286417543076,
+      "fraction_of_owner_service": 0.08125961503082323
+    },
+    {
+      "metric": "MaterializeActive",
+      "count": 84,
+      "elapsed_seconds": 8.7999471,
+      "max_ms": 295.8571,
+      "average_ms": 104.76127500000001,
+      "fraction_of_owner_service": 0.08111344127872983
+    },
+    {
+      "metric": "Status",
+      "count": 234,
+      "elapsed_seconds": 7.840744,
+      "max_ms": 205.3173,
+      "average_ms": 33.50745299145299,
+      "fraction_of_owner_service": 0.07227199445614317
+    },
+    {
+      "metric": "AckBody",
+      "count": 111,
+      "elapsed_seconds": 4.7999598,
+      "max_ms": 1137.6576,
+      "average_ms": 43.24288108108108,
+      "fraction_of_owner_service": 0.04424359066630795
+    },
+    {
+      "metric": "TakePrefix",
+      "count": 3,
+      "elapsed_seconds": 4.2232509,
+      "max_ms": 2301.6068,
+      "average_ms": 1407.7503,
+      "fraction_of_owner_service": 0.03892778104114886
+    },
+    {
+      "metric": "LiveWindow",
+      "count": 83,
+      "elapsed_seconds": 3.4734611,
+      "max_ms": 981.6455,
+      "average_ms": 41.84892891566265,
+      "fraction_of_owner_service": 0.032016599618968425
+    },
+    {
+      "metric": "Seen",
+      "count": 300,
+      "elapsed_seconds": 3.1294902,
+      "max_ms": 20.4595,
+      "average_ms": 10.431634,
+      "fraction_of_owner_service": 0.028846050627970306
+    },
+    {
+      "metric": "DebtPage",
+      "count": 7,
+      "elapsed_seconds": 3.1031679,
+      "max_ms": 872.6983,
+      "average_ms": 443.30969999999996,
+      "fraction_of_owner_service": 0.028603425040440222
+    },
+    {
+      "metric": "ParentRead",
+      "count": 256,
+      "elapsed_seconds": 3.0738038999999997,
+      "max_ms": 23.8873,
+      "average_ms": 12.007046484375,
+      "fraction_of_owner_service": 0.02833276260774121
+    },
+    {
+      "metric": "TrialSend",
+      "count": 102,
+      "elapsed_seconds": 2.9817022,
+      "max_ms": 47.4915,
+      "average_ms": 29.232374509803922,
+      "fraction_of_owner_service": 0.027483815932297994
+    },
+    {
+      "metric": "VerifyFrame",
+      "count": 255,
+      "elapsed_seconds": 2.8455717,
+      "max_ms": 12.8412,
+      "average_ms": 11.159104705882353,
+      "fraction_of_owner_service": 0.026229034148667254
+    },
+    {
+      "metric": "IngestOperation",
+      "count": 98,
+      "elapsed_seconds": 2.7287612,
+      "max_ms": 81.4541,
+      "average_ms": 27.844502040816327,
+      "fraction_of_owner_service": 0.02515233430890469
+    },
+    {
+      "metric": "Current",
+      "count": 3417,
+      "elapsed_seconds": 2.618087,
+      "max_ms": 190.9606,
+      "average_ms": 0.7661946151594966,
+      "fraction_of_owner_service": 0.024132195764802487
+    },
+    {
+      "metric": "TrialReceive",
+      "count": 102,
+      "elapsed_seconds": 2.5579924,
+      "max_ms": 59.74,
+      "average_ms": 25.078356862745096,
+      "fraction_of_owner_service": 0.023578274274948442
+    },
+    {
+      "metric": "QueueOperation",
+      "count": 98,
+      "elapsed_seconds": 2.5252915000000002,
+      "max_ms": 40.644,
+      "average_ms": 25.7682806122449,
+      "fraction_of_owner_service": 0.023276853993466115
+    },
+    {
+      "metric": "FrameSign",
+      "count": 256,
+      "elapsed_seconds": 1.9070668,
+      "max_ms": 10.9943,
+      "average_ms": 7.4494796875,
+      "fraction_of_owner_service": 0.017578372817311047
+    },
+    {
+      "metric": "AckQuery",
+      "count": 53,
+      "elapsed_seconds": 1.5778134,
+      "max_ms": 413.5755,
+      "average_ms": 29.770064150943398,
+      "fraction_of_owner_service": 0.014543482263625543
+    },
+    {
+      "metric": "HeadBody",
+      "count": 106,
+      "elapsed_seconds": 1.4907596,
+      "max_ms": 39.0141,
+      "average_ms": 14.063769811320755,
+      "fraction_of_owner_service": 0.013741064565638441
+    },
+    {
+      "metric": "AckProgress",
+      "count": 8,
+      "elapsed_seconds": 1.430765,
+      "max_ms": 250.5518,
+      "average_ms": 178.845625,
+      "fraction_of_owner_service": 0.013188064824976264
+    },
+    {
+      "metric": "PrefixRequest",
+      "count": 102,
+      "elapsed_seconds": 1.3885581999999999,
+      "max_ms": 38.8383,
+      "average_ms": 13.61331568627451,
+      "fraction_of_owner_service": 0.01279902398706451
+    },
+    {
+      "metric": "HooksLoad",
+      "count": 13369,
+      "elapsed_seconds": 1.1264001000000001,
+      "max_ms": 0.6935,
+      "average_ms": 0.08425462637444836,
+      "fraction_of_owner_service": 0.01038258381890789
+    },
+    {
+      "metric": "Selected",
+      "count": 1117,
+      "elapsed_seconds": 1.1135538999999999,
+      "max_ms": 253.0683,
+      "average_ms": 0.996914861235452,
+      "fraction_of_owner_service": 0.010264174074222624
+    },
+    {
+      "metric": "PublicRead",
+      "count": 13369,
+      "elapsed_seconds": 1.0619643,
+      "max_ms": 0.688,
+      "average_ms": 0.07943483431819882,
+      "fraction_of_owner_service": 0.009788647353136637
+    },
+    {
+      "metric": "PrefixResponse",
+      "count": 3,
+      "elapsed_seconds": 0.7831804,
+      "max_ms": 327.5485,
+      "average_ms": 261.06013333333334,
+      "fraction_of_owner_service": 0.007218959007839051
+    },
+    {
+      "metric": "AckItems",
+      "count": 111,
+      "elapsed_seconds": 0.7615333,
+      "max_ms": 8.1335,
+      "average_ms": 6.8606603603603595,
+      "fraction_of_owner_service": 0.007019427038527009
+    },
+    {
+      "metric": "NativeSeal",
+      "count": 160,
+      "elapsed_seconds": 0.28854729999999995,
+      "max_ms": 2.5372,
+      "average_ms": 1.8034206249999998,
+      "fraction_of_owner_service": 0.0026596824058960572
+    },
+    {
+      "metric": "Credential",
+      "count": 392,
+      "elapsed_seconds": 0.1733933,
+      "max_ms": 43.6994,
+      "average_ms": 0.44232984693877553,
+      "fraction_of_owner_service": 0.0015982513414967215
+    },
+    {
+      "metric": "LeaseCheck",
+      "count": 1810,
+      "elapsed_seconds": 0.0756327,
+      "max_ms": 0.228,
+      "average_ms": 0.04178602209944751,
+      "fraction_of_owner_service": 0.0006971438010350981
+    },
+    {
+      "metric": "NativeOpen",
+      "count": 598,
+      "elapsed_seconds": 0.0662717,
+      "max_ms": 0.2892,
+      "average_ms": 0.1108222408026756,
+      "fraction_of_owner_service": 0.0006108588591846875
+    },
+    {
+      "metric": "NativeFork",
+      "count": 598,
+      "elapsed_seconds": 0.059887,
+      "max_ms": 0.2786,
+      "average_ms": 0.10014548494983277,
+      "fraction_of_owner_service": 0.000552007938531732
+    },
+    {
+      "metric": "DeliveryItems",
+      "count": 6,
+      "elapsed_seconds": 0.0433083,
+      "max_ms": 7.799,
+      "average_ms": 7.218050000000001,
+      "fraction_of_owner_service": 0.0003991939052601367
+    },
+    {
+      "metric": "NativeEncrypt",
+      "count": 102,
+      "elapsed_seconds": 0.0223107,
+      "max_ms": 0.7352,
+      "average_ms": 0.2187323529411765,
+      "fraction_of_owner_service": 0.00020564869694925296
+    },
+    {
+      "metric": "NativeDecrypt",
+      "count": 102,
+      "elapsed_seconds": 0.0169258,
+      "max_ms": 1.0053,
+      "average_ms": 0.16593921568627454,
+      "fraction_of_owner_service": 0.000156013424716556
+    },
+    {
+      "metric": "MailboxSubmit",
+      "count": 2377,
+      "elapsed_seconds": 0.0058691,
+      "max_ms": 0.0216,
+      "average_ms": 0.0024691207404291125,
+      "fraction_of_owner_service": 0.000054098381819703577
+    }
+  ],
+  "totals": {
+    "MailboxSubmit": {
+      "count": 2377,
+      "elapsed_seconds": 0.0058691,
+      "max_ms": 0.0216,
+      "average_ms": 0.0024691207404291125
+    },
+    "MailboxQueue": {
+      "count": 2376,
+      "elapsed_seconds": 149.9731296,
+      "max_ms": 1177.5473,
+      "average_ms": 63.120004040404034
+    },
+    "OwnerJob": {
+      "count": 2376,
+      "elapsed_seconds": 62.4121265,
+      "max_ms": 1137.6708,
+      "average_ms": 26.26773000841751
+    },
+    "OwnerInstalled": {
+      "count": 17874,
+      "elapsed_seconds": 21.0315975,
+      "max_ms": 2.0279,
+      "average_ms": 1.1766586941926822
+    },
+    "OwnerIdle": {
+      "count": 15474,
+      "elapsed_seconds": 32.6369939,
+      "max_ms": 2.8891,
+      "average_ms": 2.109150439446814
+    },
+    "LeaseCheck": {
+      "count": 1810,
+      "elapsed_seconds": 0.0756327,
+      "max_ms": 0.228,
+      "average_ms": 0.04178602209944751
+    },
+    "Status": {
+      "count": 234,
+      "elapsed_seconds": 7.840744,
+      "max_ms": 205.3173,
+      "average_ms": 33.50745299145299
+    },
+    "MaterializeTurn": {
+      "count": 8938,
+      "elapsed_seconds": 8.8158054,
+      "max_ms": 295.8594,
+      "average_ms": 0.9863286417543076
+    },
+    "MaterializeActive": {
+      "count": 84,
+      "elapsed_seconds": 8.7999471,
+      "max_ms": 295.8571,
+      "average_ms": 104.76127500000001
+    },
+    "DrainTurn": {
+      "count": 8936,
+      "elapsed_seconds": 16.2298524,
+      "max_ms": 442.7359,
+      "average_ms": 1.8162323634735897
+    },
+    "DrainActive": {
+      "count": 64,
+      "elapsed_seconds": 16.179878799999997,
+      "max_ms": 442.73,
+      "average_ms": 252.81060624999995
+    },
+    "TrialSend": {
+      "count": 102,
+      "elapsed_seconds": 2.9817022,
+      "max_ms": 47.4915,
+      "average_ms": 29.232374509803922
+    },
+    "TrialReceive": {
+      "count": 102,
+      "elapsed_seconds": 2.5579924,
+      "max_ms": 59.74,
+      "average_ms": 25.078356862745096
+    },
+    "QueueOperation": {
+      "count": 98,
+      "elapsed_seconds": 2.5252915000000002,
+      "max_ms": 40.644,
+      "average_ms": 25.7682806122449
+    },
+    "IngestOperation": {
+      "count": 98,
+      "elapsed_seconds": 2.7287612,
+      "max_ms": 81.4541,
+      "average_ms": 27.844502040816327
+    },
+    "AcknowledgeOperation": {
+      "count": 134,
+      "elapsed_seconds": 12.1047694,
+      "max_ms": 166.8649,
+      "average_ms": 90.3341
+    },
+    "NativeEncrypt": {
+      "count": 102,
+      "elapsed_seconds": 0.0223107,
+      "max_ms": 0.7352,
+      "average_ms": 0.2187323529411765
+    },
+    "NativeDecrypt": {
+      "count": 102,
+      "elapsed_seconds": 0.0169258,
+      "max_ms": 1.0053,
+      "average_ms": 0.16593921568627454
+    },
+    "NativeFork": {
+      "count": 598,
+      "elapsed_seconds": 0.059887,
+      "max_ms": 0.2786,
+      "average_ms": 0.10014548494983277
+    },
+    "NativeSeal": {
+      "count": 160,
+      "elapsed_seconds": 0.28854729999999995,
+      "max_ms": 2.5372,
+      "average_ms": 1.8034206249999998
+    },
+    "NativeOpen": {
+      "count": 598,
+      "elapsed_seconds": 0.0662717,
+      "max_ms": 0.2892,
+      "average_ms": 0.1108222408026756
+    },
+    "Snapshot": {
+      "count": 3752,
+      "elapsed_seconds": 12.541933700000001,
+      "max_ms": 4.7028,
+      "average_ms": 3.342732862473348
+    },
+    "Current": {
+      "count": 3417,
+      "elapsed_seconds": 2.618087,
+      "max_ms": 190.9606,
+      "average_ms": 0.7661946151594966
+    },
+    "Selected": {
+      "count": 1117,
+      "elapsed_seconds": 1.1135538999999999,
+      "max_ms": 253.0683,
+      "average_ms": 0.996914861235452
+    },
+    "Require": {
+      "count": 2361,
+      "elapsed_seconds": 10.8230532,
+      "max_ms": 193.6549,
+      "average_ms": 4.58409707750953
+    },
+    "Seen": {
+      "count": 300,
+      "elapsed_seconds": 3.1294902,
+      "max_ms": 20.4595,
+      "average_ms": 10.431634
+    },
+    "ParentRead": {
+      "count": 256,
+      "elapsed_seconds": 3.0738038999999997,
+      "max_ms": 23.8873,
+      "average_ms": 12.007046484375
+    },
+    "Credential": {
+      "count": 392,
+      "elapsed_seconds": 0.1733933,
+      "max_ms": 43.6994,
+      "average_ms": 0.44232984693877553
+    },
+    "ClosedCommit": {
+      "count": 490,
+      "elapsed_seconds": 18.2575604,
+      "max_ms": 264.4808,
+      "average_ms": 37.26032734693877
+    },
+    "HooksLoad": {
+      "count": 13369,
+      "elapsed_seconds": 1.1264001000000001,
+      "max_ms": 0.6935,
+      "average_ms": 0.08425462637444836
+    },
+    "PublicRead": {
+      "count": 13369,
+      "elapsed_seconds": 1.0619643,
+      "max_ms": 0.688,
+      "average_ms": 0.07943483431819882
+    },
+    "LiveWindow": {
+      "count": 83,
+      "elapsed_seconds": 3.4734611,
+      "max_ms": 981.6455,
+      "average_ms": 41.84892891566265
+    },
+    "DebtPage": {
+      "count": 7,
+      "elapsed_seconds": 3.1031679,
+      "max_ms": 872.6983,
+      "average_ms": 443.30969999999996
+    },
+    "DeliveryItems": {
+      "count": 6,
+      "elapsed_seconds": 0.0433083,
+      "max_ms": 7.799,
+      "average_ms": 7.218050000000001
+    },
+    "VerifyFrame": {
+      "count": 255,
+      "elapsed_seconds": 2.8455717,
+      "max_ms": 12.8412,
+      "average_ms": 11.159104705882353
+    },
+    "FrameSign": {
+      "count": 256,
+      "elapsed_seconds": 1.9070668,
+      "max_ms": 10.9943,
+      "average_ms": 7.4494796875
+    },
+    "HeadBody": {
+      "count": 106,
+      "elapsed_seconds": 1.4907596,
+      "max_ms": 39.0141,
+      "average_ms": 14.063769811320755
+    },
+    "PrefixRequest": {
+      "count": 102,
+      "elapsed_seconds": 1.3885581999999999,
+      "max_ms": 38.8383,
+      "average_ms": 13.61331568627451
+    },
+    "PrefixResponse": {
+      "count": 3,
+      "elapsed_seconds": 0.7831804,
+      "max_ms": 327.5485,
+      "average_ms": 261.06013333333334
+    },
+    "AckBody": {
+      "count": 111,
+      "elapsed_seconds": 4.7999598,
+      "max_ms": 1137.6576,
+      "average_ms": 43.24288108108108
+    },
+    "AckItems": {
+      "count": 111,
+      "elapsed_seconds": 0.7615333,
+      "max_ms": 8.1335,
+      "average_ms": 6.8606603603603595
+    },
+    "AckQuery": {
+      "count": 53,
+      "elapsed_seconds": 1.5778134,
+      "max_ms": 413.5755,
+      "average_ms": 29.770064150943398
+    },
+    "AckProgress": {
+      "count": 8,
+      "elapsed_seconds": 1.430765,
+      "max_ms": 250.5518,
+      "average_ms": 178.845625
+    },
+    "TakeDelivery": {
+      "count": 6,
+      "elapsed_seconds": 14.877903,
+      "max_ms": 4201.3596,
+      "average_ms": 2479.6505
+    },
+    "TakeAck": {
+      "count": 111,
+      "elapsed_seconds": 23.494416899999997,
+      "max_ms": 2998.7658,
+      "average_ms": 211.66141351351348
+    },
+    "TakePrefix": {
+      "count": 3,
+      "elapsed_seconds": 4.2232509,
+      "max_ms": 2301.6068,
+      "average_ms": 1407.7503
+    },
+    "Rpc": {
+      "count": 128,
+      "elapsed_seconds": 65.0676663,
+      "max_ms": 3355.2057,
+      "average_ms": 508.34114296875
+    },
+    "DataRound": {
+      "count": 55,
+      "elapsed_seconds": 127.3308208,
+      "max_ms": 11613.9852,
+      "average_ms": 2315.1058327272726
+    },
+    "PushLive": {
+      "count": 55,
+      "elapsed_seconds": 13.3830086,
+      "max_ms": 4209.2692,
+      "average_ms": 243.3274290909091
+    },
+    "ServerSession": {
+      "count": 2,
+      "elapsed_seconds": 136.1250713,
+      "max_ms": 68104.9741,
+      "average_ms": 68062.53565
+    },
+    "ReadRound": {
+      "count": 136,
+      "elapsed_seconds": 70.4600827,
+      "max_ms": 4609.9676,
+      "average_ms": 518.0888433823529
+    }
+  },
+  "per_process": [
+    {
+      "pid": 60688,
+      "profile": "profile0.1.stderr.log",
+      "metrics": {
+        "MailboxSubmit": {
+          "count": 1231,
+          "elapsed_seconds": 0.0029936,
+          "average_ms": 0.002431844029244517,
+          "max_ms": 0.0216
+        },
+        "MailboxQueue": {
+          "count": 1230,
+          "elapsed_seconds": 70.3997379,
+          "average_ms": 57.23555926829268,
+          "max_ms": 983.7882
+        },
+        "OwnerJob": {
+          "count": 1230,
+          "elapsed_seconds": 34.24707,
+          "average_ms": 27.843146341463413,
+          "max_ms": 981.6628
+        },
+        "OwnerInstalled": {
+          "count": 8350,
+          "elapsed_seconds": 9.822609,
+          "average_ms": 1.1763603592814373,
+          "max_ms": 1.8931
+        },
+        "OwnerIdle": {
+          "count": 7099,
+          "elapsed_seconds": 14.939657,
+          "average_ms": 2.104473446964361,
+          "max_ms": 2.8891
+        },
+        "LeaseCheck": {
+          "count": 934,
+          "elapsed_seconds": 0.0390525,
+          "average_ms": 0.04181209850107066,
+          "max_ms": 0.228
+        },
+        "Status": {
+          "count": 198,
+          "elapsed_seconds": 6.5472551,
+          "average_ms": 33.06694494949495,
+          "max_ms": 205.3173
+        },
+        "MaterializeTurn": {
+          "count": 4176,
+          "elapsed_seconds": 5.3764041,
+          "average_ms": 1.2874530890804596,
+          "max_ms": 295.8594
+        },
+        "MaterializeActive": {
+          "count": 56,
+          "elapsed_seconds": 5.3688899,
+          "average_ms": 95.87303392857143,
+          "max_ms": 295.8571
+        },
+        "DrainTurn": {
+          "count": 4174,
+          "elapsed_seconds": 7.0296493,
+          "average_ms": 1.6841517249640632,
+          "max_ms": 442.7359
+        },
+        "DrainActive": {
+          "count": 22,
+          "elapsed_seconds": 7.0068512,
+          "average_ms": 318.49323636363636,
+          "max_ms": 442.73
+        },
+        "TrialSend": {
+          "count": 68,
+          "elapsed_seconds": 1.716521,
+          "average_ms": 25.24295588235294,
+          "max_ms": 36.8543
+        },
+        "TrialReceive": {
+          "count": 34,
+          "elapsed_seconds": 1.3721805,
+          "average_ms": 40.35825,
+          "max_ms": 59.74
+        },
+        "QueueOperation": {
+          "count": 66,
+          "elapsed_seconds": 1.6402346,
+          "average_ms": 24.852039393939396,
+          "max_ms": 39.1689
+        },
+        "IngestOperation": {
+          "count": 32,
+          "elapsed_seconds": 0.8936624,
+          "average_ms": 27.92695,
+          "max_ms": 38.1728
+        },
+        "AcknowledgeOperation": {
+          "count": 102,
+          "elapsed_seconds": 7.767749,
+          "average_ms": 76.15440196078431,
+          "max_ms": 166.8649
+        },
+        "NativeEncrypt": {
+          "count": 68,
+          "elapsed_seconds": 0.014428,
+          "average_ms": 0.2121764705882353,
+          "max_ms": 0.7352
+        },
+        "NativeDecrypt": {
+          "count": 34,
+          "elapsed_seconds": 0.0057814,
+          "average_ms": 0.17004117647058822,
+          "max_ms": 0.388
+        },
+        "NativeFork": {
+          "count": 467,
+          "elapsed_seconds": 0.0468473,
+          "average_ms": 0.10031541755888651,
+          "max_ms": 0.2786
+        },
+        "NativeSeal": {
+          "count": 84,
+          "elapsed_seconds": 0.146804,
+          "average_ms": 1.7476666666666667,
+          "max_ms": 2.5169
+        },
+        "NativeOpen": {
+          "count": 467,
+          "elapsed_seconds": 0.0517601,
+          "average_ms": 0.11083533190578158,
+          "max_ms": 0.2892
+        },
+        "Snapshot": {
+          "count": 2148,
+          "elapsed_seconds": 7.1825302,
+          "average_ms": 3.3438222532588453,
+          "max_ms": 4.7028
+        },
+        "Current": {
+          "count": 2131,
+          "elapsed_seconds": 1.3444058,
+          "average_ms": 0.6308802440168935,
+          "max_ms": 184.6954
+        },
+        "Selected": {
+          "count": 597,
+          "elapsed_seconds": 0.5603961,
+          "average_ms": 0.9386869346733668,
+          "max_ms": 251.6375
+        },
+        "Require": {
+          "count": 1404,
+          "elapsed_seconds": 6.195531,
+          "average_ms": 4.412771367521368,
+          "max_ms": 187.0861
+        },
+        "Seen": {
+          "count": 167,
+          "elapsed_seconds": 1.5881742,
+          "average_ms": 9.5100251497006,
+          "max_ms": 20.4595
+        },
+        "ParentRead": {
+          "count": 126,
+          "elapsed_seconds": 1.8704397,
+          "average_ms": 14.844759523809524,
+          "max_ms": 23.8873
+        },
+        "Credential": {
+          "count": 196,
+          "elapsed_seconds": 0.0851363,
+          "average_ms": 0.43436887755102044,
+          "max_ms": 42.2867
+        },
+        "ClosedCommit": {
+          "count": 265,
+          "elapsed_seconds": 9.2021342,
+          "average_ms": 34.725034716981135,
+          "max_ms": 246.7363
+        },
+        "HooksLoad": {
+          "count": 8065,
+          "elapsed_seconds": 0.6759642,
+          "average_ms": 0.08381453192808432,
+          "max_ms": 0.6935
+        },
+        "PublicRead": {
+          "count": 8065,
+          "elapsed_seconds": 0.6372501,
+          "average_ms": 0.07901427154370738,
+          "max_ms": 0.688
+        },
+        "LiveWindow": {
+          "count": 55,
+          "elapsed_seconds": 2.0024472,
+          "average_ms": 36.40813090909091,
+          "max_ms": 981.6455
+        },
+        "DebtPage": {
+          "count": 5,
+          "elapsed_seconds": 1.7542471,
+          "average_ms": 350.84942,
+          "max_ms": 814.605
+        },
+        "DeliveryItems": {
+          "count": 2,
+          "elapsed_seconds": 0.0141778,
+          "average_ms": 7.0889,
+          "max_ms": 7.1449
+        },
+        "VerifyFrame": {
+          "count": 127,
+          "elapsed_seconds": 1.4149819,
+          "average_ms": 11.141589763779528,
+          "max_ms": 12.7066
+        },
+        "FrameSign": {
+          "count": 128,
+          "elapsed_seconds": 0.9575821,
+          "average_ms": 7.48111015625,
+          "max_ms": 10.2464
+        },
+        "HeadBody": {
+          "count": 55,
+          "elapsed_seconds": 0.7904248,
+          "average_ms": 14.37136,
+          "max_ms": 38.8082
+        },
+        "PrefixRequest": {
+          "count": 49,
+          "elapsed_seconds": 0.6369654,
+          "average_ms": 12.999293877551022,
+          "max_ms": 38.1707
+        },
+        "PrefixResponse": {
+          "count": 2,
+          "elapsed_seconds": 0.5494436,
+          "average_ms": 274.7218,
+          "max_ms": 327.5485
+        },
+        "AckBody": {
+          "count": 53,
+          "elapsed_seconds": 1.0978525,
+          "average_ms": 20.714198113207548,
+          "max_ms": 122.4057
+        },
+        "AckItems": {
+          "count": 58,
+          "elapsed_seconds": 0.3969003,
+          "average_ms": 6.843108620689654,
+          "max_ms": 7.4605
+        },
+        "AckQuery": {
+          "count": 53,
+          "elapsed_seconds": 1.5778134,
+          "average_ms": 29.770064150943394,
+          "max_ms": 413.5755
+        },
+        "AckProgress": {
+          "count": 3,
+          "elapsed_seconds": 0.4903807,
+          "average_ms": 163.46023333333335,
+          "max_ms": 250.5518
+        },
+        "TakeDelivery": {
+          "count": 2,
+          "elapsed_seconds": 7.5462998,
+          "average_ms": 3773.1499,
+          "max_ms": 4201.3596
+        },
+        "TakeAck": {
+          "count": 58,
+          "elapsed_seconds": 14.1842791,
+          "average_ms": 244.55653620689654,
+          "max_ms": 2998.7658
+        },
+        "TakePrefix": {
+          "count": 1,
+          "elapsed_seconds": 0.7213092,
+          "average_ms": 721.3092,
+          "max_ms": 721.3092
+        },
+        "Rpc": {
+          "count": 128,
+          "elapsed_seconds": 65.0676663,
+          "average_ms": 508.34114296875,
+          "max_ms": 3355.2057
+        },
+        "DataRound": {
+          "count": 55,
+          "elapsed_seconds": 127.3308208,
+          "average_ms": 2315.1058327272726,
+          "max_ms": 11613.9852
+        },
+        "PushLive": {
+          "count": 55,
+          "elapsed_seconds": 13.3830086,
+          "average_ms": 243.3274290909091,
+          "max_ms": 4209.2692
+        }
+      }
+    },
+    {
+      "pid": 10952,
+      "profile": "profile1.1.stderr.log",
+      "metrics": {
+        "MailboxSubmit": {
+          "count": 1146,
+          "elapsed_seconds": 0.0028755,
+          "average_ms": 0.0025091623036649214,
+          "max_ms": 0.0122
+        },
+        "MailboxQueue": {
+          "count": 1146,
+          "elapsed_seconds": 79.5733917,
+          "average_ms": 69.43576937172774,
+          "max_ms": 1177.5473
+        },
+        "OwnerJob": {
+          "count": 1146,
+          "elapsed_seconds": 28.1650565,
+          "average_ms": 24.576838132635256,
+          "max_ms": 1137.6708
+        },
+        "OwnerInstalled": {
+          "count": 9524,
+          "elapsed_seconds": 11.2089885,
+          "average_ms": 1.176920254094918,
+          "max_ms": 2.0279
+        },
+        "OwnerIdle": {
+          "count": 8375,
+          "elapsed_seconds": 17.6973369,
+          "average_ms": 2.113114853731343,
+          "max_ms": 2.8569
+        },
+        "LeaseCheck": {
+          "count": 876,
+          "elapsed_seconds": 0.0365802,
+          "average_ms": 0.04175821917808219,
+          "max_ms": 0.2149
+        },
+        "Status": {
+          "count": 36,
+          "elapsed_seconds": 1.2934889,
+          "average_ms": 35.93024722222222,
+          "max_ms": 204.8339
+        },
+        "MaterializeTurn": {
+          "count": 4762,
+          "elapsed_seconds": 3.4394013,
+          "average_ms": 0.7222598278034439,
+          "max_ms": 151.5023
+        },
+        "MaterializeActive": {
+          "count": 28,
+          "elapsed_seconds": 3.4310572,
+          "average_ms": 122.53775714285715,
+          "max_ms": 151.5006
+        },
+        "DrainTurn": {
+          "count": 4762,
+          "elapsed_seconds": 9.2002031,
+          "average_ms": 1.9320040109197816,
+          "max_ms": 433.9243
+        },
+        "DrainActive": {
+          "count": 42,
+          "elapsed_seconds": 9.1730276,
+          "average_ms": 218.40541904761903,
+          "max_ms": 433.9189
+        },
+        "TrialSend": {
+          "count": 34,
+          "elapsed_seconds": 1.2651812,
+          "average_ms": 37.21121176470588,
+          "max_ms": 47.4915
+        },
+        "TrialReceive": {
+          "count": 68,
+          "elapsed_seconds": 1.1858119,
+          "average_ms": 17.43841029411765,
+          "max_ms": 33.5265
+        },
+        "QueueOperation": {
+          "count": 32,
+          "elapsed_seconds": 0.8850569,
+          "average_ms": 27.658028125,
+          "max_ms": 40.644
+        },
+        "IngestOperation": {
+          "count": 66,
+          "elapsed_seconds": 1.8350988,
+          "average_ms": 27.804527272727274,
+          "max_ms": 81.4541
+        },
+        "AcknowledgeOperation": {
+          "count": 32,
+          "elapsed_seconds": 4.3370204,
+          "average_ms": 135.5318875,
+          "max_ms": 161.7801
+        },
+        "NativeEncrypt": {
+          "count": 34,
+          "elapsed_seconds": 0.0078827,
+          "average_ms": 0.2318441176470588,
+          "max_ms": 0.4824
+        },
+        "NativeDecrypt": {
+          "count": 68,
+          "elapsed_seconds": 0.0111444,
+          "average_ms": 0.16388823529411764,
+          "max_ms": 1.0053
+        },
+        "NativeFork": {
+          "count": 131,
+          "elapsed_seconds": 0.0130397,
+          "average_ms": 0.09953969465648854,
+          "max_ms": 0.1787
+        },
+        "NativeSeal": {
+          "count": 76,
+          "elapsed_seconds": 0.1417433,
+          "average_ms": 1.8650434210526317,
+          "max_ms": 2.5372
+        },
+        "NativeOpen": {
+          "count": 131,
+          "elapsed_seconds": 0.0145116,
+          "average_ms": 0.11077557251908397,
+          "max_ms": 0.1969
+        },
+        "Snapshot": {
+          "count": 1604,
+          "elapsed_seconds": 5.3594035,
+          "average_ms": 3.3412740024937655,
+          "max_ms": 4.2692
+        },
+        "Current": {
+          "count": 1286,
+          "elapsed_seconds": 1.2736812,
+          "average_ms": 0.9904208398133748,
+          "max_ms": 190.9606
+        },
+        "Selected": {
+          "count": 520,
+          "elapsed_seconds": 0.5531578,
+          "average_ms": 1.063765,
+          "max_ms": 253.0683
+        },
+        "Require": {
+          "count": 957,
+          "elapsed_seconds": 4.6275222,
+          "average_ms": 4.835446394984326,
+          "max_ms": 193.6549
+        },
+        "Seen": {
+          "count": 133,
+          "elapsed_seconds": 1.541316,
+          "average_ms": 11.588842105263158,
+          "max_ms": 19.7459
+        },
+        "ParentRead": {
+          "count": 130,
+          "elapsed_seconds": 1.2033642,
+          "average_ms": 9.256647692307691,
+          "max_ms": 18.9128
+        },
+        "Credential": {
+          "count": 196,
+          "elapsed_seconds": 0.088257,
+          "average_ms": 0.4502908163265306,
+          "max_ms": 43.6994
+        },
+        "ClosedCommit": {
+          "count": 225,
+          "elapsed_seconds": 9.0554262,
+          "average_ms": 40.24633866666667,
+          "max_ms": 264.4808
+        },
+        "HooksLoad": {
+          "count": 5304,
+          "elapsed_seconds": 0.4504359,
+          "average_ms": 0.08492381221719457,
+          "max_ms": 0.4722
+        },
+        "PublicRead": {
+          "count": 5304,
+          "elapsed_seconds": 0.4247142,
+          "average_ms": 0.08007432126696833,
+          "max_ms": 0.4672
+        },
+        "LiveWindow": {
+          "count": 28,
+          "elapsed_seconds": 1.4710139,
+          "average_ms": 52.536210714285716,
+          "max_ms": 886.8069
+        },
+        "DebtPage": {
+          "count": 2,
+          "elapsed_seconds": 1.3489208,
+          "average_ms": 674.4604,
+          "max_ms": 872.6983
+        },
+        "DeliveryItems": {
+          "count": 4,
+          "elapsed_seconds": 0.0291305,
+          "average_ms": 7.282625,
+          "max_ms": 7.799
+        },
+        "VerifyFrame": {
+          "count": 128,
+          "elapsed_seconds": 1.4305898,
+          "average_ms": 11.1764828125,
+          "max_ms": 12.8412
+        },
+        "FrameSign": {
+          "count": 128,
+          "elapsed_seconds": 0.9494847,
+          "average_ms": 7.41784921875,
+          "max_ms": 10.9943
+        },
+        "HeadBody": {
+          "count": 51,
+          "elapsed_seconds": 0.7003348,
+          "average_ms": 13.732054901960785,
+          "max_ms": 39.0141
+        },
+        "PrefixRequest": {
+          "count": 53,
+          "elapsed_seconds": 0.7515928,
+          "average_ms": 14.180996226415093,
+          "max_ms": 38.8383
+        },
+        "PrefixResponse": {
+          "count": 1,
+          "elapsed_seconds": 0.2337368,
+          "average_ms": 233.7368,
+          "max_ms": 233.7368
+        },
+        "AckBody": {
+          "count": 58,
+          "elapsed_seconds": 3.7021073,
+          "average_ms": 63.82943620689655,
+          "max_ms": 1137.6576
+        },
+        "AckItems": {
+          "count": 53,
+          "elapsed_seconds": 0.364633,
+          "average_ms": 6.879867924528302,
+          "max_ms": 8.1335
+        },
+        "AckProgress": {
+          "count": 5,
+          "elapsed_seconds": 0.9403843,
+          "average_ms": 188.07686,
+          "max_ms": 236.7811
+        },
+        "TakeDelivery": {
+          "count": 4,
+          "elapsed_seconds": 7.3316032,
+          "average_ms": 1832.9008,
+          "max_ms": 3020.5823
+        },
+        "TakeAck": {
+          "count": 53,
+          "elapsed_seconds": 9.3101378,
+          "average_ms": 175.66297735849056,
+          "max_ms": 2465.309
+        },
+        "TakePrefix": {
+          "count": 2,
+          "elapsed_seconds": 3.5019417,
+          "average_ms": 1750.97085,
+          "max_ms": 2301.6068
+        },
+        "ServerSession": {
+          "count": 2,
+          "elapsed_seconds": 136.1250713,
+          "average_ms": 68062.53565,
+          "max_ms": 68104.9741
+        },
+        "ReadRound": {
+          "count": 136,
+          "elapsed_seconds": 70.4600827,
+          "average_ms": 518.0888433823529,
+          "max_ms": 4609.9676
+        }
+      }
+    }
+  ],
+  "closed_writer_by_operation": {
+    "Locator": {
+      "count": 8,
+      "elapsed_seconds": 0.455628,
+      "max_ms": 205.105
+    },
+    "PrepareOffer": {
+      "count": 2,
+      "elapsed_seconds": 0.022343000000000002,
+      "max_ms": 11.252
+    },
+    "Genesis": {
+      "count": 6,
+      "elapsed_seconds": 0.46975599999999995,
+      "max_ms": 196.313
+    },
+    "Ready": {
+      "count": 8,
+      "elapsed_seconds": 0.146953,
+      "max_ms": 25.736
+    },
+    "PeerHead": {
+      "count": 9,
+      "elapsed_seconds": 0.09838,
+      "max_ms": 12.615
+    },
+    "Queue": {
+      "count": 98,
+      "elapsed_seconds": 1.4507790000000005,
+      "max_ms": 28.939
+    },
+    "Materialize": {
+      "count": 84,
+      "elapsed_seconds": 4.7217210000000005,
+      "max_ms": 239.207
+    },
+    "Acknowledge": {
+      "count": 98,
+      "elapsed_seconds": 3.1598949999999992,
+      "max_ms": 40.078
+    },
+    "Repair": {
+      "count": 5,
+      "elapsed_seconds": 0.069759,
+      "max_ms": 15.859
+    },
+    "AcceptPending": {
+      "count": 98,
+      "elapsed_seconds": 1.487633,
+      "max_ms": 44.082
+    },
+    "Drain": {
+      "count": 64,
+      "elapsed_seconds": 4.571009999999999,
+      "max_ms": 264.067
+    },
+    "AckProgress": {
+      "count": 8,
+      "elapsed_seconds": 1.396865,
+      "max_ms": 246.383
+    },
+    "ReserveGrant": {
+      "count": 2,
+      "elapsed_seconds": 0.024051,
+      "max_ms": 12.28
+    }
+  },
+  "child_log_artifacts": [
+    {
+      "path": ".tmp/a3-s4/process/diagnostic-costs-UeWpKz/profile0.1.stderr.log",
+      "bytes": 76420,
+      "sha256": "de2fa8ca400320d87345385a9794c9ba24631434b616afc3c3148f8a9a273029"
+    },
+    {
+      "path": ".tmp/a3-s4/process/diagnostic-costs-UeWpKz/profile1.1.stderr.log",
+      "bytes": 73029,
+      "sha256": "fe4591cc3588d3c4035a3d5a21767a0f74f4e4037988fb12522b3e3aa9d8f78a"
+    }
+  ],
+  "privacy": "Only metric labels/counts/nanoseconds/PIDs/public log artifact hashes are used. No Root/Device key, IPC token, state vault or Native checkpoint read."
+}

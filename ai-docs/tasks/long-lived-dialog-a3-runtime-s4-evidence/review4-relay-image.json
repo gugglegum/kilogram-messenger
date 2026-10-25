@@ -1,0 +1,9 @@
+{
+  "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-runtime\\kilogram-relay.exe",
+  "bytes": 17057280,
+  "sha256": "b8723b8cb546a0ceccf3179415d580b073f0a36d2f9a458ecfd15c66bf2c6317",
+  "old_sha256": "69cad3e0e39b5c23a163b0d2a99b15d42faf0a2433bb909397a64cda81eb7aa5",
+  "source": "review4-relay-build-1-source.json",
+  "scope": "only local relay readiness writable temporary+sync+atomic publish; CLI d5d8c8 unchanged",
+  "controller": "review4-relay-clippy-3-source.json"
+}

@@ -1,0 +1,8 @@
+{
+  "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+  "bytes": 66337280,
+  "sha256": "aabace7a6fe7784dc11a284dd2108fa73c4e04437faeb03c64844c52d3e63007",
+  "source": "integration-compile-1-source.json",
+  "profile": "verification",
+  "jobs": 12
+}

@@ -1,0 +1,177 @@
+//! Test-controller file replacement only. No production IO error is retried here.
+use super::*;
+use std::io::Write;
+
+const RETRY_BUDGET: Duration = Duration::from_millis(500);
+const BACKOFF: Duration = Duration::from_millis(20);
+
+pub(super) struct Report {
+    pub attempts: usize,
+    pub elapsed: Duration,
+}
+fn replacement_contention(error: &std::io::Error) -> bool {
+    cfg!(windows) && matches!(error.raw_os_error(), Some(5 | 32 | 33))
+}
+pub(super) fn write(destination: &Path, value: &serde_json::Value) -> Result<Report> {
+    write_observed(destination, value, |_| Ok(()))
+}
+fn write_observed(
+    destination: &Path,
+    value: &serde_json::Value,
+    mut failed_persist: impl FnMut(&std::io::Error) -> Result<()>,
+) -> Result<Report> {
+    let bytes = serde_json::to_vec(value)
+        .with_context(|| format!("serialize debug schedule {}", destination.display()))?;
+    let parent = destination
+        .parent()
+        .with_context(|| format!("debug schedule parent {}", destination.display()))?;
+    let mut file = tempfile::NamedTempFile::new_in(parent)
+        .with_context(|| format!("create debug schedule temporary in {}", parent.display()))?;
+    let temporary = file.path().to_owned();
+    file.write_all(&bytes)
+        .with_context(|| format!("write debug schedule temporary {}", temporary.display()))?;
+    file.as_file()
+        .sync_all()
+        .with_context(|| format!("sync debug schedule temporary {}", temporary.display()))?;
+    let start = Instant::now();
+    let mut attempts = 0;
+    loop {
+        attempts += 1;
+        match file.persist(destination) {
+            Ok(_) => {
+                return Ok(Report {
+                    attempts,
+                    elapsed: start.elapsed(),
+                });
+            }
+            Err(error) => {
+                let tempfile::PersistError { error, file: same } = error;
+                let context = || {
+                    format!(
+                        "atomic persist debug schedule {} -> {} attempts={attempts} elapsed_micros={}",
+                        temporary.display(),
+                        destination.display(),
+                        start.elapsed().as_micros()
+                    )
+                };
+                if !replacement_contention(&error) || start.elapsed() >= RETRY_BUDGET {
+                    return Err(error).with_context(context);
+                }
+                failed_persist(&error)?;
+                println!(
+                    "controller_schedule_persist_retry attempt={attempts} os_error={:?}",
+                    error.raw_os_error()
+                );
+                let remaining = RETRY_BUDGET.saturating_sub(start.elapsed());
+                std::thread::sleep(remaining.min(BACKOFF));
+                if start.elapsed() >= RETRY_BUDGET {
+                    return Err(error).with_context(context);
+                }
+                // Preserve the same already-written, synced file and exact bytes.
+                file = same;
+            }
+        }
+    }
+}
+
+#[cfg(windows)]
+mod lock_controls {
+    use super::*;
+    use std::{fs::OpenOptions, os::windows::fs::OpenOptionsExt};
+
+    fn hold(destination: &Path) -> Result<std::fs::File> {
+        // FILE_SHARE_READ | FILE_SHARE_WRITE, deliberately no FILE_SHARE_DELETE.
+        Ok(OpenOptions::new()
+            .read(true)
+            .share_mode(0x3)
+            .open(destination)?)
+    }
+
+    #[test]
+    fn a3_s4_controller_schedule_lock_release_exact_atomic() -> Result<()> {
+        use std::io::Read;
+        let directory = tempfile::tempdir()?;
+        let destination = directory.path().join("schedule.json");
+        let old = br#"{"slot":0,"suspend_live":true}"#;
+        std::fs::write(&destination, old)?;
+        let mut held = Some(hold(&destination)?);
+        let mut observed = 0;
+        let value = serde_json::json!({"slot":0,"suspend_drain":true});
+        let report = write_observed(&destination, &value, |error| {
+            ensure!(replacement_contention(error), "real contention OS code");
+            observed += 1;
+            if let Some(mut reader) = held.take() {
+                let mut old_handle_bytes = Vec::new();
+                reader.read_to_end(&mut old_handle_bytes)?;
+                ensure!(
+                    old_handle_bytes == old && std::fs::read(&destination)? == old,
+                    "original complete bytes changed before lock release"
+                );
+                // Release is triggered by a real failed persist, never a sleep.
+                drop(reader);
+            }
+            Ok(())
+        })?;
+        ensure!(
+            report.attempts > 1,
+            "Windows reader lock did not exercise retry"
+        );
+        ensure!(
+            report.elapsed < Duration::from_secs(1)
+                && observed > 0
+                && std::fs::read(&destination)? == serde_json::to_vec(&value)?,
+            "release did not permit bounded exact atomic replacement"
+        );
+        println!(
+            "S4_SCHEDULE_RELEASE_PASS attempts={} micros={} exact_old_and_new_bytes=true atomic_persist_only=true",
+            report.attempts,
+            report.elapsed.as_micros()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn a3_s4_controller_schedule_lock_persistent_preserves_original() -> Result<()> {
+        use std::io::Read;
+        let directory = tempfile::tempdir()?;
+        let destination = directory.path().join("schedule.json");
+        let old = br#"{"slot":0,"suspend_live":true}"#;
+        std::fs::write(&destination, old)?;
+        let mut held = hold(&destination)?;
+        let started = Instant::now();
+        let error = match write(
+            &destination,
+            &serde_json::json!({"slot":0,"suspend_drain":true}),
+        ) {
+            Ok(_) => anyhow::bail!("persistent lock unexpectedly replaced destination"),
+            Err(error) => error,
+        };
+        let elapsed = started.elapsed();
+        let mut held_bytes = Vec::new();
+        held.read_to_end(&mut held_bytes)?;
+        ensure!(
+            elapsed < Duration::from_secs(1)
+                && elapsed >= RETRY_BUDGET
+                && std::fs::read(&destination)? == old
+                && held_bytes == old,
+            "persistent contention changed old bytes or exceeded retry bound"
+        );
+        let cause = error
+            .downcast_ref::<std::io::Error>()
+            .context("last IO error lost")?;
+        ensure!(
+            replacement_contention(cause),
+            "unexpected lock-control OS code"
+        );
+        ensure!(
+            format!("{error:#}").contains("atomic persist debug schedule"),
+            "operation context missing"
+        );
+        println!(
+            "S4_SCHEDULE_PERSISTENT_PASS micros={} os_error={:?} original_bytes_exact=true persistent_error_retained=true",
+            elapsed.as_micros(),
+            cause.raw_os_error()
+        );
+        Ok(())
+    }
+}

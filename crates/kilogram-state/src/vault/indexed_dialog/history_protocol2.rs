@@ -2,7 +2,7 @@
 use super::*;
 use serde::{Deserialize, Serialize};
 #[path = "history_source_v2.rs"]
-mod source;
+pub(in crate::vault::indexed_dialog) mod source;
 use source::{
     EventFields, FreshFields, read_auth_bundle, read_event2, read_fresh_binding2, read_receipt2,
 };
@@ -286,6 +286,7 @@ impl IndexedDialogVault {
         id: Id,
         op: HistoryProtocol2Operation,
     ) -> Result<CommitReport> {
+        self.component_writer()?;
         if self.poisoned {
             return Err(Error::ReopenRequired);
         }
@@ -445,6 +446,61 @@ impl<
             return Err(Error::Integrity("protocol2 source Lane correspondence"));
         }
         Ok(e)
+    }
+    pub(in crate::vault::indexed_dialog) fn runtime_event(
+        &mut self,
+        c: u8,
+        role: u8,
+        n: u64,
+    ) -> Result<(EventFields, Vec<u8>)> {
+        self.proto_required(c)?;
+        let (identity, heads) = self.history_view(c)?;
+        self.history_coherent(c, &identity, &heads)?;
+        let id: Id = self
+            .hrequired(lane(c, role, n)?)?
+            .as_slice()
+            .try_into()
+            .map_err(|_| Error::Integrity("runtime source slot"))?;
+        let e = self.proto_source(c, id, &heads)?;
+        if e.role != role || e.n != n {
+            return Err(Error::Integrity("runtime source role/ordinal"));
+        }
+        let raw = self.hrequired(Key::hash(c, Namespace::Event, id)?)?;
+        Ok((e, raw))
+    }
+    pub(in crate::vault::indexed_dialog) fn runtime_frontiers(
+        &mut self,
+        c: u8,
+    ) -> Result<([u64; 2], [Option<Id>; 2])> {
+        self.proto_required(c)?;
+        let (identity, heads) = self.history_view(c)?;
+        self.history_coherent(c, &identity, &heads)?;
+        Ok((heads.frontiers, heads.tails))
+    }
+    pub(in crate::vault::indexed_dialog) fn runtime_receipt(
+        &mut self,
+        c: u8,
+        role: u8,
+        n: u64,
+    ) -> Result<Option<Vec<u8>>> {
+        let (e, _) = self.runtime_event(c, role, n)?;
+        if e.kind != 3 {
+            return Err(Error::Conflict);
+        }
+        let (_, heads) = self.history_view(c)?;
+        self.hget(wire_receipt_key(c, heads.view, role, n)?)?
+            .map(|value| receipt_raw(&value).map(ToOwned::to_owned))
+            .transpose()
+    }
+    pub(in crate::vault::indexed_dialog) fn runtime_retry_native(
+        &mut self,
+        c: u8,
+        rows: &[HistoryReadable2],
+        native: &HistoryNativeTransition,
+    ) -> Result<()> {
+        let (identity, heads) = self.history_view(c)?;
+        self.history_coherent(c, &identity, &heads)?;
+        self.history2_retry_rows(c, &heads, rows, native)
     }
     fn proto_first(
         &mut self,

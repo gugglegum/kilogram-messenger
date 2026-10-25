@@ -215,6 +215,7 @@ use tokio::{
 };
 use zeroize::Zeroizing;
 
+mod ordered2_cli;
 mod ordered_cli;
 mod ordered_ingress;
 mod publication_conflict_ceremony;
@@ -636,11 +637,17 @@ enum Command {
     /// Write a no-clobber, secret-free profile that the desktop client can launch.
     RuntimeProfileCreate {
         /// Opt in to the separate fresh-profile ordered protocol.
-        #[arg(long, value_parser = ["ordered-dialog-v1"])]
+        #[arg(long, value_parser = ["ordered-dialog-v1", "ordered-dialog-v2"])]
         profile_mode: Option<String>,
         /// Contexts enabled by the OD1 owner; repeat at most twice.
         #[arg(long = "ordered-context")]
         ordered_contexts: Vec<String>,
+        #[arg(long)]
+        expect_account: Option<AccountId>,
+        #[arg(long)]
+        expect_claim: Option<String>,
+        #[arg(long)]
+        expect_device: Option<DeviceId>,
         #[arg(long)]
         locator_directory: Option<PathBuf>,
         #[arg(long, default_value = "127.0.0.1:0")]
@@ -2591,8 +2598,11 @@ enum Command {
 
     /// Root-sign and install a messaging certificate for one device state.
     DeviceEnroll {
-        #[arg(long, value_parser = ["ordered-dialog-v1"])]
+        #[arg(long, value_parser = ["ordered-dialog-v1", "ordered-dialog-v2"])]
         profile_mode: Option<String>,
+        /// Immutable OD2 context slots; repeat exactly twice for fresh mode2.
+        #[arg(long = "ordered-context")]
+        ordered_contexts: Vec<String>,
         /// Directory containing an existing development Account Root authority.
         #[arg(long)]
         account_dir: PathBuf,
@@ -3676,12 +3686,34 @@ async fn async_main() -> Result<()> {
         .transpose()
         .context("lock state directory and recover interrupted local transaction")?;
     if let Command::DeviceEnroll {
-        profile_mode: Some(_),
+        profile_mode: Some(mode),
+        ordered_contexts,
         account_dir,
         certificate_file,
         ..
     } = &command
     {
+        if mode == "ordered-dialog-v2" {
+            anyhow::ensure!(
+                ordered_contexts.len() == 2,
+                "mode2 enrollment requires exactly two --ordered-context IDs"
+            );
+            return kilogram_cli::ordered_dialog::runtime2::admin::enroll(
+                _state_lock
+                    .take()
+                    .context("runtime2 enrollment root lease")?,
+                account_dir,
+                [
+                    kilogram_cli::ordered_dialog::state::parse_id(&ordered_contexts[0])?,
+                    kilogram_cli::ordered_dialog::state::parse_id(&ordered_contexts[1])?,
+                ],
+                certificate_file.as_deref(),
+            );
+        }
+        anyhow::ensure!(
+            ordered_contexts.is_empty(),
+            "context slots require mode2 enrollment"
+        );
         return kilogram_cli::ordered_dialog::admin::enroll(
             _state_lock
                 .take()
@@ -3692,6 +3724,17 @@ async fn async_main() -> Result<()> {
     }
     if let Command::Ordered { command } = command {
         return ordered_cli::run(command, _state_lock.take()).await;
+    }
+    if let Command::DeviceEnroll {
+        profile_mode: None,
+        ordered_contexts,
+        ..
+    } = &command
+    {
+        anyhow::ensure!(
+            ordered_contexts.is_empty(),
+            "ordered contexts require an explicit mode2 enrollment"
+        );
     }
     if let Some(root) = state_directory.as_deref() {
         ordered_cli::reject_legacy(root)?;
@@ -3942,6 +3985,9 @@ async fn run_command(command: Command) -> Result<()> {
         Command::RuntimeProfileCreate {
             profile_mode,
             ordered_contexts,
+            expect_account,
+            expect_claim,
+            expect_device,
             locator_directory,
             ordered_bind,
             profile_file,
@@ -3967,6 +4013,32 @@ async fn run_command(command: Command) -> Result<()> {
             volunteer_mobile_transfer_mib,
             volunteer_unknown_transfer_mib,
         } => {
+            if profile_mode.as_deref() == Some("ordered-dialog-v2") {
+                anyhow::ensure!(
+                    allow_account.is_none()
+                        && device_list_file.is_none()
+                        && peer_prekey_pool_files.is_empty(),
+                    "mode2 profile forbids legacy admission fields"
+                );
+                return ordered2_cli::create_profile(ordered2_cli::CreateProfile2 {
+                    state_dir,
+                    profile_file,
+                    ipc_file,
+                    locator_directory: locator_directory
+                        .context("--locator-directory is required")?,
+                    enabled: ordered_contexts,
+                    account: expect_account.context("--expect-account is required")?,
+                    claim: expect_claim.context("--expect-claim is required")?,
+                    device: expect_device.context("--expect-device is required")?,
+                    route: route_policy.into(),
+                    relay: relay_url.map(|url| url.to_string()),
+                    bind: ordered_bind,
+                });
+            }
+            anyhow::ensure!(
+                expect_account.is_none() && expect_claim.is_none() && expect_device.is_none(),
+                "runtime2 pins require --profile-mode ordered-dialog-v2"
+            );
             if profile_mode.is_some() {
                 anyhow::ensure!(
                     allow_account.is_none()
@@ -4043,6 +4115,12 @@ async fn run_command(command: Command) -> Result<()> {
             )
         }
         Command::RuntimeFromProfile { profile_file } => {
+            if ordered2_cli::is_launch(&profile_file)? {
+                return kilogram_cli::ordered_dialog::runtime2::runtime::run(
+                    kilogram_cli::ordered_dialog::runtime2::config::Profile2::load(&profile_file)?,
+                )
+                .await;
+            }
             if ordered_cli::is_ordered_launch(&profile_file)? {
                 return kilogram_cli::ordered_dialog::runtime::run(
                     kilogram_cli::ordered_dialog::runtime::Profile::load(&profile_file)?,
@@ -5015,6 +5093,7 @@ async fn run_command(command: Command) -> Result<()> {
         } => install_conversation_membership(state_dir, membership_file),
         Command::DeviceEnroll {
             profile_mode: _,
+            ordered_contexts: _,
             account_dir,
             state_dir,
             certificate_file,

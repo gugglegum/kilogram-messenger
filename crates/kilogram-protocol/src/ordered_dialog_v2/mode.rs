@@ -445,6 +445,7 @@ impl VerifiedModeProof2 {
         })
     }
 }
+#[derive(Clone)]
 pub struct StaticSelection2 {
     pub(super) c: Id,
     pub(super) d: Id,
@@ -490,7 +491,8 @@ pub fn initial_transcript2(binding: Id, hello_a: &[u8], hello_b: &[u8]) -> Resul
         &encode(&a([b(binding), b(hello_a), b(hello_b)]), 192 * 1024)?,
     ))
 }
-fn verify_initial_pair2(
+/// Validate the selected historical pair before a runtime allocates its sole native account/OTK.
+pub fn verify_initial_pair2(
     c: Id,
     consent: &ParsedConsent2,
     raw: &[u8],

@@ -1,0 +1,109 @@
+{
+  "run": "p-full-review2-exception-1",
+  "result": {
+    "mode": "run",
+    "packages": [
+      "kilogram-cli",
+      "kilogram-transport-iroh",
+      "kilogram-state"
+    ],
+    "filter": "a3_s4_p_full_real_dialogue_offline_two_contexts",
+    "skip": [],
+    "exit_code": 1,
+    "seconds": 1901.2816169,
+    "profile": "verification",
+    "offline": true,
+    "jobs": 12,
+    "priority": "BelowNormal",
+    "executables": [
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+        "bytes": 67757568,
+        "sha256": "55da4d5e537ad43b3d5ecffc96d07fb9af160ff5331bbce2cafe5f1323197259"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+        "bytes": 40600576,
+        "sha256": "96140b58bbd140217ba07609cd0581f351375d87624d355f35315839a5469a2e"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+        "bytes": 36490240,
+        "sha256": "0e98d19a8d716d5b548a4e9ad8da4d11724fa5cf198e748cd90b38fc99caddee"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+        "bytes": 10486272,
+        "sha256": "bfa4c74a57b4f0402de7b4bba909e535b0fb837de58903ad563be73f274301ea"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s1_root_review-tests.exe",
+        "bytes": 6713856,
+        "sha256": "ecfd46610a86f1e09b419fb4157e1599f2df6251cc15a77ae34563926a59d209"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s2_root_review-tests.exe",
+        "bytes": 6968832,
+        "sha256": "41861dac57bbadf3fdfbd22d42d623e219cbfd4ef686b390f95b6dbe40952269"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+        "bytes": 29934592,
+        "sha256": "27221780b0d4b991c2a1c28f9eb417f5d87533e14365c912ffb09bf1bd168cb7"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+        "bytes": 33994240,
+        "sha256": "18496712474a236da6167744ee2f37f12595f291f9fb306957f7638325d1d894"
+      }
+    ]
+  },
+  "full_P_pass": false,
+  "original_time_target_proven": false,
+  "exception_attempt_consumed": true,
+  "aggregate_timeout_cause": false,
+  "exit_stage": "first RelayOnly runtime startup",
+  "relay_ready_public_url": "http://127.0.0.1:57214/",
+  "relay_helper_source": {
+    "path": "crates/kilogram-transport-iroh/examples/s4_loopback_relay.rs",
+    "bytes": 1230,
+    "sha256": "91dd991948f4c2bd8e1159c988c147571ad02cf56b43544cdaa3b39ca2f60ba1"
+  },
+  "relay_helper_image": {
+    "path": "target/compatibility/long-lived-dialog-runtime/kilogram-relay.exe",
+    "bytes": 19725824,
+    "sha256": "69cad3e0e39b5c23a163b0d2a99b15d42faf0a2433bb909397a64cda81eb7aa5"
+  },
+  "relay_stderr": {
+    "path": ".tmp/a3-s4/process/P-beBVhC/relay.stderr.log",
+    "bytes": 56,
+    "sha256": "cd44212e15b763d24f77d265f4663bb305258137d77df679ea3029ab3b24a5d5"
+  },
+  "first_relay_runtime_stderr": {
+    "path": ".tmp/a3-s4/process/P-beBVhC/profile0.6.stderr.log",
+    "bytes": 80,
+    "sha256": "45fdf7a697d37ef4cce79beef72bc95e0086dbb73bb3b2ba7767bae4ac1b2fff"
+  },
+  "observed_helper_error": "Error: Отказано в доступе. (os error 5)",
+  "observed_runtime_error": "Error: explicit relay registration timeout\n\nCaused by:\n    deadline has elapsed",
+  "source_defect": "ready is written then File::open(read-only).sync_all(); marker visible before this fallible step. No syscall context in historical helper error; no repair applied yet.",
+  "not_executed": [
+    "actual URL-only peer admission in RelayOnly",
+    "held B640 receipt/delivery",
+    "final both-restart histories",
+    "old-cursor suffix",
+    "3288 final successful-packet assertion"
+  ],
+  "partial_public_counters": {
+    "committed": 3287,
+    "attempts": 3289,
+    "accounts": 4,
+    "sessions": 4,
+    "bilateral_bindings": 20,
+    "normal_pages": 65,
+    "full64_funded_head": 1
+  },
+  "transition_public_capture_caution": "The file named relay-public-artifacts captured declared profile route change before successful RelayOnly publication. Signed locators may still be previous direct instance. It is preserved raw evidence, not proof of actual RelayOnly URL-only locator.",
+  "all_owned_fixed_CLI_relay_P_harness_processes_gone_native_CIM": true,
+  "no_source_or_deadline_edit_or_rerun": true
+}

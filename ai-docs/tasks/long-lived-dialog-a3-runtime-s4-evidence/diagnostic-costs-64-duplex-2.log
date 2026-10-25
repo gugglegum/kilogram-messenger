@@ -1,0 +1,100 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 28.52s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 20 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 1 test
+test diagnostic::a3_s4_diagnostic_owner_costs_64_one_way_duplex_burst ... fixture=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\diagnostic-costs-JyIURO cli_sha256_external_manifest_required=true
+process_start pid=50904 profile=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\diagnostic-costs-JyIURO\profile0.json stderr=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\diagnostic-costs-JyIURO\profile0.1.stderr.log
+private_bytes pid=50904 bytes=11120640
+process_start pid=57664 profile=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\diagnostic-costs-JyIURO\profile1.json stderr=E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\../..\.tmp/a3-s4/process\diagnostic-costs-JyIURO\profile1.1.stderr.log
+private_bytes pid=57664 bytes=11386880
+active_progress seconds=0.598 phases=[[(Number(0), Bool(false)), (Number(0), Bool(false))], [(Number(0), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=1.513 phases=[[(Number(1), Bool(false)), (Number(0), Bool(false))], [(Number(2), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=2.041 phases=[[(Number(3), Bool(false)), (Number(1), Bool(false))], [(Number(2), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=3.000 phases=[[(Number(3), Bool(false)), (Number(1), Bool(false))], [(Number(3), Bool(false)), (Number(2), Bool(false))]]
+private_bytes pid=50904 bytes=12357632
+active_progress seconds=4.436 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(2), Bool(false))]]
+private_bytes pid=57664 bytes=12607488
+active_progress seconds=5.437 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(false))]]
+active_progress seconds=5.956 phases=[[(Number(3), Bool(true)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(false))]]
+active_progress seconds=6.916 phases=[[(Number(3), Bool(true)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]
+private_bytes pid=50904 bytes=14274560
+private_bytes pid=50904 bytes=14200832
+wait=convergence seconds=10.276 node=0 contexts=[{"active":true,"blocked":null,"context":"0a3032f0bc68ec81ca60fe1e37afe9de5c714e3b306fafd69681825d5ba4602b","counts":{"debt":35,"pending":0,"queued":0,"receipts":[29,0],"sources":66},"d":"20615a4f9557618bca9aaa979de2007db71baa46ad991a01a227f7623b8e8db0","details":{"current_consent":"c15318df048b66aaeecaaa3aaa342fcd6d7197d775b3958a91d91381b1316ca1","grant":"fb527ef5a158c295ee394ae6cf6591082de199f85843336a73130dcbeb2d4734","native":{"own_first":"6687f2c6d036db95923ea12dca7d16a70cdbc1cd79c47a8fed49ca83e4b36ab1","own_g":1,"own_index":63,"own_next":65,"peer_g":0,"peer_index":0,"peer_next":1,"rotate_due":false},"native_hash":"5be787738f7d1dedf83ec51b9d4ba0fe2558755ab9811fa4dba430ee70d61021","offer":"52b122ee1f42b9afa5b5f01c67cb7069f2682c72a24a7653da2faf69712bb5b1","policy_generation":3,"readies":["5b9e2006eea3764eaf77ba8c04e0494414eee97490de2fcbe38f8cc515c2d74a","dabe24988deddd9ecfb2d6d72fcdba55600e60b715d553bbe31c9917837169a8"],"selected_hash":"a8049831613dceafe409c7a1e8825ace97fd96b42f6fdaaf753a2159cca41bb2","wall_high_water":1792923604},"e":"ecde6c0a09a28c12eb6b61624968ce4f6a9419e103a8e43f06d37ea9770d3219","file_exported":true,"native_generation":58,"own_locator_revision":1,"peer_locator_revision":1,"phase":3,"policy_error":null,"publication_ready":true,"q":"d898615ffb61fe78eee2462ad6c9e31542e73c04d217193d6afc922b7563799a","role":0,"sid":"RdtrYNA9tN3v94bfO4pLiy4ZioMOcZJVnPG16AS7ODM","slot":0},{"active":true,"blocked":null,"context":"aa72b1192b81cc66586c687fee0b82b0a17ed1fa03606a4ac5ba41f7c8e51223","counts":{"debt":0,"pending":0,"queued":0,"receipts":[0,0],"sources":2},"d":"53b98c0bb66ba7a7f7528e1a5cb4152469063bc96ef0b1b1f09fcf847a897e31","details":{"current_consent":"23f216ec112f800bc1b768d19b1c1c3daa53997067d8331526a96f500a0f2cdf","grant":"f5506f0fa39104baeff67f105fb1ddcdc732f5c7e3eff59101b76b38c1e90612","native":{"own_first":"b9ecd40e2ff77201a8f4596ee62cde56dab74ec091b7614a2b8b3a51c9a6a6b9","own_g":0,"own_index":0,"own_next":1,"peer_g":0,"peer_index":0,"peer_next":1,"rotate_due":true},"native_hash":"84cca75cd53c57cb9fd0e8eeea7c3d4978ac3a42ac55b4618b7f11c1bdf6ab09","offer":"787cee79b8ffb08327dcc0da63e9910fa020ba3de85e7d9787dc64af2d6e4653","policy_generation":3,"readies":["183a83472b94291d349e36e61f2143588332d65982e0ebd65329de7903f434f0","8aa3fbabf768accb74cdff1c79a83b31c7539fbbfbb919f93ee8cf4921d632e0"],"selected_hash":"387e461b8fd8631289d74ef222976ecbe544a96416764b05720894c7046be9f1","wall_high_water":1792923604},"e":"b7f54a063d62f90b6795fa602bd077558f486df7bedf420eff83a576053b4674","file_exported":true,"native_generation":3,"own_locator_revision":1,"peer_locator_revision":1,"phase":3,"policy_error":null,"publication_ready":true,"q":"a1129ceeeb6fdc96571f8bcaa0f63ecb5f9260e21f35b9bbf0cf1c017e2983b7","role":0,"sid":"APCjBPQO4Ak1xkwxGI0g35+BcXgOGFh4D6vXeuET0LM","slot":1}]
+private_bytes pid=50904 bytes=14200832
+private_bytes pid=50904 bytes=14147584
+wait=convergence seconds=20.384 node=0 contexts=[{"active":true,"blocked":null,"context":"0a3032f0bc68ec81ca60fe1e37afe9de5c714e3b306fafd69681825d5ba4602b","counts":{"debt":3,"pending":0,"queued":0,"receipts":[61,0],"sources":66},"d":"20615a4f9557618bca9aaa979de2007db71baa46ad991a01a227f7623b8e8db0","details":{"current_consent":"c15318df048b66aaeecaaa3aaa342fcd6d7197d775b3958a91d91381b1316ca1","grant":"fb527ef5a158c295ee394ae6cf6591082de199f85843336a73130dcbeb2d4734","native":{"own_first":"6687f2c6d036db95923ea12dca7d16a70cdbc1cd79c47a8fed49ca83e4b36ab1","own_g":1,"own_index":63,"own_next":65,"peer_g":0,"peer_index":0,"peer_next":1,"rotate_due":false},"native_hash":"5be787738f7d1dedf83ec51b9d4ba0fe2558755ab9811fa4dba430ee70d61021","offer":"52b122ee1f42b9afa5b5f01c67cb7069f2682c72a24a7653da2faf69712bb5b1","policy_generation":3,"readies":["5b9e2006eea3764eaf77ba8c04e0494414eee97490de2fcbe38f8cc515c2d74a","dabe24988deddd9ecfb2d6d72fcdba55600e60b715d553bbe31c9917837169a8"],"selected_hash":"a8049831613dceafe409c7a1e8825ace97fd96b42f6fdaaf753a2159cca41bb2","wall_high_water":1792923619},"e":"ecde6c0a09a28c12eb6b61624968ce4f6a9419e103a8e43f06d37ea9770d3219","file_exported":true,"native_generation":58,"own_locator_revision":1,"peer_locator_revision":1,"phase":3,"policy_error":null,"publication_ready":true,"q":"d898615ffb61fe78eee2462ad6c9e31542e73c04d217193d6afc922b7563799a","role":0,"sid":"RdtrYNA9tN3v94bfO4pLiy4ZioMOcZJVnPG16AS7ODM","slot":0},{"active":true,"blocked":null,"context":"aa72b1192b81cc66586c687fee0b82b0a17ed1fa03606a4ac5ba41f7c8e51223","counts":{"debt":0,"pending":0,"queued":0,"receipts":[0,0],"sources":2},"d":"53b98c0bb66ba7a7f7528e1a5cb4152469063bc96ef0b1b1f09fcf847a897e31","details":{"current_consent":"23f216ec112f800bc1b768d19b1c1c3daa53997067d8331526a96f500a0f2cdf","grant":"f5506f0fa39104baeff67f105fb1ddcdc732f5c7e3eff59101b76b38c1e90612","native":{"own_first":"b9ecd40e2ff77201a8f4596ee62cde56dab74ec091b7614a2b8b3a51c9a6a6b9","own_g":0,"own_index":0,"own_next":1,"peer_g":0,"peer_index":0,"peer_next":1,"rotate_due":true},"native_hash":"84cca75cd53c57cb9fd0e8eeea7c3d4978ac3a42ac55b4618b7f11c1bdf6ab09","offer":"787cee79b8ffb08327dcc0da63e9910fa020ba3de85e7d9787dc64af2d6e4653","policy_generation":3,"readies":["183a83472b94291d349e36e61f2143588332d65982e0ebd65329de7903f434f0","8aa3fbabf768accb74cdff1c79a83b31c7539fbbfbb919f93ee8cf4921d632e0"],"selected_hash":"387e461b8fd8631289d74ef222976ecbe544a96416764b05720894c7046be9f1","wall_high_water":1792923619},"e":"b7f54a063d62f90b6795fa602bd077558f486df7bedf420eff83a576053b4674","file_exported":true,"native_generation":3,"own_locator_revision":1,"peer_locator_revision":1,"phase":3,"policy_error":null,"publication_ready":true,"q":"a1129ceeeb6fdc96571f8bcaa0f63ecb5f9260e21f35b9bbf0cf1c017e2983b7","role":0,"sid":"APCjBPQO4Ak1xkwxGI0g35+BcXgOGFh4D6vXeuET0LM","slot":1}]
+private_bytes pid=50904 bytes=14442496
+private_bytes pid=57664 bytes=14356480
+private_bytes pid=50904 bytes=14594048
+private_bytes pid=50904 bytes=15085568
+wait=convergence seconds=10.270 node=0 contexts=[{"active":true,"blocked":null,"context":"0a3032f0bc68ec81ca60fe1e37afe9de5c714e3b306fafd69681825d5ba4602b","counts":{"debt":0,"pending":1,"queued":0,"receipts":[66,24],"sources":92},"d":"20615a4f9557618bca9aaa979de2007db71baa46ad991a01a227f7623b8e8db0","details":{"current_consent":"c15318df048b66aaeecaaa3aaa342fcd6d7197d775b3958a91d91381b1316ca1","grant":"fb527ef5a158c295ee394ae6cf6591082de199f85843336a73130dcbeb2d4734","native":{"own_first":"6687f2c6d036db95923ea12dca7d16a70cdbc1cd79c47a8fed49ca83e4b36ab1","own_g":1,"own_index":65,"own_next":67,"peer_g":1,"peer_index":23,"peer_next":25,"rotate_due":true},"native_hash":"a34e8420de929cef2f4e9963fe528becd88a89b8cd6da657724c02b9a4c43082","offer":"52b122ee1f42b9afa5b5f01c67cb7069f2682c72a24a7653da2faf69712bb5b1","policy_generation":3,"readies":["5b9e2006eea3764eaf77ba8c04e0494414eee97490de2fcbe38f8cc515c2d74a","dabe24988deddd9ecfb2d6d72fcdba55600e60b715d553bbe31c9917837169a8"],"selected_hash":"a8049831613dceafe409c7a1e8825ace97fd96b42f6fdaaf753a2159cca41bb2","wall_high_water":1792923641},"e":"ecde6c0a09a28c12eb6b61624968ce4f6a9419e103a8e43f06d37ea9770d3219","file_exported":true,"native_generation":77,"own_locator_revision":1,"peer_locator_revision":1,"phase":3,"policy_error":null,"publication_ready":true,"q":"d898615ffb61fe78eee2462ad6c9e31542e73c04d217193d6afc922b7563799a","role":0,"sid":"RdtrYNA9tN3v94bfO4pLiy4ZioMOcZJVnPG16AS7ODM","slot":0},{"active":true,"blocked":null,"context":"aa72b1192b81cc66586c687fee0b82b0a17ed1fa03606a4ac5ba41f7c8e51223","counts":{"debt":0,"pending":0,"queued":0,"receipts":[0,0],"sources":2},"d":"53b98c0bb66ba7a7f7528e1a5cb4152469063bc96ef0b1b1f09fcf847a897e31","details":{"current_consent":"23f216ec112f800bc1b768d19b1c1c3daa53997067d8331526a96f500a0f2cdf","grant":"f5506f0fa39104baeff67f105fb1ddcdc732f5c7e3eff59101b76b38c1e90612","native":{"own_first":"b9ecd40e2ff77201a8f4596ee62cde56dab74ec091b7614a2b8b3a51c9a6a6b9","own_g":0,"own_index":0,"own_next":1,"peer_g":0,"peer_index":0,"peer_next":1,"rotate_due":true},"native_hash":"84cca75cd53c57cb9fd0e8eeea7c3d4978ac3a42ac55b4618b7f11c1bdf6ab09","offer":"787cee79b8ffb08327dcc0da63e9910fa020ba3de85e7d9787dc64af2d6e4653","policy_generation":3,"readies":["183a83472b94291d349e36e61f2143588332d65982e0ebd65329de7903f434f0","8aa3fbabf768accb74cdff1c79a83b31c7539fbbfbb919f93ee8cf4921d632e0"],"selected_hash":"387e461b8fd8631289d74ef222976ecbe544a96416764b05720894c7046be9f1","wall_high_water":1792923641},"e":"b7f54a063d62f90b6795fa602bd077558f486df7bedf420eff83a576053b4674","file_exported":true,"native_generation":3,"own_locator_revision":1,"peer_locator_revision":1,"phase":3,"policy_error":null,"publication_ready":true,"q":"a1129ceeeb6fdc96571f8bcaa0f63ecb5f9260e21f35b9bbf0cf1c017e2983b7","role":0,"sid":"APCjBPQO4Ak1xkwxGI0g35+BcXgOGFh4D6vXeuET0LM","slot":1}]
+private_bytes pid=50904 bytes=14974976
+private_bytes pid=57664 bytes=14974976
+process_exit pid=50904 kill=false status=exit code: 0
+process_exit pid=57664 kill=false status=exit code: 0
+S4_DIAGNOSTIC_DONE acceptance_P=false watchdog=280 text=98 genesis=4 setup_seconds=13.283864 one_way64_seconds=33.727615 duplex34_seconds=23.834911 data_elapsed_seconds=57.562526 history_seconds=4.699647 controller_seconds=76.568639 pids=[50904, 57664] cpu_before_ms=[Some(5203.125), Some(5578.125)] cpu_after_ms=[Some(43312.5), Some(37500.0)]
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 13 filtered out; finished in 76.57s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17276 13.12
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=63994
+target_gib=68.43
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

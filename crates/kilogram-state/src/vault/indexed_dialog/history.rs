@@ -98,6 +98,7 @@ impl IndexedDialogVault {
         commit_id: Id,
         operation: HistoryOperation,
     ) -> Result<CommitReport> {
+        self.component_writer()?;
         if self.poisoned {
             return Err(Error::ReopenRequired);
         }
@@ -158,6 +159,15 @@ impl IndexedDialogVault {
         supplied: Option<&HistoryCursor>,
         limit: usize,
     ) -> Result<HistoryPage> {
+        self.history_read_bounded(context, supplied, limit, None)
+    }
+    pub(in crate::vault::indexed_dialog) fn history_read_bounded(
+        &self,
+        context: u8,
+        supplied: Option<&HistoryCursor>,
+        limit: usize,
+        json_cap: Option<usize>,
+    ) -> Result<HistoryPage> {
         if self.poisoned {
             return Err(Error::ReopenRequired);
         }
@@ -202,8 +212,21 @@ impl IndexedDialogVault {
         }
         stats.max_candidates = candidates.iter().flatten().count();
         let mut items = Vec::with_capacity(limit);
+        // Covers cursor/view/frontiers and all envelope fields, including maximum integers.
+        let mut json_bytes = 1024;
         while items.len() < limit && position.next != position.frontiers {
             let selected = choose_candidate(&candidates, position.next)?;
+            if let Some(cap) = json_cap {
+                let row = &candidates[selected]
+                    .as_ref()
+                    .ok_or(Error::Integrity("history candidate missing"))?
+                    .row;
+                let bytes = super::history_codec::row_json_bytes(row)? + 1;
+                if json_bytes + bytes > cap {
+                    break;
+                }
+                json_bytes += bytes;
+            }
             let candidate = candidates[selected]
                 .take()
                 .ok_or(Error::Integrity("history candidate missing"))?;
@@ -251,6 +274,9 @@ impl IndexedDialogVault {
         // No advanced cursor escapes before both actual response encodings fit.
         profiled!(Cbor, page.encode_cbor())?;
         profiled!(Json, page.encode_json())?;
+        if json_cap.is_some_and(|cap| page.encode_json().map_or(true, |raw| raw.len() > cap)) {
+            return Err(Error::Bound("runtime history response"));
+        }
         Ok(page)
     }
     pub fn history_point(&mut self, context: u8, event: Id) -> Result<Option<HistoryRow>> {
@@ -474,5 +500,24 @@ impl<
             return Err(Error::Integrity("history request body"));
         }
         Ok(Some((record, text)))
+    }
+    pub(in crate::vault::indexed_dialog) fn runtime_request(
+        &mut self,
+        c: u8,
+        request: [u8; 16],
+    ) -> Result<Option<(HistoryRequestOutcome, String)>> {
+        let (_, heads) = self.history_view(c)?;
+        self.history_request_record(c, request, &heads.view)
+            .map(|value| {
+                value.map(|(record, text)| {
+                    (
+                        HistoryRequestOutcome {
+                            queue_sequence: record.queue,
+                            event: record.event,
+                        },
+                        text,
+                    )
+                })
+            })
     }
 }

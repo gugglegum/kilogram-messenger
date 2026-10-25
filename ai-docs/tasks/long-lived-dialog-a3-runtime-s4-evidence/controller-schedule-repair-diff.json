@@ -1,0 +1,54 @@
+{
+  "baseline": "f-full-review2-frozen-1-source.json",
+  "changed_controller_paths": [
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process.rs",
+      "before_sha256": "7044ec8d11cb943ee1587fd8d8a9bc651b43a96e9f848c75fcd42eccf7e9cf97",
+      "after_sha256": "de11bb4fec16880bec709068cb3af2cf838b0e014c2ab59f2bc8810cf39b5465"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process/schedule_control.rs",
+      "before_sha256": null,
+      "after_sha256": "c72c175cde68682588d50a1f25a143eeb72d919eada6e7b9b8732bbeb00de1bc",
+      "git_blob": "84f13ae27d4ce2ad5fc0539f48d95b2ee15b70e1"
+    }
+  ],
+  "patch": {
+    "path": "controller-schedule-repair.patch",
+    "bytes": 8857,
+    "sha256": "8e66c7bb3f8c2b96ed482957878f590adf8a5311e95cc1490ac9de38d8102f6f"
+  },
+  "production_files_identical": 42,
+  "production_images_identical": [
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+      "bytes": 66188800,
+      "sha256": "d5d8c8c118925dfde67e37fdb32aa5a120293cde258e93843dd1939fddb15560"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-relay.exe",
+      "bytes": 19725824,
+      "sha256": "69cad3e0e39b5c23a163b0d2a99b15d42faf0a2433bb909397a64cda81eb7aa5"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-predecessor-s3/kilogram-state-predecessor.exe",
+      "bytes": 5344768,
+      "sha256": "6932db6bc228cdd38fc358792cc5cd41fcfd1e5445c087a7c0f535ce4f0c1e4e"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "bytes": 61531648,
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    }
+  ],
+  "retry_budget_ms": 500,
+  "raw_windows_codes_only": [
+    5,
+    32,
+    33
+  ],
+  "same_temp_and_bytes": true,
+  "destination_delete_truncate_attribute_ACL_or_non_atomic_fallback": false,
+  "deterministic_release": "Private observer after real failed persist verifies old bytes and drops actual deny-delete handle; ordinary write uses no-op observer.",
+  "historical_os5_cause_still_unclassified": true
+}

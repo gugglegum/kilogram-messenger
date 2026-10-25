@@ -1,0 +1,77 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error[E0277]: the trait bound `!: ToSocketAddr` is not satisfied
+   --> apps\kilogram-cli\tests\runtime2_process\versions.rs:50:160
+    |
+ 50 | ...ar_relay_transports().bind_addr("127.0.0.1:0".parse()?)?.alpns(vec![kilogram_protocol::ordered_dialog_v1::ALPN.to_vec()]).bind()...
+    |                          --------- ^^^^^^^^^^^^^^^^^^^^^^ the trait `ToSocketAddr` is not implemented for `!`
+    |                          |
+    |                          required by a bound introduced by this call
+    |
+    = help: the following other types implement trait `ToSocketAddr`:
+              &T
+              (&str, u16)
+              (IpAddr, u16)
+              (Ipv4Addr, u16)
+              (Ipv6Addr, u16)
+              (std::string::String, u16)
+              SocketAddrV4
+              SocketAddrV6
+            and 3 others
+note: required by a bound in `iroh::endpoint::Builder::bind_addr`
+   --> C:\Users\Paul\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\iroh-1.1.0\src\endpoint.rs:365:12
+    |
+363 |     pub fn bind_addr<A>(self, addr: A) -> Result<Self, InvalidSocketAddr>
+    |            --------- required by a bound in this associated function
+364 |     where
+365 |         A: ToSocketAddr,
+    |            ^^^^^^^^^^^^ required by this bound in `Builder::bind_addr`
+
+error[E0277]: the trait bound `!: ToSocketAddr` is not satisfied
+  --> apps\kilogram-cli\tests\runtime2_process\versions.rs:50:22
+   |
+50 | ...nt=iroh::Endpoint::builder(iroh::endpoint::presets::Minimal).clear_address_lookup().clear_ip_transports().clear_relay_transports().bind_addr("127.0.0.1:0".parse()?)?.a...
+   |       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `ToSocketAddr` is not implemented for `!`
+   |
+   = help: the following other types implement trait `ToSocketAddr`:
+             &T
+             (&str, u16)
+             (IpAddr, u16)
+             (Ipv4Addr, u16)
+             (Ipv6Addr, u16)
+             (std::string::String, u16)
+             SocketAddrV4
+             SocketAddrV6
+           and 3 others
+
+error[E0277]: the trait bound `!: FromStr` is not satisfied
+  --> apps\kilogram-cli\tests\runtime2_process\versions.rs:50:174
+   |
+50 | ..._transports().bind_addr("127.0.0.1:0".parse()?)?.alpns(vec![kilogram_protocol::ordered_dialog_v1::ALPN.to_vec()]).bind().await?;
+   |                                          ^^^^^ the trait `FromStr` is not implemented for `!`
+   |
+   = help: the following other types implement trait `FromStr`:
+             AccountId
+             ByteString
+             CString
+             DeviceId
+             IpAddr
+             Ipv4Addr
+             Ipv6Addr
+             NonZero<i128>
+           and 182 others
+note: required by a bound in `core::str::<impl str>::parse`
+  --> /rustc/88d9e12ae178fab0fb5cc050a94da85685d449ea/library\core\src\str\mod.rs:2781:4
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `kilogram-cli` (test "runtime2_process") due to 3 previous errors
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:78
+Line |
+  78 |          throw "cargo test --no-run failed with exit code $LASTEXITCOD …
+     |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | cargo test --no-run failed with exit code 101
+
+

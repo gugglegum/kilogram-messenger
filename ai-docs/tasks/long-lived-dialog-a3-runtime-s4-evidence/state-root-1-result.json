@@ -1,0 +1,31 @@
+{
+  "mode": "run",
+  "packages": [
+    "kilogram-state"
+  ],
+  "filter": "a3_s4_",
+  "skip": [],
+  "exit_code": 0,
+  "seconds": 26.2315993,
+  "profile": "verification",
+  "offline": true,
+  "jobs": 12,
+  "priority": "BelowNormal",
+  "executables": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 9770496,
+      "sha256": "07efff439411ffd84d664bf481a92a1c3ebbf22a75e6543740f665be50a1f037"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s1_root_review-tests.exe",
+      "bytes": 6045696,
+      "sha256": "178e91e8ff8f3da03795a86a2be1cabbde21fd98d3ec5dbf7b3973706111d4ba"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-test-a3_s2_root_review-tests.exe",
+      "bytes": 6300672,
+      "sha256": "86098d8812eb87d22e6aa885b4e68677d9610fd882dc93fd84cdd540c85aa857"
+    }
+  ]
+}

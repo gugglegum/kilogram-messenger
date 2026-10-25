@@ -2,23 +2,31 @@
 
 Актуально на: 2026-10-25.
 
-Текущая опубликованная ревизия — `7f82036ee5803edd64be98b73572604250f5961c`: S3
-components приняты и опубликованы, root независимо сверил194 changed paths/blobs
-и GitHub master; дерево после публикации чистое. Пользователь разрешил
-[A3-S4: два процесса, перезапуски и offline-доставку](tasks/long-lived-dialog-a3-runtime-s4-task.md).
-Прежний OD1 исполнитель на GPT-6.1 Sol Max без Fast сначала готовит integration
-contract. Реализация — после root review, публикация — после implementation review.
-Whole A3 и пользовательский MVP пока открыты; ниже сохранена история этапов.
+Текущее принятое состояние — **A3-S4: fresh runtime двух процессов с перезапусками
+и offline-доставкой**. [Итоговая приёмка root](tasks/long-lived-dialog-a3-runtime-s4-implementation-review-5.md)
+закрывает [реализацию](tasks/long-lived-dialog-a3-runtime-s4-implementation.md)
+по [контракту S4](tasks/long-lived-dialog-a3-runtime-s4-contract.md).
+Приняты RuntimeRoot6, атомарные Native/history/receipt transitions, durable offline
+очередь, два контекста, current-policy gates и новые signed locators после restart.
+Проверены реальные direct и собственный relay процессы на loopback.
 
-[S4 contract](tasks/long-lived-dialog-a3-runtime-s4-contract.md) получен и
-[проверен root](tasks/long-lived-dialog-a3-runtime-s4-contract-review-1.md).
-Fresh production scope поддержан; перед приёмкой нужны R1–R3: отказ прежнего schema5
-writer, согласованный endpoint/locator crash lifecycle и explicit local route config.
-Замечания R1–R3 [закрыты повторным review](tasks/long-lived-dialog-a3-runtime-s4-contract-review-2.md):
-приняты authenticated RuntimeRoot6 discriminator, locator rotation после restart
-и explicit Minimal/operator route config. Сначала exact commit/push принятой
-документации, затем root verification и поручение реализации S4; product code ещё
-не начат. Existing L1 migration/handoff остаётся обязательным successor S5.
+Полный P прошёл за2003.5355583s при исходном лимите2400s:1640 Text,
+3288 committed packet calls, exact history/old cursor и отсутствие оставшегося
+queue/pending/debt. Полный F содержит19 cases; итог F с supporting checks —
+620.4258161s/1200s. Components —370.2900657s/600s; strict Clippy и static checks PASS.
+Это один измеренный fresh scenario; результаты не являются оценкой release throughput.
+Предыдущие FAIL и расследования сохранены с явными ограничениями.
+
+Состав принятой публикации фиксирует
+[exact allowlist](tasks/long-lived-dialog-a3-runtime-s4-implementation-accepted-files.json).
+База этого изменения — контрактный commit `9547ed171c64bf5ea529b4ba487acf6aa1a61b5b`,
+его parent/S3 — `7f82036ee5803edd64be98b73572604250f5961c`.
+Исполнитель — прежний OD1 чат GPT-6.1 Sol Max, без Fast; приёмка и проверка
+публикации принадлежат root.
+
+Следующая обязательная граница A3 — **S5: existing L1 migration/handoff**; она
+ещё не начата. Whole A3, самостоятельный onboarding и пользовательский MVP остаются
+открыты. M1.2.63 не запускается автоматически; ниже сохранена история этапов.
 
 Текущая компактная передача состояния, границы active/dormant/planned,
 корректировки архитектурного аудита и три ближайших product-приоритета:

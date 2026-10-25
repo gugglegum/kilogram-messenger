@@ -62,7 +62,7 @@ pub(super) struct NamespaceProfile {
 #[derive(Clone, Default, Serialize)]
 pub(super) struct Stats {
     pub phases: [Time; 19],
-    pub namespaces: [NamespaceProfile; 21],
+    pub namespaces: [NamespaceProfile; 23],
     pub works: u64,
     pub key_tracking_truncated: bool,
     pub cache_hits: u64,

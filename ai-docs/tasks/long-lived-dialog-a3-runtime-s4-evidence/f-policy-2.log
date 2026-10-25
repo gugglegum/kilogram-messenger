@@ -1,0 +1,102 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 28.61s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 1 test
+test faults::a3_s4_f_policy_renewal_post_staging_real_close ... fixture=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-policy-GeK9Sq cli_sha256_external_manifest_required=true
+process_start pid=50068 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-policy-GeK9Sq\profile0.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-policy-GeK9Sq\profile0.1.stderr.log
+private_bytes pid=50068 bytes=11165696
+process_start pid=56224 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-policy-GeK9Sq\profile1.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-policy-GeK9Sq\profile1.1.stderr.log
+private_bytes pid=56224 bytes=11485184
+active_progress seconds=0.228 phases=[[(Number(0), Bool(false)), (Number(0), Bool(false))], [(Number(0), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=1.579 phases=[[(Number(1), Bool(false)), (Number(1), Bool(false))], [(Number(2), Bool(false)), (Number(0), Bool(false))]]
+active_progress seconds=2.271 phases=[[(Number(3), Bool(false)), (Number(1), Bool(false))], [(Number(2), Bool(false)), (Number(2), Bool(false))]]
+active_progress seconds=2.836 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(2), Bool(false))]]
+private_bytes pid=50068 bytes=12509184
+active_progress seconds=3.539 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(false)), (Number(3), Bool(false))]]
+active_progress seconds=4.305 phases=[[(Number(3), Bool(false)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(false))]]
+private_bytes pid=56224 bytes=12955648
+active_progress seconds=5.170 phases=[[(Number(3), Bool(true)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(false))]]
+active_progress seconds=5.413 phases=[[(Number(3), Bool(true)), (Number(3), Bool(false))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]
+active_progress seconds=5.697 phases=[[(Number(3), Bool(true)), (Number(3), Bool(true))], [(Number(3), Bool(true)), (Number(3), Bool(true))]]
+private_bytes pid=50068 bytes=12754944
+F01_case=clock_failure refusal=ClockBlocked: injected fallible clock protected_unchanged=true
+F01_case=clock_backward refusal=ClockBlocked protected_unchanged=true
+F01_case=authority_read_failure refusal=AuthorityReadFailure: verification provider unavailable protected_unchanged=true
+F09_exact_retry_before_current_permission=true conflict_explicit=true
+F01_case=consent_not_before refusal=ConsentExpired/NotYetValid protected_unchanged=true
+private_bytes pid=56224 bytes=13144064
+private_bytes pid=50068 bytes=12914688
+F01_case=consent_expiry refusal=ConsentExpired/NotYetValid protected_unchanged=true
+private_bytes pid=56224 bytes=13144064
+private_bytes pid=50068 bytes=12914688
+F01_case=lower_revision valid_Root_signature=true refused=true
+F01_case=same_revision_changed_bytes valid_Root_signature=true refused=true
+private_bytes pid=50068 bytes=13070336
+private_bytes pid=56224 bytes=13406208
+F01_case=post_staging_expiry clean_abort=true trial_calls_separate=true reusable=true
+process_exit pid=56224 kill=false status=exit code: 0
+process_start pid=53696 profile=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-policy-GeK9Sq\profile1.json stderr=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\a3-s4\process\F-policy-GeK9Sq\profile1.2.stderr.log
+private_bytes pid=53696 bytes=11501568
+private_bytes pid=50068 bytes=13021184
+private_bytes pid=50068 bytes=13103104
+wait=convergence seconds=10.128 node=0 contexts=[{"active":true,"blocked":null,"context":"52700d7c02c680d45a2bbc90de16e5077bebc5030658330e60d97bf783a19532","counts":{"debt":1,"pending":1,"queued":0,"receipts":[2,0],"sources":5},"d":"6254005ed49d352747c5e3e15b533b7d84442d3bddc644131a74b571e29ce601","details":{"current_consent":"978312772d4349798741c4982379b81d35c8f7aef95a2e38d789f6b5ff8fe1a4","grant":"4e45cd2ce31c5e105cde880725f23d3f7572cd76037e7e05406599377e734256","native":{"own_first":"1b4cde3c4ebb5a0ed8b5d6ac987731f0af827965676e640083ab8bec65a6c374","own_g":1,"own_index":2,"own_next":4,"peer_g":0,"peer_index":0,"peer_next":1,"rotate_due":false},"native_hash":"681618e5d3a0245bd29441ab2f327b1f0c7ffbcf9dfbf4473e5dd3e600e76ba0","offer":"4257549d450cf774575cc63e26399500f8dcedfa429d4eab6c92e614d3dc0a6f","policy_generation":7,"readies":["ba76cc7c83e9b71f84f746a1078a47421b292b289df40d0fd6677c7d532cb0b4","21a8de25b86d85eb6c3fdba892b0f4960ce058afbd9d6bafc73f8f7add2576f7"],"selected_hash":"78dc532f23d8dec245ea5a2fec5a28def2340aad6eaa0e28583756e531966c1c","wall_high_water":1792906491},"e":"c6030ac879c6f3057e412256dd303753ac95f5d683707e7a486b8231825b20df","file_exported":true,"native_generation":6,"own_locator_revision":1,"peer_locator_revision":2,"phase":3,"policy_error":null,"publication_ready":true,"q":"50fb0805c2214abcd3f51e56935c4ceedd26094cd6a8605b0d45b1549c86d130","role":0,"sid":"czQdEz+SG00rw1Ecmi4lRs6NGwoe8AWKyuvWnDHc0gY","slot":0},{"active":true,"blocked":null,"context":"061909ee045ae17790caf2bebdfd6f2e30fbff1cf5a68d6eade6ba75af377379","counts":{"debt":0,"pending":0,"queued":0,"receipts":[0,0],"sources":2},"d":"e311acc4904cf33fdd0df766b0d4f8872d049d5a059b5c2814a4a604961b7521","details":{"current_consent":"961f682a51297c36fc3fe99b0c98b0e7c9fca80bc2c123a4305307739b27fe6f","grant":"59c98f708f7500e7b42d5ae1970fb91fffe9c332aa505bea2f6a64ffa459b2cc","native":{"own_first":"6e20794f423a895cd1eee67f2cc7ed775acc06bb1132c9d7bd0bdaccb78bfa52","own_g":0,"own_index":0,"own_next":1,"peer_g":0,"peer_index":0,"peer_next":1,"rotate_due":true},"native_hash":"a556874b464c6cf4c3aa0a266a5db76dbf98e48308fb01b5f9c885be50038a66","offer":"5348a2e618aaf773bd754d626f0d372da7803832ea7586711a92b461d1d707af","policy_generation":7,"readies":["3d7f8ea5a751d46d4083cd8517aa032314ec687d9ea01e2dac1aba0c3913907b","43df2a44d58c3536f898e7fec38fb7abef427728808f15611991786190db658d"],"selected_hash":"5bf6e9c9866add8e7d1185a6a362c750e2f2fcd9db287b9f8878e10d8616b3bf","wall_high_water":1792906491},"e":"6bfabaf3eb4a5caddf44adbb140c12b33c5c26dd792db5f7672f90ee4609c453","file_exported":true,"native_generation":3,"own_locator_revision":1,"peer_locator_revision":2,"phase":3,"policy_error":null,"publication_ready":true,"q":"9fd2339c98b692cf628f232a7c5a6de62bba462c0a2cb136b177bdf073121f73","role":0,"sid":"phd/+7swGefZwHIjtHDJ46YivlDA35iIifgJOCj6oMA","slot":1}]
+private_bytes pid=50068 bytes=13103104
+private_bytes pid=50068 bytes=13299712
+private_bytes pid=53696 bytes=12582912
+F01_case=post_staging_actual_connection_close clean_abort=true reusable=true
+F01_case=own_revocation refusal=device 915033c5e1999ef6450043761b3d3cb64b2ae917aee3f373d91562c910790849 has been permanently revoked by its account root protected_unchanged=true
+private_bytes pid=53696 bytes=12550144
+F01_case=peer_revocation refusal=device 915033c5e1999ef6450043761b3d3cb64b2ae917aee3f373d91562c910790849 has been permanently revoked by its account root protected_unchanged=true
+process_exit pid=50068 kill=false status=exit code: 0
+process_exit pid=53696 kill=false status=exit code: 0
+S4_F_POLICY_PASS current_vs_historical=true monotonic_authority=true local_read_after_revoke=true clean_gates=2
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 66.20s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17101 12.52
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=63819
+target_gib=67.83
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

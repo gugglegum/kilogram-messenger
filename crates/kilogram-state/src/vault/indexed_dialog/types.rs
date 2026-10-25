@@ -86,6 +86,12 @@ pub enum Error {
     InvalidCursor,
     #[error("SnapshotUnavailable")]
     SnapshotUnavailable,
+    #[error("RuntimeWriterRequired")]
+    RuntimeWriterRequired,
+    #[error("UnsupportedRuntimeProfile")]
+    UnsupportedRuntimeProfile,
+    #[error("policy rejected before commit: {0}")]
+    PolicyRejected(&'static str),
 }
 pub type Result<T> = std::result::Result<T, Error>;
 pub(crate) fn db(error: impl std::fmt::Display) -> Error {
@@ -117,10 +123,15 @@ pub enum Namespace {
     Author1 = 18,
     Author2 = 19,
     Admission = 20,
+    Runtime = 21,
+    RuntimeProfile = 22,
 }
 impl Namespace {
     pub(crate) fn mutable(self) -> bool {
-        matches!(self, Self::Request | Self::Current | Self::Native)
+        matches!(
+            self,
+            Self::Request | Self::Current | Self::Native | Self::Runtime | Self::RuntimeProfile
+        )
     }
     pub(crate) fn numeric(self) -> bool {
         matches!(
@@ -189,6 +200,9 @@ impl Key {
     pub(crate) fn slot(self) -> Result<usize> {
         if self.context > 1 {
             return Err(Error::Bound("context"));
+        }
+        if self.namespace == Namespace::RuntimeProfile && self.context != 0 {
+            return Err(Error::Bound("runtime profile slot"));
         }
         if self.namespace.numeric() {
             self.ordinal_value()?;
