@@ -1,0 +1,193 @@
+{
+  "classification": "source-only controller field map and preservation audit; no fixture execution",
+  "baseline": "9016b578bed8b8b5e43dd0e2e94edc376804e4f0",
+  "controller_path": "apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs",
+  "functional_prefix_through_checkpoint_info_unchanged": true,
+  "original_aggregate_fields": 25,
+  "before_tail_fields": [
+    {
+      "name": "migration_a_observation",
+      "value": "migration_a"
+    },
+    {
+      "name": "migration_b_observation",
+      "value": "migration_b"
+    },
+    {
+      "name": "source_a",
+      "value": "source_a.public"
+    },
+    {
+      "name": "source_b",
+      "value": "source_b.public"
+    },
+    {
+      "name": "original_before",
+      "value": "original_before"
+    },
+    {
+      "name": "original_after",
+      "value": "original_after"
+    },
+    {
+      "name": "ready_a",
+      "value": "ready_a"
+    },
+    {
+      "name": "ready_b",
+      "value": "ready_b"
+    },
+    {
+      "name": "copied_a",
+      "value": "copied_a"
+    },
+    {
+      "name": "copied_b",
+      "value": "copied_b"
+    },
+    {
+      "name": "refused_before",
+      "value": "refused_before"
+    },
+    {
+      "name": "refused_after",
+      "value": "refused_after"
+    },
+    {
+      "name": "received_a",
+      "value": "received_a"
+    },
+    {
+      "name": "reconnect_barrier",
+      "value": "reconnect"
+    },
+    {
+      "name": "reopened_a",
+      "value": "reopened_a"
+    },
+    {
+      "name": "reopened_b",
+      "value": "reopened_b"
+    },
+    {
+      "name": "old_first_page",
+      "value": "first"
+    },
+    {
+      "name": "old_suffix",
+      "value": "suffix"
+    },
+    {
+      "name": "history_a",
+      "value": "rows_a"
+    },
+    {
+      "name": "history_b",
+      "value": "rows_b"
+    },
+    {
+      "name": "cold_a",
+      "value": "cold_a"
+    },
+    {
+      "name": "cold_b",
+      "value": "cold_b"
+    }
+  ],
+  "before_tail_count": 22,
+  "before_tail_mapping_matches_original": true,
+  "post_tail_fields": [
+    {
+      "name": "phase_trace",
+      "value": "phase_provenance"
+    },
+    {
+      "name": "phase_records",
+      "value": "json!(phases.records)"
+    },
+    {
+      "name": "checkpoint",
+      "value": "preserved"
+    }
+  ],
+  "post_tail_count": 3,
+  "original_later_phase_journal_unchanged": true,
+  "original_terminal_phase_behavior_unchanged": true,
+  "module_declaration_only": true,
+  "legacy_provenance": "unavailable_legacy_runner",
+  "private_source_objects_serialized": false,
+  "actual_controller_runtime_executed": false,
+  "protected_sources": [
+    {
+      "path": "scripts/invoke-pre-s53-refactor-case.ps1",
+      "git_blob": "1caff08957a803a1addb9dc14f30a25a35502811",
+      "sha256": "d3f9d73454c0586de42c4541d7cd1798cd1aceb485068cf6a564d1d9b595a57d",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/invoke-pre-s53-refactor-static.ps1",
+      "git_blob": "1813a93f864efa86a5993d7d2a7164b6a3e043fb",
+      "sha256": "ce54acd461327a6c4809b3cb2f4b42644e14ed6fd43e5e0e719aab8dd97914b9",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/invoke-migration-s5-l1-case.ps1",
+      "git_blob": "09d650e035eb4617078c31e641fc8a39b8521d2d",
+      "sha256": "bad2e0251c8e9dcbe6c93b4de24da840a15715aceaf7892b2b2bad2a6117578f",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/preserve-migration-s5-l1-input.ps1",
+      "git_blob": "02d7f4e620f768ced3099ddc09405d870307b96d",
+      "sha256": "25fe5a7c80821fb83a0fab5117585a48e6afe729094c1d45931aaa1556b044f3",
+      "unchanged": true
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_obligations.rs",
+      "git_blob": "65122e034a360cc5320f20247c07c8fcaf372c51",
+      "sha256": "68bc85bb08508bb73b9a89344da22518e6d1bc1ee76797c3e1bf50ad4dd06b00",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/migration-s5-l1-deadline.ps1",
+      "git_blob": "b146ab3567653e7125a88a6f874ac606206ab3b4",
+      "sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45",
+      "unchanged": true
+    },
+    {
+      "path": "scripts/run-cargo-tests-stable.ps1",
+      "git_blob": "9382cadb6ae2ecdc9a9a782e06d2439f9639e723",
+      "sha256": "c2cba5140b56c99a6482884e049426ba0ed54e90b572aebf01ace45e65cd06c3",
+      "unchanged": true
+    }
+  ],
+  "copied_reviewed_ps_functions": [
+    {
+      "function": "Hash",
+      "exact_copy": true
+    },
+    {
+      "function": "Write-NewJson",
+      "exact_copy": true
+    },
+    {
+      "function": "Replace-Json",
+      "exact_copy": true
+    },
+    {
+      "function": "Get-CaseElapsedTotal",
+      "exact_copy": true
+    },
+    {
+      "function": "Set-TemporaryProcessEnvironment",
+      "exact_copy": true
+    },
+    {
+      "function": "Verify-Rows",
+      "exact_copy": true
+    }
+  ],
+  "ra_published_paths_unchanged": 92,
+  "ra_candidate_raw_rows_verified": 90,
+  "queued_s53_task_sha256": "75cbc0f9950971820beffb08edbd7c6ccb4465d8be44aea331c51687f1807f7c"
+}

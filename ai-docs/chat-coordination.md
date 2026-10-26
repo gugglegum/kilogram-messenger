@@ -1137,3 +1137,35 @@ for root acceptance. Root explicitly permits inclusion of unchanged S5.2 authori
 history, standing test permission and nav3 current-status updates, preserving old
 chronology. No product edits, new tests/builds/limits, refactor, commit or push are
 assigned now. Maintainability follow-up is recorded only for later root assessment.
+
+### 2026-10-26: S5.2 and R-A publication verified; R-B submitted before S5.3
+
+[S5.2 acceptance](tasks/long-lived-dialog-a3-migration-s5-l1-implementation-acceptance.md)
+was published in eafd0f873eb31b64377e8e65e06bc84a911f6dc6, sole parent73c4998.
+Root independently verified all520 accepted paths/blobs and actual remote. Its
+closed C172.0310185/F3331.2897354/P0 and all historical split/FAIL outcomes remain
+unchanged; the absent boundary03 detailed parent result is still absent.
+
+The bounded preparatory [R-A acceptance](tasks/pre-s53-refactor-ra-acceptance.md)
+was published in9016b578bed8b8b5e43dd0e2e94edc376804e4f0, sole parent eafd0f8.
+Root independently verified all92 accepted paths/blobs and actual remote. Closed
+R-A charge is C118.3327995/F148.7417507/P0, including conservative C60; its revised
+ceilings were C150/F210/P0. R-A code, decisions, raw evidence and ledgers remain
+unchanged during R-B.
+
+Root separately activated [R-B](tasks/pre-s53-refactor-rb-task.md), C60/F0/P0,
+on the actual9016b578 publication. After independent
+[source clearance](tasks/pre-s53-refactor-rb-source-review.md) of the helper,
+22+3 controller field map, adapters and all775 inputs/7 images, the same GPT-6.1
+Sol Max executor without Fast ran exactly C-result-lifetime-01 in NativeToken
+under standing human permission. Actual process exit0, whole17.7590631s within
+work45/whole60, exact kernel3/0 in0.08s, normal wrapper0, unchanged provenance and
+verified zero owned children. R-B actual C17.7590631/F0/P0; no F/P or retry.
+Fmt-check, strict CLI all-targets Clippy and final compile-only checks passed.
+
+The [R-B report](tasks/pre-s53-refactor-rb-implementation.md), reuse assessment
+and exact candidate are submitted for implementation acceptance. No R-B
+commit/push is assigned yet. The original exhausted controller/checkpoint was
+not run or opened. The queued S5.3 task stays unchanged and excluded; S5.3 resumes
+only after separate R-B acceptance, publication assignment and root verification.
+Existing human callback/test authorization remains in force.

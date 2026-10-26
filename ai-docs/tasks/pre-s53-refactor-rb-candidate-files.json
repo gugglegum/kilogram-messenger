@@ -1,0 +1,225 @@
+{
+  "schema_version": 1,
+  "classification": "exact R-B candidate allowlist for root implementation review",
+  "baseline": "9016b578bed8b8b5e43dd0e2e94edc376804e4f0",
+  "self_path": "ai-docs/tasks/pre-s53-refactor-rb-candidate-files.json",
+  "self_excluded_from_files_to_avoid_hash_cycle": true,
+  "files": [
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "bytes": 102852,
+      "sha256": "57d5a5e792df5fe5da2dd8b317c5b0604933c0c53bd3a0ea4ff91c4edcea5342",
+      "git_blob": "f313adcd558dbb13f88988dac93b5564e6c0a36f",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/next-stage-plan.md",
+      "bytes": 7775,
+      "sha256": "a50c4ebdc14323614172838c89ef5fefed4bde621bba080592c677ee60e47c52",
+      "git_blob": "6695988df709d6685ed6c62312363251bc28ea69",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/README.md",
+      "bytes": 162559,
+      "sha256": "2a6763d8b531de690e9cb7823d2afb2480be48bd2013983a893682452b5ae05f",
+      "git_blob": "2ee0c47c2d4419185e4a6118ae3724f91164e5ea",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/C-result-lifetime-01.inputs.json",
+      "bytes": 163591,
+      "sha256": "8f849a6d894244916a59252e6ca5dd90040365dc5b90e8390a35c760347f386a",
+      "git_blob": "89d9f5071aa85019bb8932607ae56046cc85a52d",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/C-result-lifetime-01.json",
+      "bytes": 2058,
+      "sha256": "4e20ce86e1a4da5bf806e1700c3bb5e93848c6f691e2d00034d0c9a646ceb00d",
+      "git_blob": "f53516d64e98c2cd74cfc114317d43622f5b2379",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/C-result-lifetime-01.log",
+      "bytes": 3016,
+      "sha256": "560e3a39e2864ba29065b163af8d7e4e5b2bdb6ba0e9716578abb682efbed3a5",
+      "git_blob": "d49f15989c5424b7519583532a26396622c1495b",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/C-result-lifetime-01.started.json",
+      "bytes": 376,
+      "sha256": "d603cecab5f192d0d8a1f6a944288eed818ee5a13f91179825768342a77cfc26",
+      "git_blob": "ff83cf3d1ddee8d71838aeb3cd29eb5160530f08",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/contributing-cases.json",
+      "bytes": 3066,
+      "sha256": "ee9f7b03fa00de2daa0278da45ace793cee9a65c6c5051011f00447598a5d30e",
+      "git_blob": "6c6d59602287cbc0a76e4432849a3f66239c13f9",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/R-B-pre-run-binding.json",
+      "bytes": 164525,
+      "sha256": "0a5bcf701ddd31acaf2c83a6f53fc921adf3f7aa138f4320879b31081479aab1",
+      "git_blob": "ae5259c5f3873480bd174cbad1ca2cad8c29d6f3",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/S-rb-baseline-harnesses.json",
+      "bytes": 1783,
+      "sha256": "b35f67551aa2b58a093eb3b2c5beb908027662b2840a7b69512a797599b48ce2",
+      "git_blob": "fa56a6b95d6aa4d98ac603ef06cf06ff7f8ec9d8",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/S-rb-clippy-01.json",
+      "bytes": 318812,
+      "sha256": "249e9919f9d5abba4ab91f1701d38441ceff13bcd90bce512872129ca6f58f11",
+      "git_blob": "a9d88d95eb3c07e807f6bf9a1f057c63bb50e497",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/S-rb-clippy-01.log",
+      "bytes": 174,
+      "sha256": "ccfffe014238da498d9b40a98c0c14ea8b1b9f87f94f9881d1802b0a8eb8ad91",
+      "git_blob": "be6a5b6410b63e759528294243c4b12d74e54abc",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/S-rb-compile-01.json",
+      "bytes": 319598,
+      "sha256": "940c33c6638c34a01fddb96e9c320e72fc63886af990de41fc2b1b8bc0f7b7f1",
+      "git_blob": "1a7bca4cc8207b3d90a3064615d7d3217450b447",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/S-rb-compile-01.log",
+      "bytes": 1707,
+      "sha256": "4ef6b80f9780f64ed2a664a6e8b33aa6c4364be566a413fa022f01fdf962c17a",
+      "git_blob": "8056f35544840eba6e09a6a020f21ef3bd8b5436",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/S-rb-fmt-01.json",
+      "bytes": 318617,
+      "sha256": "d32496a1e1b3fbea0965cf26d96cf20dffd9d62b00d99b63fd70fa34bee9b6e1",
+      "git_blob": "8191250eda623034e59c57d18aa600c023cc28a5",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/S-rb-fmt-01.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/S-rb-fmt-check-01.json",
+      "bytes": 318655,
+      "sha256": "46dad0a5aa3fadcc86d8f9c8e960e6260e59a5ddb2e45d815298e7d344a3d5eb",
+      "git_blob": "0e01cc3cdbf7f169768352258832f46c316388b1",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/S-rb-fmt-check-01.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/S-rb-reuse-assessment.json",
+      "bytes": 5670,
+      "sha256": "6afe80dfcdc66122b8f7413d93c928916b47ed8cec4f32ed4c53dd652e068e39",
+      "git_blob": "906184be5ff1ae5c95ec2c4b0af9388cc4f35025",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/S-rb-source-audit.json",
+      "bytes": 5139,
+      "sha256": "7d2ceb33493edf2e4f82b85811c40353305416541a993f6f1fe109ed406e0e60",
+      "git_blob": "701da31a8f1073c01990be01cddc15f1a730bf51",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-implementation.md",
+      "bytes": 8973,
+      "sha256": "c8a8363f07d58ddf8ba813a61d76acccbe04804666c50ad39b404d720dd3e3ae",
+      "git_blob": "2efa78b73409ab2eaa97c2a3538e6d53c851b13e",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-source-review.md",
+      "bytes": 2474,
+      "sha256": "9473b7c75e78a03ce0ca839c7f9fc38f5373ea1580d80f3815865c501414e750",
+      "git_blob": "ac30f5d1c0e6242b5d1551c5c528eb97cd046865",
+      "git_mode": "100644"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-rb-task.md",
+      "bytes": 8223,
+      "sha256": "bdb458be17c867dd7b5601340b1b9f26cb87eb9b83f6c0fdc3630ceacd16a290",
+      "git_blob": "943abff9b60e902a3aa5f51727cd87339df4e1f8",
+      "git_mode": "100644"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/attempt_result.rs",
+      "bytes": 9711,
+      "sha256": "2029becd28acaf62e95d4baf60509f7606ff219a5fd061b514e05f6a006491e7",
+      "git_blob": "657c1b60fff0e8cbbbd270c6383981e89eeed8d3",
+      "git_mode": "100644"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs",
+      "bytes": 51137,
+      "sha256": "37379b14ed0c97d2f05503a1843748df305d958bf3b5b78dc2cd1d399eed407a",
+      "git_blob": "20369f7cc833aad70a5ab6b5a57801f79d5a098d",
+      "git_mode": "100644"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1.rs",
+      "bytes": 20559,
+      "sha256": "2f15fa9e796036f1d489a715504cea6e64eec4cae057ce2c02283938683c2d09",
+      "git_blob": "0bf176c9dee89c1af437e44919bff83b05e4a4c3",
+      "git_mode": "100644"
+    },
+    {
+      "path": "scripts/invoke-pre-s53-result-case.ps1",
+      "bytes": 15033,
+      "sha256": "db5eff791ae6e86fd606406fb69794d47f5b1d8b6dea6c69661e31f07c3cde79",
+      "git_blob": "c5e4f123f6e28889049282fd8903193cc2bcbd47",
+      "git_mode": "100644"
+    },
+    {
+      "path": "scripts/invoke-pre-s53-result-static.ps1",
+      "bytes": 7334,
+      "sha256": "8ca107b5232b33aa4199a507c13c4cde019abcf5e23b3f2b0ea241f79cb74cb0",
+      "git_blob": "a5872a0efa815a331e7f5e85f82be031c7411b86",
+      "git_mode": "100644"
+    }
+  ],
+  "listed_files": 28,
+  "scope": "Test-only snapshot helper/controller seam, three lifecycle tests, separate verification adapters, authority/evidence/report and navigation.",
+  "excluded": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-task.md",
+      "bytes": 10349,
+      "sha256": "75cbc0f9950971820beffb08edbd7c6ccb4465d8be44aea331c51687f1807f7c",
+      "reason": "Queued S5.3 remains unchanged and unassigned."
+    },
+    {
+      "path": ".tmp/",
+      "reason": "Private build/image preservation outputs; public hashes only."
+    },
+    {
+      "path": "target/",
+      "reason": "Build outputs are not publication candidates."
+    }
+  ],
+  "whole_case": "C-result-lifetime-01 PASS process0, C17.7590631/F0/P0",
+  "publication": "Not authorized by this submission; stop for root implementation acceptance."
+}

@@ -1,0 +1,92 @@
+{
+  "schema_version": 1,
+  "classification": "independent R-B contributing case ledger",
+  "baseline": "9016b578bed8b8b5e43dd0e2e94edc376804e4f0",
+  "active_limits_seconds": {
+    "C": 60,
+    "F": 0,
+    "P": 0
+  },
+  "charged_elapsed_seconds": {
+    "C": 17.7590631,
+    "F": 0.0,
+    "P": 0.0
+  },
+  "cases": [
+    {
+      "case": "C-result-lifetime-01",
+      "set": "C",
+      "state": "complete",
+      "classification": "whole-contributing-runner",
+      "baseline": "9016b578bed8b8b5e43dd0e2e94edc376804e4f0",
+      "selector": "pre_s53_attempt_result_",
+      "expected_names": [
+        "pre_s53_attempt_result_persists_before_failing_tail",
+        "pre_s53_attempt_result_refuses_overwrite_and_skips_tail_on_write_error",
+        "pre_s53_attempt_result_success_keeps_separate_whole_outcome"
+      ],
+      "exit_code": 0,
+      "error": null,
+      "elapsed_seconds": 17.7590631,
+      "matched_tests": 3,
+      "matches_by_name": [
+        {
+          "name": "pre_s53_attempt_result_persists_before_failing_tail",
+          "count": 1
+        },
+        {
+          "name": "pre_s53_attempt_result_refuses_overwrite_and_skips_tail_on_write_error",
+          "count": 1
+        },
+        {
+          "name": "pre_s53_attempt_result_success_keeps_separate_whole_outcome",
+          "count": 1
+        }
+      ],
+      "three_test_pass_summaries": 1,
+      "wrapper_completion_markers": 1,
+      "wrapper_returned_normally": true,
+      "wrapper_exit_code": 0,
+      "wrapper_exception": null,
+      "log_parsed": true,
+      "log_parse_error": null,
+      "source_images_verified_after": true,
+      "pre_run_inventory_verified_after": true,
+      "inventory_identity": "R-B/C-result-lifetime-01/0a5bcf701ddd31acaf2c83a6f53fc921adf3f7aa138f4320879b31081479aab1",
+      "inventory_sha256": "8f849a6d894244916a59252e6ca5dd90040365dc5b90e8390a35c760347f386a",
+      "inputs_file": "C-result-lifetime-01.inputs.json",
+      "binding_sha256": "0a5bcf701ddd31acaf2c83a6f53fc921adf3f7aa138f4320879b31081479aab1",
+      "deadline": {
+        "owned_children_after_cleanup": 0,
+        "work_seconds": 45,
+        "whole_seconds": 60,
+        "work_expired": false,
+        "whole_watchdog": "unchanged owned job armed through case/ledger writes",
+        "cleanup_verified": true
+      },
+      "execution_mode_declared": "NativeToken",
+      "no_product_fixture": true,
+      "rule": "Includes setup/files, cached compile/stage, waits, stable finalization, failures and cleanup. A kernel or snapshot alone is not whole PASS."
+    }
+  ],
+  "sole_case": {
+    "case": "C-result-lifetime-01",
+    "set": "C",
+    "work_seconds": 45,
+    "whole_seconds": 60,
+    "mode": "NativeToken",
+    "automatic_retry": false
+  },
+  "closed_ra_context": {
+    "C": 118.3327995,
+    "F": 148.7417507,
+    "P": 0,
+    "conservative_C_included": 60,
+    "charged_to_this_ledger": false
+  },
+  "overall_allocated_refactor_ceilings_seconds": {
+    "C": 210,
+    "F": 210,
+    "P": 0
+  }
+}

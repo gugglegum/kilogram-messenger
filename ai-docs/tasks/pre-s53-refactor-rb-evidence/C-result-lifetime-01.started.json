@@ -1,0 +1,11 @@
+{
+  "case": "C-result-lifetime-01",
+  "set": "C",
+  "started_utc": "2026-10-26T17:48:46.1310381Z",
+  "owner_pid": 48584,
+  "work_seconds": 45,
+  "whole_seconds": 60,
+  "baseline": "9016b578bed8b8b5e43dd0e2e94edc376804e4f0",
+  "binding_sha256": "0a5bcf701ddd31acaf2c83a6f53fc921adf3f7aa138f4320879b31081479aab1",
+  "classification": "attempt-start-not-final-result"
+}

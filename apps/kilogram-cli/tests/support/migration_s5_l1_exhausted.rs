@@ -1226,8 +1226,27 @@ fn migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint() -> 
         "restore_rule":"Private backup is never opened. Future reuse restores bytes to these exact original absolute paths; one active branch per Native domain. Root7 pins paths.",
         "no_handoff_or_Event2":true,"cold_a":cold_a,"cold_b":cold_b}))?,
     )?;Ok(())})?;
-    let preserved = phases.run("checkpoint.private_preservation", |_| {
-        obligations::preserve_input(&base, &format!("{case}-checkpoint"))
+    let observations = json!({
+        "migration_a_observation":migration_a,"migration_b_observation":migration_b,
+        "source_a":source_a.public,"source_b":source_b.public,"original_before":original_before,
+        "original_after":original_after,"ready_a":ready_a,"ready_b":ready_b,"copied_a":copied_a,"copied_b":copied_b,
+        "refused_before":refused_before,"refused_after":refused_after,"received_a":received_a,
+        "reconnect_barrier":reconnect,"reopened_a":reopened_a,"reopened_b":reopened_b,"old_first_page":first,"old_suffix":suffix,
+        "history_a":rows_a,"history_b":rows_b,"cold_a":cold_a,"cold_b":cold_b,
+    });
+    let snapshot_path = base.join("assertions-before-tail.json");
+    let provenance = attempt_result::Provenance::UnavailableLegacyRunner;
+    let envelope = attempt_result::Envelope {
+        case: &case,
+        run: &base,
+        output: &snapshot_path,
+        provenance: &provenance,
+        observations: &observations,
+    };
+    let preserved = attempt_result::persist_before_tail(&snapshot_path, &envelope, || {
+        phases.run("checkpoint.private_preservation", |_| {
+            obligations::preserve_input(&base, &format!("{case}-checkpoint"))
+        })
     })?;
     phases.record(
         "controller.assertions_and_preservation",
@@ -1238,16 +1257,16 @@ fn migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint() -> 
     let phase_provenance = json!({"path":phases.path,"bytes":std::fs::metadata(&phases.path)?.len(),
         "blake3":blake3::hash(&std::fs::read(&phases.path)?).to_hex().to_string(),
         "single_absolute_controller_seconds":760,"controlled_pauses_included":true});
+    let mut result = observations;
+    let fields = result
+        .as_object_mut()
+        .context("assertion observation object")?;
+    fields.insert("phase_trace".into(), phase_provenance);
+    fields.insert("phase_records".into(), json!(phases.records));
+    fields.insert("checkpoint".into(), preserved);
     std::fs::write(
         base.join("parent-exhausted-result.json"),
-        serde_json::to_vec_pretty(&json!({
-        "phase_trace":phase_provenance,"phase_records":phases.records,
-        "migration_a_observation":migration_a,"migration_b_observation":migration_b,
-        "source_a":source_a.public,"source_b":source_b.public,"original_before":original_before,
-        "original_after":original_after,"ready_a":ready_a,"ready_b":ready_b,"copied_a":copied_a,"copied_b":copied_b,
-        "refused_before":refused_before,"refused_after":refused_after,"received_a":received_a,
-        "reconnect_barrier":reconnect,"reopened_a":reopened_a,"reopened_b":reopened_b,"old_first_page":first,"old_suffix":suffix,
-        "history_a":rows_a,"history_b":rows_b,"cold_a":cold_a,"cold_b":cold_b,"checkpoint":preserved}))?,
+        serde_json::to_vec_pretty(&result)?,
     )?;
     phases.check()?;
     phases.completed = true;

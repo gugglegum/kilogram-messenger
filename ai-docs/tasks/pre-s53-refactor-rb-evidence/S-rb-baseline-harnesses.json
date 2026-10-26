@@ -1,0 +1,44 @@
+{
+  "baseline": "9016b578bed8b8b5e43dd0e2e94edc376804e4f0",
+  "classification": "raw non-executed harness preservation only; no fixture",
+  "archive": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\pre-s53-result-baseline-harnesses",
+  "images": [
+    {
+      "path": "target/verification/deps/kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 69868032,
+      "sha256": "2b0c7be8146c9f204e6acd614b0f9218a7b0920ab4e5eabc95efb0a0291ae34f"
+    },
+    {
+      "path": "target/verification/deps/kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 42982912,
+      "sha256": "d699b3181b9bf5f2496242a13256c23badded4fbdb6bad76356a747952ca3585"
+    },
+    {
+      "path": "target/verification/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 14014976,
+      "sha256": "4964258679d0b45057200677ce48e2631e7d09d22ad4e921261828354fd58d15"
+    },
+    {
+      "path": "target/verification/deps/kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 36986880,
+      "sha256": "a5d47d1d3b9da2720ba880b9a945a25591f9ca91a2ad40419e12b3ae40de8b96"
+    }
+  ],
+  "unchanged_product_images": [
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "bytes": 61531648,
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+      "bytes": 69796864,
+      "sha256": "a0270e2ba163393b1c66655ef5ff6d64965c1365c39fd8c8c7d859b6c7ae72f3"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-l1-control-peer.exe",
+      "bytes": 69796864,
+      "sha256": "a0270e2ba163393b1c66655ef5ff6d64965c1365c39fd8c8c7d859b6c7ae72f3"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-# Текущая точка: S5.2 submission готовится к итоговой root-приёмке
+# Текущая точка: R-B сдан на приёмку перед S5.3
 
 Актуально на2026-10-26. Принят fresh runtime двух процессов, перезапуски и
 offline-доставка: [итоговое review S4](tasks/long-lived-dialog-a3-runtime-s4-implementation-review-5.md).
@@ -22,8 +22,11 @@ Root независимо проверил все230 accepted paths/blobs, raw h
 mapping с исправлениями account scope, публичного Consent1 renewal и точного IPC3.
 [Реализация](tasks/long-lived-dialog-a3-migration-s5-l1-implementation.md) indexed L1
 owner/transport/history/receipt continuation на той же Native-сессии с одним реальным
-exhausted origin A511/B16 готовится к root acceptance; [candidate allowlist](tasks/long-lived-dialog-a3-migration-s5-l1-candidate-files.json)
-фиксирует точный состав. Root принял завершённые функциональные assertions boundary03
+exhausted origin A511/B16 [принята root](tasks/long-lived-dialog-a3-migration-s5-l1-implementation-acceptance.md)
+и опубликована commit `eafd0f873eb31b64377e8e65e06bc84a911f6dc6`.
+Root независимо сверил все520 paths/blobs, sole parent и actual remote;
+[candidate allowlist](tasks/long-lived-dialog-a3-migration-s5-l1-candidate-files.json)
+сохранён. Root принял завершённые функциональные assertions boundary03
 по связанному исходнику/фазам. Whole boundary03 остаётся FAIL649.592232s, parent-result
 отсутствует; исторические whole FAIL/split outcomes не переименованы.
 [Preservation принято отдельно](tasks/long-lived-dialog-a3-migration-s5-l1-preservation-review.md):
@@ -33,7 +36,17 @@ S5.2 actual C172.0310185/F3331.2897354/P0, потолки500/3650/0;39 contribut
 четыре явные поправки F без возврата расходов. Опубликованный S5.1 actual
 C279.3257298/F1236.2886628/P0 сохраняется; combined actual C451.3567483/F4567.5783982/P0,
 combined maxima C779.3257298/F4886.2886628/P0. Поздние estimates не являются бюджетом.
-Полная реализация S5.2 ещё не принята, commit/push не поручены.
+Подготовительный [R-A принят](tasks/pre-s53-refactor-ra-acceptance.md) и опубликован
+commit `9016b578bed8b8b5e43dd0e2e94edc376804e4f0`, sole parent eafd0f8...;
+root независимо сверил все92 paths/blobs и actual remote. Закрытый учёт
+C118.3327995/F148.7417507/P0 включает консервативные C60; потолки R-A150/210/0.
+[R-B](tasks/pre-s53-refactor-rb-task.md) выполнен на этой опубликованной базе и
+[сдан на implementation acceptance](tasks/pre-s53-refactor-rb-implementation.md).
+После source clearance единственный C-result-lifetime-01 дал whole PASS17.7590631s,
+kernel3/0. Отдельный R-B ledger C17.7590631/F0/P0 при60/0/0; общий выделенный
+потолок refactor210/210/0. Старый долгий контроллер не запускался.
+R-B ещё не принят и не опубликован. S5.3 mapping остаётся в очереди до отдельной
+приёмки R-B, поручения commit/push и независимой проверки actual publication.
 Handoff/whole P5 ещё впереди, whole P требует отдельного непрерывного run<=2400.
 Каждая логическая часть сдаётся на review до commit/push; whole S5/P5 пока открыт.
 Ниже сохранён отложенный recovery API-retirement план. Он не является текущим

@@ -1,0 +1,123 @@
+{
+  "classification": "R-B final source-bound reuse assessment; read-only checks, no extra executable run",
+  "baseline": "9016b578bed8b8b5e43dd0e2e94edc376804e4f0",
+  "frozen_binding": {
+    "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/R-B-pre-run-binding.json",
+    "sha256": "0a5bcf701ddd31acaf2c83a6f53fc921adf3f7aa138f4320879b31081479aab1",
+    "inputs_verified": 775,
+    "images_verified": 7,
+    "mismatches": 0
+  },
+  "actual_pre_run_inventory": {
+    "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/C-result-lifetime-01.inputs.json",
+    "sha256": "8f849a6d894244916a59252e6ca5dd90040365dc5b90e8390a35c760347f386a",
+    "identity": "R-B/C-result-lifetime-01/0a5bcf701ddd31acaf2c83a6f53fc921adf3f7aa138f4320879b31081479aab1",
+    "wrapper_verified_after": true,
+    "test_digest": "BLAKE3 computed from exact actual bytes by each managed lifecycle test"
+  },
+  "source_clearance": {
+    "path": "ai-docs/tasks/pre-s53-refactor-rb-source-review.md",
+    "sha256": "9473b7c75e78a03ce0ca839c7f9fc38f5373ea1580d80f3815865c501414e750"
+  },
+  "changed_source": [
+    {
+      "path": "apps/kilogram-cli/tests/support/attempt_result.rs",
+      "bytes": 9711,
+      "sha256": "2029becd28acaf62e95d4baf60509f7606ff219a5fd061b514e05f6a006491e7",
+      "current_git_blob": "657c1b60fff0e8cbbbd270c6383981e89eeed8d3",
+      "baseline_git_blob": null
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1.rs",
+      "bytes": 20559,
+      "sha256": "2f15fa9e796036f1d489a715504cea6e64eec4cae057ce2c02283938683c2d09",
+      "current_git_blob": "0bf176c9dee89c1af437e44919bff83b05e4a4c3",
+      "baseline_git_blob": "9a8c16a5f6d131d72e16f50eb0811d38fb02cb25"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs",
+      "bytes": 51137,
+      "sha256": "37379b14ed0c97d2f05503a1843748df305d958bf3b5b78dc2cd1d399eed407a",
+      "current_git_blob": "20369f7cc833aad70a5ab6b5a57801f79d5a098d",
+      "baseline_git_blob": "d2a608a987cafbdb78bd09d6ee97530a328f8993"
+    },
+    {
+      "path": "scripts/invoke-pre-s53-result-case.ps1",
+      "bytes": 15033,
+      "sha256": "db5eff791ae6e86fd606406fb69794d47f5b1d8b6dea6c69661e31f07c3cde79",
+      "current_git_blob": "c5e4f123f6e28889049282fd8903193cc2bcbd47",
+      "baseline_git_blob": null
+    },
+    {
+      "path": "scripts/invoke-pre-s53-result-static.ps1",
+      "bytes": 7334,
+      "sha256": "8ca107b5232b33aa4199a507c13c4cde019abcf5e23b3f2b0ea241f79cb74cb0",
+      "current_git_blob": "a5872a0efa815a331e7f5e85f82be031c7411b86",
+      "baseline_git_blob": null
+    }
+  ],
+  "actual_case": {
+    "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/C-result-lifetime-01.json",
+    "sha256": "4e20ce86e1a4da5bf806e1700c3bb5e93848c6f691e2d00034d0c9a646ceb00d",
+    "whole_exit_code": 0,
+    "outer_tool_process_exit_code_observed": 0,
+    "elapsed_seconds": 17.7590631,
+    "kernel_passed": 3,
+    "kernel_failed": 0,
+    "kernel_seconds": 0.08,
+    "wrapper_exit_code": 0,
+    "cleanup_verified": true,
+    "owned_children": 0,
+    "work_expired": false,
+    "extra_executable_attempts": 0
+  },
+  "source_seam": {
+    "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/S-rb-source-audit.json",
+    "sha256": "7d2ceb33493edf2e4f82b85811c40353305416541a993f6f1fe109ed406e0e60",
+    "before_tail_fields": 22,
+    "post_tail_fields": 3,
+    "functional_body_unchanged": true,
+    "actual_controller_rerun": false
+  },
+  "reuse": {
+    "helper_lifecycle": "Three new opaque tests cover close-before-tail, failure propagation, collision/invalid destination and actual success result.",
+    "controller": "Source review only proves the 22+3 integration seam and preserved functional body/phase behavior.",
+    "prior_ra": "All92 published paths unchanged; prior exact version evidence retains its original scope.",
+    "historical_boundary03": "Whole FAIL649.592232s and missing parent result remain unchanged.",
+    "future_s53": "Not verified or started; requires separate accepted/published baseline and assignment."
+  },
+  "preserved_harness_images_verified": 4,
+  "preserved_harness_images_executed": false,
+  "ra_published_paths_unchanged": 92,
+  "ra_raw_manifest_rows_verified": 90,
+  "ra_manifest_sha256": "8d8deb37d2141b3be30fb15e9a6d9d30c47853ba322f3d974c1722a597e664b0",
+  "ra_acceptance_sha256": "978951e80174fc59e014cfd54d5927d30f7899eb86d4a01bafb5485729a65cca",
+  "final_ledger": {
+    "path": "ai-docs/tasks/pre-s53-refactor-rb-evidence/contributing-cases.json",
+    "sha256": "ee9f7b03fa00de2daa0278da45ace793cee9a65c6c5051011f00447598a5d30e",
+    "R_B_C": 17.7590631,
+    "R_B_F": 0,
+    "R_B_P": 0,
+    "R_A_C": 118.3327995,
+    "R_A_F": 148.7417507,
+    "combined_C": 136.0918626,
+    "combined_F": 148.7417507,
+    "conservative_C_in_combined": 60,
+    "allocated_refactor_C": 210,
+    "allocated_refactor_F": 210,
+    "allocated_refactor_P": 0
+  },
+  "queued_s53_task": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-task.md",
+    "sha256": "75cbc0f9950971820beffb08edbd7c6ccb4465d8be44aea331c51687f1807f7c",
+    "included_in_candidate": false
+  },
+  "no_private_checkpoint_or_native_access": true,
+  "no_product_build_or_execution": true,
+  "no_system_setting_change": true,
+  "no_remaining_kilogram_processes": true,
+  "index_empty": true,
+  "head_unchanged": true,
+  "tracked_diff_whitespace_check": "PASS",
+  "candidate_navigation_only": "README.md, next-stage-plan.md and appended chat-coordination chronology update current publication/submission status; no old decision/evidence rewrite."
+}

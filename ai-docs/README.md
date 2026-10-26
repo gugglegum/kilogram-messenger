@@ -2,7 +2,13 @@
 
 Актуально на: 2026-10-26.
 
-Текущее принятое состояние — **A3-S4: fresh runtime двух процессов с перезапусками
+Текущее опубликованное состояние — **A3-S5.2: indexed existing-L1 continuation**,
+commit `eafd0f873eb31b64377e8e65e06bc84a911f6dc6`, и подготовительный R-A,
+commit `9016b578bed8b8b5e43dd0e2e94edc376804e4f0`. R-B завершил единственный
+разрешённый C и [сдан на приёмку](tasks/pre-s53-refactor-rb-implementation.md);
+S5.3 ожидает отдельной приёмки и публикации R-B.
+
+Ранее принят **A3-S4: fresh runtime двух процессов с перезапусками
 и offline-доставкой**. [Итоговая приёмка root](tasks/long-lived-dialog-a3-runtime-s4-implementation-review-5.md)
 закрывает [реализацию](tasks/long-lived-dialog-a3-runtime-s4-implementation.md)
 по [контракту S4](tasks/long-lived-dialog-a3-runtime-s4-contract.md).
@@ -39,17 +45,28 @@ paths/blobs по [allowlist](tasks/long-lived-dialog-a3-migration-s5-storage-acc
 sole parent и actual GitHub master; worktree/index были чистыми.
 [План S5.2 принят](tasks/long-lived-dialog-a3-migration-s5-l1-plan-review-2.md):
 закрыты account-wide invalidation и публичное same-C Consent1 renewal, уточнены IPC3
-и бюджет. [Submission indexed L1](tasks/long-lived-dialog-a3-migration-s5-l1-implementation.md)
-готовится к итоговой root-приёмке по [точному candidate allowlist](tasks/long-lived-dialog-a3-migration-s5-l1-candidate-files.json).
+и бюджет. [Indexed L1](tasks/long-lived-dialog-a3-migration-s5-l1-implementation.md)
+[принят root](tasks/long-lived-dialog-a3-migration-s5-l1-implementation-acceptance.md)
+и опубликован в `eafd0f873eb31b64377e8e65e06bc84a911f6dc6`; root независимо
+сверил все520 paths/blobs, sole parent и actual remote.
 Root узко принял завершённые функциональные assertions boundary03 по исходнику/фазам;
 whole boundary03 остаётся FAIL649.592232s, потерянный parent-result не восстановлен.
 [Preservation принято отдельно](tasks/long-lived-dialog-a3-migration-s5-l1-preservation-review.md):
 C whole PASS24.1463993s и F preservation-only whole PASS67.5439277s; private checkpoint
 не активировался. Все прежние whole FAIL и split outcomes сохранены.
-Текущий S5.2 учёт C172.0310185/F3331.2897354/P0 при потолках500/3650/0
+Закрытый S5.2 учёт C172.0310185/F3331.2897354/P0 при потолках500/3650/0
 ([ledger](tasks/long-lived-dialog-a3-migration-s5-l1-evidence/contributing-cases.json));
 старый S5.1 ledger сохранён, четыре поправки F учтены без возвратов расходов.
-Полная реализация ещё не принята и не опубликована; handoff/whole P5 остаются отдельными частями.
+Handoff/whole P5 остаются отдельными частями.
+
+[R-A принят](tasks/pre-s53-refactor-ra-acceptance.md) и опубликован в `9016b578...`;
+root независимо проверил все92 paths/blobs и actual remote. Закрытый учёт R-A:
+C118.3327995/F148.7417507/P0, включая консервативные C60, при пересмотренных
+потолках C150/F210/P0. [R-B](tasks/pre-s53-refactor-rb-task.md) использует отдельный
+C60/F0/P0: единственный C-result-lifetime-01 whole PASS17.7590631s, три теста3/0,
+F/P не расходовались. Исходный контроллер отдельно не перезапускался.
+R-B пока не принят и не опубликован; следующий S5.3 начинается только после
+отдельной root-приёмки и проверки публикации. Исторические результаты сохранены.
 Исполнитель прежний, GPT-6.1 Sol Max без Fast; сначала review контракта, затем
 реализации, после приёмки exact commit/push. Whole A3, самостоятельный onboarding
 и пользовательский MVP остаются открыты. M1.2.63 не запускается автоматически.

@@ -2,6 +2,8 @@
 use super::*;
 #[path = "migration_s5_l1_atomic.rs"]
 mod atomic;
+#[path = "attempt_result.rs"]
+mod attempt_result;
 #[path = "migration_s5_l1_exhausted.rs"]
 mod exhausted;
 #[path = "migration_s5_l1_isolation.rs"]
