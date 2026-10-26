@@ -1,0 +1,147 @@
+{
+  "classification": "documentation-scope-and-protected-baseline-comparison-no-runtime",
+  "protected_baseline_inputs": [
+    {
+      "file": {
+        "path": "Cargo.lock",
+        "bytes": 194144,
+        "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126"
+      },
+      "baseline_and_current_normalized_git_blob": "e7c84d5d67474922b28507111b18234b14605a15",
+      "candidate": false
+    },
+    {
+      "file": {
+        "path": "Cargo.toml",
+        "bytes": 3398,
+        "sha256": "28700ccee74b2a78f96e945b86087ce9dfac32a2236bf61067976c2ac1082aa0"
+      },
+      "baseline_and_current_normalized_git_blob": "071076d2d24dbe6eef6d2df0e9eb0efad9556512",
+      "candidate": false
+    },
+    {
+      "file": {
+        "path": ".gitattributes",
+        "bytes": 84,
+        "sha256": "f210f4208215f48ad7840abde7a3aadc033638507372fa0ecaf547941441c570"
+      },
+      "baseline_and_current_normalized_git_blob": "63507a4b9c51df9240e37997cb2309062536a4ec",
+      "candidate": false
+    },
+    {
+      "file": {
+        "path": "scripts/run-cargo-tests-stable.ps1",
+        "bytes": 10839,
+        "sha256": "c2cba5140b56c99a6482884e049426ba0ed54e90b572aebf01ace45e65cd06c3"
+      },
+      "baseline_and_current_normalized_git_blob": "9382cadb6ae2ecdc9a9a782e06d2439f9639e723",
+      "candidate": false
+    },
+    {
+      "file": {
+        "path": "scripts/cargo-resource-policy.ps1",
+        "bytes": 1168,
+        "sha256": "2485a0b0ae5b07d6625f218e4c02a8f6927b78c26f10b5506f157066abba676e"
+      },
+      "baseline_and_current_normalized_git_blob": "944d30569eddf975e5f73d15eb6f741fc7af00d0",
+      "candidate": false
+    },
+    {
+      "file": {
+        "path": "ai-docs/development-environment.md",
+        "bytes": 440717,
+        "sha256": "53074ff3734dacd9906ee03cc5c7ded952dedd99d207581f692ff900b9a79f8f"
+      },
+      "baseline_and_current_normalized_git_blob": "b4be1a56152bcf64e146c2c4418a4ffa439f6096",
+      "candidate": false
+    },
+    {
+      "file": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-contract.md",
+        "bytes": 109805,
+        "sha256": "f87c5c8b0b307863078cf3e2e85f3d13a05392d1d654affd5f2a40a3943ad2ad"
+      },
+      "baseline_and_current_normalized_git_blob": "23d7d6d094345d80352e7342d0f12848859fb295",
+      "candidate": false
+    },
+    {
+      "file": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-contract-accepted-files.json",
+        "bytes": 3141,
+        "sha256": "4f02708e998c552d7c36158812fc0151f9111040392729f75e13f3c4c8022568"
+      },
+      "baseline_and_current_normalized_git_blob": "cfe9596ecb37ea3563c9f700043f8a5003dbc928",
+      "candidate": false
+    },
+    {
+      "file": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-accepted-files.json",
+        "bytes": 83040,
+        "sha256": "86ee30aa7cd5bb5a45ccf9291aba24e3f44b24873ade8af976f4af54d7d4c57b"
+      },
+      "baseline_and_current_normalized_git_blob": "c4ef2a69ad060c9fff540d1508d00c72b9600fc7",
+      "candidate": false
+    },
+    {
+      "file": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-implementation.md",
+        "bytes": 16658,
+        "sha256": "4288cd20d4fb89f967203333e26436f647fb970d495d4b0b8a147c2f98eaa85b"
+      },
+      "baseline_and_current_normalized_git_blob": "17f49e4b181aac1800b3c63c8ddb4ffb4ec550da",
+      "candidate": false
+    },
+    {
+      "file": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-implementation-accepted-files.json",
+        "bytes": 151491,
+        "sha256": "4a3455ef15daa3a75d0d13b8643599556955583331ea08e9d35c03675aca427a"
+      },
+      "baseline_and_current_normalized_git_blob": "ea6d4b219a7469e33e317b1e374ce6edfa4af0b1",
+      "candidate": false
+    },
+    {
+      "file": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-storage-evidence/contributing-cases.json",
+        "bytes": 126608,
+        "sha256": "9e9dae271374eb9e411c1a80f1d0141a462dc170abb64c373aee6e00bb6de598"
+      },
+      "baseline_and_current_normalized_git_blob": "1cf5cc0103c35b6f78b629d098ebe0e1e02a550e",
+      "candidate": false
+    }
+  ],
+  "navigation_before": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-final-navigation-before.json",
+    "bytes": 1408,
+    "sha256": "8365871b03d6fb0051402b0c290956d011252fb6bff5b85f738ba2e7c17f96a9"
+  },
+  "navigation_delta": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-final-navigation.patch.txt",
+    "bytes": 9437,
+    "sha256": "0e39f12ec2ab2b948bd225f4f44a25948c443de12c51bd62883dfba41fa1b882"
+  },
+  "navigation_after": [
+    {
+      "path": "ai-docs/README.md",
+      "bytes": 161158,
+      "sha256": "20c2c16ea197fad0ecc5d0f96f0d8a72cce8a42f7fc9fc6b43a27fe76b38992c"
+    },
+    {
+      "path": "ai-docs/next-stage-plan.md",
+      "bytes": 6532,
+      "sha256": "899438ac8a445d20d082b84c8ba981550d36e97f2d632445bdfb3709cca58d7b"
+    },
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "bytes": 100793,
+      "sha256": "3553a4d7c85ccc904ef6f576439e10165dcdc430b3b62e857ce9f824a2732b74"
+    }
+  ],
+  "chronology_retained": {
+    "chat_old_bytes_after_LF_normalization_are_exact_prefix": true,
+    "next_stage_handoff_and_deferred_tail_identical": true,
+    "readme_historical_tail_identical": true
+  },
+  "authorized_scope": "Only current S5.2 status/budget/references plus appended chronology; include root S5.2 metadata and nav3. No product refactor or S5.3 implementation.",
+  "source_or_test_change": false
+}

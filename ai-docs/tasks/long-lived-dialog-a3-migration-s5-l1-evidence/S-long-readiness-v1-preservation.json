@@ -1,0 +1,14 @@
+{
+  "classification": "static-original-readiness-snapshot-before-controller-correction",
+  "authority": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-long-readiness-review-1.md",
+  "authority_sha256": "c492cbe874cdc5460f56fbefd42569229fef913f40471fec412c5df7cb24de6e",
+  "controller_snapshot": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-long-readiness-v1-controller.rs.txt",
+  "controller_bytes": 20858,
+  "controller_sha256": "feaf65e3e6698ff56d5fad69c89f5d5423efb22f6d44b8da30c299e45000bf61",
+  "harness_snapshot": "target\\compatibility\\long-lived-dialog-migration-readiness-v1\\migration_s5_process-harness.bin.snapshot",
+  "harness_bytes": 13648896,
+  "harness_sha256": "dba6d218adbdbe6a9c34add3419157b15bb6cced01c958f11cb3d5b9b899314b",
+  "original_readiness_sha256": "220b3cc1a74af235c6979b17c4e0ea2757f72aa2c8b1b6c758287beaae89b63a",
+  "original_binding_sha256": "9c2e3ccb053169a60a249074397521f7284bd73dfbefa5e3def276a89f1057cc",
+  "no_test_execution": true
+}

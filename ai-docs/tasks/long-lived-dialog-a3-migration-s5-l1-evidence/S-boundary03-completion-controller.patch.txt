@@ -1,0 +1,299 @@
+diff --git "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-controller.rs.txt" b/apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs
+index cebc856..d2a608a 100644
+--- "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-controller.rs.txt"
++++ b/apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs
+@@ -10,7 +10,6 @@ use zeroize::Zeroizing;
+ struct Phases {
+     started: Instant,
+     deadline: Instant,
+-    file: std::fs::File,
+     path: PathBuf,
+     records: Vec<Value>,
+     completed: bool,
+@@ -18,15 +17,17 @@ struct Phases {
+ impl Phases {
+     fn new(base: &Path, started: Instant) -> Result<Self> {
+         let path = base.join("boundary-phases.jsonl");
++        drop(
++            std::fs::OpenOptions::new()
++                .write(true)
++                .create_new(true)
++                .open(&path)?,
++        );
+         Ok(Self {
+             started,
+             // One controller allowance, never reset by a phase/checkpoint.
+             // Outer work780/whole800 remains authoritative, including setup.
+             deadline: started + Duration::from_secs(760),
+-            file: std::fs::OpenOptions::new()
+-                .write(true)
+-                .create_new(true)
+-                .open(&path)?,
+             path,
+             records: Vec::new(),
+             completed: false,
+@@ -42,10 +43,14 @@ impl Phases {
+     fn record(&mut self, phase: &str, state: &str, detail: Value) -> Result<()> {
+         let value = json!({"elapsed_seconds":self.started.elapsed().as_secs_f64(),
+             "phase":phase,"state":state,"detail":detail});
+-        serde_json::to_writer(&mut self.file, &value)?;
+-        self.file.write_all(b"\n")?;
+-        self.file.flush()?;
+-        self.file.sync_data()?;
++        // No writer survives this record. A following action may inventory and
++        // copy the exact flushed prefix through the ordinary Windows helper.
++        let mut file = std::fs::OpenOptions::new().append(true).open(&self.path)?;
++        serde_json::to_writer(&mut file, &value)?;
++        file.write_all(b"\n")?;
++        file.flush()?;
++        file.sync_data()?;
++        drop(file);
+         self.records.push(value);
+         Ok(())
+     }
+@@ -76,6 +81,245 @@ impl Drop for Phases {
+     }
+ }
+ 
++fn completion_result_path(case: &str) -> PathBuf {
++    workspace()
++        .join("ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence")
++        .join(format!("{case}-result.json"))
++}
++fn write_completion_result(case: &str, result: &Value) -> Result<()> {
++    let mut file = std::fs::OpenOptions::new()
++        .write(true)
++        .create_new(true)
++        .open(completion_result_path(case))?;
++    serde_json::to_writer_pretty(&mut file, result)?;
++    file.flush()?;
++    file.sync_data()?;
++    Ok(())
++}
++
++#[cfg(windows)]
++#[test]
++fn migration_s5_l1_phase_preservation_opaque_held_locks() -> Result<()> {
++    let case = "C-boundary-phase-preservation-01";
++    ensure!(
++        std::env::var("KILOGRAM_S5_CASE")? == case,
++        "exact charged C case"
++    );
++    ensure!(!completion_result_path(case).exists(), "immutable C result");
++    let base = run_dir("l1-phase-preservation-probe-")?;
++    let input = base.join("input");
++    let output = workspace().join(".tmp/migration-s5-preserved").join(case);
++    ensure!(!output.exists(), "immutable opaque backup");
++    let mut locks = Vec::new();
++    let mut paths = Vec::new();
++    for side in ["one", "two"] {
++        let state = input.join(side).join("state");
++        std::fs::create_dir_all(&state)?;
++        let path = state.join(".kilogram-state.lock");
++        let file = std::fs::OpenOptions::new()
++            .read(true)
++            .write(true)
++            .create_new(true)
++            .open(&path)?;
++        file.try_lock()
++            .map_err(|error| anyhow::anyhow!("real probe lock: {error}"))?;
++        ensure!(file.metadata()?.len() == 0, "genuinely held empty lock");
++        locks.push(file);
++        paths.push(path);
++    }
++    let opaque: Vec<u8> = (0..=u8::MAX).collect();
++    std::fs::write(input.join("opaque.bin"), &opaque)?;
++    let shell =
++        PathBuf::from(std::env::var_os("KILOGRAM_S5_POWERSHELL").context("parent PowerShell")?);
++    let mut phases = Phases::new(&input, Instant::now())?;
++    let (preserved, prefix) = phases.run("opaque.private_preservation", |phases| {
++        let prefix = std::fs::read(&phases.path)?;
++        let result = json_cli(
++            &shell,
++            &[
++                "-NoProfile".into(),
++                "-NonInteractive".into(),
++                "-File".into(),
++                text(&workspace().join("scripts/preserve-migration-s5-l1-input.ps1")),
++                "-InputDirectory".into(),
++                text(&input),
++                "-OutputDirectory".into(),
++                text(&output),
++                "-OwnedLockOne".into(),
++                text(&paths[0]),
++                "-OwnedLockTwo".into(),
++                text(&paths[1]),
++            ],
++        )?;
++        ensure!(
++            result["source_unchanged"] == true && result["copy_matches"] == true,
++            "real helper byte comparisons"
++        );
++        ensure!(
++            std::fs::read(output.join("boundary-phases.jsonl"))? == prefix,
++            "copied phase log must equal frozen in-action prefix"
++        );
++        ensure!(
++            std::fs::read(output.join("opaque.bin"))? == opaque,
++            "opaque non-lock bytes preserved"
++        );
++        for (index, side) in ["one", "two"].iter().enumerate() {
++            ensure!(
++                locks[index].metadata()?.len() == 0
++                    && std::fs::read(output.join(side).join("state/.kilogram-state.lock"))?
++                        .is_empty(),
++                "actual empty destination and still-held source lock"
++            );
++        }
++        Ok((result, prefix))
++    })?;
++    phases.record(
++        "opaque.after_preservation",
++        "end",
++        json!({"writer_closed_between_records":true}),
++    )?;
++    let after = std::fs::read(&phases.path)?;
++    ensure!(
++        after.starts_with(&prefix)
++            && after.len() > prefix.len()
++            && phases
++                .records
++                .iter()
++                .any(|v| v["phase"] == "opaque.private_preservation" && v["state"] == "end")
++            && phases.records.last().context("later record")?["phase"]
++                == "opaque.after_preservation",
++        "phase append must continue after successful preservation"
++    );
++    write_completion_result(
++        case,
++        &json!({"status":"PASS","classification":"opaque C mechanism only",
++        "input":input,"preservation":preserved,"two_real_held_empty_locks":true,
++        "opaque_bytes":opaque.len(),"copied_phase_prefix_bytes":prefix.len(),
++        "copied_phase_prefix_blake3":blake3::hash(&prefix).to_hex().to_string(),
++        "source_phase_after_bytes":after.len(),"source_phase_after_blake3":blake3::hash(&after).to_hex().to_string(),
++        "later_source_logging_intentionally_extends_only_the_phase_log":true,
++        "phase_records":phases.records,"no_Native_DB_or_network":true}),
++    )?;
++    phases.completed = true;
++    drop(locks);
++    println!(
++        "PHASE_PRESERVATION opaque=true result={}",
++        completion_result_path(case).display()
++    );
++    Ok(())
++}
++
++fn preserved_public_binding(base: &Path, evidence: &Path) -> Result<Vec<Value>> {
++    let observation: Value = serde_json::from_slice(&std::fs::read(
++        evidence.join("F-exhausted-boundary-03-observation.json"),
++    )?)?;
++    let root = base.canonicalize()?;
++    let public_root = evidence.canonicalize()?;
++    let mut bindings = Vec::new();
++    for entry in observation["exports"]
++        .as_array()
++        .context("case03 public exports")?
++    {
++        let source = workspace()
++            .join(entry["source"]["path"].as_str().context("source path")?)
++            .canonicalize()?;
++        let export = workspace()
++            .join(entry["export"]["path"].as_str().context("export path")?)
++            .canonicalize()?;
++        ensure!(
++            source.starts_with(&root) && export.starts_with(&public_root),
++            "bound public roots"
++        );
++        let bytes = std::fs::read(&source)?;
++        ensure!(
++            bytes == std::fs::read(&export)?,
++            "case03 public bytes changed"
++        );
++        bindings.push(json!({"source":source,"export":export,"bytes":bytes.len(),
++            "blake3":blake3::hash(&bytes).to_hex().to_string(),
++            "approved_export_sha256":entry["export"]["sha256"]}));
++    }
++    ensure!(
++        bindings.len() == 22,
++        "exact completed case03 public export set"
++    );
++    Ok(bindings)
++}
++
++#[test]
++fn migration_s5_l1_stopped_checkpoint_preservation_only() -> Result<()> {
++    let case = "F-exhausted-preservation-01";
++    ensure!(
++        std::env::var("KILOGRAM_S5_CASE")? == case,
++        "exact charged preservation case"
++    );
++    ensure!(
++        !completion_result_path(case).exists(),
++        "immutable preservation result"
++    );
++    let base =
++        PathBuf::from(std::env::var_os("KILOGRAM_S5_FIXTURE_DIR").context("exact stopped input")?);
++    let expected = workspace().join(".tmp/migration-s5-storage/l1-exhausted-observed-NCjBHb");
++    ensure!(
++        base.canonicalize()? == expected.canonicalize()?,
++        "only original stopped case03 path"
++    );
++    let evidence = workspace().join("ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence");
++    let public_before = preserved_public_binding(&base, &evidence)?;
++    let checkpoint: Value =
++        serde_json::from_slice(&std::fs::read(base.join("checkpoint-info.json"))?)?;
++    ensure!(
++        Path::new(
++            checkpoint["a_profile"]
++                .as_str()
++                .context("original A profile")?
++        ) == base.join("two/indexed.profile")
++            && Path::new(
++                checkpoint["b_profile"]
++                    .as_str()
++                    .context("original B profile")?
++            ) == base.join("one/indexed.profile")
++            && checkpoint["classification"] == "stopped-indexed-exhausted-checkpoint"
++            && checkpoint["cold_a"]["next"] == json!([512, 18])
++            && checkpoint["cold_b"]["next"] == json!([512, 18]),
++        "exact original profile paths/checkpoint binding"
++    );
++    let output = workspace().join(".tmp/migration-s5-preserved").join(case);
++    ensure!(!output.exists(), "new immutable private backup only");
++    // Existing implementation only loads profile text, holds both real OS locks
++    // and invokes the unchanged raw byte helper. It opens no repository/Native.
++    let preservation = obligations::preserve_input(&base, case)?;
++    ensure!(
++        preservation["source_unchanged"] == true
++            && preservation["copy_matches"] == true
++            && preservation["files"].as_u64().is_some_and(|n| n > 0)
++            && Path::new(
++                preservation["preserved"]
++                    .as_str()
++                    .context("private backup path")?
++            ) == output,
++        "actual unchanged-source/destination byte preservation"
++    );
++    let public_after = preserved_public_binding(&base, &evidence)?;
++    ensure!(
++        public_before == public_after,
++        "original public evidence changed during preservation"
++    );
++    write_completion_result(
++        case,
++        &json!({"status":"PASS","classification":"preservation-only stopped case03",
++        "input":base,"preservation":preservation,"checkpoint_info":checkpoint,"public_binding":public_after,
++        "boundary03_whole_result":"FAIL","lost_parent_result_reconstructed":false,
++        "no_DB_runtime_migration_recovery_restore_or_frozen_origin_open":true,
++        "backup_never_typed_opened":true,"new_active_copy_created":false}),
++    )?;
++    println!(
++        "STOPPED_PRESERVATION result={}",
++        completion_result_path(case).display()
++    );
++    Ok(())
++}
++
+ struct SourceNative {
+     head: state::Head,
+     nonce: wire::Id,

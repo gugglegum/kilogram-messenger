@@ -1,0 +1,26 @@
+{
+  "classification": "root-reviewed-single-exhausted-boundary",
+  "approved_case": "F-exhausted-boundary-01",
+  "root_thread": "01a164ec-589c-7b41-bc34-3ba158d1f22b",
+  "runner_sha256": "c9c6841213181af75f3364128cf7d0697d45db5a7a8bf5bfda1b58986c3211ed",
+  "ledger_sha256": "fcba7db288c508e028604a355c49d6e0a33e3f835b10ba842127da422c1d98cd",
+  "origin_case_sha256": "e1acc55360a45c386dde029c2f9be35cbbdacc08bd2a076a1812ac6c692d5135",
+  "root_decision": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-origin-review-1.md",
+    "bytes": 5279,
+    "sha256": "bcdefb3acec402fd87fbe390e3bce5f66ab1f1c740b2a939884ba36858103cf5"
+  },
+  "readiness_binding_sha256": "4116a5c3fc17ffb0c8b2efca0e71db98a4f22ff42ff091de3eb73ac94b0a3f67",
+  "controller_sha256": "a8077b49ba2e02956a94ca352158190854f47d3a6b37b2e624b2bb81743e71f4",
+  "compiled_harness_sha256": "5ccc3a8a3e4bc76ed811f6d0aad5c93b95381bbab8d6a2c1284b3d66c8eb5ce2",
+  "frozen_manifest_sha256": "73c38f113a7e663d00bba36ae0116a292b7ec0511d4e23b79729f60cf87e2995",
+  "work_seconds": 120,
+  "whole_seconds": 140,
+  "actual_F_before": 1925.8527127,
+  "F_ceiling": 2900,
+  "required_remaining_seconds": 365,
+  "requires_ordinary_native_execution_approval": true,
+  "automatic_retry": false,
+  "publication_authorized": false,
+  "next_action": "After failure stop and callback; after PASS finish the assigned review report and exact candidate allowlist, then callback before publication."
+}

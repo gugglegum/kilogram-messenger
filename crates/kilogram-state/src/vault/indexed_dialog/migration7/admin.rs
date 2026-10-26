@@ -478,75 +478,8 @@ impl MigrationRepository {
         Ok(())
     }
     pub fn publish_profile(&mut self, expected_existing: Option<Id>) -> Result<()> {
-        use std::io::{Read, Write};
         let (p, s, c) = self.metadata()?;
-        if s.stage != MigrationStage::Ready {
-            return Err(Error::Integrity("profile publication before Ready"));
-        }
-        let raw = desired_profile(&p, &c)?;
-        let path = std::path::PathBuf::from(p.identity.fields(14)?[11].fields(3)?[0].text()?);
-        let staged = profile_stage(&path)?;
-        let prior = if path.exists() {
-            crate::reject_symlink(&path)?;
-            if fs::metadata(&path)?.len() > 64 * 1024 {
-                return Err(Error::Conflict);
-            }
-            let mut bytes = Vec::new();
-            fs::File::open(&path)?
-                .take(64 * 1024 + 1)
-                .read_to_end(&mut bytes)?;
-            Some(bytes)
-        } else {
-            None
-        };
-        if prior.as_deref() == Some(raw.as_slice()) {
-            if staged.exists() {
-                crate::reject_symlink(&staged)?;
-                fs::remove_file(&staged)?;
-                crate::sync_directory(path.parent().ok_or(Error::Bound("profile parent"))?)?;
-            }
-            return Ok(());
-        }
-        if let Some(prior) = prior.as_ref() {
-            if expected_existing != Some(super::copy::raw_hash(b"", prior)) {
-                return Err(Error::Bound("ReadyNeedsProfileUpdate"));
-            }
-        } else if expected_existing.is_some() {
-            return Err(Error::Conflict);
-        }
-        let parent = path.parent().ok_or(Error::Bound("profile parent"))?;
-        // This single fixed staging path was reserved at preflight/Fence. A kill
-        // cannot leave an unbounded family of public temporary files. Its bytes
-        // have no authority and are rebuilt from the latest committed plan.
-        if staged.exists() {
-            crate::reject_symlink(&staged)?;
-            let meta = fs::metadata(&staged)?;
-            if !meta.is_file() || meta.len() > 64 * 1024 {
-                return Err(Error::Conflict);
-            }
-            fs::remove_file(&staged)?;
-        }
-        let mut temp = fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&staged)?;
-        temp.write_all(&raw)?;
-        temp.sync_all()?;
-        drop(temp);
-        crate::sync_directory(parent)?;
-        super::checkpoint(self.core._lease.root(), "profile-staged")?;
-        if let Some(prior) = prior {
-            crate::reject_symlink(&path)?;
-            if fs::metadata(&path)?.len() > 64 * 1024 || fs::read(&path)? != prior {
-                return Err(Error::Conflict);
-            }
-            fs::rename(&staged, &path)?;
-        } else {
-            fs::hard_link(&staged, &path)?;
-            fs::remove_file(&staged)?;
-        }
-        crate::sync_directory(parent)?;
-        Ok(())
+        publish_profile_core(&mut self.core, &p, s.stage, &c, expected_existing)
     }
     pub fn last_commit(&self) -> Result<Id> {
         self.core.last_commit()
@@ -566,4 +499,81 @@ impl MigrationRepository {
         };
         self.core.backend.fail(point, after)
     }
+}
+
+pub(super) fn publish_profile_core(
+    core: &mut IndexedDialogVault,
+    p: &Profile,
+    stage: MigrationStage,
+    c: &Effective,
+    expected_existing: Option<Id>,
+) -> Result<()> {
+    use std::io::{Read, Write};
+    if stage != MigrationStage::Ready {
+        return Err(Error::Integrity("profile publication before Ready"));
+    }
+    let raw = desired_profile(p, c)?;
+    let path = std::path::PathBuf::from(p.identity.fields(14)?[11].fields(3)?[0].text()?);
+    let staged = profile_stage(&path)?;
+    let prior = if path.exists() {
+        crate::reject_symlink(&path)?;
+        if fs::metadata(&path)?.len() > 64 * 1024 {
+            return Err(Error::Conflict);
+        }
+        let mut bytes = Vec::new();
+        fs::File::open(&path)?
+            .take(64 * 1024 + 1)
+            .read_to_end(&mut bytes)?;
+        Some(bytes)
+    } else {
+        None
+    };
+    if prior.as_deref() == Some(raw.as_slice()) {
+        if staged.exists() {
+            crate::reject_symlink(&staged)?;
+            fs::remove_file(&staged)?;
+            crate::sync_directory(path.parent().ok_or(Error::Bound("profile parent"))?)?;
+        }
+        return Ok(());
+    }
+    if let Some(prior) = prior.as_ref() {
+        if expected_existing != Some(super::copy::raw_hash(b"", prior)) {
+            return Err(Error::Bound("ReadyNeedsProfileUpdate"));
+        }
+    } else if expected_existing.is_some() {
+        return Err(Error::Conflict);
+    }
+    let parent = path.parent().ok_or(Error::Bound("profile parent"))?;
+    // This single fixed staging path was reserved at preflight/Fence. A kill
+    // cannot leave an unbounded family of public temporary files. Its bytes
+    // have no authority and are rebuilt from the latest committed plan.
+    if staged.exists() {
+        crate::reject_symlink(&staged)?;
+        let meta = fs::metadata(&staged)?;
+        if !meta.is_file() || meta.len() > 64 * 1024 {
+            return Err(Error::Conflict);
+        }
+        fs::remove_file(&staged)?;
+    }
+    let mut temp = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&staged)?;
+    temp.write_all(&raw)?;
+    temp.sync_all()?;
+    drop(temp);
+    crate::sync_directory(parent)?;
+    super::checkpoint(core._lease.root(), "profile-staged")?;
+    if let Some(prior) = prior {
+        crate::reject_symlink(&path)?;
+        if fs::metadata(&path)?.len() > 64 * 1024 || fs::read(&path)? != prior {
+            return Err(Error::Conflict);
+        }
+        fs::rename(&staged, &path)?;
+    } else {
+        fs::hard_link(&staged, &path)?;
+        fs::remove_file(&staged)?;
+    }
+    crate::sync_directory(parent)?;
+    Ok(())
 }

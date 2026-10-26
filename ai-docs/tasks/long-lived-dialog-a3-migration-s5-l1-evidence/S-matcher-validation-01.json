@@ -1,0 +1,102 @@
+{
+  "classification": "static-parser-checks-no-C-F-or-Native",
+  "authority": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-4.md",
+  "authority_bytes": 6528,
+  "authority_sha256": "2dac985cfdcede0729a1c61156dea3f252fc861eeebf6f2a98053fcd9074b4bb",
+  "runner_sha256": "69a969c2bd83f73fea991146785c7b996471d422c3072c729980868e8c8bf879",
+  "shared_parser_sha256": "b6e1c73804b63997add074f47a1b924d88bb5b3e87ea7188ab4432ecd8dd4dc0",
+  "parse_errors": 0,
+  "results": [
+    {
+      "kind": "actual immutable execution log",
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-capacity-01.log",
+      "sha256": "0856083c34de6b4034b7b36707a4a21f6f81e0aca24fde9d7574013ec68cc709",
+      "selector": "migration_s5_process_capacity_crash_and_predecessor_fences",
+      "expected": true,
+      "actual": true,
+      "rule": "Parser acceptance does not change the historical contributing verdict."
+    },
+    {
+      "kind": "actual immutable execution log",
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-isolation-02.log",
+      "sha256": "ca4d3369ebf4329e7070a3b50fbda43df069b9b827cfa0b7ee63a4a648225db1",
+      "selector": "migration_s5_l1_different_peer_c2_survives_signed_fork_and_account_pin",
+      "expected": true,
+      "actual": true,
+      "rule": "Parser acceptance does not change the historical contributing verdict."
+    },
+    {
+      "kind": "negative static text",
+      "name": "absent",
+      "text": "test other ... ok\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\nstatus=passed",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "kind": "negative static text",
+      "name": "different",
+      "text": "test ns::other ... ok\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\nstatus=passed",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "kind": "negative static text",
+      "name": "prefix",
+      "text": "test ns::prefix_exact_case ... ok\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\nstatus=passed",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "kind": "negative static text",
+      "name": "suffix",
+      "text": "test ns::exact_case_suffix ... ok\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\nstatus=passed",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "kind": "negative static text",
+      "name": "duplicate_names",
+      "text": "test ns::exact_case ... ok\ntest ns::exact_case ... ok\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\nstatus=passed",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "kind": "negative static text",
+      "name": "duplicate_summaries",
+      "text": "test ns::exact_case ... ok\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured\nstatus=passed",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "kind": "negative static text",
+      "name": "zero_tests",
+      "text": "test ns::exact_case ... ok\ntest result: ok. 0 passed; 0 failed; 0 ignored;\nstatus=passed",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "kind": "negative static text",
+      "name": "failed",
+      "text": "test ns::exact_case ... ok\ntest result: FAILED. 0 passed; 1 failed; 0 ignored;\nstatus=passed",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "kind": "negative static text",
+      "name": "no_wrapper",
+      "text": "test ns::exact_case ... ok\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    }
+  ],
+  "rule": "Actual helper used by runner; exactly one exact name/summary/completion. Historical Ready02/capacity01 remain wholeFAIL."
+}

@@ -1,0 +1,19 @@
+{
+  "classification": "static-first-origin-authority-and-input-preflight",
+  "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-long-readiness-review-2.md",
+  "root_decision_bytes": 5099,
+  "root_decision_sha256": "7d0e5ef82f6a463729778e2250c7b4f3e88266e51ff3b61d15d47e342569777b",
+  "go_ahead": "F-exhausted-origin-01-root-go-ahead.json",
+  "go_ahead_bytes": 1426,
+  "go_ahead_sha256": "0268238aec8eb090e5d466ec6b7990f5ab9f8836f6dbcb96c93568e25c7044b7",
+  "runner_sha256": "c9c6841213181af75f3364128cf7d0697d45db5a7a8bf5bfda1b58986c3211ed",
+  "ledger_before_sha256": "5218356ef3d08914f1ce1c839da558a519a6ff33455f2635b7345f36a7b725c5",
+  "compiled_input_mismatches": [],
+  "image_mismatches": [],
+  "live_fixed_processes": [],
+  "origin_existed_before": false,
+  "boundary_authorized": false,
+  "automatic_retry": false,
+  "ordinary_native_execution_approval_still_required": true,
+  "rule": "Only first frozen511/16 origin; no .rs/.ps1/image changes while active; after result callback root."
+}

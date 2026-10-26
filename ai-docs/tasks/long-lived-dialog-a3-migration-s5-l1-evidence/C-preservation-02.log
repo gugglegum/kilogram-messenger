@@ -1,0 +1,8 @@
+{
+  "status": "PASS",
+  "scope": "two exact real held empty locks; actual destination byte digests; opaque non-lock byte equality; nonempty/unlisted/missing ownership refusals",
+  "empty_exit": 0,
+  "nonempty_exit": 1,
+  "unlisted_exit": 1,
+  "missing_ownership_exit": 1
+}

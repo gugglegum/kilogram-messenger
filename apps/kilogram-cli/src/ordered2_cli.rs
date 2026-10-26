@@ -14,6 +14,28 @@ use std::path::{Path, PathBuf};
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    #[command(flatten)]
+    Runtime3(crate::ordered3_cli::Command),
+    Consent1RenewPropose {
+        #[command(flatten)]
+        renewal: Box<RenewalArgs>,
+        #[arg(long)]
+        not_before: Option<u64>,
+        #[arg(long, default_value_t = 30 * 86400)]
+        valid_for_seconds: u64,
+        #[arg(long)]
+        output_file: PathBuf,
+    },
+    Consent1RenewCosign {
+        #[command(flatten)]
+        renewal: Box<RenewalArgs>,
+        #[arg(long)]
+        proposal_file: PathBuf,
+        #[arg(long)]
+        output_invitation_file: PathBuf,
+        #[arg(long)]
+        output_consent_file: PathBuf,
+    },
     Consent2Create(Ceremony2),
     Context2Create(Ceremony2),
     Context2Import {
@@ -156,6 +178,62 @@ pub enum Command {
         #[arg(long)]
         state_dir: PathBuf,
     },
+}
+#[derive(Debug, Args)]
+pub struct RenewalArgs {
+    #[arg(long)]
+    existing_invitation_file: PathBuf,
+    #[arg(long)]
+    expect_context: String,
+    #[arg(long)]
+    expect_account: AccountId,
+    #[arg(long)]
+    expect_peer_account: AccountId,
+    #[arg(long)]
+    authority_a_file: PathBuf,
+    #[arg(long)]
+    authority_b_file: PathBuf,
+    #[arg(long)]
+    minimum_authority_a_file: PathBuf,
+    #[arg(long)]
+    minimum_authority_b_file: PathBuf,
+    #[arg(long)]
+    account_dir: PathBuf,
+}
+struct RenewalPublic {
+    original: Vec<u8>,
+    authorities: [Vec<u8>; 2],
+    minimum: [Vec<u8>; 2],
+    context: db::Id,
+}
+impl RenewalPublic {
+    fn load(args: &RenewalArgs) -> Result<Self> {
+        Ok(Self {
+            original: shared::read_public(&args.existing_invitation_file, 96 * 1024)?,
+            authorities: [
+                shared::read_public(&args.authority_a_file, 16 * 1024)?,
+                shared::read_public(&args.authority_b_file, 16 * 1024)?,
+            ],
+            minimum: [
+                shared::read_public(&args.minimum_authority_a_file, 16 * 1024)?,
+                shared::read_public(&args.minimum_authority_b_file, 16 * 1024)?,
+            ],
+            context: parse_id(&args.expect_context)?,
+        })
+    }
+    fn inputs<'a>(
+        &'a self,
+        args: &RenewalArgs,
+    ) -> kilogram_cli::ordered_dialog::consent1_admin::RenewalInputs<'a> {
+        kilogram_cli::ordered_dialog::consent1_admin::RenewalInputs {
+            original: &self.original,
+            authorities: [&self.authorities[0], &self.authorities[1]],
+            minimum_authorities: [&self.minimum[0], &self.minimum[1]],
+            context: self.context,
+            account: args.expect_account,
+            peer: args.expect_peer_account,
+        }
+    }
 }
 #[derive(Debug, Args)]
 pub struct StorageAccess {
@@ -310,6 +388,64 @@ fn json(value: &Value) -> serde_json::Value {
 pub async fn run(command: Command, lease: Option<StateDirectoryLock>) -> Result<()> {
     use kilogram_cli::ordered_dialog::storage_migration as migration;
     let command = match command {
+        Command::Runtime3(command) => {
+            ensure!(lease.is_none(), "IPC3 must use the held live owner");
+            return crate::ordered3_cli::run(command).await;
+        }
+        Command::Consent1RenewPropose {
+            renewal,
+            not_before,
+            valid_for_seconds,
+            output_file,
+        } => {
+            ensure!(
+                lease.is_none(),
+                "offline renewal must not open a messenger vault"
+            );
+            let public = RenewalPublic::load(&renewal)?;
+            let now = kilogram_cli::ordered_dialog::engine::now()?;
+            let raw = kilogram_cli::ordered_dialog::consent1_admin::propose(
+                public.inputs(&renewal),
+                &renewal.account_dir,
+                not_before.unwrap_or(now),
+                valid_for_seconds,
+                now,
+            )?;
+            shared::write_public(
+                &output_file,
+                &raw,
+                &std::fs::canonicalize(&renewal.account_dir)?,
+            )?;
+            println!("status=consent1-renewal-proposed");
+            return Ok(());
+        }
+        Command::Consent1RenewCosign {
+            renewal,
+            proposal_file,
+            output_invitation_file,
+            output_consent_file,
+        } => {
+            ensure!(
+                lease.is_none(),
+                "offline renewal must not open a messenger vault"
+            );
+            ensure!(
+                output_invitation_file != output_consent_file,
+                "distinct renewal outputs"
+            );
+            let public = RenewalPublic::load(&renewal)?;
+            let completed = kilogram_cli::ordered_dialog::consent1_admin::cosign(
+                public.inputs(&renewal),
+                &shared::read_public(&proposal_file, 96 * 1024)?,
+                &renewal.account_dir,
+                kilogram_cli::ordered_dialog::engine::now()?,
+            )?;
+            let root = std::fs::canonicalize(&renewal.account_dir)?;
+            shared::write_public(&output_invitation_file, &completed.invitation, &root)?;
+            shared::write_public(&output_consent_file, &completed.consent, &root)?;
+            println!("status=consent1-renewal-completed");
+            return Ok(());
+        }
         Command::StorageUpgrade {
             access,
             config_file,
@@ -620,7 +756,10 @@ pub async fn run(command: Command, lease: Option<StateDirectoryLock>) -> Result<
         Command::Sync2 { ipc_file, slot } => {
             call(&ipc_file, a([u(2), u(7), u(u64::from(slot))])).await?
         }
-        Command::StorageUpgrade { .. }
+        Command::Runtime3(_)
+        | Command::Consent1RenewPropose { .. }
+        | Command::Consent1RenewCosign { .. }
+        | Command::StorageUpgrade { .. }
         | Command::StorageUpgradeStatus(_)
         | Command::StorageUpgradePause(_)
         | Command::StorageHistory { .. }

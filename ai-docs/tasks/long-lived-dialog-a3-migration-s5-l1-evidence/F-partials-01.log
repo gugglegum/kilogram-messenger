@@ -1,0 +1,44 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1.66s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 29 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+running 1 test
+test live_l1::migration_s5_l1_five_real_partial_origins_continue_once ... FAILED
+
+failures:
+
+failures:
+    live_l1::migration_s5_l1_five_real_partial_origins_continue_once
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 6 filtered out; finished in 29.08s
+
+Error: continuation deadline {"backend":{"growth_bytes":0,"growth_nanos":0,"last_failure":null,"last_requested_length":0,"length":565248,"max_growth":0,"physical_quota":51539607552,"read_bytes":106825,"reads":27,"set_len_calls":0,"sync_calls":9,"sync_nanos":81266400,"write_bytes":600896,"writes":146},"config_hash":"be37586a01c7d857e312127a0b079f95fa6816720f33ea57cde5d703e5d52ebc","config_revision":1,"contexts":[{"active":false,"context":"f9db90e21d3df790bd6613fcf24c3e64e234d5f4758b0ebd24004e952c70d9d7","counts":{"debt":0,"pending":0,"queued":2,"receipts":[0,0],"sources":2},"current_consent":"8a14727d518eb2f899bcdd9e4398eb4ff565fc34da2ff5e85eac054020134cec","d":"c508711ea75fb02d676eeef1db2ff34259742d734e01b96b3cb3a8caba3d9759","e":"d45627aede541f366ac2578ed0c5e99ec5137ccc39e7c1bb92c328d253b64313","enabled":true,"handoff":"UnsupportedInCut2","head_pending":null,"mode":"L1","native":{"keys":["a7984c46cd6c4041cb59f36175bf6e25031235216e43220d63661a78aab3f572","fe6472938cc591bfc9624637c770717bb2824bc6295131ea8a72a7061ac0fe3d","61ce6df7a31c507949dfaecf81bf121570d909c06a84099ae733996816114709"],"own_next":1,"peer_next":1,"sid":"D+kuhGVzdsE+l9ykcEZAt4MO5YsxezaMqknUFAcApJo"},"native_generation":2,"native_hash":"1f506a0a386e7aa60370f4a4c09c664742599f0d0d0ad787939b537bed179049","next":[1,1],"own_locator_revision":2,"peer_locator_revision":2,"phase":3,"policy_error":null,"policy_generation":3,"provenance":"LegacySnapshot/FullL1","publication_ready":true,"repair_free":67108864,"role":1,"sid":"D+kuhGVzdsE+l9ykcEZAt4MO5YsxezaMqknUFAcApJo","slot":0,"wall_high_water":1792976594,"wire_stage":1}],"profile_mode":"ordered-dialog-indexed","resources":{"bidi_limit":4,"connection_limit":2,"connections":1,"frame_limit":1048576,"mailbox":1,"mailbox_limit":16,"peak_connections":1,"peak_mailbox":4,"refused_before_spawn":0,"uni_limit":0},"root_generation":19,"source_id":"9cf44ff210b4f215157b872d74961c47f6f08ed9ed046cc700a7c28c63df062b","stats":{"aborted_packet_calls":0,"account_constructors":1,"admissions":1,"ambiguous_packet_calls":0,"committed_decrypt":1,"committed_encrypt":1,"inbound_constructors":1,"materialized":0,"max_commit_app_bytes":52205839,"max_native_bytes":3114,"outbound_constructors":0,"packet_attempts":2,"readable":0,"reopens":0},"storage_stage":"Ready","version":3,"window":[[128,0],[0,0],[0,0]]}; logs=E:\AI-Projects\kilogram-p2p-messenger\.tmp/migration-s5-storage\l1-partial-after-offer-bZuvUt\live-a376830a
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:285
+Line |
+ 285 |              throw "Stable test executable failed with exit code ${tes …
+     |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Stable test executable failed with exit code 101:
+     | E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+

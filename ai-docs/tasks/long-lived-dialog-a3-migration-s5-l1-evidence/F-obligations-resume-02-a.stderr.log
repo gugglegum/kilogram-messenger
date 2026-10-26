@@ -1,0 +1,101 @@
+l1_wait slot=0 L1 pending admission policy changed
+l1_wait slot=1 L1 pending admission policy changed
+l1_rpc kind=1 stage=begin request=3dd5061d1224007e137584d4ff3430b6
+l1_rpc kind=1 stage=written request=3dd5061d1224007e137584d4ff3430b6
+l1_rpc kind=1 stage=finished millis=411 result=reply1
+l1_rpc kind=2 stage=begin request=d6cc01ee0a381829e18d983421651078
+l1_rpc kind=2 stage=written request=d6cc01ee0a381829e18d983421651078
+l1_rpc kind=2 stage=finished millis=229 result=reply2
+l1_rpc kind=3 stage=begin request=2cd253c0fe5b7780bf163b4b193ee5f1
+l1_rpc kind=3 stage=written request=2cd253c0fe5b7780bf163b4b193ee5f1
+l1_rpc kind=3 stage=finished millis=543 result=reply3
+l1_rpc kind=5 stage=lease_begin tick_ms=0
+l1_rpc kind=5 stage=lease_end tick_ms=57 owner_ms=57
+l1_rpc kind=5 stage=begin request=b9530060e3a6b7adb9a6c9653529538c
+l1_rpc kind=5 stage=written request=b9530060e3a6b7adb9a6c9653529538c
+l1_rpc kind=5 stage=finished millis=1257 result=reply6
+l1_rpc kind=7 stage=lease_begin tick_ms=1488
+l1_rpc kind=7 stage=lease_end tick_ms=1592 owner_ms=104
+l1_rpc kind=7 stage=begin request=a6d8aac96650c42aa9a09b1f846d990a
+l1_rpc kind=7 stage=written request=a6d8aac96650c42aa9a09b1f846d990a
+l1_rpc kind=7 stage=finished millis=1233 result=reply7
+l1_rpc kind=8 stage=lease_begin tick_ms=2967
+l1_rpc kind=8 stage=lease_end tick_ms=3068 owner_ms=100
+l1_rpc kind=8 stage=begin request=405f5f173d62b4ee6d2ac0061257c986
+l1_rpc kind=8 stage=written request=405f5f173d62b4ee6d2ac0061257c986
+l1_rpc kind=8 stage=finished millis=995 result=reply8
+l1_rpc kind=9 stage=lease_begin tick_ms=4254
+l1_rpc kind=9 stage=lease_end tick_ms=4355 owner_ms=100
+l1_rpc kind=9 stage=begin request=4c419ae57bcdb47292b7bf2095d558be
+l1_rpc kind=9 stage=written request=4c419ae57bcdb47292b7bf2095d558be
+l1_rpc kind=9 stage=finished millis=1112 result=reply9
+l1_delivery c=0 stage=owner_begin after=None tick_ms=5707
+l1_outgoing c=0 after=None ordinals=[6, 7, 8, 9, 10, 11, 12, 13]
+l1_delivery c=0 stage=owner_end after=None tick_ms=5910 owner_ms=203 selected=true
+l1_rpc kind=10 stage=lease_begin tick_ms=5910
+l1_rpc kind=10 stage=lease_end tick_ms=5959 owner_ms=49
+l1_rpc kind=10 stage=begin request=622dc3f1b801b0adc2db2885d992c5ba
+l1_rpc kind=10 stage=written request=622dc3f1b801b0adc2db2885d992c5ba
+l1_rpc kind=10 stage=finished millis=1850 result=reply13
+l1_complete c=0 after=None tick_ms=7811 exact_ids=["c13bf109a511ad9900542bd39653ab45014ff54dff02b968ef811008b8766a14", "3355b0a063015f72946409ec33ad82afeb168087a8996d2682abadde5868ac9d", "b9dafb41b8cb1e4473439a028d4abc85c4b572001ffee55968fd65e2e44fe586", "a166c5d128cfbdb14bbf01829860b4f520cae282ba0d817518a36927daf301b8", "0a2bdbb00f551ae525a96b38ae5ffce9772bec0acbb9cbfe9e883693f64a7ea8", "92655f70917866558546d22368aba6a89461ce25b44e9946048079e8fbca4242", "2d8f2eacf6239bebf3e8c0fa8374fdf3857064d9ff71e6a392caf8386a9a268b", "4fbe7d4d877e5fac90f5ba4ff5de2aaf5e9dacde6d2dc13f83fffcea639652d7"]
+l1_rpc kind=16 stage=lease_begin tick_ms=7898
+l1_rpc kind=16 stage=lease_end tick_ms=7949 owner_ms=50
+l1_rpc kind=16 stage=begin request=b6e45e2faca068b66f0f31fa4d0d3335
+l1_rpc kind=16 stage=written request=b6e45e2faca068b66f0f31fa4d0d3335
+l1_rpc kind=16 stage=finished millis=898 result=reply15
+l1_rpc kind=9 stage=lease_begin tick_ms=9270
+l1_rpc kind=9 stage=lease_end tick_ms=9426 owner_ms=156
+l1_rpc kind=9 stage=begin request=7897e1c80ce3cb50ea03b8f308baa896
+l1_rpc kind=9 stage=written request=7897e1c80ce3cb50ea03b8f308baa896
+l1_rpc kind=9 stage=finished millis=1075 result=reply9
+l1_delivery c=0 stage=owner_begin after=Some(13) tick_ms=10892
+l1_outgoing c=0 after=Some(13) ordinals=[14, 15, 16, 17, 18, 19, 20, 21]
+l1_delivery c=0 stage=owner_end after=Some(13) tick_ms=11150 owner_ms=258 selected=true
+l1_rpc kind=10 stage=lease_begin tick_ms=11150
+l1_rpc kind=10 stage=lease_end tick_ms=11365 owner_ms=215
+l1_rpc kind=10 stage=begin request=3b2448e9e737b4c4c72a97af8bfc6d13
+l1_rpc kind=10 stage=written request=3b2448e9e737b4c4c72a97af8bfc6d13
+l1_rpc kind=10 stage=finished millis=1619 result=reply13
+l1_complete c=0 after=Some(13) tick_ms=12986 exact_ids=["7ecd9ba814cc0eb836e475aca33056112150cc45e46fe5f14b3422141733e535", "64bfde6e11af5f8ad28d1fd824da3a0db55a93024315a216a0a2a90aab5302eb", "e0788f4ca754be1d8b56eeb233ee0fa7ad9cc34a771fb60db49946f7cd31af6e", "84d26869d7386324ab0dd0e6a16352f6c8a248b3b14a32f26dcc6fc01549632e", "4b8fda5f3ae945733e612d655412387b3b551859e4dc872542c2d4399290e8f0", "1bc7fe2d07a1a66be74f65286a72c742843d217c451ca9aea894593fababbd66", "eca28b8b353bc4981196ce17b87d60009277092c4072dff45546c806e471a006", "73c8504b25a088db6339ee0831fe833f14202a272b494d750a803938c0a885f4"]
+l1_rpc kind=16 stage=lease_begin tick_ms=13078
+l1_rpc kind=16 stage=lease_end tick_ms=13428 owner_ms=349
+l1_rpc kind=16 stage=begin request=b1838dfe7e0874568cabf4d599d47a92
+l1_rpc kind=16 stage=written request=b1838dfe7e0874568cabf4d599d47a92
+l1_rpc kind=16 stage=finished millis=859 result=reply15
+l1_rpc kind=9 stage=lease_begin tick_ms=14796
+l1_rpc kind=9 stage=lease_end tick_ms=14902 owner_ms=106
+l1_rpc kind=9 stage=begin request=f93b2df2c90d59035934f87db79892fc
+l1_rpc kind=9 stage=written request=f93b2df2c90d59035934f87db79892fc
+l1_rpc kind=9 stage=finished millis=966 result=reply9
+l1_delivery c=0 stage=owner_begin after=Some(21) tick_ms=16057
+l1_outgoing c=0 after=Some(21) ordinals=[22, 23, 24, 25, 26, 27, 28, 29]
+l1_delivery c=0 stage=owner_end after=Some(21) tick_ms=16210 owner_ms=153 selected=true
+l1_rpc kind=10 stage=lease_begin tick_ms=16211
+l1_rpc kind=10 stage=lease_end tick_ms=16261 owner_ms=50
+l1_rpc kind=10 stage=begin request=a67760096fca2acc482d4860e2c5b3c3
+l1_rpc kind=10 stage=written request=a67760096fca2acc482d4860e2c5b3c3
+l1_rpc kind=10 stage=finished millis=1797 result=reply13
+l1_complete c=0 after=Some(21) tick_ms=18058 exact_ids=["bfd7c45bd92173482dc2240214beae6bdb9a49f3ca906d9111ad74230dce367c", "4e25c939379477ed0dd5f0dcb44f7545063830c115e2148297c4efd217b92940", "9d721ea5d70cdda9679dbcae2c78472a4e78412a55982eba37458dd786efa894", "f676de2b08880d4ec9025407227c6644c754b2421f3f465735ac81771faa5bad", "5037fce271f372ce9b4f80ef2943a2a9d02636979c1a70ca2cb2b5479b148cbc", "c5532a06027f149660518c5cf030971765f7458fd6e7c30342e2f1c7ce220127", "5b18ca33515b876a9b982c16a4e551065a4fa8a7c99fcaed9d99603e92ea6cc9", "7a3715aaa32ce2c48e2d1563a73ae01715273efe81e3ecb5c002f68e12c8ecf3"]
+l1_rpc kind=16 stage=lease_begin tick_ms=18131
+l1_rpc kind=16 stage=lease_end tick_ms=18180 owner_ms=49
+l1_rpc kind=16 stage=begin request=ca522b8460112e9f024ae45cef4dda67
+l1_rpc kind=16 stage=written request=ca522b8460112e9f024ae45cef4dda67
+l1_rpc kind=16 stage=finished millis=811 result=reply15
+l1_rpc kind=9 stage=lease_begin tick_ms=19384
+l1_rpc kind=9 stage=lease_end tick_ms=19477 owner_ms=92
+l1_rpc kind=9 stage=begin request=da605ca4bc56cd79bc71238760dac793
+l1_rpc kind=9 stage=written request=da605ca4bc56cd79bc71238760dac793
+l1_rpc kind=9 stage=finished millis=957 result=reply9
+l1_delivery c=0 stage=owner_begin after=Some(29) tick_ms=20613
+l1_outgoing c=0 after=Some(29) ordinals=[30, 31, 32, 33, 34, 35, 36, 37]
+l1_delivery c=0 stage=owner_end after=Some(29) tick_ms=20779 owner_ms=165 selected=true
+l1_rpc kind=10 stage=lease_begin tick_ms=20779
+l1_rpc kind=10 stage=lease_end tick_ms=20832 owner_ms=52
+l1_rpc kind=10 stage=begin request=f109654035d28efedf889a97f6b53e7c
+l1_rpc kind=10 stage=written request=f109654035d28efedf889a97f6b53e7c
+l1_rpc kind=10 stage=finished millis=1624 result=reply13
+l1_complete c=0 after=Some(29) tick_ms=22457 exact_ids=["e3c471b39b7e31ff4a5dba336a68da4af1635ce19066c526f13dae51a71a917a", "e3d427b81ca27e4c9b9f031d45223db42ff39001d47acc41766891372f049ef6", "6fdbfaf0d3a5831e392609b8ab06ec49d1d01b93aef1e471ebd33e05753dd0ca", "e5f3cbf768bc8d0988e538fcdfcbd332a7c70193c9506c0dbed81e14cef179fe", "b52d3cbabeb44cbec5072320763c2f2fc6f188a829d2eb9a0380982deb4ac502", "ac96f20369315cf49848bfa345cfafbe84116afb5e52e8ccfc9220e6f68da743", "d7f9e043dfc1799534557537d037170d52ccdb33f0d5df52c5e0a3287a110dfc", "560671e1be3a05f1bf96b6316f1a2714d8bc2091b3a9ddd058117380bd1bbe35"]
+l1_rpc kind=16 stage=lease_begin tick_ms=22531
+l1_rpc kind=16 stage=lease_end tick_ms=22634 owner_ms=103
+l1_rpc kind=16 stage=begin request=caf2a80488c8285eaad19c86060d0211
+l1_rpc kind=16 stage=written request=caf2a80488c8285eaad19c86060d0211

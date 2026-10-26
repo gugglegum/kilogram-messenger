@@ -120,6 +120,42 @@ pub(super) struct Ledger {
     grant: Option<Grant>,
 }
 impl Ledger {
+    pub(super) fn legacy1_admit_pending(&mut self, ordinal: u64, head: bool) -> Result<()> {
+        if ordinal >= 512
+            || self.repair_free != REPAIR_POOL
+            || self.outstanding != 0
+            || self.grant.is_some()
+        {
+            return Err(Error::Integrity("L1 Held pending pool"));
+        }
+        if head {
+            if self.head.is_some() {
+                return Err(Error::Conflict);
+            }
+            self.head = Some(ordinal);
+        } else {
+            self.pending = self
+                .pending
+                .checked_add(1)
+                .filter(|n| *n <= 64)
+                .ok_or(Error::Quota)?;
+        }
+        Ok(())
+    }
+    pub(super) fn legacy1_retire_pending(&mut self, ordinal: u64, head: bool) -> Result<()> {
+        if head {
+            if self.head != Some(ordinal) {
+                return Err(Error::Integrity("L1 head ownership"));
+            }
+            self.head = None;
+        } else {
+            self.pending = self
+                .pending
+                .checked_sub(1)
+                .ok_or(Error::Integrity("L1 pending underflow"))?;
+        }
+        Ok(())
+    }
     pub(super) fn migration_unfunded(quota: u64) -> Self {
         Self {
             quota,

@@ -1,0 +1,10 @@
+{
+  "case": "C-review1-01",
+  "started_utc": "2026-10-26T05:17:10.3035967Z",
+  "owner_pid": 46848,
+  "whole_seconds": 120,
+  "work_seconds": 100,
+  "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-implementation-review-1.md",
+  "action": "Tests",
+  "classification": "attempt-start-not-final-result"
+}

@@ -1,0 +1,14 @@
+{
+  "classification": "static-field-stage",
+  "action": "Copy verified built image to two fixed paths",
+  "source": "target/verification/kilogram-cli.exe",
+  "targets": [
+    "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+    "target/compatibility/long-lived-dialog-migration/kilogram-l1-control-peer.exe"
+  ],
+  "bytes": 70226432,
+  "sha256": "69744fca50f44439b4734e699f416fc6b2bb8aac4336e5dad18ed173b2abbf6c",
+  "build_record": "S-build-11.json",
+  "no_live_target": true,
+  "elapsed_seconds": 2.0246349
+}

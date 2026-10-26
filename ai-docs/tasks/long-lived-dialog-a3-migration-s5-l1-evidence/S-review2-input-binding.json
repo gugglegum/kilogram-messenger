@@ -1,0 +1,18 @@
+{
+  "classification": "new-protected-review-input",
+  "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-implementation-review-2.md",
+  "bytes": 8138,
+  "sha256": "d1fe3ec11a5e9c36d38f0ca874bef609649a30ba70fdcd114e2ee1f7de9550ad",
+  "baseline": "73c499818ba9b699c331aa842e64e8432e90c59a",
+  "current_charges": {
+    "F": 979.0484649,
+    "P": 0,
+    "C": 126.2916571
+  },
+  "new_ceilings_seconds": {
+    "F": 2900,
+    "P": 0,
+    "C": 500
+  },
+  "rule": "Readiness for five focused F attempts only; no long511, publication or cut3 permission."
+}

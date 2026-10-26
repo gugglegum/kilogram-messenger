@@ -1,0 +1,55 @@
+diff --git "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary02-controller.rs.txt" b/apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs
+index 23d3c5c..cebc856 100644
+--- "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary02-controller.rs.txt"
++++ b/apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs
+@@ -21,8 +21,8 @@ impl Phases {
+         Ok(Self {
+             started,
+             // One controller allowance, never reset by a phase/checkpoint.
+-            // Outer work580/whole600 remains authoritative, including setup.
+-            deadline: started + Duration::from_secs(560),
++            // Outer work780/whole800 remains authoritative, including setup.
++            deadline: started + Duration::from_secs(760),
+             file: std::fs::OpenOptions::new()
+                 .write(true)
+                 .create_new(true)
+@@ -304,7 +304,7 @@ fn observed_migrate(node: &mut Node, phases: &mut Phases, name: &str) -> Result<
+         "stdout_bytes":std::fs::metadata(&stdout)?.len(),"stderr_bytes":std::fs::metadata(&stderr)?.len(),
+         "stdout_blake3":blake3::hash(&std::fs::read(&stdout)?).to_hex().to_string(),
+         "stderr_blake3":blake3::hash(&std::fs::read(&stderr)?).to_hex().to_string(),
+-        "checkpoints":hooks,"single_absolute_controller_deadline_seconds":560,
++        "checkpoints":hooks,"single_absolute_controller_deadline_seconds":760,
+         "controlled_pauses_are_included_in_cost":true,
+         "pre_fence_limitation":"No fence hit cannot separate inventory, first provenance verification and preflight."});
+     phases.record(name, "end", provenance.clone())?;
+@@ -698,8 +698,8 @@ fn migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint() ->
+     let controller_started = Instant::now();
+     let case = std::env::var("KILOGRAM_S5_CASE").context("budgeted boundary case")?;
+     ensure!(
+-        case == "F-exhausted-boundary-02",
+-        "instrumented controller requires its separately approved case02"
++        case == "F-exhausted-boundary-03",
++        "instrumented controller requires its separately approved case03"
+     );
+     let seed = PathBuf::from(
+         std::env::var_os("KILOGRAM_S5_FIXTURE_DIR").context("charged real511 origin")?,
+@@ -726,8 +726,8 @@ fn migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint() ->
+     phases.record(
+         "controller",
+         "begin",
+-        json!({"case":case,"absolute_controller_seconds":560,
+-        "outer_work_whole":[580,600],"origin":seed,"active":base}),
++        json!({"case":case,"absolute_controller_seconds":760,
++        "outer_work_whole":[780,800],"origin":seed,"active":base}),
+     )?;
+     println!(
+         "L1_EXHAUSTED active={} frozen_original={} original_typed_open=false",
+@@ -993,7 +993,7 @@ fn migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint() ->
+     phases.check()?;
+     let phase_provenance = json!({"path":phases.path,"bytes":std::fs::metadata(&phases.path)?.len(),
+         "blake3":blake3::hash(&std::fs::read(&phases.path)?).to_hex().to_string(),
+-        "single_absolute_controller_seconds":560,"controlled_pauses_included":true});
++        "single_absolute_controller_seconds":760,"controlled_pauses_included":true});
+     std::fs::write(
+         base.join("parent-exhausted-result.json"),
+         serde_json::to_vec_pretty(&json!({

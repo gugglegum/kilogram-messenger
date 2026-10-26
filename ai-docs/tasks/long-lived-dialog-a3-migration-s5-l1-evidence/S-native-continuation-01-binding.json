@@ -1,0 +1,28 @@
+{
+  "classification": "static-native-execution-continuation-policy-binding",
+  "runner": "scripts/invoke-migration-s5-l1-case.ps1",
+  "runner_sha256": "5505a7995ba88eb01108f3371de791608a4a8708b5dd15d78864e503809b0abb",
+  "parse_errors": 0,
+  "protected_input": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-1.md",
+  "protected_bytes": 3986,
+  "protected_sha256": "8dde9b2b0cc26de3beb2dc94800a6d628b2431879bb27e33c61933c905efaa40",
+  "review2_sha256": "d1fe3ec11a5e9c36d38f0ca874bef609649a30ba70fdcd114e2ee1f7de9550ad",
+  "failed01_sha256": "43b7cf2e3e7815ef1c258c7f502ec705a4df2f281ad077b2d1d588f4f3210c0c",
+  "unchanged_rust_inputs": 38,
+  "unchanged_compiled_harness": "S-compile-15.json",
+  "unchanged_product_build": "S-build-10.json",
+  "images": [
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+      "bytes": 70222848,
+      "sha256": "a3ff9d2ee67e5b01db8f4c922247737d0dee7bb4c639477be3e02d4999b13c56"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-l1-control-peer.exe",
+      "bytes": 70222848,
+      "sha256": "a3ff9d2ee67e5b01db8f4c922247737d0dee7bb4c639477be3e02d4999b13c56"
+    }
+  ],
+  "unchanged_deadline_sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45",
+  "execution_plan": "One fresh own-F02 native token attempt using require_escalated tool approval, then four prior authorized cases only after actual02PASS/reservecheck. No Firewall/ACL/security or product/controller changes."
+}

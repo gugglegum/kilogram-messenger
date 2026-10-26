@@ -1,0 +1,638 @@
+{
+  "actual_d9b_before": {
+    "commits": 23,
+    "contexts": [
+      {
+        "context": "41279e6d8f7faa4988150211f3b66279a3a254c894ea76f39f7bfa5d0e7156a8",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 4,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 0,
+        "peer_generation": 1,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 2,
+        "send_next": 2,
+        "session_id": "StS664j48CDAj/lMradLsZMVwSXMv8LqXACVMOZeU8w",
+        "status": "Active",
+        "unacked": 0
+      },
+      {
+        "context": "ad3e6990ba331a031b5d6d61ce5cb4edf0d804e16b7bad591447c4e67fdb4f8a",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 4,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 1,
+        "peer_generation": 0,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 1,
+        "send_next": 2,
+        "session_id": "z4SE1TuYqTO25A2BjYzDVdzhXD21kE4upaJWS+2BcPw",
+        "status": "WaitingAck",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  },
+  "actual_signed_fork": true,
+  "after": {
+    "backend": {
+      "growth_bytes": 0,
+      "growth_nanos": 0,
+      "last_failure": null,
+      "last_requested_length": 0,
+      "length": 614400,
+      "max_growth": 0,
+      "physical_quota": 51539607552,
+      "read_bytes": 360777,
+      "reads": 86,
+      "set_len_calls": 0,
+      "sync_calls": 17,
+      "sync_nanos": 31163200,
+      "write_bytes": 1353024,
+      "writes": 330
+    },
+    "config_hash": "1bd874309c51e92e7c29e259778b29cd5548a36b7a7147e97102dbc6fe815dc4",
+    "config_revision": 1,
+    "contexts": [
+      {
+        "active": true,
+        "context": "41279e6d8f7faa4988150211f3b66279a3a254c894ea76f39f7bfa5d0e7156a8",
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            1,
+            1
+          ],
+          "sources": 4
+        },
+        "current_consent": "9b46c2e2f4249b20385bbf2795de58efb6979a74986f40a3d0a37190d9d67029",
+        "d": "235e6822b67d42c5b0d9048c5023c01ab9c3c5fe982adda59165f577446b6431",
+        "e": "64ac18a687c1f76a523c2bdbd838c462ea2cf7c22aa6d36e3c2000763561f26d",
+        "enabled": true,
+        "handoff": "UnsupportedInCut2",
+        "head_pending": null,
+        "lease_current": false,
+        "lease_generation": null,
+        "mode": "L1",
+        "native": null,
+        "native_generation": 4,
+        "native_hash": "5409430bb946e799ab5e27531152b8663ad0840f7f64bb436edf344a90d9b8bd",
+        "next": [
+          2,
+          2
+        ],
+        "own_locator_revision": 1,
+        "peer_locator_revision": 2,
+        "phase": 3,
+        "policy_error": "Blocked: signed fork evidence",
+        "policy_generation": 2,
+        "provenance": "LegacySnapshot/FullL1",
+        "publication_ready": false,
+        "repair_free": 67108864,
+        "role": 1,
+        "sid": "StS664j48CDAj/lMradLsZMVwSXMv8LqXACVMOZeU8w",
+        "slot": 0,
+        "wall_high_water": 1792994979,
+        "wire_stage": 1
+      },
+      {
+        "active": true,
+        "context": "ad3e6990ba331a031b5d6d61ce5cb4edf0d804e16b7bad591447c4e67fdb4f8a",
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            4,
+            0
+          ],
+          "sources": 6
+        },
+        "current_consent": "3799117e516acaef2740a472ee37badecffbdf600d244599c36156cd6a90e08e",
+        "d": "268b1f8670d4401f69bf00254198a9448ad4ba43f2a35708962129c0f3775de5",
+        "e": "9e5032d777ceabefeca0bb5196194505d48b5b01e2dd1a603bab01ef1bbc2c6c",
+        "enabled": true,
+        "handoff": "UnsupportedInCut2",
+        "head_pending": null,
+        "lease_current": true,
+        "lease_generation": 1,
+        "mode": "L1",
+        "native": {
+          "keys": [
+            "e63e30ce418a6a28fbc5fd10a5cd81efb74a8929398e804ef04bff9f8ea8bc36",
+            "197bc47acc092c234fc8a405149d3a37a55f282dc9c3708520a03e6cb31e856b",
+            "879b7d184d9ef9efd153f1de47403dd99218d1609a759e61e9c4c17b37b2c633"
+          ],
+          "own_next": 5,
+          "peer_next": 1,
+          "sid": "z4SE1TuYqTO25A2BjYzDVdzhXD21kE4upaJWS+2BcPw"
+        },
+        "native_generation": 7,
+        "native_hash": "4fe738cbdb3eaefa2816d2be119f7f6e5101463a563c7b344b431bb8369c2754",
+        "next": [
+          5,
+          1
+        ],
+        "own_locator_revision": 2,
+        "peer_locator_revision": 2,
+        "phase": 3,
+        "policy_error": null,
+        "policy_generation": 3,
+        "provenance": "LegacySnapshot/FullL1",
+        "publication_ready": true,
+        "repair_free": 67108864,
+        "role": 0,
+        "sid": "z4SE1TuYqTO25A2BjYzDVdzhXD21kE4upaJWS+2BcPw",
+        "slot": 1,
+        "wall_high_water": 1792994980,
+        "wire_stage": 1
+      }
+    ],
+    "profile_mode": "ordered-dialog-indexed",
+    "resources": {
+      "bidi_limit": 4,
+      "connection_limit": 2,
+      "connections": 1,
+      "frame_limit": 1048576,
+      "mailbox": 2,
+      "mailbox_limit": 16,
+      "peak_connections": 1,
+      "peak_mailbox": 4,
+      "refused_before_spawn": 0,
+      "uni_limit": 0
+    },
+    "root_generation": 55,
+    "source_id": "f65a7e99ce83d2c371681c60fc551372412ba52f2ae1cfe79e244b35767188e7",
+    "stats": {
+      "aborted_packet_calls": 0,
+      "account_constructors": 0,
+      "admissions": 1,
+      "ambiguous_packet_calls": 0,
+      "committed_decrypt": 0,
+      "committed_encrypt": 2,
+      "inbound_constructors": 0,
+      "materialized": 2,
+      "max_commit_app_bytes": 52228404,
+      "max_native_bytes": 3085,
+      "outbound_constructors": 0,
+      "packet_attempts": 2,
+      "readable": 0,
+      "reopens": 0
+    },
+    "storage_stage": "Ready",
+    "version": 3,
+    "window": [
+      [
+        64,
+        64
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        34,
+        34
+      ]
+    ]
+  },
+  "blocked_C1_history": {
+    "F": [
+      2,
+      2
+    ],
+    "cursor": "S0dIMgECAADQcEiVJJnvrsiAZs87NDqQxVmg3jF4pEDvtHwg0AMGcp-FpkEWvDWffGQW3B2QB189VY2vewEJDtBb_k7ZPpI8QSeebY9_qkmIFQIR87ZieaOiVMiU6nbzn3v6XQ5xVqgjXmgitn1CxbDZBIxQI8AaucPF_pgq3aWRZfV3RGtkMWSsGKaHwfdqUjwr29g4xGLqLPfCKqbTbjwgAHY1YfJtU3RTNjY0ajQ4Q0RBai9sTXJhZExzWk1Wd1NYTXY4THFYQUNWTU9aZVU4dwAAAAAAAAACAAAAAAAAAAIAAAAAAAAAAQAAAAAAAAACQpRVZGovGaGXeAgV4cEXXyBIRcthqPzv2vAMOkoLsR0",
+    "finished": false,
+    "items": [
+      {
+        "delivered": true,
+        "id": "8372267d2966cfcc3c0b98ed5532179adec76ec543769a61beebc8a1e15a513b",
+        "ordinal": 1,
+        "proof_kind": "LegacySnapshot",
+        "request": "ec000000000000000000000000000001",
+        "role": 1,
+        "sequence": 2,
+        "text": "genuine C source 1"
+      }
+    ],
+    "version": 3,
+    "view": "9f85a64116bc359f7c6416dc1d90075f3d558daf7b01090ed05bfe4ed93e923c"
+  },
+  "different_peer_C2_token_preserved": true,
+  "parent_killed_and_waited": true,
+  "pin_changed": {
+    "backend": {
+      "growth_bytes": 0,
+      "growth_nanos": 0,
+      "last_failure": null,
+      "last_requested_length": 0,
+      "length": 614400,
+      "max_growth": 0,
+      "physical_quota": 51539607552,
+      "read_bytes": 360777,
+      "reads": 86,
+      "set_len_calls": 0,
+      "sync_calls": 14,
+      "sync_nanos": 24399800,
+      "write_bytes": 1024384,
+      "writes": 250
+    },
+    "config_hash": "1bd874309c51e92e7c29e259778b29cd5548a36b7a7147e97102dbc6fe815dc4",
+    "config_revision": 1,
+    "contexts": [
+      {
+        "active": true,
+        "context": "41279e6d8f7faa4988150211f3b66279a3a254c894ea76f39f7bfa5d0e7156a8",
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            1,
+            1
+          ],
+          "sources": 4
+        },
+        "current_consent": "9b46c2e2f4249b20385bbf2795de58efb6979a74986f40a3d0a37190d9d67029",
+        "d": "235e6822b67d42c5b0d9048c5023c01ab9c3c5fe982adda59165f577446b6431",
+        "e": "64ac18a687c1f76a523c2bdbd838c462ea2cf7c22aa6d36e3c2000763561f26d",
+        "enabled": true,
+        "handoff": "UnsupportedInCut2",
+        "head_pending": null,
+        "lease_current": false,
+        "lease_generation": null,
+        "mode": "L1",
+        "native": null,
+        "native_generation": 4,
+        "native_hash": "5409430bb946e799ab5e27531152b8663ad0840f7f64bb436edf344a90d9b8bd",
+        "next": [
+          2,
+          2
+        ],
+        "own_locator_revision": 1,
+        "peer_locator_revision": 2,
+        "phase": 3,
+        "policy_error": "Blocked: signed fork evidence",
+        "policy_generation": 2,
+        "provenance": "LegacySnapshot/FullL1",
+        "publication_ready": false,
+        "repair_free": 67108864,
+        "role": 1,
+        "sid": "StS664j48CDAj/lMradLsZMVwSXMv8LqXACVMOZeU8w",
+        "slot": 0,
+        "wall_high_water": 1792994979,
+        "wire_stage": 1
+      },
+      {
+        "active": true,
+        "context": "ad3e6990ba331a031b5d6d61ce5cb4edf0d804e16b7bad591447c4e67fdb4f8a",
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            3,
+            0
+          ],
+          "sources": 5
+        },
+        "current_consent": "3799117e516acaef2740a472ee37badecffbdf600d244599c36156cd6a90e08e",
+        "d": "268b1f8670d4401f69bf00254198a9448ad4ba43f2a35708962129c0f3775de5",
+        "e": "9e5032d777ceabefeca0bb5196194505d48b5b01e2dd1a603bab01ef1bbc2c6c",
+        "enabled": true,
+        "handoff": "UnsupportedInCut2",
+        "head_pending": null,
+        "lease_current": true,
+        "lease_generation": 1,
+        "mode": "L1",
+        "native": {
+          "keys": [
+            "e63e30ce418a6a28fbc5fd10a5cd81efb74a8929398e804ef04bff9f8ea8bc36",
+            "197bc47acc092c234fc8a405149d3a37a55f282dc9c3708520a03e6cb31e856b",
+            "879b7d184d9ef9efd153f1de47403dd99218d1609a759e61e9c4c17b37b2c633"
+          ],
+          "own_next": 4,
+          "peer_next": 1,
+          "sid": "z4SE1TuYqTO25A2BjYzDVdzhXD21kE4upaJWS+2BcPw"
+        },
+        "native_generation": 6,
+        "native_hash": "2950b31bf93079b49d4bb8be027c5f66bfec61288c416fd66f246772425654aa",
+        "next": [
+          4,
+          1
+        ],
+        "own_locator_revision": 2,
+        "peer_locator_revision": 2,
+        "phase": 3,
+        "policy_error": null,
+        "policy_generation": 3,
+        "provenance": "LegacySnapshot/FullL1",
+        "publication_ready": true,
+        "repair_free": 67108864,
+        "role": 0,
+        "sid": "z4SE1TuYqTO25A2BjYzDVdzhXD21kE4upaJWS+2BcPw",
+        "slot": 1,
+        "wall_high_water": 1792994975,
+        "wire_stage": 1
+      }
+    ],
+    "profile_mode": "ordered-dialog-indexed",
+    "resources": {
+      "bidi_limit": 4,
+      "connection_limit": 2,
+      "connections": 1,
+      "frame_limit": 1048576,
+      "mailbox": 1,
+      "mailbox_limit": 16,
+      "peak_connections": 1,
+      "peak_mailbox": 4,
+      "refused_before_spawn": 0,
+      "uni_limit": 0
+    },
+    "root_generation": 52,
+    "source_id": "f65a7e99ce83d2c371681c60fc551372412ba52f2ae1cfe79e244b35767188e7",
+    "stats": {
+      "aborted_packet_calls": 0,
+      "account_constructors": 0,
+      "admissions": 1,
+      "ambiguous_packet_calls": 0,
+      "committed_decrypt": 0,
+      "committed_encrypt": 1,
+      "inbound_constructors": 0,
+      "materialized": 1,
+      "max_commit_app_bytes": 52224313,
+      "max_native_bytes": 3085,
+      "outbound_constructors": 0,
+      "packet_attempts": 1,
+      "readable": 0,
+      "reopens": 0
+    },
+    "storage_stage": "Ready",
+    "version": 3,
+    "window": [
+      [
+        64,
+        64
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        34,
+        34
+      ]
+    ]
+  },
+  "ready": {
+    "config_hash": "1bd874309c51e92e7c29e259778b29cd5548a36b7a7147e97102dbc6fe815dc4",
+    "config_revision": 1,
+    "contexts": [
+      {
+        "context": "41279e6d8f7faa4988150211f3b66279a3a254c894ea76f39f7bfa5d0e7156a8",
+        "head_in_use": false,
+        "legacy_hold": 147832315,
+        "mode": "L1",
+        "native_phase": 3,
+        "pending": 0,
+        "provenance": "LegacySnapshot7",
+        "queue": 0,
+        "readable": [
+          2,
+          2
+        ],
+        "receipts": 2,
+        "repair_funded": true,
+        "role": 1,
+        "undelivered": 0
+      },
+      {
+        "context": "ad3e6990ba331a031b5d6d61ce5cb4edf0d804e16b7bad591447c4e67fdb4f8a",
+        "head_in_use": false,
+        "legacy_hold": 147831632,
+        "mode": "L1",
+        "native_phase": 3,
+        "pending": 0,
+        "provenance": "LegacySnapshot7",
+        "queue": 0,
+        "readable": [
+          3,
+          1
+        ],
+        "receipts": 2,
+        "repair_funded": true,
+        "role": 0,
+        "undelivered": 0
+      }
+    ],
+    "copied_entries": 78,
+    "credits": {
+      "grant_unissued": [
+        0,
+        0
+      ],
+      "head_in_use": [
+        false,
+        false
+      ],
+      "pending": [
+        0,
+        0
+      ],
+      "repair_free": [
+        67108864,
+        67108864
+      ],
+      "reserved": [
+        148092480,
+        147971416
+      ],
+      "used": [
+        120788,
+        37918
+      ]
+    },
+    "generation": 39,
+    "migration_id": "7e756c40f60413715211ee8c3dc16b13c99128503cbc21484c0415b1428f2b76",
+    "output_digest": "093c8b2971955d55ca0336cbd772dfa7efbae65d0836e9f472609b84bffd759a",
+    "reason": "",
+    "runtime_available": false,
+    "source_id": "f65a7e99ce83d2c371681c60fc551372412ba52f2ae1cfe79e244b35767188e7",
+    "storage_stage": "Ready",
+    "total_entries": 78,
+    "work_phase": 3,
+    "zero_migration_native_calls": true
+  },
+  "warm": {
+    "backend": {
+      "growth_bytes": 0,
+      "growth_nanos": 0,
+      "last_failure": null,
+      "last_requested_length": 0,
+      "length": 614400,
+      "max_growth": 0,
+      "physical_quota": 51539607552,
+      "read_bytes": 360777,
+      "reads": 86,
+      "set_len_calls": 0,
+      "sync_calls": 13,
+      "sync_nanos": 22088400,
+      "write_bytes": 954432,
+      "writes": 233
+    },
+    "config_hash": "1bd874309c51e92e7c29e259778b29cd5548a36b7a7147e97102dbc6fe815dc4",
+    "config_revision": 1,
+    "contexts": [
+      {
+        "active": true,
+        "context": "41279e6d8f7faa4988150211f3b66279a3a254c894ea76f39f7bfa5d0e7156a8",
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            1,
+            1
+          ],
+          "sources": 4
+        },
+        "current_consent": "9b46c2e2f4249b20385bbf2795de58efb6979a74986f40a3d0a37190d9d67029",
+        "d": "235e6822b67d42c5b0d9048c5023c01ab9c3c5fe982adda59165f577446b6431",
+        "e": "64ac18a687c1f76a523c2bdbd838c462ea2cf7c22aa6d36e3c2000763561f26d",
+        "enabled": true,
+        "handoff": "UnsupportedInCut2",
+        "head_pending": null,
+        "lease_current": false,
+        "lease_generation": null,
+        "mode": "L1",
+        "native": null,
+        "native_generation": 4,
+        "native_hash": "5409430bb946e799ab5e27531152b8663ad0840f7f64bb436edf344a90d9b8bd",
+        "next": [
+          2,
+          2
+        ],
+        "own_locator_revision": 1,
+        "peer_locator_revision": 2,
+        "phase": 3,
+        "policy_error": "Blocked: signed fork evidence",
+        "policy_generation": 1,
+        "provenance": "LegacySnapshot/FullL1",
+        "publication_ready": false,
+        "repair_free": 67108864,
+        "role": 1,
+        "sid": "StS664j48CDAj/lMradLsZMVwSXMv8LqXACVMOZeU8w",
+        "slot": 0,
+        "wall_high_water": 0,
+        "wire_stage": 1
+      },
+      {
+        "active": true,
+        "context": "ad3e6990ba331a031b5d6d61ce5cb4edf0d804e16b7bad591447c4e67fdb4f8a",
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            3,
+            0
+          ],
+          "sources": 5
+        },
+        "current_consent": "3799117e516acaef2740a472ee37badecffbdf600d244599c36156cd6a90e08e",
+        "d": "268b1f8670d4401f69bf00254198a9448ad4ba43f2a35708962129c0f3775de5",
+        "e": "9e5032d777ceabefeca0bb5196194505d48b5b01e2dd1a603bab01ef1bbc2c6c",
+        "enabled": true,
+        "handoff": "UnsupportedInCut2",
+        "head_pending": null,
+        "lease_current": true,
+        "lease_generation": 1,
+        "mode": "L1",
+        "native": {
+          "keys": [
+            "e63e30ce418a6a28fbc5fd10a5cd81efb74a8929398e804ef04bff9f8ea8bc36",
+            "197bc47acc092c234fc8a405149d3a37a55f282dc9c3708520a03e6cb31e856b",
+            "879b7d184d9ef9efd153f1de47403dd99218d1609a759e61e9c4c17b37b2c633"
+          ],
+          "own_next": 4,
+          "peer_next": 1,
+          "sid": "z4SE1TuYqTO25A2BjYzDVdzhXD21kE4upaJWS+2BcPw"
+        },
+        "native_generation": 6,
+        "native_hash": "2950b31bf93079b49d4bb8be027c5f66bfec61288c416fd66f246772425654aa",
+        "next": [
+          4,
+          1
+        ],
+        "own_locator_revision": 2,
+        "peer_locator_revision": 2,
+        "phase": 3,
+        "policy_error": null,
+        "policy_generation": 3,
+        "provenance": "LegacySnapshot/FullL1",
+        "publication_ready": true,
+        "repair_free": 67108864,
+        "role": 0,
+        "sid": "z4SE1TuYqTO25A2BjYzDVdzhXD21kE4upaJWS+2BcPw",
+        "slot": 1,
+        "wall_high_water": 1792994975,
+        "wire_stage": 1
+      }
+    ],
+    "profile_mode": "ordered-dialog-indexed",
+    "resources": {
+      "bidi_limit": 4,
+      "connection_limit": 2,
+      "connections": 1,
+      "frame_limit": 1048576,
+      "mailbox": 2,
+      "mailbox_limit": 16,
+      "peak_connections": 1,
+      "peak_mailbox": 4,
+      "refused_before_spawn": 0,
+      "uni_limit": 0
+    },
+    "root_generation": 51,
+    "source_id": "f65a7e99ce83d2c371681c60fc551372412ba52f2ae1cfe79e244b35767188e7",
+    "stats": {
+      "aborted_packet_calls": 0,
+      "account_constructors": 0,
+      "admissions": 1,
+      "ambiguous_packet_calls": 0,
+      "committed_decrypt": 0,
+      "committed_encrypt": 1,
+      "inbound_constructors": 0,
+      "materialized": 1,
+      "max_commit_app_bytes": 52224313,
+      "max_native_bytes": 3085,
+      "outbound_constructors": 0,
+      "packet_attempts": 1,
+      "readable": 0,
+      "reopens": 0
+    },
+    "storage_stage": "Ready",
+    "version": 3,
+    "window": [
+      [
+        64,
+        64
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        2
+      ]
+    ]
+  }
+}

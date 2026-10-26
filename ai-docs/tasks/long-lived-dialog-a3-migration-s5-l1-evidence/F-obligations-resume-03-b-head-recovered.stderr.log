@@ -1,0 +1,4 @@
+l1_background c=0 error=AuthBlocked: drain lease absent
+l1_background c=0 error=policy rejected before commit: closed/expired L1 lease
+l1_incoming_closed closed by peer: L1 policy changed (code 0)
+l1_background c=0 error=AuthBlocked: drain lease absent

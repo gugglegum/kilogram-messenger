@@ -1,0 +1,131 @@
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+error: this expression creates a reference which is immediately dereferenced by the compiler
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\admin.rs:515:31
+    |
+515 |     let raw = desired_profile(&p, &c)?;
+    |                               ^^ help: change this to: `p`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_borrow
+    = note: `-D clippy::needless-borrow` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_borrow)]`
+
+error: this expression creates a reference which is immediately dereferenced by the compiler
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\admin.rs:515:35
+    |
+515 |     let raw = desired_profile(&p, &c)?;
+    |                                   ^^ help: change this to: `c`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_borrow
+
+error: the loop variable `role` is used to index `candidates`
+  --> crates\kilogram-state\src\vault\indexed_dialog\migration7\live1\history.rs:86:25
+   |
+86 |             for role in 0..2 {
+   |                         ^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+   = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator and enumerate()
+   |
+86 -             for role in 0..2 {
+86 +             for (role, <item>) in candidates.iter_mut().enumerate() {
+   |
+
+error: using `contains()` instead of `iter().any()` is more efficient
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\live1\history.rs:154:16
+    |
+154 |             || meta.next.iter().any(|n| *n == 0)
+    |                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: try: `meta.next.contains(&0)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#manual_contains
+    = note: `-D clippy::manual-contains` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::manual_contains)]`
+
+error: this function has too many arguments (8/7)
+  --> crates\kilogram-state\src\vault\indexed_dialog\migration7\live1\data.rs:32:5
+   |
+32 | /     pub(super) fn l1_ticket(
+33 | |         &self,
+34 | |         p: &Profile,
+35 | |         c: u8,
+...  |
+40 | |         auth: Vec<Id>,
+41 | |     ) -> Result<Vec<u8>> {
+   | |________________________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#too_many_arguments
+   = note: `-D clippy::too-many-arguments` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::too_many_arguments)]`
+
+error: this function has too many arguments (8/7)
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\live1\data.rs:409:5
+    |
+409 | /     pub(super) fn l1_bootstrap(
+410 | |         &mut self,
+411 | |         p: &Profile,
+412 | |         kind: L1Bootstrap,
+...   |
+417 | |         ready: Vec<(u8, Vec<u8>)>,
+418 | |     ) -> Result<()> {
+    | |___________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#too_many_arguments
+
+error: this `if` statement can be collapsed
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\live1\data.rs:441:13
+    |
+441 | /             if let Some(old) = self.l1_control(p, c, L1Control::InitialPair)? {
+442 | |                 if old != pair {
+443 | |                     return Err(Error::Conflict);
+444 | |                 }
+445 | |             }
+    | |_____________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+    = note: `-D clippy::collapsible-if` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+    |
+441 ~             if let Some(old) = self.l1_control(p, c, L1Control::InitialPair)?
+442 ~                 && old != pair {
+443 |                     return Err(Error::Conflict);
+444 ~                 }
+    |
+
+error: this `if` statement can be collapsed
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\live1\data.rs:464:13
+    |
+464 | /             if let Some(old) = self.l1_control(p, c, L1Control::Ready(role))? {
+465 | |                 if old != raw {
+466 | |                     return Err(Error::Conflict);
+467 | |                 }
+468 | |             }
+    | |_____________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+464 ~             if let Some(old) = self.l1_control(p, c, L1Control::Ready(role))?
+465 ~                 && old != raw {
+466 |                     return Err(Error::Conflict);
+467 ~                 }
+    |
+
+error: this function has too many arguments (8/7)
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\live1\data.rs:481:5
+    |
+481 | /     pub(super) fn l1_pending(
+482 | |         &mut self,
+483 | |         p: &Profile,
+484 | |         c: u8,
+...   |
+489 | |         head: bool,
+490 | |     ) -> Result<()> {
+    | |___________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#too_many_arguments
+
+error: could not compile `kilogram-state` (lib) due to 9 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `kilogram-state` (lib test) due to 9 previous errors

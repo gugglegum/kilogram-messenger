@@ -1,0 +1,13 @@
+{
+  "classification": "static-before-boundary02-instrumentation",
+  "authority_sha256": "a9b3fd75ce257362297a9ec7c4fe00133917a42bf2ecbd4a921d41bfa4870341",
+  "controller_snapshot": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary01-controller.rs.txt",
+  "controller_sha256": "a8077b49ba2e02956a94ca352158190854f47d3a6b37b2e624b2bb81743e71f4",
+  "harness_snapshot": "target\\compatibility\\long-lived-dialog-migration-boundary01\\migration_s5_process-harness.bin.snapshot",
+  "harness_sha256": "5ccc3a8a3e4bc76ed811f6d0aad5c93b95381bbab8d6a2c1284b3d66c8eb5ce2",
+  "runner_sha256": "c9c6841213181af75f3364128cf7d0697d45db5a7a8bf5bfda1b58986c3211ed",
+  "ledger_sha256": "b9dad4528aecff9a7084492a52e2f411f67cba89cc1af4cc3ea8196cf9bd1462",
+  "failed_case_sha256": "072b522817e7f62e9bbc0f930f3d3969c2b56675c4ae348931e4b113d895753b",
+  "failed_log_sha256": "b7b5efa02401eef44abd6488f64b2f0ca3a5b975e90e877945fb51d9e69f55ab",
+  "rule": "Only controller/harness snapshots; no original or failed fixture open/copy."
+}

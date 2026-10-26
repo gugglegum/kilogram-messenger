@@ -1,0 +1,13 @@
+{
+  "classification": "new-protected-review-input",
+  "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-implementation-review-1.md",
+  "bytes": 9590,
+  "sha256": "49f8c28e0fd7a46e46df8f93622ac366362a7d48340eb2cd14c6e6e5b4e7fd49",
+  "baseline": "73c499818ba9b699c331aa842e64e8432e90c59a",
+  "current_charges": {
+    "F": 979.0484649,
+    "P": 0,
+    "C": 105.37611369999999
+  },
+  "rule": "Historical ledger in review is retained; isolation54.025038 already charged; old candidate fixtures never repaired or relabeled."
+}

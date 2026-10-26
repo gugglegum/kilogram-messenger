@@ -1,0 +1,30 @@
+{
+  "classification": "root-reviewed-single-instrumented-boundary",
+  "approved_case": "F-exhausted-boundary-02",
+  "root_thread": "01a164ec-589c-7b41-bc34-3ba158d1f22b",
+  "runner_sha256": "22dcaa81179e39986199664adea130c01c22749b3ea69a34664a60b2d66ca79e",
+  "ledger_sha256": "b9dad4528aecff9a7084492a52e2f411f67cba89cc1af4cc3ea8196cf9bd1462",
+  "origin_case_sha256": "e1acc55360a45c386dde029c2f9be35cbbdacc08bd2a076a1812ac6c692d5135",
+  "prior_boundary_case_sha256": "072b522817e7f62e9bbc0f930f3d3969c2b56675c4ae348931e4b113d895753b",
+  "prior_boundary_log_sha256": "b7b5efa02401eef44abd6488f64b2f0ca3a5b975e90e877945fb51d9e69f55ab",
+  "root_decision": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary02-review-1.md",
+    "bytes": 5462,
+    "sha256": "a6a3cad50e2b4b264a1ce7e4db50d3123ebcd7869003c86482ae4c938a870673"
+  },
+  "readiness_sha256": "0d626122b5a4fcd3b4b3fb4ee7cb9549fa53b2e1972ac1ce95e8a98bb6bc3bc0",
+  "readiness_binding_sha256": "fdb1682015099e26bcaee3e710413dbb8f62677fc30a74f5eaf78a4727addc68",
+  "controller_sha256": "dd3a4b9e6c76daa1056b1bb3d765bcb251c54092ac14f84db3178cc7c5c510bd",
+  "compiled_harness_sha256": "5a003864af885c09d0274d84f54b2000a774908382169085b42314ee546ec161",
+  "frozen_manifest_sha256": "73c38f113a7e663d00bba36ae0116a292b7ec0511d4e23b79729f60cf87e2995",
+  "work_seconds": 580,
+  "whole_seconds": 600,
+  "controller_absolute_seconds": 560,
+  "actual_F_before": 2046.0168572,
+  "F_ceiling": 2900,
+  "required_remaining_seconds": 825,
+  "requires_ordinary_native_execution_approval": true,
+  "automatic_retry": false,
+  "publication_authorized": false,
+  "next_action": "After failure stop and callback with phase/log/cleanup evidence. After PASS finish the assigned implementation report and exact candidate allowlist, then callback before publication."
+}

@@ -1,0 +1,10 @@
+{
+  "case": "F-exhausted-boundary-01",
+  "started_utc": "2026-10-26T09:24:58.0126364Z",
+  "owner_pid": 32312,
+  "whole_seconds": 140,
+  "work_seconds": 120,
+  "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-4.md",
+  "action": "Tests",
+  "classification": "attempt-start-not-final-result"
+}

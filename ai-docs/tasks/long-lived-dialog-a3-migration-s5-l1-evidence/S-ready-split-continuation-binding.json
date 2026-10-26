@@ -1,0 +1,32 @@
+{
+  "classification": "static-specific-root-predecessor-exception-binding",
+  "protected_input": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-3.md",
+  "protected_bytes": 5855,
+  "protected_sha256": "c05a408a653f9ac7d35fffd31cd50df15620b726e5357013d8525ea9e669bf02",
+  "parse_errors": 0,
+  "only_source_change": [
+    {
+      "path": "scripts/invoke-migration-s5-l1-case.ps1",
+      "before_sha256": "0f28929faccef0e58d327c39974aa38b830d5f21599b3bda6d677919c5a6be88",
+      "after_sha256": "91dd7dd7a413a0d9bb04ccef42ca497f468e2b4ad3f3d03bbe835ed50635e162"
+    }
+  ],
+  "unchanged_compile_input_count": 48,
+  "compiled_harness": "S-compile-16.json",
+  "product_build": "S-build-11.json",
+  "images": [
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+      "bytes": 70226432,
+      "sha256": "69744fca50f44439b4734e699f416fc6b2bb8aac4336e5dad18ed173b2abbf6c"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-l1-control-peer.exe",
+      "bytes": 70226432,
+      "sha256": "69744fca50f44439b4734e699f416fc6b2bb8aac4336e5dad18ed173b2abbf6c"
+    }
+  ],
+  "new_build_claim": false,
+  "deadline_helper_sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45",
+  "policy": "Exact Ready02 wholeFAIL functional acceptance only, three artifact hashes plus exit1/work-expired/children0; all other predecessor failures still block; unchanged diagnostics/guards."
+}

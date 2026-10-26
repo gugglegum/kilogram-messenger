@@ -1,0 +1,46 @@
+{
+  "classification": "opaque C mechanism only",
+  "copied_phase_prefix_blake3": "3c52f6d99cc7732e8929ed9c98537a849dc5577560084109beeaba68dfbeff5d",
+  "copied_phase_prefix_bytes": 98,
+  "input": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-phase-preservation-probe-Uvuc1q\\input",
+  "later_source_logging_intentionally_extends_only_the_phase_log": true,
+  "no_Native_DB_or_network": true,
+  "opaque_bytes": 256,
+  "phase_records": [
+    {
+      "detail": null,
+      "elapsed_seconds": 0.0001665,
+      "phase": "opaque.private_preservation",
+      "state": "begin"
+    },
+    {
+      "detail": {
+        "phase_seconds": 0.8457017
+      },
+      "elapsed_seconds": 0.8497987,
+      "phase": "opaque.private_preservation",
+      "state": "end"
+    },
+    {
+      "detail": {
+        "writer_closed_between_records": true
+      },
+      "elapsed_seconds": 0.8548927,
+      "phase": "opaque.after_preservation",
+      "state": "end"
+    }
+  ],
+  "preservation": {
+    "copy_matches": true,
+    "files": 4,
+    "inventory_path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preserved\\C-boundary-phase-preservation-01\\preservation-inventory.json",
+    "inventory_sha256": "3045bef2a4f40c0b82258489af86e85f3935add379cc520fa3c07a54b56c3a9a",
+    "preserved": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preserved\\C-boundary-phase-preservation-01",
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-phase-preservation-probe-Uvuc1q\\input",
+    "source_unchanged": true
+  },
+  "source_phase_after_blake3": "4b00e00387842d8f8275dba3de57133f8c24a0455327c888413453b3fb68a7af",
+  "source_phase_after_bytes": 345,
+  "status": "PASS",
+  "two_real_held_empty_locks": true
+}

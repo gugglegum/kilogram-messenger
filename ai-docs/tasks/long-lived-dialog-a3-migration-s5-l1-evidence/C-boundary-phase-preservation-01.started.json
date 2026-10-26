@@ -1,0 +1,10 @@
+{
+  "case": "C-boundary-phase-preservation-01",
+  "started_utc": "2026-10-26T14:08:04.1794853Z",
+  "owner_pid": 48616,
+  "whole_seconds": 40,
+  "work_seconds": 30,
+  "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary03-completion-review.md",
+  "action": "Tests",
+  "classification": "attempt-start-not-final-result"
+}

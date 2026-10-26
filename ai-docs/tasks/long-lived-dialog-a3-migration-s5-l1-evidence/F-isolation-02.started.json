@@ -1,0 +1,10 @@
+{
+  "case": "F-isolation-02",
+  "started_utc": "2026-10-26T06:09:00.4327488Z",
+  "owner_pid": 25728,
+  "whole_seconds": 100,
+  "work_seconds": 85,
+  "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-3.md",
+  "action": "Tests",
+  "classification": "attempt-start-not-final-result"
+}

@@ -1,0 +1,84 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1.79s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 1 test
+test ordered_dialog::runtime7::tests::indexed_l1_ref_window_keeps_blocked_context_share ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 28 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 7 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 3 tests
+test vault::indexed_dialog::migration7::live1::tests::indexed_l1_closed_metadata_envelope_and_input_caps ... ok
+test vault::indexed_dialog::migration7::live1::tests::indexed_l1_held64_separate_head_no_refund_or_cross_context ... ok
+test vault::indexed_dialog::migration7::live1::tests::indexed_l1_wrong_purpose_precedes_generation_and_exact_retry ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 91 filtered out; finished in 0.83s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17693 13.44
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=64414
+target_gib=68.94
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

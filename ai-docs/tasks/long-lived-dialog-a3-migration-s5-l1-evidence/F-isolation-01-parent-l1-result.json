@@ -1,0 +1,638 @@
+{
+  "actual_d9b_before": {
+    "commits": 23,
+    "contexts": [
+      {
+        "context": "2fdc4a54c06edab18d2dc060f1a82efa67a1d2525b072be9717e01dd9c7ab35b",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 4,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 1,
+        "peer_generation": 1,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 2,
+        "send_next": 2,
+        "session_id": "O8bb/j7T9mo9rzXHaEbDQqiK5VXAymPmprI/JPMK8zg",
+        "status": "WaitingAck",
+        "unacked": 0
+      },
+      {
+        "context": "23af99c2179d0a1d5afcb0603df2377e608152572c3adeb3a79ab7630310abc2",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 4,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 1,
+        "peer_generation": 0,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 1,
+        "send_next": 2,
+        "session_id": "ZHWOKJI11nwbNOM20mYNUNBKXPTxEI3XSNut3csLhBo",
+        "status": "Active",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  },
+  "actual_signed_fork": true,
+  "after": {
+    "backend": {
+      "growth_bytes": 0,
+      "growth_nanos": 0,
+      "last_failure": null,
+      "last_requested_length": 0,
+      "length": 569344,
+      "max_growth": 0,
+      "physical_quota": 51539607552,
+      "read_bytes": 360777,
+      "reads": 86,
+      "set_len_calls": 0,
+      "sync_calls": 17,
+      "sync_nanos": 32755300,
+      "write_bytes": 1369408,
+      "writes": 334
+    },
+    "config_hash": "f10186450878be67e7456fe6be0f65ad7a24d7e3cd1c85f037b2779700a7a386",
+    "config_revision": 1,
+    "contexts": [
+      {
+        "active": true,
+        "context": "23af99c2179d0a1d5afcb0603df2377e608152572c3adeb3a79ab7630310abc2",
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            4,
+            0
+          ],
+          "sources": 6
+        },
+        "current_consent": "337a8bb888a851ef59f60d98e00ffa3b3ad58fd4a155c4f132b9c1ed17a19adc",
+        "d": "d3470a398d9297cee2c0d3990a97521c9c2863e65fce61fce9ef1476c182c7d5",
+        "e": "5f01cc6fc36579a662e931d2fc95101592aa60bc954bb0f70c497a4dbb731731",
+        "enabled": true,
+        "handoff": "UnsupportedInCut2",
+        "head_pending": null,
+        "lease_current": true,
+        "lease_generation": 1,
+        "mode": "L1",
+        "native": {
+          "keys": [
+            "725487914298ad5ec3a205b6099f553537e932fe128e10f0ec50d384e49ad679",
+            "fa4adc88190515644b4f8206d0e41f7ab582fc7b91c8a0c11b86ce194c5b6449",
+            "e472f161abda70906600851dae138b1114d66e49870c2c13592e40f07f5de44d"
+          ],
+          "own_next": 5,
+          "peer_next": 1,
+          "sid": "ZHWOKJI11nwbNOM20mYNUNBKXPTxEI3XSNut3csLhBo"
+        },
+        "native_generation": 7,
+        "native_hash": "68ec03d59204af7cefdb9f41d51f6bebd9132c777829fed79f4b3ba6db29e044",
+        "next": [
+          5,
+          1
+        ],
+        "own_locator_revision": 2,
+        "peer_locator_revision": 2,
+        "phase": 3,
+        "policy_error": null,
+        "policy_generation": 3,
+        "provenance": "LegacySnapshot/FullL1",
+        "publication_ready": true,
+        "repair_free": 67108864,
+        "role": 0,
+        "sid": "ZHWOKJI11nwbNOM20mYNUNBKXPTxEI3XSNut3csLhBo",
+        "slot": 0,
+        "wall_high_water": 1792989185,
+        "wire_stage": 1
+      },
+      {
+        "active": true,
+        "context": "2fdc4a54c06edab18d2dc060f1a82efa67a1d2525b072be9717e01dd9c7ab35b",
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            1,
+            1
+          ],
+          "sources": 4
+        },
+        "current_consent": "6159ab8053a81c964e72c7eada39882796e18da87a14f13e484c11b306437439",
+        "d": "29c2ec7ff863e13f3814f4c84dbf4794ff5094edb9db7a89c60049cfa65e3731",
+        "e": "7677d09150f187be252c305f36f5ef36a628a2f62946cc1c6c2e5fcdda86160c",
+        "enabled": true,
+        "handoff": "UnsupportedInCut2",
+        "head_pending": null,
+        "lease_current": false,
+        "lease_generation": null,
+        "mode": "L1",
+        "native": null,
+        "native_generation": 4,
+        "native_hash": "587e2eee6a4fa52a1f5aae711ca16f5e7eb3e03903fcf2c58ceb41ee436d7b67",
+        "next": [
+          2,
+          2
+        ],
+        "own_locator_revision": 1,
+        "peer_locator_revision": 2,
+        "phase": 3,
+        "policy_error": "Blocked: signed fork evidence",
+        "policy_generation": 2,
+        "provenance": "LegacySnapshot/FullL1",
+        "publication_ready": false,
+        "repair_free": 67108864,
+        "role": 1,
+        "sid": "O8bb/j7T9mo9rzXHaEbDQqiK5VXAymPmprI/JPMK8zg",
+        "slot": 1,
+        "wall_high_water": 1792989185,
+        "wire_stage": 1
+      }
+    ],
+    "profile_mode": "ordered-dialog-indexed",
+    "resources": {
+      "bidi_limit": 4,
+      "connection_limit": 2,
+      "connections": 1,
+      "frame_limit": 1048576,
+      "mailbox": 2,
+      "mailbox_limit": 16,
+      "peak_connections": 1,
+      "peak_mailbox": 4,
+      "refused_before_spawn": 0,
+      "uni_limit": 0
+    },
+    "root_generation": 55,
+    "source_id": "89d71ea5a5e5b6f60bc50dee929b5a023d9ed78e6daf0771932eaa252b9ffd55",
+    "stats": {
+      "aborted_packet_calls": 0,
+      "account_constructors": 0,
+      "admissions": 1,
+      "ambiguous_packet_calls": 0,
+      "committed_decrypt": 0,
+      "committed_encrypt": 2,
+      "inbound_constructors": 0,
+      "materialized": 2,
+      "max_commit_app_bytes": 52221121,
+      "max_native_bytes": 3128,
+      "outbound_constructors": 0,
+      "packet_attempts": 2,
+      "readable": 0,
+      "reopens": 0
+    },
+    "storage_stage": "Ready",
+    "version": 3,
+    "window": [
+      [
+        64,
+        64
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        34,
+        34
+      ]
+    ]
+  },
+  "blocked_C1_history": {
+    "F": [
+      2,
+      2
+    ],
+    "cursor": "S0dIMgECAADv5PMy7rIdRAAe2mEYm4rDUxY2AJNIkb7eVwDCYjOul2aSXnlZfFlnc1Y2fwuSOCDp5zb59w8-OCZeZVkooDmsL9xKVMBu2rGNLcBg8agu-meh0lJbByvpcX4B3Zx6s1spwux_-GPhPzgU9MhNv0eU_1CU7bnbeonGAEnPpl43MXZ30JFQ8Ye-JSwwXzb17zamKKL2KUbMHGwuX83ahhYMTzhiYi9qN1Q5bW85cnpYSGFFYkRRcWlLNVZYQXltUG1wckkvSlBNSzh6ZwAAAAAAAAACAAAAAAAAAAIAAAAAAAAAAgAAAAAAAAABZmM_JkGmo6X74F-8zkBC9oRTWmW1PpmRdi0dHAVWRJo",
+    "finished": false,
+    "items": [
+      {
+        "delivered": true,
+        "id": "c6e34e739ae15e215157cd007b6dcb179b3b5c45693ce47ee3d0a7092ab1ebc8",
+        "ordinal": 1,
+        "proof_kind": "LegacySnapshot",
+        "request": "ec000000000000000000000000000004",
+        "role": 0,
+        "sequence": 1,
+        "text": "genuine C source 4"
+      }
+    ],
+    "version": 3,
+    "view": "66925e79597c59677356367f0b923820e9e736f9f70f3e38265e655928a039ac"
+  },
+  "different_peer_C2_token_preserved": true,
+  "parent_killed_and_waited": true,
+  "pin_changed": {
+    "backend": {
+      "growth_bytes": 0,
+      "growth_nanos": 0,
+      "last_failure": null,
+      "last_requested_length": 0,
+      "length": 569344,
+      "max_growth": 0,
+      "physical_quota": 51539607552,
+      "read_bytes": 360777,
+      "reads": 86,
+      "set_len_calls": 0,
+      "sync_calls": 14,
+      "sync_nanos": 25762900,
+      "write_bytes": 1044864,
+      "writes": 255
+    },
+    "config_hash": "f10186450878be67e7456fe6be0f65ad7a24d7e3cd1c85f037b2779700a7a386",
+    "config_revision": 1,
+    "contexts": [
+      {
+        "active": true,
+        "context": "23af99c2179d0a1d5afcb0603df2377e608152572c3adeb3a79ab7630310abc2",
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            3,
+            0
+          ],
+          "sources": 5
+        },
+        "current_consent": "337a8bb888a851ef59f60d98e00ffa3b3ad58fd4a155c4f132b9c1ed17a19adc",
+        "d": "d3470a398d9297cee2c0d3990a97521c9c2863e65fce61fce9ef1476c182c7d5",
+        "e": "5f01cc6fc36579a662e931d2fc95101592aa60bc954bb0f70c497a4dbb731731",
+        "enabled": true,
+        "handoff": "UnsupportedInCut2",
+        "head_pending": null,
+        "lease_current": true,
+        "lease_generation": 1,
+        "mode": "L1",
+        "native": {
+          "keys": [
+            "725487914298ad5ec3a205b6099f553537e932fe128e10f0ec50d384e49ad679",
+            "fa4adc88190515644b4f8206d0e41f7ab582fc7b91c8a0c11b86ce194c5b6449",
+            "e472f161abda70906600851dae138b1114d66e49870c2c13592e40f07f5de44d"
+          ],
+          "own_next": 4,
+          "peer_next": 1,
+          "sid": "ZHWOKJI11nwbNOM20mYNUNBKXPTxEI3XSNut3csLhBo"
+        },
+        "native_generation": 6,
+        "native_hash": "32024ac8a46a0c3d2afd59c4355b7324888d8bd7e2a6ed028a85ba7d07a06169",
+        "next": [
+          4,
+          1
+        ],
+        "own_locator_revision": 2,
+        "peer_locator_revision": 2,
+        "phase": 3,
+        "policy_error": null,
+        "policy_generation": 3,
+        "provenance": "LegacySnapshot/FullL1",
+        "publication_ready": true,
+        "repair_free": 67108864,
+        "role": 0,
+        "sid": "ZHWOKJI11nwbNOM20mYNUNBKXPTxEI3XSNut3csLhBo",
+        "slot": 0,
+        "wall_high_water": 1792989181,
+        "wire_stage": 1
+      },
+      {
+        "active": true,
+        "context": "2fdc4a54c06edab18d2dc060f1a82efa67a1d2525b072be9717e01dd9c7ab35b",
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            1,
+            1
+          ],
+          "sources": 4
+        },
+        "current_consent": "6159ab8053a81c964e72c7eada39882796e18da87a14f13e484c11b306437439",
+        "d": "29c2ec7ff863e13f3814f4c84dbf4794ff5094edb9db7a89c60049cfa65e3731",
+        "e": "7677d09150f187be252c305f36f5ef36a628a2f62946cc1c6c2e5fcdda86160c",
+        "enabled": true,
+        "handoff": "UnsupportedInCut2",
+        "head_pending": null,
+        "lease_current": false,
+        "lease_generation": null,
+        "mode": "L1",
+        "native": null,
+        "native_generation": 4,
+        "native_hash": "587e2eee6a4fa52a1f5aae711ca16f5e7eb3e03903fcf2c58ceb41ee436d7b67",
+        "next": [
+          2,
+          2
+        ],
+        "own_locator_revision": 1,
+        "peer_locator_revision": 2,
+        "phase": 3,
+        "policy_error": "Blocked: signed fork evidence",
+        "policy_generation": 2,
+        "provenance": "LegacySnapshot/FullL1",
+        "publication_ready": false,
+        "repair_free": 67108864,
+        "role": 1,
+        "sid": "O8bb/j7T9mo9rzXHaEbDQqiK5VXAymPmprI/JPMK8zg",
+        "slot": 1,
+        "wall_high_water": 1792989185,
+        "wire_stage": 1
+      }
+    ],
+    "profile_mode": "ordered-dialog-indexed",
+    "resources": {
+      "bidi_limit": 4,
+      "connection_limit": 2,
+      "connections": 1,
+      "frame_limit": 1048576,
+      "mailbox": 1,
+      "mailbox_limit": 16,
+      "peak_connections": 1,
+      "peak_mailbox": 4,
+      "refused_before_spawn": 0,
+      "uni_limit": 0
+    },
+    "root_generation": 52,
+    "source_id": "89d71ea5a5e5b6f60bc50dee929b5a023d9ed78e6daf0771932eaa252b9ffd55",
+    "stats": {
+      "aborted_packet_calls": 0,
+      "account_constructors": 0,
+      "admissions": 1,
+      "ambiguous_packet_calls": 0,
+      "committed_decrypt": 0,
+      "committed_encrypt": 1,
+      "inbound_constructors": 0,
+      "materialized": 1,
+      "max_commit_app_bytes": 52215606,
+      "max_native_bytes": 3128,
+      "outbound_constructors": 0,
+      "packet_attempts": 1,
+      "readable": 0,
+      "reopens": 0
+    },
+    "storage_stage": "Ready",
+    "version": 3,
+    "window": [
+      [
+        64,
+        64
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        34,
+        34
+      ]
+    ]
+  },
+  "ready": {
+    "config_hash": "f10186450878be67e7456fe6be0f65ad7a24d7e3cd1c85f037b2779700a7a386",
+    "config_revision": 1,
+    "contexts": [
+      {
+        "context": "23af99c2179d0a1d5afcb0603df2377e608152572c3adeb3a79ab7630310abc2",
+        "head_in_use": false,
+        "legacy_hold": 147831632,
+        "mode": "L1",
+        "native_phase": 3,
+        "pending": 0,
+        "provenance": "LegacySnapshot7",
+        "queue": 0,
+        "readable": [
+          3,
+          1
+        ],
+        "receipts": 2,
+        "repair_funded": true,
+        "role": 0,
+        "undelivered": 0
+      },
+      {
+        "context": "2fdc4a54c06edab18d2dc060f1a82efa67a1d2525b072be9717e01dd9c7ab35b",
+        "head_in_use": false,
+        "legacy_hold": 147831473,
+        "mode": "L1",
+        "native_phase": 3,
+        "pending": 0,
+        "provenance": "LegacySnapshot7",
+        "queue": 0,
+        "readable": [
+          2,
+          2
+        ],
+        "receipts": 2,
+        "repair_funded": true,
+        "role": 1,
+        "undelivered": 0
+      }
+    ],
+    "copied_entries": 78,
+    "credits": {
+      "grant_unissued": [
+        0,
+        0
+      ],
+      "head_in_use": [
+        false,
+        false
+      ],
+      "pending": [
+        0,
+        0
+      ],
+      "repair_free": [
+        67108864,
+        67108864
+      ],
+      "reserved": [
+        148092577,
+        147970694
+      ],
+      "used": [
+        119552,
+        40413
+      ]
+    },
+    "generation": 39,
+    "migration_id": "d592ece82619b732551549364ffecaeb5df30d81e3cb4292f8cd8466ed8d7d6f",
+    "output_digest": "41276bff17572ab9a46711f7a245b8b527c5247452596ebc34c0b967fb74a82d",
+    "reason": "",
+    "runtime_available": false,
+    "source_id": "89d71ea5a5e5b6f60bc50dee929b5a023d9ed78e6daf0771932eaa252b9ffd55",
+    "storage_stage": "Ready",
+    "total_entries": 78,
+    "work_phase": 3,
+    "zero_migration_native_calls": true
+  },
+  "warm": {
+    "backend": {
+      "growth_bytes": 0,
+      "growth_nanos": 0,
+      "last_failure": null,
+      "last_requested_length": 0,
+      "length": 569344,
+      "max_growth": 0,
+      "physical_quota": 51539607552,
+      "read_bytes": 360777,
+      "reads": 86,
+      "set_len_calls": 0,
+      "sync_calls": 13,
+      "sync_nanos": 23663100,
+      "write_bytes": 974912,
+      "writes": 238
+    },
+    "config_hash": "f10186450878be67e7456fe6be0f65ad7a24d7e3cd1c85f037b2779700a7a386",
+    "config_revision": 1,
+    "contexts": [
+      {
+        "active": true,
+        "context": "23af99c2179d0a1d5afcb0603df2377e608152572c3adeb3a79ab7630310abc2",
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            3,
+            0
+          ],
+          "sources": 5
+        },
+        "current_consent": "337a8bb888a851ef59f60d98e00ffa3b3ad58fd4a155c4f132b9c1ed17a19adc",
+        "d": "d3470a398d9297cee2c0d3990a97521c9c2863e65fce61fce9ef1476c182c7d5",
+        "e": "5f01cc6fc36579a662e931d2fc95101592aa60bc954bb0f70c497a4dbb731731",
+        "enabled": true,
+        "handoff": "UnsupportedInCut2",
+        "head_pending": null,
+        "lease_current": true,
+        "lease_generation": 1,
+        "mode": "L1",
+        "native": {
+          "keys": [
+            "725487914298ad5ec3a205b6099f553537e932fe128e10f0ec50d384e49ad679",
+            "fa4adc88190515644b4f8206d0e41f7ab582fc7b91c8a0c11b86ce194c5b6449",
+            "e472f161abda70906600851dae138b1114d66e49870c2c13592e40f07f5de44d"
+          ],
+          "own_next": 4,
+          "peer_next": 1,
+          "sid": "ZHWOKJI11nwbNOM20mYNUNBKXPTxEI3XSNut3csLhBo"
+        },
+        "native_generation": 6,
+        "native_hash": "32024ac8a46a0c3d2afd59c4355b7324888d8bd7e2a6ed028a85ba7d07a06169",
+        "next": [
+          4,
+          1
+        ],
+        "own_locator_revision": 2,
+        "peer_locator_revision": 2,
+        "phase": 3,
+        "policy_error": null,
+        "policy_generation": 3,
+        "provenance": "LegacySnapshot/FullL1",
+        "publication_ready": true,
+        "repair_free": 67108864,
+        "role": 0,
+        "sid": "ZHWOKJI11nwbNOM20mYNUNBKXPTxEI3XSNut3csLhBo",
+        "slot": 0,
+        "wall_high_water": 1792989181,
+        "wire_stage": 1
+      },
+      {
+        "active": true,
+        "context": "2fdc4a54c06edab18d2dc060f1a82efa67a1d2525b072be9717e01dd9c7ab35b",
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            1,
+            1
+          ],
+          "sources": 4
+        },
+        "current_consent": "6159ab8053a81c964e72c7eada39882796e18da87a14f13e484c11b306437439",
+        "d": "29c2ec7ff863e13f3814f4c84dbf4794ff5094edb9db7a89c60049cfa65e3731",
+        "e": "7677d09150f187be252c305f36f5ef36a628a2f62946cc1c6c2e5fcdda86160c",
+        "enabled": true,
+        "handoff": "UnsupportedInCut2",
+        "head_pending": null,
+        "lease_current": false,
+        "lease_generation": null,
+        "mode": "L1",
+        "native": null,
+        "native_generation": 4,
+        "native_hash": "587e2eee6a4fa52a1f5aae711ca16f5e7eb3e03903fcf2c58ceb41ee436d7b67",
+        "next": [
+          2,
+          2
+        ],
+        "own_locator_revision": 1,
+        "peer_locator_revision": 2,
+        "phase": 3,
+        "policy_error": "Blocked: signed fork evidence",
+        "policy_generation": 1,
+        "provenance": "LegacySnapshot/FullL1",
+        "publication_ready": false,
+        "repair_free": 67108864,
+        "role": 1,
+        "sid": "O8bb/j7T9mo9rzXHaEbDQqiK5VXAymPmprI/JPMK8zg",
+        "slot": 1,
+        "wall_high_water": 0,
+        "wire_stage": 1
+      }
+    ],
+    "profile_mode": "ordered-dialog-indexed",
+    "resources": {
+      "bidi_limit": 4,
+      "connection_limit": 2,
+      "connections": 1,
+      "frame_limit": 1048576,
+      "mailbox": 2,
+      "mailbox_limit": 16,
+      "peak_connections": 1,
+      "peak_mailbox": 4,
+      "refused_before_spawn": 0,
+      "uni_limit": 0
+    },
+    "root_generation": 51,
+    "source_id": "89d71ea5a5e5b6f60bc50dee929b5a023d9ed78e6daf0771932eaa252b9ffd55",
+    "stats": {
+      "aborted_packet_calls": 0,
+      "account_constructors": 0,
+      "admissions": 1,
+      "ambiguous_packet_calls": 0,
+      "committed_decrypt": 0,
+      "committed_encrypt": 1,
+      "inbound_constructors": 0,
+      "materialized": 1,
+      "max_commit_app_bytes": 52215606,
+      "max_native_bytes": 3128,
+      "outbound_constructors": 0,
+      "packet_attempts": 1,
+      "readable": 0,
+      "reopens": 0
+    },
+    "storage_stage": "Ready",
+    "version": 3,
+    "window": [
+      [
+        64,
+        64
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        2,
+        0
+      ]
+    ]
+  }
+}

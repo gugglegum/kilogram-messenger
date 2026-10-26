@@ -1,0 +1,1230 @@
+{
+  "classification": "post-failure-public-evidence-observation-not-parent-result-or-new-run",
+  "case": "F-exhausted-boundary-03",
+  "whole_verdict": "FAIL",
+  "case_record": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03.json",
+    "bytes": 12386,
+    "sha256": "6da9c4ae43dad5234df1da2aba156e0a972a7d3895069d4cf87fcdbe7932cb48"
+  },
+  "case_log": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03.log",
+    "bytes": 4493,
+    "sha256": "739839e858e1a5131e0bbe09063851f4fc2ab193d96297fd2466679b78f4a38f"
+  },
+  "field_elapsed_seconds": 649.592232,
+  "functional_harness_elapsed_seconds": 641.54,
+  "functional_harness_exit_code": 101,
+  "deadline": {
+    "work_seconds": 780,
+    "whole_seconds": 800,
+    "work_expired": false,
+    "owned_children_after_cleanup": 0,
+    "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary-continuation-review-2.md",
+    "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+  },
+  "failure": "Private checkpoint preservation Get-FileHash could not read boundary-phases.jsonl while the controller retained its writer handle.",
+  "failure_classification": "evidence-preservation failure; no timeout or independent product-crash verdict",
+  "last_failed_phase": [
+    {
+      "detail": {
+        "error": "CLI [\"-NoProfile\", \"-NonInteractive\", \"-File\", \"E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\scripts/preserve-migration-s5-l1-input.ps1\", \"-InputDirectory\", \"E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\.tmp/migration-s5-storage\\\\l1-exhausted-observed-NCjBHb\", \"-OutputDirectory\", \"E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\.tmp/migration-s5-preserved\\\\F-exhausted-boundary-03-checkpoint\", \"-OwnedLockOne\", \"\\\\\\\\?\\\\E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\.tmp\\\\migration-s5-storage\\\\l1-exhausted-observed-NCjBHb\\\\one\\\\state\\\\.kilogram-state.lock\", \"-OwnedLockTwo\", \"\\\\\\\\?\\\\E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\.tmp\\\\migration-s5-storage\\\\l1-exhausted-observed-NCjBHb\\\\two\\\\state\\\\.kilogram-state.lock\"]:  Get-FileHash: E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\preserve-migration-s5-l1-input.ps1:30\r\nLine |\r\n  30 |  : else{$hash=(Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName). :\r\n     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n     | The process cannot access the file\r\n     | 'E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\boundary-phases.jsonl' because it is being used by another process.\r\n",
+        "phase_seconds": 0.7394024
+      },
+      "elapsed_seconds": 641.5285082,
+      "phase": "checkpoint.private_preservation",
+      "state": "error"
+    }
+  ],
+  "last_completed_phase": [
+    {
+      "detail": {
+        "phase_seconds": 0.0003378
+      },
+      "elapsed_seconds": 640.7868202,
+      "phase": "checkpoint.info",
+      "state": "end"
+    }
+  ],
+  "active_base": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb",
+  "controller_source": {
+    "path": "apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs",
+    "bytes": 40620,
+    "sha256": "c3e044594d43bcbf60b8055ba203aa8e23220f3b92b35d75f9bbfc049aae0977"
+  },
+  "preservation_helper": {
+    "path": "scripts/preserve-migration-s5-l1-input.ps1",
+    "bytes": 5011,
+    "sha256": "25fe5a7c80821fb83a0fab5117585a48e6afe729094c1d45931aaa1556b044f3"
+  },
+  "phase_trace_writer_lifetime": "Phases owns std::fs::File through checkpoint.private_preservation and drops on test return. Exact source retained; no fix applied.",
+  "preservation_output_directory": ".tmp/migration-s5-preserved/F-exhausted-boundary-03-checkpoint",
+  "preservation_output_exists": false,
+  "parent_result_exists": false,
+  "exports": [
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\boundary-phases.jsonl",
+        "bytes": 31316,
+        "sha256": "940df52d347a96dcb48d1f62b7fbe2cdfc5440a62f96868f4872aa86de94c4af"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-phases.jsonl",
+        "bytes": 31316,
+        "sha256": "940df52d347a96dcb48d1f62b7fbe2cdfc5440a62f96868f4872aa86de94c4af"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\checkpoint-info.json",
+        "bytes": 1614,
+        "sha256": "2b359e4623b2e603977342df69f441e35e0276643ee420a751a3515e361771b3"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-checkpoint-info.json",
+        "bytes": 1614,
+        "sha256": "2b359e4623b2e603977342df69f441e35e0276643ee420a751a3515e361771b3"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\origin-before-verified.json",
+        "bytes": 1883572,
+        "sha256": "cd7f2f4379be0c972083a03fe94346600afea091dbcd371fa3b910d51ba645be"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-origin-before-verified.json",
+        "bytes": 1883572,
+        "sha256": "cd7f2f4379be0c972083a03fe94346600afea091dbcd371fa3b910d51ba645be"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\origin-after-verified.json",
+        "bytes": 1883572,
+        "sha256": "cd7f2f4379be0c972083a03fe94346600afea091dbcd371fa3b910d51ba645be"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-origin-after-verified.json",
+        "bytes": 1883572,
+        "sha256": "cd7f2f4379be0c972083a03fe94346600afea091dbcd371fa3b910d51ba645be"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\indexed-reconnect.schedule.json",
+        "bytes": 95,
+        "sha256": "0abf251dadfdfda73ccd3442f13dd0b51f7a82c6d7491f96d1b3bb9b1348d7ab"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-indexed-reconnect.schedule.json",
+        "bytes": 95,
+        "sha256": "0abf251dadfdfda73ccd3442f13dd0b51f7a82c6d7491f96d1b3bb9b1348d7ab"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\b-first-public-owner.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-b-first-public-owner.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\b-first-public-owner.stdout.log",
+        "bytes": 260,
+        "sha256": "46874e20b6afce6d86323217a43b95f58840ba90e5c5a16612283824162a8e77"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-b-first-public-owner.stdout.log",
+        "bytes": 260,
+        "sha256": "46874e20b6afce6d86323217a43b95f58840ba90e5c5a16612283824162a8e77"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\frozen-b.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-frozen-b.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\frozen-b.stdout.log",
+        "bytes": 250,
+        "sha256": "e38d72bb93455dc05eb67a55ab0021cf249cad1218b69b2d6ce506b051cafa67"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-frozen-b.stdout.log",
+        "bytes": 250,
+        "sha256": "e38d72bb93455dc05eb67a55ab0021cf249cad1218b69b2d6ce506b051cafa67"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\indexed-b-reopened.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-indexed-b-reopened.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\indexed-b-reopened.stdout.log",
+        "bytes": 260,
+        "sha256": "9195479dfb4922ebe157d5cf7ba9512a1654eabeb22f180482dd0dd441f828a5"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-indexed-b-reopened.stdout.log",
+        "bytes": 260,
+        "sha256": "9195479dfb4922ebe157d5cf7ba9512a1654eabeb22f180482dd0dd441f828a5"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\migration-b.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-migration-b.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\migration-b.stdout.log",
+        "bytes": 968,
+        "sha256": "cdf69b5ad8543ec1b5e9e03353533a263eb9d928aefc2e9e08f9890c9b09c83d"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-migration-b.stdout.log",
+        "bytes": 968,
+        "sha256": "cdf69b5ad8543ec1b5e9e03353533a263eb9d928aefc2e9e08f9890c9b09c83d"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\a-first-public-owner.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-a-first-public-owner.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\a-first-public-owner.stdout.log",
+        "bytes": 260,
+        "sha256": "fae56826d2195f1f20007b8f8c93e840acd04838e2f52c0e68c51544277e70f4"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-a-first-public-owner.stdout.log",
+        "bytes": 260,
+        "sha256": "fae56826d2195f1f20007b8f8c93e840acd04838e2f52c0e68c51544277e70f4"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed-a-reopened.stderr.log",
+        "bytes": 6267,
+        "sha256": "c367e6a20c538518c7871da201e80d76075158e6219a3fd7b377c2709c0ff4d0"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-indexed-a-reopened.stderr.log",
+        "bytes": 6267,
+        "sha256": "c367e6a20c538518c7871da201e80d76075158e6219a3fd7b377c2709c0ff4d0"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed-a-reopened.stdout.log",
+        "bytes": 260,
+        "sha256": "602fed97bb5b013b7d859a405c6dbd30b57ea9f0daa939d38af9c7dc1aa33325"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-indexed-a-reopened.stdout.log",
+        "bytes": 260,
+        "sha256": "602fed97bb5b013b7d859a405c6dbd30b57ea9f0daa939d38af9c7dc1aa33325"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed-exhausted-a.stderr.log",
+        "bytes": 152,
+        "sha256": "6ad768b02ba8781f97479b761646aec82c0fd9d50e29f7b3ae5e302d8955e682"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-indexed-exhausted-a.stderr.log",
+        "bytes": 152,
+        "sha256": "6ad768b02ba8781f97479b761646aec82c0fd9d50e29f7b3ae5e302d8955e682"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed-exhausted-a.stdout.log",
+        "bytes": 260,
+        "sha256": "db3a47785e472a72b4bc048cf22f37e575785a00e916b4ed05ad6f378958312b"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-indexed-exhausted-a.stdout.log",
+        "bytes": 260,
+        "sha256": "db3a47785e472a72b4bc048cf22f37e575785a00e916b4ed05ad6f378958312b"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed-reconnect-barrier.log",
+        "bytes": 1778,
+        "sha256": "545f0849be3035bb86521b03bd3dce5fd972c472cce603f27ae5c722647c8b8f"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-indexed-reconnect-barrier.log",
+        "bytes": 1778,
+        "sha256": "545f0849be3035bb86521b03bd3dce5fd972c472cce603f27ae5c722647c8b8f"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\migration-a.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-migration-a.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\migration-a.stdout.log",
+        "bytes": 969,
+        "sha256": "7ca145d62530a84b3e0263a5f6f3fd20e6f9dd356bf10cf153f72396ced172cb"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-migration-a.stdout.log",
+        "bytes": 969,
+        "sha256": "7ca145d62530a84b3e0263a5f6f3fd20e6f9dd356bf10cf153f72396ced172cb"
+      }
+    }
+  ],
+  "phase_count": 170,
+  "phase_durations": [
+    {
+      "phase": "origin.raw_verify.before",
+      "state": "end",
+      "elapsed_seconds": 3.5376075,
+      "phase_seconds": 3.5304853
+    },
+    {
+      "phase": "copy.A",
+      "state": "end",
+      "elapsed_seconds": 5.0722577,
+      "phase_seconds": 1.5170544000000001
+    },
+    {
+      "phase": "copy.B",
+      "state": "end",
+      "elapsed_seconds": 6.4030819,
+      "phase_seconds": 1.3029312
+    },
+    {
+      "phase": "legacy.A.lock",
+      "state": "end",
+      "elapsed_seconds": 6.4326054,
+      "phase_seconds": 0.0003965
+    },
+    {
+      "phase": "legacy.A.vault_open",
+      "state": "end",
+      "elapsed_seconds": 20.0351272,
+      "phase_seconds": 13.600101
+    },
+    {
+      "phase": "legacy.A.engine_new",
+      "state": "end",
+      "elapsed_seconds": 20.1835761,
+      "phase_seconds": 0.1405239
+    },
+    {
+      "phase": "legacy.A.head",
+      "state": "end",
+      "elapsed_seconds": 20.194934,
+      "phase_seconds": 0.0074305
+    },
+    {
+      "phase": "legacy.A.raw_native",
+      "state": "end",
+      "elapsed_seconds": 20.2000623,
+      "phase_seconds": 0.0013584
+    },
+    {
+      "phase": "legacy.A.native_restore",
+      "state": "end",
+      "elapsed_seconds": 20.2072101,
+      "phase_seconds": 0.0032043
+    },
+    {
+      "phase": "legacy.A.identity_material",
+      "state": "end",
+      "elapsed_seconds": 20.2113122,
+      "phase_seconds": 0.0002263
+    },
+    {
+      "phase": "legacy.A.close",
+      "state": "end",
+      "elapsed_seconds": 20.2279612,
+      "phase_seconds": 0.012877
+    },
+    {
+      "phase": "legacy.A",
+      "state": "end",
+      "elapsed_seconds": 20.2299435,
+      "phase_seconds": 13.7994051
+    },
+    {
+      "phase": "legacy.B.lock",
+      "state": "end",
+      "elapsed_seconds": 20.2360328,
+      "phase_seconds": 0.0001982
+    },
+    {
+      "phase": "legacy.B.vault_open",
+      "state": "end",
+      "elapsed_seconds": 31.733309,
+      "phase_seconds": 11.4933711
+    },
+    {
+      "phase": "legacy.B.engine_new",
+      "state": "end",
+      "elapsed_seconds": 31.8880131,
+      "phase_seconds": 0.148225
+    },
+    {
+      "phase": "legacy.B.head",
+      "state": "end",
+      "elapsed_seconds": 31.8986272,
+      "phase_seconds": 0.0078133
+    },
+    {
+      "phase": "legacy.B.raw_native",
+      "state": "end",
+      "elapsed_seconds": 31.902307,
+      "phase_seconds": 0.0011449
+    },
+    {
+      "phase": "legacy.B.native_restore",
+      "state": "end",
+      "elapsed_seconds": 31.9072849,
+      "phase_seconds": 0.0023161
+    },
+    {
+      "phase": "legacy.B.identity_material",
+      "state": "end",
+      "elapsed_seconds": 31.9102226,
+      "phase_seconds": 0.0002342
+    },
+    {
+      "phase": "legacy.B.close",
+      "state": "end",
+      "elapsed_seconds": 31.9203335,
+      "phase_seconds": 0.0073216
+    },
+    {
+      "phase": "legacy.B",
+      "state": "end",
+      "elapsed_seconds": 31.9220381,
+      "phase_seconds": 11.6881868
+    },
+    {
+      "phase": "migration-a.until.fence-committed",
+      "state": "end",
+      "elapsed_seconds": 111.1579733,
+      "phase_seconds": 79.213816
+    },
+    {
+      "phase": "migration-a.until.copy-committed",
+      "state": "end",
+      "elapsed_seconds": 184.9421362,
+      "phase_seconds": 73.7804452
+    },
+    {
+      "phase": "migration-a.until.verify-staged",
+      "state": "end",
+      "elapsed_seconds": 220.0421583,
+      "phase_seconds": 35.097453
+    },
+    {
+      "phase": "migration-a.until.ready-staged",
+      "state": "end",
+      "elapsed_seconds": 308.8637411,
+      "phase_seconds": 88.8177381
+    },
+    {
+      "phase": "migration-a.until.ready-committed",
+      "state": "end",
+      "elapsed_seconds": 308.8966454,
+      "phase_seconds": 0.0290677
+    },
+    {
+      "phase": "migration-a.until.profile-staged",
+      "state": "end",
+      "elapsed_seconds": 308.9516832,
+      "phase_seconds": 0.0509875
+    },
+    {
+      "phase": "migration-a.until_exit",
+      "state": "end",
+      "elapsed_seconds": 309.0382241,
+      "phase_seconds": 0.0816162
+    },
+    {
+      "phase": "migration.A",
+      "state": "end",
+      "elapsed_seconds": 309.0528988,
+      "phase_seconds": 277.1241707
+    },
+    {
+      "phase": "owner.A.initialize_then_cold",
+      "state": "end",
+      "elapsed_seconds": 310.7582265,
+      "phase_seconds": 1.7003352
+    },
+    {
+      "phase": "owner.A.start",
+      "state": "end",
+      "elapsed_seconds": 311.4976402,
+      "phase_seconds": 0.7356759
+    },
+    {
+      "phase": "owner.frozen_B.start",
+      "state": "end",
+      "elapsed_seconds": 313.5794289,
+      "phase_seconds": 2.0770877
+    },
+    {
+      "phase": "interop.initial_frontiers",
+      "state": "end",
+      "elapsed_seconds": 314.3366385,
+      "phase_seconds": 0.3717926
+    },
+    {
+      "phase": "requests.initial_index",
+      "state": "end",
+      "elapsed_seconds": 314.4023088,
+      "phase_seconds": 0.0560858
+    },
+    {
+      "phase": "requests.refusal_before_reopen",
+      "state": "end",
+      "elapsed_seconds": 315.0091241,
+      "phase_seconds": 0.6017123
+    },
+    {
+      "phase": "history.original527",
+      "state": "end",
+      "elapsed_seconds": 321.2873298,
+      "phase_seconds": 6.2755362
+    },
+    {
+      "phase": "interop.actual_B17_receive_ACK",
+      "state": "end",
+      "elapsed_seconds": 326.4242187,
+      "phase_seconds": 5.1273644
+    },
+    {
+      "phase": "interop.stop_before_B_migration",
+      "state": "end",
+      "elapsed_seconds": 326.4580043,
+      "phase_seconds": 0.0297783
+    },
+    {
+      "phase": "legacy.B_after17.lock",
+      "state": "end",
+      "elapsed_seconds": 326.4640076,
+      "phase_seconds": 0.0002206
+    },
+    {
+      "phase": "legacy.B_after17.vault_open",
+      "state": "end",
+      "elapsed_seconds": 330.420101,
+      "phase_seconds": 3.9522351000000002
+    },
+    {
+      "phase": "legacy.B_after17.engine_new",
+      "state": "end",
+      "elapsed_seconds": 330.5676424,
+      "phase_seconds": 0.1403387
+    },
+    {
+      "phase": "legacy.B_after17.head",
+      "state": "end",
+      "elapsed_seconds": 330.5810545,
+      "phase_seconds": 0.0073516
+    },
+    {
+      "phase": "legacy.B_after17.raw_native",
+      "state": "end",
+      "elapsed_seconds": 330.5840249,
+      "phase_seconds": 0.0011595
+    },
+    {
+      "phase": "legacy.B_after17.native_restore",
+      "state": "end",
+      "elapsed_seconds": 330.5885917,
+      "phase_seconds": 0.0026183
+    },
+    {
+      "phase": "legacy.B_after17.identity_material",
+      "state": "end",
+      "elapsed_seconds": 330.5909764,
+      "phase_seconds": 0.0002865
+    },
+    {
+      "phase": "legacy.B_after17.close",
+      "state": "end",
+      "elapsed_seconds": 330.5987579,
+      "phase_seconds": 0.005558
+    },
+    {
+      "phase": "legacy.B_after17",
+      "state": "end",
+      "elapsed_seconds": 330.5998647,
+      "phase_seconds": 4.137968
+    },
+    {
+      "phase": "migration-b.until.fence-committed",
+      "state": "end",
+      "elapsed_seconds": 410.6866286,
+      "phase_seconds": 80.0735485
+    },
+    {
+      "phase": "migration-b.until.copy-committed",
+      "state": "end",
+      "elapsed_seconds": 485.0919975,
+      "phase_seconds": 74.4002324
+    },
+    {
+      "phase": "migration-b.until.verify-staged",
+      "state": "end",
+      "elapsed_seconds": 516.9939663,
+      "phase_seconds": 31.8982501
+    },
+    {
+      "phase": "migration-b.until.ready-staged",
+      "state": "end",
+      "elapsed_seconds": 605.3280783,
+      "phase_seconds": 88.3290425
+    },
+    {
+      "phase": "migration-b.until.ready-committed",
+      "state": "end",
+      "elapsed_seconds": 605.3593566,
+      "phase_seconds": 0.0285734
+    },
+    {
+      "phase": "migration-b.until.profile-staged",
+      "state": "end",
+      "elapsed_seconds": 605.411983,
+      "phase_seconds": 0.0488775
+    },
+    {
+      "phase": "migration-b.until_exit",
+      "state": "end",
+      "elapsed_seconds": 605.4764355,
+      "phase_seconds": 0.060625
+    },
+    {
+      "phase": "migration.B",
+      "state": "end",
+      "elapsed_seconds": 605.4883808,
+      "phase_seconds": 274.8862581
+    },
+    {
+      "phase": "owner.B.initialize_then_cold",
+      "state": "end",
+      "elapsed_seconds": 607.0311203,
+      "phase_seconds": 1.53876
+    },
+    {
+      "phase": "owner.A.reopen_traced",
+      "state": "end",
+      "elapsed_seconds": 608.1976442,
+      "phase_seconds": 1.1612182
+    },
+    {
+      "phase": "owner.B.reopen",
+      "state": "end",
+      "elapsed_seconds": 608.9357657,
+      "phase_seconds": 0.7343402
+    },
+    {
+      "phase": "both_indexed.fresh_reconnect_barrier",
+      "state": "end",
+      "elapsed_seconds": 615.6342077,
+      "phase_seconds": 6.2057349
+    },
+    {
+      "phase": "requests.refusal_after_reopen",
+      "state": "end",
+      "elapsed_seconds": 616.5974612,
+      "phase_seconds": 0.5385013
+    },
+    {
+      "phase": "history.frozen_suffix",
+      "state": "end",
+      "elapsed_seconds": 623.0306892,
+      "phase_seconds": 6.4252386
+    },
+    {
+      "phase": "history.A528",
+      "state": "end",
+      "elapsed_seconds": 629.4225731,
+      "phase_seconds": 6.3830453
+    },
+    {
+      "phase": "history.B528",
+      "state": "end",
+      "elapsed_seconds": 636.3201346,
+      "phase_seconds": 6.8914666
+    },
+    {
+      "phase": "owners.final_stop",
+      "state": "end",
+      "elapsed_seconds": 636.4158793,
+      "phase_seconds": 0.0282304
+    },
+    {
+      "phase": "receipt.A.cold",
+      "state": "end",
+      "elapsed_seconds": 637.010865,
+      "phase_seconds": 0.5907583
+    },
+    {
+      "phase": "receipt.B.cold",
+      "state": "end",
+      "elapsed_seconds": 637.5537331,
+      "phase_seconds": 0.5390739
+    },
+    {
+      "phase": "origin.raw_verify.after",
+      "state": "end",
+      "elapsed_seconds": 640.7840042,
+      "phase_seconds": 3.2263836
+    },
+    {
+      "phase": "checkpoint.info",
+      "state": "end",
+      "elapsed_seconds": 640.7868202,
+      "phase_seconds": 0.0003378
+    },
+    {
+      "phase": "checkpoint.private_preservation",
+      "state": "error",
+      "elapsed_seconds": 641.5285082,
+      "phase_seconds": 0.7394024
+    }
+  ],
+  "checkpoint_records": [
+    {
+      "detail": {
+        "exact_hit": "fence-committed",
+        "first_batch_only": false,
+        "observed_seconds": 111.149544,
+        "pid": 35068,
+        "pre_transaction_commit": false,
+        "publication_still_staged": false,
+        "target": "fence-committed"
+      },
+      "elapsed_seconds": 111.1495607,
+      "phase": "migration-a",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "copy-committed",
+        "observed_seconds": 111.149544,
+        "pre_transaction_commit": false,
+        "released_seconds": 111.155955,
+        "target": "fence-committed"
+      },
+      "elapsed_seconds": 111.1559621,
+      "phase": "migration-a",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "copy-committed",
+        "first_batch_only": true,
+        "observed_seconds": 184.9349193,
+        "pid": 35068,
+        "pre_transaction_commit": false,
+        "publication_still_staged": false,
+        "target": "copy-committed"
+      },
+      "elapsed_seconds": 184.9349436,
+      "phase": "migration-a",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "verify-staged",
+        "observed_seconds": 184.9349193,
+        "pre_transaction_commit": false,
+        "released_seconds": 184.9407395,
+        "target": "copy-committed"
+      },
+      "elapsed_seconds": 184.9407443,
+      "phase": "migration-a",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "verify-staged",
+        "first_batch_only": false,
+        "observed_seconds": 220.0338151,
+        "pid": 35068,
+        "pre_transaction_commit": true,
+        "publication_still_staged": false,
+        "target": "verify-staged"
+      },
+      "elapsed_seconds": 220.0338289,
+      "phase": "migration-a",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "ready-staged",
+        "observed_seconds": 220.0338151,
+        "pre_transaction_commit": true,
+        "released_seconds": 220.040194,
+        "target": "verify-staged"
+      },
+      "elapsed_seconds": 220.0401984,
+      "phase": "migration-a",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "ready-staged",
+        "first_batch_only": false,
+        "observed_seconds": 308.8554094,
+        "pid": 35068,
+        "pre_transaction_commit": true,
+        "publication_still_staged": false,
+        "target": "ready-staged"
+      },
+      "elapsed_seconds": 308.8554233,
+      "phase": "migration-a",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "ready-committed",
+        "observed_seconds": 308.8554094,
+        "pre_transaction_commit": true,
+        "released_seconds": 308.8617816,
+        "target": "ready-staged"
+      },
+      "elapsed_seconds": 308.8617873,
+      "phase": "migration-a",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "ready-committed",
+        "first_batch_only": false,
+        "observed_seconds": 308.8878117,
+        "pid": 35068,
+        "pre_transaction_commit": false,
+        "publication_still_staged": false,
+        "target": "ready-committed"
+      },
+      "elapsed_seconds": 308.8878265,
+      "phase": "migration-a",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "profile-staged",
+        "observed_seconds": 308.8878117,
+        "pre_transaction_commit": false,
+        "released_seconds": 308.8944747,
+        "target": "ready-committed"
+      },
+      "elapsed_seconds": 308.8944808,
+      "phase": "migration-a",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "profile-staged",
+        "first_batch_only": false,
+        "observed_seconds": 308.9417131,
+        "pid": 35068,
+        "pre_transaction_commit": false,
+        "publication_still_staged": true,
+        "target": "profile-staged"
+      },
+      "elapsed_seconds": 308.9417288,
+      "phase": "migration-a",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "observation-released",
+        "observed_seconds": 308.9417131,
+        "pre_transaction_commit": false,
+        "released_seconds": 308.9492002,
+        "target": "profile-staged"
+      },
+      "elapsed_seconds": 308.9492061,
+      "phase": "migration-a",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "fence-committed",
+        "first_batch_only": false,
+        "observed_seconds": 410.6758147,
+        "pid": 2812,
+        "pre_transaction_commit": false,
+        "publication_still_staged": false,
+        "target": "fence-committed"
+      },
+      "elapsed_seconds": 410.6758301,
+      "phase": "migration-b",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "copy-committed",
+        "observed_seconds": 410.6758147,
+        "pre_transaction_commit": false,
+        "released_seconds": 410.6840304,
+        "target": "fence-committed"
+      },
+      "elapsed_seconds": 410.6840356,
+      "phase": "migration-b",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "copy-committed",
+        "first_batch_only": true,
+        "observed_seconds": 485.0839017,
+        "pid": 2812,
+        "pre_transaction_commit": false,
+        "publication_still_staged": false,
+        "target": "copy-committed"
+      },
+      "elapsed_seconds": 485.0839167,
+      "phase": "migration-b",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "verify-staged",
+        "observed_seconds": 485.0839017,
+        "pre_transaction_commit": false,
+        "released_seconds": 485.0899759,
+        "target": "copy-committed"
+      },
+      "elapsed_seconds": 485.089982,
+      "phase": "migration-b",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "verify-staged",
+        "first_batch_only": false,
+        "observed_seconds": 516.9831253,
+        "pid": 2812,
+        "pre_transaction_commit": true,
+        "publication_still_staged": false,
+        "target": "verify-staged"
+      },
+      "elapsed_seconds": 516.9831394,
+      "phase": "migration-b",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "ready-staged",
+        "observed_seconds": 516.9831253,
+        "pre_transaction_commit": true,
+        "released_seconds": 516.9912354,
+        "target": "verify-staged"
+      },
+      "elapsed_seconds": 516.9912412,
+      "phase": "migration-b",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "ready-staged",
+        "first_batch_only": false,
+        "observed_seconds": 605.3220488,
+        "pid": 2812,
+        "pre_transaction_commit": true,
+        "publication_still_staged": false,
+        "target": "ready-staged"
+      },
+      "elapsed_seconds": 605.3220635,
+      "phase": "migration-b",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "ready-committed",
+        "observed_seconds": 605.3220488,
+        "pre_transaction_commit": true,
+        "released_seconds": 605.3265799,
+        "target": "ready-staged"
+      },
+      "elapsed_seconds": 605.3265862,
+      "phase": "migration-b",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "ready-committed",
+        "first_batch_only": false,
+        "observed_seconds": 605.3509614,
+        "pid": 2812,
+        "pre_transaction_commit": false,
+        "publication_still_staged": false,
+        "target": "ready-committed"
+      },
+      "elapsed_seconds": 605.3509699,
+      "phase": "migration-b",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "profile-staged",
+        "observed_seconds": 605.3509614,
+        "pre_transaction_commit": false,
+        "released_seconds": 605.3573027,
+        "target": "ready-committed"
+      },
+      "elapsed_seconds": 605.3573078,
+      "phase": "migration-b",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "profile-staged",
+        "first_batch_only": false,
+        "observed_seconds": 605.4037148,
+        "pid": 2812,
+        "pre_transaction_commit": false,
+        "publication_still_staged": true,
+        "target": "profile-staged"
+      },
+      "elapsed_seconds": 605.4037289,
+      "phase": "migration-b",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "observation-released",
+        "observed_seconds": 605.4037148,
+        "pre_transaction_commit": false,
+        "released_seconds": 605.4099728,
+        "target": "profile-staged"
+      },
+      "elapsed_seconds": 605.4099776,
+      "phase": "migration-b",
+      "state": "checkpoint_released"
+    }
+  ],
+  "migration_reported": [
+    {
+      "side": "A",
+      "storage_stage": "Ready",
+      "zero_migration_native_calls": true
+    },
+    {
+      "side": "B",
+      "storage_stage": "Ready",
+      "zero_migration_native_calls": true
+    }
+  ],
+  "cleanup_records": [
+    {
+      "detail": {
+        "child_waited": true,
+        "control": "observation-released",
+        "exit_code": 0,
+        "hit_absent": true,
+        "pid": 35068
+      },
+      "elapsed_seconds": 309.0464041,
+      "phase": "migration-a.cleanup",
+      "state": "end"
+    },
+    {
+      "detail": {
+        "child_waited": true,
+        "control": "observation-released",
+        "exit_code": 0,
+        "hit_absent": true,
+        "pid": 2812
+      },
+      "elapsed_seconds": 605.4829314,
+      "phase": "migration-b.cleanup",
+      "state": "end"
+    }
+  ],
+  "controls": [
+    {
+      "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\migration-a.control",
+      "content": "observation-released",
+      "hit_exists": false
+    },
+    {
+      "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\migration-b.control",
+      "content": "observation-released",
+      "hit_exists": false
+    }
+  ],
+  "cold_checkpoint_info": {
+    "a_profile": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed.profile",
+    "active_base": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-exhausted-observed-NCjBHb",
+    "actual_b_next": 18,
+    "b_profile": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\indexed.profile",
+    "classification": "stopped-indexed-exhausted-checkpoint",
+    "cold_a": {
+      "counts": {
+        "debt": 0,
+        "pending": 0,
+        "queued": 0,
+        "receipts": [
+          511,
+          17
+        ],
+        "sources": 530
+      },
+      "native_generation": 517,
+      "native_hash": "6c50ea198a9d1c9fc6338c873a7bcda7d169c421d32d65fbe5369c3695c2d247",
+      "next": [
+        512,
+        18
+      ],
+      "receipt_hash": "338a74bcbee1249cb1655fa21962833d6d680394769861ca2df4ab98475a4760"
+    },
+    "cold_b": {
+      "counts": {
+        "debt": 0,
+        "pending": 0,
+        "queued": 0,
+        "receipts": [
+          511,
+          17
+        ],
+        "sources": 530
+      },
+      "native_generation": 88,
+      "native_hash": "e6e4abc55d1216a3514b40261005d6eb29e9fdecbc0312a78bddfc21fccccf1f",
+      "next": [
+        512,
+        18
+      ],
+      "receipt_hash": "338a74bcbee1249cb1655fa21962833d6d680394769861ca2df4ab98475a4760"
+    },
+    "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+    "cut_a": 512,
+    "no_handoff_or_Event2": true,
+    "restore_rule": "Private backup is never opened. Future reuse restores bytes to these exact original absolute paths; one active branch per Native domain. Root7 pins paths."
+  },
+  "persisted_reconnect_snapshot": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-indexed-reconnect-barrier.log",
+    "bytes": 1778,
+    "sha256": "545f0849be3035bb86521b03bd3dce5fd972c472cce603f27ae5c722647c8b8f"
+  },
+  "persisted_successful_resume_lines": [
+    "l1_rpc kind=9 stage=finished millis=581 result=reply9"
+  ],
+  "before_after_public_manifests_identical": true,
+  "post_attempt_source_image_bindings_verified": 54,
+  "input_mismatches": [],
+  "unchanged_product_inputs_verified": 33,
+  "unchanged_product_images_verified": 8,
+  "unchanged_protected_historical_refs_verified": 49,
+  "test_harness": {
+    "path": "target/verification/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+    "bytes": 13935104,
+    "sha256": "83429f6d41f566aadfdaddea0b862a0fe71120beec875560f6d9463dfdd932d0"
+  },
+  "ledger": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\contributing-cases.json",
+    "bytes": 419189,
+    "sha256": "acd66ac604bb83cfee19d99a26122ce5f345b2d4f3eea4d0791e644869251f6e"
+  },
+  "charges": {
+    "F": 3263.7458077,
+    "P": 0,
+    "C": 147.8846192
+  },
+  "ceilings": {
+    "F": 3650,
+    "P": 0,
+    "C": 500
+  },
+  "remaining_F": 386.2541923,
+  "known_live_kilogram_processes": [],
+  "limits": [
+    "Whole remains FAIL with no accepted partial substitute. Phase completions and recorded checkpoint-info/Resume snapshot are retained observations for root review, not a fabricated parent result.",
+    "All detailed status/history/session/barrier return objects intended for parent-exhausted-result remained in RAM and were lost on failure. Do not reconstruct them as original observations.",
+    "Private checkpoint output directory and preservation inventory are absent; helper failed during initial source inventory before its New-Item/copy sequence. It was not rerun after controller exit.",
+    "Only existing public logs/checkpoint-info/schedule/raw verification manifests were read/copied after failure. No Native/repository typed open, raw fixture-state traversal, backup, repair or resume was performed afterward.",
+    "Original raw verification completed both before and after within the charged attempt; no additional origin traversal was run after completion.",
+    "Exactly one actual case03 ran after direct human native approval. Prior prelaunch denial remains non-contributing. All failures stay fully charged, with no new attempt/refund.",
+    "No source or product fix, C/F, compile, product build, deadline probe, whole-P/cut3, implementation report/candidate allowlist completion or commit/push followed this FAIL.",
+    "Runner649.592232 excludes terminal case/ledger publication tail as previously disclosed; independent whole800 watchdog covered finalization."
+  ]
+}

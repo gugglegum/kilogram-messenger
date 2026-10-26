@@ -1,0 +1,179 @@
+{
+  "classification": "public-origin-provenance-summary-private-DBs-not-exported",
+  "case": "F-exhausted-origin-01",
+  "case_sha256": "e1acc55360a45c386dde029c2f9be35cbbdacc08bd2a076a1812ac6c692d5135",
+  "whole_result": "PASS",
+  "elapsed_seconds": 481.4608671,
+  "deadline": {
+    "work_seconds": 850,
+    "whole_seconds": 900,
+    "work_expired": false,
+    "owned_children_after_cleanup": 0,
+    "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-4.md",
+    "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+  },
+  "actual_execution_approval": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/F-exhausted-origin-01-root-go-ahead.json",
+    "sha256": "0268238aec8eb090e5d466ec6b7990f5ab9f8836f6dbcb96c93568e25c7044b7",
+    "execution_mode": "NativeToken",
+    "approval_provenance": "require_escalated tool invocation and separate root go-ahead; declaration is not token introspection",
+    "small_evidence_acceptance": "Ready02 and capacity01 remain whole FAIL, scoped functional acceptance only under continuation3/4"
+  },
+  "root_decision_sha256": "7d0e5ef82f6a463729778e2250c7b4f3e88266e51ff3b61d15d47e342569777b",
+  "original_directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-l1\\F-exhausted-origin-01",
+  "original_open_rule": "Never typed-open this frozen original; future single active copy only after separate root approval.",
+  "producer": {
+    "two": {
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-baseline\\kilogram-cli.exe"
+    },
+    "one": {
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-baseline\\kilogram-cli.exe"
+    }
+  },
+  "driver_sha256": "ca4336d26efd922ec5a2a8f68caf7812324966cd0a44481699003192a8abf405",
+  "driver_head": "73c499818ba9b699c331aa842e64e8432e90c59a",
+  "frozen_inventory_path": ".tmp\\migration-s5-l1\\F-exhausted-origin-01\\frozen-origin.json",
+  "frozen_inventory_bytes": 1884557,
+  "frozen_inventory_sha256": "73c38f113a7e663d00bba36ae0116a292b7ec0511d4e23b79729f60cf87e2995",
+  "frozen_file_count": 6944,
+  "frozen_total_file_bytes": 17855269.0,
+  "vault_file_bytes": [
+    5066752,
+    9834496
+  ],
+  "stopped_processes": [
+    {
+      "pid": 1140,
+      "has_exited": true
+    },
+    {
+      "pid": 37368,
+      "has_exited": true
+    }
+  ],
+  "C": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+  "elected_A": "two",
+  "elected_B": "one",
+  "texts_by_actual_request_prefix": {
+    "A": 511,
+    "B": 16
+  },
+  "exact_history_count": 527,
+  "exact_event_request_unique": 527,
+  "refusal_retry_conflict": {
+    "new_request": "UpgradeRequired",
+    "exact_old_request": "00000000000000020000000000000001",
+    "old_retry_preserved": true,
+    "changed_body": "RequestIdConflict",
+    "before_a": {
+      "commits": 1563,
+      "contexts": [
+        {
+          "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+          "head_credit_bytes": 65536,
+          "head_used": 0,
+          "native_generation": 516,
+          "ordinary_pending": 0,
+          "ordinary_pending_bytes": 0,
+          "own_generation": 2,
+          "peer_generation": 1,
+          "pending": 0,
+          "phase": 3,
+          "receive_next": 17,
+          "send_next": 512,
+          "session_id": "TflibOtoo5vbulwTkVuDsE6DrSVTFMHdGT2ZHDDx+oE",
+          "status": "UpgradeRequired",
+          "unacked": 0
+        }
+      ],
+      "profile_mode": "ordered-dialog-v1"
+    },
+    "after_a": {
+      "commits": 1563,
+      "contexts": [
+        {
+          "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+          "head_credit_bytes": 65536,
+          "head_used": 0,
+          "native_generation": 516,
+          "ordinary_pending": 0,
+          "ordinary_pending_bytes": 0,
+          "own_generation": 2,
+          "peer_generation": 1,
+          "pending": 0,
+          "phase": 3,
+          "receive_next": 17,
+          "send_next": 512,
+          "session_id": "TflibOtoo5vbulwTkVuDsE6DrSVTFMHdGT2ZHDDx+oE",
+          "status": "UpgradeRequired",
+          "unacked": 0
+        }
+      ],
+      "profile_mode": "ordered-dialog-v1"
+    },
+    "before_b": {
+      "commits": 773,
+      "contexts": [
+        {
+          "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+          "head_credit_bytes": 65536,
+          "head_used": 0,
+          "native_generation": 87,
+          "ordinary_pending": 0,
+          "ordinary_pending_bytes": 0,
+          "own_generation": 1,
+          "peer_generation": 2,
+          "pending": 0,
+          "phase": 3,
+          "receive_next": 512,
+          "send_next": 17,
+          "session_id": "TflibOtoo5vbulwTkVuDsE6DrSVTFMHdGT2ZHDDx+oE",
+          "status": "Active",
+          "unacked": 0
+        }
+      ],
+      "profile_mode": "ordered-dialog-v1"
+    },
+    "after_b": {
+      "commits": 773,
+      "contexts": [
+        {
+          "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+          "head_credit_bytes": 65536,
+          "head_used": 0,
+          "native_generation": 87,
+          "ordinary_pending": 0,
+          "ordinary_pending_bytes": 0,
+          "own_generation": 1,
+          "peer_generation": 2,
+          "pending": 0,
+          "phase": 3,
+          "receive_next": 512,
+          "send_next": 17,
+          "session_id": "TflibOtoo5vbulwTkVuDsE6DrSVTFMHdGT2ZHDDx+oE",
+          "status": "Active",
+          "unacked": 0
+        }
+      ],
+      "profile_mode": "ordered-dialog-v1"
+    },
+    "measurement": "actual d9b public Native generation/frontiers unchanged; no per-call Native telemetry claim"
+  },
+  "updated_charges": {
+    "F": 1925.8527127000002,
+    "P": 0,
+    "C": 147.8846192
+  },
+  "ceilings": {
+    "F": 2900,
+    "P": 0,
+    "C": 500
+  },
+  "remaining_F": 974.1472872999998,
+  "boundary140_plus_contingency225": 365,
+  "ledger_after_sha256": "fcba7db288c508e028604a355c49d6e0a33e3f835b10ba842127da422c1d98cd",
+  "boundary_executed": false,
+  "rule": "Only public result/history exports; all raw private files stay local. No kernel/packet-call claim beyond actual recorded measurements; terminal-publication timing boundary retained."
+}

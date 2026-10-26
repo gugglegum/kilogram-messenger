@@ -1,0 +1,533 @@
+//! One real exhausted origin, one active copy per Native domain. No handoff.
+use super::*;
+use kilogram_cli::ordered_dialog::{admin, engine::Engine, runtime7::Profile3, state};
+use kilogram_identity::DeviceId;
+use kilogram_protocol::ordered_dialog_v1 as wire;
+use std::collections::BTreeMap;
+use zeroize::Zeroizing;
+
+struct SourceNative {
+    head: state::Head,
+    nonce: wire::Id,
+    signing: Zeroizing<Vec<u8>>,
+    encryption: Zeroizing<Vec<u8>>,
+    public: Value,
+}
+fn legacy_native(node: &Node) -> Result<SourceNative> {
+    ensure!(!node.indexed, "cold source is actual V4 active copy only");
+    let engine = Engine::new(kilogram_state::OrderedVault::open(
+        kilogram_state::StateDirectoryLock::acquire(&node.branch.state)?,
+    )?)?;
+    let c = state::parse_id(&node.branch.context)?;
+    let head = engine.head(c)?;
+    let private = state::PrivateState::open(
+        &head,
+        engine.nonce,
+        engine.device.encryption(),
+        &admin::required(&engine.store, &state::native_path(c))?,
+    )?;
+    let session = private.session.as_ref().context("real source Session")?;
+    let guard = private.guard.as_ref().context("real source Guard1")?;
+    let public = json!({"context":node.branch.context,"account":node.branch.account,"device":node.branch.device,"role":head.role,"d":head.d.map(|v|state::hex(&v)),"e":head.e.map(|v|state::hex(&v)),"sid":session.sid(),"keys":session.keys().iter().map(|v|state::hex(v)).collect::<Vec<_>>(),"own_next":guard.own.next,"peer_next":guard.peer.next,"native_hash":head.blob.map(|v|state::hex(&v)),"native_generation":head.native_generation});
+    Ok(SourceNative {
+        head,
+        nonce: engine.nonce,
+        signing: Zeroizing::new(admin::required(&engine.store, "device-secret.key")?),
+        encryption: Zeroizing::new(admin::required(
+            &engine.store,
+            "device-encryption-secret.key",
+        )?),
+        public,
+    })
+}
+fn migrated_native(node: &Node, source: &SourceNative) -> Result<Value> {
+    let profile = Profile3::load(&node.profile)?;
+    let mut repo = profile.open(&node.profile)?;
+    let owner = repo.owner_material()?;
+    ensure!(
+        owner.nonce == source.nonce
+            && owner.account == state::parse_id(&node.branch.account)?
+            && owner.signing[..] == source.signing[..]
+            && owner.encryption[..] == source.encryption[..],
+        "migration replaced owner identity/nonce/secrets"
+    );
+    let snapshot = repo.snapshot(node.slot)?;
+    let h = state::Head::parse(
+        &snapshot.head,
+        source.head.c,
+        source.head.local_cert,
+        source.head.role,
+    )?;
+    ensure!(
+        h.d == source.head.d
+            && h.e == source.head.e
+            && h.sid == source.head.sid
+            && h.blob == source.head.blob
+            && h.native_generation == source.head.native_generation
+            && Some(wire::hash(
+                state::NATIVE_TAG,
+                snapshot
+                    .native
+                    .as_deref()
+                    .context("same actual Native blob")?
+            )) == source.head.blob,
+        "copy changed actual Native or D/E/SID"
+    );
+    Ok(
+        json!({"next":snapshot.meta.next,"counts":repo.counts(node.slot)?,"native_hash":h.blob.map(|v|state::hex(&v)),"native_generation":h.native_generation,"same_owner_secrets_and_nonce":true}),
+    )
+}
+fn same_session(node: &Node, status: &Value, source: &SourceNative) -> Result<()> {
+    let c = node.context(status)?;
+    ensure!(
+        c["sid"] == source.public["sid"]
+            && c["d"] == source.public["d"]
+            && c["e"] == source.public["e"]
+            && c["native"]["keys"] == source.public["keys"],
+        "actual public Session keys/D/E/SID changed"
+    );
+    for name in [
+        "account_constructors",
+        "outbound_constructors",
+        "inbound_constructors",
+    ] {
+        ensure!(
+            status["stats"][name] == 0,
+            "existing Native object recreated: {name}"
+        );
+    }
+    Ok(())
+}
+fn initialize_then_cold(node: &Node, source: &SourceNative, name: &str) -> Result<Value> {
+    // The real public owner initializes L1 metadata/request/history indexes.
+    // A cold repository read alone cannot stand in for this first owner turn.
+    let mut child = node.start(name)?;
+    let status = node.status()?;
+    same_session(node, &status, source)?;
+    ensure!(
+        node.context(&status)?["native_hash"] == source.public["native_hash"]
+            && status["stats"]["packet_attempts"] == 0,
+        "public initialization changed actual Native"
+    );
+    child.kill_wait()?;
+    let cold = migrated_native(node, source)?;
+    Ok(json!({"public_owner_initialization":status,"cold_copy_correspondence":cold}))
+}
+fn verify_origin(seed: &Path, base: &Path, phase: &str) -> Result<Value> {
+    let shell = PathBuf::from(
+        std::env::var_os("KILOGRAM_S5_POWERSHELL").context("dedicated parent PowerShell")?,
+    );
+    json_cli(
+        &shell,
+        &[
+            "-NoProfile".into(),
+            "-NonInteractive".into(),
+            "-File".into(),
+            text(&workspace().join("scripts/verify-migration-s5-l1-frozen-origin.ps1")),
+            "-InputDirectory".into(),
+            text(seed),
+            "-OutputManifest".into(),
+            text(&base.join(format!("origin-{phase}-verified.json"))),
+        ],
+    )
+}
+fn request_args(node: &Node, verb: &str, request: &str) -> Vec<String> {
+    vec![
+        "ordered".into(),
+        verb.into(),
+        "--ipc-file".into(),
+        text(&node.ipc),
+        "--slot".into(),
+        node.slot.to_string(),
+        "--request-id".into(),
+        request.into(),
+    ]
+}
+fn request(node: &Node, id: &str) -> Result<Value> {
+    json_cli(&current(), &request_args(node, "request-status3", id))
+}
+fn wait_index(node: &Node, child: &mut OwnedChild, last: &str) -> Result<()> {
+    let started = Instant::now();
+    loop {
+        child.alive()?;
+        if !request(node, last)?
+            .as_array()
+            .context("request option")?
+            .is_empty()
+        {
+            return Ok(());
+        }
+        ensure!(
+            started.elapsed() < Duration::from_secs(25),
+            "old request index preparation"
+        );
+        std::thread::sleep(Duration::from_millis(60));
+    }
+}
+fn exhausted_requests(node: &Node, old: &Value) -> Result<Value> {
+    let before = node.status()?;
+    let old_id = old["request_id"].as_str().context("old request ID")?;
+    let old_text = old["text"].as_str().context("old exact UTF8")?;
+    let mut args = request_args(node, "send3", "ed000000000000000000000000000200");
+    args.extend(["--text".into(), "new exhausted request must refuse".into()]);
+    ensure!(
+        rejected(&current(), &args)?.contains("UpgradeRequired"),
+        "new request must refuse"
+    );
+    let mut retry = request_args(node, "send3", old_id);
+    retry.extend(["--text".into(), old_text.into()]);
+    let exact = json_cli(&current(), &retry)?;
+    ensure!(
+        exact[1][0] == old["event_id"],
+        "old retry lost exact immutable ID"
+    );
+    let last = retry.len() - 1;
+    retry[last] = format!("{old_text}/changed");
+    ensure!(
+        rejected(&current(), &retry)?.contains("RequestIdConflict"),
+        "old request body conflict"
+    );
+    let old_status = request(node, old_id)?;
+    ensure!(
+        old_status[0][1][0] == old["event_id"] && old_status[0][2] == 1,
+        "exact old delivered request status"
+    );
+    ensure!(
+        request(node, "ed000000000000000000000000000200")? == json!([]),
+        "refused request was made durable"
+    );
+    let after = node.status()?;
+    let a = node.context(&before)?;
+    let z = node.context(&after)?;
+    ensure!(
+        a["next"] == z["next"]
+            && a["native_hash"] == z["native_hash"]
+            && a["native_generation"] == z["native_generation"]
+            && z["counts"]["queued"] == 0
+            && before["stats"]["packet_attempts"] == after["stats"]["packet_attempts"],
+        "exhausted refusal/retry invoked Native"
+    );
+    Ok(
+        json!({"before":before,"after":after,"old_retry":exact,"old_status":old_status,
+        "new_request_refused_before_packet":true,"changed_body_conflict":true}),
+    )
+}
+fn page(node: &Node, cursor: Option<&str>) -> Result<Value> {
+    let mut args = vec![
+        "ordered".into(),
+        "history3".into(),
+        "--ipc-file".into(),
+        text(&node.ipc),
+        "--slot".into(),
+        node.slot.to_string(),
+        "--limit".into(),
+        "32".into(),
+    ];
+    if let Some(cursor) = cursor {
+        args.extend(["--cursor".into(), cursor.into()]);
+    }
+    let raw = cli(&current(), &args)?;
+    ensure!(
+        raw.trim_end().len() <= 48 * 1024 - 64,
+        "actual escaped history JSON bound"
+    );
+    let page: Value = serde_json::from_str(&raw)?;
+    ensure!(
+        page["items"].as_array().context("items")?.len() <= 32,
+        "history page row bound"
+    );
+    Ok(page)
+}
+fn collect(node: &Node, first: Value) -> Result<Vec<Value>> {
+    let mut next = first;
+    let frontier = next["F"].clone();
+    let mut result = Vec::new();
+    for _ in 0..34 {
+        ensure!(next["F"] == frontier, "frozen history frontier changed");
+        result.extend(
+            next["items"]
+                .as_array()
+                .context("page items")?
+                .iter()
+                .cloned(),
+        );
+        if next["finished"] == true {
+            return Ok(result);
+        }
+        let cursor = next["cursor"]
+            .as_str()
+            .context("bounded cursor")?
+            .to_owned();
+        let following = page(node, Some(&cursor))?;
+        ensure!(
+            following["finished"] == true || following["cursor"] != cursor,
+            "nonfinal history cursor failed to advance"
+        );
+        next = following;
+    }
+    anyhow::bail!("bounded complete history page count")
+}
+fn exact_history(rows: &[Value], expected: &BTreeMap<String, (String, String)>) -> Result<()> {
+    let mut actual = BTreeMap::new();
+    for row in rows {
+        let id = row["id"].as_str().context("history ID")?.to_owned();
+        ensure!(
+            actual
+                .insert(
+                    id,
+                    (
+                        row["request"].as_str().context("request")?.to_owned(),
+                        row["text"].as_str().context("UTF8 text")?.to_owned()
+                    )
+                )
+                .is_none(),
+            "duplicate history ID"
+        );
+    }
+    ensure!(
+        &actual == expected,
+        "exact Event/request/UTF8 history mismatch"
+    );
+    Ok(())
+}
+fn cold_receipt(
+    node: &Node,
+    id: wire::Id,
+    signer: DeviceId,
+    source: &SourceNative,
+) -> Result<Value> {
+    let profile = Profile3::load(&node.profile)?;
+    let mut repo = profile.open(&node.profile)?;
+    let snapshot = repo.snapshot(node.slot)?;
+    let receipt = repo
+        .receipt(node.slot, 1, 17)?
+        .context("actual opposite-lane receipt17")?;
+    let r = wire::decode(&receipt, 1024)?;
+    let fields = r.fields(2)?;
+    let body = fields[0].fields(8)?;
+    signer.verify(
+        &wire::signing_bytes(wire::RECEIPT_SIGN, &fields[0], 1024)?,
+        fields[1].bytes()?,
+    )?;
+    ensure!(
+        body[0].uint()? == 1
+            && Some(body[1].fixed::<32>()?) == source.head.d
+            && Some(body[2].fixed::<32>()?) == source.head.e
+            && body[3].uint()? == 1
+            && body[4].uint()? == 17
+            && body[5].fixed::<32>()? == id,
+        "exact receipt source/scope"
+    );
+    let h = wire::decode(&snapshot.head, 2048)?;
+    Ok(
+        json!({"next":snapshot.meta.next,"counts":repo.counts(node.slot)?,
+        "native_generation":h.fields(13)?[6].uint()?,
+        "native_hash":snapshot.native.map(|v|state::hex(&wire::hash(state::NATIVE_TAG,&v))),
+        "receipt_hash":blake3::hash(&receipt).to_hex().to_string()}),
+    )
+}
+
+#[test]
+fn migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint() -> Result<()> {
+    let seed = PathBuf::from(
+        std::env::var_os("KILOGRAM_S5_FIXTURE_DIR").context("charged real511 origin")?,
+    );
+    let origin: Value = serde_json::from_slice(&std::fs::read(seed.join("result.json"))?)?;
+    ensure!(
+        origin["status"] == "PASS"
+            && origin["text_count"] == 527
+            && origin["duplex_requested_counts"]["A"] == 511
+            && origin["duplex_requested_counts"]["B"] == 16
+            && origin["exe_sha256"]
+                == "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+        "exact genuine asymmetric producer provenance"
+    );
+    let context = origin["context"].as_str().context("C")?;
+    let side_a = origin["elected_a"]["side"].as_str().context("elected A")?;
+    let side_b = origin["elected_b"]["side"].as_str().context("elected B")?;
+    ensure!(
+        side_a != side_b && [side_a, side_b].iter().all(|s| ["one", "two"].contains(s)),
+        "two actual sides"
+    );
+    let base = run_dir("l1-exhausted-")?;
+    println!(
+        "L1_EXHAUSTED active={} frozen_original={} original_typed_open=false",
+        base.display(),
+        seed.display()
+    );
+    let original_before = verify_origin(&seed, &base, "before")?;
+    let mut a = Node::from_seed(&seed, side_a, &base, context)?;
+    let mut b = Node::from_seed(&seed, side_b, &base, context)?;
+    let source_a = legacy_native(&a)?;
+    let source_b = legacy_native(&b)?;
+    ensure!(
+        source_a.head.role == 0
+            && source_b.head.role == 1
+            && source_a.public["own_next"] == 512
+            && source_a.public["peer_next"] == 17
+            && source_b.public["own_next"] == 17
+            && source_b.public["peer_next"] == 512,
+        "actual copied Native512/17 frontiers"
+    );
+    let old_history: Vec<Value> =
+        serde_json::from_slice(&std::fs::read(seed.join(format!("{side_a}.history.json")))?)?;
+    let old_request = old_history
+        .iter()
+        .find(|v| v["request_id"] == "00000000000000020000000000000001")
+        .context("actual earliest A Text request")?
+        .clone();
+    let mut expected = BTreeMap::new();
+    for row in &old_history {
+        ensure!(
+            expected
+                .insert(
+                    row["event_id"].as_str().context("old Event ID")?.to_owned(),
+                    (
+                        row["request_id"]
+                            .as_str()
+                            .context("old request")?
+                            .to_owned(),
+                        row["text"].as_str().context("old UTF8")?.to_owned()
+                    )
+                )
+                .is_none(),
+            "old duplicate"
+        );
+    }
+    ensure!(expected.len() == 527, "actual old527 Text rows");
+    let ready_a = a.migrate()?;
+    let copied_a = initialize_then_cold(&a, &source_a, "a-first-public-owner")?;
+    let mut ca = a.start("indexed-exhausted-a")?;
+    let mut cb = b.start("frozen-b")?;
+    b.import(&a)?;
+    a.import(&b)?;
+    let initial = a.wait(&mut ca, 512, 17)?;
+    b.wait(&mut cb, 17, 512)?;
+    same_session(&a, &initial, &source_a)?;
+    ensure!(
+        a.context(&initial)?["native_hash"] == source_a.public["native_hash"],
+        "Native changed before refusal"
+    );
+    wait_index(&a, &mut ca, "000000000000000200000000000001ff")?;
+    let refused_before = exhausted_requests(&a, &old_request)?;
+    let first = page(&a, None)?;
+    let old_rows = collect(&a, first.clone())?;
+    exact_history(&old_rows, &expected)?;
+    ensure!(
+        old_rows.iter().all(|v| v["proof_kind"] == "LegacySnapshot"),
+        "original immutable provenance"
+    );
+    let frozen_cursor = first["cursor"]
+        .as_str()
+        .context("old frozen cursor")?
+        .to_owned();
+    let prefix_len = first["items"].as_array().context("prefix")?.len();
+    let new_text = "frozen B may send17 while indexed A own lane is exhausted";
+    b.send(9001, new_text)?;
+    let received_a = a.wait(&mut ca, 512, 18)?;
+    b.wait(&mut cb, 18, 512)?;
+    same_session(&a, &received_a, &source_a)?;
+    ensure!(
+        received_a["stats"]["committed_encrypt"] == 0
+            && received_a["stats"]["committed_decrypt"] == 1,
+        "exhausted own lane interfered with actual opposite receive"
+    );
+    ca.kill_wait()?;
+    cb.kill_wait()?;
+    let source_b_after = legacy_native(&b)?;
+    ensure!(
+        source_b_after.public["keys"] == source_b.public["keys"]
+            && source_b_after.nonce == source_b.nonce
+            && source_b_after.signing[..] == source_b.signing[..]
+            && source_b_after.encryption[..] == source_b.encryption[..],
+        "frozen B identity/Session replaced"
+    );
+    let ready_b = b.migrate()?;
+    let copied_b = initialize_then_cold(&b, &source_b_after, "b-first-public-owner")?;
+    ca = a.start("indexed-a-reopened")?;
+    cb = b.start("indexed-b-reopened")?;
+    b.import(&a)?;
+    a.import(&b)?;
+    let reopened_a = a.wait(&mut ca, 512, 18)?;
+    let reopened_b = b.wait(&mut cb, 18, 512)?;
+    same_session(&a, &reopened_a, &source_a)?;
+    same_session(&b, &reopened_b, &source_b)?;
+    ensure!(
+        reopened_a["stats"]["packet_attempts"] == 0
+            && reopened_b["stats"]["packet_attempts"] == 0
+            && a.context(&reopened_a)?["native_hash"] == a.context(&received_a)?["native_hash"],
+        "reopen replayed Native"
+    );
+    let refused_after = exhausted_requests(&a, &old_request)?;
+    let suffix = collect(&a, page(&a, Some(&frozen_cursor))?)?;
+    ensure!(
+        suffix == old_rows[prefix_len..] && first["F"] == json!([512, 17]),
+        "exact old frozen suffix after append/reopen"
+    );
+    let rows_a = collect(&a, page(&a, None)?)?;
+    let rows_b = collect(&b, page(&b, None)?)?;
+    let added = rows_a
+        .iter()
+        .find(|v| v["request"] == "fa000000000000000000000000002329")
+        .context("actual B17")?;
+    ensure!(
+        added["ordinal"] == 17
+            && added["role"] == 1
+            && added["text"] == new_text
+            && added["proof_kind"] == "FullL1",
+        "actual new readable provenance"
+    );
+    let added_id = added["id"].as_str().context("new immutable ID")?.to_owned();
+    expected.insert(
+        added_id.clone(),
+        ("fa000000000000000000000000002329".into(), new_text.into()),
+    );
+    exact_history(&rows_a, &expected)?;
+    exact_history(&rows_b, &expected)?;
+    ensure!(
+        rows_a.len() == 528
+            && rows_b.len() == 528
+            && request(&b, "fa000000000000000000000000002329")?[0][2] == 1,
+        "real exact B17 ACK"
+    );
+    ca.kill_wait()?;
+    cb.kill_wait()?;
+    let id = state::parse_id(&added_id)?;
+    let signer = DeviceId::from_bytes(state::parse_id(&a.branch.device)?);
+    let cold_a = cold_receipt(&a, id, signer, &source_a)?;
+    let cold_b = cold_receipt(&b, id, signer, &source_a)?;
+    ensure!(
+        cold_a["receipt_hash"] == cold_b["receipt_hash"]
+            && cold_a["next"] == json!([512, 18])
+            && cold_b["next"] == json!([512, 18]),
+        "cold exact receipt/frontiers mismatch"
+    );
+    let original_after = verify_origin(&seed, &base, "after")?;
+    ensure!(
+        original_before["frozen_manifest_sha256"] == original_after["frozen_manifest_sha256"],
+        "frozen original changed"
+    );
+    std::fs::write(
+        base.join("checkpoint-info.json"),
+        serde_json::to_vec_pretty(&json!({
+        "classification":"stopped-indexed-exhausted-checkpoint","active_base":base,"a_profile":a.profile,
+        "b_profile":b.profile,"cut_a":512,"actual_b_next":18,"context":context,
+        "restore_rule":"Private backup is never opened. Future reuse restores bytes to these exact original absolute paths; one active branch per Native domain. Root7 pins paths.",
+        "no_handoff_or_Event2":true,"cold_a":cold_a,"cold_b":cold_b}))?,
+    )?;
+    let preserved = obligations::preserve_input(&base, "F-exhausted-boundary-01-checkpoint")?;
+    std::fs::write(
+        base.join("parent-exhausted-result.json"),
+        serde_json::to_vec_pretty(&json!({
+        "source_a":source_a.public,"source_b":source_b.public,"original_before":original_before,
+        "original_after":original_after,"ready_a":ready_a,"ready_b":ready_b,"copied_a":copied_a,"copied_b":copied_b,
+        "refused_before":refused_before,"refused_after":refused_after,"received_a":received_a,
+        "reopened_a":reopened_a,"reopened_b":reopened_b,"old_first_page":first,"old_suffix":suffix,
+        "history_a":rows_a,"history_b":rows_b,"cold_a":cold_a,"cold_b":cold_b,"checkpoint":preserved}))?,
+    )?;
+    println!(
+        "L1_EXHAUSTED PASS actual511_16=true next512_refusal_before_native=true opposite17_receive_ACK=true history527_528=true frozen_suffix=true stopped_checkpoint=true root={}",
+        base.display()
+    );
+    Ok(())
+}

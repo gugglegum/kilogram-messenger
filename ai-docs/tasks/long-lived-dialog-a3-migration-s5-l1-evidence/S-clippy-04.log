@@ -1,0 +1,24 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: used `unwrap()` on an `Option` value
+   --> apps\kilogram-cli\tests\support\migration_s5_l1.rs:218:43
+    |
+218 |             == origin[format!("final_{}", origin["elected_a"]["side"].as_str().unwrap())]["contexts"]
+    |                                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unwrap_used
+    = note: requested on the command line with `-D clippy::unwrap-used`
+
+error: used `unwrap()` on an `Option` value
+   --> apps\kilogram-cli\tests\support\migration_s5_l1.rs:273:9
+    |
+273 | /         ha["items"]
+274 | |             .as_array()
+275 | |             .unwrap()
+    | |_____________________^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unwrap_used
+
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...

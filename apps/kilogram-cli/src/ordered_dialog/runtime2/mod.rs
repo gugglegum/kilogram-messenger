@@ -21,7 +21,7 @@ mod public_import;
 mod resources;
 pub mod runtime;
 mod timing;
-mod window;
+pub(super) mod window;
 
 pub fn now() -> Result<u64> {
     if let Some(wall) = hooks::clock()? {

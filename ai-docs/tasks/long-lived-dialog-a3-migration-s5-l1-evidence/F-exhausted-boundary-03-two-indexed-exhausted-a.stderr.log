@@ -1,0 +1,4 @@
+l1_wait slot=0 LocatorRefreshRequired
+l1_wait slot=0 LocatorRefreshRequired
+l1_wait slot=0 LocatorRefreshRequired
+l1_wait slot=0 LocatorRefreshRequired

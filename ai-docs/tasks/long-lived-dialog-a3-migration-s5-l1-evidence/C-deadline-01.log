@@ -1,0 +1,18 @@
+{
+  "classification": "real-owned-process-deadline-mechanism-probe-no-Native",
+  "status": "PASS",
+  "cases": [
+    {
+      "mode": "Work",
+      "exit_code": 0,
+      "elapsed_seconds": 5.1359357,
+      "actual_child_and_descendant_stopped": true
+    },
+    {
+      "mode": "Whole",
+      "exit_code": 124,
+      "elapsed_seconds": 2.676914,
+      "actual_child_and_descendant_stopped": true
+    }
+  ]
+}

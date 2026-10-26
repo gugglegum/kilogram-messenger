@@ -1,0 +1,170 @@
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Checking kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+    Checking kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: file is loaded as a module multiple times: `apps\kilogram-cli\src\ordered_dialog\runtime2\window.rs`
+  |
+  = help: replace all but one `mod` item with `use` items
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#duplicate_mod
+  = note: `-D clippy::duplicate-mod` implied by `-D warnings`
+  = help: to override `-D warnings` add `#[allow(clippy::duplicate_mod)]`
+
+error: this function has too many arguments (8/7)
+  --> apps\kilogram-cli\src\ordered_dialog\runtime7\bootstrap.rs:60:5
+   |
+60 | /     pub(super) fn encrypt(
+61 | |         &mut self,
+62 | |         head: &Head,
+63 | |         private: &mut PrivateState,
+...  |
+68 | |         sequence: u64,
+69 | |     ) -> Result<Event> {
+   | |______________________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#too_many_arguments
+   = note: `-D clippy::too-many-arguments` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::too_many_arguments)]`
+
+error: this function has too many arguments (10/7)
+   --> apps\kilogram-cli\src\ordered_dialog\runtime7\bootstrap.rs:121:5
+    |
+121 | /     fn bootstrap_commit(
+122 | |         &mut self,
+123 | |         c: u8,
+124 | |         binding: Id,
+...   |
+131 | |         ready: Vec<(u8, Vec<u8>)>,
+132 | |     ) -> Result<()> {
+    | |___________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#too_many_arguments
+
+error: this `if` statement can be collapsed
+   --> apps\kilogram-cli\src\ordered_dialog\runtime7\data.rs:211:13
+    |
+211 | /             if let Some((context, old)) = self
+212 | |                 .repo()?
+213 | |                 .authored(*cert.device_id().as_bytes(), event.core.sequence)?
+...   |
+220 | |             }
+    | |_____________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+    = note: `-D clippy::collapsible-if` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+    |
+213 ~                 .authored(*cert.device_id().as_bytes(), event.core.sequence)?
+214 ~                 && old != id {
+215 |                     let old_c = self.slot(context)?;
+216 |                     let old = self.source_for_proof(old_c, old)?;
+217 |                     self.signed_fork(c, "author sequence", &old, &raw)?;
+218 ~                 }
+    |
+
+error: usage of `contains_key` followed by `insert` on a `BTreeMap`
+   --> apps\kilogram-cli\src\ordered_dialog\runtime7\owner.rs:145:9
+    |
+145 | /         if !pins.contains_key(&material.account) {
+146 | |             let raw = repository.authority(material.account)?;
+147 | |             let pin = AccountAuthoritySnapshot::decode_and_verify(&raw)?;
+148 | |             pins.insert(
+...   |
+155 | |             );
+156 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#map_entry
+    = note: `-D clippy::map-entry` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::map_entry)]`
+help: try
+    |
+145 ~         if let std::collections::btree_map::Entry::Vacant(e) = pins.entry(material.account) {
+146 +             let raw = repository.authority(material.account)?;
+147 +             let pin = AccountAuthoritySnapshot::decode_and_verify(&raw)?;
+148 +             e.insert(store::L1Authority {
+149 +                     account: material.account,
+150 +                     revision: pin.revision(),
+151 +                     raw,
+152 +                 });
+153 +         }
+    |
+
+error: enclosing `Ok` and `?` operator are unneeded
+   --> apps\kilogram-cli\src\ordered_dialog\runtime7\owner.rs:218:9
+    |
+218 |         Ok(Head::parse(&self.repo()?.head(c)?, context, cert, role)?)
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_question_mark
+    = note: `-D clippy::needless-question-mark` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_question_mark)]`
+help: remove the enclosing `Ok` and `?` operator
+    |
+218 -         Ok(Head::parse(&self.repo()?.head(c)?, context, cert, role)?)
+218 +         Head::parse(&self.repo()?.head(c)?, context, cert, role)
+    |
+
+error: this `if` statement can be collapsed
+   --> apps\kilogram-cli\src\ordered_dialog\runtime7\owner.rs:249:9
+    |
+249 | /         if let Some((generation, not_before, expires)) = self.current_cache[usize::from(c)] {
+250 | |             if generation == meta.policy_generation
+251 | |                 && wall.saturating_add(120) >= not_before
+252 | |                 && wall < expires
+...   |
+256 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+249 ~         if let Some((generation, not_before, expires)) = self.current_cache[usize::from(c)]
+250 ~             && generation == meta.policy_generation
+251 |                 && wall.saturating_add(120) >= not_before
+...
+254 |                 return Ok(expires);
+255 ~             }
+    |
+
+error: this `if` statement can be collapsed
+   --> apps\kilogram-cli\src\ordered_dialog\runtime7\owner.rs:406:9
+    |
+406 | /         if let Some(previous) = &previous {
+407 | |             if previous.endpoint == *endpoint.id.as_bytes() && previous.valid_now(now()?).is_ok() {
+408 | |                 return Ok(previous.raw.clone());
+409 | |             }
+410 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+406 ~         if let Some(previous) = &previous
+407 ~             && previous.endpoint == *endpoint.id.as_bytes() && previous.valid_now(now()?).is_ok() {
+408 |                 return Ok(previous.raw.clone());
+409 ~             }
+    |
+
+error: this `if` statement can be collapsed
+   --> apps\kilogram-cli\src\ordered_dialog\runtime7\owner.rs:494:9
+    |
+494 | /         if let Some((saved, native)) = &self.native_cache[usize::from(c)] {
+495 | |             if *saved == hash {
+496 | |                 return Ok(native.fork());
+497 | |             }
+498 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+494 ~         if let Some((saved, native)) = &self.native_cache[usize::from(c)]
+495 ~             && *saved == hash {
+496 |                 return Ok(native.fork());
+497 ~             }
+    |
+
+error: could not compile `kilogram-cli` (lib) due to 9 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `kilogram-cli` (lib test) due to 9 previous errors

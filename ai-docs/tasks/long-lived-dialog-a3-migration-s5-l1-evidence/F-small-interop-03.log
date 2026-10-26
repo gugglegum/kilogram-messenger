@@ -1,0 +1,64 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 3.13s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 29 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+running 1 test
+test live_l1::migration_s5_l1_small_real_d9b_then_both_indexed ... L1_SMALL active_branch=E:\AI-Projects\kilogram-p2p-messenger\.tmp/migration-s5-storage\l1-small-62i6qb origin=E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-l1\F-small-origin-01 frozen_original_never_opened=true
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: RequestIdConflict
+
+L1_SMALL PASS actual_frozen_interop=true both_indexed=true same_sid=true no_bootstrap_constructor=true history_suffix=true root=E:\AI-Projects\kilogram-p2p-messenger\.tmp/migration-s5-storage\l1-small-62i6qb
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 6 filtered out; finished in 47.82s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17693 13.44
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=64414
+target_gib=68.94
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

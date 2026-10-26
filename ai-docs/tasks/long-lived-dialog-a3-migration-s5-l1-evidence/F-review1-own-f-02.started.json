@@ -1,0 +1,10 @@
+{
+  "case": "F-review1-own-f-02",
+  "started_utc": "2026-10-26T05:39:25.0911136Z",
+  "owner_pid": 36936,
+  "whole_seconds": 120,
+  "work_seconds": 100,
+  "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-1.md",
+  "action": "Tests",
+  "classification": "attempt-start-not-final-result"
+}

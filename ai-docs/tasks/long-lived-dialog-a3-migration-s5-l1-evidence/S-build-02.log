@@ -1,0 +1,5 @@
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+   Compiling kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+   Compiling kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1m 26s

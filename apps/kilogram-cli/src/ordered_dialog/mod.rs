@@ -1,5 +1,6 @@
 //! Explicit OD1 actor components. No legacy protocol/default activation.
 pub mod admin;
+pub mod consent1_admin;
 pub mod engine;
 pub mod handshake;
 pub mod ingress;
@@ -12,6 +13,7 @@ pub mod repair;
 mod repair_tests;
 pub mod runtime;
 pub mod runtime2;
+pub mod runtime7;
 pub mod state;
 pub mod storage_migration;
 pub(crate) mod test_support;

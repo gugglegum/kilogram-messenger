@@ -1,0 +1,27 @@
+{
+  "classification": "root-reviewed-first-origin-only",
+  "approved_case": "F-exhausted-origin-01",
+  "root_thread": "01a164ec-589c-7b41-bc34-3ba158d1f22b",
+  "runner_sha256": "c9c6841213181af75f3364128cf7d0697d45db5a7a8bf5bfda1b58986c3211ed",
+  "ledger_sha256": "5218356ef3d08914f1ce1c839da558a519a6ff33455f2635b7345f36a7b725c5",
+  "root_decision": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-long-readiness-review-2.md",
+    "bytes": 5099,
+    "sha256": "7d0e5ef82f6a463729778e2250c7b4f3e88266e51ff3b61d15d47e342569777b"
+  },
+  "readiness_sha256": "2e844d34c089e55be17ad84a48cfafef8dcd51c8400c9d167abc493dd4867876",
+  "readiness_binding_sha256": "4116a5c3fc17ffb0c8b2efca0e71db98a4f22ff42ff091de3eb73ac94b0a3f67",
+  "controller_sha256": "a8077b49ba2e02956a94ca352158190854f47d3a6b37b2e624b2bb81743e71f4",
+  "compiled_harness_sha256": "5ccc3a8a3e4bc76ed811f6d0aad5c93b95381bbab8d6a2c1284b3d66c8eb5ce2",
+  "origin_producer_sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+  "work_seconds": 850,
+  "whole_seconds": 900,
+  "actual_F_before": 1444.3918456,
+  "F_ceiling": 2900,
+  "long_entry_reserve_seconds": 1215,
+  "requires_ordinary_native_execution_approval": true,
+  "automatic_retry": false,
+  "boundary_authorized": false,
+  "publication_authorized": false,
+  "next_action": "Stop and callback root with actual origin evidence and accounting before any boundary run."
+}

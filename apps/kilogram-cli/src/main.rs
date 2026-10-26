@@ -216,6 +216,7 @@ use tokio::{
 use zeroize::Zeroizing;
 
 mod ordered2_cli;
+mod ordered3_cli;
 mod ordered_cli;
 mod ordered_ingress;
 mod publication_conflict_ceremony;
@@ -4115,6 +4116,24 @@ async fn run_command(command: Command) -> Result<()> {
             )
         }
         Command::RuntimeFromProfile { profile_file } => {
+            let indexed_launch: serde_json::Value = serde_json::from_slice(
+                &kilogram_cli::ordered_dialog::admin::read_public(&profile_file, 64 * 1024)?,
+            )?;
+            if indexed_launch
+                .get("version")
+                .and_then(serde_json::Value::as_u64)
+                == Some(3)
+                || indexed_launch
+                    .get("profile_mode")
+                    .and_then(serde_json::Value::as_str)
+                    == Some("ordered-dialog-indexed")
+            {
+                return kilogram_cli::ordered_dialog::runtime7::runtime::run(
+                    kilogram_cli::ordered_dialog::runtime7::Profile3::load(&profile_file)?,
+                    profile_file,
+                )
+                .await;
+            }
             kilogram_cli::ordered_dialog::storage_migration::reject_indexed_runtime(&profile_file)?;
             if ordered2_cli::is_launch(&profile_file)? {
                 return kilogram_cli::ordered_dialog::runtime2::runtime::run(

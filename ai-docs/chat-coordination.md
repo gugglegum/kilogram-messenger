@@ -1076,3 +1076,64 @@ sole parent3547cf528f15c15a21cdb9e30b1d7ca35a01297a. Root froze publication via
 [accepted manifest](tasks/long-lived-dialog-a3-migration-s5-storage-accepted-files.json).
 No product/evidence changes during publication, no S5.2 before root verifies remote.
 Human standing publication and callback authorization remains in force.
+
+### 2026-10-26: S5.1 publication verified; S5.2 preparation assigned
+
+Commit73c499818ba9b699c331aa842e64e8432e90c59a, sole parent3547cf5, ordinary
+fast-forward push. Root independently checked all230 accepted committed paths/blobs,
+raw working hashes, clean tree/index and actual GitHub master: identical/ahead0/
+behind0. Executor separately verified actual ls-remote. S5.1 publication is complete.
+
+User explicitly said to continue. The same GPT-6.1 Sol Max executor, no Fast, receives
+[S5.2 mapping/verification task](tasks/long-lived-dialog-a3-migration-s5-l1-task.md).
+Its first output is one concrete plan for indexed L1 continuation and a new explicit
+test budget; no code/build/fixture/commit yet. The reason is new live-owner seams
+and spent prior F allowance, not missing user permission. Root reviews the proposal
+before authorizing implementation. Prior storage ledger/evidence stay immutable;
+current C279.3257298/F1236.2886628/P0 are not reset. Later existing handoff/whole P5
+remain open. Callback uses the existing authorized root chat.
+
+### 2026-10-26: S5.2 corrected plan accepted; implementation dispatched
+
+[Review2](tasks/long-lived-dialog-a3-migration-s5-l1-plan-review-2.md) accepts
+revision2 SHA256 f6d6439bc0af594153d30d30a4bcac37188f4c6c50bdaec8c3e941ff170a865f.
+The independent protocol follow-up closed R1 account-wide invalidation and R2
+public same-C offline renewal, including the actual stopped d9b import path.
+Root verified IPC/config/accounting clarifications. Original submitted plan,
+review1 and published S5.1 inputs remain unchanged. No product execution occurred
+during plan review.
+
+The same GPT-6.1 Sol Max executor, no Fast, receives the separate
+[implementation assignment](tasks/long-lived-dialog-a3-migration-s5-l1-implementation-task.md).
+It activates new C500/F1800/P0, cumulative maxima C779.3257298/F3036.2886628/P0,
+with original S5.1 actuals preserved. One real A511/B16 exhausted origin; small
+gates and remaining-budget check precede it. Later estimates/P are unallocated.
+Submit implementation and exact source-bound evidence to root, then stop before
+commit/push. Root reviews/fixes before acceptance and exact publication. The
+existing human-authorized callback/review loop continues without copy/paste.
+
+### 2026-10-26: S5.2 assertions and separate preservation reviewed; final submission
+
+[Boundary03 completion review](tasks/long-lived-dialog-a3-migration-s5-l1-boundary03-completion-review.md)
+accepts completed source-bound functional assertions through checkpoint.info.
+The actual boundary03 whole result remains FAIL649.592232s; its original detailed
+parent-result was lost from RAM and is not reconstructed. Historical whole FAIL,
+Ready02/capacity01 split outcomes and every charged attempt remain unchanged.
+
+[Preservation review](tasks/long-lived-dialog-a3-migration-s5-l1-preservation-review.md)
+accepts the narrow test-writer fix, actual opaque C whole PASS24.1463993s and
+stopped-input preservation-only F whole PASS67.5439277s. Under both original OS
+locks6956 files/45597399 bytes matched source-before/source-after/destination.
+Private backup stays local and inactive, with original absolute profile paths.
+No DB/runtime/recovery/new active branch or frozen-origin traversal was used by F.
+
+S5.2 actual C172.0310185/F3331.2897354/P0 under500/3650/0;39 contributing cases,
+four explicit F amendments, no refunds or P borrowing. Prior published S5.1
+actuals remain immutable. Whole-P, handoff/cut3 and MVP readiness are still open.
+
+The same executor prepares [final implementation report](tasks/long-lived-dialog-a3-migration-s5-l1-implementation.md)
+and [exact candidate allowlist](tasks/long-lived-dialog-a3-migration-s5-l1-candidate-files.json)
+for root acceptance. Root explicitly permits inclusion of unchanged S5.2 authority
+history, standing test permission and nav3 current-status updates, preserving old
+chronology. No product edits, new tests/builds/limits, refactor, commit or push are
+assigned now. Maintainability follow-up is recorded only for later root assessment.

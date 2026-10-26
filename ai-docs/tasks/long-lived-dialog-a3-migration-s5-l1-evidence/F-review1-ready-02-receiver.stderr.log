@@ -1,0 +1,26 @@
+l1_dispatch_rejected OD1 array arity
+l1_incoming_closed stream finished early (0 bytes read)
+l1_incoming_closed connection lost: closed
+l1_dispatch_rejected Ready shape/scope refusal: Ready scope/role/suite
+l1_incoming_closed stream finished early (0 bytes read)
+l1_incoming_closed connection lost: closed
+l1_dispatch_rejected Ready shape/scope refusal: Ready scope/role/suite
+l1_incoming_closed stream finished early (0 bytes read)
+l1_incoming_closed connection lost: closed
+l1_dispatch_rejected Ready shape/scope refusal: Ready scope/role/suite
+l1_incoming_closed stream finished early (0 bytes read)
+l1_incoming_closed connection lost: closed
+l1_dispatch_rejected Ready shape/scope refusal: Ready scope/role/suite
+l1_incoming_closed stream finished early (0 bytes read)
+l1_incoming_closed connection lost: closed
+l1_dispatch_rejected Ready shape/scope refusal: Ready scope/role/suite
+l1_incoming_closed connection lost: closed by peer: L1 reconnect (code 0)
+l1_incoming_closed connection lost: closed
+l1_dispatch_rejected Ready shape/scope refusal: Ready scope/role/suite
+l1_incoming_closed stream finished early (0 bytes read)
+l1_incoming_closed connection lost: closed
+l1_dispatch_rejected Ready shape/scope refusal: OD1 fixed length
+l1_incoming_closed stream finished early (0 bytes read)
+l1_incoming_closed connection lost: closed
+l1_dispatch_rejected Blocked: signed fork Ready genesis
+l1_incoming_closed connection lost: closed

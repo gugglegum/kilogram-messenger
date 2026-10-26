@@ -1,0 +1,13 @@
+{
+  "classification": "supplemental-environment-observation",
+  "recorded_utc": "2026-10-26 01:04:15 UTC",
+  "notice_receipt_time": "approximately recorded_utc; clock read while processing the root message",
+  "source": "user report relayed by root chat 01a164ec-589c-7b41-bc34-3ba158d1f22b",
+  "reported_workload": "local Ollama with CPU offload",
+  "reported_cpu_percent": "80-90",
+  "measured_telemetry": false,
+  "contention_onset": "unknown",
+  "interpretation": "Timing comparisons to earlier runs are not comparable until a clean run. Functional assertions and retained failures remain unchanged. No attribution of every earlier failure to contention.",
+  "execution_response": "No new C/F contributors or heavy static launches until root clears CPU or sustained absence of contention is verified. F-partials-01 had ended through its existing deadline and parent cleanup; all elapsed retained. No timeout/budget/assertion changes. Read, source review and test preparation continue.",
+  "actual_s52_seconds_at_notice": { "C": 44.7378423, "F": 210.1117945, "P": 0 }
+}

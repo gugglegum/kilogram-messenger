@@ -1,0 +1,138 @@
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Checking kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+    Checking kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error[E0716]: temporary value dropped while borrowed
+  --> apps\kilogram-cli\tests\support\migration_s5_l1.rs:64:32
+   |
+63 |         let mut child = spawn(
+   |                         ----- borrow later used by call
+64 |             if self.indexed { &current() } else { &frozen() },
+   |                                ^^^^^^^^-
+   |                                |       |
+   |                                |       temporary value is freed at the end of this statement
+   |                                creates a temporary value which is freed while still in use
+   |
+   = note: consider using a `let` binding to create a longer lived value
+
+error[E0716]: temporary value dropped while borrowed
+  --> apps\kilogram-cli\tests\support\migration_s5_l1.rs:64:52
+   |
+63 |         let mut child = spawn(
+   |                         ----- borrow later used by call
+64 |             if self.indexed { &current() } else { &frozen() },
+   |                                                    ^^^^^^^-
+   |                                                    |      |
+   |                                                    |      temporary value is freed at the end of this statement
+   |                                                    creates a temporary value which is freed while still in use
+   |
+   = note: consider using a `let` binding to create a longer lived value
+
+error[E0716]: temporary value dropped while borrowed
+  --> apps\kilogram-cli\tests\support\migration_s5_l1.rs:81:32
+   |
+80 |         json_cli(
+   |         -------- borrow later used by call
+81 |             if self.indexed { &current() } else { &frozen() },
+   |                                ^^^^^^^^-
+   |                                |       |
+   |                                |       temporary value is freed at the end of this statement
+   |                                creates a temporary value which is freed while still in use
+   |
+   = note: consider using a `let` binding to create a longer lived value
+
+error[E0716]: temporary value dropped while borrowed
+  --> apps\kilogram-cli\tests\support\migration_s5_l1.rs:81:52
+   |
+80 |         json_cli(
+   |         -------- borrow later used by call
+81 |             if self.indexed { &current() } else { &frozen() },
+   |                                                    ^^^^^^^-
+   |                                                    |      |
+   |                                                    |      temporary value is freed at the end of this statement
+   |                                                    creates a temporary value which is freed while still in use
+   |
+   = note: consider using a `let` binding to create a longer lived value
+
+error[E0716]: temporary value dropped while borrowed
+   --> apps\kilogram-cli\tests\support\migration_s5_l1.rs:115:32
+    |
+115 |         cli(if self.indexed { &current() } else { &frozen() }, &args)?;
+    |         ---                    ^^^^^^^^-
+    |         |                      |       |
+    |         |                      |       temporary value is freed at the end of this statement
+    |         |                      creates a temporary value which is freed while still in use
+    |         borrow later used by call
+    |
+    = note: consider using a `let` binding to create a longer lived value
+
+error[E0716]: temporary value dropped while borrowed
+   --> apps\kilogram-cli\tests\support\migration_s5_l1.rs:115:52
+    |
+115 |         cli(if self.indexed { &current() } else { &frozen() }, &args)?;
+    |         ---                                        ^^^^^^^-
+    |         |                                          |      |
+    |         |                                          |      temporary value is freed at the end of this statement
+    |         borrow later used by call                  creates a temporary value which is freed while still in use
+    |
+    = note: consider using a `let` binding to create a longer lived value
+
+error[E0716]: temporary value dropped while borrowed
+   --> apps\kilogram-cli\tests\support\migration_s5_l1.rs:136:32
+    |
+136 |         cli(if self.indexed { &current() } else { &frozen() }, &args)
+    |         ---                    ^^^^^^^^-
+    |         |                      |       |
+    |         |                      |       temporary value is freed at the end of this statement
+    |         |                      creates a temporary value which is freed while still in use
+    |         borrow later used by call
+    |
+    = note: consider using a `let` binding to create a longer lived value
+
+error[E0716]: temporary value dropped while borrowed
+   --> apps\kilogram-cli\tests\support\migration_s5_l1.rs:136:52
+    |
+136 |         cli(if self.indexed { &current() } else { &frozen() }, &args)
+    |         ---                                        ^^^^^^^-
+    |         |                                          |      |
+    |         |                                          |      temporary value is freed at the end of this statement
+    |         borrow later used by call                  creates a temporary value which is freed while still in use
+    |
+    = note: consider using a `let` binding to create a longer lived value
+
+For more information about this error, try `rustc --explain E0716`.
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 8 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: large size difference between variants
+   --> apps\kilogram-cli\src\ordered_cli.rs:12:1
+    |
+ 12 | /  pub enum Command {
+ 13 | |      #[command(flatten)]
+ 14 | |      Runtime2(crate::ordered2_cli::Command),
+    | |      -------------------------------------- the largest variant contains at least 376 bytes
+ 15 | |      Shutdown {
+...   |
+ 29 | |/     ContextCreate {
+ 30 | ||         #[arg(long)]
+ 31 | ||         state_dir: PathBuf,
+ 32 | ||         #[arg(long)]
+...   ||
+ 39 | ||         output_file: PathBuf,
+ 40 | ||     },
+    | ||_____- the second-largest variant contains at least 160 bytes
+...   |
+119 | |      },
+120 | |  }
+    | |__^ the entire enum is at least 376 bytes
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#large_enum_variant
+    = note: `-D clippy::large-enum-variant` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::large_enum_variant)]`
+help: consider boxing the large fields or introducing indirection in some other way to reduce the total size of the enum
+    |
+ 14 -     Runtime2(crate::ordered2_cli::Command),
+ 14 +     Runtime2(Box<crate::ordered2_cli::Command>),
+    |
+
+error: could not compile `kilogram-cli` (bin "kilogram-cli") due to 1 previous error
+error: could not compile `kilogram-cli` (bin "kilogram-cli" test) due to 1 previous error

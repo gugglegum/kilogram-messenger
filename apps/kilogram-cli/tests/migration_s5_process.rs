@@ -1,5 +1,7 @@
 //! Parent-owned real process evidence. Sources come from frozen d9b or a fresh
 //! frozen d9b enrollment; this controller never writes Native, Head or Event rows.
+#[path = "support/migration_s5_l1.rs"]
+mod live_l1;
 use anyhow::{Context, Result, ensure};
 use kilogram_cli::ordered_dialog::handshake::Credentials;
 use serde_json::{Value, json};

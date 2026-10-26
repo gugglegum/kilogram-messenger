@@ -1,0 +1,13 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: used `unwrap_err()` on a `Result` value
+   --> apps\kilogram-cli\src\ordered_dialog\test_support.rs:313:23
+    |
+313 |         let refusal = wire::control(raw, 3, signer.device_id()).unwrap_err();
+    |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Ok`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#unwrap_used
+    = note: requested on the command line with `-D clippy::unwrap-used`
+
+error: could not compile `kilogram-cli` (lib test) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...

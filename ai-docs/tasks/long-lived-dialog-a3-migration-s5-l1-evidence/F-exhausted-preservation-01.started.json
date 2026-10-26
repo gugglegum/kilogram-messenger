@@ -1,0 +1,10 @@
+{
+  "case": "F-exhausted-preservation-01",
+  "started_utc": "2026-10-26T14:13:04.8025487Z",
+  "owner_pid": 49544,
+  "whole_seconds": 140,
+  "work_seconds": 120,
+  "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary03-completion-review.md",
+  "action": "Tests",
+  "classification": "attempt-start-not-final-result"
+}

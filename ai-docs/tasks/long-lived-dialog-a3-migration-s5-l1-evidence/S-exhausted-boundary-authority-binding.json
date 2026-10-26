@@ -1,0 +1,19 @@
+{
+  "classification": "static-single-boundary-authority-and-input-preflight",
+  "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-origin-review-1.md",
+  "root_decision_sha256": "bcdefb3acec402fd87fbe390e3bce5f66ab1f1c740b2a939884ba36858103cf5",
+  "go_ahead_sha256": "a261876600e00995485cf5e1e98d2b0e18ea2ee5cc43a3af61d5ae8a1c791dac",
+  "runner_sha256": "c9c6841213181af75f3364128cf7d0697d45db5a7a8bf5bfda1b58986c3211ed",
+  "ledger_before_sha256": "fcba7db288c508e028604a355c49d6e0a33e3f835b10ba842127da422c1d98cd",
+  "actual_origin_case_sha256": "e1acc55360a45c386dde029c2f9be35cbbdacc08bd2a076a1812ac6c692d5135",
+  "frozen_manifest_sha256": "73c38f113a7e663d00bba36ae0116a292b7ec0511d4e23b79729f60cf87e2995",
+  "controller_sha256": "a8077b49ba2e02956a94ca352158190854f47d3a6b37b2e624b2bb81743e71f4",
+  "harness_sha256": "5ccc3a8a3e4bc76ed811f6d0aad5c93b95381bbab8d6a2c1284b3d66c8eb5ce2",
+  "input_mismatches": [],
+  "live_fixed_processes": [],
+  "work_seconds": 120,
+  "whole_seconds": 140,
+  "automatic_retry": false,
+  "ordinary_native_execution_approval_still_required": true,
+  "rule": "One actual revision2 boundary, one active Native-domain copy, original closed, no source/image changes while active; stop/callback on failure."
+}

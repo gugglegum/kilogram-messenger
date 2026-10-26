@@ -1,0 +1,1180 @@
+{
+  "classification": "static-only-phase-writer-and-preservation-completion-preparation",
+  "baseline": "73c499818ba9b699c331aa842e64e8432e90c59a",
+  "index": "empty",
+  "authority": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary03-completion-review.md",
+    "bytes": 6604,
+    "sha256": "c98a14c445985acfa4e2295f9519848b73e8316a9d72b764900a6b36750211e0"
+  },
+  "before": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-completion-before.json",
+    "bytes": 2088,
+    "sha256": "932d9b17b8f87498b69516bb074e7b9094bfdb98483d74318ac247813ccd574d"
+  },
+  "previous_binding": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-readiness-binding.json",
+    "bytes": 41370,
+    "sha256": "e8276f359e52fe574cdf66b90ce624eb1a632a8b73d51bdca418674e4bbb769a"
+  },
+  "snapshots": [
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-controller.rs.txt",
+      "bytes": 40620,
+      "sha256": "c3e044594d43bcbf60b8055ba203aa8e23220f3b92b35d75f9bbfc049aae0977"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-runner.ps1.txt",
+      "bytes": 26849,
+      "sha256": "d3324692346ae12da8e10cb2bbeb2a614d9201d39597eb80536d1e8d34b2aac2"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration-boundary03/migration_s5_process-harness.bin.snapshot",
+      "bytes": 13935104,
+      "sha256": "83429f6d41f566aadfdaddea0b862a0fe71120beec875560f6d9463dfdd932d0"
+    }
+  ],
+  "source_delta": [
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs",
+      "before": {
+        "path": "apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs",
+        "bytes": 40620,
+        "sha256": "c3e044594d43bcbf60b8055ba203aa8e23220f3b92b35d75f9bbfc049aae0977"
+      },
+      "after": {
+        "path": "apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs",
+        "bytes": 50456,
+        "sha256": "6f1576955aab0c2e9eb1e2f330d549ac35016618769c840ee3a613042c8e058f"
+      }
+    },
+    {
+      "path": "scripts/invoke-migration-s5-l1-case.ps1",
+      "before": {
+        "path": "scripts/invoke-migration-s5-l1-case.ps1",
+        "bytes": 26849,
+        "sha256": "d3324692346ae12da8e10cb2bbeb2a614d9201d39597eb80536d1e8d34b2aac2"
+      },
+      "after": {
+        "path": "scripts/invoke-migration-s5-l1-case.ps1",
+        "bytes": 32804,
+        "sha256": "bad2e0251c8e9dcbe6c93b4de24da840a15715aceaf7892b2b2bad2a6117578f"
+      }
+    }
+  ],
+  "controller": {
+    "path": "apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs",
+    "bytes": 50456,
+    "sha256": "6f1576955aab0c2e9eb1e2f330d549ac35016618769c840ee3a613042c8e058f"
+  },
+  "runner": {
+    "path": "scripts/invoke-migration-s5-l1-case.ps1",
+    "bytes": 32804,
+    "sha256": "bad2e0251c8e9dcbe6c93b4de24da840a15715aceaf7892b2b2bad2a6117578f"
+  },
+  "controller_patch": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-completion-controller.patch.txt",
+    "bytes": 12230,
+    "sha256": "62f5807345513e6f5a021cb897886d4070224da54826a64255edfec3e0855b2c"
+  },
+  "runner_patch": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-completion-runner.patch.txt",
+    "bytes": 12241,
+    "sha256": "38bdabf3efa8a43dfaccc05c2225bd3668a50104a31c0653c9970a6fdbd94503"
+  },
+  "new_compiled_harness": {
+    "path": "target/verification/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+    "bytes": 14014976,
+    "sha256": "12bb6adda2a96c518785b654369805f6502b6e69998e28b30b1cde052688156e"
+  },
+  "superseded_compile_record": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-21.json",
+    "bytes": 20559,
+    "sha256": "8bf8936cbc8a6329a9582915ae16640cb97a5560e70a953b360ade96c6100b15"
+  },
+  "final_compile_record": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-22.json",
+    "bytes": 20558,
+    "sha256": "607b16c79f66aa5f4cdebd6241ad6fbed24c9258712103ca9f41e597616bf061"
+  },
+  "static_records": [
+    {
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-29.json",
+        "bytes": 20427,
+        "sha256": "dd385e2e68a2cd3d7027fa7de40d95878c889417519b2712f2ec8dd9a74ed572"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-29.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 3.8185275,
+      "argv": [
+        "fmt",
+        "--all"
+      ]
+    },
+    {
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-26.json",
+        "bytes": 20622,
+        "sha256": "6beacc8d9684e8e0b4035a2659511bffe1ce76eaea9f6ff951ab9c4365984772"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-26.log",
+        "bytes": 174,
+        "sha256": "40cd64911af34ed674a66c5592f206ca431877ee6323cd6f1610fb7fa7f10a22"
+      },
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 4.1847154,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ]
+    },
+    {
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-22.json",
+        "bytes": 20558,
+        "sha256": "607b16c79f66aa5f4cdebd6241ad6fbed24c9258712103ca9f41e597616bf061"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-22.log",
+        "bytes": 1707,
+        "sha256": "5be32289619be829321331b1dbeffafe7bd949578a0c838ffa32d6b913a40428"
+      },
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 20.718447,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ]
+    },
+    {
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-30.json",
+        "bytes": 20459,
+        "sha256": "83209eed7ee2eb2263a1b1b4ed4300fda158ef5e20f93409c6afbd01a675ae88"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-30.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "action": "FmtCheck",
+      "exit_code": 0,
+      "elapsed_seconds": 4.0984597,
+      "argv": [
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ]
+    }
+  ],
+  "policy_validation": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-completion-policy.json",
+    "bytes": 2557,
+    "sha256": "08e32561c3fc900651e74f6daede17c4f5c56eb95b06edbd26f0d83ddb1773c2"
+  },
+  "compiled_inputs": [
+    {
+      "path": "apps/kilogram-cli/src/main.rs",
+      "bytes": 1756492,
+      "sha256": "0950d33fb969257cd79e38834bdf9da72493bd89c2b7a7b5fd14cf0945f0cbc3"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/consent1_admin.rs",
+      "bytes": 6668,
+      "sha256": "42b170a3f2795b4d7d0729403a10bd3be2a58fcb516238146e4f06458381c0ff"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+      "bytes": 413,
+      "sha256": "0fbf38e8a9549b55dcd002d567d52ebc9eb1006aaad13c468849ae3846630be7"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/mod.rs",
+      "bytes": 1079,
+      "sha256": "1dd468c8dfa75bb7b0948eb126c95111de68d3cc51e2d9471ff033254b7ffe03"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/window.rs",
+      "bytes": 1797,
+      "sha256": "426095f83aa541223ed259b6ddb392aa2de144862b5c01c3f6bd263ea404ba3f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/bootstrap.rs",
+      "bytes": 22350,
+      "sha256": "48b265f82a08f0501e65d0663cdea86cd7877c839f114dfb1fe950bdd0b6abaa"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/config.rs",
+      "bytes": 3439,
+      "sha256": "2313cc04329a58284afc6dbf5f09ce87efc9ab9e320112b1319f83deb81903ff"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/data.rs",
+      "bytes": 19234,
+      "sha256": "8426cc13d1a2c3eea47a0b1d8288c8e5951e0e58c04b7b5020d7a71983b4c089"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/mod.rs",
+      "bytes": 1237,
+      "sha256": "54bcb444ce3e8255bc98cace3bcc2ddc9d21d3ac1081741f84309d063cdbf7aa"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/network.rs",
+      "bytes": 24672,
+      "sha256": "afa5821c4cf996d8360d2960bfb20d8958a3afa3513055177716800a053942ba"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/owner.rs",
+      "bytes": 27207,
+      "sha256": "c81ca0b842a496730f732f0e086f2624eec2b0044db0d71d9bed1f148487506f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/protocol.rs",
+      "bytes": 22539,
+      "sha256": "a6664fc2ae6bca5f20f81abc8cc7d2e63c2d0a4c14b9f4c8e0dc62810c64c0e0"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/resources.rs",
+      "bytes": 1910,
+      "sha256": "5ca93e08d68c1c7496cf139b05441f949e7ab7dd809b62cb0c7b66907d377a21"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/review1_tests.rs",
+      "bytes": 2151,
+      "sha256": "6610a3a030efb69e931248004ef15d0690b5dcbfe235e4fa54a2728792c66242"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/runtime.rs",
+      "bytes": 19579,
+      "sha256": "7bc8bf5006088f7928b653b7ddbf70331709cc98b45231ca3895e83f18ea8222"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/test_support.rs",
+      "bytes": 11357,
+      "sha256": "11ed46eec8e7322879b1072ff8edc33bf1f000b929ca812944788a3bc8327cb2"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered2_cli.rs",
+      "bytes": 23851,
+      "sha256": "ebb4364b456af163425e6b644ca51955e3c4f5c8f187ea7e2bb34623a915bbf9"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered3_cli.rs",
+      "bytes": 7806,
+      "sha256": "3e5812e8f4b6b584e0209546be49176f7469c8bce7a5e42e917df11a12b25548"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/migration_s5_process.rs",
+      "bytes": 48147,
+      "sha256": "3b8141503de00930e5cdadb1c79dc433a4dee29daf87daccdeba4e89b4f7b1d2"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_atomic.rs",
+      "bytes": 9879,
+      "sha256": "fc5f2039eb1b9988836bca8bdb3e46579b49f23e6dfeef8a58664227143a15ad"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs",
+      "bytes": 50456,
+      "sha256": "6f1576955aab0c2e9eb1e2f330d549ac35016618769c840ee3a613042c8e058f"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_isolation.rs",
+      "bytes": 7565,
+      "sha256": "964a2bb978e22f28eee6315eca0513f443ae9b5fda6422fbe14bff8d35d58cbe"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_obligations.rs",
+      "bytes": 24415,
+      "sha256": "68bc85bb08508bb73b9a89344da22518e6d1bc1ee76797c3e1bf50ad4dd06b00"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_policy.rs",
+      "bytes": 20222,
+      "sha256": "0ca7dd04fd65967f85b798bb6cb1a58a0fc79bdad80ddc1d90ae9673d15784cd"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_review1.rs",
+      "bytes": 17596,
+      "sha256": "9f4b792567f15790cc9b851d0c42f275231130c78fbfc85b7aa0a67e01f63f8e"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1.rs",
+      "bytes": 20509,
+      "sha256": "60b896e3aa4b511fe06e3307f5e988760f76bc172bb693af18ef87663405be34"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 194144,
+      "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126"
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 3398,
+      "sha256": "28700ccee74b2a78f96e945b86087ce9dfac32a2236bf61067976c2ac1082aa0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "bytes": 58084,
+      "sha256": "c3f1c082c2c76cab37ec43741930b084b99b08bd233af264d2ad52e21be87431"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "bytes": 27795,
+      "sha256": "51a3168bed785fbe5b38c8347e3d921f1f9146ef5c99c48783f26a4b8cfbe313"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7.rs",
+      "bytes": 4146,
+      "sha256": "faffa9189d14dc210a23a6f3cc5dac6b6de357b632d72a500c1d7d4fb3433893"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/admin.rs",
+      "bytes": 21053,
+      "sha256": "c09f784cf4795b6de343f8343a140e79079874df3b190ad05044523521a7bfd7"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs",
+      "bytes": 13230,
+      "sha256": "26732bea30d9c8e2a4ef030154c23c4c43747fc53ff9a7bcf6b2e0f17e143066"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/data.rs",
+      "bytes": 24900,
+      "sha256": "265ce9634a3334c36b135006889adf234da18d69c456b8d90f892f33b3bc8dc5"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/history.rs",
+      "bytes": 15504,
+      "sha256": "235e72ae0fa495de8dc1566afb6b67eae61de0aa9198fbaea3bc690cfc31453d"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops_review1_tests.rs",
+      "bytes": 2656,
+      "sha256": "7fc78c66e6df639b5079795853abab2ebb6840ea0a35d7ba5dac9634e8d233f9"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops.rs",
+      "bytes": 23635,
+      "sha256": "0216fedb707ed858562cc4485037fed949d8f5be7da66381a2034be56bf672d0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/read.rs",
+      "bytes": 20524,
+      "sha256": "75bf8ca2a04ed16b51f8535da782b8fe7ff04eea79c45e096c2153038bc9ce9c"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/tests.rs",
+      "bytes": 6681,
+      "sha256": "34131ea0523889a50be00ed4d85bcdac846062d294c442c172660e3f7cdba644"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/types.rs",
+      "bytes": 10621,
+      "sha256": "ecce02f754515e85fd88e95a32408e9f7ebe2368d8885c59299056def2c7f2fa"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/load.rs",
+      "bytes": 6003,
+      "sha256": "55d6c8278c153d3293cd1ceb7ade7b3b89544be4a2cab9cafa2073284db41abe"
+    },
+    {
+      "path": "scripts/cargo-resource-policy.ps1",
+      "bytes": 1168,
+      "sha256": "2485a0b0ae5b07d6625f218e4c02a8f6927b78c26f10b5506f157066abba676e"
+    },
+    {
+      "path": "scripts/invoke-migration-s5-l1-case.ps1",
+      "bytes": 32804,
+      "sha256": "bad2e0251c8e9dcbe6c93b4de24da840a15715aceaf7892b2b2bad2a6117578f"
+    },
+    {
+      "path": "scripts/invoke-migration-s5-l1-static.ps1",
+      "bytes": 3573,
+      "sha256": "00debd7f47502df9985a8b56231ef9fad3137fbfd77052c09b9b517d4fbc7863"
+    },
+    {
+      "path": "scripts/migration-s5-l1-deadline.ps1",
+      "bytes": 6038,
+      "sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45"
+    },
+    {
+      "path": "scripts/migration-s5-l1-test-result.ps1",
+      "bytes": 422,
+      "sha256": "b6e1c73804b63997add074f47a1b924d88bb5b3e87ea7188ab4432ecd8dd4dc0"
+    },
+    {
+      "path": "scripts/preserve-migration-s5-l1-input.ps1",
+      "bytes": 5011,
+      "sha256": "25fe5a7c80821fb83a0fab5117585a48e6afe729094c1d45931aaa1556b044f3"
+    },
+    {
+      "path": "scripts/run-cargo-tests-stable.ps1",
+      "bytes": 10839,
+      "sha256": "c2cba5140b56c99a6482884e049426ba0ed54e90b572aebf01ace45e65cd06c3"
+    },
+    {
+      "path": "scripts/test-migration-s5-l1-deadline.ps1",
+      "bytes": 3641,
+      "sha256": "6c9a9bc6d4139cfc13f85465a0fcb938921cf3464d3f3b5bc891977fb81d66e1"
+    },
+    {
+      "path": "scripts/test-migration-s5-l1-preservation.ps1",
+      "bytes": 4061,
+      "sha256": "f36929d27340c67f3d8abb522801fa273325db6a3285b99638aac0c9118a5b48"
+    },
+    {
+      "path": "scripts/test-ordered-dialog-process.ps1",
+      "bytes": 38356,
+      "sha256": "ca4336d26efd922ec5a2a8f68caf7812324966cd0a44481699003192a8abf405"
+    },
+    {
+      "path": "scripts/verify-migration-s5-l1-frozen-origin.ps1",
+      "bytes": 3458,
+      "sha256": "fec72c16ab954aa0a71cca5bb09aef0cc4bcd6c0dbfbb7fef4ce4155183ca94a"
+    }
+  ],
+  "compiled_input_mismatches": [],
+  "unchanged_product_inputs": [
+    {
+      "path": "apps/kilogram-cli/src/main.rs",
+      "bytes": 1756492,
+      "sha256": "0950d33fb969257cd79e38834bdf9da72493bd89c2b7a7b5fd14cf0945f0cbc3"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/consent1_admin.rs",
+      "bytes": 6668,
+      "sha256": "42b170a3f2795b4d7d0729403a10bd3be2a58fcb516238146e4f06458381c0ff"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+      "bytes": 413,
+      "sha256": "0fbf38e8a9549b55dcd002d567d52ebc9eb1006aaad13c468849ae3846630be7"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/mod.rs",
+      "bytes": 1079,
+      "sha256": "1dd468c8dfa75bb7b0948eb126c95111de68d3cc51e2d9471ff033254b7ffe03"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/window.rs",
+      "bytes": 1797,
+      "sha256": "426095f83aa541223ed259b6ddb392aa2de144862b5c01c3f6bd263ea404ba3f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/bootstrap.rs",
+      "bytes": 22350,
+      "sha256": "48b265f82a08f0501e65d0663cdea86cd7877c839f114dfb1fe950bdd0b6abaa"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/config.rs",
+      "bytes": 3439,
+      "sha256": "2313cc04329a58284afc6dbf5f09ce87efc9ab9e320112b1319f83deb81903ff"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/data.rs",
+      "bytes": 19234,
+      "sha256": "8426cc13d1a2c3eea47a0b1d8288c8e5951e0e58c04b7b5020d7a71983b4c089"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/mod.rs",
+      "bytes": 1237,
+      "sha256": "54bcb444ce3e8255bc98cace3bcc2ddc9d21d3ac1081741f84309d063cdbf7aa"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/network.rs",
+      "bytes": 24672,
+      "sha256": "afa5821c4cf996d8360d2960bfb20d8958a3afa3513055177716800a053942ba"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/owner.rs",
+      "bytes": 27207,
+      "sha256": "c81ca0b842a496730f732f0e086f2624eec2b0044db0d71d9bed1f148487506f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/protocol.rs",
+      "bytes": 22539,
+      "sha256": "a6664fc2ae6bca5f20f81abc8cc7d2e63c2d0a4c14b9f4c8e0dc62810c64c0e0"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/resources.rs",
+      "bytes": 1910,
+      "sha256": "5ca93e08d68c1c7496cf139b05441f949e7ab7dd809b62cb0c7b66907d377a21"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/review1_tests.rs",
+      "bytes": 2151,
+      "sha256": "6610a3a030efb69e931248004ef15d0690b5dcbfe235e4fa54a2728792c66242"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/runtime.rs",
+      "bytes": 19579,
+      "sha256": "7bc8bf5006088f7928b653b7ddbf70331709cc98b45231ca3895e83f18ea8222"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/test_support.rs",
+      "bytes": 11357,
+      "sha256": "11ed46eec8e7322879b1072ff8edc33bf1f000b929ca812944788a3bc8327cb2"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered2_cli.rs",
+      "bytes": 23851,
+      "sha256": "ebb4364b456af163425e6b644ca51955e3c4f5c8f187ea7e2bb34623a915bbf9"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered3_cli.rs",
+      "bytes": 7806,
+      "sha256": "3e5812e8f4b6b584e0209546be49176f7469c8bce7a5e42e917df11a12b25548"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 194144,
+      "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126"
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 3398,
+      "sha256": "28700ccee74b2a78f96e945b86087ce9dfac32a2236bf61067976c2ac1082aa0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "bytes": 58084,
+      "sha256": "c3f1c082c2c76cab37ec43741930b084b99b08bd233af264d2ad52e21be87431"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "bytes": 27795,
+      "sha256": "51a3168bed785fbe5b38c8347e3d921f1f9146ef5c99c48783f26a4b8cfbe313"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7.rs",
+      "bytes": 4146,
+      "sha256": "faffa9189d14dc210a23a6f3cc5dac6b6de357b632d72a500c1d7d4fb3433893"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/admin.rs",
+      "bytes": 21053,
+      "sha256": "c09f784cf4795b6de343f8343a140e79079874df3b190ad05044523521a7bfd7"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs",
+      "bytes": 13230,
+      "sha256": "26732bea30d9c8e2a4ef030154c23c4c43747fc53ff9a7bcf6b2e0f17e143066"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/data.rs",
+      "bytes": 24900,
+      "sha256": "265ce9634a3334c36b135006889adf234da18d69c456b8d90f892f33b3bc8dc5"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/history.rs",
+      "bytes": 15504,
+      "sha256": "235e72ae0fa495de8dc1566afb6b67eae61de0aa9198fbaea3bc690cfc31453d"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops_review1_tests.rs",
+      "bytes": 2656,
+      "sha256": "7fc78c66e6df639b5079795853abab2ebb6840ea0a35d7ba5dac9634e8d233f9"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops.rs",
+      "bytes": 23635,
+      "sha256": "0216fedb707ed858562cc4485037fed949d8f5be7da66381a2034be56bf672d0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/read.rs",
+      "bytes": 20524,
+      "sha256": "75bf8ca2a04ed16b51f8535da782b8fe7ff04eea79c45e096c2153038bc9ce9c"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/tests.rs",
+      "bytes": 6681,
+      "sha256": "34131ea0523889a50be00ed4d85bcdac846062d294c442c172660e3f7cdba644"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/types.rs",
+      "bytes": 10621,
+      "sha256": "ecce02f754515e85fd88e95a32408e9f7ebe2368d8885c59299056def2c7f2fa"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/load.rs",
+      "bytes": 6003,
+      "sha256": "55d6c8278c153d3293cd1ceb7ade7b3b89544be4a2cab9cafa2073284db41abe"
+    }
+  ],
+  "unchanged_product_input_count": 33,
+  "images": [
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "bytes": 61531648,
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration-predecessor-s5/kilogram-cli.exe",
+      "bytes": 67720192,
+      "sha256": "5685e34704c39edb3d6c7531f0c3c78d590915600201e52b9b9114516a231926"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration-preready/kilogram-cli.exe",
+      "bytes": 70222848,
+      "sha256": "a3ff9d2ee67e5b01db8f4c922247737d0dee7bb4c639477be3e02d4999b13c56"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration-prereview/kilogram-cli.exe",
+      "bytes": 69767680,
+      "sha256": "4f4c240f10e90f86aaae5bf087bb4056280e7da762d52c68ebfeb24432542d98"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+      "bytes": 70226432,
+      "sha256": "69744fca50f44439b4734e699f416fc6b2bb8aac4336e5dad18ed173b2abbf6c"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-l1-control-peer.exe",
+      "bytes": 70226432,
+      "sha256": "69744fca50f44439b4734e699f416fc6b2bb8aac4336e5dad18ed173b2abbf6c"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-predecessor-s3/kilogram-state-predecessor.exe",
+      "bytes": 5344768,
+      "sha256": "6932db6bc228cdd38fc358792cc5cd41fcfd1e5445c087a7c0f535ce4f0c1e4e"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+      "bytes": 66188800,
+      "sha256": "d5d8c8c118925dfde67e37fdb32aa5a120293cde258e93843dd1939fddb15560"
+    }
+  ],
+  "unchanged_helpers": [
+    {
+      "path": "scripts/preserve-migration-s5-l1-input.ps1",
+      "bytes": 5011,
+      "sha256": "25fe5a7c80821fb83a0fab5117585a48e6afe729094c1d45931aaa1556b044f3"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_obligations.rs",
+      "bytes": 24415,
+      "sha256": "68bc85bb08508bb73b9a89344da22518e6d1bc1ee76797c3e1bf50ad4dd06b00"
+    },
+    {
+      "path": "scripts/migration-s5-l1-deadline.ps1",
+      "bytes": 6038,
+      "sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45"
+    },
+    {
+      "path": "scripts/migration-s5-l1-test-result.ps1",
+      "bytes": 422,
+      "sha256": "b6e1c73804b63997add074f47a1b924d88bb5b3e87ea7188ab4432ecd8dd4dc0"
+    }
+  ],
+  "protected_records": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary-continuation-review-1.md",
+      "bytes": 7943,
+      "sha256": "a9b3fd75ce257362297a9ec7c4fe00133917a42bf2ecbd4a921d41bfa4870341"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary-continuation-review-2.md",
+      "bytes": 7582,
+      "sha256": "e6ebba9e204eea61d53438012d2bcf11f98cd9159a34f4008d69e08e0cea6f0f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary02-readiness.md",
+      "bytes": 12755,
+      "sha256": "0d626122b5a4fcd3b4b3fb4ee7cb9549fa53b2e1972ac1ce95e8a98bb6bc3bc0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary02-review-1.md",
+      "bytes": 5462,
+      "sha256": "a6a3cad50e2b4b264a1ce7e4db50d3123ebcd7869003c86482ae4c938a870673"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary03-readiness.md",
+      "bytes": 8667,
+      "sha256": "eb46024e98c46988c692086b31c34abced834ef8ec33c688292204c9cd9ec12d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-long-readiness-review-1.md",
+      "bytes": 5714,
+      "sha256": "c492cbe874cdc5460f56fbefd42569229fef913f40471fec412c5df7cb24de6e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-long-readiness-revision-2.md",
+      "bytes": 7007,
+      "sha256": "2e844d34c089e55be17ad84a48cfafef8dcd51c8400c9d167abc493dd4867876"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-long-readiness.md",
+      "bytes": 13088,
+      "sha256": "220b3cc1a74af235c6979b17c4e0ea2757f72aa2c8b1b6c758287beaae89b63a"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\contributing-cases.json",
+      "bytes": 419189,
+      "sha256": "acd66ac604bb83cfee19d99a26122ce5f345b2d4f3eea4d0791e644869251f6e"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-01-root-go-ahead.json",
+      "bytes": 1449,
+      "sha256": "a261876600e00995485cf5e1e98d2b0e18ea2ee5cc43a3af61d5ae8a1c791dac"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-01.json",
+      "bytes": 12277,
+      "sha256": "072b522817e7f62e9bbc0f930f3d3969c2b56675c4ae348931e4b113d895753b"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-01.log",
+      "bytes": 2365,
+      "sha256": "b7b5efa02401eef44abd6488f64b2f0ca3a5b975e90e877945fb51d9e69f55ab"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02-analysis.md",
+      "bytes": 7057,
+      "sha256": "55d42902543f69f74797a69c5bc9da347d9299b7f5a21ed978a291ac9e777f43"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02-migration-a.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02-migration-a.stdout.log",
+      "bytes": 969,
+      "sha256": "a24d79199d1d333241457e69d810b95d030afd55af4601a2eccb3b5c05f13fe1"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02-migration-b.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02-migration-b.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02-observation.json",
+      "bytes": 24118,
+      "sha256": "150b9067d9e737cb82f79a13ff736a86ba8cc62b8ecac7a155b646ec56f68b38"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02-origin-before-verified.json",
+      "bytes": 1883572,
+      "sha256": "cd7f2f4379be0c972083a03fe94346600afea091dbcd371fa3b910d51ba645be"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02-phases.jsonl",
+      "bytes": 22213,
+      "sha256": "51ec859236a9d0ca0855f5b38a5abbc42f2b5ada7cbce6da7245dd5232e1247e"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02-root-go-ahead.json",
+      "bytes": 1823,
+      "sha256": "86e6f9025fe216bd5e5df1b94f541dbdcdda0b4c032a1c05f6cbbb715efaa817"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02.json",
+      "bytes": 12387,
+      "sha256": "dea5e8749393815f297aa9bb5cf714e353cce8da2a860944d3a3f9f2b224357b"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02.log",
+      "bytes": 3006,
+      "sha256": "c914820f5ddab5e3acd89690aa71f248cf81ad9bab0964f22e380c349c617bcb"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-analysis.md",
+      "bytes": 7973,
+      "sha256": "d416b9c74c33c3d8f8073e9892722fde4e6f98e81faa3255a4a525de0f832c72"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-checkpoint-info.json",
+      "bytes": 1614,
+      "sha256": "2b359e4623b2e603977342df69f441e35e0276643ee420a751a3515e361771b3"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-indexed-reconnect.schedule.json",
+      "bytes": 95,
+      "sha256": "0abf251dadfdfda73ccd3442f13dd0b51f7a82c6d7491f96d1b3bb9b1348d7ab"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-observation.json",
+      "bytes": 42598,
+      "sha256": "7f2adda05a3e1a845b4b7580db54e402283fad608e0d2c24de98a7b82f5f05f0"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-b-first-public-owner.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-b-first-public-owner.stdout.log",
+      "bytes": 260,
+      "sha256": "46874e20b6afce6d86323217a43b95f58840ba90e5c5a16612283824162a8e77"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-frozen-b.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-frozen-b.stdout.log",
+      "bytes": 250,
+      "sha256": "e38d72bb93455dc05eb67a55ab0021cf249cad1218b69b2d6ce506b051cafa67"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-indexed-b-reopened.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-indexed-b-reopened.stdout.log",
+      "bytes": 260,
+      "sha256": "9195479dfb4922ebe157d5cf7ba9512a1654eabeb22f180482dd0dd441f828a5"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-migration-b.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-migration-b.stdout.log",
+      "bytes": 968,
+      "sha256": "cdf69b5ad8543ec1b5e9e03353533a263eb9d928aefc2e9e08f9890c9b09c83d"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-origin-after-verified.json",
+      "bytes": 1883572,
+      "sha256": "cd7f2f4379be0c972083a03fe94346600afea091dbcd371fa3b910d51ba645be"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-origin-before-verified.json",
+      "bytes": 1883572,
+      "sha256": "cd7f2f4379be0c972083a03fe94346600afea091dbcd371fa3b910d51ba645be"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-phases.jsonl",
+      "bytes": 31316,
+      "sha256": "940df52d347a96dcb48d1f62b7fbe2cdfc5440a62f96868f4872aa86de94c4af"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-a-first-public-owner.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-a-first-public-owner.stdout.log",
+      "bytes": 260,
+      "sha256": "fae56826d2195f1f20007b8f8c93e840acd04838e2f52c0e68c51544277e70f4"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-indexed-a-reopened.stderr.log",
+      "bytes": 6267,
+      "sha256": "c367e6a20c538518c7871da201e80d76075158e6219a3fd7b377c2709c0ff4d0"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-indexed-a-reopened.stdout.log",
+      "bytes": 260,
+      "sha256": "602fed97bb5b013b7d859a405c6dbd30b57ea9f0daa939d38af9c7dc1aa33325"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-indexed-exhausted-a.stderr.log",
+      "bytes": 152,
+      "sha256": "6ad768b02ba8781f97479b761646aec82c0fd9d50e29f7b3ae5e302d8955e682"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-indexed-exhausted-a.stdout.log",
+      "bytes": 260,
+      "sha256": "db3a47785e472a72b4bc048cf22f37e575785a00e916b4ed05ad6f378958312b"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-indexed-reconnect-barrier.log",
+      "bytes": 1778,
+      "sha256": "545f0849be3035bb86521b03bd3dce5fd972c472cce603f27ae5c722647c8b8f"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-migration-a.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-migration-a.stdout.log",
+      "bytes": 969,
+      "sha256": "7ca145d62530a84b3e0263a5f6f3fd20e6f9dd356bf10cf153f72396ced172cb"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03.json",
+      "bytes": 12386,
+      "sha256": "6da9c4ae43dad5234df1da2aba156e0a972a7d3895069d4cf87fcdbe7932cb48"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03.log",
+      "bytes": 4493,
+      "sha256": "739839e858e1a5131e0bbe09063851f4fc2ab193d96297fd2466679b78f4a38f"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-origin-01-one.history.json",
+      "bytes": 135045,
+      "sha256": "335dc4c449ba490f8cc5ddb2248b8f69bc052c4f29a2fc1f65a065db71d44dc4"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-origin-01-provenance.json",
+      "bytes": 6713,
+      "sha256": "f933ec226012da931fdbe2c818df3570c80ccd43dd0307498110a7da5b4832da"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-origin-01-result.json",
+      "bytes": 6535,
+      "sha256": "7c9d54afefbbaa025089e62141595cc752c0d3e546ae854885d7e20522aedbd5"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-origin-01-two.history.json",
+      "bytes": 135045,
+      "sha256": "335dc4c449ba490f8cc5ddb2248b8f69bc052c4f29a2fc1f65a065db71d44dc4"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-origin-01.json",
+      "bytes": 12328,
+      "sha256": "e1acc55360a45c386dde029c2f9be35cbbdacc08bd2a076a1812ac6c692d5135"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-origin-01.log",
+      "bytes": 6644,
+      "sha256": "1724466a8a78b3e414b21ac47bfb5faa0bcec60f88fc3479962f0d35af4f3052"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary01-controller.rs.txt",
+      "bytes": 26779,
+      "sha256": "a8077b49ba2e02956a94ca352158190854f47d3a6b37b2e624b2bb81743e71f4"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary01-runner.ps1.txt",
+      "bytes": 23612,
+      "sha256": "c9c6841213181af75f3364128cf7d0697d45db5a7a8bf5bfda1b58986c3211ed"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary02-controller.rs.txt",
+      "bytes": 40620,
+      "sha256": "dd3a4b9e6c76daa1056b1bb3d765bcb251c54092ac14f84db3178cc7c5c510bd"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary02-native-approval-blocked-01.json",
+      "bytes": 1704,
+      "sha256": "85982d145305950d1c24e37ad411fc521330ed61dba00cc524088eb874fbcff8"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary02-readiness-binding.json",
+      "bytes": 35119,
+      "sha256": "fdb1682015099e26bcaee3e710413dbb8f62677fc30a74f5eaf78a4727addc68"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary02-runner.ps1.txt",
+      "bytes": 24964,
+      "sha256": "22dcaa81179e39986199664adea130c01c22749b3ea69a34664a60b2d66ca79e"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-readiness-binding.json",
+      "bytes": 41370,
+      "sha256": "e8276f359e52fe574cdf66b90ce624eb1a632a8b73d51bdca418674e4bbb769a"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-budget-amendment-4-binding.json",
+      "bytes": 2822,
+      "sha256": "1f1bea8be58afd7cec90cd4a4d463d485a4423922bd8b2d028653377b69b238b"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-budget-amendment-4-ledger-before.json",
+      "bytes": 404540,
+      "sha256": "83ea734311622f0578d843c0bbae4587c22c7538f6618deb974b6855516cf3fc"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-22.json",
+      "bytes": 20622,
+      "sha256": "7b55fb5c19cdc28c2a4be0017b7b5d8ddf769fdaa7d8c91f13ddb76dcf2fa3a9"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-23.json",
+      "bytes": 20622,
+      "sha256": "c1de81606770d9d999ee3f59dc1893b314fd54279c253827114bd852d0b3c70f"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-18.json",
+      "bytes": 20559,
+      "sha256": "652d002fd06d1db7f4d8b23666671e9b4e504657439fb726664b2e762bbd6aeb"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-19.json",
+      "bytes": 20559,
+      "sha256": "515e58ad8cdf689b98043d625b5562366a8d8d1352c726c61f8a89a68fc04103"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-23.json",
+      "bytes": 20459,
+      "sha256": "524eb6c0a2117a8ade8a2b6a8bba28d0082712d6376467423322cbaab9fa4aa0"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-25.json",
+      "bytes": 20459,
+      "sha256": "fa8bf3958009226053753ccb3ab1f963932e1dccc8978451165258ed98097b61"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-long-readiness-binding.json",
+      "bytes": 22114,
+      "sha256": "9c2e3ccb053169a60a249074397521f7284bd73dfbefa5e3def276a89f1057cc"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-long-readiness-r2-controller.patch.txt",
+      "bytes": 8510,
+      "sha256": "1511f642203af92742c6e2fe4aa091b264022a26350a057d4787034355b60548"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-long-readiness-revision-2-binding.json",
+      "bytes": 23657,
+      "sha256": "4116a5c3fc17ffb0c8b2efca0e71db98a4f22ff42ff091de3eb73ac94b0a3f67"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-long-readiness-v1-controller.rs.txt",
+      "bytes": 20858,
+      "sha256": "feaf65e3e6698ff56d5fad69c89f5d5423efb22f6d44b8da30c299e45000bf61"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-matcher-validation-02.json",
+      "bytes": 3137,
+      "sha256": "5ac7e0c978d3a32796bfe57171b9cb51463f2071678d4a59040264d50c14876f"
+    },
+    {
+      "path": "scripts/migration-s5-l1-deadline.ps1",
+      "bytes": 6038,
+      "sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration-boundary02/migration_s5_process-harness.bin.snapshot",
+      "bytes": 13935104,
+      "sha256": "5a003864af885c09d0274d84f54b2000a774908382169085b42314ee546ec161"
+    },
+    {
+      "path": "target\\compatibility\\long-lived-dialog-migration-boundary01\\migration_s5_process-harness.bin.snapshot",
+      "bytes": 13683712,
+      "sha256": "5ccc3a8a3e4bc76ed811f6d0aad5c93b95381bbab8d6a2c1284b3d66c8eb5ce2"
+    }
+  ],
+  "ledger": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\contributing-cases.json",
+    "bytes": 419189,
+    "sha256": "acd66ac604bb83cfee19d99a26122ce5f345b2d4f3eea4d0791e644869251f6e"
+  },
+  "charges": {
+    "F": 3263.7458077,
+    "P": 0,
+    "C": 147.8846192
+  },
+  "ceilings": {
+    "F": 3650,
+    "P": 0,
+    "C": 500
+  },
+  "ledger_sum_checks": [
+    {
+      "set": "C",
+      "count": 8,
+      "sum_seconds": 147.8846192,
+      "stated_seconds": 147.8846192
+    },
+    {
+      "set": "F",
+      "count": 29,
+      "sum_seconds": 3263.7458077,
+      "stated_seconds": 3263.7458077
+    }
+  ],
+  "case_count": 37,
+  "remaining_C": 352.1153808,
+  "remaining_F": 386.2541923,
+  "new_contributing_rows": 0,
+  "budget_amendment_or_refund": false,
+  "new_product_build_or_stage": false,
+  "prepared_cases": [
+    {
+      "case": "C-boundary-phase-preservation-01",
+      "set": "C",
+      "action": "Tests",
+      "package": [
+        "kilogram-cli"
+      ],
+      "filter": "migration_s5_l1_phase_preservation_opaque_held_locks",
+      "work": 30,
+      "whole": 40,
+      "scope": "actual Phases::run plus unchanged raw helper, opaque bytes, two real held empty OS locks; frozen copied JSONL prefix and later source logging",
+      "fixture_directory": null,
+      "default_execution_mode": "Restricted",
+      "future_bound_root_approval_required": true
+    },
+    {
+      "case": "F-exhausted-preservation-01",
+      "set": "F",
+      "action": "Tests",
+      "package": [
+        "kilogram-cli"
+      ],
+      "filter": "migration_s5_l1_stopped_checkpoint_preservation_only",
+      "work": 120,
+      "whole": 140,
+      "entry_reserve_F": 365,
+      "remaining_after_max_whole140": 246.2541923,
+      "requires_C_whole_PASS": true,
+      "scope": "unchanged obligations::preserve_input on existing stopped path only; both actual OS locks and raw before/after/destination byte comparisons",
+      "fixture_directory": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/migration-s5-storage/l1-exhausted-observed-NCjBHb",
+      "public_export_binding_count": 22,
+      "results_logs_outside_input": true,
+      "default_execution_mode": "Restricted",
+      "new_active_copy": false,
+      "frozen_origin_traversal": false,
+      "future_bound_root_approval_required": true
+    }
+  ],
+  "future_case_approval_start_result_files": [],
+  "fixture_actions_performed": [],
+  "known_live_kilogram_processes": [],
+  "standing_human_authorization": {
+    "path": "ai-docs/tasks/local-tests-standing-authorization-2026-10-26.md",
+    "bytes": 1876,
+    "sha256": "75777623bae55d4fa9185b0c17fd078cba8f61255a90ab1f70df5e4079e77957"
+  },
+  "limits": [
+    "All historical whole failures and missing boundary03 parent result retained. Root accepts only completed source-bound functional assertions; future preservation cannot retrospectively make boundary03 whole PASS.",
+    "Only Phases writer lifetime and two new exact test cases/runner guards changed. Existing check/run/drop, genuine SourceNative-to-end controller tail and all helper/product bytes unchanged.",
+    "Per-record writer is append/flushed/synced/closed on success and closed by Rust local drop on error; helper/log/JSONL preservation rules were not weakened.",
+    "C probe intentionally extends only its opaque fixture phase log after the helper copied the frozen prefix; no concurrent log mutation during copy.",
+    "F does not instantiate Phases in the stopped input. It byte-compares approved public exports before/after unchanged raw preservation, keeps pinned profile paths, and never typed-opens backup/input or starts a runtime.",
+    "Only source and public exported-evidence hashing was performed in static preparation. No stopped/frozen state inventory, copy, preservation, DB open, test executable, C/F, deadline probe or new approval was run/created.",
+    "Future separate C and F root approvals bind the exact case/new runner/current ledger; F approval must bind accounting after actual C whole PASS. Ordinary tool review and possible NativeToken use are covered by direct standing human scope, without bypass.",
+    "No product build/optimization, whole-P, cut3, implementation publication/allowlist finalization, commit or push."
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "status": "PASS",
+  "scope": "real held Windows empty synchronization file; raw opaque byte equality; nonempty lock refused before output creation",
+  "empty_exit": 0,
+  "nonempty_exit": 1
+}

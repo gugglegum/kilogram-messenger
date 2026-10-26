@@ -1,0 +1,65 @@
+{
+  "classification": "post-run-private-manifest-metadata-verification-no-new-test",
+  "case": "F-exhausted-preservation-01",
+  "whole_outcome": "PASS",
+  "elapsed_seconds": 67.5439277,
+  "work_expired": false,
+  "owned_children_after_cleanup": 0,
+  "case_record": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-preservation-01.json",
+    "bytes": 12428,
+    "sha256": "2180aadd201d76b164302088d25706a4a46561be76ddc1fbddf54267bbaeb320"
+  },
+  "case_log": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-preservation-01.log",
+    "bytes": 2951,
+    "sha256": "2a2eb80ea7c8f5cde988da54f4fbb0aed0351a9eb9fa50c2ac3f48c9c0ee0d24"
+  },
+  "result": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-preservation-01-result.json",
+    "bytes": 14994,
+    "sha256": "bcd69f3c44940c269f38c3fc5fc463e30803d7f5c5e2887a9875305d62926ca8"
+  },
+  "private_manifest": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preserved\\F-exhausted-preservation-01\\preservation-inventory.json",
+    "bytes": 6765525,
+    "sha256": "c2a56327fd1462b471163956fbfb61c6b89a07e142f4828c76011c29cadf28b3"
+  },
+  "source_files": 6956,
+  "source_after_files": 6956,
+  "destination_files": 6956,
+  "input_bytes_excluding_manifest": 45597399,
+  "source_before_after_destination_identity_equal": true,
+  "source_derived_empty_held_lock_digests": 2,
+  "all_other_source_and_all_destination_digests_actual": true,
+  "public_binding_count": 22,
+  "unchanged_original_absolute_profiles": [
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed.profile",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\indexed.profile"
+  ],
+  "case_source_image_bindings_verified": 54,
+  "backup_typed_opened": false,
+  "post_run_Native_DB_runtime_or_frozen_origin_traversal": false,
+  "source_script_image_changes": false,
+  "boundary03_whole_result": "FAIL",
+  "lost_parent_result_reconstructed": false,
+  "ledger": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\contributing-cases.json",
+    "bytes": 446512,
+    "sha256": "8acf1e8a11994e839f032e45e28aefcae7ce713f9eac47791fd7599af320b2fa"
+  },
+  "charges": {
+    "F": 3331.2897354,
+    "P": 0,
+    "C": 172.03101850000002
+  },
+  "ceilings": {
+    "F": 3650,
+    "P": 0,
+    "C": 500
+  },
+  "remaining_F": 318.7102646,
+  "new_extra_tests_after_F": 0,
+  "known_live_kilogram_processes": [],
+  "timing_limit": "Runner elapsed excludes terminal case/ledger write tail; independent whole watchdog covers it, as previously disclosed."
+}

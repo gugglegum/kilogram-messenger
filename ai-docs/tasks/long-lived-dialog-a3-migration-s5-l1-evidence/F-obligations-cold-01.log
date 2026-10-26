@@ -1,0 +1,7 @@
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\invoke-migration-s5-l1-case.ps1:50
+Line |
+  50 |     if($LASTEXITCODE -ne 0){throw 'Cold diagnostic failed.'}
+     |                             ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Cold diagnostic failed.
+
+

@@ -1,0 +1,224 @@
+{
+  "backup_never_typed_opened": true,
+  "boundary03_whole_result": "FAIL",
+  "checkpoint_info": {
+    "a_profile": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed.profile",
+    "active_base": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-exhausted-observed-NCjBHb",
+    "actual_b_next": 18,
+    "b_profile": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\indexed.profile",
+    "classification": "stopped-indexed-exhausted-checkpoint",
+    "cold_a": {
+      "counts": {
+        "debt": 0,
+        "pending": 0,
+        "queued": 0,
+        "receipts": [
+          511,
+          17
+        ],
+        "sources": 530
+      },
+      "native_generation": 517,
+      "native_hash": "6c50ea198a9d1c9fc6338c873a7bcda7d169c421d32d65fbe5369c3695c2d247",
+      "next": [
+        512,
+        18
+      ],
+      "receipt_hash": "338a74bcbee1249cb1655fa21962833d6d680394769861ca2df4ab98475a4760"
+    },
+    "cold_b": {
+      "counts": {
+        "debt": 0,
+        "pending": 0,
+        "queued": 0,
+        "receipts": [
+          511,
+          17
+        ],
+        "sources": 530
+      },
+      "native_generation": 88,
+      "native_hash": "e6e4abc55d1216a3514b40261005d6eb29e9fdecbc0312a78bddfc21fccccf1f",
+      "next": [
+        512,
+        18
+      ],
+      "receipt_hash": "338a74bcbee1249cb1655fa21962833d6d680394769861ca2df4ab98475a4760"
+    },
+    "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+    "cut_a": 512,
+    "no_handoff_or_Event2": true,
+    "restore_rule": "Private backup is never opened. Future reuse restores bytes to these exact original absolute paths; one active branch per Native domain. Root7 pins paths."
+  },
+  "classification": "preservation-only stopped case03",
+  "input": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb",
+  "lost_parent_result_reconstructed": false,
+  "new_active_copy_created": false,
+  "no_DB_runtime_migration_recovery_restore_or_frozen_origin_open": true,
+  "preservation": {
+    "copy_matches": true,
+    "files": 6956,
+    "inventory_path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preserved\\F-exhausted-preservation-01\\preservation-inventory.json",
+    "inventory_sha256": "c2a56327fd1462b471163956fbfb61c6b89a07e142f4828c76011c29cadf28b3",
+    "preserved": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preserved\\F-exhausted-preservation-01",
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb",
+    "source_unchanged": true
+  },
+  "public_binding": [
+    {
+      "approved_export_sha256": "940df52d347a96dcb48d1f62b7fbe2cdfc5440a62f96868f4872aa86de94c4af",
+      "blake3": "5caef97208337ada255a559955dbcdf0cf7934285941f2b49d4f057339174033",
+      "bytes": 31316,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-phases.jsonl",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\boundary-phases.jsonl"
+    },
+    {
+      "approved_export_sha256": "2b359e4623b2e603977342df69f441e35e0276643ee420a751a3515e361771b3",
+      "blake3": "7f353f200da9780dd858de933f70a5f59113eecf11fd0d9137edb75bb376541e",
+      "bytes": 1614,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-checkpoint-info.json",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\checkpoint-info.json"
+    },
+    {
+      "approved_export_sha256": "cd7f2f4379be0c972083a03fe94346600afea091dbcd371fa3b910d51ba645be",
+      "blake3": "9705563b7a2ec28a373d12bcc02da398b0f301bfeb10003f4c38ca3f195bbd68",
+      "bytes": 1883572,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-origin-before-verified.json",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\origin-before-verified.json"
+    },
+    {
+      "approved_export_sha256": "cd7f2f4379be0c972083a03fe94346600afea091dbcd371fa3b910d51ba645be",
+      "blake3": "9705563b7a2ec28a373d12bcc02da398b0f301bfeb10003f4c38ca3f195bbd68",
+      "bytes": 1883572,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-origin-after-verified.json",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\origin-after-verified.json"
+    },
+    {
+      "approved_export_sha256": "0abf251dadfdfda73ccd3442f13dd0b51f7a82c6d7491f96d1b3bb9b1348d7ab",
+      "blake3": "a991d11d46685bda85768d8e575d8e854ace9a6159f7df14665392c88ee4c4ad",
+      "bytes": 95,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-indexed-reconnect.schedule.json",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\indexed-reconnect.schedule.json"
+    },
+    {
+      "approved_export_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "blake3": "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262",
+      "bytes": 0,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-b-first-public-owner.stderr.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\b-first-public-owner.stderr.log"
+    },
+    {
+      "approved_export_sha256": "46874e20b6afce6d86323217a43b95f58840ba90e5c5a16612283824162a8e77",
+      "blake3": "9032d2720013a4b13b1299e2920baa38e5746b15459a8a26e0cad16e112870de",
+      "bytes": 260,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-b-first-public-owner.stdout.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\b-first-public-owner.stdout.log"
+    },
+    {
+      "approved_export_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "blake3": "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262",
+      "bytes": 0,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-frozen-b.stderr.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\frozen-b.stderr.log"
+    },
+    {
+      "approved_export_sha256": "e38d72bb93455dc05eb67a55ab0021cf249cad1218b69b2d6ce506b051cafa67",
+      "blake3": "c2ba849e72cc7d886342cddeded55ac8287075a11ba79808538c997b05fae28d",
+      "bytes": 250,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-frozen-b.stdout.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\frozen-b.stdout.log"
+    },
+    {
+      "approved_export_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "blake3": "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262",
+      "bytes": 0,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-indexed-b-reopened.stderr.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\indexed-b-reopened.stderr.log"
+    },
+    {
+      "approved_export_sha256": "9195479dfb4922ebe157d5cf7ba9512a1654eabeb22f180482dd0dd441f828a5",
+      "blake3": "99f5ce65e35afd92c07c0e3ae870f533eb2c4fadb115d06b149d416901d0f467",
+      "bytes": 260,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-indexed-b-reopened.stdout.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\indexed-b-reopened.stdout.log"
+    },
+    {
+      "approved_export_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "blake3": "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262",
+      "bytes": 0,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-migration-b.stderr.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\migration-b.stderr.log"
+    },
+    {
+      "approved_export_sha256": "cdf69b5ad8543ec1b5e9e03353533a263eb9d928aefc2e9e08f9890c9b09c83d",
+      "blake3": "2d6ba3be7457ca72f8d48ab021eb94051e856292e9407cb05d4117fa75680ae8",
+      "bytes": 968,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-one-migration-b.stdout.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\migration-b.stdout.log"
+    },
+    {
+      "approved_export_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "blake3": "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262",
+      "bytes": 0,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-a-first-public-owner.stderr.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\a-first-public-owner.stderr.log"
+    },
+    {
+      "approved_export_sha256": "fae56826d2195f1f20007b8f8c93e840acd04838e2f52c0e68c51544277e70f4",
+      "blake3": "adf3db168708ef2c1467f4410cda7f7aa2846365d9e63d16ca04f8cfc6cf635c",
+      "bytes": 260,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-a-first-public-owner.stdout.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\a-first-public-owner.stdout.log"
+    },
+    {
+      "approved_export_sha256": "c367e6a20c538518c7871da201e80d76075158e6219a3fd7b377c2709c0ff4d0",
+      "blake3": "f814440b9439d5eb86e8c8486ee4880ac22181fc12f74c46b5db9ec8392c102b",
+      "bytes": 6267,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-indexed-a-reopened.stderr.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed-a-reopened.stderr.log"
+    },
+    {
+      "approved_export_sha256": "602fed97bb5b013b7d859a405c6dbd30b57ea9f0daa939d38af9c7dc1aa33325",
+      "blake3": "4b3fcddff5bb7a56c5b648f7ffe4085d0dd1eb12896f39b84b1e0e4bada6805b",
+      "bytes": 260,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-indexed-a-reopened.stdout.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed-a-reopened.stdout.log"
+    },
+    {
+      "approved_export_sha256": "6ad768b02ba8781f97479b761646aec82c0fd9d50e29f7b3ae5e302d8955e682",
+      "blake3": "0eb4f9bcc3de9bad4c569c8bf6430642fc80f9e517c1420d3095f347314e162b",
+      "bytes": 152,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-indexed-exhausted-a.stderr.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed-exhausted-a.stderr.log"
+    },
+    {
+      "approved_export_sha256": "db3a47785e472a72b4bc048cf22f37e575785a00e916b4ed05ad6f378958312b",
+      "blake3": "48003ee0fa63a8938b2763adacfeaac5c0a4397aae35f362b3c9225606ea6f53",
+      "bytes": 260,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-indexed-exhausted-a.stdout.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed-exhausted-a.stdout.log"
+    },
+    {
+      "approved_export_sha256": "545f0849be3035bb86521b03bd3dce5fd972c472cce603f27ae5c722647c8b8f",
+      "blake3": "8948fbafcbd28a0f4a0a680b76ea9739b9d9f7b7711de00f35cbdca18d2f4ced",
+      "bytes": 1778,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-indexed-reconnect-barrier.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed-reconnect-barrier.log"
+    },
+    {
+      "approved_export_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "blake3": "af1349b9f5f9a1a6a0404dea36dcc9499bcb25c9adc112b7cc9a93cae41f3262",
+      "bytes": 0,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-migration-a.stderr.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\migration-a.stderr.log"
+    },
+    {
+      "approved_export_sha256": "7ca145d62530a84b3e0263a5f6f3fd20e6f9dd356bf10cf153f72396ced172cb",
+      "blake3": "78442ce4e43d88fa50fdac50aff539d0b399a1cf715998149b9f9650f67dcd26",
+      "bytes": 969,
+      "export": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-two-migration-a.stdout.log",
+      "source": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\migration-a.stdout.log"
+    }
+  ],
+  "status": "PASS"
+}

@@ -1,0 +1,10 @@
+{
+  "case": "F-obligations-resume-01",
+  "started_utc": "2026-10-26T03:34:13.8884919Z",
+  "owner_pid": 37720,
+  "whole_seconds": 150,
+  "work_seconds": 125,
+  "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-obligations-continuation-review-1.md",
+  "action": "Tests",
+  "classification": "attempt-start-not-final-result"
+}

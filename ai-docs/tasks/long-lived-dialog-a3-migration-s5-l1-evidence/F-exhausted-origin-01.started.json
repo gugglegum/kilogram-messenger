@@ -1,0 +1,10 @@
+{
+  "case": "F-exhausted-origin-01",
+  "started_utc": "2026-10-26T09:04:57.2963871Z",
+  "owner_pid": 21424,
+  "whole_seconds": 900,
+  "work_seconds": 850,
+  "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-4.md",
+  "action": "ExhaustedOrigin",
+  "classification": "attempt-start-not-final-result"
+}

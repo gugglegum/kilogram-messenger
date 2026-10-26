@@ -1,0 +1,42 @@
+l1_background c=0 error=AuthBlocked: drain lease absent
+l1_rpc kind=9 stage=lease_begin tick_ms=0
+l1_rpc kind=9 stage=lease_end tick_ms=641 owner_ms=641
+l1_rpc kind=9 stage=begin request=e065f1d9c742b412f61dce45287d380d
+l1_rpc kind=9 stage=written request=e065f1d9c742b412f61dce45287d380d
+l1_rpc kind=9 stage=finished millis=828 result=reply9
+l1_delivery c=0 stage=owner_begin after=None tick_ms=2312
+l1_delivery c=0 stage=owner_end after=None tick_ms=2865 owner_ms=552 selected=false
+l1_rpc kind=9 stage=lease_begin tick_ms=4254
+l1_rpc kind=9 stage=lease_end tick_ms=4751 owner_ms=496
+l1_rpc kind=9 stage=begin request=09798a67bce08f96121f110e305c2165
+l1_rpc kind=9 stage=written request=09798a67bce08f96121f110e305c2165
+l1_rpc kind=9 stage=finished millis=296 result=reply9
+l1_delivery c=0 stage=owner_begin after=None tick_ms=6135
+l1_delivery c=0 stage=owner_end after=None tick_ms=7330 owner_ms=1195 selected=false
+l1_rpc kind=9 stage=lease_begin tick_ms=8838
+l1_rpc kind=9 stage=lease_end tick_ms=9096 owner_ms=257
+l1_rpc kind=9 stage=begin request=873ec638bde84e02c191abf351cd8d5e
+l1_rpc kind=9 stage=written request=873ec638bde84e02c191abf351cd8d5e
+l1_rpc kind=9 stage=finished millis=440 result=reply9
+l1_delivery c=0 stage=owner_begin after=None tick_ms=10490
+l1_delivery c=0 stage=owner_end after=None tick_ms=10968 owner_ms=478 selected=false
+l1_rpc kind=9 stage=lease_begin tick_ms=12569
+l1_rpc kind=9 stage=lease_end tick_ms=13185 owner_ms=615
+l1_rpc kind=9 stage=begin request=8be8a3e1b5fa38d4d8fa1c0162dfdec4
+l1_rpc kind=9 stage=written request=8be8a3e1b5fa38d4d8fa1c0162dfdec4
+l1_rpc kind=9 stage=finished millis=462 result=reply9
+l1_delivery c=0 stage=owner_begin after=None tick_ms=14565
+l1_delivery c=0 stage=owner_end after=None tick_ms=15157 owner_ms=591 selected=false
+l1_rpc kind=9 stage=lease_begin tick_ms=16639
+l1_rpc kind=9 stage=lease_end tick_ms=17581 owner_ms=941
+l1_rpc kind=9 stage=begin request=4cc35226c4beff5dac51f8f958682a3c
+l1_rpc kind=9 stage=written request=4cc35226c4beff5dac51f8f958682a3c
+l1_rpc kind=9 stage=finished millis=279 result=reply9
+l1_delivery c=0 stage=owner_begin after=None tick_ms=18953
+l1_delivery c=0 stage=owner_end after=None tick_ms=19200 owner_ms=247 selected=false
+l1_rpc kind=9 stage=lease_begin tick_ms=20683
+l1_rpc kind=9 stage=lease_end tick_ms=21091 owner_ms=408
+l1_rpc kind=9 stage=begin request=f18e3369982df34bc495f838c6c03ca2
+l1_rpc kind=9 stage=written request=f18e3369982df34bc495f838c6c03ca2
+l1_rpc kind=9 stage=finished millis=404 result=reply9
+l1_delivery c=0 stage=owner_begin after=None tick_ms=22901

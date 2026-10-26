@@ -1,0 +1,43 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error[E0277]: the trait bound `RuntimeRepairState: serde::Serialize` is not satisfied
+   --> apps\kilogram-cli\tests\support\migration_s5_l1_obligations.rs:81:88
+    |
+ 81 | ...e={side} repair={:?} after61={:?}",serde_json::to_value(repo.repair_state(0)?)?,repo.debt_page(0,Some(61),32)?.iter().map(|v|v.0...
+    |                                       -------------------- ^^^^^^^^^^^^^^^^^^^^^ the trait `serde_core::ser::Serialize` is not implemented for `RuntimeRepairState`
+    |                                       |
+    |                                       required by a bound introduced by this call
+    |
+    = note: for local types consider adding `#[derive(serde::Serialize)]` to your `RuntimeRepairState` type
+    = note: for types from other crates check whether the crate offers a `serde` feature flag
+    = help: the following other types implement trait `serde_core::ser::Serialize`:
+              &'a T
+              &'a mut T
+              ()
+              (T,)
+              (T0, T1)
+              (T0, T1, T2)
+              (T0, T1, T2, T3)
+              (T0, T1, T2, T3, T4)
+            and 515 others
+note: required by a bound in `to_value`
+   --> C:\Users\Paul\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_json-1.0.151\src\value\mod.rs:997:8
+    |
+995 | pub fn to_value<T>(value: T) -> Result<Value, Error>
+    |        -------- required by a bound in this function
+996 | where
+997 |     T: Serialize,
+    |        ^^^^^^^^^ required by this bound in `to_value`
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 1 previous error
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:78
+Line |
+  78 |          throw "cargo test --no-run failed with exit code $LASTEXITCOD …
+     |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | cargo test --no-run failed with exit code 101
+
+

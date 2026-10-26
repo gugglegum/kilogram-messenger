@@ -1,0 +1,55 @@
+{
+  "case": "S-build-01",
+  "classification": "static-only",
+  "argv": [
+    "scripts/invoke-cargo-friendly.ps1",
+    "build",
+    "-CargoJobs",
+    "12",
+    "--locked",
+    "--offline",
+    "--profile",
+    "verification",
+    "--package",
+    "kilogram-cli",
+    "--bin",
+    "kilogram-cli"
+  ],
+  "cargo_features": [],
+  "elapsed_seconds": 94.9217544,
+  "exit_code": 0,
+  "error": null,
+  "source_files": [
+    {
+      "path": "Cargo.lock",
+      "bytes": 194144,
+      "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/consent1_admin.rs",
+      "bytes": 6358,
+      "sha256": "7377b1001cedfa6403e96ca357fc26596d0297714c43fef580a8fb5765b3a217"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+      "bytes": 395,
+      "sha256": "f0e87efd89c439617356ec66eb6e12f912f615d73c8590a70e3c773e61c1387f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered2_cli.rs",
+      "bytes": 23123,
+      "sha256": "d8243fa4eb10528f3ca70b147030710be68e0980a32e279a0149550294db3264"
+    },
+    {
+      "path": "scripts/invoke-cargo-friendly.ps1",
+      "bytes": 1103,
+      "sha256": "14abfe0cd8fcec63b956aa915b1f35430949b723d9b0e559aa8aef67d43fd803"
+    },
+    {
+      "path": "scripts/cargo-resource-policy.ps1",
+      "bytes": 1168,
+      "sha256": "2485a0b0ae5b07d6625f218e4c02a8f6927b78c26f10b5506f157066abba676e"
+    }
+  ],
+  "rule": "separate compile-only; no fixture or runtime execution; outside C/F"
+}

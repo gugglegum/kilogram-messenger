@@ -1,0 +1,48 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1.42s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 31 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+running 1 test
+Error: CLI ["ordered", "locator-import", "--ipc-file", "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-review1-own-f-0-XrlSo6\\ipc0", "--context", "3fcdbdd5985e949b7cff0b7e89335195553dc13d8192c58972da7b75d08dcb69", "--locator-file", "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-review1-own-f-0-XrlSo6\\locators1\\3fcdbdd5985e949b7cff0b7e89335195553dc13d8192c58972da7b75d08dcb69.locator"]:  Error: connect to runtime IPC
+
+Caused by:
+    Сделана попытка доступа к сокету методом, запрещенным правами доступа. (os error 10013)
+
+test live_l1::review1::migration_s5_l1_review1_genuine_partial_own_f_both_genesis_roles ... FAILED
+
+failures:
+
+failures:
+    live_l1::review1::migration_s5_l1_review1_genuine_partial_own_f_both_genesis_roles
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 14 filtered out; finished in 2.64s
+
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:285
+Line |
+ 285 |              throw "Stable test executable failed with exit code ${tes …
+     |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Stable test executable failed with exit code 101:
+     | E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+

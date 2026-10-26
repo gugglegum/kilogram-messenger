@@ -1,0 +1,1015 @@
+//! One real exhausted origin, one active copy per Native domain. No handoff.
+use super::*;
+use kilogram_cli::ordered_dialog::{admin, engine::Engine, runtime7::Profile3, state};
+use kilogram_identity::DeviceId;
+use kilogram_protocol::ordered_dialog_v1 as wire;
+use std::collections::BTreeMap;
+use std::io::Write;
+use zeroize::Zeroizing;
+
+struct Phases {
+    started: Instant,
+    deadline: Instant,
+    file: std::fs::File,
+    path: PathBuf,
+    records: Vec<Value>,
+    completed: bool,
+}
+impl Phases {
+    fn new(base: &Path, started: Instant) -> Result<Self> {
+        let path = base.join("boundary-phases.jsonl");
+        Ok(Self {
+            started,
+            // One controller allowance, never reset by a phase/checkpoint.
+            // Outer work580/whole600 remains authoritative, including setup.
+            deadline: started + Duration::from_secs(560),
+            file: std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)?,
+            path,
+            records: Vec::new(),
+            completed: false,
+        })
+    }
+    fn check(&self) -> Result<()> {
+        ensure!(
+            Instant::now() < self.deadline,
+            "absolute instrumented controller deadline"
+        );
+        Ok(())
+    }
+    fn record(&mut self, phase: &str, state: &str, detail: Value) -> Result<()> {
+        let value = json!({"elapsed_seconds":self.started.elapsed().as_secs_f64(),
+            "phase":phase,"state":state,"detail":detail});
+        serde_json::to_writer(&mut self.file, &value)?;
+        self.file.write_all(b"\n")?;
+        self.file.flush()?;
+        self.file.sync_data()?;
+        self.records.push(value);
+        Ok(())
+    }
+    fn run<T>(&mut self, name: &str, action: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
+        self.record(name, "begin", Value::Null)?;
+        let begin = Instant::now();
+        let result = self.check().and_then(|()| action(self)).and_then(|value| {
+            self.check()?;
+            Ok(value)
+        });
+        let detail = match &result {
+            Ok(_) => json!({"phase_seconds":begin.elapsed().as_secs_f64()}),
+            Err(error) => {
+                json!({"phase_seconds":begin.elapsed().as_secs_f64(),"error":format!("{error:#}")})
+            }
+        };
+        self.record(name, if result.is_ok() { "end" } else { "error" }, detail)?;
+        result
+    }
+}
+impl Drop for Phases {
+    fn drop(&mut self) {
+        if !self.completed {
+            let _ = self.record("controller","error",json!({
+                "returned_before_completed_parent_result":true,"panic_unwind":std::thread::panicking(),
+                "detail":"See the last phase begin/error and persistent child/test stderr; hard job termination may bypass Rust Drop."}));
+        }
+    }
+}
+
+struct SourceNative {
+    head: state::Head,
+    nonce: wire::Id,
+    signing: Zeroizing<Vec<u8>>,
+    encryption: Zeroizing<Vec<u8>>,
+    public: Value,
+}
+fn legacy_native(node: &Node, phases: &mut Phases, name: &str) -> Result<SourceNative> {
+    ensure!(!node.indexed, "cold source is actual V4 active copy only");
+    let lease = phases.run(&format!("{name}.lock"), |_| {
+        Ok(kilogram_state::StateDirectoryLock::acquire(
+            &node.branch.state,
+        )?)
+    })?;
+    let vault = phases.run(&format!("{name}.vault_open"), |_| {
+        Ok(kilogram_state::OrderedVault::open(lease)?)
+    })?;
+    let engine = phases.run(&format!("{name}.engine_new"), |_| Engine::new(vault))?;
+    let c = state::parse_id(&node.branch.context)?;
+    let head = phases.run(&format!("{name}.head"), |_| engine.head(c))?;
+    let raw = phases.run(&format!("{name}.raw_native"), |_| {
+        admin::required(&engine.store, &state::native_path(c))
+    })?;
+    let private = phases.run(&format!("{name}.native_restore"), |_| {
+        state::PrivateState::open(&head, engine.nonce, engine.device.encryption(), &raw)
+    })?;
+    let session = private.session.as_ref().context("real source Session")?;
+    let guard = private.guard.as_ref().context("real source Guard1")?;
+    let public = json!({"context":node.branch.context,"account":node.branch.account,"device":node.branch.device,"role":head.role,"d":head.d.map(|v|state::hex(&v)),"e":head.e.map(|v|state::hex(&v)),"sid":session.sid(),"keys":session.keys().iter().map(|v|state::hex(v)).collect::<Vec<_>>(),"own_next":guard.own.next,"peer_next":guard.peer.next,"native_hash":head.blob.map(|v|state::hex(&v)),"native_generation":head.native_generation});
+    let nonce = engine.nonce;
+    let (signing, encryption) = phases.run(&format!("{name}.identity_material"), |_| {
+        Ok((
+            Zeroizing::new(admin::required(&engine.store, "device-secret.key")?),
+            Zeroizing::new(admin::required(
+                &engine.store,
+                "device-encryption-secret.key",
+            )?),
+        ))
+    })?;
+    phases.run(&format!("{name}.close"), |_| {
+        drop(private);
+        drop(engine);
+        Ok(())
+    })?;
+    Ok(SourceNative {
+        head,
+        nonce,
+        signing,
+        encryption,
+        public,
+    })
+}
+fn replace_control(path: &Path, target: &str) -> Result<()> {
+    let mut file = tempfile::NamedTempFile::new_in(path.parent().context("control parent")?)?;
+    file.write_all(target.as_bytes())?;
+    file.as_file().sync_all()?;
+    file.persist(path).map_err(|error| error.error)?;
+    Ok(())
+}
+struct MigrationPause {
+    control: PathBuf,
+    hit: PathBuf,
+    armed: bool,
+}
+impl MigrationPause {
+    fn new(base: &Path, name: &str) -> Result<Self> {
+        let control = base.join(format!("{name}.control"));
+        let hit = control.with_extension("hit");
+        ensure!(
+            !control.exists() && !hit.exists(),
+            "fresh per-invocation migration controls"
+        );
+        replace_control(&control, "fence-committed")?;
+        Ok(Self {
+            control,
+            hit,
+            armed: true,
+        })
+    }
+    fn cleanup(&mut self) -> Result<()> {
+        if self.hit.exists() {
+            std::fs::remove_file(&self.hit)?;
+        }
+        replace_control(&self.control, "observation-released")?;
+        self.armed = false;
+        Ok(())
+    }
+}
+impl Drop for MigrationPause {
+    fn drop(&mut self) {
+        if self.armed {
+            let _ = self.cleanup();
+        }
+    }
+}
+fn observed_migrate(node: &mut Node, phases: &mut Phases, name: &str) -> Result<(Value, Value)> {
+    const TARGETS: [&str; 6] = [
+        "fence-committed",
+        "copy-committed",
+        "verify-staged",
+        "ready-staged",
+        "ready-committed",
+        "profile-staged",
+    ];
+    let args = node.branch.upgrade(false);
+    let stdout = node.branch.base.join(format!("{name}.stdout.log"));
+    let stderr = node.branch.base.join(format!("{name}.stderr.log"));
+    ensure!(
+        !stdout.exists() && !stderr.exists(),
+        "fresh migration child logs"
+    );
+    // Declare control before the OwnedChild: unwinding drops/kills/waits the
+    // actual child first, then removes its marker/releases its external control.
+    let mut pause = MigrationPause::new(&node.branch.base, name)?;
+    let mut child = spawn(
+        &current(),
+        &args,
+        &node.branch.base,
+        name,
+        Some(&pause.control),
+        None,
+    )?;
+    let pid = child.0.id();
+    phases.record(
+        name,
+        "begin",
+        json!({"pid":pid,"exe":current(),"argv":args,
+        "stdout":stdout,"stderr":stderr,"pause_control":pause.control,
+        "observation_is_brief_controlled_pause_not_passive_trace":true}),
+    )?;
+    let mut hooks = Vec::new();
+    let observed = (|| -> Result<Value> {
+        for (index, target) in TARGETS.iter().enumerate() {
+            let detail = phases.run(&format!("{name}.until.{target}"),|phases| {
+                loop {
+                    phases.check()?;
+                    child.alive()?;
+                    if pause.hit.is_file() {
+                        let hit = std::fs::read_to_string(&pause.hit)?;
+                        ensure!(hit == *target, "exact migration checkpoint hit");
+                        let next = TARGETS.get(index+1).copied().unwrap_or("observation-released");
+                        let observed_at = phases.started.elapsed().as_secs_f64();
+                        phases.record(name,"checkpoint_hit",json!({"pid":pid,"target":target,
+                            "exact_hit":hit,"observed_seconds":observed_at,
+                            "pre_transaction_commit":matches!(*target,"verify-staged"|"ready-staged"),
+                            "first_batch_only":*target == "copy-committed",
+                            "publication_still_staged":*target == "profile-staged"}))?;
+                        // While the old bytes remain, the child stays paused.
+                        // Remove the exact hit first, then atomically publish the
+                        // next complete target: no stale hit or empty control.
+                        std::fs::remove_file(&pause.hit)?;
+                        replace_control(&pause.control,next)?;
+                        let release = json!({"target":target,"next_target":next,
+                            "observed_seconds":observed_at,
+                            "released_seconds":phases.started.elapsed().as_secs_f64(),
+                            "hit_removed_before_release":true,"atomic_control_replace":true,
+                            "pre_transaction_commit":matches!(*target,"verify-staged"|"ready-staged")});
+                        phases.record(name,"checkpoint_released",release.clone())?;
+                        return Ok(release);
+                    }
+                    std::thread::sleep(Duration::from_millis(20));
+                }
+            })?;
+            hooks.push(detail);
+        }
+        phases.run(&format!("{name}.until_exit"), |phases| {
+            loop {
+                phases.check()?;
+                if let Some(status) = child.0.try_wait()? {
+                    ensure!(
+                        status.success(),
+                        "migration child {pid} failed; logs {} {}",
+                        stdout.display(),
+                        stderr.display()
+                    );
+                    return Ok(());
+                }
+                std::thread::sleep(Duration::from_millis(20));
+            }
+        })?;
+        let ready: Value = serde_json::from_slice(&std::fs::read(&stdout)?)?;
+        ensure!(
+            ready["storage_stage"] == "Ready" && ready["zero_migration_native_calls"] == true,
+            "real storage Ready"
+        );
+        Ok(ready)
+    })();
+    // Explicit cleanup on errors/timeouts; OwnedChild remains the fallback on
+    // every early-return/panic path. Never release a live paused child on error.
+    let cleanup = (|| -> Result<Value> {
+        let status = match child.0.try_wait()? {
+            Some(status) => status,
+            None => {
+                child.0.kill()?;
+                child.0.wait()?
+            }
+        };
+        drop(child);
+        pause.cleanup()?;
+        Ok(
+            json!({"pid":pid,"child_waited":true,"exit_code":status.code(),
+            "hit_absent":!pause.hit.exists(),"control":"observation-released"}),
+        )
+    })();
+    match &cleanup {
+        Ok(value) => phases.record(&format!("{name}.cleanup"), "end", value.clone())?,
+        Err(error) => phases.record(
+            &format!("{name}.cleanup"),
+            "error",
+            json!({"error":format!("{error:#}")}),
+        )?,
+    }
+    cleanup?;
+    let ready = observed?;
+    node.indexed = true;
+    node.slot = ready["contexts"]
+        .as_array()
+        .context("Ready contexts")?
+        .iter()
+        .position(|v| v["context"] == node.branch.context)
+        .context("actual C slot")? as u8;
+    node.profile = node.branch.base.join("indexed.profile");
+    node.ipc = node.branch.base.join("indexed.ipc");
+    node.locators = node.branch.base.join("indexed.locators");
+    let provenance = json!({"pid":pid,"argv":args,"stdout":stdout,"stderr":stderr,
+        "stdout_bytes":std::fs::metadata(&stdout)?.len(),"stderr_bytes":std::fs::metadata(&stderr)?.len(),
+        "stdout_blake3":blake3::hash(&std::fs::read(&stdout)?).to_hex().to_string(),
+        "stderr_blake3":blake3::hash(&std::fs::read(&stderr)?).to_hex().to_string(),
+        "checkpoints":hooks,"single_absolute_controller_deadline_seconds":560,
+        "controlled_pauses_are_included_in_cost":true,
+        "pre_fence_limitation":"No fence hit cannot separate inventory, first provenance verification and preflight."});
+    phases.record(name, "end", provenance.clone())?;
+    Ok((ready, provenance))
+}
+fn migrated_native(node: &Node, source: &SourceNative) -> Result<Value> {
+    let profile = Profile3::load(&node.profile)?;
+    let mut repo = profile.open(&node.profile)?;
+    let owner = repo.owner_material()?;
+    ensure!(
+        owner.nonce == source.nonce
+            && owner.account == state::parse_id(&node.branch.account)?
+            && owner.signing[..] == source.signing[..]
+            && owner.encryption[..] == source.encryption[..],
+        "migration replaced owner identity/nonce/secrets"
+    );
+    let snapshot = repo.snapshot(node.slot)?;
+    let h = state::Head::parse(
+        &snapshot.head,
+        source.head.c,
+        source.head.local_cert,
+        source.head.role,
+    )?;
+    ensure!(
+        h.d == source.head.d
+            && h.e == source.head.e
+            && h.sid == source.head.sid
+            && h.blob == source.head.blob
+            && h.native_generation == source.head.native_generation
+            && Some(wire::hash(
+                state::NATIVE_TAG,
+                snapshot
+                    .native
+                    .as_deref()
+                    .context("same actual Native blob")?
+            )) == source.head.blob,
+        "copy changed actual Native or D/E/SID"
+    );
+    Ok(
+        json!({"next":snapshot.meta.next,"counts":repo.counts(node.slot)?,"native_hash":h.blob.map(|v|state::hex(&v)),"native_generation":h.native_generation,"same_owner_secrets_and_nonce":true}),
+    )
+}
+fn same_session(node: &Node, status: &Value, source: &SourceNative) -> Result<()> {
+    let c = node.context(status)?;
+    ensure!(
+        c["sid"] == source.public["sid"]
+            && c["d"] == source.public["d"]
+            && c["e"] == source.public["e"]
+            && c["native"]["keys"] == source.public["keys"],
+        "actual public Session keys/D/E/SID changed"
+    );
+    for name in [
+        "account_constructors",
+        "outbound_constructors",
+        "inbound_constructors",
+    ] {
+        ensure!(
+            status["stats"][name] == 0,
+            "existing Native object recreated: {name}"
+        );
+    }
+    Ok(())
+}
+fn initialize_then_cold(node: &Node, source: &SourceNative, name: &str) -> Result<Value> {
+    // The real public owner initializes L1 metadata/request/history indexes.
+    // A cold repository read alone cannot stand in for this first owner turn.
+    let mut child = node.start(name)?;
+    let status = node.status()?;
+    same_session(node, &status, source)?;
+    ensure!(
+        node.context(&status)?["native_hash"] == source.public["native_hash"]
+            && status["stats"]["packet_attempts"] == 0,
+        "public initialization changed actual Native"
+    );
+    child.kill_wait()?;
+    let cold = migrated_native(node, source)?;
+    Ok(json!({"public_owner_initialization":status,"cold_copy_correspondence":cold}))
+}
+fn pair_current(
+    a: &Node,
+    b: &Node,
+    sa: &Value,
+    sb: &Value,
+    locator_revisions: [u64; 2],
+) -> Result<bool> {
+    let ca = a.context(sa)?;
+    let cb = b.context(sb)?;
+    Ok([ca, cb].iter().all(|c| {
+        c["lease_current"] == true
+            && c["lease_generation"].as_u64().is_some_and(|g| g > 0)
+            && c["publication_ready"] == true
+            && c["policy_error"].is_null()
+    }) && [sa, sb]
+        .iter()
+        .all(|s| s["stats"]["admissions"].as_u64().is_some_and(|n| n > 0))
+        && ca["own_locator_revision"] == locator_revisions[0]
+        && cb["peer_locator_revision"] == locator_revisions[0]
+        && cb["own_locator_revision"] == locator_revisions[1]
+        && ca["peer_locator_revision"] == locator_revisions[1])
+}
+fn reconnect_barrier(
+    a: &Node,
+    b: &Node,
+    children: [&mut OwnedChild; 2],
+    locator_revisions: [u64; 2],
+    log_path: &Path,
+) -> Result<Value> {
+    let [ca, cb] = children;
+    let started = Instant::now();
+    let deadline = started + Duration::from_secs(25);
+    let mut phase: Option<([u64; 4], usize)> = None;
+    loop {
+        ensure!(Instant::now() < deadline, "fresh indexed reconnect barrier");
+        ca.alive()?;
+        cb.alive()?;
+        let sa = a.status()?;
+        let sb = b.status()?;
+        let log = std::fs::read_to_string(log_path)?;
+        ensure!(
+            Instant::now() < deadline,
+            "fresh indexed reconnect barrier after IO"
+        );
+        if pair_current(a, b, &sa, &sb, locator_revisions)? {
+            let token = [
+                a.context(&sa)?["lease_generation"]
+                    .as_u64()
+                    .context("A lease")?,
+                b.context(&sb)?["lease_generation"]
+                    .as_u64()
+                    .context("B lease")?,
+                sa["stats"]["admissions"].as_u64().context("A admissions")?,
+                sb["stats"]["admissions"].as_u64().context("B admissions")?,
+            ];
+            if let Some((prior, offset)) = phase.filter(|(prior, _)| *prior == token) {
+                let finished = log
+                    .lines()
+                    .enumerate()
+                    .skip(offset)
+                    .find_map(|(index, line)| {
+                        let millis = line
+                            .strip_prefix("l1_rpc kind=9 stage=finished millis=")?
+                            .strip_suffix(" result=reply9")?;
+                        if millis.is_empty() || !millis.bytes().all(|b| b.is_ascii_digit()) {
+                            return None;
+                        }
+                        Some((index + 1, line, millis))
+                    });
+                if let Some((line_number, line, millis)) = finished {
+                    ca.alive()?;
+                    cb.alive()?;
+                    let snapshot = log_path.with_file_name("indexed-reconnect-barrier.log");
+                    ensure!(!snapshot.exists(), "immutable reconnect log snapshot");
+                    std::fs::write(&snapshot, log.as_bytes())?;
+                    return Ok(json!({"elapsed_seconds":started.elapsed().as_secs_f64(),
+                        "bounded_seconds":25,"a_pid":ca.0.id(),"b_pid":cb.0.id(),
+                        "locator_revisions":locator_revisions,"stable_lease_admission_token":prior,
+                        "a_context":a.context(&sa)?,"b_context":b.context(&sb)?,
+                        "a_admissions":sa["stats"]["admissions"],"b_admissions":sb["stats"]["admissions"],
+                        "fresh_a_log":log_path,"snapshot":snapshot,"snapshot_bytes":log.len(),
+                        "snapshot_blake3":blake3::hash(log.as_bytes()).to_hex().to_string(),
+                        "phase_log_line_offset":offset,"resume_finished_line_number":line_number,
+                        "resume_finished_line":line,"resume_millis":millis}));
+                }
+            } else {
+                // Require a later successful Resume under a stable fresh pair,
+                // rather than accept a round logged before current admission.
+                phase = Some((token, log.lines().count()));
+            }
+        } else {
+            phase = None;
+        }
+        std::thread::sleep(Duration::from_millis(60));
+    }
+}
+fn verify_origin(seed: &Path, base: &Path, phase: &str) -> Result<Value> {
+    let shell = PathBuf::from(
+        std::env::var_os("KILOGRAM_S5_POWERSHELL").context("dedicated parent PowerShell")?,
+    );
+    json_cli(
+        &shell,
+        &[
+            "-NoProfile".into(),
+            "-NonInteractive".into(),
+            "-File".into(),
+            text(&workspace().join("scripts/verify-migration-s5-l1-frozen-origin.ps1")),
+            "-InputDirectory".into(),
+            text(seed),
+            "-OutputManifest".into(),
+            text(&base.join(format!("origin-{phase}-verified.json"))),
+        ],
+    )
+}
+fn request_args(node: &Node, verb: &str, request: &str) -> Vec<String> {
+    vec![
+        "ordered".into(),
+        verb.into(),
+        "--ipc-file".into(),
+        text(&node.ipc),
+        "--slot".into(),
+        node.slot.to_string(),
+        "--request-id".into(),
+        request.into(),
+    ]
+}
+fn request(node: &Node, id: &str) -> Result<Value> {
+    json_cli(&current(), &request_args(node, "request-status3", id))
+}
+fn wait_index(node: &Node, child: &mut OwnedChild, last: &str) -> Result<()> {
+    let started = Instant::now();
+    loop {
+        child.alive()?;
+        if !request(node, last)?
+            .as_array()
+            .context("request option")?
+            .is_empty()
+        {
+            return Ok(());
+        }
+        ensure!(
+            started.elapsed() < Duration::from_secs(25),
+            "old request index preparation"
+        );
+        std::thread::sleep(Duration::from_millis(60));
+    }
+}
+fn exhausted_requests(node: &Node, old: &Value) -> Result<Value> {
+    let before = node.status()?;
+    let old_id = old["request_id"].as_str().context("old request ID")?;
+    let old_text = old["text"].as_str().context("old exact UTF8")?;
+    let mut args = request_args(node, "send3", "ed000000000000000000000000000200");
+    args.extend(["--text".into(), "new exhausted request must refuse".into()]);
+    ensure!(
+        rejected(&current(), &args)?.contains("UpgradeRequired"),
+        "new request must refuse"
+    );
+    let mut retry = request_args(node, "send3", old_id);
+    retry.extend(["--text".into(), old_text.into()]);
+    let exact = json_cli(&current(), &retry)?;
+    ensure!(
+        exact[1][0] == old["event_id"],
+        "old retry lost exact immutable ID"
+    );
+    let last = retry.len() - 1;
+    retry[last] = format!("{old_text}/changed");
+    ensure!(
+        rejected(&current(), &retry)?.contains("RequestIdConflict"),
+        "old request body conflict"
+    );
+    let old_status = request(node, old_id)?;
+    ensure!(
+        old_status[0][1][0] == old["event_id"] && old_status[0][2] == 1,
+        "exact old delivered request status"
+    );
+    ensure!(
+        request(node, "ed000000000000000000000000000200")? == json!([]),
+        "refused request was made durable"
+    );
+    let after = node.status()?;
+    let a = node.context(&before)?;
+    let z = node.context(&after)?;
+    ensure!(
+        a["next"] == z["next"]
+            && a["native_hash"] == z["native_hash"]
+            && a["native_generation"] == z["native_generation"]
+            && z["counts"]["queued"] == 0
+            && before["stats"]["packet_attempts"] == after["stats"]["packet_attempts"],
+        "exhausted refusal/retry invoked Native"
+    );
+    Ok(
+        json!({"before":before,"after":after,"old_retry":exact,"old_status":old_status,
+        "new_request_refused_before_packet":true,"changed_body_conflict":true}),
+    )
+}
+fn page(node: &Node, cursor: Option<&str>) -> Result<Value> {
+    let mut args = vec![
+        "ordered".into(),
+        "history3".into(),
+        "--ipc-file".into(),
+        text(&node.ipc),
+        "--slot".into(),
+        node.slot.to_string(),
+        "--limit".into(),
+        "32".into(),
+    ];
+    if let Some(cursor) = cursor {
+        args.extend(["--cursor".into(), cursor.into()]);
+    }
+    let raw = cli(&current(), &args)?;
+    ensure!(
+        raw.trim_end().len() <= 48 * 1024 - 64,
+        "actual escaped history JSON bound"
+    );
+    let page: Value = serde_json::from_str(&raw)?;
+    ensure!(
+        page["items"].as_array().context("items")?.len() <= 32,
+        "history page row bound"
+    );
+    Ok(page)
+}
+fn collect(node: &Node, first: Value) -> Result<Vec<Value>> {
+    let mut next = first;
+    let frontier = next["F"].clone();
+    let mut result = Vec::new();
+    for _ in 0..34 {
+        ensure!(next["F"] == frontier, "frozen history frontier changed");
+        result.extend(
+            next["items"]
+                .as_array()
+                .context("page items")?
+                .iter()
+                .cloned(),
+        );
+        if next["finished"] == true {
+            return Ok(result);
+        }
+        let cursor = next["cursor"]
+            .as_str()
+            .context("bounded cursor")?
+            .to_owned();
+        let following = page(node, Some(&cursor))?;
+        ensure!(
+            following["finished"] == true || following["cursor"] != cursor,
+            "nonfinal history cursor failed to advance"
+        );
+        next = following;
+    }
+    anyhow::bail!("bounded complete history page count")
+}
+fn exact_history(rows: &[Value], expected: &BTreeMap<String, (String, String)>) -> Result<()> {
+    let mut actual = BTreeMap::new();
+    for row in rows {
+        let id = row["id"].as_str().context("history ID")?.to_owned();
+        ensure!(
+            actual
+                .insert(
+                    id,
+                    (
+                        row["request"].as_str().context("request")?.to_owned(),
+                        row["text"].as_str().context("UTF8 text")?.to_owned()
+                    )
+                )
+                .is_none(),
+            "duplicate history ID"
+        );
+    }
+    ensure!(
+        &actual == expected,
+        "exact Event/request/UTF8 history mismatch"
+    );
+    Ok(())
+}
+fn cold_receipt(
+    node: &Node,
+    id: wire::Id,
+    signer: DeviceId,
+    source: &SourceNative,
+) -> Result<Value> {
+    let profile = Profile3::load(&node.profile)?;
+    let mut repo = profile.open(&node.profile)?;
+    let snapshot = repo.snapshot(node.slot)?;
+    let receipt = repo
+        .receipt(node.slot, 1, 17)?
+        .context("actual opposite-lane receipt17")?;
+    let r = wire::decode(&receipt, 1024)?;
+    let fields = r.fields(2)?;
+    let body = fields[0].fields(8)?;
+    signer.verify(
+        &wire::signing_bytes(wire::RECEIPT_SIGN, &fields[0], 1024)?,
+        fields[1].bytes()?,
+    )?;
+    ensure!(
+        body[0].uint()? == 1
+            && Some(body[1].fixed::<32>()?) == source.head.d
+            && Some(body[2].fixed::<32>()?) == source.head.e
+            && body[3].uint()? == 1
+            && body[4].uint()? == 17
+            && body[5].fixed::<32>()? == id,
+        "exact receipt source/scope"
+    );
+    let h = wire::decode(&snapshot.head, 2048)?;
+    Ok(
+        json!({"next":snapshot.meta.next,"counts":repo.counts(node.slot)?,
+        "native_generation":h.fields(13)?[6].uint()?,
+        "native_hash":snapshot.native.map(|v|state::hex(&wire::hash(state::NATIVE_TAG,&v))),
+        "receipt_hash":blake3::hash(&receipt).to_hex().to_string()}),
+    )
+}
+
+#[test]
+fn migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint() -> Result<()> {
+    let controller_started = Instant::now();
+    let case = std::env::var("KILOGRAM_S5_CASE").context("budgeted boundary case")?;
+    ensure!(
+        case == "F-exhausted-boundary-02",
+        "instrumented controller requires its separately approved case02"
+    );
+    let seed = PathBuf::from(
+        std::env::var_os("KILOGRAM_S5_FIXTURE_DIR").context("charged real511 origin")?,
+    );
+    let origin: Value = serde_json::from_slice(&std::fs::read(seed.join("result.json"))?)?;
+    ensure!(
+        origin["status"] == "PASS"
+            && origin["text_count"] == 527
+            && origin["duplex_requested_counts"]["A"] == 511
+            && origin["duplex_requested_counts"]["B"] == 16
+            && origin["exe_sha256"]
+                == "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+        "exact genuine asymmetric producer provenance"
+    );
+    let context = origin["context"].as_str().context("C")?;
+    let side_a = origin["elected_a"]["side"].as_str().context("elected A")?;
+    let side_b = origin["elected_b"]["side"].as_str().context("elected B")?;
+    ensure!(
+        side_a != side_b && [side_a, side_b].iter().all(|s| ["one", "two"].contains(s)),
+        "two actual sides"
+    );
+    let base = run_dir("l1-exhausted-observed-")?;
+    let mut phases = Phases::new(&base, controller_started)?;
+    phases.record(
+        "controller",
+        "begin",
+        json!({"case":case,"absolute_controller_seconds":560,
+        "outer_work_whole":[580,600],"origin":seed,"active":base}),
+    )?;
+    println!(
+        "L1_EXHAUSTED active={} frozen_original={} original_typed_open=false",
+        base.display(),
+        seed.display()
+    );
+    let original_before = phases.run("origin.raw_verify.before", |_| {
+        verify_origin(&seed, &base, "before")
+    })?;
+    let mut a = phases.run("copy.A", |_| Node::from_seed(&seed, side_a, &base, context))?;
+    let mut b = phases.run("copy.B", |_| Node::from_seed(&seed, side_b, &base, context))?;
+    let source_a = phases.run("legacy.A", |p| legacy_native(&a, p, "legacy.A"))?;
+    let source_b = phases.run("legacy.B", |p| legacy_native(&b, p, "legacy.B"))?;
+    ensure!(
+        source_a.head.role == 0
+            && source_b.head.role == 1
+            && source_a.public["own_next"] == 512
+            && source_a.public["peer_next"] == 17
+            && source_b.public["own_next"] == 17
+            && source_b.public["peer_next"] == 512,
+        "actual copied Native512/17 frontiers"
+    );
+    let old_history: Vec<Value> =
+        serde_json::from_slice(&std::fs::read(seed.join(format!("{side_a}.history.json")))?)?;
+    let old_request = old_history
+        .iter()
+        .find(|v| v["request_id"] == "00000000000000020000000000000001")
+        .context("actual earliest A Text request")?
+        .clone();
+    let mut expected = BTreeMap::new();
+    for row in &old_history {
+        ensure!(
+            expected
+                .insert(
+                    row["event_id"].as_str().context("old Event ID")?.to_owned(),
+                    (
+                        row["request_id"]
+                            .as_str()
+                            .context("old request")?
+                            .to_owned(),
+                        row["text"].as_str().context("old UTF8")?.to_owned()
+                    )
+                )
+                .is_none(),
+            "old duplicate"
+        );
+    }
+    ensure!(expected.len() == 527, "actual old527 Text rows");
+    let (ready_a, migration_a) = phases.run("migration.A", |p| {
+        observed_migrate(&mut a, p, "migration-a")
+    })?;
+    let copied_a = phases.run("owner.A.initialize_then_cold", |_| {
+        initialize_then_cold(&a, &source_a, "a-first-public-owner")
+    })?;
+    let mut ca = phases.run("owner.A.start", |_| a.start("indexed-exhausted-a"))?;
+    let mut cb = phases.run("owner.frozen_B.start", |_| b.start("frozen-b"))?;
+    b.import(&a)?;
+    a.import(&b)?;
+    let initial = phases.run("interop.initial_frontiers", |_| {
+        let status = a.wait(&mut ca, 512, 17)?;
+        b.wait(&mut cb, 17, 512)?;
+        Ok(status)
+    })?;
+    same_session(&a, &initial, &source_a)?;
+    ensure!(
+        a.context(&initial)?["native_hash"] == source_a.public["native_hash"],
+        "Native changed before refusal"
+    );
+    phases.run("requests.initial_index", |_| {
+        wait_index(&a, &mut ca, "000000000000000200000000000001ff")
+    })?;
+    let refused_before = phases.run("requests.refusal_before_reopen", |_| {
+        exhausted_requests(&a, &old_request)
+    })?;
+    let (first, old_rows) = phases.run("history.original527", |_| {
+        let first = page(&a, None)?;
+        let rows = collect(&a, first.clone())?;
+        Ok((first, rows))
+    })?;
+    exact_history(&old_rows, &expected)?;
+    ensure!(
+        old_rows.iter().all(|v| v["proof_kind"] == "LegacySnapshot"),
+        "original immutable provenance"
+    );
+    let frozen_cursor = first["cursor"]
+        .as_str()
+        .context("old frozen cursor")?
+        .to_owned();
+    let prefix_len = first["items"].as_array().context("prefix")?.len();
+    let new_text = "frozen B may send17 while indexed A own lane is exhausted";
+    let received_a = phases.run("interop.actual_B17_receive_ACK", |_| {
+        b.send(9001, new_text)?;
+        let status = a.wait(&mut ca, 512, 18)?;
+        b.wait(&mut cb, 18, 512)?;
+        Ok(status)
+    })?;
+    same_session(&a, &received_a, &source_a)?;
+    ensure!(
+        received_a["stats"]["committed_encrypt"] == 0
+            && received_a["stats"]["committed_decrypt"] == 1,
+        "exhausted own lane interfered with actual opposite receive"
+    );
+    phases.run("interop.stop_before_B_migration", |_| {
+        ca.kill_wait()?;
+        cb.kill_wait()?;
+        Ok(())
+    })?;
+    let source_b_after = phases.run("legacy.B_after17", |p| {
+        legacy_native(&b, p, "legacy.B_after17")
+    })?;
+    ensure!(
+        source_b_after.public["keys"] == source_b.public["keys"]
+            && source_b_after.nonce == source_b.nonce
+            && source_b_after.signing[..] == source_b.signing[..]
+            && source_b_after.encryption[..] == source_b.encryption[..],
+        "frozen B identity/Session replaced"
+    );
+    let (ready_b, migration_b) = phases.run("migration.B", |p| {
+        observed_migrate(&mut b, p, "migration-b")
+    })?;
+    let copied_b = phases.run("owner.B.initialize_then_cold", |_| {
+        initialize_then_cold(&b, &source_b_after, "b-first-public-owner")
+    })?;
+    let reconnect_schedule = base.join("indexed-reconnect.schedule.json");
+    schedule_file(
+        &reconnect_schedule,
+        &json!({"context":context,"trace_rpc":true}),
+    )?;
+    let reconnect_log = a.branch.base.join("indexed-a-reopened.stderr.log");
+    ensure!(
+        !reconnect_log.exists(),
+        "new invocation must have a fresh A log"
+    );
+    ca = phases.run("owner.A.reopen_traced", |_| {
+        a.start_controlled("indexed-a-reopened", Some(&reconnect_schedule), None)
+    })?;
+    cb = phases.run("owner.B.reopen", |_| b.start("indexed-b-reopened"))?;
+    let fresh_a = a.status()?;
+    let fresh_b = b.status()?;
+    let locator_revisions = [
+        a.context(&fresh_a)?["own_locator_revision"]
+            .as_u64()
+            .context("fresh A locator")?,
+        b.context(&fresh_b)?["own_locator_revision"]
+            .as_u64()
+            .context("fresh B locator")?,
+    ];
+    ensure!(
+        locator_revisions.iter().all(|r| *r > 0),
+        "fresh locator revisions"
+    );
+    b.import(&a)?;
+    a.import(&b)?;
+    let reconnect = phases.run("both_indexed.fresh_reconnect_barrier", |_| {
+        reconnect_barrier(
+            &a,
+            &b,
+            [&mut ca, &mut cb],
+            locator_revisions,
+            &reconnect_log,
+        )
+    })?;
+    let reopened_a = a.status()?;
+    let reopened_b = b.status()?;
+    ensure!(
+        pair_current(&a, &b, &reopened_a, &reopened_b, locator_revisions)?
+            && a.context(&reopened_a)?["lease_generation"]
+                == reconnect["a_context"]["lease_generation"]
+            && b.context(&reopened_b)?["lease_generation"]
+                == reconnect["b_context"]["lease_generation"]
+            && reopened_a["stats"]["admissions"] == reconnect["a_admissions"]
+            && reopened_b["stats"]["admissions"] == reconnect["b_admissions"]
+            && a.reached(&reopened_a, 512, 18)?
+            && b.reached(&reopened_b, 18, 512)?,
+        "fresh post-Resume status/frontier/admission correspondence"
+    );
+    same_session(&a, &reopened_a, &source_a)?;
+    same_session(&b, &reopened_b, &source_b)?;
+    ensure!(
+        reopened_a["stats"]["packet_attempts"] == 0
+            && reopened_b["stats"]["packet_attempts"] == 0
+            && a.context(&reopened_a)?["native_hash"] == a.context(&received_a)?["native_hash"],
+        "reopen replayed Native"
+    );
+    let refused_after = phases.run("requests.refusal_after_reopen", |_| {
+        exhausted_requests(&a, &old_request)
+    })?;
+    let suffix = phases.run("history.frozen_suffix", |_| {
+        collect(&a, page(&a, Some(&frozen_cursor))?)
+    })?;
+    ensure!(
+        suffix == old_rows[prefix_len..] && first["F"] == json!([512, 17]),
+        "exact old frozen suffix after append/reopen"
+    );
+    let rows_a = phases.run("history.A528", |_| collect(&a, page(&a, None)?))?;
+    let rows_b = phases.run("history.B528", |_| collect(&b, page(&b, None)?))?;
+    let added = rows_a
+        .iter()
+        .find(|v| v["request"] == "fa000000000000000000000000002329")
+        .context("actual B17")?;
+    ensure!(
+        added["ordinal"] == 17
+            && added["role"] == 1
+            && added["text"] == new_text
+            && added["proof_kind"] == "FullL1",
+        "actual new readable provenance"
+    );
+    let added_id = added["id"].as_str().context("new immutable ID")?.to_owned();
+    expected.insert(
+        added_id.clone(),
+        ("fa000000000000000000000000002329".into(), new_text.into()),
+    );
+    exact_history(&rows_a, &expected)?;
+    exact_history(&rows_b, &expected)?;
+    ensure!(
+        rows_a.len() == 528
+            && rows_b.len() == 528
+            && request(&b, "fa000000000000000000000000002329")?[0][2] == 1,
+        "real exact B17 ACK"
+    );
+    phases.run("owners.final_stop", |_| {
+        ca.kill_wait()?;
+        cb.kill_wait()?;
+        Ok(())
+    })?;
+    let id = state::parse_id(&added_id)?;
+    let signer = DeviceId::from_bytes(state::parse_id(&a.branch.device)?);
+    let cold_a = phases.run("receipt.A.cold", |_| {
+        cold_receipt(&a, id, signer, &source_a)
+    })?;
+    let cold_b = phases.run("receipt.B.cold", |_| {
+        cold_receipt(&b, id, signer, &source_a)
+    })?;
+    ensure!(
+        cold_a["receipt_hash"] == cold_b["receipt_hash"]
+            && cold_a["next"] == json!([512, 18])
+            && cold_b["next"] == json!([512, 18]),
+        "cold exact receipt/frontiers mismatch"
+    );
+    let original_after = phases.run("origin.raw_verify.after", |_| {
+        verify_origin(&seed, &base, "after")
+    })?;
+    ensure!(
+        original_before["frozen_manifest_sha256"] == original_after["frozen_manifest_sha256"],
+        "frozen original changed"
+    );
+    phases.run("checkpoint.info", |_| {std::fs::write(
+        base.join("checkpoint-info.json"),
+        serde_json::to_vec_pretty(&json!({
+        "classification":"stopped-indexed-exhausted-checkpoint","active_base":base,"a_profile":a.profile,
+        "b_profile":b.profile,"cut_a":512,"actual_b_next":18,"context":context,
+        "restore_rule":"Private backup is never opened. Future reuse restores bytes to these exact original absolute paths; one active branch per Native domain. Root7 pins paths.",
+        "no_handoff_or_Event2":true,"cold_a":cold_a,"cold_b":cold_b}))?,
+    )?;Ok(())})?;
+    let preserved = phases.run("checkpoint.private_preservation", |_| {
+        obligations::preserve_input(&base, &format!("{case}-checkpoint"))
+    })?;
+    phases.record(
+        "controller.assertions_and_preservation",
+        "end",
+        json!({"no_handoff_or_Event2":true}),
+    )?;
+    phases.check()?;
+    let phase_provenance = json!({"path":phases.path,"bytes":std::fs::metadata(&phases.path)?.len(),
+        "blake3":blake3::hash(&std::fs::read(&phases.path)?).to_hex().to_string(),
+        "single_absolute_controller_seconds":560,"controlled_pauses_included":true});
+    std::fs::write(
+        base.join("parent-exhausted-result.json"),
+        serde_json::to_vec_pretty(&json!({
+        "phase_trace":phase_provenance,"phase_records":phases.records,
+        "migration_a_observation":migration_a,"migration_b_observation":migration_b,
+        "source_a":source_a.public,"source_b":source_b.public,"original_before":original_before,
+        "original_after":original_after,"ready_a":ready_a,"ready_b":ready_b,"copied_a":copied_a,"copied_b":copied_b,
+        "refused_before":refused_before,"refused_after":refused_after,"received_a":received_a,
+        "reconnect_barrier":reconnect,"reopened_a":reopened_a,"reopened_b":reopened_b,"old_first_page":first,"old_suffix":suffix,
+        "history_a":rows_a,"history_b":rows_b,"cold_a":cold_a,"cold_b":cold_b,"checkpoint":preserved}))?,
+    )?;
+    phases.check()?;
+    phases.completed = true;
+    println!(
+        "L1_EXHAUSTED PASS actual511_16=true next512_refusal_before_native=true opposite17_receive_ACK=true history527_528=true frozen_suffix=true stopped_checkpoint=true root={}",
+        base.display()
+    );
+    Ok(())
+}

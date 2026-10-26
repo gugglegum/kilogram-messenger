@@ -1,0 +1,39 @@
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+error[E0583]: file not found for module `live1`
+  --> crates\kilogram-state\src\vault\indexed_dialog\migration7.rs:12:1
+   |
+12 | pub mod live1;
+   | ^^^^^^^^^^^^^^
+   |
+   = help: to create the module `live1`, create file "crates\kilogram-state\src\vault\indexed_dialog\live1.rs" or "crates\kilogram-state\src\vault\indexed_dialog\live1\mod.rs"
+   = note: if there is a `mod live1` elsewhere in the crate already, import it with `use crate::...` instead
+
+error[E0599]: no method named `l1_check` found for struct `indexed_dialog::Work<'a, N, V>` in the current scope
+    --> crates\kilogram-state\src\vault\indexed_dialog.rs:910:43
+     |
+ 910 |               CommitInput::Legacy1(op) => w.l1_check(op, id == self.root.commit_id)?,
+     |                                             ^^^^^^^^ method not found in `indexed_dialog::Work<'_, ReadOnlyTable<&[u8], &[u8]>, ReadOnlyTable<&[u8], &[u8]>>`
+...
+1287 | / struct Work<
+1288 | |     'a,
+1289 | |     N: ReadableTable<&'static [u8], &'static [u8]>,
+1290 | |     V: ReadableTable<&'static [u8], &'static [u8]>,
+1291 | | > {
+     | |_- method `l1_check` not found for this struct
+
+error[E0599]: no method named `l1_apply` found for struct `indexed_dialog::Work<'a, N, V>` in the current scope
+    --> crates\kilogram-state\src\vault\indexed_dialog.rs:965:43
+     |
+ 965 |               CommitInput::Legacy1(op) => w.l1_apply(*op)?,
+     |                                             ^^^^^^^^ method not found in `indexed_dialog::Work<'_, ReadOnlyTable<&[u8], &[u8]>, ReadOnlyTable<&[u8], &[u8]>>`
+...
+1287 | / struct Work<
+1288 | |     'a,
+1289 | |     N: ReadableTable<&'static [u8], &'static [u8]>,
+1290 | |     V: ReadableTable<&'static [u8], &'static [u8]>,
+1291 | | > {
+     | |_- method `l1_apply` not found for this struct
+
+Some errors have detailed explanations: E0583, E0599.
+For more information about an error, try `rustc --explain E0583`.
+error: could not compile `kilogram-state` (lib) due to 3 previous errors

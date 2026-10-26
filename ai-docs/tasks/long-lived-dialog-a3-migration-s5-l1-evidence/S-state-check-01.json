@@ -1,0 +1,196 @@
+{
+  "case": "S-state-check-01",
+  "classification": "static-only",
+  "baseline": "73c499818ba9b699c331aa842e64e8432e90c59a",
+  "action": "Check",
+  "argv": [
+    "check",
+    "--locked",
+    "--offline",
+    "--jobs",
+    "12",
+    "--profile",
+    "verification",
+    "--package",
+    "kilogram-state"
+  ],
+  "cargo_features": [],
+  "elapsed_seconds": 4.8173009,
+  "exit_code": 101,
+  "error": null,
+  "before": [
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/consent1_admin.rs",
+      "bytes": 6358,
+      "sha256": "7377b1001cedfa6403e96ca357fc26596d0297714c43fef580a8fb5765b3a217"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+      "bytes": 395,
+      "sha256": "f0e87efd89c439617356ec66eb6e12f912f615d73c8590a70e3c773e61c1387f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered2_cli.rs",
+      "bytes": 23123,
+      "sha256": "d8243fa4eb10528f3ca70b147030710be68e0980a32e279a0149550294db3264"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 194144,
+      "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126"
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 3398,
+      "sha256": "28700ccee74b2a78f96e945b86087ce9dfac32a2236bf61067976c2ac1082aa0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "bytes": 58018,
+      "sha256": "cf8bc81b5608c10b0e858e840caca69c8d08cd2aaba424d6056c106b26cadbf6"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "bytes": 27421,
+      "sha256": "9df23b09516a1ea5521b3bc93c03e5f39e3978140b38d76b187d582701df5469"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7.rs",
+      "bytes": 4114,
+      "sha256": "01cd82b3764c681e394167e0a600da6142f3c7d70ec89e0a719959a51ef8ad8d"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs",
+      "bytes": 6038,
+      "sha256": "71a8c6df63cdf561b247798fdf389773ef6c66b2bb7bb6b5eb2448dcf13499ce"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/data.rs",
+      "bytes": 16497,
+      "sha256": "4981218aeeead1797081fa998282e4eb4b8f77c327a25ab91c82b8e459fcfd40"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/history.rs",
+      "bytes": 10766,
+      "sha256": "c44fd3133d392bf85f1c54e49375129ed21c24a24bec6383d26d9f17a84cbb7f"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops.rs",
+      "bytes": 13997,
+      "sha256": "bb4015521134a57b0cfa00a0632029f44beaa49d804a514077243bcb7da11909"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/read.rs",
+      "bytes": 9998,
+      "sha256": "944a38284e366c7ca6143ec1679b2acb9aff2b06517ee9a7326e140457c60ac7"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/types.rs",
+      "bytes": 7419,
+      "sha256": "72165dd234130c413e1b965f94d771f6047aaac98d49d083224340cde60548c7"
+    },
+    {
+      "path": "scripts/cargo-resource-policy.ps1",
+      "bytes": 1168,
+      "sha256": "2485a0b0ae5b07d6625f218e4c02a8f6927b78c26f10b5506f157066abba676e"
+    },
+    {
+      "path": "scripts/invoke-migration-s5-l1-static.ps1",
+      "bytes": 3573,
+      "sha256": "00debd7f47502df9985a8b56231ef9fad3137fbfd77052c09b9b517d4fbc7863"
+    },
+    {
+      "path": "scripts/run-cargo-tests-stable.ps1",
+      "bytes": 10839,
+      "sha256": "c2cba5140b56c99a6482884e049426ba0ed54e90b572aebf01ace45e65cd06c3"
+    }
+  ],
+  "after": [
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/consent1_admin.rs",
+      "bytes": 6358,
+      "sha256": "7377b1001cedfa6403e96ca357fc26596d0297714c43fef580a8fb5765b3a217"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+      "bytes": 395,
+      "sha256": "f0e87efd89c439617356ec66eb6e12f912f615d73c8590a70e3c773e61c1387f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered2_cli.rs",
+      "bytes": 23123,
+      "sha256": "d8243fa4eb10528f3ca70b147030710be68e0980a32e279a0149550294db3264"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 194144,
+      "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126"
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 3398,
+      "sha256": "28700ccee74b2a78f96e945b86087ce9dfac32a2236bf61067976c2ac1082aa0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "bytes": 58018,
+      "sha256": "cf8bc81b5608c10b0e858e840caca69c8d08cd2aaba424d6056c106b26cadbf6"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "bytes": 27421,
+      "sha256": "9df23b09516a1ea5521b3bc93c03e5f39e3978140b38d76b187d582701df5469"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7.rs",
+      "bytes": 4114,
+      "sha256": "01cd82b3764c681e394167e0a600da6142f3c7d70ec89e0a719959a51ef8ad8d"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs",
+      "bytes": 6038,
+      "sha256": "71a8c6df63cdf561b247798fdf389773ef6c66b2bb7bb6b5eb2448dcf13499ce"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/data.rs",
+      "bytes": 16497,
+      "sha256": "4981218aeeead1797081fa998282e4eb4b8f77c327a25ab91c82b8e459fcfd40"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/history.rs",
+      "bytes": 10766,
+      "sha256": "c44fd3133d392bf85f1c54e49375129ed21c24a24bec6383d26d9f17a84cbb7f"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops.rs",
+      "bytes": 13997,
+      "sha256": "bb4015521134a57b0cfa00a0632029f44beaa49d804a514077243bcb7da11909"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/read.rs",
+      "bytes": 9998,
+      "sha256": "944a38284e366c7ca6143ec1679b2acb9aff2b06517ee9a7326e140457c60ac7"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/types.rs",
+      "bytes": 7419,
+      "sha256": "72165dd234130c413e1b965f94d771f6047aaac98d49d083224340cde60548c7"
+    },
+    {
+      "path": "scripts/cargo-resource-policy.ps1",
+      "bytes": 1168,
+      "sha256": "2485a0b0ae5b07d6625f218e4c02a8f6927b78c26f10b5506f157066abba676e"
+    },
+    {
+      "path": "scripts/invoke-migration-s5-l1-static.ps1",
+      "bytes": 3573,
+      "sha256": "00debd7f47502df9985a8b56231ef9fad3137fbfd77052c09b9b517d4fbc7863"
+    },
+    {
+      "path": "scripts/run-cargo-tests-stable.ps1",
+      "bytes": 10839,
+      "sha256": "c2cba5140b56c99a6482884e049426ba0ed54e90b572aebf01ace45e65cd06c3"
+    }
+  ],
+  "rule": "Separate static work outside C/F; no fixture/runtime execution."
+}

@@ -1,0 +1,18 @@
+{
+  "classification": "ledger-amendment-no-runtime",
+  "authority": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-obligations-continuation-review-3.md",
+  "sha256": "8a075a753718605c1dd2659846b54673b2fb3930c0e1f229a662223a1b82d46c",
+  "before_ledger_sha256": "5265ea35d9b11ec1a64484409dce971f0807934155485de9a2298d735c0e6d11",
+  "after_ledger_sha256": "88bf0b315b3ec312a209419ee7262f9db170882e1d74188717f4e532b995094e",
+  "immutable_cases_verified": 22,
+  "charged_unchanged": {
+    "F": 763.8892556,
+    "P": 0,
+    "C": 105.37611369999999
+  },
+  "cumulative_maxima_seconds": {
+    "P": 0,
+    "F": 3636.2886628,
+    "C": 779.3257298
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "case": "F-capacity-01",
+  "started_utc": "2026-10-26T06:10:23.9317834Z",
+  "owner_pid": 39024,
+  "whole_seconds": 45,
+  "work_seconds": 40,
+  "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-3.md",
+  "action": "Tests",
+  "classification": "attempt-start-not-final-result"
+}

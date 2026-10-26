@@ -1,0 +1,23 @@
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Checking kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+    Checking kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error[E0618]: expected function, found `std::string::String`
+   --> apps\kilogram-cli\tests\support\migration_s5_l1_atomic.rs:195:21
+    |
+ 94 |         let text = if index < 2 {
+    |             ---- `text` has type `std::string::String`
+...
+195 |                     text(&a.ipc),
+    |                     ^^^^--------
+    |                     |
+    |                     call expression requires function
+    |
+   ::: apps\kilogram-cli\tests\migration_s5_process.rs:54:1
+    |
+ 54 | fn text(path: &Path) -> String {
+    | ------------------------------ this function of the same name is available here, but it's shadowed by the local binding
+
+For more information about this error, try `rustc --explain E0618`.
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...

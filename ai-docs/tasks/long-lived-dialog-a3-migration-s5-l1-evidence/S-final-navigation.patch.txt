@@ -1,0 +1,104 @@
+diff --git "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-final-navigation-README.md.txt" b/ai-docs/README.md
+index 999b7bd..9358bda 100644
+--- "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-final-navigation-README.md.txt"
++++ b/ai-docs/README.md
+@@ -1,6 +1,6 @@
+ # Память проекта Kilogram
+ 
+-Актуально на: 2026-10-25.
++Актуально на: 2026-10-26.
+ 
+ Текущее принятое состояние — **A3-S4: fresh runtime двух процессов с перезапусками
+ и offline-доставкой**. [Итоговая приёмка root](tasks/long-lived-dialog-a3-runtime-s4-implementation-review-5.md)
+@@ -39,9 +39,17 @@ paths/blobs по [allowlist](tasks/long-lived-dialog-a3-migration-s5-storage-acc
+ sole parent и actual GitHub master; worktree/index были чистыми.
+ [План S5.2 принят](tasks/long-lived-dialog-a3-migration-s5-l1-plan-review-2.md):
+ закрыты account-wide invalidation и публичное same-C Consent1 renewal, уточнены IPC3
+-и бюджет. Поручена [реализация indexed L1](tasks/long-lived-dialog-a3-migration-s5-l1-implementation-task.md),
+-новый tranche C500/F1800/P0; старый ledger сохранён. Готовность runtime ещё не принята;
+-handoff/whole P5 остаются отдельными следующими частями.
++и бюджет. [Submission indexed L1](tasks/long-lived-dialog-a3-migration-s5-l1-implementation.md)
++готовится к итоговой root-приёмке по [точному candidate allowlist](tasks/long-lived-dialog-a3-migration-s5-l1-candidate-files.json).
++Root узко принял завершённые функциональные assertions boundary03 по исходнику/фазам;
++whole boundary03 остаётся FAIL649.592232s, потерянный parent-result не восстановлен.
++[Preservation принято отдельно](tasks/long-lived-dialog-a3-migration-s5-l1-preservation-review.md):
++C whole PASS24.1463993s и F preservation-only whole PASS67.5439277s; private checkpoint
++не активировался. Все прежние whole FAIL и split outcomes сохранены.
++Текущий S5.2 учёт C172.0310185/F3331.2897354/P0 при потолках500/3650/0
++([ledger](tasks/long-lived-dialog-a3-migration-s5-l1-evidence/contributing-cases.json));
++старый S5.1 ledger сохранён, четыре поправки F учтены без возвратов расходов.
++Полная реализация ещё не принята и не опубликована; handoff/whole P5 остаются отдельными частями.
+ Исполнитель прежний, GPT-6.1 Sol Max без Fast; сначала review контракта, затем
+ реализации, после приёмки exact commit/push. Whole A3, самостоятельный onboarding
+ и пользовательский MVP остаются открыты. M1.2.63 не запускается автоматически.
+diff --git "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-final-navigation-next-stage-plan.md.txt" b/ai-docs/next-stage-plan.md
+index f882e37..ac978c5 100644
+--- "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-final-navigation-next-stage-plan.md.txt"
++++ b/ai-docs/next-stage-plan.md
+@@ -1,4 +1,4 @@
+-# Текущая точка: S5.1 опубликован; план S5.2 принят, поручена реализация
++# Текущая точка: S5.2 submission готовится к итоговой root-приёмке
+ 
+ Актуально на2026-10-26. Принят fresh runtime двух процессов, перезапуски и
+ offline-доставка: [итоговое review S4](tasks/long-lived-dialog-a3-runtime-s4-implementation-review-5.md).
+@@ -20,12 +20,20 @@ Root независимо проверил все230 accepted paths/blobs, raw h
+ и actual GitHub master (identical, ahead0/behind0).
+ [S5.2 plan review2](tasks/long-lived-dialog-a3-migration-s5-l1-plan-review-2.md) принимает
+ mapping с исправлениями account scope, публичного Consent1 renewal и точного IPC3.
+-Поручена [реализация](tasks/long-lived-dialog-a3-migration-s5-l1-implementation-task.md):
+-indexed L1 owner/transport/history/receipt continuation на той же Native-сессии,
+-один реальный exhausted origin A511/B16. Новая allocation C500/F1800/P0;
+-опубликованный S5.1 ledger C279.3257298/F1236.2886628/P0 сохраняется, cumulative
+-maxima C779.3257298/F3036.2886628/P0. Поздние estimates не являются разрешённым бюджетом.
+-Текущая принятая Ready — storage only; реализация S5.2 ещё не принята.
++[Реализация](tasks/long-lived-dialog-a3-migration-s5-l1-implementation.md) indexed L1
++owner/transport/history/receipt continuation на той же Native-сессии с одним реальным
++exhausted origin A511/B16 готовится к root acceptance; [candidate allowlist](tasks/long-lived-dialog-a3-migration-s5-l1-candidate-files.json)
++фиксирует точный состав. Root принял завершённые функциональные assertions boundary03
++по связанному исходнику/фазам. Whole boundary03 остаётся FAIL649.592232s, parent-result
++отсутствует; исторические whole FAIL/split outcomes не переименованы.
++[Preservation принято отдельно](tasks/long-lived-dialog-a3-migration-s5-l1-preservation-review.md):
++C whole PASS24.1463993s, F preservation-only whole PASS67.5439277s,6956 файлов
++остановленного checkpoint сохранены под обоими OS locks; backup не активировался.
++S5.2 actual C172.0310185/F3331.2897354/P0, потолки500/3650/0;39 contributing cases,
++четыре явные поправки F без возврата расходов. Опубликованный S5.1 actual
++C279.3257298/F1236.2886628/P0 сохраняется; combined actual C451.3567483/F4567.5783982/P0,
++combined maxima C779.3257298/F4886.2886628/P0. Поздние estimates не являются бюджетом.
++Полная реализация S5.2 ещё не принята, commit/push не поручены.
+ Handoff/whole P5 ещё впереди, whole P требует отдельного непрерывного run<=2400.
+ Каждая логическая часть сдаётся на review до commit/push; whole S5/P5 пока открыт.
+ Ниже сохранён отложенный recovery API-retirement план. Он не является текущим
+diff --git "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-final-navigation-chat-coordination.md.txt" b/ai-docs/chat-coordination.md
+index cabd5e9..f4c2e44 100644
+--- "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-final-navigation-chat-coordination.md.txt"
++++ b/ai-docs/chat-coordination.md
+@@ -1111,3 +1111,29 @@ gates and remaining-budget check precede it. Later estimates/P are unallocated.
+ Submit implementation and exact source-bound evidence to root, then stop before
+ commit/push. Root reviews/fixes before acceptance and exact publication. The
+ existing human-authorized callback/review loop continues without copy/paste.
++
++### 2026-10-26: S5.2 assertions and separate preservation reviewed; final submission
++
++[Boundary03 completion review](tasks/long-lived-dialog-a3-migration-s5-l1-boundary03-completion-review.md)
++accepts completed source-bound functional assertions through checkpoint.info.
++The actual boundary03 whole result remains FAIL649.592232s; its original detailed
++parent-result was lost from RAM and is not reconstructed. Historical whole FAIL,
++Ready02/capacity01 split outcomes and every charged attempt remain unchanged.
++
++[Preservation review](tasks/long-lived-dialog-a3-migration-s5-l1-preservation-review.md)
++accepts the narrow test-writer fix, actual opaque C whole PASS24.1463993s and
++stopped-input preservation-only F whole PASS67.5439277s. Under both original OS
++locks6956 files/45597399 bytes matched source-before/source-after/destination.
++Private backup stays local and inactive, with original absolute profile paths.
++No DB/runtime/recovery/new active branch or frozen-origin traversal was used by F.
++
++S5.2 actual C172.0310185/F3331.2897354/P0 under500/3650/0;39 contributing cases,
++four explicit F amendments, no refunds or P borrowing. Prior published S5.1
++actuals remain immutable. Whole-P, handoff/cut3 and MVP readiness are still open.
++
++The same executor prepares [final implementation report](tasks/long-lived-dialog-a3-migration-s5-l1-implementation.md)
++and [exact candidate allowlist](tasks/long-lived-dialog-a3-migration-s5-l1-candidate-files.json)
++for root acceptance. Root explicitly permits inclusion of unchanged S5.2 authority
++history, standing test permission and nav3 current-status updates, preserving old
++chronology. No product edits, new tests/builds/limits, refactor, commit or push are
++assigned now. Maintainability follow-up is recorded only for later root assessment.

@@ -1,0 +1,59 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1.12s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 32 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+running 1 test
+test live_l1::exhausted::migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint ... L1_EXHAUSTED active=E:\AI-Projects\kilogram-p2p-messenger\.tmp/migration-s5-storage\l1-exhausted-observed-NCjBHb frozen_original=E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-l1\F-exhausted-origin-01 original_typed_open=false
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: UpgradeRequired: send lane lifetime capacity
+
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: RequestIdConflict
+
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: UpgradeRequired: send lane lifetime capacity
+
+version_refusal exe=E:\AI-Projects\kilogram-p2p-messenger\target/compatibility/long-lived-dialog-migration/kilogram-cli.exe reason=Error: RequestIdConflict
+
+Error: CLI ["-NoProfile", "-NonInteractive", "-File", "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts/preserve-migration-s5-l1-input.ps1", "-InputDirectory", "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-exhausted-observed-NCjBHb", "-OutputDirectory", "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-preserved\\F-exhausted-boundary-03-checkpoint", "-OwnedLockOne", "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\state\\.kilogram-state.lock", "-OwnedLockTwo", "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\state\\.kilogram-state.lock"]:  Get-FileHash: E:\AI-Projects\kilogram-p2p-messenger\scripts\preserve-migration-s5-l1-input.ps1:30
+Line |
+  30 |  : else{$hash=(Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName). :
+     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | The process cannot access the file
+     | 'E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-storage\l1-exhausted-observed-NCjBHb\boundary-phases.jsonl' because it is being used by another process.
+
+FAILED
+
+failures:
+
+failures:
+    live_l1::exhausted::migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 15 filtered out; finished in 641.54s
+
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:285
+Line |
+ 285 |              throw "Stable test executable failed with exit code ${tes …
+     |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Stable test executable failed with exit code 101:
+     | E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+

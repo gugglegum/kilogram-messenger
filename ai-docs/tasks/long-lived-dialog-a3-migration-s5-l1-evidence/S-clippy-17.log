@@ -1,0 +1,44 @@
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+error[E0624]: method `bound` is private
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\live1\tests.rs:42:13
+    |
+ 42 |         row.bound(),
+    |             ^^^^^ private method
+    |
+   ::: crates\kilogram-state\src\vault\indexed_dialog\migration7\live1\types.rs:340:5
+    |
+340 |     fn bound(&self) -> Result<()> {
+    |     ----------------------------- private method defined here
+
+error[E0624]: method `bound` is private
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\live1\tests.rs:46:9
+    |
+ 46 |     row.bound()?; // Envelope bounds only, not valid Event/Native authorization.
+    |         ^^^^^ private method
+    |
+   ::: crates\kilogram-state\src\vault\indexed_dialog\migration7\live1\types.rs:340:5
+    |
+340 |     fn bound(&self) -> Result<()> {
+    |     ----------------------------- private method defined here
+
+error[E0624]: method `l1_native_rows` is private
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\live1\tests.rs:113:15
+    |
+113 |               w.l1_native_rows(&p, change, vec![row; batch], true),
+    |                 ^^^^^^^^^^^^^^ private method
+    |
+   ::: crates\kilogram-state\src\vault\indexed_dialog\migration7\live1\data.rs:399:5
+    |
+399 | /     pub(super) fn l1_native_rows(
+400 | |         &mut self,
+401 | |         p: &Profile,
+402 | |         change: L1NativeChange,
+403 | |         rows: Vec<L1Readable>,
+404 | |         own: bool,
+405 | |     ) -> Result<()> {
+    | |___________________- private method defined here
+
+    Checking kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+For more information about this error, try `rustc --explain E0624`.
+error: could not compile `kilogram-state` (lib test) due to 3 previous errors
+warning: build failed, waiting for other jobs to finish...

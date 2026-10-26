@@ -1,0 +1,2302 @@
+{
+  "cold_reopened": {
+    "backend": {
+      "growth_bytes": 0,
+      "growth_nanos": 0,
+      "last_failure": null,
+      "last_requested_length": 0,
+      "length": 569344,
+      "max_growth": 0,
+      "physical_quota": 51539607552,
+      "read_bytes": 409929,
+      "reads": 98,
+      "set_len_calls": 0,
+      "sync_calls": 1,
+      "sync_nanos": 760700,
+      "write_bytes": 320,
+      "writes": 1
+    },
+    "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+    "config_revision": 1,
+    "contexts": [
+      {
+        "active": true,
+        "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            12,
+            4
+          ],
+          "sources": 18
+        },
+        "current_consent": "cf8d8763483d2d9aea1f325609731d1cf923b02a8e4b8e374f380c95aa8b74a2",
+        "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+        "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+        "enabled": true,
+        "handoff": "UnsupportedInCut2",
+        "head_pending": null,
+        "lease_current": false,
+        "lease_generation": null,
+        "mode": "L1",
+        "native": null,
+        "native_generation": 15,
+        "native_hash": "2acbab8f2279c1be22e07e5f3530870612d6efd3bf2c37e30eb223334a2f5554",
+        "next": [
+          13,
+          5
+        ],
+        "own_locator_revision": 2,
+        "peer_locator_revision": 10,
+        "phase": 3,
+        "policy_error": "Blocked: signed fork evidence",
+        "policy_generation": 13,
+        "provenance": "LegacySnapshot/FullL1",
+        "publication_ready": false,
+        "repair_free": 67108864,
+        "role": 1,
+        "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+        "slot": 0,
+        "wall_high_water": 1792994448,
+        "wire_stage": 1
+      }
+    ],
+    "profile_mode": "ordered-dialog-indexed",
+    "resources": {
+      "bidi_limit": 4,
+      "connection_limit": 2,
+      "connections": 0,
+      "frame_limit": 1048576,
+      "mailbox": 0,
+      "mailbox_limit": 16,
+      "peak_connections": 0,
+      "peak_mailbox": 1,
+      "refused_before_spawn": 0,
+      "uni_limit": 0
+    },
+    "root_generation": 91,
+    "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+    "stats": {
+      "aborted_packet_calls": 0,
+      "account_constructors": 0,
+      "admissions": 0,
+      "ambiguous_packet_calls": 0,
+      "committed_decrypt": 0,
+      "committed_encrypt": 0,
+      "inbound_constructors": 0,
+      "materialized": 0,
+      "max_commit_app_bytes": 0,
+      "max_native_bytes": 0,
+      "outbound_constructors": 0,
+      "packet_attempts": 0,
+      "readable": 0,
+      "reopens": 0
+    },
+    "storage_stage": "Ready",
+    "version": 3,
+    "window": [
+      [
+        128,
+        0
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ]
+  },
+  "fork_proof_hash": "4ddbf90dc6e5baa1c6d0dd6c1e35004f5a5c41ac444de8813702e8ff5f67edf5",
+  "prior_ready_witness_hash": "e34a5de50713febcb22e3f5712c43fed8314611399aedc759ca474b2ec3c19d3",
+  "public_renewal_still_blocked": {
+    "backend": {
+      "growth_bytes": 0,
+      "growth_nanos": 0,
+      "last_failure": null,
+      "last_requested_length": 0,
+      "length": 569344,
+      "max_growth": 0,
+      "physical_quota": 51539607552,
+      "read_bytes": 409929,
+      "reads": 98,
+      "set_len_calls": 0,
+      "sync_calls": 2,
+      "sync_nanos": 2628300,
+      "write_bytes": 70272,
+      "writes": 18
+    },
+    "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+    "config_revision": 1,
+    "contexts": [
+      {
+        "active": true,
+        "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            12,
+            4
+          ],
+          "sources": 18
+        },
+        "current_consent": "cf8d8763483d2d9aea1f325609731d1cf923b02a8e4b8e374f380c95aa8b74a2",
+        "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+        "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+        "enabled": true,
+        "handoff": "UnsupportedInCut2",
+        "head_pending": null,
+        "lease_current": false,
+        "lease_generation": null,
+        "mode": "L1",
+        "native": null,
+        "native_generation": 15,
+        "native_hash": "2acbab8f2279c1be22e07e5f3530870612d6efd3bf2c37e30eb223334a2f5554",
+        "next": [
+          13,
+          5
+        ],
+        "own_locator_revision": 2,
+        "peer_locator_revision": 10,
+        "phase": 3,
+        "policy_error": "Blocked: signed fork evidence",
+        "policy_generation": 13,
+        "provenance": "LegacySnapshot/FullL1",
+        "publication_ready": false,
+        "repair_free": 67108864,
+        "role": 1,
+        "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+        "slot": 0,
+        "wall_high_water": 1792994448,
+        "wire_stage": 1
+      }
+    ],
+    "profile_mode": "ordered-dialog-indexed",
+    "resources": {
+      "bidi_limit": 4,
+      "connection_limit": 2,
+      "connections": 0,
+      "frame_limit": 1048576,
+      "mailbox": 0,
+      "mailbox_limit": 16,
+      "peak_connections": 0,
+      "peak_mailbox": 1,
+      "refused_before_spawn": 0,
+      "uni_limit": 0
+    },
+    "root_generation": 91,
+    "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+    "stats": {
+      "aborted_packet_calls": 0,
+      "account_constructors": 0,
+      "admissions": 0,
+      "ambiguous_packet_calls": 0,
+      "committed_decrypt": 0,
+      "committed_encrypt": 0,
+      "inbound_constructors": 0,
+      "materialized": 0,
+      "max_commit_app_bytes": 0,
+      "max_native_bytes": 0,
+      "outbound_constructors": 0,
+      "packet_attempts": 0,
+      "readable": 0,
+      "reopens": 0
+    },
+    "storage_stage": "Ready",
+    "version": 3,
+    "window": [
+      [
+        128,
+        0
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        0,
+        0
+      ]
+    ]
+  },
+  "same_scope_fork": {
+    "backend": {
+      "growth_bytes": 561152,
+      "growth_nanos": 171181800,
+      "last_failure": null,
+      "last_requested_length": 847872,
+      "length": 847872,
+      "max_growth": 561152,
+      "physical_quota": 51539607552,
+      "read_bytes": 340297,
+      "reads": 81,
+      "set_len_calls": 2,
+      "sync_calls": 58,
+      "sync_nanos": 220346500,
+      "write_bytes": 4732736,
+      "writes": 1152
+    },
+    "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+    "config_revision": 1,
+    "contexts": [
+      {
+        "active": true,
+        "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            12,
+            4
+          ],
+          "sources": 18
+        },
+        "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+        "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+        "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+        "enabled": true,
+        "handoff": "UnsupportedInCut2",
+        "head_pending": null,
+        "lease_current": false,
+        "lease_generation": null,
+        "mode": "L1",
+        "native": null,
+        "native_generation": 15,
+        "native_hash": "2acbab8f2279c1be22e07e5f3530870612d6efd3bf2c37e30eb223334a2f5554",
+        "next": [
+          13,
+          5
+        ],
+        "own_locator_revision": 2,
+        "peer_locator_revision": 10,
+        "phase": 3,
+        "policy_error": "Blocked: signed fork evidence",
+        "policy_generation": 12,
+        "provenance": "LegacySnapshot/FullL1",
+        "publication_ready": false,
+        "repair_free": 67108864,
+        "role": 1,
+        "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+        "slot": 0,
+        "wall_high_water": 1792994441,
+        "wire_stage": 1
+      }
+    ],
+    "profile_mode": "ordered-dialog-indexed",
+    "resources": {
+      "bidi_limit": 4,
+      "connection_limit": 2,
+      "connections": 1,
+      "frame_limit": 1048576,
+      "mailbox": 2,
+      "mailbox_limit": 16,
+      "peak_connections": 1,
+      "peak_mailbox": 4,
+      "refused_before_spawn": 0,
+      "uni_limit": 0
+    },
+    "root_generation": 90,
+    "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+    "stats": {
+      "aborted_packet_calls": 0,
+      "account_constructors": 0,
+      "admissions": 17,
+      "ambiguous_packet_calls": 0,
+      "committed_decrypt": 8,
+      "committed_encrypt": 0,
+      "inbound_constructors": 0,
+      "materialized": 0,
+      "max_commit_app_bytes": 52233587,
+      "max_native_bytes": 3723,
+      "outbound_constructors": 0,
+      "packet_attempts": 8,
+      "readable": 8,
+      "reopens": 0
+    },
+    "storage_stage": "Ready",
+    "version": 3,
+    "window": [
+      [
+        128,
+        0
+      ],
+      [
+        0,
+        0
+      ],
+      [
+        8,
+        0
+      ]
+    ]
+  },
+  "signed_malformed_cases": [
+    {
+      "fault": "arity",
+      "refusal": {
+        "backend": {
+          "growth_bytes": 0,
+          "growth_nanos": 0,
+          "last_failure": null,
+          "last_requested_length": 0,
+          "length": 565248,
+          "max_growth": 0,
+          "physical_quota": 51539607552,
+          "read_bytes": 340297,
+          "reads": 81,
+          "set_len_calls": 0,
+          "sync_calls": 8,
+          "sync_nanos": 12923400,
+          "write_bytes": 494080,
+          "writes": 121
+        },
+        "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+        "config_revision": 1,
+        "contexts": [
+          {
+            "active": true,
+            "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+            "counts": {
+              "debt": 0,
+              "pending": 0,
+              "queued": 0,
+              "receipts": [
+                4,
+                4
+              ],
+              "sources": 10
+            },
+            "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+            "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+            "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+            "enabled": true,
+            "handoff": "UnsupportedInCut2",
+            "head_pending": null,
+            "lease_current": false,
+            "lease_generation": null,
+            "mode": "L1",
+            "native": {
+              "keys": [
+                "6aac69e329fefde5ee52b0c623b53c5a7d915afc4a156b322c4addd4fbc1d630",
+                "7bb62106421e4da430228a724271d7fd5eb181d3058416514904c2fc34d9a67c",
+                "5ec2c1311f77c08472f350cb7df086d893e3b687455698d6c0155b134e4aa271"
+              ],
+              "own_next": 5,
+              "peer_next": 5,
+              "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw"
+            },
+            "native_generation": 7,
+            "native_hash": "c7a52bfc33d29feac16e417aa15851bd17be8b5b1badf264a0242498555dd265",
+            "next": [
+              5,
+              5
+            ],
+            "own_locator_revision": 2,
+            "peer_locator_revision": 2,
+            "phase": 3,
+            "policy_error": null,
+            "policy_generation": 3,
+            "provenance": "LegacySnapshot/FullL1",
+            "publication_ready": true,
+            "repair_free": 67108864,
+            "role": 1,
+            "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+            "slot": 0,
+            "wall_high_water": 1792994333,
+            "wire_stage": 1
+          }
+        ],
+        "profile_mode": "ordered-dialog-indexed",
+        "resources": {
+          "bidi_limit": 4,
+          "connection_limit": 2,
+          "connections": 0,
+          "frame_limit": 1048576,
+          "mailbox": 0,
+          "mailbox_limit": 16,
+          "peak_connections": 1,
+          "peak_mailbox": 3,
+          "refused_before_spawn": 0,
+          "uni_limit": 0
+        },
+        "root_generation": 41,
+        "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+        "stats": {
+          "aborted_packet_calls": 0,
+          "account_constructors": 0,
+          "admissions": 1,
+          "ambiguous_packet_calls": 0,
+          "committed_decrypt": 0,
+          "committed_encrypt": 0,
+          "inbound_constructors": 0,
+          "materialized": 0,
+          "max_commit_app_bytes": 52046351,
+          "max_native_bytes": 0,
+          "outbound_constructors": 0,
+          "packet_attempts": 0,
+          "readable": 0,
+          "reopens": 0
+        },
+        "storage_stage": "Ready",
+        "version": 3,
+        "window": [
+          [
+            128,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            0,
+            0
+          ]
+        ]
+      },
+      "valid_after": {
+        "backend": {
+          "growth_bytes": 0,
+          "growth_nanos": 0,
+          "last_failure": null,
+          "last_requested_length": 0,
+          "length": 565248,
+          "max_growth": 0,
+          "physical_quota": 51539607552,
+          "read_bytes": 340297,
+          "reads": 81,
+          "set_len_calls": 0,
+          "sync_calls": 12,
+          "sync_nanos": 22044400,
+          "write_bytes": 868096,
+          "writes": 212
+        },
+        "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+        "config_revision": 1,
+        "contexts": [
+          {
+            "active": true,
+            "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+            "counts": {
+              "debt": 0,
+              "pending": 0,
+              "queued": 0,
+              "receipts": [
+                5,
+                4
+              ],
+              "sources": 11
+            },
+            "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+            "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+            "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+            "enabled": true,
+            "handoff": "UnsupportedInCut2",
+            "head_pending": null,
+            "lease_current": true,
+            "lease_generation": 2,
+            "mode": "L1",
+            "native": {
+              "keys": [
+                "6aac69e329fefde5ee52b0c623b53c5a7d915afc4a156b322c4addd4fbc1d630",
+                "7bb62106421e4da430228a724271d7fd5eb181d3058416514904c2fc34d9a67c",
+                "5ec2c1311f77c08472f350cb7df086d893e3b687455698d6c0155b134e4aa271"
+              ],
+              "own_next": 5,
+              "peer_next": 6,
+              "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw"
+            },
+            "native_generation": 8,
+            "native_hash": "cf2592e2303f794d26e32e5465d08a5024bac3830bf2a84443812f88cb567896",
+            "next": [
+              6,
+              5
+            ],
+            "own_locator_revision": 2,
+            "peer_locator_revision": 2,
+            "phase": 3,
+            "policy_error": null,
+            "policy_generation": 3,
+            "provenance": "LegacySnapshot/FullL1",
+            "publication_ready": true,
+            "repair_free": 67108864,
+            "role": 1,
+            "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+            "slot": 0,
+            "wall_high_water": 1792994343,
+            "wire_stage": 1
+          }
+        ],
+        "profile_mode": "ordered-dialog-indexed",
+        "resources": {
+          "bidi_limit": 4,
+          "connection_limit": 2,
+          "connections": 1,
+          "frame_limit": 1048576,
+          "mailbox": 0,
+          "mailbox_limit": 16,
+          "peak_connections": 1,
+          "peak_mailbox": 3,
+          "refused_before_spawn": 0,
+          "uni_limit": 0
+        },
+        "root_generation": 45,
+        "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+        "stats": {
+          "aborted_packet_calls": 0,
+          "account_constructors": 0,
+          "admissions": 2,
+          "ambiguous_packet_calls": 0,
+          "committed_decrypt": 1,
+          "committed_encrypt": 0,
+          "inbound_constructors": 0,
+          "materialized": 0,
+          "max_commit_app_bytes": 52229864,
+          "max_native_bytes": 3723,
+          "outbound_constructors": 0,
+          "packet_attempts": 1,
+          "readable": 1,
+          "reopens": 0
+        },
+        "storage_stage": "Ready",
+        "version": 3,
+        "window": [
+          [
+            128,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            8,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "fault": "d",
+      "refusal": {
+        "backend": {
+          "growth_bytes": 0,
+          "growth_nanos": 0,
+          "last_failure": null,
+          "last_requested_length": 0,
+          "length": 565248,
+          "max_growth": 0,
+          "physical_quota": 51539607552,
+          "read_bytes": 340297,
+          "reads": 81,
+          "set_len_calls": 0,
+          "sync_calls": 14,
+          "sync_nanos": 25897100,
+          "write_bytes": 999808,
+          "writes": 244
+        },
+        "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+        "config_revision": 1,
+        "contexts": [
+          {
+            "active": true,
+            "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+            "counts": {
+              "debt": 0,
+              "pending": 0,
+              "queued": 0,
+              "receipts": [
+                5,
+                4
+              ],
+              "sources": 11
+            },
+            "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+            "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+            "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+            "enabled": true,
+            "handoff": "UnsupportedInCut2",
+            "head_pending": null,
+            "lease_current": false,
+            "lease_generation": null,
+            "mode": "L1",
+            "native": {
+              "keys": [
+                "6aac69e329fefde5ee52b0c623b53c5a7d915afc4a156b322c4addd4fbc1d630",
+                "7bb62106421e4da430228a724271d7fd5eb181d3058416514904c2fc34d9a67c",
+                "5ec2c1311f77c08472f350cb7df086d893e3b687455698d6c0155b134e4aa271"
+              ],
+              "own_next": 5,
+              "peer_next": 6,
+              "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw"
+            },
+            "native_generation": 8,
+            "native_hash": "cf2592e2303f794d26e32e5465d08a5024bac3830bf2a84443812f88cb567896",
+            "next": [
+              6,
+              5
+            ],
+            "own_locator_revision": 2,
+            "peer_locator_revision": 3,
+            "phase": 3,
+            "policy_error": null,
+            "policy_generation": 4,
+            "provenance": "LegacySnapshot/FullL1",
+            "publication_ready": true,
+            "repair_free": 67108864,
+            "role": 1,
+            "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+            "slot": 0,
+            "wall_high_water": 1792994347,
+            "wire_stage": 1
+          }
+        ],
+        "profile_mode": "ordered-dialog-indexed",
+        "resources": {
+          "bidi_limit": 4,
+          "connection_limit": 2,
+          "connections": 0,
+          "frame_limit": 1048576,
+          "mailbox": 0,
+          "mailbox_limit": 16,
+          "peak_connections": 1,
+          "peak_mailbox": 3,
+          "refused_before_spawn": 0,
+          "uni_limit": 0
+        },
+        "root_generation": 47,
+        "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+        "stats": {
+          "aborted_packet_calls": 0,
+          "account_constructors": 0,
+          "admissions": 3,
+          "ambiguous_packet_calls": 0,
+          "committed_decrypt": 1,
+          "committed_encrypt": 0,
+          "inbound_constructors": 0,
+          "materialized": 0,
+          "max_commit_app_bytes": 52229864,
+          "max_native_bytes": 3723,
+          "outbound_constructors": 0,
+          "packet_attempts": 1,
+          "readable": 1,
+          "reopens": 0
+        },
+        "storage_stage": "Ready",
+        "version": 3,
+        "window": [
+          [
+            128,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            8,
+            0
+          ]
+        ]
+      },
+      "valid_after": {
+        "backend": {
+          "growth_bytes": 0,
+          "growth_nanos": 0,
+          "last_failure": null,
+          "last_requested_length": 0,
+          "length": 565248,
+          "max_growth": 0,
+          "physical_quota": 51539607552,
+          "read_bytes": 340297,
+          "reads": 81,
+          "set_len_calls": 0,
+          "sync_calls": 18,
+          "sync_nanos": 45530800,
+          "write_bytes": 1369728,
+          "writes": 334
+        },
+        "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+        "config_revision": 1,
+        "contexts": [
+          {
+            "active": true,
+            "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+            "counts": {
+              "debt": 0,
+              "pending": 0,
+              "queued": 0,
+              "receipts": [
+                6,
+                4
+              ],
+              "sources": 12
+            },
+            "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+            "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+            "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+            "enabled": true,
+            "handoff": "UnsupportedInCut2",
+            "head_pending": null,
+            "lease_current": true,
+            "lease_generation": 4,
+            "mode": "L1",
+            "native": {
+              "keys": [
+                "6aac69e329fefde5ee52b0c623b53c5a7d915afc4a156b322c4addd4fbc1d630",
+                "7bb62106421e4da430228a724271d7fd5eb181d3058416514904c2fc34d9a67c",
+                "5ec2c1311f77c08472f350cb7df086d893e3b687455698d6c0155b134e4aa271"
+              ],
+              "own_next": 5,
+              "peer_next": 7,
+              "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw"
+            },
+            "native_generation": 9,
+            "native_hash": "cd3a59fcad04093bb7315f8c38eb275efaeabf02f33e5047891c810eb08913d9",
+            "next": [
+              7,
+              5
+            ],
+            "own_locator_revision": 2,
+            "peer_locator_revision": 3,
+            "phase": 3,
+            "policy_error": null,
+            "policy_generation": 4,
+            "provenance": "LegacySnapshot/FullL1",
+            "publication_ready": true,
+            "repair_free": 67108864,
+            "role": 1,
+            "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+            "slot": 0,
+            "wall_high_water": 1792994356,
+            "wire_stage": 1
+          }
+        ],
+        "profile_mode": "ordered-dialog-indexed",
+        "resources": {
+          "bidi_limit": 4,
+          "connection_limit": 2,
+          "connections": 1,
+          "frame_limit": 1048576,
+          "mailbox": 0,
+          "mailbox_limit": 16,
+          "peak_connections": 1,
+          "peak_mailbox": 3,
+          "refused_before_spawn": 0,
+          "uni_limit": 0
+        },
+        "root_generation": 51,
+        "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+        "stats": {
+          "aborted_packet_calls": 0,
+          "account_constructors": 0,
+          "admissions": 4,
+          "ambiguous_packet_calls": 0,
+          "committed_decrypt": 2,
+          "committed_encrypt": 0,
+          "inbound_constructors": 0,
+          "materialized": 0,
+          "max_commit_app_bytes": 52229864,
+          "max_native_bytes": 3723,
+          "outbound_constructors": 0,
+          "packet_attempts": 2,
+          "readable": 2,
+          "reopens": 0
+        },
+        "storage_stage": "Ready",
+        "version": 3,
+        "window": [
+          [
+            128,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            8,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "fault": "e",
+      "refusal": {
+        "backend": {
+          "growth_bytes": 0,
+          "growth_nanos": 0,
+          "last_failure": null,
+          "last_requested_length": 0,
+          "length": 565248,
+          "max_growth": 0,
+          "physical_quota": 51539607552,
+          "read_bytes": 340297,
+          "reads": 81,
+          "set_len_calls": 0,
+          "sync_calls": 20,
+          "sync_nanos": 53131800,
+          "write_bytes": 1501440,
+          "writes": 366
+        },
+        "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+        "config_revision": 1,
+        "contexts": [
+          {
+            "active": true,
+            "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+            "counts": {
+              "debt": 0,
+              "pending": 0,
+              "queued": 0,
+              "receipts": [
+                6,
+                4
+              ],
+              "sources": 12
+            },
+            "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+            "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+            "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+            "enabled": true,
+            "handoff": "UnsupportedInCut2",
+            "head_pending": null,
+            "lease_current": false,
+            "lease_generation": null,
+            "mode": "L1",
+            "native": {
+              "keys": [
+                "6aac69e329fefde5ee52b0c623b53c5a7d915afc4a156b322c4addd4fbc1d630",
+                "7bb62106421e4da430228a724271d7fd5eb181d3058416514904c2fc34d9a67c",
+                "5ec2c1311f77c08472f350cb7df086d893e3b687455698d6c0155b134e4aa271"
+              ],
+              "own_next": 5,
+              "peer_next": 7,
+              "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw"
+            },
+            "native_generation": 9,
+            "native_hash": "cd3a59fcad04093bb7315f8c38eb275efaeabf02f33e5047891c810eb08913d9",
+            "next": [
+              7,
+              5
+            ],
+            "own_locator_revision": 2,
+            "peer_locator_revision": 4,
+            "phase": 3,
+            "policy_error": null,
+            "policy_generation": 5,
+            "provenance": "LegacySnapshot/FullL1",
+            "publication_ready": true,
+            "repair_free": 67108864,
+            "role": 1,
+            "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+            "slot": 0,
+            "wall_high_water": 1792994360,
+            "wire_stage": 1
+          }
+        ],
+        "profile_mode": "ordered-dialog-indexed",
+        "resources": {
+          "bidi_limit": 4,
+          "connection_limit": 2,
+          "connections": 0,
+          "frame_limit": 1048576,
+          "mailbox": 0,
+          "mailbox_limit": 16,
+          "peak_connections": 1,
+          "peak_mailbox": 3,
+          "refused_before_spawn": 0,
+          "uni_limit": 0
+        },
+        "root_generation": 53,
+        "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+        "stats": {
+          "aborted_packet_calls": 0,
+          "account_constructors": 0,
+          "admissions": 5,
+          "ambiguous_packet_calls": 0,
+          "committed_decrypt": 2,
+          "committed_encrypt": 0,
+          "inbound_constructors": 0,
+          "materialized": 0,
+          "max_commit_app_bytes": 52229864,
+          "max_native_bytes": 3723,
+          "outbound_constructors": 0,
+          "packet_attempts": 2,
+          "readable": 2,
+          "reopens": 0
+        },
+        "storage_stage": "Ready",
+        "version": 3,
+        "window": [
+          [
+            128,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            8,
+            0
+          ]
+        ]
+      },
+      "valid_after": {
+        "backend": {
+          "growth_bytes": 0,
+          "growth_nanos": 0,
+          "last_failure": null,
+          "last_requested_length": 0,
+          "length": 565248,
+          "max_growth": 0,
+          "physical_quota": 51539607552,
+          "read_bytes": 340297,
+          "reads": 81,
+          "set_len_calls": 0,
+          "sync_calls": 24,
+          "sync_nanos": 76604000,
+          "write_bytes": 1875456,
+          "writes": 457
+        },
+        "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+        "config_revision": 1,
+        "contexts": [
+          {
+            "active": true,
+            "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+            "counts": {
+              "debt": 0,
+              "pending": 0,
+              "queued": 0,
+              "receipts": [
+                7,
+                4
+              ],
+              "sources": 13
+            },
+            "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+            "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+            "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+            "enabled": true,
+            "handoff": "UnsupportedInCut2",
+            "head_pending": null,
+            "lease_current": true,
+            "lease_generation": 6,
+            "mode": "L1",
+            "native": {
+              "keys": [
+                "6aac69e329fefde5ee52b0c623b53c5a7d915afc4a156b322c4addd4fbc1d630",
+                "7bb62106421e4da430228a724271d7fd5eb181d3058416514904c2fc34d9a67c",
+                "5ec2c1311f77c08472f350cb7df086d893e3b687455698d6c0155b134e4aa271"
+              ],
+              "own_next": 5,
+              "peer_next": 8,
+              "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw"
+            },
+            "native_generation": 10,
+            "native_hash": "e441e5a2733b240486b23b32ccde49dbdde18bf56730f81f59d971d57d516112",
+            "next": [
+              8,
+              5
+            ],
+            "own_locator_revision": 2,
+            "peer_locator_revision": 4,
+            "phase": 3,
+            "policy_error": null,
+            "policy_generation": 5,
+            "provenance": "LegacySnapshot/FullL1",
+            "publication_ready": true,
+            "repair_free": 67108864,
+            "role": 1,
+            "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+            "slot": 0,
+            "wall_high_water": 1792994369,
+            "wire_stage": 1
+          }
+        ],
+        "profile_mode": "ordered-dialog-indexed",
+        "resources": {
+          "bidi_limit": 4,
+          "connection_limit": 2,
+          "connections": 1,
+          "frame_limit": 1048576,
+          "mailbox": 0,
+          "mailbox_limit": 16,
+          "peak_connections": 1,
+          "peak_mailbox": 3,
+          "refused_before_spawn": 0,
+          "uni_limit": 0
+        },
+        "root_generation": 57,
+        "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+        "stats": {
+          "aborted_packet_calls": 0,
+          "account_constructors": 0,
+          "admissions": 6,
+          "ambiguous_packet_calls": 0,
+          "committed_decrypt": 3,
+          "committed_encrypt": 0,
+          "inbound_constructors": 0,
+          "materialized": 0,
+          "max_commit_app_bytes": 52230735,
+          "max_native_bytes": 3723,
+          "outbound_constructors": 0,
+          "packet_attempts": 3,
+          "readable": 3,
+          "reopens": 0
+        },
+        "storage_stage": "Ready",
+        "version": 3,
+        "window": [
+          [
+            128,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            8,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "fault": "sid",
+      "refusal": {
+        "backend": {
+          "growth_bytes": 0,
+          "growth_nanos": 0,
+          "last_failure": null,
+          "last_requested_length": 0,
+          "length": 565248,
+          "max_growth": 0,
+          "physical_quota": 51539607552,
+          "read_bytes": 340297,
+          "reads": 81,
+          "set_len_calls": 0,
+          "sync_calls": 26,
+          "sync_nanos": 84250800,
+          "write_bytes": 2007168,
+          "writes": 489
+        },
+        "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+        "config_revision": 1,
+        "contexts": [
+          {
+            "active": true,
+            "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+            "counts": {
+              "debt": 0,
+              "pending": 0,
+              "queued": 0,
+              "receipts": [
+                7,
+                4
+              ],
+              "sources": 13
+            },
+            "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+            "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+            "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+            "enabled": true,
+            "handoff": "UnsupportedInCut2",
+            "head_pending": null,
+            "lease_current": false,
+            "lease_generation": null,
+            "mode": "L1",
+            "native": {
+              "keys": [
+                "6aac69e329fefde5ee52b0c623b53c5a7d915afc4a156b322c4addd4fbc1d630",
+                "7bb62106421e4da430228a724271d7fd5eb181d3058416514904c2fc34d9a67c",
+                "5ec2c1311f77c08472f350cb7df086d893e3b687455698d6c0155b134e4aa271"
+              ],
+              "own_next": 5,
+              "peer_next": 8,
+              "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw"
+            },
+            "native_generation": 10,
+            "native_hash": "e441e5a2733b240486b23b32ccde49dbdde18bf56730f81f59d971d57d516112",
+            "next": [
+              8,
+              5
+            ],
+            "own_locator_revision": 2,
+            "peer_locator_revision": 5,
+            "phase": 3,
+            "policy_error": null,
+            "policy_generation": 6,
+            "provenance": "LegacySnapshot/FullL1",
+            "publication_ready": true,
+            "repair_free": 67108864,
+            "role": 1,
+            "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+            "slot": 0,
+            "wall_high_water": 1792994374,
+            "wire_stage": 1
+          }
+        ],
+        "profile_mode": "ordered-dialog-indexed",
+        "resources": {
+          "bidi_limit": 4,
+          "connection_limit": 2,
+          "connections": 0,
+          "frame_limit": 1048576,
+          "mailbox": 0,
+          "mailbox_limit": 16,
+          "peak_connections": 1,
+          "peak_mailbox": 3,
+          "refused_before_spawn": 0,
+          "uni_limit": 0
+        },
+        "root_generation": 59,
+        "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+        "stats": {
+          "aborted_packet_calls": 0,
+          "account_constructors": 0,
+          "admissions": 7,
+          "ambiguous_packet_calls": 0,
+          "committed_decrypt": 3,
+          "committed_encrypt": 0,
+          "inbound_constructors": 0,
+          "materialized": 0,
+          "max_commit_app_bytes": 52230735,
+          "max_native_bytes": 3723,
+          "outbound_constructors": 0,
+          "packet_attempts": 3,
+          "readable": 3,
+          "reopens": 0
+        },
+        "storage_stage": "Ready",
+        "version": 3,
+        "window": [
+          [
+            128,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            8,
+            0
+          ]
+        ]
+      },
+      "valid_after": {
+        "backend": {
+          "growth_bytes": 0,
+          "growth_nanos": 0,
+          "last_failure": null,
+          "last_requested_length": 0,
+          "length": 565248,
+          "max_growth": 0,
+          "physical_quota": 51539607552,
+          "read_bytes": 340297,
+          "reads": 81,
+          "set_len_calls": 0,
+          "sync_calls": 30,
+          "sync_nanos": 107935500,
+          "write_bytes": 2413952,
+          "writes": 588
+        },
+        "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+        "config_revision": 1,
+        "contexts": [
+          {
+            "active": true,
+            "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+            "counts": {
+              "debt": 0,
+              "pending": 0,
+              "queued": 0,
+              "receipts": [
+                8,
+                4
+              ],
+              "sources": 14
+            },
+            "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+            "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+            "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+            "enabled": true,
+            "handoff": "UnsupportedInCut2",
+            "head_pending": null,
+            "lease_current": true,
+            "lease_generation": 8,
+            "mode": "L1",
+            "native": {
+              "keys": [
+                "6aac69e329fefde5ee52b0c623b53c5a7d915afc4a156b322c4addd4fbc1d630",
+                "7bb62106421e4da430228a724271d7fd5eb181d3058416514904c2fc34d9a67c",
+                "5ec2c1311f77c08472f350cb7df086d893e3b687455698d6c0155b134e4aa271"
+              ],
+              "own_next": 5,
+              "peer_next": 9,
+              "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw"
+            },
+            "native_generation": 11,
+            "native_hash": "f04afbe8e314c30de81ebab44b1661de329cfa753a4dc1aa55b19d928725b87f",
+            "next": [
+              9,
+              5
+            ],
+            "own_locator_revision": 2,
+            "peer_locator_revision": 5,
+            "phase": 3,
+            "policy_error": null,
+            "policy_generation": 6,
+            "provenance": "LegacySnapshot/FullL1",
+            "publication_ready": true,
+            "repair_free": 67108864,
+            "role": 1,
+            "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+            "slot": 0,
+            "wall_high_water": 1792994383,
+            "wire_stage": 1
+          }
+        ],
+        "profile_mode": "ordered-dialog-indexed",
+        "resources": {
+          "bidi_limit": 4,
+          "connection_limit": 2,
+          "connections": 1,
+          "frame_limit": 1048576,
+          "mailbox": 0,
+          "mailbox_limit": 16,
+          "peak_connections": 1,
+          "peak_mailbox": 3,
+          "refused_before_spawn": 0,
+          "uni_limit": 0
+        },
+        "root_generation": 63,
+        "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+        "stats": {
+          "aborted_packet_calls": 0,
+          "account_constructors": 0,
+          "admissions": 8,
+          "ambiguous_packet_calls": 0,
+          "committed_decrypt": 4,
+          "committed_encrypt": 0,
+          "inbound_constructors": 0,
+          "materialized": 0,
+          "max_commit_app_bytes": 52230735,
+          "max_native_bytes": 3723,
+          "outbound_constructors": 0,
+          "packet_attempts": 4,
+          "readable": 4,
+          "reopens": 0
+        },
+        "storage_stage": "Ready",
+        "version": 3,
+        "window": [
+          [
+            128,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            8,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "fault": "role",
+      "refusal": {
+        "backend": {
+          "growth_bytes": 0,
+          "growth_nanos": 0,
+          "last_failure": null,
+          "last_requested_length": 0,
+          "length": 565248,
+          "max_growth": 0,
+          "physical_quota": 51539607552,
+          "read_bytes": 340297,
+          "reads": 81,
+          "set_len_calls": 0,
+          "sync_calls": 32,
+          "sync_nanos": 115461200,
+          "write_bytes": 2545664,
+          "writes": 620
+        },
+        "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+        "config_revision": 1,
+        "contexts": [
+          {
+            "active": true,
+            "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+            "counts": {
+              "debt": 0,
+              "pending": 0,
+              "queued": 0,
+              "receipts": [
+                8,
+                4
+              ],
+              "sources": 14
+            },
+            "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+            "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+            "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+            "enabled": true,
+            "handoff": "UnsupportedInCut2",
+            "head_pending": null,
+            "lease_current": false,
+            "lease_generation": null,
+            "mode": "L1",
+            "native": {
+              "keys": [
+                "6aac69e329fefde5ee52b0c623b53c5a7d915afc4a156b322c4addd4fbc1d630",
+                "7bb62106421e4da430228a724271d7fd5eb181d3058416514904c2fc34d9a67c",
+                "5ec2c1311f77c08472f350cb7df086d893e3b687455698d6c0155b134e4aa271"
+              ],
+              "own_next": 5,
+              "peer_next": 9,
+              "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw"
+            },
+            "native_generation": 11,
+            "native_hash": "f04afbe8e314c30de81ebab44b1661de329cfa753a4dc1aa55b19d928725b87f",
+            "next": [
+              9,
+              5
+            ],
+            "own_locator_revision": 2,
+            "peer_locator_revision": 6,
+            "phase": 3,
+            "policy_error": null,
+            "policy_generation": 7,
+            "provenance": "LegacySnapshot/FullL1",
+            "publication_ready": true,
+            "repair_free": 67108864,
+            "role": 1,
+            "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+            "slot": 0,
+            "wall_high_water": 1792994387,
+            "wire_stage": 1
+          }
+        ],
+        "profile_mode": "ordered-dialog-indexed",
+        "resources": {
+          "bidi_limit": 4,
+          "connection_limit": 2,
+          "connections": 0,
+          "frame_limit": 1048576,
+          "mailbox": 0,
+          "mailbox_limit": 16,
+          "peak_connections": 1,
+          "peak_mailbox": 3,
+          "refused_before_spawn": 0,
+          "uni_limit": 0
+        },
+        "root_generation": 65,
+        "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+        "stats": {
+          "aborted_packet_calls": 0,
+          "account_constructors": 0,
+          "admissions": 9,
+          "ambiguous_packet_calls": 0,
+          "committed_decrypt": 4,
+          "committed_encrypt": 0,
+          "inbound_constructors": 0,
+          "materialized": 0,
+          "max_commit_app_bytes": 52230735,
+          "max_native_bytes": 3723,
+          "outbound_constructors": 0,
+          "packet_attempts": 4,
+          "readable": 4,
+          "reopens": 0
+        },
+        "storage_stage": "Ready",
+        "version": 3,
+        "window": [
+          [
+            128,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            8,
+            0
+          ]
+        ]
+      },
+      "valid_after": {
+        "backend": {
+          "growth_bytes": 0,
+          "growth_nanos": 0,
+          "last_failure": null,
+          "last_requested_length": 0,
+          "length": 565248,
+          "max_growth": 0,
+          "physical_quota": 51539607552,
+          "read_bytes": 340297,
+          "reads": 81,
+          "set_len_calls": 0,
+          "sync_calls": 36,
+          "sync_nanos": 123808400,
+          "write_bytes": 2940160,
+          "writes": 716
+        },
+        "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+        "config_revision": 1,
+        "contexts": [
+          {
+            "active": true,
+            "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+            "counts": {
+              "debt": 0,
+              "pending": 0,
+              "queued": 0,
+              "receipts": [
+                9,
+                4
+              ],
+              "sources": 15
+            },
+            "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+            "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+            "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+            "enabled": true,
+            "handoff": "UnsupportedInCut2",
+            "head_pending": null,
+            "lease_current": true,
+            "lease_generation": 10,
+            "mode": "L1",
+            "native": {
+              "keys": [
+                "6aac69e329fefde5ee52b0c623b53c5a7d915afc4a156b322c4addd4fbc1d630",
+                "7bb62106421e4da430228a724271d7fd5eb181d3058416514904c2fc34d9a67c",
+                "5ec2c1311f77c08472f350cb7df086d893e3b687455698d6c0155b134e4aa271"
+              ],
+              "own_next": 5,
+              "peer_next": 10,
+              "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw"
+            },
+            "native_generation": 12,
+            "native_hash": "c08de7ef033b832123850f1885c56282cae5ea35e220eec44a083d26814d754c",
+            "next": [
+              10,
+              5
+            ],
+            "own_locator_revision": 2,
+            "peer_locator_revision": 6,
+            "phase": 3,
+            "policy_error": null,
+            "policy_generation": 7,
+            "provenance": "LegacySnapshot/FullL1",
+            "publication_ready": true,
+            "repair_free": 67108864,
+            "role": 1,
+            "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+            "slot": 0,
+            "wall_high_water": 1792994396,
+            "wire_stage": 1
+          }
+        ],
+        "profile_mode": "ordered-dialog-indexed",
+        "resources": {
+          "bidi_limit": 4,
+          "connection_limit": 2,
+          "connections": 1,
+          "frame_limit": 1048576,
+          "mailbox": 0,
+          "mailbox_limit": 16,
+          "peak_connections": 1,
+          "peak_mailbox": 3,
+          "refused_before_spawn": 0,
+          "uni_limit": 0
+        },
+        "root_generation": 69,
+        "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+        "stats": {
+          "aborted_packet_calls": 0,
+          "account_constructors": 0,
+          "admissions": 10,
+          "ambiguous_packet_calls": 0,
+          "committed_decrypt": 5,
+          "committed_encrypt": 0,
+          "inbound_constructors": 0,
+          "materialized": 0,
+          "max_commit_app_bytes": 52230735,
+          "max_native_bytes": 3723,
+          "outbound_constructors": 0,
+          "packet_attempts": 5,
+          "readable": 5,
+          "reopens": 0
+        },
+        "storage_stage": "Ready",
+        "version": 3,
+        "window": [
+          [
+            128,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            8,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "fault": "suite",
+      "refusal": {
+        "backend": {
+          "growth_bytes": 0,
+          "growth_nanos": 0,
+          "last_failure": null,
+          "last_requested_length": 0,
+          "length": 565248,
+          "max_growth": 0,
+          "physical_quota": 51539607552,
+          "read_bytes": 340297,
+          "reads": 81,
+          "set_len_calls": 0,
+          "sync_calls": 38,
+          "sync_nanos": 127679800,
+          "write_bytes": 3071872,
+          "writes": 748
+        },
+        "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+        "config_revision": 1,
+        "contexts": [
+          {
+            "active": true,
+            "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+            "counts": {
+              "debt": 0,
+              "pending": 0,
+              "queued": 0,
+              "receipts": [
+                9,
+                4
+              ],
+              "sources": 15
+            },
+            "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+            "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+            "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+            "enabled": true,
+            "handoff": "UnsupportedInCut2",
+            "head_pending": null,
+            "lease_current": false,
+            "lease_generation": null,
+            "mode": "L1",
+            "native": {
+              "keys": [
+                "6aac69e329fefde5ee52b0c623b53c5a7d915afc4a156b322c4addd4fbc1d630",
+                "7bb62106421e4da430228a724271d7fd5eb181d3058416514904c2fc34d9a67c",
+                "5ec2c1311f77c08472f350cb7df086d893e3b687455698d6c0155b134e4aa271"
+              ],
+              "own_next": 5,
+              "peer_next": 10,
+              "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw"
+            },
+            "native_generation": 12,
+            "native_hash": "c08de7ef033b832123850f1885c56282cae5ea35e220eec44a083d26814d754c",
+            "next": [
+              10,
+              5
+            ],
+            "own_locator_revision": 2,
+            "peer_locator_revision": 7,
+            "phase": 3,
+            "policy_error": null,
+            "policy_generation": 8,
+            "provenance": "LegacySnapshot/FullL1",
+            "publication_ready": true,
+            "repair_free": 67108864,
+            "role": 1,
+            "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+            "slot": 0,
+            "wall_high_water": 1792994401,
+            "wire_stage": 1
+          }
+        ],
+        "profile_mode": "ordered-dialog-indexed",
+        "resources": {
+          "bidi_limit": 4,
+          "connection_limit": 2,
+          "connections": 0,
+          "frame_limit": 1048576,
+          "mailbox": 0,
+          "mailbox_limit": 16,
+          "peak_connections": 1,
+          "peak_mailbox": 3,
+          "refused_before_spawn": 0,
+          "uni_limit": 0
+        },
+        "root_generation": 71,
+        "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+        "stats": {
+          "aborted_packet_calls": 0,
+          "account_constructors": 0,
+          "admissions": 11,
+          "ambiguous_packet_calls": 0,
+          "committed_decrypt": 5,
+          "committed_encrypt": 0,
+          "inbound_constructors": 0,
+          "materialized": 0,
+          "max_commit_app_bytes": 52230735,
+          "max_native_bytes": 3723,
+          "outbound_constructors": 0,
+          "packet_attempts": 5,
+          "readable": 5,
+          "reopens": 0
+        },
+        "storage_stage": "Ready",
+        "version": 3,
+        "window": [
+          [
+            128,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            8,
+            0
+          ]
+        ]
+      },
+      "valid_after": {
+        "backend": {
+          "growth_bytes": 561152,
+          "growth_nanos": 171149500,
+          "last_failure": null,
+          "last_requested_length": 1126400,
+          "length": 1126400,
+          "max_growth": 561152,
+          "physical_quota": 51539607552,
+          "read_bytes": 340297,
+          "reads": 81,
+          "set_len_calls": 1,
+          "sync_calls": 43,
+          "sync_nanos": 152077700,
+          "write_bytes": 3466368,
+          "writes": 844
+        },
+        "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+        "config_revision": 1,
+        "contexts": [
+          {
+            "active": true,
+            "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+            "counts": {
+              "debt": 0,
+              "pending": 0,
+              "queued": 0,
+              "receipts": [
+                10,
+                4
+              ],
+              "sources": 16
+            },
+            "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+            "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+            "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+            "enabled": true,
+            "handoff": "UnsupportedInCut2",
+            "head_pending": null,
+            "lease_current": true,
+            "lease_generation": 12,
+            "mode": "L1",
+            "native": {
+              "keys": [
+                "6aac69e329fefde5ee52b0c623b53c5a7d915afc4a156b322c4addd4fbc1d630",
+                "7bb62106421e4da430228a724271d7fd5eb181d3058416514904c2fc34d9a67c",
+                "5ec2c1311f77c08472f350cb7df086d893e3b687455698d6c0155b134e4aa271"
+              ],
+              "own_next": 5,
+              "peer_next": 11,
+              "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw"
+            },
+            "native_generation": 13,
+            "native_hash": "8524bdbecbefe1f7962d54da526564d9d01d35879a934a12456f7f3f86725247",
+            "next": [
+              11,
+              5
+            ],
+            "own_locator_revision": 2,
+            "peer_locator_revision": 7,
+            "phase": 3,
+            "policy_error": null,
+            "policy_generation": 8,
+            "provenance": "LegacySnapshot/FullL1",
+            "publication_ready": true,
+            "repair_free": 67108864,
+            "role": 1,
+            "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+            "slot": 0,
+            "wall_high_water": 1792994410,
+            "wire_stage": 1
+          }
+        ],
+        "profile_mode": "ordered-dialog-indexed",
+        "resources": {
+          "bidi_limit": 4,
+          "connection_limit": 2,
+          "connections": 1,
+          "frame_limit": 1048576,
+          "mailbox": 0,
+          "mailbox_limit": 16,
+          "peak_connections": 1,
+          "peak_mailbox": 3,
+          "refused_before_spawn": 0,
+          "uni_limit": 0
+        },
+        "root_generation": 75,
+        "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+        "stats": {
+          "aborted_packet_calls": 0,
+          "account_constructors": 0,
+          "admissions": 12,
+          "ambiguous_packet_calls": 0,
+          "committed_decrypt": 6,
+          "committed_encrypt": 0,
+          "inbound_constructors": 0,
+          "materialized": 0,
+          "max_commit_app_bytes": 52233587,
+          "max_native_bytes": 3723,
+          "outbound_constructors": 0,
+          "packet_attempts": 6,
+          "readable": 6,
+          "reopens": 0
+        },
+        "storage_stage": "Ready",
+        "version": 3,
+        "window": [
+          [
+            128,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            8,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "fault": "format",
+      "refusal": {
+        "backend": {
+          "growth_bytes": 561152,
+          "growth_nanos": 171181800,
+          "last_failure": null,
+          "last_requested_length": 847872,
+          "length": 847872,
+          "max_growth": 561152,
+          "physical_quota": 51539607552,
+          "read_bytes": 340297,
+          "reads": 81,
+          "set_len_calls": 2,
+          "sync_calls": 45,
+          "sync_nanos": 159392900,
+          "write_bytes": 3598080,
+          "writes": 876
+        },
+        "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+        "config_revision": 1,
+        "contexts": [
+          {
+            "active": true,
+            "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+            "counts": {
+              "debt": 0,
+              "pending": 0,
+              "queued": 0,
+              "receipts": [
+                10,
+                4
+              ],
+              "sources": 16
+            },
+            "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+            "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+            "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+            "enabled": true,
+            "handoff": "UnsupportedInCut2",
+            "head_pending": null,
+            "lease_current": false,
+            "lease_generation": null,
+            "mode": "L1",
+            "native": {
+              "keys": [
+                "6aac69e329fefde5ee52b0c623b53c5a7d915afc4a156b322c4addd4fbc1d630",
+                "7bb62106421e4da430228a724271d7fd5eb181d3058416514904c2fc34d9a67c",
+                "5ec2c1311f77c08472f350cb7df086d893e3b687455698d6c0155b134e4aa271"
+              ],
+              "own_next": 5,
+              "peer_next": 11,
+              "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw"
+            },
+            "native_generation": 13,
+            "native_hash": "8524bdbecbefe1f7962d54da526564d9d01d35879a934a12456f7f3f86725247",
+            "next": [
+              11,
+              5
+            ],
+            "own_locator_revision": 2,
+            "peer_locator_revision": 8,
+            "phase": 3,
+            "policy_error": null,
+            "policy_generation": 9,
+            "provenance": "LegacySnapshot/FullL1",
+            "publication_ready": true,
+            "repair_free": 67108864,
+            "role": 1,
+            "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+            "slot": 0,
+            "wall_high_water": 1792994414,
+            "wire_stage": 1
+          }
+        ],
+        "profile_mode": "ordered-dialog-indexed",
+        "resources": {
+          "bidi_limit": 4,
+          "connection_limit": 2,
+          "connections": 0,
+          "frame_limit": 1048576,
+          "mailbox": 0,
+          "mailbox_limit": 16,
+          "peak_connections": 1,
+          "peak_mailbox": 3,
+          "refused_before_spawn": 0,
+          "uni_limit": 0
+        },
+        "root_generation": 77,
+        "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+        "stats": {
+          "aborted_packet_calls": 0,
+          "account_constructors": 0,
+          "admissions": 13,
+          "ambiguous_packet_calls": 0,
+          "committed_decrypt": 6,
+          "committed_encrypt": 0,
+          "inbound_constructors": 0,
+          "materialized": 0,
+          "max_commit_app_bytes": 52233587,
+          "max_native_bytes": 3723,
+          "outbound_constructors": 0,
+          "packet_attempts": 6,
+          "readable": 6,
+          "reopens": 0
+        },
+        "storage_stage": "Ready",
+        "version": 3,
+        "window": [
+          [
+            128,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            8,
+            0
+          ]
+        ]
+      },
+      "valid_after": {
+        "backend": {
+          "growth_bytes": 561152,
+          "growth_nanos": 171181800,
+          "last_failure": null,
+          "last_requested_length": 847872,
+          "length": 847872,
+          "max_growth": 561152,
+          "physical_quota": 51539607552,
+          "read_bytes": 340297,
+          "reads": 81,
+          "set_len_calls": 2,
+          "sync_calls": 49,
+          "sync_nanos": 183618800,
+          "write_bytes": 4000768,
+          "writes": 974
+        },
+        "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+        "config_revision": 1,
+        "contexts": [
+          {
+            "active": true,
+            "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+            "counts": {
+              "debt": 0,
+              "pending": 0,
+              "queued": 0,
+              "receipts": [
+                11,
+                4
+              ],
+              "sources": 17
+            },
+            "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+            "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+            "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+            "enabled": true,
+            "handoff": "UnsupportedInCut2",
+            "head_pending": null,
+            "lease_current": true,
+            "lease_generation": 14,
+            "mode": "L1",
+            "native": {
+              "keys": [
+                "6aac69e329fefde5ee52b0c623b53c5a7d915afc4a156b322c4addd4fbc1d630",
+                "7bb62106421e4da430228a724271d7fd5eb181d3058416514904c2fc34d9a67c",
+                "5ec2c1311f77c08472f350cb7df086d893e3b687455698d6c0155b134e4aa271"
+              ],
+              "own_next": 5,
+              "peer_next": 12,
+              "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw"
+            },
+            "native_generation": 14,
+            "native_hash": "5db1a6cf28c5258d7c0942bd8d99cc904e3b3b1ca5b0b7ee0a4a1256cecbc2b9",
+            "next": [
+              12,
+              5
+            ],
+            "own_locator_revision": 2,
+            "peer_locator_revision": 8,
+            "phase": 3,
+            "policy_error": null,
+            "policy_generation": 9,
+            "provenance": "LegacySnapshot/FullL1",
+            "publication_ready": true,
+            "repair_free": 67108864,
+            "role": 1,
+            "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+            "slot": 0,
+            "wall_high_water": 1792994423,
+            "wire_stage": 1
+          }
+        ],
+        "profile_mode": "ordered-dialog-indexed",
+        "resources": {
+          "bidi_limit": 4,
+          "connection_limit": 2,
+          "connections": 1,
+          "frame_limit": 1048576,
+          "mailbox": 0,
+          "mailbox_limit": 16,
+          "peak_connections": 1,
+          "peak_mailbox": 3,
+          "refused_before_spawn": 0,
+          "uni_limit": 0
+        },
+        "root_generation": 81,
+        "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+        "stats": {
+          "aborted_packet_calls": 0,
+          "account_constructors": 0,
+          "admissions": 14,
+          "ambiguous_packet_calls": 0,
+          "committed_decrypt": 7,
+          "committed_encrypt": 0,
+          "inbound_constructors": 0,
+          "materialized": 0,
+          "max_commit_app_bytes": 52233587,
+          "max_native_bytes": 3723,
+          "outbound_constructors": 0,
+          "packet_attempts": 7,
+          "readable": 7,
+          "reopens": 0
+        },
+        "storage_stage": "Ready",
+        "version": 3,
+        "window": [
+          [
+            128,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            8,
+            0
+          ]
+        ]
+      }
+    },
+    {
+      "fault": "genesis-shape",
+      "refusal": {
+        "backend": {
+          "growth_bytes": 561152,
+          "growth_nanos": 171181800,
+          "last_failure": null,
+          "last_requested_length": 847872,
+          "length": 847872,
+          "max_growth": 561152,
+          "physical_quota": 51539607552,
+          "read_bytes": 340297,
+          "reads": 81,
+          "set_len_calls": 2,
+          "sync_calls": 51,
+          "sync_nanos": 191104900,
+          "write_bytes": 4132480,
+          "writes": 1006
+        },
+        "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+        "config_revision": 1,
+        "contexts": [
+          {
+            "active": true,
+            "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+            "counts": {
+              "debt": 0,
+              "pending": 0,
+              "queued": 0,
+              "receipts": [
+                11,
+                4
+              ],
+              "sources": 17
+            },
+            "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+            "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+            "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+            "enabled": true,
+            "handoff": "UnsupportedInCut2",
+            "head_pending": null,
+            "lease_current": false,
+            "lease_generation": null,
+            "mode": "L1",
+            "native": {
+              "keys": [
+                "6aac69e329fefde5ee52b0c623b53c5a7d915afc4a156b322c4addd4fbc1d630",
+                "7bb62106421e4da430228a724271d7fd5eb181d3058416514904c2fc34d9a67c",
+                "5ec2c1311f77c08472f350cb7df086d893e3b687455698d6c0155b134e4aa271"
+              ],
+              "own_next": 5,
+              "peer_next": 12,
+              "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw"
+            },
+            "native_generation": 14,
+            "native_hash": "5db1a6cf28c5258d7c0942bd8d99cc904e3b3b1ca5b0b7ee0a4a1256cecbc2b9",
+            "next": [
+              12,
+              5
+            ],
+            "own_locator_revision": 2,
+            "peer_locator_revision": 9,
+            "phase": 3,
+            "policy_error": null,
+            "policy_generation": 10,
+            "provenance": "LegacySnapshot/FullL1",
+            "publication_ready": true,
+            "repair_free": 67108864,
+            "role": 1,
+            "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+            "slot": 0,
+            "wall_high_water": 1792994428,
+            "wire_stage": 1
+          }
+        ],
+        "profile_mode": "ordered-dialog-indexed",
+        "resources": {
+          "bidi_limit": 4,
+          "connection_limit": 2,
+          "connections": 0,
+          "frame_limit": 1048576,
+          "mailbox": 0,
+          "mailbox_limit": 16,
+          "peak_connections": 1,
+          "peak_mailbox": 3,
+          "refused_before_spawn": 0,
+          "uni_limit": 0
+        },
+        "root_generation": 83,
+        "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+        "stats": {
+          "aborted_packet_calls": 0,
+          "account_constructors": 0,
+          "admissions": 15,
+          "ambiguous_packet_calls": 0,
+          "committed_decrypt": 7,
+          "committed_encrypt": 0,
+          "inbound_constructors": 0,
+          "materialized": 0,
+          "max_commit_app_bytes": 52233587,
+          "max_native_bytes": 3723,
+          "outbound_constructors": 0,
+          "packet_attempts": 7,
+          "readable": 7,
+          "reopens": 0
+        },
+        "storage_stage": "Ready",
+        "version": 3,
+        "window": [
+          [
+            128,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            8,
+            0
+          ]
+        ]
+      },
+      "valid_after": {
+        "backend": {
+          "growth_bytes": 561152,
+          "growth_nanos": 171181800,
+          "last_failure": null,
+          "last_requested_length": 847872,
+          "length": 847872,
+          "max_growth": 561152,
+          "physical_quota": 51539607552,
+          "read_bytes": 340297,
+          "reads": 81,
+          "set_len_calls": 2,
+          "sync_calls": 55,
+          "sync_nanos": 210726200,
+          "write_bytes": 4518784,
+          "writes": 1100
+        },
+        "config_hash": "e6fbbce88c250cd678d272ba91be877e4706530a20eb6fadae1da43e72ec29cb",
+        "config_revision": 1,
+        "contexts": [
+          {
+            "active": true,
+            "context": "1cc6f92dee4bec94ddafd7474eff67af69fe8988b9183c15d5e5d7aa0aad7c5c",
+            "counts": {
+              "debt": 0,
+              "pending": 0,
+              "queued": 0,
+              "receipts": [
+                12,
+                4
+              ],
+              "sources": 18
+            },
+            "current_consent": "4a2eccdda0bfe325fe4098eecf436ba2b554330513630c2facb5696fa48d9141",
+            "d": "0068f6573b3957f2269cbb7fce38ed37144dc8d8a95ef4a1ca22af4becc0ba8c",
+            "e": "df3cdff288fc2f72c485405c6708a0d1cc02945edbcfd05a237a1a118a6c5238",
+            "enabled": true,
+            "handoff": "UnsupportedInCut2",
+            "head_pending": null,
+            "lease_current": true,
+            "lease_generation": 16,
+            "mode": "L1",
+            "native": {
+              "keys": [
+                "6aac69e329fefde5ee52b0c623b53c5a7d915afc4a156b322c4addd4fbc1d630",
+                "7bb62106421e4da430228a724271d7fd5eb181d3058416514904c2fc34d9a67c",
+                "5ec2c1311f77c08472f350cb7df086d893e3b687455698d6c0155b134e4aa271"
+              ],
+              "own_next": 5,
+              "peer_next": 13,
+              "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw"
+            },
+            "native_generation": 15,
+            "native_hash": "2acbab8f2279c1be22e07e5f3530870612d6efd3bf2c37e30eb223334a2f5554",
+            "next": [
+              13,
+              5
+            ],
+            "own_locator_revision": 2,
+            "peer_locator_revision": 9,
+            "phase": 3,
+            "policy_error": null,
+            "policy_generation": 10,
+            "provenance": "LegacySnapshot/FullL1",
+            "publication_ready": true,
+            "repair_free": 67108864,
+            "role": 1,
+            "sid": "ZK1PiA/cQPpqYzk+AMRwcxpfRxs5AomF6jg3YH0Gscw",
+            "slot": 0,
+            "wall_high_water": 1792994437,
+            "wire_stage": 1
+          }
+        ],
+        "profile_mode": "ordered-dialog-indexed",
+        "resources": {
+          "bidi_limit": 4,
+          "connection_limit": 2,
+          "connections": 1,
+          "frame_limit": 1048576,
+          "mailbox": 0,
+          "mailbox_limit": 16,
+          "peak_connections": 1,
+          "peak_mailbox": 3,
+          "refused_before_spawn": 0,
+          "uni_limit": 0
+        },
+        "root_generation": 87,
+        "source_id": "2f767720229ec6d2224cee7d26fd03b7188ed6a0c4d3ec4b717f5acbf0846e6a",
+        "stats": {
+          "aborted_packet_calls": 0,
+          "account_constructors": 0,
+          "admissions": 16,
+          "ambiguous_packet_calls": 0,
+          "committed_decrypt": 8,
+          "committed_encrypt": 0,
+          "inbound_constructors": 0,
+          "materialized": 0,
+          "max_commit_app_bytes": 52233587,
+          "max_native_bytes": 3723,
+          "outbound_constructors": 0,
+          "packet_attempts": 8,
+          "readable": 8,
+          "reopens": 0
+        },
+        "storage_stage": "Ready",
+        "version": 3,
+        "window": [
+          [
+            128,
+            0
+          ],
+          [
+            0,
+            0
+          ],
+          [
+            8,
+            0
+          ]
+        ]
+      }
+    }
+  ]
+}

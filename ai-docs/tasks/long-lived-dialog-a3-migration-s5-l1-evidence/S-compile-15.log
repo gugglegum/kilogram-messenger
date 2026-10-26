@@ -1,0 +1,41 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+   Compiling kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+   Compiling kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 39.61s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+test_profile=verification
+status=compiled-only
+No test executable was started. Pass -Run explicitly when it is safe to run tests.
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17695 13.46
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=64417
+target_gib=69.03
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

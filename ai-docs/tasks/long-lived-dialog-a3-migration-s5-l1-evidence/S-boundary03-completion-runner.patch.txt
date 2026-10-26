@@ -1,0 +1,77 @@
+diff --git "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-runner.ps1.txt" b/scripts/invoke-migration-s5-l1-case.ps1
+index 7d9b814..09d650e 100644
+--- "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-runner.ps1.txt"
++++ b/scripts/invoke-migration-s5-l1-case.ps1
+@@ -25,6 +25,43 @@ if($Action -in @('DeadlineProbe','PreservationProbe') -and $Set -ne 'C'){throw '
+ if($Case -notlike "$Set-*"){throw 'Case prefix must match the contributing set.'}
+ if($Action -eq 'ExhaustedOrigin' -and [double]$ledger.new_ceilings_seconds.F-[double]$ledger.charged_elapsed_seconds.F -lt 1215){throw 'Long origin requires850+140+225 contingency remaining.'}
+ $deadline=$null;$decision=$null;$readyException=$false
++$phasePreservationC=$Case -ceq 'C-boundary-phase-preservation-01'
++$checkpointPreservationF=$Case -ceq 'F-exhausted-preservation-01'
++$preservationCompletion=$phasePreservationC -or $checkpointPreservationF
++if($preservationCompletion){
++ $expectedSet=if($phasePreservationC){'C'}else{'F'}
++ $expectedFilter=if($phasePreservationC){'migration_s5_l1_phase_preservation_opaque_held_locks'}else{'migration_s5_l1_stopped_checkpoint_preservation_only'}
++ if($Set -cne $expectedSet -or $Action -cne 'Tests' -or $Filter -cne $expectedFilter -or $Package.Count -ne 1 -or $Package[0] -cne 'kilogram-cli' -or $ResumeDirectory){throw 'Preservation completion case/selector/package mismatch.'}
++ $decision='ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary03-completion-review.md'
++ if((Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $workspace $decision)).Hash.ToLowerInvariant() -cne 'c98a14c445985acfa4e2295f9519848b73e8316a9d72b764900a6b36750211e0'){throw 'Narrow preservation authority changed.'}
++ foreach($fixedHelper in @(@('scripts/preserve-migration-s5-l1-input.ps1','25fe5a7c80821fb83a0fab5117585a48e6afe729094c1d45931aaa1556b044f3'),@('apps/kilogram-cli/tests/support/migration_s5_l1_obligations.rs','68bc85bb08508bb73b9a89344da22518e6d1bc1ee76797c3e1bf50ad4dd06b00'))){
++  if((Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $workspace $fixedHelper[0])).Hash.ToLowerInvariant() -cne $fixedHelper[1]){throw 'Raw preservation implementation must remain unchanged.'}
++ }
++ foreach($prior03 in @(@('F-exhausted-boundary-03.json','6da9c4ae43dad5234df1da2aba156e0a972a7d3895069d4cf87fcdbe7932cb48'),@('F-exhausted-boundary-03.log','739839e858e1a5131e0bbe09063851f4fc2ab193d96297fd2466679b78f4a38f'),@('F-exhausted-boundary-03-observation.json','7f2adda05a3e1a845b4b7580db54e402283fad608e0d2c24de98a7b82f5f05f0'),@('F-exhausted-boundary-03-phases.jsonl','940df52d347a96dcb48d1f62b7fbe2cdfc5440a62f96868f4872aa86de94c4af'),@('F-exhausted-boundary-03-checkpoint-info.json','2b359e4623b2e603977342df69f441e35e0276643ee420a751a3515e361771b3'),@('F-exhausted-boundary-03-two-indexed-reconnect-barrier.log','545f0849be3035bb86521b03bd3dce5fd972c472cce603f27ae5c722647c8b8f'))){
++  if((Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $evidence $prior03[0])).Hash.ToLowerInvariant() -cne $prior03[1]){throw 'Completed case03 evidence changed.'}
++ }
++ $public03=Get-Content -Raw -LiteralPath (Join-Path $evidence 'F-exhausted-boundary-03-observation.json')|ConvertFrom-Json
++ foreach($binding03 in $public03.exports){
++  $export03=Join-Path $workspace $binding03.export.path
++  if((Get-Item -LiteralPath $export03).Length -ne $binding03.export.bytes -or (Get-FileHash -Algorithm SHA256 -LiteralPath $export03).Hash.ToLowerInvariant() -cne $binding03.export.sha256){throw 'Approved case03 public export changed.'}
++ }
++ $failed03=@($ledger.cases|Where-Object {$_.case -ceq 'F-exhausted-boundary-03'})
++ if($failed03.Count -ne 1 -or $failed03[0].exit_code -ne 1 -or $failed03[0].elapsed_seconds -ne 649.592232 -or $failed03[0].deadline.work_expired -or $failed03[0].deadline.owned_children_after_cleanup -ne 0){throw 'Boundary03 must remain the charged whole failure.'}
++ if($phasePreservationC){
++  if($FixtureDirectory -or [double]$ledger.new_ceilings_seconds.C-[double]$ledger.charged_elapsed_seconds.C -lt 40){throw 'Opaque C requires no genuine fixture and remaining whole40.'}
++ }else{
++  $expectedInput=[IO.Path]::GetFullPath((Join-Path $workspace '.tmp/migration-s5-storage/l1-exhausted-observed-NCjBHb'))
++  if(-not $FixtureDirectory -or -not ([IO.Path]::GetFullPath($FixtureDirectory)).Equals($expectedInput,[StringComparison]::OrdinalIgnoreCase)){throw 'Preservation only accepts the exact stopped case03 path.'}
++  $component=@($ledger.cases|Where-Object {$_.case -ceq 'C-boundary-phase-preservation-01'})
++  if($component.Count -ne 1 -or $component[0].exit_code -ne 0 -or $component[0].deadline.work_expired -or $component[0].deadline.owned_children_after_cleanup -ne 0){throw 'Actual whole opaque Phases C PASS is required first.'}
++  if([double]$ledger.new_ceilings_seconds.F-[double]$ledger.charged_elapsed_seconds.F -lt 365){throw 'Preservation whole140 plus225 contingency does not fit.'}
++  if(@(Get-Process -ErrorAction SilentlyContinue|Where-Object {$_.ProcessName -like 'kilogram-*'}).Count){throw 'Known Kilogram process still active; stopped-only preservation refused.'}
++ }
++ if(Test-Path -LiteralPath (Join-Path $evidence "$Case-result.json")){throw 'Completion result is immutable.'}
++ if(-not $LongApprovalFile){throw 'Preservation completion requires a separate later root go-ahead.'}
++ $approval=Get-Content -Raw -LiteralPath $LongApprovalFile|ConvertFrom-Json
++ if($approval.approved_case -cne $Case -or $approval.root_thread -cne '01a164ec-589c-7b41-bc34-3ba158d1f22b' -or $approval.runner_sha256 -cne (Get-FileHash -Algorithm SHA256 -LiteralPath $PSCommandPath).Hash.ToLowerInvariant() -or $approval.ledger_sha256 -cne (Get-FileHash -Algorithm SHA256 -LiteralPath $ledgerPath).Hash.ToLowerInvariant()){throw 'Completion go-ahead does not bind this case/runner/current ledger.'}
++}
+ $boundaryExtended=$Case -ceq 'F-exhausted-boundary-03'
+ $boundaryObserved=$Case -ceq 'F-exhausted-boundary-02'
+ $boundaryGroup=$Case -ceq 'F-exhausted-boundary-01' -or $boundaryObserved -or $boundaryExtended
+@@ -149,9 +186,9 @@ if($boundaryGroup){
+  if($originCase.exit_code -ne 0 -or $originCase.deadline.work_expired -or $originCase.deadline.owned_children_after_cleanup -ne 0){throw 'Actual whole origin PASS required before boundary.'}
+  if($approval.approved_case -cne $Case -or $approval.root_thread -cne '01a164ec-589c-7b41-bc34-3ba158d1f22b' -or $approval.runner_sha256 -cne (Get-FileHash -Algorithm SHA256 -LiteralPath $PSCommandPath).Hash.ToLowerInvariant() -or $approval.ledger_sha256 -cne (Get-FileHash -Algorithm SHA256 -LiteralPath $ledgerPath).Hash.ToLowerInvariant() -or $approval.origin_case_sha256 -cne (Get-FileHash -Algorithm SHA256 -LiteralPath $originRecordPath).Hash.ToLowerInvariant()){throw 'Boundary go-ahead does not bind the actual runner/ledger/origin.'}
+ }
+-if($ResumeDirectory -or $Action -eq 'ExhaustedOrigin' -or $reviewGroup -or $reviewField -or $arityGroup -or $boundaryGroup){
++if($ResumeDirectory -or $Action -eq 'ExhaustedOrigin' -or $reviewGroup -or $reviewField -or $arityGroup -or $boundaryGroup -or $preservationCompletion){
+  . (Join-Path $PSScriptRoot 'migration-s5-l1-deadline.ps1')
+- $whole=if($boundaryExtended){800}elseif($boundaryObserved){600}elseif($boundaryGroup){140}elseif($arityGroup){40}elseif($reviewField){$fieldPolicy.whole}elseif($reviewGroup){120}elseif($ResumeDirectory){240}else{900};$work=if($boundaryExtended){780}elseif($boundaryObserved){580}elseif($boundaryGroup){120}elseif($arityGroup){30}elseif($reviewField){$fieldPolicy.work}elseif($reviewGroup){100}elseif($ResumeDirectory){210}else{850}
++ $whole=if($phasePreservationC){40}elseif($checkpointPreservationF){140}elseif($boundaryExtended){800}elseif($boundaryObserved){600}elseif($boundaryGroup){140}elseif($arityGroup){40}elseif($reviewField){$fieldPolicy.whole}elseif($reviewGroup){120}elseif($ResumeDirectory){240}else{900};$work=if($phasePreservationC){30}elseif($checkpointPreservationF){120}elseif($boundaryExtended){780}elseif($boundaryObserved){580}elseif($boundaryGroup){120}elseif($arityGroup){30}elseif($reviewField){$fieldPolicy.work}elseif($reviewGroup){100}elseif($ResumeDirectory){210}else{850}
+  $deadline=[KilogramS5Deadline]::new($work-$timer.Elapsed.TotalSeconds,$whole-$timer.Elapsed.TotalSeconds)
+  [ordered]@{case=$Case;started_utc=[DateTime]::UtcNow.ToString('O');owner_pid=$PID;whole_seconds=$whole;work_seconds=$work;root_decision=$decision;action=$Action;classification='attempt-start-not-final-result'}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $evidence "$Case.started.json") -Encoding utf8
+ }
+@@ -191,7 +228,7 @@ try {
+   }
+   $argv=@('scripts/run-cargo-tests-stable.ps1','-Package')+$Package+@('-CargoJobs','12','-Profile','verification','-Filter',$Filter,'-Run','-NoCapture')
+   & (Join-Path $PSScriptRoot 'run-cargo-tests-stable.ps1') -Package $Package -CargoJobs 12 -Profile verification -Filter $Filter -Run -NoCapture *> (Join-Path $evidence "$Case.log")
+-  if($reviewField -or $arityGroup -or $boundaryGroup){
++  if($reviewField -or $arityGroup -or $boundaryGroup -or $preservationCompletion){
+    $matchingLog=Get-Content -LiteralPath (Join-Path $evidence "$Case.log") -Raw
+    . (Join-Path $PSScriptRoot 'migration-s5-l1-test-result.ps1')
+    if(-not (Test-KilogramS5SingleTestLog $matchingLog $Filter)){throw 'Review2 requires exactly one matching test, one one-test PASS summary and wrapper completion.'}
+@@ -225,6 +262,7 @@ finally {
+ Get-Content -LiteralPath (Join-Path $evidence "$Case.log") -Tail 50
+ $timer.Stop()
+ $record=[ordered]@{case=$Case;contributing_set=$Set;action=$Action;argv=$argv;fixture=$fixture;fixture_input=$FixtureDirectory;resume_active_input=$ResumeDirectory;exit_code=$code;error=$failure;elapsed_seconds=$timer.Elapsed.TotalSeconds;sources=$sources;images=$images;classification='whole-contributing-runner';features=@();rule='Includes all runner setup, cached compile/stage, real fixture creation/copy, waits, recovery, kill and cleanup; failures retained.'}
++if($preservationCompletion){$record['preservation_completion']=[ordered]@{root_decision=$decision;root_go_ahead=$LongApprovalFile;root_go_ahead_sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $LongApprovalFile).Hash.ToLowerInvariant();execution_mode_declared=$ExecutionMode;approval_provenance='separate root technical go-ahead and ordinary tool execution review; mode is a declaration, not token introspection';scope=$(if($phasePreservationC){'opaque actual Phases/helper regression with two real held locks'}else{'stopped case03 preservation only, no typed opens/runtime/recovery/restore'});boundary03_whole_result='FAIL';lost_parent_result_reconstructed=$false}}
+ if($boundaryGroup -or $Action -eq 'ExhaustedOrigin'){$record['long_approval']=[ordered]@{path=$LongApprovalFile;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $LongApprovalFile).Hash.ToLowerInvariant();execution_mode=$ExecutionMode;approval_provenance='require_escalated tool invocation and separate root go-ahead; declaration is not token introspection';small_evidence_acceptance='Ready02 and capacity01 remain whole FAIL, scoped functional acceptance only under continuation3/4'}}
+ if($readyException){$record['reviewed_predecessor']=[ordered]@{case='F-review1-ready-02';whole_result='FAIL';scope='Root accepted completed functional R3 assertions only';decision_sha256='c05a408a653f9ac7d35fffd31cd50df15620b726e5357013d8525ea9e669bf02';case_sha256='20540287fc8e478ba72bdfc49786f8b6c6a90e02b298ce3b1fdef7745278e7be';log_sha256='c09dfa264573ff3873f8bca52998dadcff9d22a52748b59451d9c32ebb52f463';parent_sha256='fcfb7da3b292b8427f99f49e20fa55a067cc0a727f7936900179520e3edcccf0'}}
+ if($reviewField){$record['execution_mode']=[ordered]@{declared=$ExecutionMode;approval_provenance='require_escalated tool invocation, independently recorded by the execution approval layer; declaration is not token introspection';prior_failed_case='F-review1-own-f-01';review2_sha256='d1fe3ec11a5e9c36d38f0ca874bef609649a30ba70fdcd114e2ee1f7de9550ad';continuation_sha256='8dde9b2b0cc26de3beb2dc94800a6d628b2431879bb27e33c61933c905efaa40';ready_fixture_continuation_sha256='28b1385688e394a8219fea1ee576cf6d244e8318c1186bdb1ff9c53759d3bb21'}}

@@ -1,0 +1,47 @@
+{
+  "classification": "static-source-comparison-and-AST-only",
+  "genuine_boundary_tail_exact_normalized": true,
+  "phase_check_run_drop_exact_normalized": true,
+  "raw_helper_and_obligations_unchanged": true,
+  "runner_parse_errors": 0,
+  "runner_token_count": 4624,
+  "policy_assignment_extents": [
+    "$phasePreservationC=$Case -ceq 'C-boundary-phase-preservation-01'",
+    "$checkpointPreservationF=$Case -ceq 'F-exhausted-preservation-01'",
+    "$preservationCompletion=$phasePreservationC -or $checkpointPreservationF",
+    "$expectedFilter=if($phasePreservationC){'migration_s5_l1_phase_preservation_opaque_held_locks'}else{'migration_s5_l1_stopped_checkpoint_preservation_only'}",
+    "$boundaryExtended=$Case -ceq 'F-exhausted-boundary-03'",
+    "$boundaryObserved=$Case -ceq 'F-exhausted-boundary-02'",
+    "$boundaryGroup=$Case -ceq 'F-exhausted-boundary-01' -or $boundaryObserved -or $boundaryExtended",
+    "$boundaryReserve=if($boundaryExtended){1025}elseif($boundaryObserved){825}else{365}",
+    "$whole=if($phasePreservationC){40}elseif($checkpointPreservationF){140}elseif($boundaryExtended){800}elseif($boundaryObserved){600}elseif($boundaryGroup){140}elseif($arityGroup){40}elseif($reviewField){$fieldPolicy.whole}elseif($reviewGroup){120}elseif($ResumeDirectory){240}else{900}",
+    "$work=if($phasePreservationC){30}elseif($checkpointPreservationF){120}elseif($boundaryExtended){780}elseif($boundaryObserved){580}elseif($boundaryGroup){120}elseif($arityGroup){30}elseif($reviewField){$fieldPolicy.work}elseif($reviewGroup){100}elseif($ResumeDirectory){210}else{850}"
+  ],
+  "new_policies": [
+    {
+      "case": "C-boundary-phase-preservation-01",
+      "set": "C",
+      "filter": "migration_s5_l1_phase_preservation_opaque_held_locks",
+      "work": 30,
+      "whole": 40,
+      "genuine_fixture_input": false
+    },
+    {
+      "case": "F-exhausted-preservation-01",
+      "set": "F",
+      "filter": "migration_s5_l1_stopped_checkpoint_preservation_only",
+      "work": 120,
+      "whole": 140,
+      "remaining_F_entry_reserve": 365,
+      "requires_C_whole_PASS": true,
+      "input": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/migration-s5-storage/l1-exhausted-observed-NCjBHb"
+    }
+  ],
+  "future_root_approval_required_for_each_case": true,
+  "ordinary_sandbox_possible": true,
+  "native_not_forced": true,
+  "script_executed": false,
+  "test_executable_started": false,
+  "fixture_read_copy_inventory_or_preservation_performed": false,
+  "new_root_approvals_created": false
+}

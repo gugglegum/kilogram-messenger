@@ -1,0 +1,10 @@
+{
+  "case": "C-ready-arity-fixture-01",
+  "started_utc": "2026-10-26T05:57:30.8360925Z",
+  "owner_pid": 42264,
+  "whole_seconds": 40,
+  "work_seconds": 30,
+  "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-2.md",
+  "action": "Tests",
+  "classification": "attempt-start-not-final-result"
+}

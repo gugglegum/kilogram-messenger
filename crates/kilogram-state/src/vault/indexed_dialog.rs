@@ -476,6 +476,7 @@ struct LoadedCore {
     backend: backend::BackendControl,
 }
 enum CommitInput {
+    Legacy1(Box<migration7::live1::L1Operation>),
     Runtime2(Box<RuntimeOperation>),
     Migration7(Box<migration7::Operation>),
     Protocol2 {
@@ -886,10 +887,12 @@ impl IndexedDialogVault {
         let purpose_matches = match self.root.layout {
             RootLayout::Component5 => !matches!(
                 &input,
-                CommitInput::Runtime2(_) | CommitInput::Migration7(_)
+                CommitInput::Runtime2(_) | CommitInput::Migration7(_) | CommitInput::Legacy1(_)
             ),
             RootLayout::Runtime6 => matches!(&input, CommitInput::Runtime2(_)),
-            RootLayout::Migrated7 => matches!(&input, CommitInput::Migration7(_)),
+            RootLayout::Migrated7 => {
+                matches!(&input, CommitInput::Migration7(_) | CommitInput::Legacy1(_))
+            }
         };
         if !purpose_matches {
             return Err(Error::RuntimeWriterRequired);
@@ -906,6 +909,7 @@ impl IndexedDialogVault {
         let values = tx.open_table(VALUES).map_err(db)?;
         let mut w = Work::new(&nodes, &values, &self.crypto, self.root.clone());
         match &input {
+            CommitInput::Legacy1(op) => w.l1_check(op, id == self.root.commit_id)?,
             CommitInput::Runtime2(op) => w.runtime_check(op, id == self.root.commit_id)?,
             CommitInput::Migration7(op) => {
                 w.migration_check_input(op, id == self.root.commit_id)?
@@ -960,6 +964,7 @@ impl IndexedDialogVault {
             return Err(Error::StaleGeneration);
         }
         match input {
+            CommitInput::Legacy1(op) => w.l1_apply(*op)?,
             CommitInput::Runtime2(op) => w.runtime_apply(*op)?,
             CommitInput::Migration7(op) => w.migration_apply(*op)?,
             CommitInput::Protocol2 { context, operation } => {
@@ -1018,7 +1023,10 @@ impl IndexedDialogVault {
         w.tree.seal_changes()?;
         // Runtime's bounded IPC/QUIC queues, two prefetch windows and crypto caches
         // retain a separate 32 MiB arena while this single writer is in flight.
-        let runtime_buffers = if self.root.layout == RootLayout::Runtime6 {
+        let runtime_buffers = if matches!(
+            self.root.layout,
+            RootLayout::Runtime6 | RootLayout::Migrated7
+        ) {
             32 * 1024 * 1024
         } else {
             0

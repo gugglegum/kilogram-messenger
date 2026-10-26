@@ -1,0 +1,535 @@
+{
+  "classification": "static-long-readiness-binding-no-origin-or-boundary-execution",
+  "baseline": "73c499818ba9b699c331aa842e64e8432e90c59a",
+  "index": [],
+  "authority": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-4.md",
+  "authority_sha256": "2dac985cfdcede0729a1c61156dea3f252fc861eeebf6f2a98053fcd9074b4bb",
+  "sources": [
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs",
+      "bytes": 20858,
+      "sha256": "feaf65e3e6698ff56d5fad69c89f5d5423efb22f6d44b8da30c299e45000bf61"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_obligations.rs",
+      "bytes": 24415,
+      "sha256": "68bc85bb08508bb73b9a89344da22518e6d1bc1ee76797c3e1bf50ad4dd06b00"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1.rs",
+      "bytes": 20509,
+      "sha256": "60b896e3aa4b511fe06e3307f5e988760f76bc172bb693af18ef87663405be34"
+    },
+    {
+      "path": "scripts/invoke-migration-s5-l1-case.ps1",
+      "bytes": 23612,
+      "sha256": "c9c6841213181af75f3364128cf7d0697d45db5a7a8bf5bfda1b58986c3211ed"
+    },
+    {
+      "path": "scripts/migration-s5-l1-deadline.ps1",
+      "bytes": 6038,
+      "sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45"
+    },
+    {
+      "path": "scripts/migration-s5-l1-test-result.ps1",
+      "bytes": 422,
+      "sha256": "b6e1c73804b63997add074f47a1b924d88bb5b3e87ea7188ab4432ecd8dd4dc0"
+    },
+    {
+      "path": "scripts/preserve-migration-s5-l1-input.ps1",
+      "bytes": 5011,
+      "sha256": "25fe5a7c80821fb83a0fab5117585a48e6afe729094c1d45931aaa1556b044f3"
+    },
+    {
+      "path": "scripts/test-ordered-dialog-process.ps1",
+      "bytes": 38356,
+      "sha256": "ca4336d26efd922ec5a2a8f68caf7812324966cd0a44481699003192a8abf405"
+    },
+    {
+      "path": "scripts/verify-migration-s5-l1-frozen-origin.ps1",
+      "bytes": 3458,
+      "sha256": "fec72c16ab954aa0a71cca5bb09aef0cc4bcd6c0dbfbb7fef4ce4155183ca94a"
+    }
+  ],
+  "compiled_harness": {
+    "path": "target/verification/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+    "bytes": 13648896,
+    "sha256": "dba6d218adbdbe6a9c34add3419157b15bb6cced01c958f11cb3d5b9b899314b"
+  },
+  "compiled_harness_record": "S-compile-18.json",
+  "compiled_input_count": 52,
+  "compiled_input_mismatches": [],
+  "static_records": [
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-22.json",
+      "bytes": 20622,
+      "sha256": "7b55fb5c19cdc28c2a4be0017b7b5d8ddf769fdaa7d8c91f13ddb76dcf2fa3a9"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-18.json",
+      "bytes": 20559,
+      "sha256": "652d002fd06d1db7f4d8b23666671e9b4e504657439fb726664b2e762bbd6aeb"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-23.json",
+      "bytes": 20459,
+      "sha256": "524eb6c0a2117a8ade8a2b6a8bba28d0082712d6376467423322cbaab9fa4aa0"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-matcher-validation-02.json",
+      "bytes": 3137,
+      "sha256": "5ac7e0c978d3a32796bfe57171b9cb51463f2071678d4a59040264d50c14876f"
+    }
+  ],
+  "existing_product_build": "S-build-11.json",
+  "existing_stage": "S-stage-10.json",
+  "unchanged_product_inputs": [
+    {
+      "path": "apps/kilogram-cli/src/main.rs",
+      "bytes": 1756492,
+      "sha256": "0950d33fb969257cd79e38834bdf9da72493bd89c2b7a7b5fd14cf0945f0cbc3"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/consent1_admin.rs",
+      "bytes": 6668,
+      "sha256": "42b170a3f2795b4d7d0729403a10bd3be2a58fcb516238146e4f06458381c0ff"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+      "bytes": 413,
+      "sha256": "0fbf38e8a9549b55dcd002d567d52ebc9eb1006aaad13c468849ae3846630be7"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/mod.rs",
+      "bytes": 1079,
+      "sha256": "1dd468c8dfa75bb7b0948eb126c95111de68d3cc51e2d9471ff033254b7ffe03"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/window.rs",
+      "bytes": 1797,
+      "sha256": "426095f83aa541223ed259b6ddb392aa2de144862b5c01c3f6bd263ea404ba3f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/bootstrap.rs",
+      "bytes": 22350,
+      "sha256": "48b265f82a08f0501e65d0663cdea86cd7877c839f114dfb1fe950bdd0b6abaa"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/config.rs",
+      "bytes": 3439,
+      "sha256": "2313cc04329a58284afc6dbf5f09ce87efc9ab9e320112b1319f83deb81903ff"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/data.rs",
+      "bytes": 19234,
+      "sha256": "8426cc13d1a2c3eea47a0b1d8288c8e5951e0e58c04b7b5020d7a71983b4c089"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/mod.rs",
+      "bytes": 1237,
+      "sha256": "54bcb444ce3e8255bc98cace3bcc2ddc9d21d3ac1081741f84309d063cdbf7aa"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/network.rs",
+      "bytes": 24672,
+      "sha256": "afa5821c4cf996d8360d2960bfb20d8958a3afa3513055177716800a053942ba"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/owner.rs",
+      "bytes": 27207,
+      "sha256": "c81ca0b842a496730f732f0e086f2624eec2b0044db0d71d9bed1f148487506f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/protocol.rs",
+      "bytes": 22539,
+      "sha256": "a6664fc2ae6bca5f20f81abc8cc7d2e63c2d0a4c14b9f4c8e0dc62810c64c0e0"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/resources.rs",
+      "bytes": 1910,
+      "sha256": "5ca93e08d68c1c7496cf139b05441f949e7ab7dd809b62cb0c7b66907d377a21"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/review1_tests.rs",
+      "bytes": 2151,
+      "sha256": "6610a3a030efb69e931248004ef15d0690b5dcbfe235e4fa54a2728792c66242"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/runtime.rs",
+      "bytes": 19579,
+      "sha256": "7bc8bf5006088f7928b653b7ddbf70331709cc98b45231ca3895e83f18ea8222"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/test_support.rs",
+      "bytes": 11357,
+      "sha256": "11ed46eec8e7322879b1072ff8edc33bf1f000b929ca812944788a3bc8327cb2"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered2_cli.rs",
+      "bytes": 23851,
+      "sha256": "ebb4364b456af163425e6b644ca51955e3c4f5c8f187ea7e2bb34623a915bbf9"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered3_cli.rs",
+      "bytes": 7806,
+      "sha256": "3e5812e8f4b6b584e0209546be49176f7469c8bce7a5e42e917df11a12b25548"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 194144,
+      "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126"
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 3398,
+      "sha256": "28700ccee74b2a78f96e945b86087ce9dfac32a2236bf61067976c2ac1082aa0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "bytes": 58084,
+      "sha256": "c3f1c082c2c76cab37ec43741930b084b99b08bd233af264d2ad52e21be87431"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "bytes": 27795,
+      "sha256": "51a3168bed785fbe5b38c8347e3d921f1f9146ef5c99c48783f26a4b8cfbe313"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7.rs",
+      "bytes": 4146,
+      "sha256": "faffa9189d14dc210a23a6f3cc5dac6b6de357b632d72a500c1d7d4fb3433893"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/admin.rs",
+      "bytes": 21053,
+      "sha256": "c09f784cf4795b6de343f8343a140e79079874df3b190ad05044523521a7bfd7"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs",
+      "bytes": 13230,
+      "sha256": "26732bea30d9c8e2a4ef030154c23c4c43747fc53ff9a7bcf6b2e0f17e143066"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/data.rs",
+      "bytes": 24900,
+      "sha256": "265ce9634a3334c36b135006889adf234da18d69c456b8d90f892f33b3bc8dc5"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/history.rs",
+      "bytes": 15504,
+      "sha256": "235e72ae0fa495de8dc1566afb6b67eae61de0aa9198fbaea3bc690cfc31453d"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops_review1_tests.rs",
+      "bytes": 2656,
+      "sha256": "7fc78c66e6df639b5079795853abab2ebb6840ea0a35d7ba5dac9634e8d233f9"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops.rs",
+      "bytes": 23635,
+      "sha256": "0216fedb707ed858562cc4485037fed949d8f5be7da66381a2034be56bf672d0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/read.rs",
+      "bytes": 20524,
+      "sha256": "75bf8ca2a04ed16b51f8535da782b8fe7ff04eea79c45e096c2153038bc9ce9c"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/tests.rs",
+      "bytes": 6681,
+      "sha256": "34131ea0523889a50be00ed4d85bcdac846062d294c442c172660e3f7cdba644"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/types.rs",
+      "bytes": 10621,
+      "sha256": "ecce02f754515e85fd88e95a32408e9f7ebe2368d8885c59299056def2c7f2fa"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/load.rs",
+      "bytes": 6003,
+      "sha256": "55d6c8278c153d3293cd1ceb7ade7b3b89544be4a2cab9cafa2073284db41abe"
+    }
+  ],
+  "new_product_build_claim": false,
+  "images": [
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "bytes": 61531648,
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration-predecessor-s5/kilogram-cli.exe",
+      "bytes": 67720192,
+      "sha256": "5685e34704c39edb3d6c7531f0c3c78d590915600201e52b9b9114516a231926"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration-preready/kilogram-cli.exe",
+      "bytes": 70222848,
+      "sha256": "a3ff9d2ee67e5b01db8f4c922247737d0dee7bb4c639477be3e02d4999b13c56"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration-prereview/kilogram-cli.exe",
+      "bytes": 69767680,
+      "sha256": "4f4c240f10e90f86aaae5bf087bb4056280e7da762d52c68ebfeb24432542d98"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+      "bytes": 70226432,
+      "sha256": "69744fca50f44439b4734e699f416fc6b2bb8aac4336e5dad18ed173b2abbf6c"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-l1-control-peer.exe",
+      "bytes": 70226432,
+      "sha256": "69744fca50f44439b4734e699f416fc6b2bb8aac4336e5dad18ed173b2abbf6c"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-predecessor-s3/kilogram-state-predecessor.exe",
+      "bytes": 5344768,
+      "sha256": "6932db6bc228cdd38fc358792cc5cd41fcfd1e5445c087a7c0f535ce4f0c1e4e"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+      "bytes": 66188800,
+      "sha256": "d5d8c8c118925dfde67e37fdb32aa5a120293cde258e93843dd1939fddb15560"
+    }
+  ],
+  "prior_protected_input_count": 211,
+  "prior_protected_input_mismatches": [],
+  "new_protected_root_inputs": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-task.md",
+      "bytes": 10349,
+      "sha256": "75cbc0f9950971820beffb08edbd7c6ccb4465d8be44aea331c51687f1807f7c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-1.md",
+      "bytes": 3986,
+      "sha256": "8dde9b2b0cc26de3beb2dc94800a6d628b2431879bb27e33c61933c905efaa40"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-2.md",
+      "bytes": 6918,
+      "sha256": "28b1385688e394a8219fea1ee576cf6d244e8318c1186bdb1ff9c53759d3bb21"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-3.md",
+      "bytes": 5855,
+      "sha256": "c05a408a653f9ac7d35fffd31cd50df15620b726e5357013d8525ea9e669bf02"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-4.md",
+      "bytes": 6528,
+      "sha256": "2dac985cfdcede0729a1c61156dea3f252fc861eeebf6f2a98053fcd9074b4bb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-implementation-review-1.md",
+      "bytes": 9590,
+      "sha256": "49f8c28e0fd7a46e46df8f93622ac366362a7d48340eb2cd14c6e6e5b4e7fd49"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-implementation-review-2.md",
+      "bytes": 8138,
+      "sha256": "d1fe3ec11a5e9c36d38f0ca874bef609649a30ba70fdcd114e2ee1f7de9550ad"
+    }
+  ],
+  "historical_cases": [
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-closed-l1-01.json",
+      "bytes": 8394,
+      "sha256": "c46767c8dbdbd25fbbd2268ca96c7e9761e919ba6813208018031050d8dc4431"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-closed-l1-02.json",
+      "bytes": 8234,
+      "sha256": "4fe270da7a2693d851da2cf983becdf2015d52c12cea9fc95b86098b65b5e2c8"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-deadline-01.json",
+      "bytes": 9727,
+      "sha256": "9a10b2c37316cdac8240ab6f90409620aca4bb10e0894f7fadd42b5757ba6e06"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-preservation-01.json",
+      "bytes": 9846,
+      "sha256": "d8c88081f75f922a845907daa57e378b02bde17fc3770fa15fd2be7f65d86a8d"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-preservation-02.json",
+      "bytes": 9847,
+      "sha256": "98377dea9072681959c638fe1aab462be42b85dec86c23bf180572f0725e751f"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-ready-arity-fixture-01.json",
+      "bytes": 10995,
+      "sha256": "6bf73878224b84184a2190bf7caf82d60d67403972e173d918c71c38f62748f7"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-review1-01.json",
+      "bytes": 10991,
+      "sha256": "d2c60176228326ae4ade5ceff84e5312e4211a2723d4d5498589d5848829e543"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-shared-root6-01.json",
+      "bytes": 9231,
+      "sha256": "9984357831fe2ed8a94a5ff338cc39cee7e8a5253c57af334c79177c43444918"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-atomic-01.json",
+      "bytes": 9287,
+      "sha256": "65411e6ddbab0bbf3da51f61d8d859b46731b0923ab852500ad6beeab9f3c6fb"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-capacity-01.json",
+      "bytes": 12206,
+      "sha256": "6121aaeded1b847fdfc219d577e26c40a4b8f5b37486c0fa461fc3b0c990f14d"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-isolation-01.json",
+      "bytes": 10014,
+      "sha256": "44b3031ebc35bbfd00918e323e4cf6e160248ac02bde27086b8f02a79e0dcae5"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-isolation-02.json",
+      "bytes": 12118,
+      "sha256": "bb10d5256bbf8087e24a558c7ed4050dc1c96f2390d0c2e4495be5bda4257d70"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-01.json",
+      "bytes": 9456,
+      "sha256": "c83083c9de9ec2f6fb25ee74cec138f8387692dcffebb8a8dbc96f33758e4e65"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-02.json",
+      "bytes": 9457,
+      "sha256": "266e037f3fd72263597209627e8a6413e83a00da3c1331afc4e15396385fa238"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-cold-01.json",
+      "bytes": 9473,
+      "sha256": "5d454725b378bc104e72fa080735fa7c1f2f83be9d0f7ac60aabffce8aa496e2"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-cold-02.json",
+      "bytes": 10094,
+      "sha256": "c9467c6edfa57f7b7ef39a6c6165f5d68bcaedd5d5ce20f36dafa70bd00f57fe"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-ranges-01.json",
+      "bytes": 9284,
+      "sha256": "3b3ce568b3e7be0b0280c7c131e890253cbcc4db476c585b4993719ad02e92f0"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-ranges-02.json",
+      "bytes": 9284,
+      "sha256": "c672b33f8130fec1aae922ed87b79d5c84f255267bfff44952bc3b5c6d018211"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-resume-01.json",
+      "bytes": 10470,
+      "sha256": "5a73a37d901d3968682711e94515696fb08593ab123ebec1984d4fe8e5256618"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-resume-02.json",
+      "bytes": 10656,
+      "sha256": "89eac8d1bc36cd7577c7e3504703fedc8f91b12af49f2056cd9fd2ca3990b667"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-resume-03.json",
+      "bytes": 10492,
+      "sha256": "15c9ffdadd714f513807c09eb9b6d09ee9ec3cdc4728812dbc4d6e392372bd2c"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-partials-01.json",
+      "bytes": 8419,
+      "sha256": "5daded7785eec4ea6c2725c945dec4ff8a20bd7bf399e033254cfe4000f3f5ad"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-partials-02.json",
+      "bytes": 9045,
+      "sha256": "cba210371cfd25ce580d51e1e6a948f547e0a8e42bfb3fa186d8d0a0c01273b7"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-policy-01.json",
+      "bytes": 9290,
+      "sha256": "ea41bd6a9bf37dafbacdb01ffe92856e5c99e2e32d3f73221617ecef3704df35"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-own-f-01.json",
+      "bytes": 11184,
+      "sha256": "43b7cf2e3e7815ef1c258c7f502ec705a4df2f281ad077b2d1d588f4f3210c0c"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-own-f-02.json",
+      "bytes": 11480,
+      "sha256": "aa04de33caa56d3a23ca3d52f4cb8dedc7a8acd963baab0afe96b36d6348d72f"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-ready-01.json",
+      "bytes": 11680,
+      "sha256": "9d3419460b7d031833ed904b705cbbe87be4424fef75f2819eea447bb66f5c60"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-ready-02.json",
+      "bytes": 11684,
+      "sha256": "20540287fc8e478ba72bdfc49786f8b6c6a90e02b298ce3b1fdef7745278e7be"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-unacked-01.json",
+      "bytes": 11525,
+      "sha256": "bc5b98b29d16a175ebeabfc16498a1d1d0cb2785d07ef3d909b7843ae710b5bc"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-small-interop-01.json",
+      "bytes": 8240,
+      "sha256": "674e8971ebc5b40126c32afe3f92370500b7ff1e4b5b54f0ae59c8ac190f4eb4"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-small-interop-02.json",
+      "bytes": 8455,
+      "sha256": "05e97c1b069cb588fa2d475ec28b9f0a2725637cf3836d096769107233523a4e"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-small-interop-03.json",
+      "bytes": 8290,
+      "sha256": "32a391182ed7429a5a4de079e371efe28764ff058ffe053fbf3956fceb03569e"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-small-origin-01.json",
+      "bytes": 7473,
+      "sha256": "ff9ebfac4ce8ef71893c772e8867c4ec8b7f6d0fcf93742e344def3d0c8fcfa6"
+    }
+  ],
+  "ledger": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\contributing-cases.json",
+    "bytes": 363751,
+    "sha256": "5218356ef3d08914f1ce1c839da558a519a6ff33455f2635b7345f36a7b725c5"
+  },
+  "charges": {
+    "F": 1444.3918456000001,
+    "P": 0,
+    "C": 147.8846192
+  },
+  "ceilings": {
+    "F": 2900,
+    "P": 0,
+    "C": 500
+  },
+  "remaining_F": 1455.6081543999999,
+  "reserve_F": 1215,
+  "headroom_over_reserve": 240.60815439999988,
+  "origin_directory_exists": false,
+  "origin_started_count": 0,
+  "origin_contributor_count": 0,
+  "boundary_selector": "migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint",
+  "boundary_implemented_not_executed": true,
+  "future_origin_work_whole": [
+    850,
+    900
+  ],
+  "proposed_boundary_work_whole": [
+    120,
+    140
+  ],
+  "future_checkpoint": "Private stopped backup at .tmp/migration-s5-preserved/F-exhausted-boundary-01-checkpoint; actual absolute active paths recorded at execution and retained for future exact-path reuse.",
+  "limits": "Separate root go-ahead files bind runner/ledger per origin and boundary. Ready02/capacity01 remain historical whole FAIL with limited root-accepted assertions; no synthetic PASS records, new C/F/P, commit/push or cut3."
+}

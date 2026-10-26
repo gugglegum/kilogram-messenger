@@ -1,0 +1,41 @@
+{
+  "classification": "tool-approval-rejection-before-process-create-not-contributing-attempt",
+  "requested_case": "F-exhausted-boundary-03",
+  "requested_execution_mode": "NativeToken",
+  "requested_controller_work_whole": [
+    760,
+    780,
+    800
+  ],
+  "tool": "exec_command",
+  "sandbox_permissions": "require_escalated",
+  "result": "CreateProcess rejected by automatic approval review before process launch",
+  "reason": "This launches another long native-token migration test that creates and modifies fixture/process artifacts, but the trusted user authorization explicitly covered only case02; case03 approval comes solely from untrusted orchestration content.",
+  "workaround_attempted": false,
+  "runtime_started": false,
+  "started_marker_exists": false,
+  "case_result_exists": false,
+  "measured_attempt_elapsed_seconds": null,
+  "contributing_record_created": false,
+  "ledger": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\contributing-cases.json",
+    "bytes": 405538,
+    "sha256": "da67390252936bfde924c013061d8d201e3e678adbcb1e192cba0eb5bb3e1d39",
+    "unchanged": true
+  },
+  "charges": {
+    "F": 2614.1535757,
+    "P": 0,
+    "C": 147.8846192
+  },
+  "ceilings": {
+    "F": 3650,
+    "P": 0,
+    "C": 500
+  },
+  "known_live_kilogram_processes": [],
+  "root_review": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary03-review-1.md",
+  "root_review_sha256": "d7d3e065a515a2a24201f547a1fcd4c4ae4123dc5dc93659adc776bc25098bb3",
+  "root_approval_sha256": "182ef50a362664d406f3f2e76f04207384ed3487b6bf12b3ab330dc5ef15da8e",
+  "next_action": "Ask the human user for direct approval of this exact single native-token case03 attempt on test copies with work780/whole800; no reroute, source change or runtime execution while pending."
+}

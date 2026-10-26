@@ -1,0 +1,84 @@
+{
+  "classification": "root-authorized-accounting-amendment-static-no-contributing-run",
+  "authority": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary-continuation-review-2.md",
+    "bytes": 7582,
+    "sha256": "e6ebba9e204eea61d53438012d2bcf11f98cd9159a34f4008d69e08e0cea6f0f"
+  },
+  "ledger_before": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-budget-amendment-4-ledger-before.json",
+    "bytes": 404540,
+    "sha256": "83ea734311622f0578d843c0bbae4587c22c7538f6618deb974b6855516cf3fc"
+  },
+  "ledger_after": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\contributing-cases.json",
+    "bytes": 405538,
+    "sha256": "da67390252936bfde924c013061d8d201e3e678adbcb1e192cba0eb5bb3e1d39"
+  },
+  "snapshots": [
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary02-controller.rs.txt",
+      "bytes": 40620,
+      "sha256": "dd3a4b9e6c76daa1056b1bb3d765bcb251c54092ac14f84db3178cc7c5c510bd"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary02-runner.ps1.txt",
+      "bytes": 24964,
+      "sha256": "22dcaa81179e39986199664adea130c01c22749b3ea69a34664a60b2d66ca79e"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration-boundary02/migration_s5_process-harness.bin.snapshot",
+      "bytes": 13935104,
+      "sha256": "5a003864af885c09d0274d84f54b2000a774908382169085b42314ee546ec161"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-budget-amendment-4-ledger-before.json",
+      "bytes": 404540,
+      "sha256": "83ea734311622f0578d843c0bbae4587c22c7538f6618deb974b6855516cf3fc"
+    }
+  ],
+  "semantic_retention_checks": {
+    "cases_identical": true,
+    "charges_identical": true,
+    "prior_actuals_identical": true,
+    "previous_amendments_identical": true,
+    "all_other_top_level_fields_identical": true,
+    "only_changed_fields": [
+      "new_ceilings_seconds.F",
+      "cumulative_maxima_seconds.F",
+      "budget_amendments appended one entry"
+    ],
+    "case_count_before": 36,
+    "case_count_after": 36
+  },
+  "charges": {
+    "F": 2614.1535757,
+    "P": 0,
+    "C": 147.8846192
+  },
+  "prior_actual_seconds": {
+    "F": 1236.2886628,
+    "P": 0,
+    "C": 279.3257298
+  },
+  "ceilings": {
+    "F": 3650,
+    "P": 0,
+    "C": 500
+  },
+  "cumulative_maxima": {
+    "P": 0,
+    "F": 4886.2886628,
+    "C": 779.3257298
+  },
+  "combined_actual": {
+    "C": 427.2103490,
+    "F": 3850.4422385,
+    "P": 0
+  },
+  "remaining_F": 1035.8464243,
+  "entry_reserve_seconds": 1025,
+  "remaining_after_whole800": 235.8464243,
+  "contributor_added": false,
+  "runtime_executed": false
+}

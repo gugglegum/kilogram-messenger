@@ -1,0 +1,9 @@
+{
+  "classification": "static-only-prereview-image-preservation",
+  "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-migration\\kilogram-cli.exe",
+  "preserved": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-migration-prereview\\kilogram-cli.exe",
+  "bytes": 69767680,
+  "sha256": "4f4c240f10e90f86aaae5bf087bb4056280e7da762d52c68ebfeb24432542d98",
+  "no_live_source": true,
+  "elapsed_seconds": 1.4900967
+}

@@ -1,0 +1,65 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 0.86s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 29 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+running 1 test
+test live_l1::migration_s5_l1_five_real_partial_origins_continue_once ... L1_PARTIAL PASS point=after-offer original_phase=0 exact_constructor_boundary=true queued_preserved=true root=E:\AI-Projects\kilogram-p2p-messenger\.tmp/migration-s5-storage\l1-partial-after-offer-kWNarQ
+L1_PARTIAL PASS point=after-grant original_phase=1 exact_constructor_boundary=true queued_preserved=true root=E:\AI-Projects\kilogram-p2p-messenger\.tmp/migration-s5-storage\l1-partial-after-grant-TBXm7F
+L1_PARTIAL PASS point=before-init-commit original_phase=2 exact_constructor_boundary=true queued_preserved=true root=E:\AI-Projects\kilogram-p2p-messenger\.tmp/migration-s5-storage\l1-partial-before-init-commit-egAlhQ
+L1_PARTIAL PASS point=before-confirm-commit original_phase=3 exact_constructor_boundary=true queued_preserved=false root=E:\AI-Projects\kilogram-p2p-messenger\.tmp/migration-s5-storage\l1-partial-before-confirm-commit-Dx7Rfa
+L1_PARTIAL PASS point=after-receive-confirm original_phase=3 exact_constructor_boundary=true queued_preserved=false root=E:\AI-Projects\kilogram-p2p-messenger\.tmp/migration-s5-storage\l1-partial-after-receive-confirm-UQTJml
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 137.66s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17693 13.45
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=64414
+target_gib=68.95
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

@@ -1,0 +1,67 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 9.69s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 8 tests
+test vault::indexed_dialog::runtime2::tests::a3_s4_authenticated_root_layout_and_component_fences ... ok
+test vault::indexed_dialog::runtime2::tests::a3_s4_f01_stale_captured_policy_is_a_closed_writer_refusal ... ok
+test vault::indexed_dialog::runtime2::tests::a3_s4_f10_future_layout_and_missing_marker_cold_open_refused ... a3_s4_F10_cold_case=0 authenticated_input=true refused_before_runtime_handle=true
+a3_s4_F10_cold_case=1 authenticated_input=true refused_before_runtime_handle=true
+a3_s4_F10_cold_case=2 authenticated_input=true refused_before_runtime_handle=true
+a3_s4_F10_cold_case=3 authenticated_input=true refused_before_runtime_handle=true
+a3_s4_F10_cold_case=4 authenticated_input=true refused_before_runtime_handle=true
+a3_s4_F10_cold_case=5 authenticated_input=true refused_before_runtime_handle=true
+ok
+test vault::indexed_dialog::runtime2::tests::a3_s4_f10_internal_component_purpose_retry_cannot_bypass_runtime ... ok
+test vault::indexed_dialog::runtime2::tests::a3_s4_f10_marker_binding_mismatch_cold_open_refused ... ok
+test vault::indexed_dialog::runtime2::tests::a3_s4_metadata_growth_consumes_only_its_prepaid_capacity ... ok
+test vault::indexed_dialog::runtime2::tests::a3_s4_post_staging_gate_abort_preserves_root_and_reuses_repository ... ok
+test vault::indexed_dialog::runtime2::tests::a3_s4_reopen_retains_directory_lock_on_success_and_failure ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 86 filtered out; finished in 2.60s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+
+Name              Files   GiB
+----              -----   ---
+debug-incremental 10503 10.57
+debug-total       36319  51.8
+verification      17695 13.46
+release            5799  1.91
+
+
+target_path=E:\AI-Projects\kilogram-p2p-messenger\target
+target_files=64416
+target_gib=68.96
+warning_gib=40
+cache_above_warning=true
+WARNING: Cargo target exceeds 40 GiB. Use -PruneDebugIncremental to remove only reproducible incremental generations, 
+-PruneVerification for the disposable test profile, or -VacuumAndWarm for an explicit full reset.
+vacuum_and_warm=false
+verification_pruned=false
+debug_incremental_pruned=false

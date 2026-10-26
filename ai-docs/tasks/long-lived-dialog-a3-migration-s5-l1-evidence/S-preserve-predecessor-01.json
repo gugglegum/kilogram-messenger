@@ -1,0 +1,9 @@
+{
+  "classification": "static-only",
+  "action": "preserve accepted S5.1 predecessor before candidate staging",
+  "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-migration\\kilogram-cli.exe",
+  "destination": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-migration-predecessor-s5\\kilogram-cli.exe",
+  "bytes": 67720192,
+  "sha256": "5685e34704c39edb3d6c7531f0c3c78d590915600201e52b9b9114516a231926",
+  "elapsed_seconds": 0.5821174
+}

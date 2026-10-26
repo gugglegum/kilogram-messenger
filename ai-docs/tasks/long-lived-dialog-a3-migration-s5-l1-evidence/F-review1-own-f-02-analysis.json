@@ -1,0 +1,46 @@
+{
+  "classification": "actual-native-execution-own-F-field-result",
+  "case_sha256": "aa04de33caa56d3a23ca3d52f4cb8dedc7a8acd963baab0afe96b36d6348d72f",
+  "elapsed_seconds": 66.2735246,
+  "matching_tests": 1,
+  "deadline": {
+    "work_seconds": 100,
+    "whole_seconds": 120,
+    "work_expired": false,
+    "owned_children_after_cleanup": 0,
+    "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-1.md",
+    "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+  },
+  "execution_mode": {
+    "declared": "NativeToken",
+    "approval_provenance": "require_escalated tool invocation, independently recorded by the execution approval layer; declaration is not token introspection",
+    "prior_failed_case": "F-review1-own-f-01",
+    "review2_sha256": "d1fe3ec11a5e9c36d38f0ca874bef609649a30ba70fdcd114e2ee1f7de9550ad",
+    "continuation_sha256": "8dde9b2b0cc26de3beb2dc94800a6d628b2431879bb27e33c61933c905efaa40"
+  },
+  "exports": [
+    {
+      "role": 0,
+      "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-review1-own-f-0-2LgPiI\\review1-own-f-result.json",
+      "export": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-own-f-02-role0-result.json",
+      "sha256": "751b8b278113d91457ec28e6e16713e81ac64daeefcdc329598cc19a27b914eb",
+      "old_O": "30f53acaee22582c3c7f837a7b6af1c1402801d7ef57c73ea21fd7f98aafe7c5",
+      "current_F": "4645928a06f356032d4369666d56eeca77aad3bd8e333f48cd2d40625c211a78"
+    },
+    {
+      "role": 1,
+      "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-review1-own-f-1-AEDAfT\\review1-own-f-result.json",
+      "export": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-own-f-02-role1-result.json",
+      "sha256": "05f4f030197c62906c859c3c958cbe28b21a4e55e7766e07b1f055f7df5dee00",
+      "old_O": "3ae2afd89487ac36b8ed205dfa55581fc3d805e2c05a9166a03c1357814b00bb",
+      "current_F": "e702606d0c6d5ac079303956e9d6edd269648c18f8bda4c0cd7d9546806654f9"
+    }
+  ],
+  "charges": {
+    "F": 1054.3612892,
+    "P": 0,
+    "C": 126.2916571
+  },
+  "remaining_F": 1845.6387108,
+  "rule": "Genuine roles A Offered and B Granted, public authority advance, actual Oold/Fcurrent and own Text full proofs; original failed01 retained; no inference about exact policy causing10013."
+}

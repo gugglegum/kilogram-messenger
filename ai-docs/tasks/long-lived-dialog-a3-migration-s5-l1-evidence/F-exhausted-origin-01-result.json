@@ -1,0 +1,201 @@
+{
+  "status": "PASS",
+  "scope": "real CLI/runtime TLS Duplex; scheduler delays only committed serialized records",
+  "exe": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-baseline\\kilogram-cli.exe",
+  "exe_sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+  "runtime_executables": {
+    "two": {
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-baseline\\kilogram-cli.exe"
+    },
+    "one": {
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-baseline\\kilogram-cli.exe"
+    }
+  },
+  "pids": [
+    1140,
+    37368
+  ],
+  "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+  "elected_a": {
+    "side": "two",
+    "account": "7a87df0a69a322c4ec28fb94e175e26e77c428151a6e67336f6d0c8eb0abb2ce",
+    "device": "55f714cd9cebfc84d1af03d515373e851704c0f1a87ce1d7b84cd4cffb2e69bb"
+  },
+  "elected_b": {
+    "side": "one",
+    "account": "9a16920200c69f6507bdf7ed94ede32b3f1dd36158e32be35159b1ac9fe25f0e",
+    "device": "a227497b8c0e9029a96b668939cc3ccc96d7a42f054c47927f486d4ca3d305f8"
+  },
+  "text_count": 527,
+  "setup_seconds": 4.4571576,
+  "total_seconds": 477.926988,
+  "exchange_seconds": 445.18887259999997,
+  "history_seconds": 28.280713300000002,
+  "vault_commits": {
+    "count": 2336,
+    "p95_ms": 162.103,
+    "native_count": 603,
+    "delta_max_bytes": 1185051.0,
+    "delta_total_bytes": 1337060216.0,
+    "p50_ms": 87.8
+  },
+  "vault_file_bytes": [
+    5066752,
+    9834496
+  ],
+  "crash_point": "",
+  "immutable_reopen_records_checked": 0,
+  "queue_p50_ms": 251.66419999999925,
+  "queue_p95_ms": 507.5991999999969,
+  "final_one": {
+    "commits": 773,
+    "contexts": [
+      {
+        "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 87,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 1,
+        "peer_generation": 2,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 512,
+        "send_next": 17,
+        "session_id": "TflibOtoo5vbulwTkVuDsE6DrSVTFMHdGT2ZHDDx+oE",
+        "status": "Active",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  },
+  "final_two": {
+    "commits": 1563,
+    "contexts": [
+      {
+        "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+        "head_credit_bytes": 65536,
+        "head_used": 0,
+        "native_generation": 516,
+        "ordinary_pending": 0,
+        "ordinary_pending_bytes": 0,
+        "own_generation": 2,
+        "peer_generation": 1,
+        "pending": 0,
+        "phase": 3,
+        "receive_next": 17,
+        "send_next": 512,
+        "session_id": "TflibOtoo5vbulwTkVuDsE6DrSVTFMHdGT2ZHDDx+oE",
+        "status": "UpgradeRequired",
+        "unacked": 0
+      }
+    ],
+    "profile_mode": "ordered-dialog-v1"
+  },
+  "duplex_requested_counts": {
+    "A": 511,
+    "B": 16
+  },
+  "exhausted_boundary": {
+    "new_request": "UpgradeRequired",
+    "exact_old_request": "00000000000000020000000000000001",
+    "old_retry_preserved": true,
+    "changed_body": "RequestIdConflict",
+    "before_a": {
+      "commits": 1563,
+      "contexts": [
+        {
+          "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+          "head_credit_bytes": 65536,
+          "head_used": 0,
+          "native_generation": 516,
+          "ordinary_pending": 0,
+          "ordinary_pending_bytes": 0,
+          "own_generation": 2,
+          "peer_generation": 1,
+          "pending": 0,
+          "phase": 3,
+          "receive_next": 17,
+          "send_next": 512,
+          "session_id": "TflibOtoo5vbulwTkVuDsE6DrSVTFMHdGT2ZHDDx+oE",
+          "status": "UpgradeRequired",
+          "unacked": 0
+        }
+      ],
+      "profile_mode": "ordered-dialog-v1"
+    },
+    "after_a": {
+      "commits": 1563,
+      "contexts": [
+        {
+          "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+          "head_credit_bytes": 65536,
+          "head_used": 0,
+          "native_generation": 516,
+          "ordinary_pending": 0,
+          "ordinary_pending_bytes": 0,
+          "own_generation": 2,
+          "peer_generation": 1,
+          "pending": 0,
+          "phase": 3,
+          "receive_next": 17,
+          "send_next": 512,
+          "session_id": "TflibOtoo5vbulwTkVuDsE6DrSVTFMHdGT2ZHDDx+oE",
+          "status": "UpgradeRequired",
+          "unacked": 0
+        }
+      ],
+      "profile_mode": "ordered-dialog-v1"
+    },
+    "before_b": {
+      "commits": 773,
+      "contexts": [
+        {
+          "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+          "head_credit_bytes": 65536,
+          "head_used": 0,
+          "native_generation": 87,
+          "ordinary_pending": 0,
+          "ordinary_pending_bytes": 0,
+          "own_generation": 1,
+          "peer_generation": 2,
+          "pending": 0,
+          "phase": 3,
+          "receive_next": 512,
+          "send_next": 17,
+          "session_id": "TflibOtoo5vbulwTkVuDsE6DrSVTFMHdGT2ZHDDx+oE",
+          "status": "Active",
+          "unacked": 0
+        }
+      ],
+      "profile_mode": "ordered-dialog-v1"
+    },
+    "after_b": {
+      "commits": 773,
+      "contexts": [
+        {
+          "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+          "head_credit_bytes": 65536,
+          "head_used": 0,
+          "native_generation": 87,
+          "ordinary_pending": 0,
+          "ordinary_pending_bytes": 0,
+          "own_generation": 1,
+          "peer_generation": 2,
+          "pending": 0,
+          "phase": 3,
+          "receive_next": 512,
+          "send_next": 17,
+          "session_id": "TflibOtoo5vbulwTkVuDsE6DrSVTFMHdGT2ZHDDx+oE",
+          "status": "Active",
+          "unacked": 0
+        }
+      ],
+      "profile_mode": "ordered-dialog-v1"
+    },
+    "measurement": "actual d9b public Native generation/frontiers unchanged; no per-call Native telemetry claim"
+  }
+}

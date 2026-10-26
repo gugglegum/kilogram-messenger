@@ -1,0 +1,4 @@
+profile_mode=ordered-dialog-indexed
+endpoint_id=8acc6eea87bf7be6eaf81d858f7ad1ac0de00eccabd7933a575cd45a7382b627
+ipc_file=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-storage\l1-exhausted-observed-NCjBHb\two\indexed.ipc
+status=runtime-listening

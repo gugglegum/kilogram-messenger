@@ -4,12 +4,12 @@ use std::sync::{
     Arc,
     atomic::{AtomicUsize, Ordering},
 };
-pub(super) struct RefWindow2 {
+pub(crate) struct RefWindow2 {
     limits: [usize; 2],
     current: [AtomicUsize; 2],
     peak: [AtomicUsize; 2],
 }
-pub(super) struct RefPermit2 {
+pub(crate) struct RefPermit2 {
     window: Arc<RefWindow2>,
     c: usize,
     count: usize,

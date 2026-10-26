@@ -1,4 +1,4 @@
-# Текущая точка: S5.1 storage core принят; поручен exact commit/push
+# Текущая точка: S5.2 submission готовится к итоговой root-приёмке
 
 Актуально на2026-10-26. Принят fresh runtime двух процессов, перезапуски и
 offline-доставка: [итоговое review S4](tasks/long-lived-dialog-a3-runtime-s4-implementation-review-5.md).
@@ -15,12 +15,26 @@ all9 accepted paths/blobs, sole parent и actual remote master.
 [S5.1 review3](tasks/long-lived-dialog-a3-migration-s5-storage-implementation-review-3.md)
 принимает production preflight, Root7/fence/copy/Ready, provenance/credits,
 offline administration и focused integrity/version/kill checks. R1–R4 закрыты.
-Исполнителю поручен один exact commit/push по accepted manifest, parent3547cf5;
-root проверяет опубликованный diff/remote. После этого поручается S5.2 indexed L1
-owner/transport/history/receipt continuation; existing handoff и whole P5 ещё впереди.
-Текущая Ready — storage only. C279.3257298/600, F1236.2886628/1320 (явная поправка
-review2 +120 только на R4), P0/2400. Для следующих live cuts нужен отдельный root
-план проверок и бюджета; этот ledger не сбрасывать и не расходовать молча.
+Commit `73c499818ba9b699c331aa842e64e8432e90c59a` опубликован, sole parent3547cf5.
+Root независимо проверил все230 accepted paths/blobs, raw hashes, clean tree/index
+и actual GitHub master (identical, ahead0/behind0).
+[S5.2 plan review2](tasks/long-lived-dialog-a3-migration-s5-l1-plan-review-2.md) принимает
+mapping с исправлениями account scope, публичного Consent1 renewal и точного IPC3.
+[Реализация](tasks/long-lived-dialog-a3-migration-s5-l1-implementation.md) indexed L1
+owner/transport/history/receipt continuation на той же Native-сессии с одним реальным
+exhausted origin A511/B16 готовится к root acceptance; [candidate allowlist](tasks/long-lived-dialog-a3-migration-s5-l1-candidate-files.json)
+фиксирует точный состав. Root принял завершённые функциональные assertions boundary03
+по связанному исходнику/фазам. Whole boundary03 остаётся FAIL649.592232s, parent-result
+отсутствует; исторические whole FAIL/split outcomes не переименованы.
+[Preservation принято отдельно](tasks/long-lived-dialog-a3-migration-s5-l1-preservation-review.md):
+C whole PASS24.1463993s, F preservation-only whole PASS67.5439277s,6956 файлов
+остановленного checkpoint сохранены под обоими OS locks; backup не активировался.
+S5.2 actual C172.0310185/F3331.2897354/P0, потолки500/3650/0;39 contributing cases,
+четыре явные поправки F без возврата расходов. Опубликованный S5.1 actual
+C279.3257298/F1236.2886628/P0 сохраняется; combined actual C451.3567483/F4567.5783982/P0,
+combined maxima C779.3257298/F4886.2886628/P0. Поздние estimates не являются бюджетом.
+Полная реализация S5.2 ещё не принята, commit/push не поручены.
+Handoff/whole P5 ещё впереди, whole P требует отдельного непрерывного run<=2400.
 Каждая логическая часть сдаётся на review до commit/push; whole S5/P5 пока открыт.
 Ниже сохранён отложенный recovery API-retirement план. Он не является текущим
 приоритетом и не должен автоматически запускаться после S4.

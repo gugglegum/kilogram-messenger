@@ -1,0 +1,56 @@
+diff --git "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary02-runner.ps1.txt" b/scripts/invoke-migration-s5-l1-case.ps1
+index c4745c0..7d9b814 100644
+--- "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary02-runner.ps1.txt"
++++ b/scripts/invoke-migration-s5-l1-case.ps1
+@@ -25,13 +25,14 @@ if($Action -in @('DeadlineProbe','PreservationProbe') -and $Set -ne 'C'){throw '
+ if($Case -notlike "$Set-*"){throw 'Case prefix must match the contributing set.'}
+ if($Action -eq 'ExhaustedOrigin' -and [double]$ledger.new_ceilings_seconds.F-[double]$ledger.charged_elapsed_seconds.F -lt 1215){throw 'Long origin requires850+140+225 contingency remaining.'}
+ $deadline=$null;$decision=$null;$readyException=$false
++$boundaryExtended=$Case -ceq 'F-exhausted-boundary-03'
+ $boundaryObserved=$Case -ceq 'F-exhausted-boundary-02'
+-$boundaryGroup=$Case -ceq 'F-exhausted-boundary-01' -or $boundaryObserved
++$boundaryGroup=$Case -ceq 'F-exhausted-boundary-01' -or $boundaryObserved -or $boundaryExtended
+ if($boundaryGroup){
+  if($Set -cne 'F' -or $Action -cne 'Tests' -or $Filter -cne 'migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint' -or $Package.Count -ne 1 -or $Package[0] -cne 'kilogram-cli' -or $ResumeDirectory){throw 'Exhausted boundary selector/classification mismatch.'}
+  $expectedOrigin=[IO.Path]::GetFullPath((Join-Path $workspace '.tmp/migration-s5-l1/F-exhausted-origin-01'))
+  if(-not $FixtureDirectory -or -not ([IO.Path]::GetFullPath($FixtureDirectory)).Equals($expectedOrigin,[StringComparison]::OrdinalIgnoreCase)){throw 'Boundary requires the one genuine frozen511/16 origin.'}
+- $boundaryReserve=if($boundaryObserved){825}else{365}
++ $boundaryReserve=if($boundaryExtended){1025}elseif($boundaryObserved){825}else{365}
+  if([double]$ledger.new_ceilings_seconds.F-[double]$ledger.charged_elapsed_seconds.F -lt $boundaryReserve){throw 'Boundary whole allowance plus contingency225 no longer fit.'}
+ }
+ if($Action -eq 'ExhaustedOrigin' -or $boundaryGroup){
+@@ -49,7 +50,7 @@ if($Action -eq 'ExhaustedOrigin' -or $boundaryGroup){
+   $entry=@($ledger.cases|Where-Object {$_.case -ceq $splitCase})
+   if($entry.Count -ne 1 -or $entry[0].exit_code -ne 1 -or $entry[0].deadline.owned_children_after_cleanup -ne 0 -or $entry[0].deadline.work_expired -ne ($splitCase -ceq 'F-review1-ready-02')){throw 'Accepted split verdict changed; historical FAIL must remain.'}
+  }
+- if($boundaryObserved){
++ if($boundaryObserved -or $boundaryExtended){
+   $decision='ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary-continuation-review-1.md'
+   if((Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $workspace $decision)).Hash.ToLowerInvariant() -cne 'a9b3fd75ce257362297a9ec7c4fe00133917a42bf2ecbd4a921d41bfa4870341'){throw 'Instrumented-boundary preparation authority changed.'}
+   foreach($priorBoundary in @(@('F-exhausted-boundary-01.json','072b522817e7f62e9bbc0f930f3d3969c2b56675c4ae348931e4b113d895753b'),@('F-exhausted-boundary-01.log','b7b5efa02401eef44abd6488f64b2f0ca3a5b975e90e877945fb51d9e69f55ab'))){
+@@ -58,6 +59,16 @@ if($Action -eq 'ExhaustedOrigin' -or $boundaryGroup){
+   $failedBoundary=@($ledger.cases|Where-Object {$_.case -ceq 'F-exhausted-boundary-01'})
+   if($failedBoundary.Count -ne 1 -or $failedBoundary[0].exit_code -ne 1 -or -not $failedBoundary[0].deadline.work_expired -or $failedBoundary[0].deadline.owned_children_after_cleanup -ne 0){throw 'Boundary01 must remain its exact charged cutoff.'}
+  }
++ if($boundaryExtended){
++  $decision='ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary-continuation-review-2.md'
++  if((Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $workspace $decision)).Hash.ToLowerInvariant() -cne 'e6ebba9e204eea61d53438012d2bcf11f98cd9159a34f4008d69e08e0cea6f0f'){throw 'Boundary03 static-preparation and budget authority changed.'}
++  foreach($priorBoundary02 in @(@('F-exhausted-boundary-02.json','dea5e8749393815f297aa9bb5cf714e353cce8da2a860944d3a3f9f2b224357b'),@('F-exhausted-boundary-02.log','c914820f5ddab5e3acd89690aa71f248cf81ad9bab0964f22e380c349c617bcb'),@('F-exhausted-boundary-02-observation.json','150b9067d9e737cb82f79a13ff736a86ba8cc62b8ecac7a155b646ec56f68b38'),@('F-exhausted-boundary-02-phases.jsonl','51ec859236a9d0ca0855f5b38a5abbc42f2b5ada7cbce6da7245dd5232e1247e'))){
++   if((Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $evidence $priorBoundary02[0])).Hash.ToLowerInvariant() -cne $priorBoundary02[1]){throw 'Prior boundary02 evidence changed.'}
++  }
++  $failedBoundary02=@($ledger.cases|Where-Object {$_.case -ceq 'F-exhausted-boundary-02'})
++  if($failedBoundary02.Count -ne 1 -or $failedBoundary02[0].exit_code -ne 1 -or $failedBoundary02[0].elapsed_seconds -ne 568.1367185 -or $failedBoundary02[0].deadline.work_expired -or $failedBoundary02[0].deadline.owned_children_after_cleanup -ne 0){throw 'Boundary02 must remain its exact charged controller cutoff.'}
++  if($ledger.new_ceilings_seconds.F -ne 3650 -or @($ledger.budget_amendments|Where-Object {$_.sha256 -ceq 'e6ebba9e204eea61d53438012d2bcf11f98cd9159a34f4008d69e08e0cea6f0f'}).Count -ne 1){throw 'Boundary03 requires the explicit activated budget amendment4.'}
++ }
+ }
+ $fieldCases=[ordered]@{
+  'F-review1-own-f-02'=@{filter='migration_s5_l1_review1_genuine_partial_own_f_both_genesis_roles';whole=120;work=100}
+@@ -140,7 +151,7 @@ if($boundaryGroup){
+ }
+ if($ResumeDirectory -or $Action -eq 'ExhaustedOrigin' -or $reviewGroup -or $reviewField -or $arityGroup -or $boundaryGroup){
+  . (Join-Path $PSScriptRoot 'migration-s5-l1-deadline.ps1')
+- $whole=if($boundaryObserved){600}elseif($boundaryGroup){140}elseif($arityGroup){40}elseif($reviewField){$fieldPolicy.whole}elseif($reviewGroup){120}elseif($ResumeDirectory){240}else{900};$work=if($boundaryObserved){580}elseif($boundaryGroup){120}elseif($arityGroup){30}elseif($reviewField){$fieldPolicy.work}elseif($reviewGroup){100}elseif($ResumeDirectory){210}else{850}
++ $whole=if($boundaryExtended){800}elseif($boundaryObserved){600}elseif($boundaryGroup){140}elseif($arityGroup){40}elseif($reviewField){$fieldPolicy.whole}elseif($reviewGroup){120}elseif($ResumeDirectory){240}else{900};$work=if($boundaryExtended){780}elseif($boundaryObserved){580}elseif($boundaryGroup){120}elseif($arityGroup){30}elseif($reviewField){$fieldPolicy.work}elseif($reviewGroup){100}elseif($ResumeDirectory){210}else{850}
+  $deadline=[KilogramS5Deadline]::new($work-$timer.Elapsed.TotalSeconds,$whole-$timer.Elapsed.TotalSeconds)
+  [ordered]@{case=$Case;started_utc=[DateTime]::UtcNow.ToString('O');owner_pid=$PID;whole_seconds=$whole;work_seconds=$work;root_decision=$decision;action=$Action;classification='attempt-start-not-final-result'}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $evidence "$Case.started.json") -Encoding utf8
+ }

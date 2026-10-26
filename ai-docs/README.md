@@ -1,6 +1,6 @@
 # Память проекта Kilogram
 
-Актуально на: 2026-10-25.
+Актуально на: 2026-10-26.
 
 Текущее принятое состояние — **A3-S4: fresh runtime двух процессов с перезапусками
 и offline-доставкой**. [Итоговая приёмка root](tasks/long-lived-dialog-a3-runtime-s4-implementation-review-5.md)
@@ -34,10 +34,22 @@ queue/pending/debt. Полный F содержит19 cases; итог F с suppo
 все9 paths/blobs и actual remote. На2026-10-26 принят
 [S5.1 storage migration core](tasks/long-lived-dialog-a3-migration-s5-storage-implementation-review-3.md):
 preflight/fence/copy/Ready, recovery, provenance и bounded administration; R1–R4 закрыты.
-Исполнителю поручена exact публикация по
-[allowlist](tasks/long-lived-dialog-a3-migration-s5-storage-accepted-files.json).
-Root ещё должен проверить commit/push. Ready означает готовность хранилища;
-live indexed L1/handoff/whole P5 остаются следующими частями S5.
+Опубликован commit `73c499818ba9b699c331aa842e64e8432e90c59a`: root сверил все230
+paths/blobs по [allowlist](tasks/long-lived-dialog-a3-migration-s5-storage-accepted-files.json),
+sole parent и actual GitHub master; worktree/index были чистыми.
+[План S5.2 принят](tasks/long-lived-dialog-a3-migration-s5-l1-plan-review-2.md):
+закрыты account-wide invalidation и публичное same-C Consent1 renewal, уточнены IPC3
+и бюджет. [Submission indexed L1](tasks/long-lived-dialog-a3-migration-s5-l1-implementation.md)
+готовится к итоговой root-приёмке по [точному candidate allowlist](tasks/long-lived-dialog-a3-migration-s5-l1-candidate-files.json).
+Root узко принял завершённые функциональные assertions boundary03 по исходнику/фазам;
+whole boundary03 остаётся FAIL649.592232s, потерянный parent-result не восстановлен.
+[Preservation принято отдельно](tasks/long-lived-dialog-a3-migration-s5-l1-preservation-review.md):
+C whole PASS24.1463993s и F preservation-only whole PASS67.5439277s; private checkpoint
+не активировался. Все прежние whole FAIL и split outcomes сохранены.
+Текущий S5.2 учёт C172.0310185/F3331.2897354/P0 при потолках500/3650/0
+([ledger](tasks/long-lived-dialog-a3-migration-s5-l1-evidence/contributing-cases.json));
+старый S5.1 ledger сохранён, четыре поправки F учтены без возвратов расходов.
+Полная реализация ещё не принята и не опубликована; handoff/whole P5 остаются отдельными частями.
 Исполнитель прежний, GPT-6.1 Sol Max без Fast; сначала review контракта, затем
 реализации, после приёмки exact commit/push. Whole A3, самостоятельный onboarding
 и пользовательский MVP остаются открыты. M1.2.63 не запускается автоматически.

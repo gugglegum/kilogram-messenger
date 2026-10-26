@@ -1,0 +1,33 @@
+{
+  "classification": "root-reviewed-single-full-boundary03",
+  "approved_case": "F-exhausted-boundary-03",
+  "root_thread": "01a164ec-589c-7b41-bc34-3ba158d1f22b",
+  "runner_sha256": "d3324692346ae12da8e10cb2bbeb2a614d9201d39597eb80536d1e8d34b2aac2",
+  "ledger_sha256": "da67390252936bfde924c013061d8d201e3e678adbcb1e192cba0eb5bb3e1d39",
+  "origin_case_sha256": "e1acc55360a45c386dde029c2f9be35cbbdacc08bd2a076a1812ac6c692d5135",
+  "prior_boundary_case_sha256": "dea5e8749393815f297aa9bb5cf714e353cce8da2a860944d3a3f9f2b224357b",
+  "prior_boundary_log_sha256": "c914820f5ddab5e3acd89690aa71f248cf81ad9bab0964f22e380c349c617bcb",
+  "prior_observation_sha256": "150b9067d9e737cb82f79a13ff736a86ba8cc62b8ecac7a155b646ec56f68b38",
+  "prior_phases_sha256": "51ec859236a9d0ca0855f5b38a5abbc42f2b5ada7cbce6da7245dd5232e1247e",
+  "root_decision": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary03-review-1.md",
+    "bytes": 4861,
+    "sha256": "d7d3e065a515a2a24201f547a1fcd4c4ae4123dc5dc93659adc776bc25098bb3"
+  },
+  "budget_amendment_sha256": "e6ebba9e204eea61d53438012d2bcf11f98cd9159a34f4008d69e08e0cea6f0f",
+  "readiness_sha256": "eb46024e98c46988c692086b31c34abced834ef8ec33c688292204c9cd9ec12d",
+  "readiness_binding_sha256": "e8276f359e52fe574cdf66b90ce624eb1a632a8b73d51bdca418674e4bbb769a",
+  "controller_sha256": "c3e044594d43bcbf60b8055ba203aa8e23220f3b92b35d75f9bbfc049aae0977",
+  "compiled_harness_sha256": "83429f6d41f566aadfdaddea0b862a0fe71120beec875560f6d9463dfdd932d0",
+  "frozen_manifest_sha256": "73c38f113a7e663d00bba36ae0116a292b7ec0511d4e23b79729f60cf87e2995",
+  "work_seconds": 780,
+  "whole_seconds": 800,
+  "controller_absolute_seconds": 760,
+  "actual_F_before": 2614.1535757,
+  "F_ceiling": 3650,
+  "required_remaining_seconds": 1025,
+  "requires_ordinary_native_execution_approval": true,
+  "automatic_retry": false,
+  "publication_authorized": false,
+  "next_action": "On refusal or failure stop and callback. After PASS finish the assigned implementation report and exact candidate allowlist, then callback before publication."
+}

@@ -2,12 +2,12 @@
 use super::super::*;
 use super::{MigrationRepository, codec, records::*, source::Inventory};
 
-pub(super) fn open_repository(
-    lease: StateDirectoryLock,
+pub(super) fn open_core_borrowed(
+    lease: &StateDirectoryLock,
     account: Id,
     device: Id,
     recovery: Option<&MigrationConfig>,
-) -> Result<MigrationRepository> {
+) -> Result<(LoadedCore, Profile, MigrationConfig)> {
     let path = lease.root().join(STATE_VAULT_FILE);
     crate::reject_symlink(&path)?;
     let key = load_master_key(&lease.root().join(STATE_VAULT_KEY_FILE))?;
@@ -36,7 +36,7 @@ pub(super) fn open_repository(
         }
         Err(error) => return Err(db(error)),
     };
-    let (owner, config) = {
+    let (owner, config, profile) = {
         let tx = reader.begin_read().map_err(db)?;
         let meta = tx.open_table(META_TABLE).map_err(db)?;
         let root = read_root(&meta, &key.master_key.0, RootLayout::Migrated7)?;
@@ -89,6 +89,7 @@ pub(super) fn open_repository(
                 claim: w.root.claim,
             },
             config,
+            profile,
         )
     };
     drop(reader);
@@ -100,13 +101,31 @@ pub(super) fn open_repository(
             .max(candidate.physical_capacity);
     }
     let loaded =
-        IndexedDialogVault::load_borrowed(&lease, owner, backend_config, RootLayout::Migrated7)?;
-    let mut core = IndexedDialogVault::from_loaded(lease, loaded);
-    let profile = Profile::parse(
-        &core
-            .get(profile_key()?)?
-            .ok_or(Error::Integrity("migration marker"))?,
-    )?;
+        IndexedDialogVault::load_borrowed(lease, owner, backend_config, RootLayout::Migrated7)?;
+    Ok((loaded, profile, config))
+}
+
+pub(super) fn open_core(
+    lease: StateDirectoryLock,
+    account: Id,
+    device: Id,
+    recovery: Option<&MigrationConfig>,
+) -> Result<(IndexedDialogVault, Profile, MigrationConfig)> {
+    let (loaded, profile, config) = open_core_borrowed(&lease, account, device, recovery)?;
+    Ok((
+        IndexedDialogVault::from_loaded(lease, loaded),
+        profile,
+        config,
+    ))
+}
+
+pub(super) fn open_repository(
+    lease: StateDirectoryLock,
+    account: Id,
+    device: Id,
+    recovery: Option<&MigrationConfig>,
+) -> Result<MigrationRepository> {
+    let (mut core, profile, _) = open_core(lease, account, device, recovery)?;
     let raw = core
         .get(migration_key(profile.mid, 1, b"")?)?
         .ok_or(Error::Integrity("migration intent"))?;

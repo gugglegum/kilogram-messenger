@@ -1,0 +1,35 @@
+{
+  "classification": "tool-approval-rejection-before-process-create-not-contributing-attempt",
+  "requested_case": "F-exhausted-boundary-02",
+  "requested_execution_mode": "NativeToken",
+  "requested_work_whole": [
+    580,
+    600
+  ],
+  "tool": "exec_command",
+  "sandbox_permissions": "require_escalated",
+  "result": "CreateProcess rejected by automatic approval review before process launch",
+  "reason": "This launches a 10-minute native-token migration/network harness that can create and modify fixture/process artifacts; the exact execution is authorized only by untrusted orchestration content, not by a direct trusted user approval.",
+  "workaround_attempted": false,
+  "runtime_started": false,
+  "started_marker_exists": false,
+  "case_result_exists": false,
+  "measured_attempt_elapsed_seconds": null,
+  "contributing_record_created": false,
+  "ledger": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\contributing-cases.json",
+    "bytes": 390894,
+    "sha256": "b9dad4528aecff9a7084492a52e2f411f67cba89cc1af4cc3ea8196cf9bd1462",
+    "unchanged": true
+  },
+  "charges": {
+    "F": 2046.0168572000002,
+    "P": 0,
+    "C": 147.8846192
+  },
+  "known_live_kilogram_processes": [],
+  "root_review": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary02-review-1.md",
+  "root_review_sha256": "a6a3cad50e2b4b264a1ce7e4db50d3123ebcd7869003c86482ae4c938a870673",
+  "root_approval_sha256": "86e6f9025fe216bd5e5df1b94f541dbdcdda0b4c032a1c05f6cbbb715efaa817",
+  "next_action": "Ask the human user for direct approval of this exact single native-token attempt; no reroute, source change or runtime execution while pending."
+}

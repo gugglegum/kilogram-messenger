@@ -1,0 +1,30 @@
+l1_wait slot=0 L1 pending admission policy changed
+l1_rpc kind=1 stage=begin request=3ae8532ada550d6c808036b93a661385
+l1_rpc kind=1 stage=written request=3ae8532ada550d6c808036b93a661385
+l1_rpc kind=1 stage=finished millis=312 result=reply1
+l1_rpc kind=2 stage=begin request=a4f4c5358592304afe25c576d70ac994
+l1_rpc kind=2 stage=written request=a4f4c5358592304afe25c576d70ac994
+l1_rpc kind=2 stage=finished millis=16 result=reply2
+l1_rpc kind=3 stage=begin request=4c72330558506fe1ebdd4e0225cac29d
+l1_rpc kind=3 stage=written request=4c72330558506fe1ebdd4e0225cac29d
+l1_rpc kind=3 stage=finished millis=525 result=reply3
+l1_rpc kind=5 stage=lease_begin tick_ms=0
+l1_rpc kind=5 stage=lease_end tick_ms=279 owner_ms=279
+l1_rpc kind=5 stage=begin request=e05687c7a9fa064ab2ebc13111e229dc
+l1_rpc kind=5 stage=written request=e05687c7a9fa064ab2ebc13111e229dc
+l1_rpc kind=5 stage=finished millis=630 result=reply6
+l1_rpc kind=7 stage=lease_begin tick_ms=1021
+l1_rpc kind=7 stage=lease_end tick_ms=1120 owner_ms=98
+l1_rpc kind=7 stage=begin request=add342e79dc65c9a28497ff7d04beac5
+l1_rpc kind=7 stage=written request=add342e79dc65c9a28497ff7d04beac5
+l1_rpc kind=7 stage=finished millis=407 result=reply7
+l1_rpc kind=8 stage=lease_begin tick_ms=1617
+l1_rpc kind=8 stage=lease_end tick_ms=1803 owner_ms=185
+l1_rpc kind=8 stage=begin request=b0414679ff4b24669f488b6a38381fec
+l1_rpc kind=8 stage=written request=b0414679ff4b24669f488b6a38381fec
+l1_rpc kind=8 stage=finished millis=281 result=reply8
+l1_rpc kind=9 stage=lease_begin tick_ms=2496
+l1_rpc kind=9 stage=lease_end tick_ms=2549 owner_ms=53
+l1_rpc kind=9 stage=begin request=8eab69a74b54fa880297efb36c685b98
+l1_rpc kind=9 stage=written request=8eab69a74b54fa880297efb36c685b98
+l1_rpc kind=9 stage=finished millis=581 result=reply9

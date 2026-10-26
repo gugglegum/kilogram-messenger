@@ -1,0 +1,28 @@
+{
+  "classification": "before-authorized-current-S5.2-navigation-status-only-update",
+  "authority": "Direct root instruction in executor thread after preservation-review, include unchanged S5.2 authority chain and nav3 with only current status/budget/references updated; preserve chronology.",
+  "files": [
+    {
+      "path": "ai-docs/README.md",
+      "bytes": 160203,
+      "sha256": "3692aaac44c3f8c64ec755d20e2d570380eda4962c7f7562ff471864e3d484c5",
+      "git_blob": "999b7bdc4080572d743c39ab4064eea81b21e5fb",
+      "snapshot": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-final-navigation-README.md.txt"
+    },
+    {
+      "path": "ai-docs/next-stage-plan.md",
+      "bytes": 5596,
+      "sha256": "2e8cb0877d10538089766086cdb8bd46072afca35577f0ed73743deeea0629a3",
+      "git_blob": "f882e37e90e3abce953e2bb735a55c4010921035",
+      "snapshot": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-final-navigation-next-stage-plan.md.txt"
+    },
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "bytes": 99001,
+      "sha256": "922191ea1d4bd28ba952eda768314477c34a2f2c1756b2bff7d676888e799956",
+      "git_blob": "cabd5e9d91d20ea196ac6c0b16a33fd4bc4e8486",
+      "snapshot": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-final-navigation-chat-coordination.md.txt"
+    }
+  ],
+  "source_code_change": false
+}

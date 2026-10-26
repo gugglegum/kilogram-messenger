@@ -1,0 +1,608 @@
+diff --git "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary01-controller.rs.txt" b/apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs
+index 5967ae7..23d3c5c 100644
+--- "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary01-controller.rs.txt"
++++ b/apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs
+@@ -4,8 +4,78 @@ use kilogram_cli::ordered_dialog::{admin, engine::Engine, runtime7::Profile3, st
+ use kilogram_identity::DeviceId;
+ use kilogram_protocol::ordered_dialog_v1 as wire;
+ use std::collections::BTreeMap;
++use std::io::Write;
+ use zeroize::Zeroizing;
+ 
++struct Phases {
++    started: Instant,
++    deadline: Instant,
++    file: std::fs::File,
++    path: PathBuf,
++    records: Vec<Value>,
++    completed: bool,
++}
++impl Phases {
++    fn new(base: &Path, started: Instant) -> Result<Self> {
++        let path = base.join("boundary-phases.jsonl");
++        Ok(Self {
++            started,
++            // One controller allowance, never reset by a phase/checkpoint.
++            // Outer work580/whole600 remains authoritative, including setup.
++            deadline: started + Duration::from_secs(560),
++            file: std::fs::OpenOptions::new()
++                .write(true)
++                .create_new(true)
++                .open(&path)?,
++            path,
++            records: Vec::new(),
++            completed: false,
++        })
++    }
++    fn check(&self) -> Result<()> {
++        ensure!(
++            Instant::now() < self.deadline,
++            "absolute instrumented controller deadline"
++        );
++        Ok(())
++    }
++    fn record(&mut self, phase: &str, state: &str, detail: Value) -> Result<()> {
++        let value = json!({"elapsed_seconds":self.started.elapsed().as_secs_f64(),
++            "phase":phase,"state":state,"detail":detail});
++        serde_json::to_writer(&mut self.file, &value)?;
++        self.file.write_all(b"\n")?;
++        self.file.flush()?;
++        self.file.sync_data()?;
++        self.records.push(value);
++        Ok(())
++    }
++    fn run<T>(&mut self, name: &str, action: impl FnOnce(&mut Self) -> Result<T>) -> Result<T> {
++        self.record(name, "begin", Value::Null)?;
++        let begin = Instant::now();
++        let result = self.check().and_then(|()| action(self)).and_then(|value| {
++            self.check()?;
++            Ok(value)
++        });
++        let detail = match &result {
++            Ok(_) => json!({"phase_seconds":begin.elapsed().as_secs_f64()}),
++            Err(error) => {
++                json!({"phase_seconds":begin.elapsed().as_secs_f64(),"error":format!("{error:#}")})
++            }
++        };
++        self.record(name, if result.is_ok() { "end" } else { "error" }, detail)?;
++        result
++    }
++}
++impl Drop for Phases {
++    fn drop(&mut self) {
++        if !self.completed {
++            let _ = self.record("controller","error",json!({
++                "returned_before_completed_parent_result":true,"panic_unwind":std::thread::panicking(),
++                "detail":"See the last phase begin/error and persistent child/test stderr; hard job termination may bypass Rust Drop."}));
++        }
++    }
++}
++
+ struct SourceNative {
+     head: state::Head,
+     nonce: wire::Id,
+@@ -13,33 +83,233 @@ struct SourceNative {
+     encryption: Zeroizing<Vec<u8>>,
+     public: Value,
+ }
+-fn legacy_native(node: &Node) -> Result<SourceNative> {
++fn legacy_native(node: &Node, phases: &mut Phases, name: &str) -> Result<SourceNative> {
+     ensure!(!node.indexed, "cold source is actual V4 active copy only");
+-    let engine = Engine::new(kilogram_state::OrderedVault::open(
+-        kilogram_state::StateDirectoryLock::acquire(&node.branch.state)?,
+-    )?)?;
++    let lease = phases.run(&format!("{name}.lock"), |_| {
++        Ok(kilogram_state::StateDirectoryLock::acquire(
++            &node.branch.state,
++        )?)
++    })?;
++    let vault = phases.run(&format!("{name}.vault_open"), |_| {
++        Ok(kilogram_state::OrderedVault::open(lease)?)
++    })?;
++    let engine = phases.run(&format!("{name}.engine_new"), |_| Engine::new(vault))?;
+     let c = state::parse_id(&node.branch.context)?;
+-    let head = engine.head(c)?;
+-    let private = state::PrivateState::open(
+-        &head,
+-        engine.nonce,
+-        engine.device.encryption(),
+-        &admin::required(&engine.store, &state::native_path(c))?,
+-    )?;
++    let head = phases.run(&format!("{name}.head"), |_| engine.head(c))?;
++    let raw = phases.run(&format!("{name}.raw_native"), |_| {
++        admin::required(&engine.store, &state::native_path(c))
++    })?;
++    let private = phases.run(&format!("{name}.native_restore"), |_| {
++        state::PrivateState::open(&head, engine.nonce, engine.device.encryption(), &raw)
++    })?;
+     let session = private.session.as_ref().context("real source Session")?;
+     let guard = private.guard.as_ref().context("real source Guard1")?;
+     let public = json!({"context":node.branch.context,"account":node.branch.account,"device":node.branch.device,"role":head.role,"d":head.d.map(|v|state::hex(&v)),"e":head.e.map(|v|state::hex(&v)),"sid":session.sid(),"keys":session.keys().iter().map(|v|state::hex(v)).collect::<Vec<_>>(),"own_next":guard.own.next,"peer_next":guard.peer.next,"native_hash":head.blob.map(|v|state::hex(&v)),"native_generation":head.native_generation});
++    let nonce = engine.nonce;
++    let (signing, encryption) = phases.run(&format!("{name}.identity_material"), |_| {
++        Ok((
++            Zeroizing::new(admin::required(&engine.store, "device-secret.key")?),
++            Zeroizing::new(admin::required(
++                &engine.store,
++                "device-encryption-secret.key",
++            )?),
++        ))
++    })?;
++    phases.run(&format!("{name}.close"), |_| {
++        drop(private);
++        drop(engine);
++        Ok(())
++    })?;
+     Ok(SourceNative {
+         head,
+-        nonce: engine.nonce,
+-        signing: Zeroizing::new(admin::required(&engine.store, "device-secret.key")?),
+-        encryption: Zeroizing::new(admin::required(
+-            &engine.store,
+-            "device-encryption-secret.key",
+-        )?),
++        nonce,
++        signing,
++        encryption,
+         public,
+     })
+ }
++fn replace_control(path: &Path, target: &str) -> Result<()> {
++    let mut file = tempfile::NamedTempFile::new_in(path.parent().context("control parent")?)?;
++    file.write_all(target.as_bytes())?;
++    file.as_file().sync_all()?;
++    file.persist(path).map_err(|error| error.error)?;
++    Ok(())
++}
++struct MigrationPause {
++    control: PathBuf,
++    hit: PathBuf,
++    armed: bool,
++}
++impl MigrationPause {
++    fn new(base: &Path, name: &str) -> Result<Self> {
++        let control = base.join(format!("{name}.control"));
++        let hit = control.with_extension("hit");
++        ensure!(
++            !control.exists() && !hit.exists(),
++            "fresh per-invocation migration controls"
++        );
++        replace_control(&control, "fence-committed")?;
++        Ok(Self {
++            control,
++            hit,
++            armed: true,
++        })
++    }
++    fn cleanup(&mut self) -> Result<()> {
++        if self.hit.exists() {
++            std::fs::remove_file(&self.hit)?;
++        }
++        replace_control(&self.control, "observation-released")?;
++        self.armed = false;
++        Ok(())
++    }
++}
++impl Drop for MigrationPause {
++    fn drop(&mut self) {
++        if self.armed {
++            let _ = self.cleanup();
++        }
++    }
++}
++fn observed_migrate(node: &mut Node, phases: &mut Phases, name: &str) -> Result<(Value, Value)> {
++    const TARGETS: [&str; 6] = [
++        "fence-committed",
++        "copy-committed",
++        "verify-staged",
++        "ready-staged",
++        "ready-committed",
++        "profile-staged",
++    ];
++    let args = node.branch.upgrade(false);
++    let stdout = node.branch.base.join(format!("{name}.stdout.log"));
++    let stderr = node.branch.base.join(format!("{name}.stderr.log"));
++    ensure!(
++        !stdout.exists() && !stderr.exists(),
++        "fresh migration child logs"
++    );
++    // Declare control before the OwnedChild: unwinding drops/kills/waits the
++    // actual child first, then removes its marker/releases its external control.
++    let mut pause = MigrationPause::new(&node.branch.base, name)?;
++    let mut child = spawn(
++        &current(),
++        &args,
++        &node.branch.base,
++        name,
++        Some(&pause.control),
++        None,
++    )?;
++    let pid = child.0.id();
++    phases.record(
++        name,
++        "begin",
++        json!({"pid":pid,"exe":current(),"argv":args,
++        "stdout":stdout,"stderr":stderr,"pause_control":pause.control,
++        "observation_is_brief_controlled_pause_not_passive_trace":true}),
++    )?;
++    let mut hooks = Vec::new();
++    let observed = (|| -> Result<Value> {
++        for (index, target) in TARGETS.iter().enumerate() {
++            let detail = phases.run(&format!("{name}.until.{target}"),|phases| {
++                loop {
++                    phases.check()?;
++                    child.alive()?;
++                    if pause.hit.is_file() {
++                        let hit = std::fs::read_to_string(&pause.hit)?;
++                        ensure!(hit == *target, "exact migration checkpoint hit");
++                        let next = TARGETS.get(index+1).copied().unwrap_or("observation-released");
++                        let observed_at = phases.started.elapsed().as_secs_f64();
++                        phases.record(name,"checkpoint_hit",json!({"pid":pid,"target":target,
++                            "exact_hit":hit,"observed_seconds":observed_at,
++                            "pre_transaction_commit":matches!(*target,"verify-staged"|"ready-staged"),
++                            "first_batch_only":*target == "copy-committed",
++                            "publication_still_staged":*target == "profile-staged"}))?;
++                        // While the old bytes remain, the child stays paused.
++                        // Remove the exact hit first, then atomically publish the
++                        // next complete target: no stale hit or empty control.
++                        std::fs::remove_file(&pause.hit)?;
++                        replace_control(&pause.control,next)?;
++                        let release = json!({"target":target,"next_target":next,
++                            "observed_seconds":observed_at,
++                            "released_seconds":phases.started.elapsed().as_secs_f64(),
++                            "hit_removed_before_release":true,"atomic_control_replace":true,
++                            "pre_transaction_commit":matches!(*target,"verify-staged"|"ready-staged")});
++                        phases.record(name,"checkpoint_released",release.clone())?;
++                        return Ok(release);
++                    }
++                    std::thread::sleep(Duration::from_millis(20));
++                }
++            })?;
++            hooks.push(detail);
++        }
++        phases.run(&format!("{name}.until_exit"), |phases| {
++            loop {
++                phases.check()?;
++                if let Some(status) = child.0.try_wait()? {
++                    ensure!(
++                        status.success(),
++                        "migration child {pid} failed; logs {} {}",
++                        stdout.display(),
++                        stderr.display()
++                    );
++                    return Ok(());
++                }
++                std::thread::sleep(Duration::from_millis(20));
++            }
++        })?;
++        let ready: Value = serde_json::from_slice(&std::fs::read(&stdout)?)?;
++        ensure!(
++            ready["storage_stage"] == "Ready" && ready["zero_migration_native_calls"] == true,
++            "real storage Ready"
++        );
++        Ok(ready)
++    })();
++    // Explicit cleanup on errors/timeouts; OwnedChild remains the fallback on
++    // every early-return/panic path. Never release a live paused child on error.
++    let cleanup = (|| -> Result<Value> {
++        let status = match child.0.try_wait()? {
++            Some(status) => status,
++            None => {
++                child.0.kill()?;
++                child.0.wait()?
++            }
++        };
++        drop(child);
++        pause.cleanup()?;
++        Ok(
++            json!({"pid":pid,"child_waited":true,"exit_code":status.code(),
++            "hit_absent":!pause.hit.exists(),"control":"observation-released"}),
++        )
++    })();
++    match &cleanup {
++        Ok(value) => phases.record(&format!("{name}.cleanup"), "end", value.clone())?,
++        Err(error) => phases.record(
++            &format!("{name}.cleanup"),
++            "error",
++            json!({"error":format!("{error:#}")}),
++        )?,
++    }
++    cleanup?;
++    let ready = observed?;
++    node.indexed = true;
++    node.slot = ready["contexts"]
++        .as_array()
++        .context("Ready contexts")?
++        .iter()
++        .position(|v| v["context"] == node.branch.context)
++        .context("actual C slot")? as u8;
++    node.profile = node.branch.base.join("indexed.profile");
++    node.ipc = node.branch.base.join("indexed.ipc");
++    node.locators = node.branch.base.join("indexed.locators");
++    let provenance = json!({"pid":pid,"argv":args,"stdout":stdout,"stderr":stderr,
++        "stdout_bytes":std::fs::metadata(&stdout)?.len(),"stderr_bytes":std::fs::metadata(&stderr)?.len(),
++        "stdout_blake3":blake3::hash(&std::fs::read(&stdout)?).to_hex().to_string(),
++        "stderr_blake3":blake3::hash(&std::fs::read(&stderr)?).to_hex().to_string(),
++        "checkpoints":hooks,"single_absolute_controller_deadline_seconds":560,
++        "controlled_pauses_are_included_in_cost":true,
++        "pre_fence_limitation":"No fence hit cannot separate inventory, first provenance verification and preflight."});
++    phases.record(name, "end", provenance.clone())?;
++    Ok((ready, provenance))
++}
+ fn migrated_native(node: &Node, source: &SourceNative) -> Result<Value> {
+     let profile = Profile3::load(&node.profile)?;
+     let mut repo = profile.open(&node.profile)?;
+@@ -425,6 +695,12 @@ fn cold_receipt(
+ 
+ #[test]
+ fn migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint() -> Result<()> {
++    let controller_started = Instant::now();
++    let case = std::env::var("KILOGRAM_S5_CASE").context("budgeted boundary case")?;
++    ensure!(
++        case == "F-exhausted-boundary-02",
++        "instrumented controller requires its separately approved case02"
++    );
+     let seed = PathBuf::from(
+         std::env::var_os("KILOGRAM_S5_FIXTURE_DIR").context("charged real511 origin")?,
+     );
+@@ -445,17 +721,26 @@ fn migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint() ->
+         side_a != side_b && [side_a, side_b].iter().all(|s| ["one", "two"].contains(s)),
+         "two actual sides"
+     );
+-    let base = run_dir("l1-exhausted-")?;
++    let base = run_dir("l1-exhausted-observed-")?;
++    let mut phases = Phases::new(&base, controller_started)?;
++    phases.record(
++        "controller",
++        "begin",
++        json!({"case":case,"absolute_controller_seconds":560,
++        "outer_work_whole":[580,600],"origin":seed,"active":base}),
++    )?;
+     println!(
+         "L1_EXHAUSTED active={} frozen_original={} original_typed_open=false",
+         base.display(),
+         seed.display()
+     );
+-    let original_before = verify_origin(&seed, &base, "before")?;
+-    let mut a = Node::from_seed(&seed, side_a, &base, context)?;
+-    let mut b = Node::from_seed(&seed, side_b, &base, context)?;
+-    let source_a = legacy_native(&a)?;
+-    let source_b = legacy_native(&b)?;
++    let original_before = phases.run("origin.raw_verify.before", |_| {
++        verify_origin(&seed, &base, "before")
++    })?;
++    let mut a = phases.run("copy.A", |_| Node::from_seed(&seed, side_a, &base, context))?;
++    let mut b = phases.run("copy.B", |_| Node::from_seed(&seed, side_b, &base, context))?;
++    let source_a = phases.run("legacy.A", |p| legacy_native(&a, p, "legacy.A"))?;
++    let source_b = phases.run("legacy.B", |p| legacy_native(&b, p, "legacy.B"))?;
+     ensure!(
+         source_a.head.role == 0
+             && source_b.head.role == 1
+@@ -491,23 +776,37 @@ fn migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint() ->
+         );
+     }
+     ensure!(expected.len() == 527, "actual old527 Text rows");
+-    let ready_a = a.migrate()?;
+-    let copied_a = initialize_then_cold(&a, &source_a, "a-first-public-owner")?;
+-    let mut ca = a.start("indexed-exhausted-a")?;
+-    let mut cb = b.start("frozen-b")?;
++    let (ready_a, migration_a) = phases.run("migration.A", |p| {
++        observed_migrate(&mut a, p, "migration-a")
++    })?;
++    let copied_a = phases.run("owner.A.initialize_then_cold", |_| {
++        initialize_then_cold(&a, &source_a, "a-first-public-owner")
++    })?;
++    let mut ca = phases.run("owner.A.start", |_| a.start("indexed-exhausted-a"))?;
++    let mut cb = phases.run("owner.frozen_B.start", |_| b.start("frozen-b"))?;
+     b.import(&a)?;
+     a.import(&b)?;
+-    let initial = a.wait(&mut ca, 512, 17)?;
+-    b.wait(&mut cb, 17, 512)?;
++    let initial = phases.run("interop.initial_frontiers", |_| {
++        let status = a.wait(&mut ca, 512, 17)?;
++        b.wait(&mut cb, 17, 512)?;
++        Ok(status)
++    })?;
+     same_session(&a, &initial, &source_a)?;
+     ensure!(
+         a.context(&initial)?["native_hash"] == source_a.public["native_hash"],
+         "Native changed before refusal"
+     );
+-    wait_index(&a, &mut ca, "000000000000000200000000000001ff")?;
+-    let refused_before = exhausted_requests(&a, &old_request)?;
+-    let first = page(&a, None)?;
+-    let old_rows = collect(&a, first.clone())?;
++    phases.run("requests.initial_index", |_| {
++        wait_index(&a, &mut ca, "000000000000000200000000000001ff")
++    })?;
++    let refused_before = phases.run("requests.refusal_before_reopen", |_| {
++        exhausted_requests(&a, &old_request)
++    })?;
++    let (first, old_rows) = phases.run("history.original527", |_| {
++        let first = page(&a, None)?;
++        let rows = collect(&a, first.clone())?;
++        Ok((first, rows))
++    })?;
+     exact_history(&old_rows, &expected)?;
+     ensure!(
+         old_rows.iter().all(|v| v["proof_kind"] == "LegacySnapshot"),
+@@ -519,18 +818,26 @@ fn migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint() ->
+         .to_owned();
+     let prefix_len = first["items"].as_array().context("prefix")?.len();
+     let new_text = "frozen B may send17 while indexed A own lane is exhausted";
+-    b.send(9001, new_text)?;
+-    let received_a = a.wait(&mut ca, 512, 18)?;
+-    b.wait(&mut cb, 18, 512)?;
++    let received_a = phases.run("interop.actual_B17_receive_ACK", |_| {
++        b.send(9001, new_text)?;
++        let status = a.wait(&mut ca, 512, 18)?;
++        b.wait(&mut cb, 18, 512)?;
++        Ok(status)
++    })?;
+     same_session(&a, &received_a, &source_a)?;
+     ensure!(
+         received_a["stats"]["committed_encrypt"] == 0
+             && received_a["stats"]["committed_decrypt"] == 1,
+         "exhausted own lane interfered with actual opposite receive"
+     );
+-    ca.kill_wait()?;
+-    cb.kill_wait()?;
+-    let source_b_after = legacy_native(&b)?;
++    phases.run("interop.stop_before_B_migration", |_| {
++        ca.kill_wait()?;
++        cb.kill_wait()?;
++        Ok(())
++    })?;
++    let source_b_after = phases.run("legacy.B_after17", |p| {
++        legacy_native(&b, p, "legacy.B_after17")
++    })?;
+     ensure!(
+         source_b_after.public["keys"] == source_b.public["keys"]
+             && source_b_after.nonce == source_b.nonce
+@@ -538,8 +845,12 @@ fn migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint() ->
+             && source_b_after.encryption[..] == source_b.encryption[..],
+         "frozen B identity/Session replaced"
+     );
+-    let ready_b = b.migrate()?;
+-    let copied_b = initialize_then_cold(&b, &source_b_after, "b-first-public-owner")?;
++    let (ready_b, migration_b) = phases.run("migration.B", |p| {
++        observed_migrate(&mut b, p, "migration-b")
++    })?;
++    let copied_b = phases.run("owner.B.initialize_then_cold", |_| {
++        initialize_then_cold(&b, &source_b_after, "b-first-public-owner")
++    })?;
+     let reconnect_schedule = base.join("indexed-reconnect.schedule.json");
+     schedule_file(
+         &reconnect_schedule,
+@@ -550,8 +861,10 @@ fn migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint() ->
+         !reconnect_log.exists(),
+         "new invocation must have a fresh A log"
+     );
+-    ca = a.start_controlled("indexed-a-reopened", Some(&reconnect_schedule), None)?;
+-    cb = b.start("indexed-b-reopened")?;
++    ca = phases.run("owner.A.reopen_traced", |_| {
++        a.start_controlled("indexed-a-reopened", Some(&reconnect_schedule), None)
++    })?;
++    cb = phases.run("owner.B.reopen", |_| b.start("indexed-b-reopened"))?;
+     let fresh_a = a.status()?;
+     let fresh_b = b.status()?;
+     let locator_revisions = [
+@@ -568,13 +881,15 @@ fn migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint() ->
+     );
+     b.import(&a)?;
+     a.import(&b)?;
+-    let reconnect = reconnect_barrier(
+-        &a,
+-        &b,
+-        [&mut ca, &mut cb],
+-        locator_revisions,
+-        &reconnect_log,
+-    )?;
++    let reconnect = phases.run("both_indexed.fresh_reconnect_barrier", |_| {
++        reconnect_barrier(
++            &a,
++            &b,
++            [&mut ca, &mut cb],
++            locator_revisions,
++            &reconnect_log,
++        )
++    })?;
+     let reopened_a = a.status()?;
+     let reopened_b = b.status()?;
+     ensure!(
+@@ -597,14 +912,18 @@ fn migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint() ->
+             && a.context(&reopened_a)?["native_hash"] == a.context(&received_a)?["native_hash"],
+         "reopen replayed Native"
+     );
+-    let refused_after = exhausted_requests(&a, &old_request)?;
+-    let suffix = collect(&a, page(&a, Some(&frozen_cursor))?)?;
++    let refused_after = phases.run("requests.refusal_after_reopen", |_| {
++        exhausted_requests(&a, &old_request)
++    })?;
++    let suffix = phases.run("history.frozen_suffix", |_| {
++        collect(&a, page(&a, Some(&frozen_cursor))?)
++    })?;
+     ensure!(
+         suffix == old_rows[prefix_len..] && first["F"] == json!([512, 17]),
+         "exact old frozen suffix after append/reopen"
+     );
+-    let rows_a = collect(&a, page(&a, None)?)?;
+-    let rows_b = collect(&b, page(&b, None)?)?;
++    let rows_a = phases.run("history.A528", |_| collect(&a, page(&a, None)?))?;
++    let rows_b = phases.run("history.B528", |_| collect(&b, page(&b, None)?))?;
+     let added = rows_a
+         .iter()
+         .find(|v| v["request"] == "fa000000000000000000000000002329")
+@@ -629,41 +948,65 @@ fn migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint() ->
+             && request(&b, "fa000000000000000000000000002329")?[0][2] == 1,
+         "real exact B17 ACK"
+     );
+-    ca.kill_wait()?;
+-    cb.kill_wait()?;
++    phases.run("owners.final_stop", |_| {
++        ca.kill_wait()?;
++        cb.kill_wait()?;
++        Ok(())
++    })?;
+     let id = state::parse_id(&added_id)?;
+     let signer = DeviceId::from_bytes(state::parse_id(&a.branch.device)?);
+-    let cold_a = cold_receipt(&a, id, signer, &source_a)?;
+-    let cold_b = cold_receipt(&b, id, signer, &source_a)?;
++    let cold_a = phases.run("receipt.A.cold", |_| {
++        cold_receipt(&a, id, signer, &source_a)
++    })?;
++    let cold_b = phases.run("receipt.B.cold", |_| {
++        cold_receipt(&b, id, signer, &source_a)
++    })?;
+     ensure!(
+         cold_a["receipt_hash"] == cold_b["receipt_hash"]
+             && cold_a["next"] == json!([512, 18])
+             && cold_b["next"] == json!([512, 18]),
+         "cold exact receipt/frontiers mismatch"
+     );
+-    let original_after = verify_origin(&seed, &base, "after")?;
++    let original_after = phases.run("origin.raw_verify.after", |_| {
++        verify_origin(&seed, &base, "after")
++    })?;
+     ensure!(
+         original_before["frozen_manifest_sha256"] == original_after["frozen_manifest_sha256"],
+         "frozen original changed"
+     );
+-    std::fs::write(
++    phases.run("checkpoint.info", |_| {std::fs::write(
+         base.join("checkpoint-info.json"),
+         serde_json::to_vec_pretty(&json!({
+         "classification":"stopped-indexed-exhausted-checkpoint","active_base":base,"a_profile":a.profile,
+         "b_profile":b.profile,"cut_a":512,"actual_b_next":18,"context":context,
+         "restore_rule":"Private backup is never opened. Future reuse restores bytes to these exact original absolute paths; one active branch per Native domain. Root7 pins paths.",
+         "no_handoff_or_Event2":true,"cold_a":cold_a,"cold_b":cold_b}))?,
++    )?;Ok(())})?;
++    let preserved = phases.run("checkpoint.private_preservation", |_| {
++        obligations::preserve_input(&base, &format!("{case}-checkpoint"))
++    })?;
++    phases.record(
++        "controller.assertions_and_preservation",
++        "end",
++        json!({"no_handoff_or_Event2":true}),
+     )?;
+-    let preserved = obligations::preserve_input(&base, "F-exhausted-boundary-01-checkpoint")?;
++    phases.check()?;
++    let phase_provenance = json!({"path":phases.path,"bytes":std::fs::metadata(&phases.path)?.len(),
++        "blake3":blake3::hash(&std::fs::read(&phases.path)?).to_hex().to_string(),
++        "single_absolute_controller_seconds":560,"controlled_pauses_included":true});
+     std::fs::write(
+         base.join("parent-exhausted-result.json"),
+         serde_json::to_vec_pretty(&json!({
++        "phase_trace":phase_provenance,"phase_records":phases.records,
++        "migration_a_observation":migration_a,"migration_b_observation":migration_b,
+         "source_a":source_a.public,"source_b":source_b.public,"original_before":original_before,
+         "original_after":original_after,"ready_a":ready_a,"ready_b":ready_b,"copied_a":copied_a,"copied_b":copied_b,
+         "refused_before":refused_before,"refused_after":refused_after,"received_a":received_a,
+         "reconnect_barrier":reconnect,"reopened_a":reopened_a,"reopened_b":reopened_b,"old_first_page":first,"old_suffix":suffix,
+         "history_a":rows_a,"history_b":rows_b,"cold_a":cold_a,"cold_b":cold_b,"checkpoint":preserved}))?,
+     )?;
++    phases.check()?;
++    phases.completed = true;
+     println!(
+         "L1_EXHAUSTED PASS actual511_16=true next512_refusal_before_native=true opposite17_receive_ACK=true history527_528=true frozen_suffix=true stopped_checkpoint=true root={}",
+         base.display()

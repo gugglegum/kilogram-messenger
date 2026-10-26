@@ -1,0 +1,60 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error[E0631]: type mismatch in function arguments
+   --> apps\kilogram-cli\src\ordered_dialog\runtime7\network.rs:595:45
+    |
+595 |                         received.iter().map(state::hex).collect::<Vec<_>>()
+    |                                         --- ^^^^^^^^^^ expected due to this
+    |                                         |
+    |                                         required by a bound introduced by this call
+    |
+   ::: apps\kilogram-cli\src\ordered_dialog\state.rs:350:1
+    |
+350 | pub fn hex(bytes: &[u8]) -> String {
+    | ---------------------------------- found signature defined here
+    |
+    = note: expected function signature `fn(&[u8; 32]) -> _`
+               found function signature `fn(&[u8]) -> _`
+note: required by a bound in `std::iter::Iterator::map`
+   --> /rustc/88d9e12ae178fab0fb5cc050a94da85685d449ea/library\core\src\iter\traits\iterator.rs:831:4
+help: consider wrapping the function in a closure
+    |
+595 |                         received.iter().map(|arg0: &[u8; 32]| state::hex(/* &[u8] */)).collect::<Vec<_>>()
+    |                                             +++++++++++++++++           +++++++++++++
+
+error[E0599]: the method `collect` exists for struct `Map<Iter<'_, [u8; 32]>, fn(&[u8]) -> String {hex}>`, but its trait bounds were not satisfied
+   --> apps\kilogram-cli\src\ordered_dialog\runtime7\network.rs:595:57
+    |
+595 |                         received.iter().map(state::hex).collect::<Vec<_>>()
+    |                                                         ^^^^^^^ method cannot be called on `Map<Iter<'_, [u8; 32]>, fn(&[u8]) -> String {hex}>` due to unsatisfied trait bounds
+    |
+    = note: the following trait bounds were not satisfied:
+            `<for<'a> fn(&'a [u8]) -> std::string::String {ordered_dialog::state::hex} as std::ops::FnOnce<(&[u8; 32],)>>::Output = _`
+            which is required by `std::iter::Map<std::slice::Iter<'_, [u8; 32]>, for<'a> fn(&'a [u8]) -> std::string::String {ordered_dialog::state::hex}>: std::iter::Iterator`
+            `for<'a> fn(&'a [u8]) -> std::string::String {ordered_dialog::state::hex}: std::ops::FnMut<(&[u8; 32],)>`
+            which is required by `std::iter::Map<std::slice::Iter<'_, [u8; 32]>, for<'a> fn(&'a [u8]) -> std::string::String {ordered_dialog::state::hex}>: std::iter::Iterator`
+            `std::iter::Map<std::slice::Iter<'_, [u8; 32]>, for<'a> fn(&'a [u8]) -> std::string::String {ordered_dialog::state::hex}>: std::iter::Iterator`
+            which is required by `&mut std::iter::Map<std::slice::Iter<'_, [u8; 32]>, for<'a> fn(&'a [u8]) -> std::string::String {ordered_dialog::state::hex}>: std::iter::Iterator`
+    = note: the full name for the type has been written to 'E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram_cli-80500809a6cc7ea2.long-type-17093827175128464996.txt'
+    = note: consider using `--verbose` to print the full type name to the console
+
+error[E0599]: the method `collect` exists for struct `Map<Iter<'_, [u8; 32]>, fn(&[u8]) -> String {hex}>`, but its trait bounds were not satisfied
+   --> apps\kilogram-cli\src\ordered_dialog\runtime7\network.rs:595:57
+    |
+595 |                         received.iter().map(state::hex).collect::<Vec<_>>()
+    |                                                         ^^^^^^^ method cannot be called on `Map<Iter<'_, [u8; 32]>, fn(&[u8]) -> String {hex}>` due to unsatisfied trait bounds
+    |
+    = note: the following trait bounds were not satisfied:
+            `<for<'a> fn(&'a [u8]) -> std::string::String {ordered_dialog::state::hex} as std::ops::FnOnce<(&[u8; 32],)>>::Output = _`
+            which is required by `std::iter::Map<std::slice::Iter<'_, [u8; 32]>, for<'a> fn(&'a [u8]) -> std::string::String {ordered_dialog::state::hex}>: std::iter::Iterator`
+            `for<'a> fn(&'a [u8]) -> std::string::String {ordered_dialog::state::hex}: std::ops::FnMut<(&[u8; 32],)>`
+            which is required by `std::iter::Map<std::slice::Iter<'_, [u8; 32]>, for<'a> fn(&'a [u8]) -> std::string::String {ordered_dialog::state::hex}>: std::iter::Iterator`
+            `std::iter::Map<std::slice::Iter<'_, [u8; 32]>, for<'a> fn(&'a [u8]) -> std::string::String {ordered_dialog::state::hex}>: std::iter::Iterator`
+            which is required by `&mut std::iter::Map<std::slice::Iter<'_, [u8; 32]>, for<'a> fn(&'a [u8]) -> std::string::String {ordered_dialog::state::hex}>: std::iter::Iterator`
+    = note: the full name for the type has been written to 'E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram_cli-a8139bf45fb778ac.long-type-17477165812845218298.txt'
+    = note: consider using `--verbose` to print the full type name to the console
+
+Some errors have detailed explanations: E0599, E0631.
+For more information about an error, try `rustc --explain E0599`.
+error: could not compile `kilogram-cli` (lib) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `kilogram-cli` (lib test) due to 2 previous errors

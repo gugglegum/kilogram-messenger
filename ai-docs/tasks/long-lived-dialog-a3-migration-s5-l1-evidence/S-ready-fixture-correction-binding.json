@@ -1,0 +1,125 @@
+{
+  "classification": "scoped-ready-fixture-correction-source-and-image-binding",
+  "protected_input": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-2.md",
+  "protected_bytes": 6918,
+  "protected_sha256": "28b1385688e394a8219fea1ee576cf6d244e8318c1186bdb1ff9c53759d3bb21",
+  "changed": [
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/test_support.rs",
+      "before_sha256": "6792cd9fd57079da7148fc94965a772ab864503c33cbb0129513622b6f60cb03",
+      "after_sha256": "11ed46eec8e7322879b1072ff8edc33bf1f000b929ca812944788a3bc8327cb2"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_review1.rs",
+      "before_sha256": "3c682b63971480a0fe3e93ff49f36dd734424c0a4ed0438bc7b1b474fcc93ed2",
+      "after_sha256": "9f4b792567f15790cc9b851d0c42f275231130c78fbfc85b7aa0a67e01f63f8e"
+    },
+    {
+      "path": "scripts/invoke-migration-s5-l1-case.ps1",
+      "before_sha256": "5505a7995ba88eb01108f3371de791608a4a8708b5dd15d78864e503809b0abb",
+      "after_sha256": "0f28929faccef0e58d327c39974aa38b830d5f21599b3bda6d677919c5a6be88"
+    }
+  ],
+  "unchanged": [
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/bootstrap.rs",
+      "bytes": 22350,
+      "sha256": "48b265f82a08f0501e65d0663cdea86cd7877c839f114dfb1fe950bdd0b6abaa"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/config.rs",
+      "bytes": 3439,
+      "sha256": "2313cc04329a58284afc6dbf5f09ce87efc9ab9e320112b1319f83deb81903ff"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/data.rs",
+      "bytes": 19234,
+      "sha256": "8426cc13d1a2c3eea47a0b1d8288c8e5951e0e58c04b7b5020d7a71983b4c089"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/mod.rs",
+      "bytes": 1237,
+      "sha256": "54bcb444ce3e8255bc98cace3bcc2ddc9d21d3ac1081741f84309d063cdbf7aa"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/network.rs",
+      "bytes": 24672,
+      "sha256": "afa5821c4cf996d8360d2960bfb20d8958a3afa3513055177716800a053942ba"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/owner.rs",
+      "bytes": 27207,
+      "sha256": "c81ca0b842a496730f732f0e086f2624eec2b0044db0d71d9bed1f148487506f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/protocol.rs",
+      "bytes": 22539,
+      "sha256": "a6664fc2ae6bca5f20f81abc8cc7d2e63c2d0a4c14b9f4c8e0dc62810c64c0e0"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/resources.rs",
+      "bytes": 1910,
+      "sha256": "5ca93e08d68c1c7496cf139b05441f949e7ab7dd809b62cb0c7b66907d377a21"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/review1_tests.rs",
+      "bytes": 2151,
+      "sha256": "6610a3a030efb69e931248004ef15d0690b5dcbfe235e4fa54a2728792c66242"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/runtime.rs",
+      "bytes": 19579,
+      "sha256": "7bc8bf5006088f7928b653b7ddbf70331709cc98b45231ca3895e83f18ea8222"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v1.rs",
+      "bytes": 18034,
+      "sha256": "9f3253aa552a825c1f2522a9c05c72aba1ccfa70adc71b1d2c8ca2caca8d90bb"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/data.rs",
+      "bytes": 24900,
+      "sha256": "265ce9634a3334c36b135006889adf234da18d69c456b8d90f892f33b3bc8dc5"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/history.rs",
+      "bytes": 15504,
+      "sha256": "235e72ae0fa495de8dc1566afb6b67eae61de0aa9198fbaea3bc690cfc31453d"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops_review1_tests.rs",
+      "bytes": 2656,
+      "sha256": "7fc78c66e6df639b5079795853abab2ebb6840ea0a35d7ba5dac9634e8d233f9"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops.rs",
+      "bytes": 23635,
+      "sha256": "0216fedb707ed858562cc4485037fed949d8f5be7da66381a2034be56bf672d0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/read.rs",
+      "bytes": 20524,
+      "sha256": "75bf8ca2a04ed16b51f8535da782b8fe7ff04eea79c45e096c2153038bc9ce9c"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/tests.rs",
+      "bytes": 6681,
+      "sha256": "34131ea0523889a50be00ed4d85bcdac846062d294c442c172660e3f7cdba644"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/types.rs",
+      "bytes": 10621,
+      "sha256": "ecce02f754515e85fd88e95a32408e9f7ebe2368d8885c59299056def2c7f2fa"
+    }
+  ],
+  "runner_parse_errors": 0,
+  "runner_sha256": "0f28929faccef0e58d327c39974aa38b830d5f21599b3bda6d677919c5a6be88",
+  "deadline_helper_sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45",
+  "field_image_bytes": 70226432,
+  "field_image_sha256": "69744fca50f44439b4734e699f416fc6b2bb8aac4336e5dad18ed173b2abbf6c",
+  "product_build": "S-build-11.json",
+  "compiled_harness": "S-compile-16.json",
+  "strict_clippy": "S-clippy-20.json",
+  "retained_static_failure": "S-clippy-19.json",
+  "source_reuse": "All runtime7 R1/R2/R3 and closed state source files plus production protocol validators are byte-identical to accepted own-F02/unacked01 inputs. Only existing debug Ready hook and controller are corrected; normal-shape behavior is checked in the focused component gate."
+}

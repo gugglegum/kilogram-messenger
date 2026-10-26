@@ -1,0 +1,54 @@
+{
+  "classification": "static-before-phase-preservation-fix",
+  "authority": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary03-completion-review.md",
+    "bytes": 6604,
+    "sha256": "c98a14c445985acfa4e2295f9519848b73e8316a9d72b764900a6b36750211e0"
+  },
+  "snapshots": [
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-controller.rs.txt",
+      "bytes": 40620,
+      "sha256": "c3e044594d43bcbf60b8055ba203aa8e23220f3b92b35d75f9bbfc049aae0977"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-runner.ps1.txt",
+      "bytes": 26849,
+      "sha256": "d3324692346ae12da8e10cb2bbeb2a614d9201d39597eb80536d1e8d34b2aac2"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration-boundary03/migration_s5_process-harness.bin.snapshot",
+      "bytes": 13935104,
+      "sha256": "83429f6d41f566aadfdaddea0b862a0fe71120beec875560f6d9463dfdd932d0"
+    }
+  ],
+  "ledger": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\contributing-cases.json",
+    "bytes": 419189,
+    "sha256": "acd66ac604bb83cfee19d99a26122ce5f345b2d4f3eea4d0791e644869251f6e"
+  },
+  "unchanged_helpers": [
+    {
+      "path": "scripts/preserve-migration-s5-l1-input.ps1",
+      "bytes": 5011,
+      "sha256": "25fe5a7c80821fb83a0fab5117585a48e6afe729094c1d45931aaa1556b044f3"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_obligations.rs",
+      "bytes": 24415,
+      "sha256": "68bc85bb08508bb73b9a89344da22518e6d1bc1ee76797c3e1bf50ad4dd06b00"
+    },
+    {
+      "path": "scripts/migration-s5-l1-deadline.ps1",
+      "bytes": 6038,
+      "sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45"
+    },
+    {
+      "path": "scripts/migration-s5-l1-test-result.ps1",
+      "bytes": 422,
+      "sha256": "b6e1c73804b63997add074f47a1b924d88bb5b3e87ea7188ab4432ecd8dd4dc0"
+    }
+  ],
+  "fixture_actions_performed": [],
+  "runtime_executed": false
+}

@@ -1,0 +1,14 @@
+{
+  "classification": "static-only",
+  "action": "field-stage",
+  "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\kilogram-cli.exe",
+  "targets": [
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-migration\\kilogram-cli.exe",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-migration\\kilogram-l1-control-peer.exe"
+  ],
+  "bytes": 70110720,
+  "sha256": "81c7ee4d120f750bba8c307726857e69b14dc2d7a71b0e2566cca8d657f5ca95",
+  "build_record": "S-build-05.json",
+  "no_live_target": true,
+  "elapsed_seconds": 2.0568963
+}

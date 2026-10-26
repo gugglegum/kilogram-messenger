@@ -1,0 +1,774 @@
+{
+  "classification": "post-failure-public-artifact-export-not-a-new-contributing-run",
+  "case": "F-exhausted-boundary-02",
+  "whole_verdict": "FAIL",
+  "case_record": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02.json",
+    "bytes": 12387,
+    "sha256": "dea5e8749393815f297aa9bb5cf714e353cce8da2a860944d3a3f9f2b224357b"
+  },
+  "case_log": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02.log",
+    "bytes": 3006,
+    "sha256": "c914820f5ddab5e3acd89690aa71f248cf81ad9bab0964f22e380c349c617bcb"
+  },
+  "active_base": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-HymOU4",
+  "field_elapsed_seconds": 568.1367185,
+  "deadline": {
+    "work_seconds": 580,
+    "whole_seconds": 600,
+    "work_expired": false,
+    "owned_children_after_cleanup": 0,
+    "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary-continuation-review-1.md",
+    "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+  },
+  "functional_harness_exit_code": 101,
+  "functional_harness_elapsed_seconds": 560.03,
+  "controller_error": "absolute instrumented controller deadline",
+  "last_successful_migration_checkpoint": "migration-b verify-staged at534.1376448, released534.1409139",
+  "last_failed_phase": [
+    {
+      "detail": {
+        "error": "absolute instrumented controller deadline",
+        "phase_seconds": 25.8683648
+      },
+      "elapsed_seconds": 560.0123959,
+      "phase": "migration-b.until.ready-staged",
+      "state": "error"
+    }
+  ],
+  "last_phase": {
+    "detail": {
+      "detail": "See the last phase begin/error and persistent child/test stderr; hard job termination may bypass Rust Drop.",
+      "panic_unwind": false,
+      "returned_before_completed_parent_result": true
+    },
+    "elapsed_seconds": 560.0272348,
+    "phase": "controller",
+    "state": "error"
+  },
+  "phase_count": 129,
+  "phase_durations": [
+    {
+      "elapsed_seconds": 3.5887492,
+      "phase": "origin.raw_verify.before",
+      "state": "end",
+      "phase_seconds": 3.5833811
+    },
+    {
+      "elapsed_seconds": 5.1481195,
+      "phase": "copy.A",
+      "state": "end",
+      "phase_seconds": 1.5427710000000001
+    },
+    {
+      "elapsed_seconds": 6.4380706,
+      "phase": "copy.B",
+      "state": "end",
+      "phase_seconds": 1.2782168999999999
+    },
+    {
+      "elapsed_seconds": 6.4586897,
+      "phase": "legacy.A.lock",
+      "state": "end",
+      "phase_seconds": 0.0002672
+    },
+    {
+      "elapsed_seconds": 19.3155536,
+      "phase": "legacy.A.vault_open",
+      "state": "end",
+      "phase_seconds": 12.8551458
+    },
+    {
+      "elapsed_seconds": 19.464988,
+      "phase": "legacy.A.engine_new",
+      "state": "end",
+      "phase_seconds": 0.1463724
+    },
+    {
+      "elapsed_seconds": 19.4746536,
+      "phase": "legacy.A.head",
+      "state": "end",
+      "phase_seconds": 0.0074722
+    },
+    {
+      "elapsed_seconds": 19.4776479,
+      "phase": "legacy.A.raw_native",
+      "state": "end",
+      "phase_seconds": 0.0010739
+    },
+    {
+      "elapsed_seconds": 19.4866944,
+      "phase": "legacy.A.native_restore",
+      "state": "end",
+      "phase_seconds": 0.0069749
+    },
+    {
+      "elapsed_seconds": 19.4895328,
+      "phase": "legacy.A.identity_material",
+      "state": "end",
+      "phase_seconds": 0.0002625
+    },
+    {
+      "elapsed_seconds": 19.5018739,
+      "phase": "legacy.A.close",
+      "state": "end",
+      "phase_seconds": 0.0106249
+    },
+    {
+      "elapsed_seconds": 19.5027867,
+      "phase": "legacy.A",
+      "state": "end",
+      "phase_seconds": 13.0452795
+    },
+    {
+      "elapsed_seconds": 19.5055112,
+      "phase": "legacy.B.lock",
+      "state": "end",
+      "phase_seconds": 0.0002345
+    },
+    {
+      "elapsed_seconds": 31.0778575,
+      "phase": "legacy.B.vault_open",
+      "state": "end",
+      "phase_seconds": 11.5705936
+    },
+    {
+      "elapsed_seconds": 31.2344171,
+      "phase": "legacy.B.engine_new",
+      "state": "end",
+      "phase_seconds": 0.1507708
+    },
+    {
+      "elapsed_seconds": 31.2445058,
+      "phase": "legacy.B.head",
+      "state": "end",
+      "phase_seconds": 0.0080903
+    },
+    {
+      "elapsed_seconds": 31.2474537,
+      "phase": "legacy.B.raw_native",
+      "state": "end",
+      "phase_seconds": 0.0011904
+    },
+    {
+      "elapsed_seconds": 31.2519847,
+      "phase": "legacy.B.native_restore",
+      "state": "end",
+      "phase_seconds": 0.0027154
+    },
+    {
+      "elapsed_seconds": 31.2541446,
+      "phase": "legacy.B.identity_material",
+      "state": "end",
+      "phase_seconds": 0.0002386
+    },
+    {
+      "elapsed_seconds": 31.2613042,
+      "phase": "legacy.B.close",
+      "state": "end",
+      "phase_seconds": 0.0053934
+    },
+    {
+      "elapsed_seconds": 31.2622025,
+      "phase": "legacy.B",
+      "state": "end",
+      "phase_seconds": 11.7577573
+    },
+    {
+      "elapsed_seconds": 114.7894724,
+      "phase": "migration-a.until.fence-committed",
+      "state": "end",
+      "phase_seconds": 83.50977
+    },
+    {
+      "elapsed_seconds": 190.0805795,
+      "phase": "migration-a.until.copy-committed",
+      "state": "end",
+      "phase_seconds": 75.2892752
+    },
+    {
+      "elapsed_seconds": 227.3907466,
+      "phase": "migration-a.until.verify-staged",
+      "state": "end",
+      "phase_seconds": 37.3083085
+    },
+    {
+      "elapsed_seconds": 317.9880073,
+      "phase": "migration-a.until.ready-staged",
+      "state": "end",
+      "phase_seconds": 90.5954658
+    },
+    {
+      "elapsed_seconds": 318.014377,
+      "phase": "migration-a.until.ready-committed",
+      "state": "end",
+      "phase_seconds": 0.0246395
+    },
+    {
+      "elapsed_seconds": 318.0612144,
+      "phase": "migration-a.until.profile-staged",
+      "state": "end",
+      "phase_seconds": 0.04489
+    },
+    {
+      "elapsed_seconds": 318.1237183,
+      "phase": "migration-a.until_exit",
+      "state": "end",
+      "phase_seconds": 0.0607824
+    },
+    {
+      "elapsed_seconds": 318.1303952,
+      "phase": "migration.A",
+      "state": "end",
+      "phase_seconds": 286.8625578
+    },
+    {
+      "elapsed_seconds": 319.8237891,
+      "phase": "owner.A.initialize_then_cold",
+      "state": "end",
+      "phase_seconds": 1.6914958
+    },
+    {
+      "elapsed_seconds": 320.581037,
+      "phase": "owner.A.start",
+      "state": "end",
+      "phase_seconds": 0.7553573
+    },
+    {
+      "elapsed_seconds": 322.721991,
+      "phase": "owner.frozen_B.start",
+      "state": "end",
+      "phase_seconds": 2.1391735
+    },
+    {
+      "elapsed_seconds": 323.4581308,
+      "phase": "interop.initial_frontiers",
+      "state": "end",
+      "phase_seconds": 0.3771045
+    },
+    {
+      "elapsed_seconds": 323.5377732,
+      "phase": "requests.initial_index",
+      "state": "end",
+      "phase_seconds": 0.0739183
+    },
+    {
+      "elapsed_seconds": 324.2226042,
+      "phase": "requests.refusal_before_reopen",
+      "state": "end",
+      "phase_seconds": 0.6826296
+    },
+    {
+      "elapsed_seconds": 330.7058945,
+      "phase": "history.original527",
+      "state": "end",
+      "phase_seconds": 6.4808654
+    },
+    {
+      "elapsed_seconds": 336.0055436,
+      "phase": "interop.actual_B17_receive_ACK",
+      "state": "end",
+      "phase_seconds": 5.2929825
+    },
+    {
+      "elapsed_seconds": 336.0376188,
+      "phase": "interop.stop_before_B_migration",
+      "state": "end",
+      "phase_seconds": 0.0301346
+    },
+    {
+      "elapsed_seconds": 336.040571,
+      "phase": "legacy.B_after17.lock",
+      "state": "end",
+      "phase_seconds": 0.0002262
+    },
+    {
+      "elapsed_seconds": 340.106681,
+      "phase": "legacy.B_after17.vault_open",
+      "state": "end",
+      "phase_seconds": 4.0643925
+    },
+    {
+      "elapsed_seconds": 340.2491153,
+      "phase": "legacy.B_after17.engine_new",
+      "state": "end",
+      "phase_seconds": 0.1405928
+    },
+    {
+      "elapsed_seconds": 340.2583333,
+      "phase": "legacy.B_after17.head",
+      "state": "end",
+      "phase_seconds": 0.0071793
+    },
+    {
+      "elapsed_seconds": 340.2613669,
+      "phase": "legacy.B_after17.raw_native",
+      "state": "end",
+      "phase_seconds": 0.0013254
+    },
+    {
+      "elapsed_seconds": 340.2656775,
+      "phase": "legacy.B_after17.native_restore",
+      "state": "end",
+      "phase_seconds": 0.0025912
+    },
+    {
+      "elapsed_seconds": 340.2676141,
+      "phase": "legacy.B_after17.identity_material",
+      "state": "end",
+      "phase_seconds": 0.0002352
+    },
+    {
+      "elapsed_seconds": 340.2740979,
+      "phase": "legacy.B_after17.close",
+      "state": "end",
+      "phase_seconds": 0.0048106
+    },
+    {
+      "elapsed_seconds": 340.2749484,
+      "phase": "legacy.B_after17",
+      "state": "end",
+      "phase_seconds": 4.2355112
+    },
+    {
+      "elapsed_seconds": 423.1966146,
+      "phase": "migration-b.until.fence-committed",
+      "state": "end",
+      "phase_seconds": 82.9097922
+    },
+    {
+      "elapsed_seconds": 500.2595938,
+      "phase": "migration-b.until.copy-committed",
+      "state": "end",
+      "phase_seconds": 77.0612198
+    },
+    {
+      "elapsed_seconds": 534.1420813,
+      "phase": "migration-b.until.verify-staged",
+      "state": "end",
+      "phase_seconds": 33.8807181
+    },
+    {
+      "elapsed_seconds": 560.0123959,
+      "phase": "migration-b.until.ready-staged",
+      "state": "error",
+      "phase_seconds": 25.8683648
+    },
+    {
+      "elapsed_seconds": 560.0232683,
+      "phase": "migration.B",
+      "state": "error",
+      "phase_seconds": 219.7466387
+    }
+  ],
+  "checkpoint_records": [
+    {
+      "detail": {
+        "exact_hit": "fence-committed",
+        "first_batch_only": false,
+        "observed_seconds": 114.7847953,
+        "pid": 2724,
+        "pre_transaction_commit": false,
+        "publication_still_staged": false,
+        "target": "fence-committed"
+      },
+      "elapsed_seconds": 114.784813,
+      "phase": "migration-a",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "copy-committed",
+        "observed_seconds": 114.7847953,
+        "pre_transaction_commit": false,
+        "released_seconds": 114.7883585,
+        "target": "fence-committed"
+      },
+      "elapsed_seconds": 114.788365,
+      "phase": "migration-a",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "copy-committed",
+        "first_batch_only": true,
+        "observed_seconds": 190.0761391,
+        "pid": 2724,
+        "pre_transaction_commit": false,
+        "publication_still_staged": false,
+        "target": "copy-committed"
+      },
+      "elapsed_seconds": 190.0761532,
+      "phase": "migration-a",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "verify-staged",
+        "observed_seconds": 190.0761391,
+        "pre_transaction_commit": false,
+        "released_seconds": 190.0793935,
+        "target": "copy-committed"
+      },
+      "elapsed_seconds": 190.0794004,
+      "phase": "migration-a",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "verify-staged",
+        "first_batch_only": false,
+        "observed_seconds": 227.3862357,
+        "pid": 2724,
+        "pre_transaction_commit": true,
+        "publication_still_staged": false,
+        "target": "verify-staged"
+      },
+      "elapsed_seconds": 227.38625,
+      "phase": "migration-a",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "ready-staged",
+        "observed_seconds": 227.3862357,
+        "pre_transaction_commit": true,
+        "released_seconds": 227.3896281,
+        "target": "verify-staged"
+      },
+      "elapsed_seconds": 227.389633,
+      "phase": "migration-a",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "ready-staged",
+        "first_batch_only": false,
+        "observed_seconds": 317.9836825,
+        "pid": 2724,
+        "pre_transaction_commit": true,
+        "publication_still_staged": false,
+        "target": "ready-staged"
+      },
+      "elapsed_seconds": 317.9836987,
+      "phase": "migration-a",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "ready-committed",
+        "observed_seconds": 317.9836825,
+        "pre_transaction_commit": true,
+        "released_seconds": 317.987044,
+        "target": "ready-staged"
+      },
+      "elapsed_seconds": 317.9870507,
+      "phase": "migration-a",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "ready-committed",
+        "first_batch_only": false,
+        "observed_seconds": 318.0102161,
+        "pid": 2724,
+        "pre_transaction_commit": false,
+        "publication_still_staged": false,
+        "target": "ready-committed"
+      },
+      "elapsed_seconds": 318.0102273,
+      "phase": "migration-a",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "profile-staged",
+        "observed_seconds": 318.0102161,
+        "pre_transaction_commit": false,
+        "released_seconds": 318.0133695,
+        "target": "ready-committed"
+      },
+      "elapsed_seconds": 318.0133748,
+      "phase": "migration-a",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "profile-staged",
+        "first_batch_only": false,
+        "observed_seconds": 318.0570583,
+        "pid": 2724,
+        "pre_transaction_commit": false,
+        "publication_still_staged": true,
+        "target": "profile-staged"
+      },
+      "elapsed_seconds": 318.0570734,
+      "phase": "migration-a",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "observation-released",
+        "observed_seconds": 318.0570583,
+        "pre_transaction_commit": false,
+        "released_seconds": 318.0602504,
+        "target": "profile-staged"
+      },
+      "elapsed_seconds": 318.0602557,
+      "phase": "migration-a",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "fence-committed",
+        "first_batch_only": false,
+        "observed_seconds": 423.1920996,
+        "pid": 47668,
+        "pre_transaction_commit": false,
+        "publication_still_staged": false,
+        "target": "fence-committed"
+      },
+      "elapsed_seconds": 423.1921165,
+      "phase": "migration-b",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "copy-committed",
+        "observed_seconds": 423.1920996,
+        "pre_transaction_commit": false,
+        "released_seconds": 423.1954942,
+        "target": "fence-committed"
+      },
+      "elapsed_seconds": 423.195501,
+      "phase": "migration-b",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "copy-committed",
+        "first_batch_only": true,
+        "observed_seconds": 500.2550769,
+        "pid": 47668,
+        "pre_transaction_commit": false,
+        "publication_still_staged": false,
+        "target": "copy-committed"
+      },
+      "elapsed_seconds": 500.2550931,
+      "phase": "migration-b",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "verify-staged",
+        "observed_seconds": 500.2550769,
+        "pre_transaction_commit": false,
+        "released_seconds": 500.2584269,
+        "target": "copy-committed"
+      },
+      "elapsed_seconds": 500.258434,
+      "phase": "migration-b",
+      "state": "checkpoint_released"
+    },
+    {
+      "detail": {
+        "exact_hit": "verify-staged",
+        "first_batch_only": false,
+        "observed_seconds": 534.1376448,
+        "pid": 47668,
+        "pre_transaction_commit": true,
+        "publication_still_staged": false,
+        "target": "verify-staged"
+      },
+      "elapsed_seconds": 534.1376596,
+      "phase": "migration-b",
+      "state": "checkpoint_hit"
+    },
+    {
+      "detail": {
+        "atomic_control_replace": true,
+        "hit_removed_before_release": true,
+        "next_target": "ready-staged",
+        "observed_seconds": 534.1376448,
+        "pre_transaction_commit": true,
+        "released_seconds": 534.1409139,
+        "target": "verify-staged"
+      },
+      "elapsed_seconds": 534.1409208,
+      "phase": "migration-b",
+      "state": "checkpoint_released"
+    }
+  ],
+  "migration_a_reported": {
+    "storage_stage": "Ready",
+    "zero_migration_native_calls": true
+  },
+  "cleanup_records": [
+    {
+      "detail": {
+        "child_waited": true,
+        "control": "observation-released",
+        "exit_code": 0,
+        "hit_absent": true,
+        "pid": 2724
+      },
+      "elapsed_seconds": 318.1271342,
+      "phase": "migration-a.cleanup",
+      "state": "end"
+    },
+    {
+      "detail": {
+        "child_waited": true,
+        "control": "observation-released",
+        "exit_code": 1,
+        "hit_absent": true,
+        "pid": 47668
+      },
+      "elapsed_seconds": 560.0221524,
+      "phase": "migration-b.cleanup",
+      "state": "end"
+    }
+  ],
+  "controls": [
+    {
+      "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-HymOU4\\two\\migration-a.control",
+      "content": "observation-released",
+      "hit_exists": false
+    },
+    {
+      "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-HymOU4\\one\\migration-b.control",
+      "content": "observation-released",
+      "hit_exists": false
+    }
+  ],
+  "missing_completion_artifacts": [
+    "parent-exhausted-result.json",
+    "origin-after-verified.json",
+    "checkpoint-info.json"
+  ],
+  "exports": [
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-HymOU4\\boundary-phases.jsonl",
+        "bytes": 22213,
+        "sha256": "51ec859236a9d0ca0855f5b38a5abbc42f2b5ada7cbce6da7245dd5232e1247e"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02-phases.jsonl",
+        "bytes": 22213,
+        "sha256": "51ec859236a9d0ca0855f5b38a5abbc42f2b5ada7cbce6da7245dd5232e1247e"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-HymOU4\\two\\migration-a.stdout.log",
+        "bytes": 969,
+        "sha256": "a24d79199d1d333241457e69d810b95d030afd55af4601a2eccb3b5c05f13fe1"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02-migration-a.stdout.log",
+        "bytes": 969,
+        "sha256": "a24d79199d1d333241457e69d810b95d030afd55af4601a2eccb3b5c05f13fe1"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-HymOU4\\two\\migration-a.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02-migration-a.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-HymOU4\\one\\migration-b.stdout.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02-migration-b.stdout.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-HymOU4\\one\\migration-b.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02-migration-b.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "source": {
+        "path": ".tmp\\migration-s5-storage\\l1-exhausted-observed-HymOU4\\origin-before-verified.json",
+        "bytes": 1883572,
+        "sha256": "cd7f2f4379be0c972083a03fe94346600afea091dbcd371fa3b910d51ba645be"
+      },
+      "export": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02-origin-before-verified.json",
+        "bytes": 1883572,
+        "sha256": "cd7f2f4379be0c972083a03fe94346600afea091dbcd371fa3b910d51ba645be"
+      }
+    }
+  ],
+  "post_attempt_inputs_verified_count": 54,
+  "post_attempt_input_mismatches": [],
+  "product_inputs_verified": 33,
+  "product_images_verified": 8,
+  "test_harness": {
+    "path": "target/verification/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+    "bytes": 13935104,
+    "sha256": "5a003864af885c09d0274d84f54b2000a774908382169085b42314ee546ec161"
+  },
+  "ledger": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\contributing-cases.json",
+    "bytes": 404540,
+    "sha256": "83ea734311622f0578d843c0bbae4587c22c7538f6618deb974b6855516cf3fc"
+  },
+  "charges": {
+    "F": 2614.1535757,
+    "P": 0,
+    "C": 147.8846192
+  },
+  "ceilings": {
+    "F": 2900,
+    "P": 0,
+    "C": 500
+  },
+  "remaining_F": 285.8464243,
+  "known_live_kilogram_processes": [],
+  "limits": [
+    "Exactly one actual attempt ran after direct human native-execution approval. The prior auto-review denial remains a prelaunch rejection, not an additional contributing attempt.",
+    "No functional boundary PASS or accepted partial substitute. No final both-indexed reconnect/history528/cold-receipt/checkpoint preservation completed.",
+    "Only existing public phase/log/raw-before-manifest artifacts exported. No repository, Native, fixture-state copy, repair or resume after failure. No post-attempt raw origin traversal performed.",
+    "Checkpoint hook intervals include controlled pause/record costs and multiple product operations. They do not identify one internal bottleneck, corruption or a performance fix.",
+    "Failed attempt remains fully charged. No automatic retry, source/script/product modification, new C/F, whole-P, cut3, implementation-report completion or candidate allowlist after failure.",
+    "Runner stopwatch568.1367185 excludes terminal case/ledger publication tail as previously disclosed; independent whole watchdog covers finalization."
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "classification": "static-exact-old-image-preservation",
+  "source": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+  "target": "target\\compatibility\\long-lived-dialog-migration-preready\\kilogram-cli.exe",
+  "bytes": 70222848,
+  "sha256": "a3ff9d2ee67e5b01db8f4c922247737d0dee7bb4c639477be3e02d4999b13c56",
+  "elapsed_seconds": 0.9131641,
+  "rule": "Exact build10 bytes preserved before corrected debug-hook staging; other historical images untouched."
+}

@@ -1,0 +1,46 @@
+diff --git "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary01-runner.ps1.txt" b/scripts/invoke-migration-s5-l1-case.ps1
+index 0100f6a..c4745c0 100644
+--- "a/ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary01-runner.ps1.txt"
++++ b/scripts/invoke-migration-s5-l1-case.ps1
+@@ -25,12 +25,14 @@ if($Action -in @('DeadlineProbe','PreservationProbe') -and $Set -ne 'C'){throw '
+ if($Case -notlike "$Set-*"){throw 'Case prefix must match the contributing set.'}
+ if($Action -eq 'ExhaustedOrigin' -and [double]$ledger.new_ceilings_seconds.F-[double]$ledger.charged_elapsed_seconds.F -lt 1215){throw 'Long origin requires850+140+225 contingency remaining.'}
+ $deadline=$null;$decision=$null;$readyException=$false
+-$boundaryGroup=$Case -ceq 'F-exhausted-boundary-01'
++$boundaryObserved=$Case -ceq 'F-exhausted-boundary-02'
++$boundaryGroup=$Case -ceq 'F-exhausted-boundary-01' -or $boundaryObserved
+ if($boundaryGroup){
+  if($Set -cne 'F' -or $Action -cne 'Tests' -or $Filter -cne 'migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint' -or $Package.Count -ne 1 -or $Package[0] -cne 'kilogram-cli' -or $ResumeDirectory){throw 'Exhausted boundary selector/classification mismatch.'}
+  $expectedOrigin=[IO.Path]::GetFullPath((Join-Path $workspace '.tmp/migration-s5-l1/F-exhausted-origin-01'))
+  if(-not $FixtureDirectory -or -not ([IO.Path]::GetFullPath($FixtureDirectory)).Equals($expectedOrigin,[StringComparison]::OrdinalIgnoreCase)){throw 'Boundary requires the one genuine frozen511/16 origin.'}
+- if([double]$ledger.new_ceilings_seconds.F-[double]$ledger.charged_elapsed_seconds.F -lt 365){throw 'Boundary140 plus contingency225 no longer fit.'}
++ $boundaryReserve=if($boundaryObserved){825}else{365}
++ if([double]$ledger.new_ceilings_seconds.F-[double]$ledger.charged_elapsed_seconds.F -lt $boundaryReserve){throw 'Boundary whole allowance plus contingency225 no longer fit.'}
+ }
+ if($Action -eq 'ExhaustedOrigin' -or $boundaryGroup){
+  if($ExecutionMode -cne 'NativeToken'){throw 'Long/boundary local network execution requires ordinary native-token approval.'}
+@@ -47,6 +49,15 @@ if($Action -eq 'ExhaustedOrigin' -or $boundaryGroup){
+   $entry=@($ledger.cases|Where-Object {$_.case -ceq $splitCase})
+   if($entry.Count -ne 1 -or $entry[0].exit_code -ne 1 -or $entry[0].deadline.owned_children_after_cleanup -ne 0 -or $entry[0].deadline.work_expired -ne ($splitCase -ceq 'F-review1-ready-02')){throw 'Accepted split verdict changed; historical FAIL must remain.'}
+  }
++ if($boundaryObserved){
++  $decision='ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary-continuation-review-1.md'
++  if((Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $workspace $decision)).Hash.ToLowerInvariant() -cne 'a9b3fd75ce257362297a9ec7c4fe00133917a42bf2ecbd4a921d41bfa4870341'){throw 'Instrumented-boundary preparation authority changed.'}
++  foreach($priorBoundary in @(@('F-exhausted-boundary-01.json','072b522817e7f62e9bbc0f930f3d3969c2b56675c4ae348931e4b113d895753b'),@('F-exhausted-boundary-01.log','b7b5efa02401eef44abd6488f64b2f0ca3a5b975e90e877945fb51d9e69f55ab'))){
++   if((Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $evidence $priorBoundary[0])).Hash.ToLowerInvariant() -cne $priorBoundary[1]){throw 'Prior failed boundary provenance changed.'}
++  }
++  $failedBoundary=@($ledger.cases|Where-Object {$_.case -ceq 'F-exhausted-boundary-01'})
++  if($failedBoundary.Count -ne 1 -or $failedBoundary[0].exit_code -ne 1 -or -not $failedBoundary[0].deadline.work_expired -or $failedBoundary[0].deadline.owned_children_after_cleanup -ne 0){throw 'Boundary01 must remain its exact charged cutoff.'}
++ }
+ }
+ $fieldCases=[ordered]@{
+  'F-review1-own-f-02'=@{filter='migration_s5_l1_review1_genuine_partial_own_f_both_genesis_roles';whole=120;work=100}
+@@ -129,7 +140,7 @@ if($boundaryGroup){
+ }
+ if($ResumeDirectory -or $Action -eq 'ExhaustedOrigin' -or $reviewGroup -or $reviewField -or $arityGroup -or $boundaryGroup){
+  . (Join-Path $PSScriptRoot 'migration-s5-l1-deadline.ps1')
+- $whole=if($boundaryGroup){140}elseif($arityGroup){40}elseif($reviewField){$fieldPolicy.whole}elseif($reviewGroup){120}elseif($ResumeDirectory){240}else{900};$work=if($boundaryGroup){120}elseif($arityGroup){30}elseif($reviewField){$fieldPolicy.work}elseif($reviewGroup){100}elseif($ResumeDirectory){210}else{850}
++ $whole=if($boundaryObserved){600}elseif($boundaryGroup){140}elseif($arityGroup){40}elseif($reviewField){$fieldPolicy.whole}elseif($reviewGroup){120}elseif($ResumeDirectory){240}else{900};$work=if($boundaryObserved){580}elseif($boundaryGroup){120}elseif($arityGroup){30}elseif($reviewField){$fieldPolicy.work}elseif($reviewGroup){100}elseif($ResumeDirectory){210}else{850}
+  $deadline=[KilogramS5Deadline]::new($work-$timer.Elapsed.TotalSeconds,$whole-$timer.Elapsed.TotalSeconds)
+  [ordered]@{case=$Case;started_utc=[DateTime]::UtcNow.ToString('O');owner_pid=$PID;whole_seconds=$whole;work_seconds=$work;root_decision=$decision;action=$Action;classification='attempt-start-not-final-result'}|ConvertTo-Json|Set-Content -LiteralPath (Join-Path $evidence "$Case.started.json") -Encoding utf8
+ }

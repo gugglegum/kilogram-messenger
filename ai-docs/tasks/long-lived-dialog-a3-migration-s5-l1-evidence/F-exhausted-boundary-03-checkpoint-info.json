@@ -1,0 +1,49 @@
+{
+  "a_profile": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed.profile",
+  "active_base": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-exhausted-observed-NCjBHb",
+  "actual_b_next": 18,
+  "b_profile": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\indexed.profile",
+  "classification": "stopped-indexed-exhausted-checkpoint",
+  "cold_a": {
+    "counts": {
+      "debt": 0,
+      "pending": 0,
+      "queued": 0,
+      "receipts": [
+        511,
+        17
+      ],
+      "sources": 530
+    },
+    "native_generation": 517,
+    "native_hash": "6c50ea198a9d1c9fc6338c873a7bcda7d169c421d32d65fbe5369c3695c2d247",
+    "next": [
+      512,
+      18
+    ],
+    "receipt_hash": "338a74bcbee1249cb1655fa21962833d6d680394769861ca2df4ab98475a4760"
+  },
+  "cold_b": {
+    "counts": {
+      "debt": 0,
+      "pending": 0,
+      "queued": 0,
+      "receipts": [
+        511,
+        17
+      ],
+      "sources": 530
+    },
+    "native_generation": 88,
+    "native_hash": "e6e4abc55d1216a3514b40261005d6eb29e9fdecbc0312a78bddfc21fccccf1f",
+    "next": [
+      512,
+      18
+    ],
+    "receipt_hash": "338a74bcbee1249cb1655fa21962833d6d680394769861ca2df4ab98475a4760"
+  },
+  "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+  "cut_a": 512,
+  "no_handoff_or_Event2": true,
+  "restore_rule": "Private backup is never opened. Future reuse restores bytes to these exact original absolute paths; one active branch per Native domain. Root7 pins paths."
+}

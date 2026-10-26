@@ -6,7 +6,10 @@ param(
     [ValidateSet('Duplex','Gap','Partial','BOnly','Crash','TwoContexts','Expiry','ConsentExpiry','Conflict','UnsupportedSuite','MissingAuth','CrossContext')][string]$Scenario = 'Duplex',
     [string]$KillPoint,
     [ValidateRange(1,128)][int]$MessagesPerLane = 128,
-    [ValidateRange(1,16)][int]$Burst = 8
+    [ValidateRange(0,511)][int]$MessagesA = 0,
+    [ValidateRange(0,511)][int]$MessagesB = 0,
+    [ValidateRange(1,16)][int]$Burst = 8,
+    [object]$DeadlineGuard
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -16,6 +19,11 @@ $exe = (Resolve-Path -LiteralPath (Join-Path $workspace $Executable)).Path
 $peerExe = if ($PeerExecutable) {
     (Resolve-Path -LiteralPath (Join-Path $workspace $PeerExecutable)).Path
 } else { $exe }
+$exhaustedOrigin=$Scenario -ceq 'Duplex' -and $MessagesA -eq 511 -and $MessagesB -eq 16
+if($exhaustedOrigin){
+    if(-not $DeadlineGuard){throw 'The one511/16 origin requires the budget-bound whole-attempt runner.'}
+    foreach($image in @($exe,$peerExe)){if((Get-FileHash -Algorithm SHA256 -LiteralPath $image).Hash.ToLowerInvariant() -cne 'd9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1'){throw 'Exhausted origin requires both exact frozen d9b producers.'}}
+}
 if (-not $RunDirectory) { $RunDirectory = Join-Path $workspace ('.tmp/ordered-dialog-process/' + [guid]::NewGuid().ToString('N')) }
 if (Test-Path -LiteralPath $RunDirectory) { throw 'Process acceptance requires a new run directory.' }
 [void](New-Item -ItemType Directory -Path $RunDirectory)
@@ -27,12 +35,22 @@ $runtimeBySide = @{}
 $immutableBefore = @{}
 $queueTimes = [Collections.Generic.List[double]]::new()
 function Invoke-Cli([string[]]$Arguments) {
+    if($DeadlineGuard){$DeadlineGuard.CheckWork()}
     $output = & $exe @Arguments 2>&1
     $exitCode = $LASTEXITCODE
     $rendered = ($output | ForEach-Object { $_.ToString() }) -join "`n"
     Add-Content -LiteralPath $trace -Value ("{0:N3}s exit={1} {2}`n{3}" -f $watch.Elapsed.TotalSeconds,$exitCode,($Arguments -join ' '),$rendered)
+    if($DeadlineGuard){$DeadlineGuard.CheckWork()}
     if ($exitCode -ne 0) { throw "CLI exit ${exitCode}: $rendered" }
     return $rendered
+}
+function Expect-Refusal([string[]]$Arguments,[string]$Reason){
+    if($DeadlineGuard){$DeadlineGuard.CheckWork()}
+    $output=& $exe @Arguments 2>&1;$code=$LASTEXITCODE
+    $rendered=($output|ForEach-Object {$_.ToString()}) -join "`n"
+    Add-Content -LiteralPath $trace -Value ("{0:N3}s expected_refusal exit={1} {2}`n{3}" -f $watch.Elapsed.TotalSeconds,$code,($Arguments -join ' '),$rendered)
+    if($code -eq 0 -or -not $rendered.Contains($Reason)){throw "Expected $Reason refusal, got exit${code}: $rendered"}
+    if($DeadlineGuard){$DeadlineGuard.CheckWork()}
 }
 function Path-In([string]$Name) { return (Join-Path $run $Name) }
 function Get-Status([string]$Side) { return (Invoke-Cli @('ordered','status','--ipc-file',(Path-In "$Side.ipc")) | ConvertFrom-Json) }
@@ -60,6 +78,7 @@ function Start-Runtime([string]$Side) {
         $suffix = [guid]::NewGuid().ToString('N').Substring(0,8)
         $runtimeExe = if ($Side -ceq 'two') { $peerExe } else { $exe }
         $process = Start-Process -FilePath $runtimeExe -ArgumentList @('runtime-from-profile','--profile-file',('"{0}"' -f (Path-In "$Side.profile"))) -WindowStyle Hidden -PassThru -RedirectStandardOutput (Path-In "$Side.$suffix.stdout.log") -RedirectStandardError (Path-In "$Side.$suffix.stderr.log")
+        if($DeadlineGuard){try{$DeadlineGuard.VerifyChild($process)}catch{if(-not $process.HasExited){$process.Kill()};throw}}
         $runtimeBySide[$Side]=$process
         Add-Content -LiteralPath $trace -Value "runtime_start side=$Side pid=$($process.Id) log_suffix=$suffix"
         return $process
@@ -376,10 +395,14 @@ try {
         [void](Wait-State $a.side {param($s) $s.unacked -eq 0})
     }
     if ($Scenario -eq 'Duplex') {
-    for ($offset=0; $offset -lt $MessagesPerLane; $offset += $Burst) {
+    $targetA=if($MessagesA){$MessagesA}else{$MessagesPerLane}
+    $targetB=if($MessagesB){$MessagesB}else{$MessagesPerLane}
+    for ($offset=0; $offset -lt [Math]::Max($targetA,$targetB); $offset += $Burst) {
         foreach ($sender in @($a,$b)) {
+            $targetCount=if($sender.side -ceq $a.side){$targetA}else{$targetB}
+            if($offset -ge $targetCount){continue}
             $receiver = if ($sender.side -ceq $a.side) { $b } else { $a }
-            $end = [Math]::Min($offset+$Burst,$MessagesPerLane)
+            $end = [Math]::Min($offset+$Burst,$targetCount)
             for ($i=$offset; $i -lt $end; $i++) {
                 Queue-Test $sender ($i+1)
             }
@@ -404,6 +427,21 @@ try {
         $items | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Path-In "$side.history.json")
     }
     if (@(Compare-Object @($history.one.event_id | Sort-Object) @($history.two.event_id | Sort-Object)).Count) { throw 'Different immutable event history.' }
+    $originBoundary=$null
+    if($exhaustedOrigin){
+        $beforeA=Get-Status $a.side;$beforeB=Get-Status $b.side
+        if($expected.Count -ne 527 -or $beforeA.contexts[0].send_next -ne 512 -or $beforeA.contexts[0].receive_next -ne 17 -or $beforeB.contexts[0].send_next -ne 17 -or $beforeB.contexts[0].receive_next -ne 512 -or $beforeA.contexts[0].unacked -ne 0 -or $beforeB.contexts[0].unacked -ne 0){throw 'Genuine asymmetric counter/receipt boundary mismatch.'}
+        $common=@('ordered','queue','--ipc-file',(Path-In "$($a.side).ipc"),'--context',$context)
+        Expect-Refusal ($common+@('--request-id','ed000000000000000000000000000200','--text','new Text beyond real511 boundary')) 'UpgradeRequired'
+        $oldRequest=('{0:x16}{1:x16}' -f 2,1);$oldText="OD1/$($a.side)/1/Привет"
+        [void](Invoke-Cli ($common+@('--request-id',$oldRequest,'--text',$oldText)))
+        Expect-Refusal ($common+@('--request-id',$oldRequest,'--text',"$oldText/changed")) 'RequestIdConflict'
+        $afterA=Get-Status $a.side;$afterB=Get-Status $b.side
+        foreach($field in @('native_generation','send_next','receive_next','session_id','pending','unacked')){
+            if($beforeA.contexts[0].$field -cne $afterA.contexts[0].$field -or $beforeB.contexts[0].$field -cne $afterB.contexts[0].$field){throw "Frozen rejection/retry advanced$field"}
+        }
+        $originBoundary=[ordered]@{new_request='UpgradeRequired';exact_old_request=$oldRequest;old_retry_preserved=$true;changed_body='RequestIdConflict';before_a=$beforeA;after_a=$afterA;before_b=$beforeB;after_b=$afterB;measurement='actual d9b public Native generation/frontiers unchanged; no per-call Native telemetry claim'}
+    }
     foreach ($path in $immutableBefore.Keys) {
         if (-not (Test-Path -LiteralPath $path) -or (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash -cne $immutableBefore[$path]) {throw "Immutable bytes changed after process kill/reopen: $path"}
     }
@@ -426,11 +464,23 @@ try {
         crash_point=$KillPoint; immutable_reopen_records_checked=$immutableBefore.Count;
         queue_p50_ms=$timings[[int][Math]::Floor(($timings.Count-1)*0.50)];queue_p95_ms=$timings[[int][Math]::Floor(($timings.Count-1)*0.95)];
         final_one=(Get-Status 'one'); final_two=(Get-Status 'two')
+        duplex_requested_counts=$(
+            if($Scenario -ceq 'Duplex'){
+                @{A=$(if($MessagesA){$MessagesA}else{$MessagesPerLane});B=$(if($MessagesB){$MessagesB}else{$MessagesPerLane})}
+            }else{$null}
+        );exhausted_boundary=$originBoundary
     }
     $result | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath (Path-In 'result.json')
     $result | ConvertTo-Json -Depth 8
 }
 finally {
     foreach ($p in $processes) { if (-not $p.HasExited) { Stop-Process -Id $p.Id; $p.WaitForExit() } }
+    if($exhaustedOrigin -and (Test-Path -LiteralPath (Path-In 'result.json')) -and -not $DeadlineGuard.WorkExpired){
+        $files=@(Get-ChildItem -LiteralPath $run -Recurse -Force -File|Sort-Object FullName|ForEach-Object {
+            if($_.Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Origin reparse point refused.'}
+            [ordered]@{path=[IO.Path]::GetRelativePath($run,$_.FullName).Replace('\','/');bytes=$_.Length;sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName).Hash.ToLowerInvariant()}
+        })
+        [ordered]@{classification='genuine-stopped-origin-provenance-not-case-verdict';frozen_original=$run;open_rule='Never reopen this original; one isolated active copy per Native domain';producer_image=$exe;producer_sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $exe).Hash.ToLowerInvariant();producer_binding='S5 contract frozen d9b61531648B; historical static-field-images01';driver_path=$PSCommandPath;driver_sha256=(Get-FileHash -Algorithm SHA256 -LiteralPath $PSCommandPath).Hash.ToLowerInvariant();driver_head=(& git -C $workspace rev-parse HEAD);feature_claim='No field rebuild; exact frozen image';processes=@($processes|ForEach-Object {[ordered]@{pid=$_.Id;has_exited=$_.HasExited}});asymmetric_text_counts=@{A=511;B=16};logical_provenance='public511/16 request/Text/Event mapping and exact receipt/frontiers in result/history artifacts; no manufactured Native';files=$files}|ConvertTo-Json -Depth 8 |Set-Content -LiteralPath (Path-In 'frozen-origin.json') -Encoding utf8
+    }
     Write-Host "process_evidence_directory=$run"
 }

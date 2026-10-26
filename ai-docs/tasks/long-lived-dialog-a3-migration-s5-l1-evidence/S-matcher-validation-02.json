@@ -1,0 +1,106 @@
+{
+  "classification": "static-shared-parser-final-policy-binding",
+  "authority_sha256": "2dac985cfdcede0729a1c61156dea3f252fc861eeebf6f2a98053fcd9074b4bb",
+  "original_input_record": "S-matcher-validation-01.json",
+  "original_input_record_sha256": "4789137667e49ea95c5d6c8de3677a3fb9fd582e53167a6808ba15e4c7d70099",
+  "runner_sha256": "c9c6841213181af75f3364128cf7d0697d45db5a7a8bf5bfda1b58986c3211ed",
+  "actual_shared_parser_sha256": "b6e1c73804b63997add074f47a1b924d88bb5b3e87ea7188ab4432ecd8dd4dc0",
+  "parsed_files": [
+    "scripts/invoke-migration-s5-l1-case.ps1",
+    "scripts/migration-s5-l1-test-result.ps1",
+    "scripts/verify-migration-s5-l1-frozen-origin.ps1",
+    "scripts/test-ordered-dialog-process.ps1"
+  ],
+  "parse_errors": 0,
+  "results": [
+    {
+      "kind": "actual immutable execution log",
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-capacity-01.log",
+      "name": null,
+      "selector": "migration_s5_process_capacity_crash_and_predecessor_fences",
+      "expected": true,
+      "actual": true
+    },
+    {
+      "kind": "actual immutable execution log",
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-isolation-02.log",
+      "name": null,
+      "selector": "migration_s5_l1_different_peer_c2_survives_signed_fork_and_account_pin",
+      "expected": true,
+      "actual": true
+    },
+    {
+      "kind": "negative static text",
+      "path": null,
+      "name": "absent",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "kind": "negative static text",
+      "path": null,
+      "name": "different",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "kind": "negative static text",
+      "path": null,
+      "name": "prefix",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "kind": "negative static text",
+      "path": null,
+      "name": "suffix",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "kind": "negative static text",
+      "path": null,
+      "name": "duplicate_names",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "kind": "negative static text",
+      "path": null,
+      "name": "duplicate_summaries",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "kind": "negative static text",
+      "path": null,
+      "name": "zero_tests",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "kind": "negative static text",
+      "path": null,
+      "name": "failed",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    },
+    {
+      "kind": "negative static text",
+      "path": null,
+      "name": "no_wrapper",
+      "selector": "exact_case",
+      "expected": false,
+      "actual": false
+    }
+  ],
+  "no_harness_or_fixture_execution": true
+}

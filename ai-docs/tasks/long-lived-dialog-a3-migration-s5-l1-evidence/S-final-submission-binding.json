@@ -1,0 +1,4914 @@
+{
+  "classification": "documentation-only-final-submission-binding-no-new-run",
+  "baseline": "73c499818ba9b699c331aa842e64e8432e90c59a",
+  "branch": "master",
+  "index": "no staged changes; index remains HEAD",
+  "authority": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-preservation-review.md",
+    "bytes": 5141,
+    "sha256": "5f911cb8f48c5e6d5c1b448789b6854603562be0a7f730fa35c3449fdb14cd7e"
+  },
+  "compiled_inputs": [
+    {
+      "path": "apps/kilogram-cli/src/main.rs",
+      "bytes": 1756492,
+      "sha256": "0950d33fb969257cd79e38834bdf9da72493bd89c2b7a7b5fd14cf0945f0cbc3"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/consent1_admin.rs",
+      "bytes": 6668,
+      "sha256": "42b170a3f2795b4d7d0729403a10bd3be2a58fcb516238146e4f06458381c0ff"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+      "bytes": 413,
+      "sha256": "0fbf38e8a9549b55dcd002d567d52ebc9eb1006aaad13c468849ae3846630be7"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/mod.rs",
+      "bytes": 1079,
+      "sha256": "1dd468c8dfa75bb7b0948eb126c95111de68d3cc51e2d9471ff033254b7ffe03"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/window.rs",
+      "bytes": 1797,
+      "sha256": "426095f83aa541223ed259b6ddb392aa2de144862b5c01c3f6bd263ea404ba3f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/bootstrap.rs",
+      "bytes": 22350,
+      "sha256": "48b265f82a08f0501e65d0663cdea86cd7877c839f114dfb1fe950bdd0b6abaa"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/config.rs",
+      "bytes": 3439,
+      "sha256": "2313cc04329a58284afc6dbf5f09ce87efc9ab9e320112b1319f83deb81903ff"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/data.rs",
+      "bytes": 19234,
+      "sha256": "8426cc13d1a2c3eea47a0b1d8288c8e5951e0e58c04b7b5020d7a71983b4c089"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/mod.rs",
+      "bytes": 1237,
+      "sha256": "54bcb444ce3e8255bc98cace3bcc2ddc9d21d3ac1081741f84309d063cdbf7aa"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/network.rs",
+      "bytes": 24672,
+      "sha256": "afa5821c4cf996d8360d2960bfb20d8958a3afa3513055177716800a053942ba"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/owner.rs",
+      "bytes": 27207,
+      "sha256": "c81ca0b842a496730f732f0e086f2624eec2b0044db0d71d9bed1f148487506f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/protocol.rs",
+      "bytes": 22539,
+      "sha256": "a6664fc2ae6bca5f20f81abc8cc7d2e63c2d0a4c14b9f4c8e0dc62810c64c0e0"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/resources.rs",
+      "bytes": 1910,
+      "sha256": "5ca93e08d68c1c7496cf139b05441f949e7ab7dd809b62cb0c7b66907d377a21"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/review1_tests.rs",
+      "bytes": 2151,
+      "sha256": "6610a3a030efb69e931248004ef15d0690b5dcbfe235e4fa54a2728792c66242"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/runtime.rs",
+      "bytes": 19579,
+      "sha256": "7bc8bf5006088f7928b653b7ddbf70331709cc98b45231ca3895e83f18ea8222"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/test_support.rs",
+      "bytes": 11357,
+      "sha256": "11ed46eec8e7322879b1072ff8edc33bf1f000b929ca812944788a3bc8327cb2"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered2_cli.rs",
+      "bytes": 23851,
+      "sha256": "ebb4364b456af163425e6b644ca51955e3c4f5c8f187ea7e2bb34623a915bbf9"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered3_cli.rs",
+      "bytes": 7806,
+      "sha256": "3e5812e8f4b6b584e0209546be49176f7469c8bce7a5e42e917df11a12b25548"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/migration_s5_process.rs",
+      "bytes": 48147,
+      "sha256": "3b8141503de00930e5cdadb1c79dc433a4dee29daf87daccdeba4e89b4f7b1d2"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_atomic.rs",
+      "bytes": 9879,
+      "sha256": "fc5f2039eb1b9988836bca8bdb3e46579b49f23e6dfeef8a58664227143a15ad"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs",
+      "bytes": 50456,
+      "sha256": "6f1576955aab0c2e9eb1e2f330d549ac35016618769c840ee3a613042c8e058f"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_isolation.rs",
+      "bytes": 7565,
+      "sha256": "964a2bb978e22f28eee6315eca0513f443ae9b5fda6422fbe14bff8d35d58cbe"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_obligations.rs",
+      "bytes": 24415,
+      "sha256": "68bc85bb08508bb73b9a89344da22518e6d1bc1ee76797c3e1bf50ad4dd06b00"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_policy.rs",
+      "bytes": 20222,
+      "sha256": "0ca7dd04fd65967f85b798bb6cb1a58a0fc79bdad80ddc1d90ae9673d15784cd"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_review1.rs",
+      "bytes": 17596,
+      "sha256": "9f4b792567f15790cc9b851d0c42f275231130c78fbfc85b7aa0a67e01f63f8e"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1.rs",
+      "bytes": 20509,
+      "sha256": "60b896e3aa4b511fe06e3307f5e988760f76bc172bb693af18ef87663405be34"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 194144,
+      "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126"
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 3398,
+      "sha256": "28700ccee74b2a78f96e945b86087ce9dfac32a2236bf61067976c2ac1082aa0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "bytes": 58084,
+      "sha256": "c3f1c082c2c76cab37ec43741930b084b99b08bd233af264d2ad52e21be87431"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "bytes": 27795,
+      "sha256": "51a3168bed785fbe5b38c8347e3d921f1f9146ef5c99c48783f26a4b8cfbe313"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7.rs",
+      "bytes": 4146,
+      "sha256": "faffa9189d14dc210a23a6f3cc5dac6b6de357b632d72a500c1d7d4fb3433893"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/admin.rs",
+      "bytes": 21053,
+      "sha256": "c09f784cf4795b6de343f8343a140e79079874df3b190ad05044523521a7bfd7"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs",
+      "bytes": 13230,
+      "sha256": "26732bea30d9c8e2a4ef030154c23c4c43747fc53ff9a7bcf6b2e0f17e143066"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/data.rs",
+      "bytes": 24900,
+      "sha256": "265ce9634a3334c36b135006889adf234da18d69c456b8d90f892f33b3bc8dc5"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/history.rs",
+      "bytes": 15504,
+      "sha256": "235e72ae0fa495de8dc1566afb6b67eae61de0aa9198fbaea3bc690cfc31453d"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops_review1_tests.rs",
+      "bytes": 2656,
+      "sha256": "7fc78c66e6df639b5079795853abab2ebb6840ea0a35d7ba5dac9634e8d233f9"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops.rs",
+      "bytes": 23635,
+      "sha256": "0216fedb707ed858562cc4485037fed949d8f5be7da66381a2034be56bf672d0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/read.rs",
+      "bytes": 20524,
+      "sha256": "75bf8ca2a04ed16b51f8535da782b8fe7ff04eea79c45e096c2153038bc9ce9c"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/tests.rs",
+      "bytes": 6681,
+      "sha256": "34131ea0523889a50be00ed4d85bcdac846062d294c442c172660e3f7cdba644"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/types.rs",
+      "bytes": 10621,
+      "sha256": "ecce02f754515e85fd88e95a32408e9f7ebe2368d8885c59299056def2c7f2fa"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/load.rs",
+      "bytes": 6003,
+      "sha256": "55d6c8278c153d3293cd1ceb7ade7b3b89544be4a2cab9cafa2073284db41abe"
+    },
+    {
+      "path": "scripts/cargo-resource-policy.ps1",
+      "bytes": 1168,
+      "sha256": "2485a0b0ae5b07d6625f218e4c02a8f6927b78c26f10b5506f157066abba676e"
+    },
+    {
+      "path": "scripts/invoke-migration-s5-l1-case.ps1",
+      "bytes": 32804,
+      "sha256": "bad2e0251c8e9dcbe6c93b4de24da840a15715aceaf7892b2b2bad2a6117578f"
+    },
+    {
+      "path": "scripts/invoke-migration-s5-l1-static.ps1",
+      "bytes": 3573,
+      "sha256": "00debd7f47502df9985a8b56231ef9fad3137fbfd77052c09b9b517d4fbc7863"
+    },
+    {
+      "path": "scripts/migration-s5-l1-deadline.ps1",
+      "bytes": 6038,
+      "sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45"
+    },
+    {
+      "path": "scripts/migration-s5-l1-test-result.ps1",
+      "bytes": 422,
+      "sha256": "b6e1c73804b63997add074f47a1b924d88bb5b3e87ea7188ab4432ecd8dd4dc0"
+    },
+    {
+      "path": "scripts/preserve-migration-s5-l1-input.ps1",
+      "bytes": 5011,
+      "sha256": "25fe5a7c80821fb83a0fab5117585a48e6afe729094c1d45931aaa1556b044f3"
+    },
+    {
+      "path": "scripts/run-cargo-tests-stable.ps1",
+      "bytes": 10839,
+      "sha256": "c2cba5140b56c99a6482884e049426ba0ed54e90b572aebf01ace45e65cd06c3"
+    },
+    {
+      "path": "scripts/test-migration-s5-l1-deadline.ps1",
+      "bytes": 3641,
+      "sha256": "6c9a9bc6d4139cfc13f85465a0fcb938921cf3464d3f3b5bc891977fb81d66e1"
+    },
+    {
+      "path": "scripts/test-migration-s5-l1-preservation.ps1",
+      "bytes": 4061,
+      "sha256": "f36929d27340c67f3d8abb522801fa273325db6a3285b99638aac0c9118a5b48"
+    },
+    {
+      "path": "scripts/test-ordered-dialog-process.ps1",
+      "bytes": 38356,
+      "sha256": "ca4336d26efd922ec5a2a8f68caf7812324966cd0a44481699003192a8abf405"
+    },
+    {
+      "path": "scripts/verify-migration-s5-l1-frozen-origin.ps1",
+      "bytes": 3458,
+      "sha256": "fec72c16ab954aa0a71cca5bb09aef0cc4bcd6c0dbfbb7fef4ce4155183ca94a"
+    }
+  ],
+  "compiled_input_mismatches": [],
+  "product_inputs": [
+    {
+      "path": "apps/kilogram-cli/src/main.rs",
+      "bytes": 1756492,
+      "sha256": "0950d33fb969257cd79e38834bdf9da72493bd89c2b7a7b5fd14cf0945f0cbc3"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/consent1_admin.rs",
+      "bytes": 6668,
+      "sha256": "42b170a3f2795b4d7d0729403a10bd3be2a58fcb516238146e4f06458381c0ff"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+      "bytes": 413,
+      "sha256": "0fbf38e8a9549b55dcd002d567d52ebc9eb1006aaad13c468849ae3846630be7"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/mod.rs",
+      "bytes": 1079,
+      "sha256": "1dd468c8dfa75bb7b0948eb126c95111de68d3cc51e2d9471ff033254b7ffe03"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/window.rs",
+      "bytes": 1797,
+      "sha256": "426095f83aa541223ed259b6ddb392aa2de144862b5c01c3f6bd263ea404ba3f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/bootstrap.rs",
+      "bytes": 22350,
+      "sha256": "48b265f82a08f0501e65d0663cdea86cd7877c839f114dfb1fe950bdd0b6abaa"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/config.rs",
+      "bytes": 3439,
+      "sha256": "2313cc04329a58284afc6dbf5f09ce87efc9ab9e320112b1319f83deb81903ff"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/data.rs",
+      "bytes": 19234,
+      "sha256": "8426cc13d1a2c3eea47a0b1d8288c8e5951e0e58c04b7b5020d7a71983b4c089"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/mod.rs",
+      "bytes": 1237,
+      "sha256": "54bcb444ce3e8255bc98cace3bcc2ddc9d21d3ac1081741f84309d063cdbf7aa"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/network.rs",
+      "bytes": 24672,
+      "sha256": "afa5821c4cf996d8360d2960bfb20d8958a3afa3513055177716800a053942ba"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/owner.rs",
+      "bytes": 27207,
+      "sha256": "c81ca0b842a496730f732f0e086f2624eec2b0044db0d71d9bed1f148487506f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/protocol.rs",
+      "bytes": 22539,
+      "sha256": "a6664fc2ae6bca5f20f81abc8cc7d2e63c2d0a4c14b9f4c8e0dc62810c64c0e0"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/resources.rs",
+      "bytes": 1910,
+      "sha256": "5ca93e08d68c1c7496cf139b05441f949e7ab7dd809b62cb0c7b66907d377a21"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/review1_tests.rs",
+      "bytes": 2151,
+      "sha256": "6610a3a030efb69e931248004ef15d0690b5dcbfe235e4fa54a2728792c66242"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/runtime.rs",
+      "bytes": 19579,
+      "sha256": "7bc8bf5006088f7928b653b7ddbf70331709cc98b45231ca3895e83f18ea8222"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/test_support.rs",
+      "bytes": 11357,
+      "sha256": "11ed46eec8e7322879b1072ff8edc33bf1f000b929ca812944788a3bc8327cb2"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered2_cli.rs",
+      "bytes": 23851,
+      "sha256": "ebb4364b456af163425e6b644ca51955e3c4f5c8f187ea7e2bb34623a915bbf9"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered3_cli.rs",
+      "bytes": 7806,
+      "sha256": "3e5812e8f4b6b584e0209546be49176f7469c8bce7a5e42e917df11a12b25548"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 194144,
+      "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126"
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 3398,
+      "sha256": "28700ccee74b2a78f96e945b86087ce9dfac32a2236bf61067976c2ac1082aa0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "bytes": 58084,
+      "sha256": "c3f1c082c2c76cab37ec43741930b084b99b08bd233af264d2ad52e21be87431"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "bytes": 27795,
+      "sha256": "51a3168bed785fbe5b38c8347e3d921f1f9146ef5c99c48783f26a4b8cfbe313"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7.rs",
+      "bytes": 4146,
+      "sha256": "faffa9189d14dc210a23a6f3cc5dac6b6de357b632d72a500c1d7d4fb3433893"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/admin.rs",
+      "bytes": 21053,
+      "sha256": "c09f784cf4795b6de343f8343a140e79079874df3b190ad05044523521a7bfd7"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs",
+      "bytes": 13230,
+      "sha256": "26732bea30d9c8e2a4ef030154c23c4c43747fc53ff9a7bcf6b2e0f17e143066"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/data.rs",
+      "bytes": 24900,
+      "sha256": "265ce9634a3334c36b135006889adf234da18d69c456b8d90f892f33b3bc8dc5"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/history.rs",
+      "bytes": 15504,
+      "sha256": "235e72ae0fa495de8dc1566afb6b67eae61de0aa9198fbaea3bc690cfc31453d"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops_review1_tests.rs",
+      "bytes": 2656,
+      "sha256": "7fc78c66e6df639b5079795853abab2ebb6840ea0a35d7ba5dac9634e8d233f9"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops.rs",
+      "bytes": 23635,
+      "sha256": "0216fedb707ed858562cc4485037fed949d8f5be7da66381a2034be56bf672d0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/read.rs",
+      "bytes": 20524,
+      "sha256": "75bf8ca2a04ed16b51f8535da782b8fe7ff04eea79c45e096c2153038bc9ce9c"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/tests.rs",
+      "bytes": 6681,
+      "sha256": "34131ea0523889a50be00ed4d85bcdac846062d294c442c172660e3f7cdba644"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/types.rs",
+      "bytes": 10621,
+      "sha256": "ecce02f754515e85fd88e95a32408e9f7ebe2368d8885c59299056def2c7f2fa"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/load.rs",
+      "bytes": 6003,
+      "sha256": "55d6c8278c153d3293cd1ceb7ade7b3b89544be4a2cab9cafa2073284db41abe"
+    }
+  ],
+  "product_build": "S-build-11",
+  "product_stage": "S-stage-10",
+  "product_cli_sha256": "69744fca50f44439b4734e699f416fc6b2bb8aac4336e5dad18ed173b2abbf6c",
+  "features": [],
+  "test_harness": {
+    "path": "target/verification/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+    "bytes": 14014976,
+    "sha256": "12bb6adda2a96c518785b654369805f6502b6e69998e28b30b1cde052688156e"
+  },
+  "images": [
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "bytes": 61531648,
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration-predecessor-s5/kilogram-cli.exe",
+      "bytes": 67720192,
+      "sha256": "5685e34704c39edb3d6c7531f0c3c78d590915600201e52b9b9114516a231926"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration-preready/kilogram-cli.exe",
+      "bytes": 70222848,
+      "sha256": "a3ff9d2ee67e5b01db8f4c922247737d0dee7bb4c639477be3e02d4999b13c56"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration-prereview/kilogram-cli.exe",
+      "bytes": 69767680,
+      "sha256": "4f4c240f10e90f86aaae5bf087bb4056280e7da762d52c68ebfeb24432542d98"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+      "bytes": 70226432,
+      "sha256": "69744fca50f44439b4734e699f416fc6b2bb8aac4336e5dad18ed173b2abbf6c"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-l1-control-peer.exe",
+      "bytes": 70226432,
+      "sha256": "69744fca50f44439b4734e699f416fc6b2bb8aac4336e5dad18ed173b2abbf6c"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-predecessor-s3/kilogram-state-predecessor.exe",
+      "bytes": 5344768,
+      "sha256": "6932db6bc228cdd38fc358792cc5cd41fcfd1e5445c087a7c0f535ce4f0c1e4e"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+      "bytes": 66188800,
+      "sha256": "d5d8c8c118925dfde67e37fdb32aa5a120293cde258e93843dd1939fddb15560"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-relay.exe",
+      "bytes": 17057280,
+      "sha256": "b8723b8cb546a0ceccf3179415d580b073f0a36d2f9a458ecfd15c66bf2c6317"
+    }
+  ],
+  "dependency_attribute_and_policy_baselines": [
+    {
+      "file": {
+        "path": "Cargo.lock",
+        "bytes": 194144,
+        "sha256": "f5313a5adcdd4cea1627e47fc2a9b760cee3d7113a5bce1c663e559bbd46f126"
+      },
+      "baseline_git_blob": "e7c84d5d67474922b28507111b18234b14605a15",
+      "current_normalized_git_blob": "e7c84d5d67474922b28507111b18234b14605a15"
+    },
+    {
+      "file": {
+        "path": "Cargo.toml",
+        "bytes": 3398,
+        "sha256": "28700ccee74b2a78f96e945b86087ce9dfac32a2236bf61067976c2ac1082aa0"
+      },
+      "baseline_git_blob": "071076d2d24dbe6eef6d2df0e9eb0efad9556512",
+      "current_normalized_git_blob": "071076d2d24dbe6eef6d2df0e9eb0efad9556512"
+    },
+    {
+      "file": {
+        "path": ".gitattributes",
+        "bytes": 84,
+        "sha256": "f210f4208215f48ad7840abde7a3aadc033638507372fa0ecaf547941441c570"
+      },
+      "baseline_git_blob": "63507a4b9c51df9240e37997cb2309062536a4ec",
+      "current_normalized_git_blob": "63507a4b9c51df9240e37997cb2309062536a4ec"
+    },
+    {
+      "file": {
+        "path": "scripts/run-cargo-tests-stable.ps1",
+        "bytes": 10839,
+        "sha256": "c2cba5140b56c99a6482884e049426ba0ed54e90b572aebf01ace45e65cd06c3"
+      },
+      "baseline_git_blob": "9382cadb6ae2ecdc9a9a782e06d2439f9639e723",
+      "current_normalized_git_blob": "9382cadb6ae2ecdc9a9a782e06d2439f9639e723"
+    },
+    {
+      "file": {
+        "path": "scripts/cargo-resource-policy.ps1",
+        "bytes": 1168,
+        "sha256": "2485a0b0ae5b07d6625f218e4c02a8f6927b78c26f10b5506f157066abba676e"
+      },
+      "baseline_git_blob": "944d30569eddf975e5f73d15eb6f741fc7af00d0",
+      "current_normalized_git_blob": "944d30569eddf975e5f73d15eb6f741fc7af00d0"
+    }
+  ],
+  "final_static_references": [
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-build-11.json",
+      "bytes": 19460,
+      "sha256": "1301def99287f4ae1873052dfd205d27d305f003418fbf8d82903b925c516dd7"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-build-11.log",
+      "bytes": 175,
+      "sha256": "d1d2fc086ae9f8dc170894dbca612d466f0d5cc34e82f5209235f131d470c8d9"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-stage-10.json",
+      "bytes": 544,
+      "sha256": "5e0816fdee3d86b569cca2dba380850610693c5bd6f2f29044c646cadd8e7320"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-18.json",
+      "bytes": 19528,
+      "sha256": "858802b78b6913566644a2f77fe3c19284ea2ebb1bab8360e54352a49ddb4cb8"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-18.log",
+      "bytes": 569,
+      "sha256": "9f4597e13d0a832a227e1db47b2d7fd98e8a20cd265aa3d5ed979f0e90ad30a1"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-26.json",
+      "bytes": 20622,
+      "sha256": "6beacc8d9684e8e0b4035a2659511bffe1ce76eaea9f6ff951ab9c4365984772"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-26.log",
+      "bytes": 174,
+      "sha256": "40cd64911af34ed674a66c5592f206ca431877ee6323cd6f1610fb7fa7f10a22"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-22.json",
+      "bytes": 20558,
+      "sha256": "607b16c79f66aa5f4cdebd6241ad6fbed24c9258712103ca9f41e597616bf061"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-22.log",
+      "bytes": 1707,
+      "sha256": "5be32289619be829321331b1dbeffafe7bd949578a0c838ffa32d6b913a40428"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-30.json",
+      "bytes": 20459,
+      "sha256": "83209eed7ee2eb2263a1b1b4ed4300fda158ef5e20f93409c6afbd01a675ae88"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-30.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-final-reuse-assessment.json",
+      "bytes": 45423,
+      "sha256": "135337b1a62b5c64d665a4a24413d5dd63263e1fd7967d1c93c508a1d1fc4f6e"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-completion-readiness-binding.json",
+      "bytes": 49592,
+      "sha256": "afdd0ad89fb55ae3fee6d412b55e8c58ec905d585b4f90dd75b38b6fa301bae3"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-completion-policy.json",
+      "bytes": 2557,
+      "sha256": "08e32561c3fc900651e74f6daede17c4f5c56eb95b06edbd26f0d83ddb1773c2"
+    }
+  ],
+  "static_attempt_index": [
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-build-01.json",
+        "bytes": 1574,
+        "sha256": "9003983114b834b141f5eb8ad90d8a2cee5d9b6db6be3f877019bf0287c91f06"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-build-01.log",
+        "bytes": 256,
+        "sha256": "e64123059354261f8586931b8ba7ad6afd8cfc8773630167a71b7196745e56a9"
+      },
+      "classification": "static-only",
+      "action": null,
+      "exit_code": 0,
+      "elapsed_seconds": 94.9217544,
+      "argv": [
+        "scripts/invoke-cargo-friendly.ps1",
+        "build",
+        "-CargoJobs",
+        "12",
+        "--locked",
+        "--offline",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--bin",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-build-02.json",
+        "bytes": 14350,
+        "sha256": "2140d407578995de9affe65e8777067cc53be7e3c8f05ca9de67056bbb0ec984"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-build-02.log",
+        "bytes": 569,
+        "sha256": "9ae0a01ef173ad3839b3f79b2883476ce593ab63b3e9839e5673c99edaa40d46"
+      },
+      "classification": "static-only",
+      "action": "Build",
+      "exit_code": 0,
+      "elapsed_seconds": 87.1660702,
+      "argv": [
+        "build",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--bin",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-build-03.json",
+        "bytes": 14776,
+        "sha256": "88503290adf682b96ee0326d5804d0a3fe332fc0a760e2c48a6f88a035c454b1"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-build-03.log",
+        "bytes": 569,
+        "sha256": "8ef1e2315790c9c33a77601073432f3556bc57547b0ba38a17a0230ba4873cd6"
+      },
+      "classification": "static-only",
+      "action": "Build",
+      "exit_code": 0,
+      "elapsed_seconds": 69.3037267,
+      "argv": [
+        "build",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--bin",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-build-04.json",
+        "bytes": 14776,
+        "sha256": "deb45d6808298da143aa73b1f645bcabf2403617c6d0f95965768f87d4ce84d6"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-build-04.log",
+        "bytes": 175,
+        "sha256": "4c126c1a2b08b5e454bf381ea32db315b9e12b7417c12ba4535b521f30443846"
+      },
+      "classification": "static-only",
+      "action": "Build",
+      "exit_code": 0,
+      "elapsed_seconds": 57.9694051,
+      "argv": [
+        "build",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--bin",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-build-05.json",
+        "bytes": 16355,
+        "sha256": "c0ad0e360092e5ccdec4c0a45003fd7737a7803738f7ef553801afb3daad9c80"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-build-05.log",
+        "bytes": 569,
+        "sha256": "4f05c9b283df02117cfcfb76f05f43b7dbe3e20fdbffc665a5fe5bb40b2c67f3"
+      },
+      "classification": "static-only",
+      "action": "Build",
+      "exit_code": 0,
+      "elapsed_seconds": 37.479121,
+      "argv": [
+        "build",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--bin",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-build-06.json",
+        "bytes": 16755,
+        "sha256": "77eac5b32affad7299bb5b50c114814f5cc87871e1b8cb510112d98a8821d902"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-build-06.log",
+        "bytes": 175,
+        "sha256": "e48876e66eda3106204ead75c55e94d6e93eed259de3a3c1949d6c17e55f3f0c"
+      },
+      "classification": "static-only",
+      "action": "Build",
+      "exit_code": 0,
+      "elapsed_seconds": 28.845488,
+      "argv": [
+        "build",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--bin",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-build-07.json",
+        "bytes": 16756,
+        "sha256": "0c57c9d5f85d922023abb3bf2e81e14857d776e827e8228a50d5b3d3c6e5f317"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-build-07.log",
+        "bytes": 175,
+        "sha256": "95ac77e2d44a4c8e41ae98ff91e2e75848feedfe7d61146c214beefb9fc2fea7"
+      },
+      "classification": "static-only",
+      "action": "Build",
+      "exit_code": 0,
+      "elapsed_seconds": 29.3695132,
+      "argv": [
+        "build",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--bin",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-build-08.json",
+        "bytes": 16756,
+        "sha256": "500b7398f03e7c1a2d1ea8beddbdb05c16ef8d9e2fe2b532caa5cde624861499"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-build-08.log",
+        "bytes": 175,
+        "sha256": "9c9bdd5dc2873d28441a4828208aa3df96de579c97276b092ff6565cae7a8e69"
+      },
+      "classification": "static-only",
+      "action": "Build",
+      "exit_code": 0,
+      "elapsed_seconds": 29.4648266,
+      "argv": [
+        "build",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--bin",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-build-09.json",
+        "bytes": 17836,
+        "sha256": "e3a9dc4fb73f6a74cb5b16e51e1f98375fd156ef558ca4b37881efa992a878c8"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-build-09.log",
+        "bytes": 175,
+        "sha256": "3525458897a4a96dbe48de6317fa03670d452a70923fc51aaed9130e5d04f203"
+      },
+      "classification": "static-only",
+      "action": "Build",
+      "exit_code": 0,
+      "elapsed_seconds": 29.4761008,
+      "argv": [
+        "build",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--bin",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-build-10.json",
+        "bytes": 19458,
+        "sha256": "dbf6e07c921a4575c53d4e29a9bb085f4f1a5a9b57926d81171cfdff39769f25"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-build-10.log",
+        "bytes": 569,
+        "sha256": "3c34b9906325d0fc9ae6cf9de7e11231507a00652a587a304358e9e14e00e8f8"
+      },
+      "classification": "static-only",
+      "action": "Build",
+      "exit_code": 0,
+      "elapsed_seconds": 40.3180045,
+      "argv": [
+        "build",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--bin",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-build-11.json",
+        "bytes": 19460,
+        "sha256": "1301def99287f4ae1873052dfd205d27d305f003418fbf8d82903b925c516dd7"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-build-11.log",
+        "bytes": 175,
+        "sha256": "d1d2fc086ae9f8dc170894dbca612d466f0d5cc34e82f5209235f131d470c8d9"
+      },
+      "classification": "static-only",
+      "action": "Build",
+      "exit_code": 0,
+      "elapsed_seconds": 28.3766376,
+      "argv": [
+        "build",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--bin",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-cli-check-01.json",
+        "bytes": 12069,
+        "sha256": "d19b10f5509c7114f2b72bd909dfb98d34b2e4870838c8ab706650dea8f6b50c"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-cli-check-01.log",
+        "bytes": 3476,
+        "sha256": "5d97cc171073762f49d4302eb552bce164c00bd8522b02d52a0ff16d3ad45318"
+      },
+      "classification": "static-only",
+      "action": "Check",
+      "exit_code": 101,
+      "elapsed_seconds": 18.2886283,
+      "argv": [
+        "check",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-cli-check-02.json",
+        "bytes": 12067,
+        "sha256": "b4a44e6d427a99778f78e72c5d7db82c92c154a1809dd5150826c5eb7e21b8b9"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-cli-check-02.log",
+        "bytes": 569,
+        "sha256": "c97e9a0442a2adbbbbb5d4964b0c88391d703579f45182a9d75549063b1f0933"
+      },
+      "classification": "static-only",
+      "action": "Check",
+      "exit_code": 0,
+      "elapsed_seconds": 20.7690839,
+      "argv": [
+        "check",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-01.json",
+        "bytes": 12172,
+        "sha256": "247e94465d9a74fd7ae36b4420e4fdfcf9ef94c26a626f2c88cab2a208137518"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-01.log",
+        "bytes": 5970,
+        "sha256": "6749d3ef22a6af4103640715b206876a97cd8c97cba1bbfa13be615589d2f336"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 101,
+      "elapsed_seconds": 14.0487075,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-02.json",
+        "bytes": 12890,
+        "sha256": "1b847f5fae193677cf511a433889658146c3b5175a2e1c723500bb7e2d784c0a"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-02.log",
+        "bytes": 7776,
+        "sha256": "53609ac3525e15d999010cf53970132dec8fba882dcefcd3bfd0593d8936d7ce"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 101,
+      "elapsed_seconds": 25.6024841,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-03.json",
+        "bytes": 14422,
+        "sha256": "f383878b12690db19e8a151845ef9b93c83c97bf47593163f9484330f199bbda"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-03.log",
+        "bytes": 7455,
+        "sha256": "6caf9f25c95560d29ba3e4a33ae815e5322db528e216bbc6461465603269ff29"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 101,
+      "elapsed_seconds": 48.5842231,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-04.json",
+        "bytes": 14420,
+        "sha256": "be1f50ccfb08e69e01fb792e19b0d7dc6e76d9f4d7e5952564da9b5de06c31cd"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-04.log",
+        "bytes": 1242,
+        "sha256": "5575d4ea0b6daf419bb3f8f2f1e3964d87d7a2f3259cac3f1b63279c69f7eb87"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 101,
+      "elapsed_seconds": 35.39881,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-05.json",
+        "bytes": 14846,
+        "sha256": "408c4e55a93879f5b983e1a17ee6b76cc683a770550ab0d866adaa59fca07063"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-05.log",
+        "bytes": 569,
+        "sha256": "cb890b320142340cc2d37349e6fc79a54d43fd0ad71494fb65accf0f9090b19f"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 55.4224936,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-06.json",
+        "bytes": 16428,
+        "sha256": "d43282aadaec65456f80b859340f35a8247f955e9e4451ebd9563e0877f8b3de"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-06.log",
+        "bytes": 1375,
+        "sha256": "26e26bf0e7b292d820b6e9f4d39eb8da8e4c000aa2d4b68d39c1c3abf1c3c3fd"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 101,
+      "elapsed_seconds": 26.9209338,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-07.json",
+        "bytes": 16425,
+        "sha256": "a3af0a2430e25f88334ace3f05a34ea5159e544eb22f105cea911112beece9bb"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-07.log",
+        "bytes": 174,
+        "sha256": "1fbfa142c1669d43f620a552dc2df77f326587fb247f16681cf8f4a97a9411bf"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 3.0585654,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-08.json",
+        "bytes": 16426,
+        "sha256": "11c1dbaa4d3a1e7800cc7fbc5454b4cfda548cf53568e81d492045f3f91532cb"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-08.log",
+        "bytes": 175,
+        "sha256": "ba8be2d55645998f5b7194617dd9b647ef12e7799ea5345a8042fbcfc8cef219"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 19.4080089,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-09.json",
+        "bytes": 16825,
+        "sha256": "ec2ed5dea072e6b76292d34592ba3d21534091e55106bab7f94a9e1cf646fe0c"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-09.log",
+        "bytes": 174,
+        "sha256": "171427ed7cdff24e8f504b7e2664e00b14c6392f8e844f1801aa6e83d346f4cf"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 3.2018513,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-10.json",
+        "bytes": 16826,
+        "sha256": "4620ab1d0d83fb52d13144fba418e9387e8870fa1550d44139bf2d08f3f06422"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-10.log",
+        "bytes": 175,
+        "sha256": "fc94c82e41446dbf775322f09696e8befaf7327800143ff5a0130e7c873d7b7c"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 21.6250947,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-11.json",
+        "bytes": 16826,
+        "sha256": "f093782c22994532b6cdb52909f3f4f5a55d42206b6d7159e4c90fa41fced8b7"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-11.log",
+        "bytes": 5174,
+        "sha256": "b02848e3d5ab26e64e94c33067a1e9a199e3a112a40bd34dc8becc1f891bd286"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 101,
+      "elapsed_seconds": 7.919821,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-12.json",
+        "bytes": 16826,
+        "sha256": "c9f4886d62d3493c2b96428c9a094060ce84ed1fe78f6d51b81631ebe7d5b8e9"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-12.log",
+        "bytes": 175,
+        "sha256": "a3f9d9ac9307324498a890ce414c1896783d4ac616fdd27db52dfc9bf15b7131"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 20.1800882,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-13.json",
+        "bytes": 17906,
+        "sha256": "b12515898ea949ed1bdee686c9c2671c3e9e2ef7862f5d783bff9f2f9179fc55"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-13.log",
+        "bytes": 175,
+        "sha256": "c37a6d03a1ab61ac02c5d12c521d3e3d143b63efbb1f9915ee8bf720000ba7c9"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 21.2477664,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-14.json",
+        "bytes": 18275,
+        "sha256": "1a88b65add86eb08344997da7d34e45563e81c446f0b0437ecffe86c61e3058c"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-14.log",
+        "bytes": 174,
+        "sha256": "ab9f220d540b912f1df67c134c7cfe4f0449fa519d61f6d09d38ddaca95fbe24"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 3.0781851,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-15.json",
+        "bytes": 18275,
+        "sha256": "e4f39f20efe4607d04137dfb124a3cbd81c4ba68660765bf2c4054561c1e7183"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-15.log",
+        "bytes": 174,
+        "sha256": "bdabdaa5e48dbde5bf9d4992beef4d9a1090388b27c272d4768cbe64d5cb9da9"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 3.8060602,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-16.json",
+        "bytes": 18275,
+        "sha256": "c77068f5ff95354f6579a9ff5c251f5e4adcb823c7f0215ab1a80e10c46b9749"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-16.log",
+        "bytes": 174,
+        "sha256": "d91e501f701e9155ae96efb16cc0b8fc5091127d2823340d192df088273287f6"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 3.7328699,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-17.json",
+        "bytes": 19080,
+        "sha256": "cd35fc04b7cd6745032d7dc0dab2adb70d95520ae84a19c69beb9108d9edc558"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-17.log",
+        "bytes": 2020,
+        "sha256": "72cab87a0581677d696d17557e10ce48e8807c003869ca4b431b9dd36b3a510d"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 101,
+      "elapsed_seconds": 8.423325,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-18.json",
+        "bytes": 19528,
+        "sha256": "858802b78b6913566644a2f77fe3c19284ea2ebb1bab8360e54352a49ddb4cb8"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-18.log",
+        "bytes": 569,
+        "sha256": "9f4597e13d0a832a227e1db47b2d7fd98e8a20cd265aa3d5ed979f0e90ad30a1"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 44.0439025,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-19.json",
+        "bytes": 19491,
+        "sha256": "96486171c679fabdc4452d31d2656aaa5b3f9f7e438558ac38b52be02fb6b2e9"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-19.log",
+        "bytes": 773,
+        "sha256": "70fc9aea65725c39fb4f5f40852e164a2dbf89c344e782621da4eb6e114973fe"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 101,
+      "elapsed_seconds": 19.0672483,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-20.json",
+        "bytes": 19489,
+        "sha256": "e924886963753bfbe4c976f625d1c16c177f02ec7bfe045da63407e4466d2c46"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-20.log",
+        "bytes": 175,
+        "sha256": "e9f5df3da47ecc41c583e22d6239b1e1a440f77083595ba37ad46b11e6859e43"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 18.6433374,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-21.json",
+        "bytes": 20622,
+        "sha256": "42e929256e22c32beddd4003485d77d83d498b0dad458cec8ac80c323b7e4418"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-21.log",
+        "bytes": 174,
+        "sha256": "de97744574ec3cccf7189467590efa53e21c034c86a0fe7708e15777b2c1992f"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 3.1542143,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-22.json",
+        "bytes": 20622,
+        "sha256": "7b55fb5c19cdc28c2a4be0017b7b5d8ddf769fdaa7d8c91f13ddb76dcf2fa3a9"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-22.log",
+        "bytes": 174,
+        "sha256": "73e2559400c906642ee4ffc6f3154424dab05b40627fb02018afa0e981ce2f1d"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 3.4413655,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-23.json",
+        "bytes": 20622,
+        "sha256": "c1de81606770d9d999ee3f59dc1893b314fd54279c253827114bd852d0b3c70f"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-23.log",
+        "bytes": 174,
+        "sha256": "0513e8c8777bccd9d65e3ef7f11bd49a6606c0663b25b8886f1419e2d209076c"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 3.3466573,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-24.json",
+        "bytes": 20622,
+        "sha256": "fc5c89c4654dd8d4d1c0517d499ac624c8c5e3111c1857414b8a638dd948c01c"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-24.log",
+        "bytes": 174,
+        "sha256": "9aac734d3379c8f16e315144d4b18b47d3f07c9b0d1388a715e348cddf9e340a"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 3.4830869,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-25.json",
+        "bytes": 20622,
+        "sha256": "76fbae2f06c0df569260bc07a4fff838cb4376519de4c72b341a155bac49574a"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-25.log",
+        "bytes": 174,
+        "sha256": "cfb33f801cc588b17494780cbff67d575ea3b36be039efec0de5329a23b8d4eb"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 3.3669095,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-clippy-26.json",
+        "bytes": 20622,
+        "sha256": "6beacc8d9684e8e0b4035a2659511bffe1ce76eaea9f6ff951ab9c4365984772"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-clippy-26.log",
+        "bytes": 174,
+        "sha256": "40cd64911af34ed674a66c5592f206ca431877ee6323cd6f1610fb7fa7f10a22"
+      },
+      "classification": "static-only",
+      "action": "Clippy",
+      "exit_code": 0,
+      "elapsed_seconds": 4.1847154,
+      "argv": [
+        "clippy",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-cli",
+        "--all-targets",
+        "--",
+        "-D",
+        "warnings"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-01.json",
+        "bytes": 14316,
+        "sha256": "d1b0c5e9ac9a168b873037456075f116a5383432a8c432bccfc202c51ec5ad72"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-01.log",
+        "bytes": 2102,
+        "sha256": "8a0dac4e99c5d3cbdf850761b2fae802f99c52b593e40d19de47f532142c0853"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 120.2219754,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-02.json",
+        "bytes": 14765,
+        "sha256": "f829c4e79c3b6c15ebe5bda68d0f0792f57eadbc1911b3fad55546dfd2e86b12"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-02.log",
+        "bytes": 2503,
+        "sha256": "10bbde43f373c5b1fea51e3cd112de1a39c5fbfacd16454fb79cbacd3b4a0eb0"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 110.7885313,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-state",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-03.json",
+        "bytes": 14763,
+        "sha256": "14edaa98b388dce8e69bce074af71c7fa3c71c0eabe266b04977cceb546fcd0c"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-03.log",
+        "bytes": 2207,
+        "sha256": "d2661125db9d79c129be7e33f128ed5ee367da73d1d56334070a7528bc917562"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 96.545647,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-state",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-04.json",
+        "bytes": 16344,
+        "sha256": "883349177a11f03ce5e192eb64ad3d27e90c823d584736e1ac55f4edccbd1751"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-04.log",
+        "bytes": 2503,
+        "sha256": "44ea398c110b67703b0306079b4be45c2dcf6b0a986e3444a30b8b480f60aff1"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 56.6459542,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-state",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-05.json",
+        "bytes": 16744,
+        "sha256": "1eaed3b8c12560afa3b40c89b0f06be22e815053736d078811eb362c8fe38f33"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-05.log",
+        "bytes": 2109,
+        "sha256": "5e383d91e35aa908ceb4863f2557936f09fbbc6fecdebba51667fb7b62e2b1e1"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 47.8092963,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-state",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-06.json",
+        "bytes": 16721,
+        "sha256": "8718a6c33d07d00e0e0b8b8459fb927247ef285f562b72e4242e1305be414671"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-06.log",
+        "bytes": 1707,
+        "sha256": "47b79c893462dd17e14284924ce992b19c025fffc74303e39436eaa693de1fe1"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 18.5670051,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-07.json",
+        "bytes": 16762,
+        "sha256": "537208c1285e7d10f4b5491dee285a802b8e07e6e484cae01a0edc04f8018cd7"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-07.log",
+        "bytes": 2272,
+        "sha256": "a1cea3a387ef096ec10c52cb1bb2d27d0fa5227d89fa4eb7fd3c7302b3ecab4b"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 1,
+      "elapsed_seconds": 3.769896,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-08.json",
+        "bytes": 16721,
+        "sha256": "6aebc43d7bb4011b513a13ff3bf6c476df3d11ebed983e445cbccbe406915a1d"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-08.log",
+        "bytes": 1707,
+        "sha256": "defedda79aef2eb0998215d34783d74f84cfecf506e6bd6966a58209948930c7"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 18.1477074,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-09.json",
+        "bytes": 16721,
+        "sha256": "8bbc7dc01875076a72316f289a0a573e7871ad73b007b02aba989eeadb76c00d"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-09.log",
+        "bytes": 1708,
+        "sha256": "05f8d8bcea09d816bc2197989eff221dc808021091334aae0a4cc00ed0452cfb"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 50.2495887,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-10.json",
+        "bytes": 16721,
+        "sha256": "47571abbbe9ac60135ed9244b2caf740f83f001cc18553444f2dc040461dfc00"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-10.log",
+        "bytes": 1708,
+        "sha256": "5b214a525d486b21674a526a44fe07b709e2380665592c0ea477ea049134b1c1"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 49.7999453,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-11.json",
+        "bytes": 17801,
+        "sha256": "dc40563d5fb8352d283ccec56d8ac859d9680b5ef9960bbd9fb948b5db2b6720"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-11.log",
+        "bytes": 1708,
+        "sha256": "eac37a5089bbd26413815abb9f0be7b3a69a8021a54a39ab0f878fbe409b344a"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 51.3113848,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-12.json",
+        "bytes": 18171,
+        "sha256": "11e9b2e69a50aeecf792e6d6af6b612fe8f72751cfbcb3344368ffde91d595ff"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-12.log",
+        "bytes": 1707,
+        "sha256": "05bd23812ba2ec7a79c5f6386fbf8a6a0790680c47a4bc133fde83a26e2a9dfb"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 18.5533577,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-13.json",
+        "bytes": 18171,
+        "sha256": "624f9808ccb83f64ea7d9dbb62ae53b69200ff53e5a63cf8e0b7041fc3b57825"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-13.log",
+        "bytes": 1707,
+        "sha256": "2701d47d094a518eb3475034bbb622e8b0681d5e0b9023a4ec8fda58e8369b3e"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 21.3212334,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-14.json",
+        "bytes": 18171,
+        "sha256": "2a8d6e843c86faafff17765ddf811db0dc35d4600bd27ba376a79e1f0eb24b4c"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-14.log",
+        "bytes": 1707,
+        "sha256": "85e1c5d69ad2da28ca89a3b26a764965705f7ae2baf7cc7b202d5b826ffa4b6f"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 19.1495168,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-15.json",
+        "bytes": 19446,
+        "sha256": "d09f6e341a3910e5acc6952a53d8105e971a138d0b3fb6a279530ae2f0301e30"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-15.log",
+        "bytes": 2503,
+        "sha256": "afb49a52ab6e871fb5f0dbea14507cc6972fdeb0679b36f044eefb9c146a4f72"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 59.1359183,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-state",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-16.json",
+        "bytes": 19425,
+        "sha256": "599ff5e7726430e8dbb27a6cd23c19272c1bb21fea850707ab6f0e2be8a2b1a7"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-16.log",
+        "bytes": 1708,
+        "sha256": "8fec429eaf8235009aad88606bfffbf878310ea6e5fe387164858f1bdc6f4dbb"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 47.0133169,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-17.json",
+        "bytes": 20559,
+        "sha256": "c37b621e72fdfa3836c47817d5dbeeeba7d02a22a9373962ab3161fb358ff3a3"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-17.log",
+        "bytes": 1706,
+        "sha256": "475965c2307519a679927668f08204de844cbea3b69e5ba1bfa652431fb7e2c4"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 18.8901529,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-18.json",
+        "bytes": 20559,
+        "sha256": "652d002fd06d1db7f4d8b23666671e9b4e504657439fb726664b2e762bbd6aeb"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-18.log",
+        "bytes": 1706,
+        "sha256": "2d116c531b25e547cf4e134ebaa929fcc38ed9ee2bc458871e81de50efbf53cf"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 20.4573052,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-19.json",
+        "bytes": 20559,
+        "sha256": "515e58ad8cdf689b98043d625b5562366a8d8d1352c726c61f8a89a68fc04103"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-19.log",
+        "bytes": 1707,
+        "sha256": "230e8418d7ac5d01403200485df72eb589076f1458fc439a74a9731825dcc06f"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 21.5881405,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-20.json",
+        "bytes": 20559,
+        "sha256": "e7a0fe6f2ccd3db800d2e46bae61fb4940238024058af9bd8c9eee1985491484"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-20.log",
+        "bytes": 1707,
+        "sha256": "fbb544e8f2fbb4b95460d9148d68386a09e7f2d8c04fb9880a5d5d3a6369acee"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 21.2038928,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-21.json",
+        "bytes": 20559,
+        "sha256": "8bf8936cbc8a6329a9582915ae16640cb97a5560e70a953b360ade96c6100b15"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-21.log",
+        "bytes": 1707,
+        "sha256": "de3b3c0bf5d59cbab3976587f8ca0253310db05aebf0ae030ed10325d97ca3db"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 21.0042926,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-compile-22.json",
+        "bytes": 20558,
+        "sha256": "607b16c79f66aa5f4cdebd6241ad6fbed24c9258712103ca9f41e597616bf061"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-compile-22.log",
+        "bytes": 1707,
+        "sha256": "5be32289619be829321331b1dbeffafe7bd949578a0c838ffa32d6b913a40428"
+      },
+      "classification": "static-only",
+      "action": "Compile",
+      "exit_code": 0,
+      "elapsed_seconds": 20.718447,
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Package",
+        "kilogram-cli"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-01.json",
+        "bytes": 11932,
+        "sha256": "d68cd99eb01ab4ae244cb5073edb4d72af90cfa9fcba1f8bc3880eaaf94ad2a3"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-01.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 5.2036221,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-02.json",
+        "bytes": 14182,
+        "sha256": "07ee088a5d4d7cc9a21c67ec2ad382668de573de7c6bb491ae1045d5db528c69"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-02.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 5.9575664,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-03.json",
+        "bytes": 14609,
+        "sha256": "4b4fa4b2e2e33e438a0e36310455b7c220d6ce20d73183c70b06940da7f0da79"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-03.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 8.2729431,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-04.json",
+        "bytes": 14609,
+        "sha256": "67fd5098bd6cdf1fc2626d2ea9bfd01d26ab2733cfd0e5ba16c88f3abaccb608"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-04.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 7.4521895,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-05.json",
+        "bytes": 14609,
+        "sha256": "b7656a40334d607028a54cea21fe6b207a25c14f268b4946e145b8536f41bede"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-05.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 6.4682509,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-06.json",
+        "bytes": 14609,
+        "sha256": "3b3e46ddc41797dfa37134548dd53af3b90c15742d90f9c9c2af0cf04e697a40"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-06.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 7.9350932,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-07.json",
+        "bytes": 16189,
+        "sha256": "663e2d3a1f4615aa3c4f7d69ae967a2d6c1a33c445b2e91fb552139c3436fa99"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-07.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 3.7966469,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-08.json",
+        "bytes": 16189,
+        "sha256": "60da2c95b6a18fe5d1a765f4049aa2d0c3c2e37399258f8dccaa4f26ca9d349f"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-08.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 3.7363927,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-09.json",
+        "bytes": 16589,
+        "sha256": "9282deb0202577fec2f09109b01c700934e252bf3640e07b09efe4362867d8c9"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-09.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 3.6990266,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-10.json",
+        "bytes": 16587,
+        "sha256": "f7627981a781826cf27454e69096db1ac15bab4934959765f084aba60556c10e"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-10.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 4.36906,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-11.json",
+        "bytes": 16589,
+        "sha256": "351368ef777ce3df4d4553225e4fbebb5559e15d24069be04176d541f9e63a8b"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-11.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 4.2600656,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-12.json",
+        "bytes": 16589,
+        "sha256": "669fdbccf5f6eb5f78fe7f8cf02e713beb77f363d90c22444eaa0994841035e5"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-12.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 3.8207149,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-13.json",
+        "bytes": 17669,
+        "sha256": "69f08f5e996c2ad2f5f9c45f4a65b701b8bce9919adac03ebc82002e983a5ad7"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-13.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 4.2866872,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-14.json",
+        "bytes": 18039,
+        "sha256": "d43b45bdc6eeb72194da9861ab72f450cce12dbe06e3b2aa1227a314385d1a7f"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-14.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 3.9112383,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-15.json",
+        "bytes": 18039,
+        "sha256": "2ec21a45082e86e048521fdf1a7483c61bdf5f3d64e45e97b8fc209fce17f089"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-15.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 4.0908265,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-16.json",
+        "bytes": 18039,
+        "sha256": "6ca3aaeeb2cbae9024dc6a599a32c289aea85171b042f94b3a53af177575f663"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-16.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 4.0768733,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-17.json",
+        "bytes": 18843,
+        "sha256": "68d7eef21497a897f139a652840d02f1c065dd4caaeded584e4670dc777d928a"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-17.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 4.0808266,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-18.json",
+        "bytes": 19291,
+        "sha256": "e1f85b77ac96c352de9eef0281ea0f7778d3e9d4f481fbb1d955f510bb0d2556"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-18.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 8.2591486,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-19.json",
+        "bytes": 19293,
+        "sha256": "7bd1af7c948b547d5724cacaff9086eab7d0166d31ad3443c9ea41be663b7b99"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-19.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 3.5512682,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-20.json",
+        "bytes": 19293,
+        "sha256": "f4bb642a8f561f7f6a5f71e94a4487a96c8f26949051323707c5981fac2dc319"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-20.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 3.4849767,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-21.json",
+        "bytes": 20427,
+        "sha256": "2d0fe807d25418d0af510d142497ece5da6047a60b531d49fdc6807eff234506"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-21.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 3.5966404,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-22.json",
+        "bytes": 20427,
+        "sha256": "524c8bc0cae417e93fcfe89dd02f097f1748624f41cbeab057677932513abddc"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-22.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 3.7705795,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-23.json",
+        "bytes": 20459,
+        "sha256": "524eb6c0a2117a8ade8a2b6a8bba28d0082712d6376467423322cbaab9fa4aa0"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-23.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "FmtCheck",
+      "exit_code": 0,
+      "elapsed_seconds": 3.6835979,
+      "argv": [
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-24.json",
+        "bytes": 20427,
+        "sha256": "39c6fe5b2954b953fee9fd3e4dc26681115408497f782c3545d97cf7f83181c7"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-24.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 3.7535252,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-25.json",
+        "bytes": 20459,
+        "sha256": "fa8bf3958009226053753ccb3ab1f963932e1dccc8978451165258ed98097b61"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-25.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "FmtCheck",
+      "exit_code": 0,
+      "elapsed_seconds": 3.6601073,
+      "argv": [
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-26.json",
+        "bytes": 20427,
+        "sha256": "ec10bf1ca21dc86dd454205fe7ca47bba95e65e508ee9e1af06bc38056af2636"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-26.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 3.8494937,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-27.json",
+        "bytes": 20459,
+        "sha256": "9c3b1a1f1b5338aa0b720905dcaaaad67e983aa1672ce7cf5ef199a08f34698b"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-27.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "FmtCheck",
+      "exit_code": 0,
+      "elapsed_seconds": 3.7127638,
+      "argv": [
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-28.json",
+        "bytes": 20459,
+        "sha256": "cb2c0f0dbb0bf1118dd68d7fcd98a32f60cf8a615519eb269d8a8591b7052c5f"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-28.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "FmtCheck",
+      "exit_code": 0,
+      "elapsed_seconds": 3.8370189,
+      "argv": [
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-29.json",
+        "bytes": 20427,
+        "sha256": "dd385e2e68a2cd3d7027fa7de40d95878c889417519b2712f2ec8dd9a74ed572"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-29.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "Fmt",
+      "exit_code": 0,
+      "elapsed_seconds": 3.8185275,
+      "argv": [
+        "fmt",
+        "--all"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-fmt-30.json",
+        "bytes": 20459,
+        "sha256": "83209eed7ee2eb2263a1b1b4ed4300fda158ef5e20f93409c6afbd01a675ae88"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-fmt-30.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "classification": "static-only",
+      "action": "FmtCheck",
+      "exit_code": 0,
+      "elapsed_seconds": 4.0984597,
+      "argv": [
+        "fmt",
+        "--all",
+        "--",
+        "--check"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-state-check-01.json",
+        "bytes": 7020,
+        "sha256": "0ecaf95f0cb5985c6ee51f38d6b0faf01c2b66385e44b447a4311361888b20f0"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-state-check-01.log",
+        "bytes": 2111,
+        "sha256": "ce975bbf95edf8dd1659e3f99114483584103edc404608131d5e3b4d4d400ca3"
+      },
+      "classification": "static-only",
+      "action": "Check",
+      "exit_code": 101,
+      "elapsed_seconds": 4.8173009,
+      "argv": [
+        "check",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-state-check-02.json",
+        "bytes": 7020,
+        "sha256": "3d075673bf4ce23f95e8b1cf883507e5c3a295095c0c54a2261cbad6ad2dd0d5"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-state-check-02.log",
+        "bytes": 682,
+        "sha256": "fda312ff6277911364b58e6970b9f5c164fbfb10570c7a3ad25c1629d3bc541b"
+      },
+      "classification": "static-only",
+      "action": "Check",
+      "exit_code": 101,
+      "elapsed_seconds": 3.7263916,
+      "argv": [
+        "check",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state"
+      ],
+      "features": []
+    },
+    {
+      "record": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/S-state-check-03.json",
+        "bytes": 7020,
+        "sha256": "8dd86b4546ff0173782838ecbeb0d7f8a038b544da4d8ed0604b345d8f70a0a4"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-state-check-03.log",
+        "bytes": 180,
+        "sha256": "49901e3d0893b289b0c0b640d7bb4ede959267b703baeec5ee30eba923b88bee"
+      },
+      "classification": "static-only",
+      "action": "Check",
+      "exit_code": 0,
+      "elapsed_seconds": 3.7433867,
+      "argv": [
+        "check",
+        "--locked",
+        "--offline",
+        "--jobs",
+        "12",
+        "--profile",
+        "verification",
+        "--package",
+        "kilogram-state"
+      ],
+      "features": []
+    }
+  ],
+  "contributing_case_index": [
+    {
+      "case": "F-small-origin-01",
+      "set": "F",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 18.7168939,
+      "action": "SmallOrigin",
+      "argv": [
+        "scripts/test-ordered-dialog-process.ps1",
+        "-Executable",
+        "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+        "-RunDirectory",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-l1\\F-small-origin-01",
+        "-Scenario",
+        "Duplex",
+        "-MessagesA",
+        "4",
+        "-MessagesB",
+        "4",
+        "-Burst",
+        "16"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-small-origin-01.json",
+        "bytes": 7473,
+        "sha256": "ff9ebfac4ce8ef71893c772e8867c4ec8b7f6d0fcf93742e344def3d0c8fcfa6"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-small-origin-01.log",
+        "bytes": 3348,
+        "sha256": "4d4ccf09169ec656a3688f2bf0dc6c28484e15e7b15f3190224b9423ff36d5dc"
+      },
+      "result": null
+    },
+    {
+      "case": "F-small-interop-01",
+      "set": "F",
+      "whole_result": "FAIL",
+      "exit_code": 1,
+      "elapsed_seconds": 26.80717,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_small_real_d9b_then_both_indexed",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-small-interop-01.json",
+        "bytes": 8240,
+        "sha256": "674e8971ebc5b40126c32afe3f92370500b7ff1e4b5b54f0ae59c8ac190f4eb4"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-small-interop-01.log",
+        "bytes": 2699,
+        "sha256": "ea314b93fbd444ca2596760fd1bd00434583932e083587215bf3baad82fef401"
+      },
+      "result": null
+    },
+    {
+      "case": "F-small-interop-02",
+      "set": "F",
+      "whole_result": "FAIL",
+      "exit_code": 1,
+      "elapsed_seconds": 50.3112762,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_small_real_d9b_then_both_indexed",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-small-interop-02.json",
+        "bytes": 8455,
+        "sha256": "05e97c1b069cb588fa2d475ec28b9f0a2725637cf3836d096769107233523a4e"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-small-interop-02.log",
+        "bytes": 4930,
+        "sha256": "6d1d8db8eb206f07c031c7a47168629974bcf58f65405daa4985a49ddb672e3f"
+      },
+      "result": null
+    },
+    {
+      "case": "C-closed-l1-01",
+      "set": "C",
+      "whole_result": "FAIL",
+      "exit_code": 1,
+      "elapsed_seconds": 14.6110299,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-state",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "indexed_l1_",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-state-lib-kilogram_state-tests.exe",
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-closed-l1-01.json",
+        "bytes": 8394,
+        "sha256": "c46767c8dbdbd25fbbd2268ca96c7e9761e919ba6813208018031050d8dc4431"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-closed-l1-01.log",
+        "bytes": 4183,
+        "sha256": "b5c6ff161a01657b425cceb97d45c725f74dd9ab8f081c063b36c4885bcadc81"
+      },
+      "result": null
+    },
+    {
+      "case": "F-small-interop-03",
+      "set": "F",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 74.5982578,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_small_real_d9b_then_both_indexed",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-small-interop-03.json",
+        "bytes": 8290,
+        "sha256": "32a391182ed7429a5a4de079e371efe28764ff058ffe053fbf3956fceb03569e"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-small-interop-03.log",
+        "bytes": 3358,
+        "sha256": "ea9279e4c5c4900299796ce05e438cbf3be327f91aa0a7a40af80cedddd5bd19"
+      },
+      "result": null
+    },
+    {
+      "case": "C-closed-l1-02",
+      "set": "C",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 30.1268124,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-state",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "indexed_l1_",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-closed-l1-02.json",
+        "bytes": 8234,
+        "sha256": "4fe270da7a2693d851da2cf983becdf2015d52c12cea9fc95b86098b65b5e2c8"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-closed-l1-02.log",
+        "bytes": 4309,
+        "sha256": "5a004ae9ae309524660cee710c3aad3bfeec1113781abde8e2f179751e788562"
+      },
+      "result": null
+    },
+    {
+      "case": "F-partials-01",
+      "set": "F",
+      "whole_result": "FAIL",
+      "exit_code": 1,
+      "elapsed_seconds": 39.6781966,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_five_real_partial_origins_continue_once",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-partials-01.json",
+        "bytes": 8419,
+        "sha256": "5daded7785eec4ea6c2725c945dec4ff8a20bd7bf399e033254cfe4000f3f5ad"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-partials-01.log",
+        "bytes": 4756,
+        "sha256": "3913c3cf88d2c025455b39409882bff7d4f04c6a65d0de79160f38c66cbefb61"
+      },
+      "result": null
+    },
+    {
+      "case": "F-partials-02",
+      "set": "F",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 154.7601154,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_five_real_partial_origins_continue_once",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-partials-02.json",
+        "bytes": 9045,
+        "sha256": "cba210371cfd25ce580d51e1e6a948f547e0a8e42bfb3fa186d8d0a0c01273b7"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-partials-02.log",
+        "bytes": 3857,
+        "sha256": "784bcdbbd8ef73499e3c43427884593e838e31c096d4fb043b99e38a7aac9a22"
+      },
+      "result": null
+    },
+    {
+      "case": "F-policy-01",
+      "set": "F",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 52.7285073,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_policy_public_renewal_frozen_import_ipc3_capacity",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-policy-01.json",
+        "bytes": 9290,
+        "sha256": "ea41bd6a9bf37dafbacdb01ffe92856e5c99e2e32d3f73221617ecef3704df35"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-policy-01.log",
+        "bytes": 3682,
+        "sha256": "c5da3e98d7d3343fc82d4706a08433ff21dc9f9a348f94c71ac88dccf46dd9a8"
+      },
+      "result": null
+    },
+    {
+      "case": "F-atomic-01",
+      "set": "F",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 61.7059514,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_atomic_parent_kills_and_escaped_history_budget",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-atomic-01.json",
+        "bytes": 9287,
+        "sha256": "65411e6ddbab0bbf3da51f61d8d859b46731b0923ab852500ad6beeab9f3c6fb"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-atomic-01.log",
+        "bytes": 3007,
+        "sha256": "42f531bb8908ac658b49a3c185f36086f27e98cfc767f31404cbd8b98d5c66b9"
+      },
+      "result": null
+    },
+    {
+      "case": "F-obligations-01",
+      "set": "F",
+      "whole_result": "FAIL",
+      "exit_code": 1,
+      "elapsed_seconds": 98.6709406,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_obligations_full64_head_saved_captures_and_c2",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-01.json",
+        "bytes": 9456,
+        "sha256": "c83083c9de9ec2f6fb25ee74cec138f8387692dcffebb8a8dbc96f33758e4e65"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-01.log",
+        "bytes": 5991,
+        "sha256": "de3fec435b2b43ea2e60cd451ee8333a86b72f98bedd02ab739e03438bf5e7de"
+      },
+      "result": null
+    },
+    {
+      "case": "F-obligations-cold-01",
+      "set": "F",
+      "whole_result": "FAIL",
+      "exit_code": 1,
+      "elapsed_seconds": 0.3934474,
+      "action": "ColdStatus",
+      "argv": [
+        [
+          "ordered",
+          "storage-upgrade-status",
+          "--state-dir",
+          "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-obligations-oGcXtE\\one\\state",
+          "--expect-account",
+          "3985d1d1af5f498b70ee8a3ab9c49b42ba248591fb229743759587d31cbb6f57",
+          "--expect-device",
+          "a4101ed5dc49b8eba913dd853b976cc1e776e82075c108aeac69e87b56532cff"
+        ]
+      ],
+      "features": [],
+      "deadline": null,
+      "error": "Cold diagnostic failed.",
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-cold-01.json",
+        "bytes": 9473,
+        "sha256": "5d454725b378bc104e72fa080735fa7c1f2f83be9d0f7ac60aabffce8aa496e2"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-cold-01.log",
+        "bytes": 274,
+        "sha256": "2c4f1274b8ef55f9a7ec4574c86ed4617b115e11523f34e50d69bbebce783b99"
+      },
+      "result": null
+    },
+    {
+      "case": "F-obligations-cold-02",
+      "set": "F",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 0.9957848,
+      "action": "ColdStatus",
+      "argv": [
+        [
+          "ordered",
+          "storage-upgrade",
+          "--check",
+          "--state-dir",
+          "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-obligations-oGcXtE\\one\\state",
+          "--expect-account",
+          "3985d1d1af5f498b70ee8a3ab9c49b42ba248591fb229743759587d31cbb6f57",
+          "--expect-device",
+          "a4101ed5dc49b8eba913dd853b976cc1e776e82075c108aeac69e87b56532cff",
+          "--config-file",
+          ".tmp\\migration-s5-storage\\l1-obligations-oGcXtE\\one\\migration.json"
+        ],
+        [
+          "ordered",
+          "storage-upgrade",
+          "--check",
+          "--state-dir",
+          "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-obligations-oGcXtE\\two\\state",
+          "--expect-account",
+          "728862238ade52288e3de226a42e7abbf6eed62acce592ebb09045be8988fa0a",
+          "--expect-device",
+          "36220aa80ef9316f1bf165b0c1e8c1a2764a4d697437526284d2f141ed7e6c8f",
+          "--config-file",
+          ".tmp\\migration-s5-storage\\l1-obligations-oGcXtE\\two\\migration.json"
+        ]
+      ],
+      "features": [],
+      "deadline": null,
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-cold-02.json",
+        "bytes": 10094,
+        "sha256": "c9467c6edfa57f7b7ef39a6c6165f5d68bcaedd5d5ce20f36dafa70bd00f57fe"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-cold-02.log",
+        "bytes": 53,
+        "sha256": "435b2fd89666f69831d7f5e6c3cc2113dfbb4ceb7fa385eb3bf0cf0fe3623c30"
+      },
+      "result": null
+    },
+    {
+      "case": "F-obligations-ranges-01",
+      "set": "F",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 16.5876485,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_cold_diagnostic_ranges",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-ranges-01.json",
+        "bytes": 9284,
+        "sha256": "3b3ce568b3e7be0b0280c7c131e890253cbcc4db476c585b4993719ad02e92f0"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-ranges-01.log",
+        "bytes": 3357,
+        "sha256": "fe615e87a77a459b36c5d33e19fe239b2d511b19385ce8cf92ea0ed0e985266d"
+      },
+      "result": null
+    },
+    {
+      "case": "F-obligations-ranges-02",
+      "set": "F",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 16.4971366,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_cold_diagnostic_ranges",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-ranges-02.json",
+        "bytes": 9284,
+        "sha256": "c672b33f8130fec1aae922ed87b79d5c84f255267bfff44952bc3b5c6d018211"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-ranges-02.log",
+        "bytes": 3468,
+        "sha256": "a2e14e9c5279d112efb22365074e57883dcbeb46ee437d41dc2f1fb64312cea1"
+      },
+      "result": null
+    },
+    {
+      "case": "F-obligations-02",
+      "set": "F",
+      "whole_result": "FAIL",
+      "exit_code": 1,
+      "elapsed_seconds": 101.7948885,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_obligations_full64_head_saved_captures_and_c2",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-02.json",
+        "bytes": 9457,
+        "sha256": "266e037f3fd72263597209627e8a6413e83a00da3c1331afc4e15396385fa238"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-02.log",
+        "bytes": 5991,
+        "sha256": "5071890a130f7d7d1b79a03f3efc691872b8e9254c1a271dd0797c906f96578e"
+      },
+      "result": null
+    },
+    {
+      "case": "C-shared-root6-01",
+      "set": "C",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 47.6905729,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-state",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "a3_s4_",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-shared-root6-01.json",
+        "bytes": 9231,
+        "sha256": "9984357831fe2ed8a94a5ff338cc39cee7e8a5253c57af334c79177c43444918"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-shared-root6-01.log",
+        "bytes": 3826,
+        "sha256": "b9e3c681140b6d5ff0941a80ec01235716255f926e84d9313cdbb8c3303d0e60"
+      },
+      "result": null
+    },
+    {
+      "case": "C-deadline-01",
+      "set": "C",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 8.5214364,
+      "action": "DeadlineProbe",
+      "argv": [
+        "scripts/test-migration-s5-l1-deadline.ps1",
+        "-OutputDirectory",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-deadline\\C-deadline-01"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-deadline-01.json",
+        "bytes": 9727,
+        "sha256": "9a10b2c37316cdac8240ab6f90409620aca4bb10e0894f7fadd42b5757ba6e06"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-deadline-01.log",
+        "bytes": 423,
+        "sha256": "b0dcf83d9b3e5088ffa8562843942c5f3f214a813b418ad2a9d089e8cd090032"
+      },
+      "result": null
+    },
+    {
+      "case": "F-obligations-resume-01",
+      "set": "F",
+      "whole_result": "FAIL",
+      "exit_code": 1,
+      "elapsed_seconds": 9.6329237,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_obligations_full64_head_saved_captures_and_c2",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 125,
+        "whole_seconds": 150,
+        "work_expired": false,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-obligations-continuation-review-1.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-resume-01.json",
+        "bytes": 10470,
+        "sha256": "5a73a37d901d3968682711e94515696fb08593ab123ebec1984d4fe8e5256618"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-resume-01.log",
+        "bytes": 3222,
+        "sha256": "9e984d2f4f6377b1c5404f73b9164672b006201bf9264bfee9e34c3d39fe3e08"
+      },
+      "result": null
+    },
+    {
+      "case": "C-preservation-01",
+      "set": "C",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 1.514107,
+      "action": "PreservationProbe",
+      "argv": [
+        "scripts/test-migration-s5-l1-preservation.ps1",
+        "-Case",
+        "C-preservation-01"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-preservation-01.json",
+        "bytes": 9846,
+        "sha256": "d8c88081f75f922a845907daa57e378b02bde17fc3770fa15fd2be7f65d86a8d"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-preservation-01.log",
+        "bytes": 201,
+        "sha256": "ffd55480632dc3c1817126710310eba0b2531625ef50f4f8b8e080eb6fa5b2dd"
+      },
+      "result": null
+    },
+    {
+      "case": "C-preservation-02",
+      "set": "C",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 2.9121551,
+      "action": "PreservationProbe",
+      "argv": [
+        "scripts/test-migration-s5-l1-preservation.ps1",
+        "-Case",
+        "C-preservation-02"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-preservation-02.json",
+        "bytes": 9847,
+        "sha256": "98377dea9072681959c638fe1aab462be42b85dec86c23bf180572f0725e751f"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-preservation-02.log",
+        "bytes": 281,
+        "sha256": "7909a06a7da63ecd8f60d4d8d9a174503326a1a8a5ab8a1b23fe4a336d4adf42"
+      },
+      "result": null
+    },
+    {
+      "case": "F-obligations-resume-02",
+      "set": "F",
+      "whole_result": "FAIL",
+      "exit_code": 1,
+      "elapsed_seconds": 40.0101169,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_obligations_full64_head_saved_captures_and_c2",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 125,
+        "whole_seconds": 150,
+        "work_expired": false,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-obligations-continuation-review-2.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-resume-02.json",
+        "bytes": 10656,
+        "sha256": "89eac8d1bc36cd7577c7e3504703fedc8f91b12af49f2056cd9fd2ca3990b667"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-resume-02.log",
+        "bytes": 5962,
+        "sha256": "79c341c5979ee8404d18bf7f505673ff8567c0f7d5a24932f70dbbd537b09e39"
+      },
+      "result": null
+    },
+    {
+      "case": "F-obligations-resume-03",
+      "set": "F",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 161.1341713,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_obligations_full64_head_saved_captures_and_c2",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 210,
+        "whole_seconds": 240,
+        "work_expired": false,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-obligations-continuation-review-3.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": null,
+      "accepted_scope": "Whole PASS for explicitly resumed bounded assertion set on build09; not a fresh aggregate or final-source repetition.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-resume-03.json",
+        "bytes": 10492,
+        "sha256": "15c9ffdadd714f513807c09eb9b6d09ee9ec3cdc4728812dbc4d6e392372bd2c"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-obligations-resume-03.log",
+        "bytes": 3044,
+        "sha256": "5e4810b797f48dc69b8eeb99dcc2f5c1a447d6b4bf9166e2559aa9fbf61a39a2"
+      },
+      "result": null
+    },
+    {
+      "case": "F-isolation-01",
+      "set": "F",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 54.025038,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_different_peer_c2_survives_signed_fork_and_account_pin",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": null,
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-isolation-01.json",
+        "bytes": 10014,
+        "sha256": "44b3031ebc35bbfd00918e323e4cf6e160248ac02bde27086b8f02a79e0dcae5"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-isolation-01.log",
+        "bytes": 3020,
+        "sha256": "5a9205bfb425eb54f8ecedf99cfe6770da5effafae485fc1a52f2ba19278f5b9"
+      },
+      "result": null
+    },
+    {
+      "case": "C-review1-01",
+      "set": "C",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 20.9155434,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-state",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "indexed_l1_review1",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 100,
+        "whole_seconds": 120,
+        "work_expired": false,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-implementation-review-1.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-review1-01.json",
+        "bytes": 10991,
+        "sha256": "d2c60176228326ae4ade5ceff84e5312e4211a2723d4d5498589d5848829e543"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-review1-01.log",
+        "bytes": 4509,
+        "sha256": "92d00c6adaacf7510f4b24dcab99dce941a4515bf29bd4a240f5ba63a553d6b4"
+      },
+      "result": null
+    },
+    {
+      "case": "F-review1-own-f-01",
+      "set": "F",
+      "whole_result": "FAIL",
+      "exit_code": 1,
+      "elapsed_seconds": 9.0392997,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_review1_genuine_partial_own_f_both_genesis_roles",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 100,
+        "whole_seconds": 120,
+        "work_expired": false,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-implementation-review-2.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-own-f-01.json",
+        "bytes": 11184,
+        "sha256": "43b7cf2e3e7815ef1c258c7f502ec705a4df2f281ad077b2d1d588f4f3210c0c"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-own-f-01.log",
+        "bytes": 2995,
+        "sha256": "27a5163715bac694e4f88bf1f61af500ca355d371bf40662f306fb99fc3f03c1"
+      },
+      "result": null
+    },
+    {
+      "case": "F-review1-own-f-02",
+      "set": "F",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 66.2735246,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_review1_genuine_partial_own_f_both_genesis_roles",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 100,
+        "whole_seconds": 120,
+        "work_expired": false,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-1.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-own-f-02.json",
+        "bytes": 11480,
+        "sha256": "aa04de33caa56d3a23ca3d52f4cb8dedc7a8acd963baab0afe96b36d6348d72f"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-own-f-02.log",
+        "bytes": 11507,
+        "sha256": "779453b9308d100e7eeaa253ff44078f06139addd37c4b4555ad90c5b06a7cd6"
+      },
+      "result": null
+    },
+    {
+      "case": "F-review1-unacked-01",
+      "set": "F",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 115.07523,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_review1_unacked128_before_native_and_one_exact_receipt",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 220,
+        "whole_seconds": 240,
+        "work_expired": false,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-1.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-unacked-01.json",
+        "bytes": 11525,
+        "sha256": "bc5b98b29d16a175ebeabfc16498a1d1d0cb2785d07ef3d909b7843ae710b5bc"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-unacked-01.log",
+        "bytes": 3013,
+        "sha256": "98ceb9ccdedbdf18629b3f33b93554f126514622c9e62118a8c96161dab6830e"
+      },
+      "result": null
+    },
+    {
+      "case": "F-review1-ready-01",
+      "set": "F",
+      "whole_result": "FAIL",
+      "exit_code": 1,
+      "elapsed_seconds": 46.9119333,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_review1_signed_ready_refusal_then_scoped_fork",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 140,
+        "whole_seconds": 160,
+        "work_expired": false,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-1.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-ready-01.json",
+        "bytes": 11680,
+        "sha256": "9d3419460b7d031833ed904b705cbbe87be4424fef75f2819eea447bb66f5c60"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-ready-01.log",
+        "bytes": 2391,
+        "sha256": "39ff4e3f6b41159d747099d6683c8d0b6cd82224c2d63a3c07c1a3359edfad45"
+      },
+      "result": null
+    },
+    {
+      "case": "C-ready-arity-fixture-01",
+      "set": "C",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 21.5929621,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "indexed_l1_ready_arity_fixture",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 30,
+        "whole_seconds": 40,
+        "work_expired": false,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-2.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-ready-arity-fixture-01.json",
+        "bytes": 10995,
+        "sha256": "6bf73878224b84184a2190bf7caf82d60d67403972e173d918c71c38f62748f7"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-ready-arity-fixture-01.log",
+        "bytes": 2778,
+        "sha256": "bfdbaa37425c820a6e165983c6f49e79f4733f3d99b2331f2655409682e0aa41"
+      },
+      "result": null
+    },
+    {
+      "case": "F-review1-ready-02",
+      "set": "F",
+      "whole_result": "FAIL",
+      "exit_code": 1,
+      "elapsed_seconds": 140.155492,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_review1_signed_ready_refusal_then_scoped_fork",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 140,
+        "whole_seconds": 160,
+        "work_expired": true,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-2.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": "Whole-attempt work cutoff reached; owned children terminated.",
+      "accepted_scope": "Whole FAIL; root accepted completed R3 receiver assertions only, work cutoff during finalization.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-ready-02.json",
+        "bytes": 11684,
+        "sha256": "20540287fc8e478ba72bdfc49786f8b6c6a90e02b298ce3b1fdef7745278e7be"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-review1-ready-02.log",
+        "bytes": 2623,
+        "sha256": "c09dfa264573ff3873f8bca52998dadcff9d22a52748b59451d9c32ebb52f463"
+      },
+      "result": null
+    },
+    {
+      "case": "F-isolation-02",
+      "set": "F",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 53.1324232,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_different_peer_c2_survives_signed_fork_and_account_pin",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 85,
+        "whole_seconds": 100,
+        "work_expired": false,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-3.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-isolation-02.json",
+        "bytes": 12118,
+        "sha256": "bb10d5256bbf8087e24a558c7ed4050dc1c96f2390d0c2e4495be5bda4257d70"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-isolation-02.log",
+        "bytes": 3020,
+        "sha256": "ca4d3369ebf4329e7070a3b50fbda43df069b9b827cfa0b7ee63a4a648225db1"
+      },
+      "result": null
+    },
+    {
+      "case": "F-capacity-01",
+      "set": "F",
+      "whole_result": "FAIL",
+      "exit_code": 1,
+      "elapsed_seconds": 34.7554779,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_process_capacity_crash_and_predecessor_fences",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 40,
+        "whole_seconds": 45,
+        "work_expired": false,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-3.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": "Review2 requires the exact matching test and actual one-test PASS.",
+      "accepted_scope": "Whole FAIL; root accepted completed capacity/predecessor kernel assertions and cache finalization, matcher rejected top-level test name.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-capacity-01.json",
+        "bytes": 12206,
+        "sha256": "6121aaeded1b847fdfc219d577e26c40a4b8f5b37486c0fa461fc3b0c990f14d"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-capacity-01.log",
+        "bytes": 6622,
+        "sha256": "0856083c34de6b4034b7b36707a4a21f6f81e0aca24fde9d7574013ec68cc709"
+      },
+      "result": null
+    },
+    {
+      "case": "F-exhausted-origin-01",
+      "set": "F",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 481.4608671,
+      "action": "ExhaustedOrigin",
+      "argv": [
+        "scripts/test-ordered-dialog-process.ps1",
+        "-Executable",
+        "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+        "-RunDirectory",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-l1\\F-exhausted-origin-01",
+        "-Scenario",
+        "Duplex",
+        "-MessagesA",
+        "511",
+        "-MessagesB",
+        "16",
+        "-Burst",
+        "16"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 850,
+        "whole_seconds": 900,
+        "work_expired": false,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-4.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-origin-01.json",
+        "bytes": 12328,
+        "sha256": "e1acc55360a45c386dde029c2f9be35cbbdacc08bd2a076a1812ac6c692d5135"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-origin-01.log",
+        "bytes": 6644,
+        "sha256": "1724466a8a78b3e414b21ac47bfb5faa0bcec60f88fc3479962f0d35af4f3052"
+      },
+      "result": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-origin-01-result.json",
+        "bytes": 6535,
+        "sha256": "7c9d54afefbbaa025089e62141595cc752c0d3e546ae854885d7e20522aedbd5"
+      }
+    },
+    {
+      "case": "F-exhausted-boundary-01",
+      "set": "F",
+      "whole_result": "FAIL",
+      "exit_code": 1,
+      "elapsed_seconds": 120.1641445,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 120,
+        "whole_seconds": 140,
+        "work_expired": true,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-field-continuation-review-4.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": "Whole-attempt work cutoff reached; owned children terminated.",
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-01.json",
+        "bytes": 12277,
+        "sha256": "072b522817e7f62e9bbc0f930f3d3969c2b56675c4ae348931e4b113d895753b"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-01.log",
+        "bytes": 2365,
+        "sha256": "b7b5efa02401eef44abd6488f64b2f0ca3a5b975e90e877945fb51d9e69f55ab"
+      },
+      "result": null
+    },
+    {
+      "case": "F-exhausted-boundary-02",
+      "set": "F",
+      "whole_result": "FAIL",
+      "exit_code": 1,
+      "elapsed_seconds": 568.1367185,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 580,
+        "whole_seconds": 600,
+        "work_expired": false,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary-continuation-review-1.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02.json",
+        "bytes": 12387,
+        "sha256": "dea5e8749393815f297aa9bb5cf714e353cce8da2a860944d3a3f9f2b224357b"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-02.log",
+        "bytes": 3006,
+        "sha256": "c914820f5ddab5e3acd89690aa71f248cf81ad9bab0964f22e380c349c617bcb"
+      },
+      "result": null
+    },
+    {
+      "case": "F-exhausted-boundary-03",
+      "set": "F",
+      "whole_result": "FAIL",
+      "exit_code": 1,
+      "elapsed_seconds": 649.592232,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_genuine_exhausted512_refusal_receive_history_checkpoint",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 780,
+        "whole_seconds": 800,
+        "work_expired": false,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary-continuation-review-2.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "accepted_scope": "Whole FAIL; root accepted functional assertions through checkpoint.info by exact source and170 phases; no original parent result.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03.json",
+        "bytes": 12386,
+        "sha256": "6da9c4ae43dad5234df1da2aba156e0a972a7d3895069d4cf87fcdbe7932cb48"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03.log",
+        "bytes": 4493,
+        "sha256": "739839e858e1a5131e0bbe09063851f4fc2ab193d96297fd2466679b78f4a38f"
+      },
+      "result": null
+    },
+    {
+      "case": "C-boundary-phase-preservation-01",
+      "set": "C",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 24.1463993,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_phase_preservation_opaque_held_locks",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 30,
+        "whole_seconds": 40,
+        "work_expired": false,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary03-completion-review.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": null,
+      "accepted_scope": "Only the actual case/source/image/assertion scope; no inferred aggregate.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-boundary-phase-preservation-01.json",
+        "bytes": 12334,
+        "sha256": "2e640f6112d056ed7337dfc3dcad3b4d862d19d8110c2dee098ef90cde38002d"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-boundary-phase-preservation-01.log",
+        "bytes": 2965,
+        "sha256": "46ef0a7d4caa71f1cd6c857de34eab73ea972e83f0c8e75b1e28044ce37631ba"
+      },
+      "result": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\C-boundary-phase-preservation-01-result.json",
+        "bytes": 1758,
+        "sha256": "5620bd3725e711f355e71fcd6c03d5a5e15c616a6c7464a5ee39f8430c463554"
+      }
+    },
+    {
+      "case": "F-exhausted-preservation-01",
+      "set": "F",
+      "whole_result": "PASS",
+      "exit_code": 0,
+      "elapsed_seconds": 67.5439277,
+      "action": "Tests",
+      "argv": [
+        "scripts/run-cargo-tests-stable.ps1",
+        "-Package",
+        "kilogram-cli",
+        "-CargoJobs",
+        "12",
+        "-Profile",
+        "verification",
+        "-Filter",
+        "migration_s5_l1_stopped_checkpoint_preservation_only",
+        "-Run",
+        "-NoCapture"
+      ],
+      "features": [],
+      "deadline": {
+        "work_seconds": 120,
+        "whole_seconds": 140,
+        "work_expired": false,
+        "owned_children_after_cleanup": 0,
+        "root_decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary03-completion-review.md",
+        "mechanism": "non-breakaway self-owned Windows job; independent native whole-deadline thread remains armed through finalization"
+      },
+      "error": null,
+      "accepted_scope": "Whole PASS preservation-only on stopped case03 input; no retrospective change to boundary03 verdict.",
+      "record": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-preservation-01.json",
+        "bytes": 12428,
+        "sha256": "2180aadd201d76b164302088d25706a4a46561be76ddc1fbddf54267bbaeb320"
+      },
+      "log": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-preservation-01.log",
+        "bytes": 2951,
+        "sha256": "2a2eb80ea7c8f5cde988da54f4fbb0aed0351a9eb9fa50c2ac3f48c9c0ee0d24"
+      },
+      "result": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-preservation-01-result.json",
+        "bytes": 14994,
+        "sha256": "bcd69f3c44940c269f38c3fc5fc463e30803d7f5c5e2887a9875305d62926ca8"
+      }
+    }
+  ],
+  "ledger": {
+    "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\contributing-cases.json",
+    "bytes": 446512,
+    "sha256": "8acf1e8a11994e839f032e45e28aefcae7ce713f9eac47791fd7599af320b2fa"
+  },
+  "ledger_sums": [
+    {
+      "set": "C",
+      "cases": 9,
+      "sum": 172.03101850000002,
+      "stated": 172.03101850000002
+    },
+    {
+      "set": "F",
+      "cases": 30,
+      "sum": 3331.2897354,
+      "stated": 3331.2897354
+    }
+  ],
+  "charges": {
+    "F": 3331.2897354,
+    "P": 0,
+    "C": 172.03101850000002
+  },
+  "ceilings": {
+    "F": 3650,
+    "P": 0,
+    "C": 500
+  },
+  "prior_actual": {
+    "F": 1236.2886628,
+    "P": 0,
+    "C": 279.3257298
+  },
+  "combined_actual": {
+    "C": 451.3567483,
+    "F": 4567.5783982,
+    "P": 0
+  },
+  "combined_maxima": {
+    "P": 0,
+    "F": 4886.2886628,
+    "C": 779.3257298
+  },
+  "remaining_C": 327.9689815,
+  "remaining_F": 318.7102646,
+  "budget_amendments": [
+    {
+      "authority": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-budget-amendment-1.md",
+      "sha256": "6c73b0740ef51afef8e974a73137798d058d4aae107e70ee16b26b3956bf70d3",
+      "recorded_utc": "2026-10-26T02:17:31.9243213Z",
+      "previous_F": 1800,
+      "new_F": 2100,
+      "consumed_at_activation": {
+        "P": 0,
+        "F": 364.8719099,
+        "C": 44.7378423
+      },
+      "rule": "Root authorization before new contributors; no resets/refunds; first long needs root readiness go-ahead, remaining1215 and whole900 deadline."
+    },
+    {
+      "authority": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-obligations-continuation-review-3.md",
+      "sha256": "8a075a753718605c1dd2659846b54673b2fb3930c0e1f229a662223a1b82d46c",
+      "recorded_utc": "2026-10-26T04:06:40.463893Z",
+      "previous_F": 2100,
+      "new_F": 2400,
+      "consumed_at_activation": {
+        "F": 763.8892556,
+        "P": 0,
+        "C": 105.37611369999999
+      },
+      "rule": "Explicit root amendment2; no resets/refunds; oneF-resume03 whole240/work210; long still remaining1215 and separate root go-ahead."
+    },
+    {
+      "authority": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-implementation-review-2.md",
+      "sha256": "d1fe3ec11a5e9c36d38f0ca874bef609649a30ba70fdcd114e2ee1f7de9550ad",
+      "recorded_utc": "2026-10-26T05:34:23.3841705Z",
+      "previous_F": 2400,
+      "new_F": 2900,
+      "consumed_at_activation": {
+        "F": 979.0484649,
+        "P": 0,
+        "C": 126.2916571
+      },
+      "rule": "Explicit root amendment3; five serial exact field cases/guards, failure callback; long remains separately gated with minimum1215. No resets/refunds/P borrowing."
+    },
+    {
+      "authority": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-boundary-continuation-review-2.md",
+      "sha256": "e6ebba9e204eea61d53438012d2bcf11f98cd9159a34f4008d69e08e0cea6f0f",
+      "recorded_utc": "2026-10-26T11:13:30.3985172Z",
+      "previous_F": 2900,
+      "new_F": 3650,
+      "consumed_at_activation": {
+        "F": 2614.1535757,
+        "P": 0,
+        "C": 147.8846192
+      },
+      "ledger_before": {
+        "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-budget-amendment-4-ledger-before.json",
+        "bytes": 404540,
+        "sha256": "83ea734311622f0578d843c0bbae4587c22c7538f6618deb974b6855516cf3fc"
+      },
+      "rule": "Explicit root amendment4 within S5.2; controller760/work780/whole800 for exact boundary03 only after separate root review/go-ahead and ordinary native execution approval. No resets/refunds/P borrowing, new origin or automatic retries; preparation is static and adds no contributor."
+    }
+  ],
+  "private_checkpoint": {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb",
+    "preserved": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preserved\\F-exhausted-preservation-01",
+    "manifest": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preserved\\F-exhausted-preservation-01\\preservation-inventory.json",
+      "bytes": 6765525,
+      "sha256": "c2a56327fd1462b471163956fbfb61c6b89a07e142f4828c76011c29cadf28b3"
+    },
+    "verification": {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-preservation-01-verification.json",
+      "bytes": 2795,
+      "sha256": "c86efeb19d563b09e933ea1813f9ad30acbb584837516fce095ff84a1e79d7e0"
+    },
+    "source_files": 6956,
+    "source_bytes_excluding_manifest": 45597399,
+    "profile_A": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed.profile",
+    "profile_B": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\indexed.profile",
+    "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+    "frontier": [
+      512,
+      18
+    ],
+    "receipt_hash": "338a74bcbee1249cb1655fa21962833d6d680394769861ca2df4ab98475a4760",
+    "backup_never_activated": true,
+    "future_restore_only_original_pinned_paths": true,
+    "one_active_branch_per_Native_domain": true
+  },
+  "original_provenance_exports": [
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-origin-01.json",
+      "bytes": 12328,
+      "sha256": "e1acc55360a45c386dde029c2f9be35cbbdacc08bd2a076a1812ac6c692d5135"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-origin-01-result.json",
+      "bytes": 6535,
+      "sha256": "7c9d54afefbbaa025089e62141595cc752c0d3e546ae854885d7e20522aedbd5"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-origin-01-provenance.json",
+      "bytes": 6713,
+      "sha256": "f933ec226012da931fdbe2c818df3570c80ccd43dd0307498110a7da5b4832da"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-origin-01-one.history.json",
+      "bytes": 135045,
+      "sha256": "335dc4c449ba490f8cc5ddb2248b8f69bc052c4f29a2fc1f65a065db71d44dc4"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-origin-01-two.history.json",
+      "bytes": 135045,
+      "sha256": "335dc4c449ba490f8cc5ddb2248b8f69bc052c4f29a2fc1f65a065db71d44dc4"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-origin-before-verified.json",
+      "bytes": 1883572,
+      "sha256": "cd7f2f4379be0c972083a03fe94346600afea091dbcd371fa3b910d51ba645be"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\F-exhausted-boundary-03-origin-after-verified.json",
+      "bytes": 1883572,
+      "sha256": "cd7f2f4379be0c972083a03fe94346600afea091dbcd371fa3b910d51ba645be"
+    }
+  ],
+  "prelaunch_denials": [
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary02-native-approval-blocked-01.json",
+      "bytes": 1704,
+      "sha256": "85982d145305950d1c24e37ad411fc521330ed61dba00cc524088eb874fbcff8"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-l1-evidence\\S-boundary03-native-approval-blocked-01.json",
+      "bytes": 1838,
+      "sha256": "e10316da6c404b93fc222851364f810e63e4134b8ebe71282c8f27571d2b7512"
+    }
+  ],
+  "source_or_image_change_after_last_verification": false,
+  "new_tests_builds_or_limits_during_submission": false,
+  "lost_parent_result_reconstructed": false,
+  "boundary03_whole_result": "FAIL",
+  "private_data_stays_local": true,
+  "known_live_kilogram": [],
+  "toolchain": {
+    "cargo": "cargo 1.98.0 (797e8a9bc 2026-08-05)",
+    "rustc": "rustc 1.98.0 (88d9e12ae 2026-08-18)",
+    "powershell": "7.6.5"
+  },
+  "limits": [
+    "No all-green aggregate or new whole boundary/P run. Root accepted completed functional assertions narrowly from source/phases and later accepted preservation-only PASS. Detailed original boundary03 parent outputs stay missing.",
+    "Historical small/partial/policy/atomic/obligations scopes keep exact older image bindings. Reuse assessment records baseline comparisons and build09-to-final deltas, not fake final-source reruns.",
+    "Private manifest metadata was read, not backup/input typed Native/DB state. No additional fixture traversal, runtime, copy or recovery occurred during submission.",
+    "All39 actual runners and all failed static attempts remain archived. Publication tail timing limitation remains; no refunds, old-ledger rewrite or P borrowing.",
+    "This candidate awaits root review. No commit/push, product optimization, cut3, whole-P or MVP readiness assertion."
+  ]
+}

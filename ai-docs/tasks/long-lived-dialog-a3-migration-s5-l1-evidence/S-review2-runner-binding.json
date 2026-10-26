@@ -1,0 +1,27 @@
+{
+  "classification": "static-policy-table-extension-and-existing-compiled-input-reuse",
+  "runner": "scripts/invoke-migration-s5-l1-case.ps1",
+  "runner_sha256": "216b5ad9f0cb47044518aff55df4cb65b5f8f09c221560825966bf22dc8eeafb",
+  "parse_error_count": 0,
+  "decision": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-implementation-review-2.md",
+  "decision_sha256": "d1fe3ec11a5e9c36d38f0ca874bef609649a30ba70fdcd114e2ee1f7de9550ad",
+  "unchanged_deadline_helper_sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45",
+  "rust_inputs_checked": 38,
+  "rust_input_mismatches": [],
+  "compiled_harness": "S-compile-15.json",
+  "product_build": "S-build-10.json",
+  "images": [
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+      "bytes": 70222848,
+      "sha256": "a3ff9d2ee67e5b01db8f4c922247737d0dee7bb4c639477be3e02d4999b13c56"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-l1-control-peer.exe",
+      "bytes": 70222848,
+      "sha256": "a3ff9d2ee67e5b01db8f4c922247737d0dee7bb4c639477be3e02d4999b13c56"
+    }
+  ],
+  "new_product_build_claim": false,
+  "policy": "Five fixed ID/selector/guard entries; ordered prior PASS plus remaining upper bounds+1215; exact matching test required; no changes to job mechanism; timing-boundary.md remains applicable."
+}

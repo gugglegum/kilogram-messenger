@@ -1,0 +1,47 @@
+{
+  "classification": "static-parser-and-exact-source-substitution-check-only",
+  "controller_delta_exact_normalized": true,
+  "allowed_controller_replacements": [
+    "560->760",
+    "580->780",
+    "600->800",
+    "F-exhausted-boundary-02->03",
+    "approved case02->03"
+  ],
+  "runner_parse_errors": 0,
+  "runner_token_count": 3835,
+  "policy_assignment_extents": [
+    "$boundaryExtended=$Case -ceq 'F-exhausted-boundary-03'",
+    "$boundaryObserved=$Case -ceq 'F-exhausted-boundary-02'",
+    "$boundaryGroup=$Case -ceq 'F-exhausted-boundary-01' -or $boundaryObserved -or $boundaryExtended",
+    "$boundaryReserve=if($boundaryExtended){1025}elseif($boundaryObserved){825}else{365}",
+    "$whole=if($boundaryExtended){800}elseif($boundaryObserved){600}elseif($boundaryGroup){140}elseif($arityGroup){40}elseif($reviewField){$fieldPolicy.whole}elseif($reviewGroup){120}elseif($ResumeDirectory){240}else{900}",
+    "$work=if($boundaryExtended){780}elseif($boundaryObserved){580}elseif($boundaryGroup){120}elseif($arityGroup){30}elseif($reviewField){$fieldPolicy.work}elseif($reviewGroup){100}elseif($ResumeDirectory){210}else{850}"
+  ],
+  "policies": [
+    {
+      "case": "F-exhausted-boundary-01",
+      "work": 120,
+      "whole": 140,
+      "reserve": 365
+    },
+    {
+      "case": "F-exhausted-boundary-02",
+      "work": 580,
+      "whole": 600,
+      "reserve": 825
+    },
+    {
+      "case": "F-exhausted-boundary-03",
+      "work": 780,
+      "whole": 800,
+      "reserve": 1025
+    }
+  ],
+  "single_absolute_controller_seconds": 760,
+  "reconnect_local_seconds": 25,
+  "shared_deadline_helper_changed": false,
+  "runner_executed": false,
+  "runtime_or_probe_run": false,
+  "new_approval_created": false
+}

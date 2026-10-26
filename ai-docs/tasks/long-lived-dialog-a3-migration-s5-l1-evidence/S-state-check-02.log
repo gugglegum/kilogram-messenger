@@ -1,0 +1,14 @@
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+error[E0624]: method `occupied` is private
+  --> crates\kilogram-state\src\vault\indexed_dialog\migration7\live1\history.rs:20:14
+   |
+20 |         self.occupied(c)?;
+   |              ^^^^^^^^ private method
+   |
+  ::: crates\kilogram-state\src\vault\indexed_dialog\migration7\live1\read.rs:24:5
+   |
+24 |     fn occupied(&self, c: u8) -> Result<Id> {
+   |     --------------------------------------- private method defined here
+
+For more information about this error, try `rustc --explain E0624`.
+error: could not compile `kilogram-state` (lib) due to 1 previous error

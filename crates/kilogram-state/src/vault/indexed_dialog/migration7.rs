@@ -7,6 +7,8 @@ pub mod codec;
 mod copy;
 #[path = "migration7/fence.rs"]
 mod fence;
+#[path = "migration7/live1.rs"]
+pub mod live1;
 #[path = "migration7/load.rs"]
 mod load;
 #[path = "migration7/operations.rs"]
