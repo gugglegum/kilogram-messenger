@@ -1,0 +1,33 @@
+{
+  "classification": "static raw image/source preservation only; no fixture data or execution",
+  "executed_runner_snapshot": "ai-docs\\tasks\\pre-s53-refactor-evidence\\S-ra-executed-case-wrapper-r4.ps1.txt",
+  "executed_runner_sha256": "fc0077196739056277fe087051f4a3653b0432ba28e083b4baa01025d7c1dddc",
+  "test_source_snapshot": "ai-docs\\tasks\\pre-s53-refactor-evidence\\S-ra-legacy-characterization-before-arity.rs.txt",
+  "test_source_sha256": "db79ffe758a142910256459bbba59621c6a159bfa319ae8a61615c0f152c9b2b",
+  "images": [
+    {
+      "path": "target/verification/deps/kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 69868032,
+      "sha256": "2b0c7be8146c9f204e6acd614b0f9218a7b0920ab4e5eabc95efb0a0291ae34f",
+      "raw_nonexecuted_backup": ".tmp/pre-s53-refactor-r4-harnesses/kilogram-cli-bin-kilogram-cli-tests.exe"
+    },
+    {
+      "path": "target/verification/deps/kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 42980352,
+      "sha256": "38e6b0807b954848f8bbbe5f7779b8ed6e964b49dc63a436f4cefd8cea95ac5c",
+      "raw_nonexecuted_backup": ".tmp/pre-s53-refactor-r4-harnesses/kilogram-cli-lib-kilogram_cli-tests.exe"
+    },
+    {
+      "path": "target/verification/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 14014976,
+      "sha256": "4964258679d0b45057200677ce48e2631e7d09d22ad4e921261828354fd58d15",
+      "raw_nonexecuted_backup": ".tmp/pre-s53-refactor-r4-harnesses/kilogram-cli-test-migration_s5_process-tests.exe"
+    },
+    {
+      "path": "target/verification/deps/kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 36986880,
+      "sha256": "a5d47d1d3b9da2720ba880b9a945a25591f9ca91a2ad40419e12b3ae40de8b96",
+      "raw_nonexecuted_backup": ".tmp/pre-s53-refactor-r4-harnesses/kilogram-cli-test-runtime2_process-tests.exe"
+    }
+  ]
+}

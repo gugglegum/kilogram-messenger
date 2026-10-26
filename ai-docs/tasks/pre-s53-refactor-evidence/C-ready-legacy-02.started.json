@@ -1,0 +1,11 @@
+{
+  "case": "C-ready-legacy-02",
+  "set": "C",
+  "started_utc": "2026-10-26T16:31:01.0601008Z",
+  "owner_pid": 33332,
+  "work_seconds": 35,
+  "whole_seconds": 45,
+  "baseline": "eafd0f873eb31b64377e8e65e06bc84a911f6dc6",
+  "binding_sha256": "32d2cb28ee2f705c64688501f976318155133f8c1f63390653f7d9658a5eb781",
+  "classification": "attempt-start-not-final-result"
+}

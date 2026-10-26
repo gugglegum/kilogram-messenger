@@ -1,0 +1,33 @@
+{
+  "case": "C-ready-legacy-01",
+  "state": "complete",
+  "set": "C",
+  "classification": "whole-contributing-runner",
+  "baseline": "eafd0f873eb31b64377e8e65e06bc84a911f6dc6",
+  "selector": "pre_s53_ready1_legacy_refusal_and_fork_boundary",
+  "exit_code": 1,
+  "error": "Stable wrapper failed, including finalization: Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+  "elapsed_seconds": 10.2520644,
+  "matched_tests": 1,
+  "one_test_pass_summaries": 0,
+  "wrapper_completion_markers": 0,
+  "wrapper_returned_normally": false,
+  "wrapper_exit_code": null,
+  "wrapper_exception": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+  "log_parsed": true,
+  "log_parse_error": null,
+  "source_images_verified_after": true,
+  "deadline": {
+    "owned_children_after_cleanup": 0,
+    "whole_watchdog": "unchanged owned Windows job remains armed through record and ledger writes",
+    "cleanup_verified": true,
+    "work_seconds": 45,
+    "work_expired": false,
+    "whole_seconds": 60
+  },
+  "binding_sha256": "050503fec6936a6444a9cb1eaea72711ac99d87dfecfa7c5b16089c27e5bbe34",
+  "inputs_file": "C-ready-legacy-01.inputs.json",
+  "origin_original_raw_unchanged": false,
+  "execution_mode_declared": "Restricted",
+  "rule": "Setup, raw provenance, copies, cached compile/stage, waits, failures, stable-wrapper finalization and cleanup included. A case file alone is not whole completion."
+}

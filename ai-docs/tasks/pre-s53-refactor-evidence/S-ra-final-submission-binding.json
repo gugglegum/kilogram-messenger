@@ -1,0 +1,182 @@
+{
+  "classification": "final R-A review submission; not permission to publish",
+  "baseline": "eafd0f873eb31b64377e8e65e06bc84a911f6dc6",
+  "root_thread": "01a164ec-589c-7b41-bc34-3ba158d1f22b",
+  "source": [
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/engine.rs",
+      "bytes": 34899,
+      "sha256": "4c3b8d0d735d9011d6796add6d3614d181e0b9cb8bc54fbbb63f7547cfab8583"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+      "bytes": 425,
+      "sha256": "3470c2ffc8989623271b22cd8e8bf7938ca50cd72fd4bc552ef5b4297254f502"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/ready1.rs",
+      "bytes": 730,
+      "sha256": "dc19b1dac26a8dad8825b13d1b2cab174ace7c690ff065fef06f1f49198aa25d"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/repair_tests.rs",
+      "bytes": 30908,
+      "sha256": "db599519a160589710af296ecd634154f937ce36a666e2efaea9cb125971fae1"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/bootstrap.rs",
+      "bytes": 22071,
+      "sha256": "eded68928b90c4051dbdb58e68e6c6d98b4365c3b2b392a8ec8f0f32a7680c30"
+    },
+    {
+      "path": "scripts/invoke-pre-s53-refactor-case.ps1",
+      "bytes": 18761,
+      "sha256": "d3f9d73454c0586de42c4541d7cd1798cd1aceb485068cf6a564d1d9b595a57d"
+    },
+    {
+      "path": "scripts/invoke-pre-s53-refactor-static.ps1",
+      "bytes": 7999,
+      "sha256": "ce54acd461327a6c4809b3cb2f4b42644e14ed6fd43e5e0e719aab8dd97914b9"
+    }
+  ],
+  "authority": [
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-plan-review.md",
+      "bytes": 6363,
+      "sha256": "c5dc9c026e4db7baf13f47289fe8782830c50efb45da89277f104cac4f3b367a"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-plan.md",
+      "bytes": 22331,
+      "sha256": "fdd411fb4a2519af494648858abcbe4c870f725e901479644048b4a3a85036a9"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-ra-environment-continuation.md",
+      "bytes": 3785,
+      "sha256": "703158ea5bc0382d76ce272631bb6336c3e9bec86221c3e93f7d63ffbac01af2"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-ra-fixture-continuation.md",
+      "bytes": 4355,
+      "sha256": "0e02e9e024168f95a8e2512821fa055610bd8f78a46dedc342f15e0894eb0467"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-ra-native-continuation.md",
+      "bytes": 3368,
+      "sha256": "18072263269874dacdd24aa93dfb2c1cb6b0f8e514954937c69ab2d1cfd373bf"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-ra-runner-continuation.md",
+      "bytes": 4501,
+      "sha256": "7c5100068617dc015ba010aa9dce8d2957768562fe57f7a364f49957bec9038c"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-task.md",
+      "bytes": 6948,
+      "sha256": "aebdb762365ed25b03438794c2d9e4c3ac2c3498f8fee02ef78db1fdfb16435b"
+    }
+  ],
+  "report": {
+    "path": "ai-docs/tasks/pre-s53-refactor-ra-implementation.md",
+    "bytes": 11263,
+    "sha256": "eed5b74d71c36ea4262fa15513936085cc20943df1d4c65b63b5064860c5b5ab"
+  },
+  "runtime_binding": {
+    "path": "ai-docs/tasks/pre-s53-refactor-evidence/R-A-pre-run-binding-r5.json",
+    "bytes": 175263,
+    "sha256": "15c3c29b8b9f8e84863f0e926405e8a16b94e850d85e5ba9a97d7ee42797d4f1"
+  },
+  "runtime_images": [
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "bytes": 61531648,
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+      "bytes": 69796864,
+      "sha256": "a0270e2ba163393b1c66655ef5ff6d64965c1365c39fd8c8c7d859b6c7ae72f3"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-l1-control-peer.exe",
+      "bytes": 69796864,
+      "sha256": "a0270e2ba163393b1c66655ef5ff6d64965c1365c39fd8c8c7d859b6c7ae72f3"
+    },
+    {
+      "path": "target/verification/deps/kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 69868032,
+      "sha256": "2b0c7be8146c9f204e6acd614b0f9218a7b0920ab4e5eabc95efb0a0291ae34f"
+    },
+    {
+      "path": "target/verification/deps/kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 42982912,
+      "sha256": "d699b3181b9bf5f2496242a13256c23badded4fbdb6bad76356a747952ca3585"
+    },
+    {
+      "path": "target/verification/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 14014976,
+      "sha256": "4964258679d0b45057200677ce48e2631e7d09d22ad4e921261828354fd58d15"
+    },
+    {
+      "path": "target/verification/deps/kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 36986880,
+      "sha256": "a5d47d1d3b9da2720ba880b9a945a25591f9ca91a2ad40419e12b3ae40de8b96"
+    }
+  ],
+  "actual_whole_PASS": [
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-04.json",
+      "bytes": 1277,
+      "sha256": "5eac2493c1f2b3c9a6341397598f71286a6c288652384d83d96111691e5e6261"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/F-ready-scope-01.json",
+      "bytes": 1291,
+      "sha256": "d51e89a3bb9e684c71990b5f9f8b2c79aeb9f0a338aec9cd14999e99377c4912"
+    }
+  ],
+  "final_ledger": {
+    "path": "ai-docs/tasks/pre-s53-refactor-evidence/contributing-cases-r5.json",
+    "bytes": 4326,
+    "sha256": "6c7eec440c6f503e11b0fba303c0e8a32db1966eaca58b89a7745000fc3270d3"
+  },
+  "final_reuse": {
+    "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-final-reuse-assessment.json",
+    "bytes": 184487,
+    "sha256": "0b374e9517d52d55dcf89b869e36cab2dca8283772135fcbeaa5b007d9075298"
+  },
+  "preserved_S5_2_acceptance": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-candidate-files.json",
+      "bytes": 200236,
+      "sha256": "cb4c91b65e1b8977e334e985f62119da117a16f1664677452a8a0ab8252749c5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-implementation-acceptance.md",
+      "bytes": 5823,
+      "sha256": "fa3e4981398128b3bfb9a439de218bacc9cea7f983c38d63603f6e15ed03f321"
+    }
+  ],
+  "excluded_queued_task": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-task.md",
+    "bytes": 10349,
+    "sha256": "75cbc0f9950971820beffb08edbd7c6ccb4465d8be44aea331c51687f1807f7c"
+  },
+  "charge_seconds": {
+    "C_total": 118.3327995,
+    "C_conservative": 60,
+    "C_measured": 58.3327995,
+    "F_measured": 148.7417507,
+    "P": 0
+  },
+  "revised_active_ceiling": {
+    "P": 0,
+    "F": 210,
+    "C": 150
+  },
+  "R_B_C60_reserved_inactive": true,
+  "R_B_started": false,
+  "S5_3_started": false,
+  "index_expected_empty": true,
+  "commit_push_authorized_by_this_record": false
+}

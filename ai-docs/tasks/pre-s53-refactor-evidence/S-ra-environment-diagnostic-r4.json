@@ -1,0 +1,34 @@
+{
+  "classification": "root-authorized disposable PowerShell process diagnostic; no product/harness/fixture",
+  "runner_sha256": "fc0077196739056277fe087051f4a3653b0432ba28e083b4baa01025d7c1dddc",
+  "actual_helper_AST_extracted": true,
+  "probe_variable": "KILOGRAM_PRE_S53_R4_ENV_DIAGNOSTIC",
+  "scope": "Process only; User/Machine environment not read or changed",
+  "powershell_version": "7.6.5",
+  "framework": ".NET 10.0.11",
+  "states": [
+    {
+      "original_state": "absent",
+      "captured_present": false,
+      "clear_is_actual_absence": true,
+      "restored_present": false,
+      "restored_exactly": true
+    },
+    {
+      "original_state": "present-empty",
+      "captured_present": true,
+      "clear_is_actual_absence": true,
+      "restored_present": true,
+      "restored_exactly": true
+    },
+    {
+      "original_state": "present-nonempty",
+      "captured_present": true,
+      "clear_is_actual_absence": true,
+      "restored_present": true,
+      "restored_exactly": true
+    }
+  ],
+  "result": "PASS",
+  "variable_restored_to_initial_state": true
+}

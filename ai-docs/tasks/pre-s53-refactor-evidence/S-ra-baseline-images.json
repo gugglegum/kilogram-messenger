@@ -1,0 +1,42 @@
+{
+  "baseline": "eafd0f873eb31b64377e8e65e06bc84a911f6dc6",
+  "classification": "static image preservation only; never executed",
+  "archive": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\pre-s53-refactor-baseline-images",
+  "images": [
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+      "bytes": 70226432,
+      "sha256": "69744fca50f44439b4734e699f416fc6b2bb8aac4336e5dad18ed173b2abbf6c"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-l1-control-peer.exe",
+      "bytes": 70226432,
+      "sha256": "69744fca50f44439b4734e699f416fc6b2bb8aac4336e5dad18ed173b2abbf6c"
+    },
+    {
+      "path": "target/verification/deps/kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 69870592,
+      "sha256": "0788820a3dd6afffb6935fc3afa9d94f61f839462a37836c4c9d1209ba2dc648"
+    },
+    {
+      "path": "target/verification/deps/kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 42956288,
+      "sha256": "45178e529f5d962bd8e5b53fc1b59dae0c3a53d86be791987c4d71c1214a0443"
+    },
+    {
+      "path": "target/verification/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 14014976,
+      "sha256": "12bb6adda2a96c518785b654369805f6502b6e69998e28b30b1cde052688156e"
+    },
+    {
+      "path": "target/verification/deps/kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 36986880,
+      "sha256": "659d158fe8583b2134d968ed745ec909064064fc50a0dde4fe88b49a3e60a79f"
+    }
+  ],
+  "frozen": {
+    "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+    "bytes": 61531648,
+    "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+  }
+}

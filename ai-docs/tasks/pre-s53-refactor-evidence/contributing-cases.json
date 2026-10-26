@@ -1,0 +1,28 @@
+{
+  "baseline": "eafd0f873eb31b64377e8e65e06bc84a911f6dc6",
+  "active_limits_seconds": {
+    "P": 0.0,
+    "F": 210.0,
+    "C": 120.0
+  },
+  "reserved_inactive_R_B": {
+    "P": 0.0,
+    "F": 0.0,
+    "C": 60.0
+  },
+  "charged_elapsed_seconds": {
+    "P": 0.0,
+    "F": 0.0,
+    "C": 0.0
+  },
+  "cases": [
+    {
+      "case": "C-ready-scope-01",
+      "state": "started",
+      "exit_code": null,
+      "elapsed_seconds": null,
+      "set": "C"
+    }
+  ],
+  "rule": "Every started attempt retained; no automatic retries or historical budget reuse."
+}

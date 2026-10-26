@@ -836,16 +836,7 @@ impl Engine {
         let body = wire::control(raw, 3, self.spec(c)?.peers[peer as usize].cert.device_id())?;
         let a0 = self.event_at(c, 0, 0)?.context("NeedHandshake: A0")?;
         let b0 = self.event_at(c, 1, 0)?.context("NeedHandshake: B0")?;
-        let f = body.fields(8)?;
-        ensure!(
-            Some(f[0].fixed::<32>()?) == head.d
-                && Some(f[1].fixed::<32>()?) == head.e
-                && f[2].text()? == head.sid.as_deref().context("SID")?
-                && f[5].uint()? == peer
-                && f[6].uint()? == 1
-                && f[7].uint()? == 1,
-            "Ready scope/role/suite"
-        );
+        let f = super::ready1::scoped_fields(&head, peer, &body)?;
         if f[3].fixed::<32>()? != a0.id()? || f[4].fixed::<32>()? != b0.id()? {
             let prior = self
                 .store

@@ -1,0 +1,15 @@
+{
+  "classification": "root-requested in-memory PowerShell shape check only; no product/harness/fixture execution",
+  "source": "scripts/invoke-pre-s53-refactor-case.ps1",
+  "source_sha256": "ed0cfd441e40415ee022acea5ca74faf653bfdd4c31a152484cffb7a299662ab",
+  "actual_function_extracted_from_source": true,
+  "parse_errors": 0,
+  "dictionary_only_sum": 2.5,
+  "mixed_sum": 6.25,
+  "json_round_trip_sum": 6.25,
+  "single_record_reference_identity": true,
+  "elapsed_update_visible_in_ledger": true,
+  "verdict_update_visible_in_ledger": true,
+  "invalid_duration_cases_refused": 5,
+  "result": "PASS"
+}

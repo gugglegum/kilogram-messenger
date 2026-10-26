@@ -1,0 +1,43 @@
+{
+  "classification": "static full-file comparison",
+  "before_sha256": "f9b58b931abce5179fea516b1efab97c8c2013b03b37f3455824bef96a037dba",
+  "after_sha256": "fc0077196739056277fe087051f4a3653b0432ba28e083b4baa01025d7c1dddc",
+  "only_literal_policy_paths_and_actual_environment_helper_changes": true,
+  "all_other_execution_parsing_cleanup_accounting_terminal_guards_deadline_text_unchanged": true,
+  "helper_start_line": 47,
+  "helper_end_line": 60,
+  "literal_replacements": [
+    [
+      "C-ready-legacy-02",
+      "C-ready-legacy-03"
+    ],
+    [
+      "work=35;whole=45;selector='pre_s53_ready1_legacy_refusal_and_fork_boundary'",
+      "work=25;whole=35;selector='pre_s53_ready1_legacy_refusal_and_fork_boundary'"
+    ],
+    [
+      "R-A-pre-run-binding-r3.json",
+      "R-A-pre-run-binding-r4.json"
+    ],
+    [
+      "contributing-cases-r3.json",
+      "contributing-cases-r4.json"
+    ],
+    [
+      "050503fec6936a6444a9cb1eaea72711ac99d87dfecfa7c5b16089c27e5bbe34",
+      "32d2cb28ee2f705c64688501f976318155133f8c1f63390653f7d9658a5eb781"
+    ],
+    [
+      "$ledger.active_limits_seconds.C -ne 49.7479356",
+      "$ledger.active_limits_seconds.C -ne 38.4375917"
+    ],
+    [
+      "R-A-prior-charge-r3.json",
+      "R-A-prior-charge-r4.json"
+    ]
+  ],
+  "clear_restore_calls": [
+    "    foreach ($name in $environment.Keys) { Set-TemporaryProcessEnvironment $name $null }",
+    "    foreach ($name in $environment.Keys) { Set-TemporaryProcessEnvironment $name $environment[$name] }"
+  ]
+}

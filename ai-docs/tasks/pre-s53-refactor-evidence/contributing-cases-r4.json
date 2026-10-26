@@ -1,0 +1,81 @@
+{
+  "baseline": "eafd0f873eb31b64377e8e65e06bc84a911f6dc6",
+  "classification": "root-authorized environment-repaired NativeToken continuation",
+  "active_limits_seconds": {
+    "F": 210.0,
+    "C": 38.4375917,
+    "P": 0.0
+  },
+  "original_R_A_ceiling_seconds": {
+    "F": 210.0,
+    "C": 120.0,
+    "P": 0.0
+  },
+  "conservative_prior_R_A_seconds": {
+    "F": 0.0,
+    "C": 60.0,
+    "P": 0.0
+  },
+  "measured_prior_R_A_seconds": {
+    "F": 0.0,
+    "C": 21.5624083,
+    "P": 0.0
+  },
+  "total_prior_R_A_charge_seconds": {
+    "F": 0.0,
+    "C": 81.5624083,
+    "P": 0.0
+  },
+  "reconciliation_path": "ai-docs/tasks/pre-s53-refactor-evidence/R-A-prior-charge-r4.json",
+  "reconciliation_sha256": "4f97eca803c8dfc7919aa4dcb0794bd230c07fb507891dcd87e688d619402b24",
+  "allowed_cases": [
+    "C-ready-legacy-03",
+    "F-ready-scope-01"
+  ],
+  "reserved_inactive_R_B": {
+    "F": 0.0,
+    "C": 60.0,
+    "P": 0.0
+  },
+  "charged_elapsed_seconds": {
+    "F": 0.0,
+    "C": 11.9990029,
+    "P": 0.0
+  },
+  "cases": [
+    {
+      "case": "C-ready-legacy-03",
+      "state": "complete",
+      "set": "C",
+      "classification": "whole-contributing-runner",
+      "baseline": "eafd0f873eb31b64377e8e65e06bc84a911f6dc6",
+      "selector": "pre_s53_ready1_legacy_refusal_and_fork_boundary",
+      "exit_code": 1,
+      "error": "Stable wrapper failed, including finalization: Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "elapsed_seconds": 11.9990029,
+      "matched_tests": 1,
+      "one_test_pass_summaries": 0,
+      "wrapper_completion_markers": 0,
+      "wrapper_returned_normally": false,
+      "wrapper_exit_code": null,
+      "wrapper_exception": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "log_parsed": true,
+      "log_parse_error": null,
+      "source_images_verified_after": true,
+      "deadline": {
+        "work_expired": false,
+        "whole_watchdog": "unchanged owned Windows job remains armed through record and ledger writes",
+        "work_seconds": 25,
+        "owned_children_after_cleanup": 0,
+        "cleanup_verified": true,
+        "whole_seconds": 35
+      },
+      "binding_sha256": "fe93a98f831dbfb184be921db4e444a25eaf2174a56650ab166c50e2b18496de",
+      "inputs_file": "C-ready-legacy-03.inputs.json",
+      "origin_original_raw_unchanged": false,
+      "execution_mode_declared": "NativeToken",
+      "rule": "Setup, raw provenance, copies, cached compile/stage, waits, failures, stable-wrapper finalization and cleanup included. A case file alone is not whole completion."
+    }
+  ],
+  "rule": "Combined R-A charge = conservative60 + prior measured21.5624083 + this ledger measured elapsed. One C03 then F if PASS; no generic bypass or further retry."
+}

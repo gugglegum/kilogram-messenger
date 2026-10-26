@@ -1,0 +1,74 @@
+{
+  "baseline": "eafd0f873eb31b64377e8e65e06bc84a911f6dc6",
+  "classification": "root-authorized two-case continuation; historical failed ledger remains unchanged",
+  "active_limits_seconds": {
+    "P": 0.0,
+    "F": 210.0,
+    "C": 60.0
+  },
+  "original_R_A_ceiling_seconds": {
+    "P": 0.0,
+    "F": 210.0,
+    "C": 120.0
+  },
+  "conservative_prior_R_A_seconds": {
+    "P": 0.0,
+    "F": 0.0,
+    "C": 60.0
+  },
+  "conservative_prior_basis": "Whole60 allocation for failed C-ready-scope-01; not measured actual",
+  "reconciliation_path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-scope-01-reconciliation.json",
+  "reconciliation_sha256": "c0f14c5fcb959a94d4db22bcf05e4ddea1857b12328b3959071750b2b9e73a45",
+  "historical_ledger_path": "ai-docs/tasks/pre-s53-refactor-evidence/contributing-cases.json",
+  "historical_ledger_sha256": "50fb687f4f5ffc60211353425992ddab350d949abc06770da76542ccc2901d18",
+  "allowed_cases": [
+    "C-ready-legacy-01",
+    "F-ready-scope-01"
+  ],
+  "reserved_inactive_R_B": {
+    "P": 0.0,
+    "F": 0.0,
+    "C": 60.0
+  },
+  "charged_elapsed_seconds": {
+    "P": 0.0,
+    "F": 0.0,
+    "C": 10.2520644
+  },
+  "cases": [
+    {
+      "case": "C-ready-legacy-01",
+      "state": "complete",
+      "set": "C",
+      "classification": "whole-contributing-runner",
+      "baseline": "eafd0f873eb31b64377e8e65e06bc84a911f6dc6",
+      "selector": "pre_s53_ready1_legacy_refusal_and_fork_boundary",
+      "exit_code": 1,
+      "error": "Stable wrapper failed, including finalization: Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "elapsed_seconds": 10.2520644,
+      "matched_tests": 1,
+      "one_test_pass_summaries": 0,
+      "wrapper_completion_markers": 0,
+      "wrapper_returned_normally": false,
+      "wrapper_exit_code": null,
+      "wrapper_exception": "Stable test executable failed with exit code 101: E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "log_parsed": true,
+      "log_parse_error": null,
+      "source_images_verified_after": true,
+      "deadline": {
+        "owned_children_after_cleanup": 0,
+        "whole_watchdog": "unchanged owned Windows job remains armed through record and ledger writes",
+        "cleanup_verified": true,
+        "work_seconds": 45,
+        "work_expired": false,
+        "whole_seconds": 60
+      },
+      "binding_sha256": "050503fec6936a6444a9cb1eaea72711ac99d87dfecfa7c5b16089c27e5bbe34",
+      "inputs_file": "C-ready-legacy-01.inputs.json",
+      "origin_original_raw_unchanged": false,
+      "execution_mode_declared": "Restricted",
+      "rule": "Setup, raw provenance, copies, cached compile/stage, waits, failures, stable-wrapper finalization and cleanup included. A case file alone is not whole completion."
+    }
+  ],
+  "rule": "Combined R-A charge is conservative prior plus this continuation measured elapsed. Only two unstarted cases; every attempt retained, no retries or bypass of a failed continuation."
+}

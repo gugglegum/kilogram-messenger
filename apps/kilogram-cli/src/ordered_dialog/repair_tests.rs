@@ -179,6 +179,129 @@ impl Pair {
 }
 
 #[test]
+fn pre_s53_ready1_legacy_refusal_and_fork_boundary() -> Result<()> {
+    let mut p = Pair::new()?;
+    let pair = p.admit()?;
+    p.activate(&pair)?;
+    let mut saved_proofs = Vec::new();
+    for own_role in 0..2 {
+        let (receiver, signer) = if own_role == 0 {
+            (&mut p.a, &p.b)
+        } else {
+            (&mut p.b, &p.a)
+        };
+        let prior = admin::required(&receiver.store, &engine::ready_path(p.c, 1 - own_role))?;
+        let expected = wire::control(&prior, 3, signer.device.identity().device_id())?;
+        let fields = expected.fields(8)?.to_vec();
+        let native = admin::required(&receiver.store, &state::native_path(p.c))?;
+        let head = admin::required(&receiver.store, &state::head_path(p.c))?;
+        let generation = receiver.store.generation();
+        let blocked_path = format!("{}blocked-fork", engine::prefix(p.c));
+        let mut malformed = Vec::new();
+        for index in [0, 1, 2, 5, 6, 7] {
+            let mut wrong = fields.clone();
+            wrong[index] = match index {
+                0 | 1 => {
+                    let mut id = wrong[index].fixed::<32>()?;
+                    id[0] ^= 0x80;
+                    b(id)
+                }
+                2 => b("wrong SID"),
+                5 => u(own_role),
+                _ => u(2),
+            };
+            malformed.push(a(wrong));
+        }
+        let mut short = fields.clone();
+        short.pop();
+        malformed.push(a(short));
+        let mut bad_second = fields.clone();
+        bad_second[4] = b([0; 31]);
+        malformed.push(a(bad_second));
+        for body in malformed {
+            let raw = if body.list()?.len() == 7 {
+                // The production signer refuses arity7. Sign only this exact
+                // negative fixture, retaining the production receiver checks.
+                let identity = signer.device.identity();
+                let unsigned = a([u(1), u(3), body.clone()]);
+                let bytes = wire::signing_bytes(wire::CONTROL_SIGN, &unsigned, 32 * 1024)?;
+                let signature = identity.sign(&bytes);
+                identity.device_id().verify(&bytes, &signature)?;
+                wire::encode(&a([u(1), u(3), body, b(signature)]), 32 * 1024)?
+            } else {
+                wire::signed_control(3, body, signer.device.identity())?
+            };
+            let error = receiver
+                .ready(p.c, &raw, p.binding)
+                .err()
+                .context("malformed Ready accepted")?;
+            ensure!(
+                !error.to_string().contains("Blocked"),
+                "ordinary refusal became a fork: {error:#}"
+            );
+            ensure!(
+                receiver.store.generation() == generation
+                    && receiver.store.get(&blocked_path)?.is_none()
+                    && admin::required(&receiver.store, &state::head_path(p.c))? == head
+                    && admin::required(&receiver.store, &state::native_path(p.c))? == native,
+                "malformed Ready changed durable Head/Native/block"
+            );
+            let own = admin::required(&receiver.store, &engine::ready_path(p.c, own_role))?;
+            ensure!(
+                receiver.ready(p.c, &prior, p.binding)? == own
+                    && receiver.store.generation() == generation,
+                "valid Ready after refusal was not an exact retry"
+            );
+        }
+        // Preserve Engine's short circuit: a conflicting first genesis reaches
+        // the fork path without parsing a malformed second genesis. Owner7's
+        // eager parsing deliberately remains different.
+        let mut conflicting = fields;
+        let mut id = conflicting[3].fixed::<32>()?;
+        id[0] ^= 0x80;
+        conflicting[3] = b(id);
+        conflicting[4] = b([0; 31]);
+        let raw = wire::signed_control(3, a(conflicting), signer.device.identity())?;
+        let error = receiver
+            .ready(p.c, &raw, p.binding)
+            .err()
+            .context("same-scope conflicting genesis accepted")?;
+        ensure!(
+            error.to_string().contains("Ready genesis fork"),
+            "{error:#}"
+        );
+        let proof = admin::required(&receiver.store, &blocked_path)?;
+        let value = wire::decode(&proof, 68 * 1024)?;
+        let f = value.fields(4)?;
+        ensure!(
+            f[1].bytes()? == b"Ready genesis" && f[2].bytes()? == prior && f[3].bytes()? == raw,
+            "fork must retain the saved peer Ready as its first witness"
+        );
+        ensure!(
+            admin::required(&receiver.store, &state::native_path(p.c))? == native,
+            "Ready fork changed Native"
+        );
+        saved_proofs.push(proof);
+    }
+    p.a = reopen(p.a)?;
+    p.b = reopen(p.b)?;
+    for (receiver, proof) in [&p.a, &p.b].into_iter().zip(saved_proofs) {
+        ensure!(
+            admin::required(
+                &receiver.store,
+                &format!("{}blocked-fork", engine::prefix(p.c))
+            )? == proof
+                && receiver.policy(p.c).is_err(),
+            "Ready fork did not survive cold reopen"
+        );
+    }
+    println!(
+        "PRE_S53_READY1 genuine_pair=true roles=2 signed_refusals=16 valid_retries=16 short_circuit_forks=2 saved_ready_witness=true cold_block=true"
+    );
+    Ok(())
+}
+
+#[test]
 fn review_r1_renewal_before_offer_and_historical_selection() -> Result<()> {
     for selected_at in [0, 1, 2, 3] {
         let mut p = Pair::new()?;

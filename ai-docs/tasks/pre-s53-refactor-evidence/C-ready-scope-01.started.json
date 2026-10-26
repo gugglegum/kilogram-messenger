@@ -1,0 +1,11 @@
+{
+  "case": "C-ready-scope-01",
+  "set": "C",
+  "started_utc": "2026-10-26T16:04:36.6018096Z",
+  "owner_pid": 49804,
+  "work_seconds": 45,
+  "whole_seconds": 60,
+  "baseline": "eafd0f873eb31b64377e8e65e06bc84a911f6dc6",
+  "binding_sha256": "a561122881f4e1e951473ea9e6e062a6e39688e1e17014c3cc288357cc61ebd1",
+  "classification": "attempt-start-not-final-result"
+}

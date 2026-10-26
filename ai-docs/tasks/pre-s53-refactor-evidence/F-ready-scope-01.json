@@ -1,0 +1,33 @@
+{
+  "case": "F-ready-scope-01",
+  "state": "complete",
+  "set": "F",
+  "classification": "whole-contributing-runner",
+  "baseline": "eafd0f873eb31b64377e8e65e06bc84a911f6dc6",
+  "selector": "migration_s5_l1_review1_signed_ready_refusal_then_scoped_fork",
+  "exit_code": 0,
+  "error": null,
+  "elapsed_seconds": 148.7417507,
+  "matched_tests": 1,
+  "one_test_pass_summaries": 1,
+  "wrapper_completion_markers": 1,
+  "wrapper_returned_normally": true,
+  "wrapper_exit_code": 0,
+  "wrapper_exception": null,
+  "log_parsed": true,
+  "log_parse_error": null,
+  "source_images_verified_after": true,
+  "deadline": {
+    "owned_children_after_cleanup": 0,
+    "whole_seconds": 210,
+    "work_expired": false,
+    "work_seconds": 180,
+    "whole_watchdog": "unchanged owned Windows job remains armed through record and ledger writes",
+    "cleanup_verified": true
+  },
+  "binding_sha256": "15c3c29b8b9f8e84863f0e926405e8a16b94e850d85e5ba9a97d7ee42797d4f1",
+  "inputs_file": "F-ready-scope-01.inputs.json",
+  "origin_original_raw_unchanged": true,
+  "execution_mode_declared": "NativeToken",
+  "rule": "Setup, raw provenance, copies, cached compile/stage, waits, failures, stable-wrapper finalization and cleanup included. A case file alone is not whole completion."
+}

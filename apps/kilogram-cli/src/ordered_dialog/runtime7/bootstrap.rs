@@ -607,15 +607,6 @@ impl Owner7 {
 /// Shape/scope errors are ordinary refusals; only the returned same-scope
 /// genesis claims may be compared with durable genesis and classified as a fork.
 pub(super) fn ready_claims(head: &Head, peer: u64, body: &Value) -> Result<[Id; 2]> {
-    let f = body.fields(8)?;
-    ensure!(
-        Some(f[0].fixed::<32>()?) == head.d
-            && Some(f[1].fixed::<32>()?) == head.e
-            && f[2].text()? == head.sid.as_deref().context("SID")?
-            && f[5].uint()? == peer
-            && f[6].uint()? == 1
-            && f[7].uint()? == 1,
-        "Ready scope/role/suite"
-    );
+    let f = super::super::ready1::scoped_fields(head, peer, body)?;
     Ok([f[3].fixed::<32>()?, f[4].fixed::<32>()?])
 }

@@ -1,0 +1,47 @@
+{
+  "classification": "static full-file mechanical comparison; no runtime/product/fixture check",
+  "before_sha256": "c1fce94bb909ba8cd4945cbd70907a23a1a6654b2e5398960cc88fb43b2c273c",
+  "after_sha256": "f9b58b931abce5179fea516b1efab97c8c2013b03b37f3455824bef96a037dba",
+  "only_listed_literal_changes": true,
+  "literal_replacements": [
+    [
+      "C-ready-legacy-01",
+      "C-ready-legacy-02"
+    ],
+    [
+      "ValidateSet('Restricted','NativeToken')",
+      "ValidateSet('NativeToken')"
+    ],
+    [
+      "= 'Restricted'",
+      "= 'NativeToken'"
+    ],
+    [
+      "work=45;whole=60;selector='pre_s53_ready1_legacy_refusal_and_fork_boundary'",
+      "work=35;whole=45;selector='pre_s53_ready1_legacy_refusal_and_fork_boundary'"
+    ],
+    [
+      "R-A-pre-run-binding-r2.json",
+      "R-A-pre-run-binding-r3.json"
+    ],
+    [
+      "contributing-cases-r2.json",
+      "contributing-cases-r3.json"
+    ],
+    [
+      "a561122881f4e1e951473ea9e6e062a6e39688e1e17014c3cc288357cc61ebd1",
+      "050503fec6936a6444a9cb1eaea72711ac99d87dfecfa7c5b16089c27e5bbe34"
+    ],
+    [
+      "$ledger.active_limits_seconds.C -ne 60",
+      "$ledger.active_limits_seconds.C -ne 49.7479356"
+    ],
+    [
+      "C-ready-scope-01-reconciliation.json",
+      "R-A-prior-charge-r3.json"
+    ]
+  ],
+  "parser_cleanup_accounting_errorguards_deadline_unchanged": true,
+  "parse_errors": 0,
+  "declared_mode": "NativeToken required for both cases"
+}

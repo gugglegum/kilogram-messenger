@@ -1,0 +1,568 @@
+{
+  "schema_version": 1,
+  "classification": "exact R-A candidate allowlist for root implementation review",
+  "baseline": "eafd0f873eb31b64377e8e65e06bc84a911f6dc6",
+  "self_path": "ai-docs/tasks/pre-s53-refactor-ra-candidate-files.json",
+  "self_excluded_from_files_to_avoid_hash_cycle": true,
+  "files": [
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-01.inputs.json",
+      "bytes": 163890,
+      "sha256": "52522b3c21251e02a487eab693c875a0b897c9b6d26fc2c6618741f238a781a7",
+      "git_blob": "69ead25879f466516f9da64330628dd9a9f3b46c"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-01.json",
+      "bytes": 1639,
+      "sha256": "e8212418ddd62cd13c660c717379ed03b46ac74ca8fa10e0c597f5d79bab2735",
+      "git_blob": "7faed9c37f70597a1138620655dd3ab66e66fa40"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-01.log",
+      "bytes": 2238,
+      "sha256": "194d2262dc09bd15e36843ac7d0087c31da5d44ab1c47a12e3b8159cbdc05890",
+      "git_blob": "0b757e741f36f83f859b914a613739d15b5ba970"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-01.started.json",
+      "bytes": 373,
+      "sha256": "5c4cf8252269285cb7b917aa984cfcfe6b9348ad031b513dd112aa64151ad360",
+      "git_blob": "6f4ae863dc122b168925be3748f3442f9a008e70"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-02.inputs.json",
+      "bytes": 167354,
+      "sha256": "879d24c46d3117ffbd4ff88fe16d034f106af851a8742944f16c957223ba25ca",
+      "git_blob": "c87e5b77067103005ffb14b2b1e0606831be8c98"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-02.json",
+      "bytes": 1640,
+      "sha256": "142dab6147e9d7d9dfad1b4aa276c052f34ab22b051bc5bf6b2013f2c8610d81",
+      "git_blob": "a7c51b0a57e8a991f094f71f2c10dbbda2f85a5f"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-02.log",
+      "bytes": 2652,
+      "sha256": "5b9848253622aca0094ba7046c58c4ef8c5071419eb06db0b24cc98027a0bdd5",
+      "git_blob": "60cec7527c6825378cd4c37ca781a7fc538885d9"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-02.started.json",
+      "bytes": 373,
+      "sha256": "c03291057516e47df10a8128bb6a8a43f18cdc4f5362af8d0adff3cc3e35e5f0",
+      "git_blob": "2fbf1049134c3462393d9a7aaf9b259931551599"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-03.inputs.json",
+      "bytes": 169650,
+      "sha256": "cf3b230251c2bbfdfeaabdc19dcdd7b855584aa5cb904671f18b7f6327c74b6a",
+      "git_blob": "78a4fc91546861539836b2eed955e37d0b48126b"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-03.json",
+      "bytes": 1640,
+      "sha256": "437b61c69448ffdd62a82b2653cb147e7ab917a1053c9ea6de4e67db354b5ddc",
+      "git_blob": "8d2d83b41aefa130959ced94abf486a9a43dd0e6"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-03.log",
+      "bytes": 2580,
+      "sha256": "c33816cc31992909953187705fad42a4ed1b72639e28b2e45083cccf6fc80693",
+      "git_blob": "da1a9abb134a747cd729db5587494d5df8ea6ba5"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-03.started.json",
+      "bytes": 372,
+      "sha256": "939bb5c558582bf29ff0edd1277aecb60a11bc392cef07e994002a6614e38a99",
+      "git_blob": "4bb94bb7babddacee9e4dab29583d2f614956631"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-04.inputs.json",
+      "bytes": 173035,
+      "sha256": "b47402287690a5b364b96664d0225434a1439d6b17c30ff30fcede334446e988",
+      "git_blob": "dd23b0b2b92edf0818ac1550fe7d02330f4abaa4"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-04.json",
+      "bytes": 1277,
+      "sha256": "5eac2493c1f2b3c9a6341397598f71286a6c288652384d83d96111691e5e6261",
+      "git_blob": "ae02d941765e0889429a2137ec25ab82ecbb2934"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-04.log",
+      "bytes": 3347,
+      "sha256": "13823bdef3ef8bd319a0beee526284a5ac13538e4ff49bed90531276c354a632",
+      "git_blob": "bb1516d7f4a40aa5029f60dce3c6676ef54bfd24"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-04.started.json",
+      "bytes": 373,
+      "sha256": "d169ab65b6ac28f5f34d32dabc60a1f46581f9d3b3e7e66ba6042b4fde3f2df5",
+      "git_blob": "998ecaca8cbd438cafe45ff93ae3f95d21bbc493"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-scope-01-reconciliation.json",
+      "bytes": 2559,
+      "sha256": "c0f14c5fcb959a94d4db22bcf05e4ddea1857b12328b3959071750b2b9e73a45",
+      "git_blob": "cecaeb4d069b8961767297452ad52744f10ca986"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-scope-01.inputs.json",
+      "bytes": 161388,
+      "sha256": "a0053022d47ef85a9aa9c45b532eeb56fcc13f65c3aad669d0007f65170014b3",
+      "git_blob": "f692b35048889dec351d0847133f9acf6be3810b"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-scope-01.json",
+      "bytes": 1286,
+      "sha256": "ce888144ce10b607ebac8ba5da9efcf80736d8ec2dd709c4b947207881fc3005",
+      "git_blob": "5c7c345b689caea0e4a1abdc2b0253b81e88a5da"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-scope-01.log",
+      "bytes": 2913,
+      "sha256": "7cff4984426e7a6a8d17bfae74af21e91591b305b85aa7790abb0861d8b62b5d",
+      "git_blob": "b22f0ea6f054d1683f5d3a6663c0192e567e13d0"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-scope-01.started.json",
+      "bytes": 372,
+      "sha256": "98db2bf54cf4568f2d1331941e2871ea5746eecef16bc1e0beb87e5505988185",
+      "git_blob": "844d148f503d4c42c86c6f55bef482b296136851"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/contributing-cases-r2.json",
+      "bytes": 3166,
+      "sha256": "9e03cf909514390205c965d9dfe902cdb14bc64a62fdd40eb82534294e61f118",
+      "git_blob": "14c008a6cb6c9ee28a5e86aebf2c82f790094345"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/contributing-cases-r3.json",
+      "bytes": 2981,
+      "sha256": "33eaad603d4fde91bf8483cc451285fa85c897d4e6439688151904ec5c7990cb",
+      "git_blob": "e3681f349bcc432ebe566c55698b1fbdf12f4885"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/contributing-cases-r4.json",
+      "bytes": 3008,
+      "sha256": "24cfc8364933bda1836bd8fda9d4c7bd8c0e61ad8bcdc692a25108422bc780f5",
+      "git_blob": "661200b3bfe6c325b68557157f415a30da52e1cb"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/contributing-cases-r5.json",
+      "bytes": 4326,
+      "sha256": "6c7eec440c6f503e11b0fba303c0e8a32db1966eaca58b89a7745000fc3270d3",
+      "git_blob": "159b403d85854cf6e0c10f7f5a22419cd1c92286"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/contributing-cases.json",
+      "bytes": 576,
+      "sha256": "50fb687f4f5ffc60211353425992ddab350d949abc06770da76542ccc2901d18",
+      "git_blob": "3c577f70ae21be8472aa6158279c814fb3a12ade"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/F-ready-scope-01.inputs.json",
+      "bytes": 173034,
+      "sha256": "b0b12920ede0293f7aab2401fc5301a455beba1607d8ab4fe8108973973db47c",
+      "git_blob": "690c8a27c361247970a12432aa2bf2c6bc914e8b"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/F-ready-scope-01.json",
+      "bytes": 1291,
+      "sha256": "d51e89a3bb9e684c71990b5f9f8b2c79aeb9f0a338aec9cd14999e99377c4912",
+      "git_blob": "04ad9cb736c15ac9fd14be584e00a52ac5b84f6a"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/F-ready-scope-01.log",
+      "bytes": 3004,
+      "sha256": "9b8cdd4a878b54eac4b123d888aa47392c4506929693f02f34080ce26f7aeeb9",
+      "git_blob": "d6e888974ad5280dbf3a0ff05e11408cfae8d304"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/F-ready-scope-01.origin-after.json",
+      "bytes": 47709,
+      "sha256": "9bce04097df5bd49ff0909e1ff28609d73758b016ff203a8515c703af63ba1fa",
+      "git_blob": "e7fee1766252ae3cfca9a9639ba779e0de7e36f0"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/F-ready-scope-01.origin-before.json",
+      "bytes": 48081,
+      "sha256": "e4b450fed862521980b750518f0fc4684c289a7c49ca909307d225a2f976ee1b",
+      "git_blob": "ef91ccff83e7f8204e72cafe694086e01f76cf4e"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/F-ready-scope-01.started.json",
+      "bytes": 374,
+      "sha256": "f26d1d96f9ad272a4f23cf4bac74555914838777abe86a2b63c7308e4bf2b206",
+      "git_blob": "a7b8a58af39df2028fcfb97002132ae952cb15c5"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/R-A-pre-run-binding-r2.json",
+      "bytes": 166375,
+      "sha256": "050503fec6936a6444a9cb1eaea72711ac99d87dfecfa7c5b16089c27e5bbe34",
+      "git_blob": "85aa2970ba930978e525561700bb739b4fff9be2"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/R-A-pre-run-binding-r3.json",
+      "bytes": 169843,
+      "sha256": "32d2cb28ee2f705c64688501f976318155133f8c1f63390653f7d9658a5eb781",
+      "git_blob": "99fbd2734514ebaf6897d987d517c6f64d1dc682"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/R-A-pre-run-binding-r4.json",
+      "bytes": 172164,
+      "sha256": "fe93a98f831dbfb184be921db4e444a25eaf2174a56650ab166c50e2b18496de",
+      "git_blob": "691b3232890af9037742fa46fa6fcff9996c1a99"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/R-A-pre-run-binding-r5.json",
+      "bytes": 175263,
+      "sha256": "15c3c29b8b9f8e84863f0e926405e8a16b94e850d85e5ba9a97d7ee42797d4f1",
+      "git_blob": "991b23db8041dcb99ec401b72d95fb017e7c6390"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/R-A-pre-run-binding.json",
+      "bytes": 163452,
+      "sha256": "a561122881f4e1e951473ea9e6e062a6e39688e1e17014c3cc288357cc61ebd1",
+      "git_blob": "37893ddbddc773bedc58fd1fa91073807b4c9fda"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/R-A-prior-charge-r3.json",
+      "bytes": 7675,
+      "sha256": "173741e26f47cdd749ecd073d4fe80438b8ce0215f331d437825373ebf5136e0",
+      "git_blob": "95a2fc8fc5ccb991ddc82a3730aec7ca8304b954"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/R-A-prior-charge-r4.json",
+      "bytes": 9658,
+      "sha256": "4f97eca803c8dfc7919aa4dcb0794bd230c07fb507891dcd87e688d619402b24",
+      "git_blob": "5aad27e5ba4ef95cc2363e014522884e4c42e30c"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/R-A-prior-charge-r5.json",
+      "bytes": 12543,
+      "sha256": "3bf4b7640c54cae3bdf357adf86598a900720c0d8f3529c70015c9f3ac0f9e3b",
+      "git_blob": "cc87fef9156e1e39e5498c8050ee4cf4c63ea125"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-arity-fixture-source-comparison.json",
+      "bytes": 647,
+      "sha256": "7dae4771f6d9c1ae8778c75ebf8bcd4da221c5882d9e2da7a1e47efaa3980577",
+      "git_blob": "350e3d0b3c4b9575de24b6294233107f2c4d7f85"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-baseline-images.json",
+      "bytes": 1736,
+      "sha256": "68742d15ac0384c4a6ca11ef40c6798b06806c4d7d6e3c5f2c7c7eca88c3bee5",
+      "git_blob": "61463aab2f1c7aa07e5ab480e7331a1958cd3228"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-build-01.json",
+      "bytes": 317224,
+      "sha256": "654113f279b6c48d341db1a8ec396177feeb8c38bf913e30751771f6edb7ae7c",
+      "git_blob": "92337157bd90b9e395510f669ecb09633c06d588"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-build-01.log",
+      "bytes": 175,
+      "sha256": "4e49791fc6f2ceb7bcc660a851a2619ea2e196e212d458275a3ed4efecc8e318",
+      "git_blob": "e5d0244275fe1b61aba9968b33a584483679342e"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-case-wrapper-r2-before-terminal-guard.ps1.txt",
+      "bytes": 17833,
+      "sha256": "ed0cfd441e40415ee022acea5ca74faf653bfdd4c31a152484cffb7a299662ab",
+      "git_blob": "9459e4d82028f9f8439ee95bd0f545e58311293c"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-clippy-01.json",
+      "bytes": 316820,
+      "sha256": "da3153e4196613c52f35ac12ed43cef3520abd621e101f223c68d9539b1f64a7",
+      "git_blob": "b3227d5e542b8642fd1cee6202a8cda4f10d27d2"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-clippy-01.log",
+      "bytes": 175,
+      "sha256": "3a38876262b7128dd436d3f6ff0d0c9f5ab124170f2ee1b1ab1e941bb82d3859",
+      "git_blob": "8c3e821e24283d4643ca3e04aaeeb86798f3af03"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-compile-01.json",
+      "bytes": 317605,
+      "sha256": "e84329618f16a59a5dd144d80eee5977c53f6843e811f10d1ba98daa8f50d628",
+      "git_blob": "0dda09158500d10fa1923a93bc39c8454fd21cbd"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-compile-01.log",
+      "bytes": 1708,
+      "sha256": "ac9478e124d724a4ec3cd6cbdca674628194af427827ca3100312c3fc5185927",
+      "git_blob": "9efd9b26bc25eec151e8790d27e4b7d666cf78dc"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-environment-diagnostic-r4.json",
+      "bytes": 1112,
+      "sha256": "6e63064d858059979e7193c46227c6e65051f8b541e8699fca1c35d495f79349",
+      "git_blob": "4eda433434e79731dcb19c3dc0e83bd1f6017a86"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-environment-only-comparison-r4.json",
+      "bytes": 1546,
+      "sha256": "b32d3be233a428646dc898e77854c9dac38b2dd71a2e5a8f937914d518268d1b",
+      "git_blob": "29912212cddb33630fe4ce8d7822f12e2055e3cd"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-executed-case-wrapper-r2.ps1.txt",
+      "bytes": 18180,
+      "sha256": "c1fce94bb909ba8cd4945cbd70907a23a1a6654b2e5398960cc88fb43b2c273c",
+      "git_blob": "7091dd6599fc9af81b352f7df3cb8bacd1ed2e90"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-executed-case-wrapper-r3.ps1.txt",
+      "bytes": 18164,
+      "sha256": "f9b58b931abce5179fea516b1efab97c8c2013b03b37f3455824bef96a037dba",
+      "git_blob": "df5b5e9634995e8875e8eed29b20ed1b5a6301eb"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-executed-case-wrapper-r4.ps1.txt",
+      "bytes": 18761,
+      "sha256": "fc0077196739056277fe087051f4a3653b0432ba28e083b4baa01025d7c1dddc",
+      "git_blob": "a823000c957c00138cff430e56be8f4094a42c3a"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-executed-case-wrapper-v1.ps1.txt",
+      "bytes": 15659,
+      "sha256": "d9b1a26c05ce42661322632fe26aa95302576b25e7ace4323c93467ee7f92506",
+      "git_blob": "c4194c9f347bcf7e679596bcaa01721ca1ce9e24"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-final-reuse-assessment.json",
+      "bytes": 184487,
+      "sha256": "0b374e9517d52d55dcf89b869e36cab2dca8283772135fcbeaa5b007d9075298",
+      "git_blob": "f264e6f4a74fc51ed70c18354ef582ab4f7fa320"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-final-submission-binding.json",
+      "bytes": 6773,
+      "sha256": "bc300505ffa0f4d6749e46c4c178575ab6caecbb70445a7c27e7b13bdac5eda5",
+      "git_blob": "a413544a0fd1ae2e7fae67366555b9238bec3df7"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-fixture-clippy-01.json",
+      "bytes": 316826,
+      "sha256": "c62e7cb6d91223b909ead9d40395e1a8198fb379731a644f211416adf6f40a24",
+      "git_blob": "7545110cd4ecabb1821f418a94c72602adce5020"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-fixture-clippy-01.log",
+      "bytes": 174,
+      "sha256": "de83038853d2e46f88d79b824b23a517091fb8840d8caf339c0098745c129f2c",
+      "git_blob": "1cbaf925cdd03995a23977762ac9371241a94474"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-fixture-compile-01.json",
+      "bytes": 317613,
+      "sha256": "5b2fa32c6b58f88cb9647a11d6e3cb0b42ed11d779fb87fe95831ae0d83aadcf",
+      "git_blob": "54b56c6fb1c9850e3ee5b473e2b7a6d1db54806c"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-fixture-compile-01.log",
+      "bytes": 1708,
+      "sha256": "84c70cd035ae80e48bef959f769226d52b81f1e339f6b958013eee16d2ec29f7",
+      "git_blob": "9162c4057eba0e9e468fb5cd37911b09fb2a971a"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-fixture-fmt-check-01.json",
+      "bytes": 316670,
+      "sha256": "d3250e5a6b0d92a812cb3a2e276bd898df8e8b959dd5b55113ef305d633143ab",
+      "git_blob": "312191453d9d56e45072068900b37aa524aa2986"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-fixture-fmt-check-01.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-fixture-runner-policy-comparison-r5.json",
+      "bytes": 1200,
+      "sha256": "01a9ced4603d9dfecfd748e6bb29c85bb21b51f88fd1799f564cb6c02a6d056a",
+      "git_blob": "bcd92bae0a8788909e73eb8c247db8c401b9571a"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-fmt-01.json",
+      "bytes": 316210,
+      "sha256": "284f8c331082960ca5aeb6b03a4e0263388ab843a0bd6de8a5d54eb89c50ef03",
+      "git_blob": "4eed3ac8b6d7993bbe78ef0d33826b1af2d4816c"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-fmt-01.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-fmt-check-01.json",
+      "bytes": 316662,
+      "sha256": "1ac5196f3e5e6e4d7857d8b4d1331b6bff9145fed55ac7e417065a8d18b0c21e",
+      "git_blob": "9904f484bd258e0ebc85b3b983f02989690a9988"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-fmt-check-01.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-legacy-characterization-before-arity.rs.txt",
+      "bytes": 30260,
+      "sha256": "db79ffe758a142910256459bbba59621c6a159bfa319ae8a61615c0f152c9b2b",
+      "git_blob": "4041250fa8080f632ee822412498c48f11337ff7"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-native-policy-only-comparison.json",
+      "bytes": 1481,
+      "sha256": "dc3d3a3a236140ac0917b15837c3e6034bd1a9b4ecea43e6777c2f626cb9897f",
+      "git_blob": "e136d98436180d1a5bfffcca1f1f3ed0bb90e865"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-pre-fixture-harness-preservation.json",
+      "bytes": 1852,
+      "sha256": "eef0942b22df890384bc1bf2e66199de71f99d9f82db1ec751c4423776cd5406",
+      "git_blob": "d2c066ffc2f3a9ed21835e4970d0b47f9325bacf"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-record-shape-check-r2.json",
+      "bytes": 618,
+      "sha256": "051a02e125aad4bf92af8ee21305e30830ebb0b4d8c1c1018ad1761b2eee62b0",
+      "git_blob": "ca6af9c8a24c55b12ee1d83976788ce6379dc206"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-reuse-assessment.json",
+      "bytes": 180918,
+      "sha256": "e780b5f06f84bd4201e81474ea6824f04ac9c1ab302540d4616af9b81230be2e",
+      "git_blob": "024e3645c2f226d9c314edf53c2c10a239234437"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-source-equivalence.json",
+      "bytes": 680,
+      "sha256": "4320b1792e14ea790f04b59aca8f29c974239dc862e8f0509ffb2f7f44d4c401",
+      "git_blob": "4713e28bd68e95a4fec2fcdff6aaa14e48777bc7"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-terminal-guard-source-comparison.json",
+      "bytes": 631,
+      "sha256": "b0238ea19eb480e51dd8668c274a1729fedf43bdf181704796d2c9e9ec637e96",
+      "git_blob": "a1b6e84e0732963bdad205a0646388c377bb3bbf"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-plan-review.md",
+      "bytes": 6363,
+      "sha256": "c5dc9c026e4db7baf13f47289fe8782830c50efb45da89277f104cac4f3b367a",
+      "git_blob": "62dd56ce511b90c091f496fa8252762cbda5ea5a"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-plan.md",
+      "bytes": 22331,
+      "sha256": "fdd411fb4a2519af494648858abcbe4c870f725e901479644048b4a3a85036a9",
+      "git_blob": "fc54863a8c49cfb0a90ad136c9fd1db3f7714c17"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-ra-environment-continuation.md",
+      "bytes": 3785,
+      "sha256": "703158ea5bc0382d76ce272631bb6336c3e9bec86221c3e93f7d63ffbac01af2",
+      "git_blob": "7882cb32524fe9bed96360f218126db166c17e4a"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-ra-fixture-continuation.md",
+      "bytes": 4355,
+      "sha256": "0e02e9e024168f95a8e2512821fa055610bd8f78a46dedc342f15e0894eb0467",
+      "git_blob": "712e2ba2a0921af29923e5d31f421c1f2143f186"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-ra-implementation.md",
+      "bytes": 11263,
+      "sha256": "eed5b74d71c36ea4262fa15513936085cc20943df1d4c65b63b5064860c5b5ab",
+      "git_blob": "b3e93e47f90af62d90c684d895d72b51e829dc85"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-ra-native-continuation.md",
+      "bytes": 3368,
+      "sha256": "18072263269874dacdd24aa93dfb2c1cb6b0f8e514954937c69ab2d1cfd373bf",
+      "git_blob": "06676a8b034177f3c093886d49355abe1932b101"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-ra-runner-continuation.md",
+      "bytes": 4501,
+      "sha256": "7c5100068617dc015ba010aa9dce8d2957768562fe57f7a364f49957bec9038c",
+      "git_blob": "0d232e8f01bd39a84c2a6e943cc1dfd6799ac145"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-task.md",
+      "bytes": 6948,
+      "sha256": "aebdb762365ed25b03438794c2d9e4c3ac2c3498f8fee02ef78db1fdfb16435b",
+      "git_blob": "dfe33670078dd2199b679633f3007413f1f73403"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/engine.rs",
+      "bytes": 34899,
+      "sha256": "4c3b8d0d735d9011d6796add6d3614d181e0b9cb8bc54fbbb63f7547cfab8583",
+      "git_blob": "e92a06e6132a0185c2e6125d2933191148c144ac"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+      "bytes": 425,
+      "sha256": "3470c2ffc8989623271b22cd8e8bf7938ca50cd72fd4bc552ef5b4297254f502",
+      "git_blob": "dc2298027cb7899e0da4061f5beec1f955dd35ef"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/ready1.rs",
+      "bytes": 730,
+      "sha256": "dc19b1dac26a8dad8825b13d1b2cab174ace7c690ff065fef06f1f49198aa25d",
+      "git_blob": "98393884d94846245fa748e2dc9ca37815929003"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/repair_tests.rs",
+      "bytes": 30908,
+      "sha256": "db599519a160589710af296ecd634154f937ce36a666e2efaea9cb125971fae1",
+      "git_blob": "9ab653f2c2480126b4a5e81993be644836f2269e"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/bootstrap.rs",
+      "bytes": 22071,
+      "sha256": "eded68928b90c4051dbdb58e68e6c6d98b4365c3b2b392a8ec8f0f32a7680c30",
+      "git_blob": "0b2e442a198772b82a536278187f996f6cc82b69"
+    },
+    {
+      "path": "scripts/invoke-pre-s53-refactor-case.ps1",
+      "bytes": 18761,
+      "sha256": "d3f9d73454c0586de42c4541d7cd1798cd1aceb485068cf6a564d1d9b595a57d",
+      "git_blob": "1caff08957a803a1addb9dc14f30a25a35502811"
+    },
+    {
+      "path": "scripts/invoke-pre-s53-refactor-static.ps1",
+      "bytes": 7999,
+      "sha256": "ce54acd461327a6c4809b3cb2f4b42644e14ed6fd43e5e0e719aab8dd97914b9",
+      "git_blob": "1813a93f864efa86a5993d7d2a7164b6a3e043fb"
+    }
+  ],
+  "excluded_dirty_paths": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-task.md",
+    "bytes": 10349,
+    "sha256": "75cbc0f9950971820beffb08edbd7c6ccb4465d8be44aea331c51687f1807f7c"
+  },
+  "private_and_build_paths_excluded": [
+    ".tmp/",
+    "target/"
+  ],
+  "charge_seconds": {
+    "C_total": 118.3327995,
+    "C_conservative": 60,
+    "C_measured": 58.3327995,
+    "F": 148.7417507,
+    "P": 0
+  },
+  "publication_state": "not staged, not committed or pushed; stop for root review",
+  "R_B_started": false,
+  "S5_3_started": false
+}

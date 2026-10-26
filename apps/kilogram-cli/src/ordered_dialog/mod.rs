@@ -8,6 +8,7 @@ pub mod outbox;
 #[cfg(test)]
 mod protocol2_component_tests;
 pub mod ratchet;
+mod ready1;
 pub mod repair;
 #[cfg(test)]
 mod repair_tests;

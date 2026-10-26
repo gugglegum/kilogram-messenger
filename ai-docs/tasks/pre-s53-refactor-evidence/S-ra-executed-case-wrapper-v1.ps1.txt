@@ -1,0 +1,198 @@
+[CmdletBinding()]
+param(
+    [Parameter(Mandatory)][ValidateSet('C-ready-scope-01','C-ready-legacy-01','F-ready-scope-01')][string]$Case,
+    [ValidateSet('Restricted','NativeToken')][string]$ExecutionMode = 'Restricted'
+)
+$timer = [Diagnostics.Stopwatch]::StartNew()
+$startedUtc = [DateTime]::UtcNow.ToString('O')
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+$workspace = Split-Path -Parent $PSScriptRoot
+$evidence = Join-Path $workspace 'ai-docs/tasks/pre-s53-refactor-evidence'
+$baseline = 'eafd0f873eb31b64377e8e65e06bc84a911f6dc6'
+$policy = switch ($Case) {
+    'C-ready-scope-01' { @{set='C';work=45;whole=60;selector='indexed_l1_review1_ready_scope_shape_precedes_genesis_classification'} }
+    'C-ready-legacy-01' { @{set='C';work=45;whole=60;selector='pre_s53_ready1_legacy_refusal_and_fork_boundary'} }
+    'F-ready-scope-01' { @{set='F';work=180;whole=210;selector='migration_s5_l1_review1_signed_ready_refusal_then_scoped_fork'} }
+}
+function Hash([string]$Path) { (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
+function Write-NewJson([string]$Path, $Value) {
+    $bytes = [Text.UTF8Encoding]::new($false).GetBytes((ConvertTo-Json -InputObject $Value -Depth 30))
+    $file = [IO.File]::Open($Path, [IO.FileMode]::CreateNew, [IO.FileAccess]::Write, [IO.FileShare]::Read)
+    try { $file.Write($bytes,0,$bytes.Length); $file.Flush($true) } finally { $file.Dispose() }
+}
+function Replace-Json([string]$Path, $Value) {
+    $bytes = [Text.UTF8Encoding]::new($false).GetBytes((ConvertTo-Json -InputObject $Value -Depth 30))
+    $file = [IO.File]::Open($Path, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::Read)
+    try { $file.Write($bytes,0,$bytes.Length); $file.Flush($true) } finally { $file.Dispose() }
+}
+function Verify-Rows($Rows) {
+    foreach ($row in $Rows) {
+        $path = [IO.Path]::GetFullPath((Join-Path $workspace $row.path))
+        if (-not $path.StartsWith($workspace+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)) { throw 'Binding path escapes workspace.' }
+        if ((Get-Item -LiteralPath $path).Length -ne $row.bytes -or (Hash $path) -cne $row.sha256) { throw "Binding changed: $($row.path)" }
+    }
+}
+function Origin-Inventory([string]$Root) {
+    if ((Get-Item -LiteralPath $Root).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Origin root reparse point.' }
+    @((Get-ChildItem -LiteralPath $Root -Recurse -Force | Sort-Object FullName) | ForEach-Object {
+        if ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Origin reparse point.' }
+        if (-not $_.PSIsContainer) {
+            [ordered]@{path=[IO.Path]::GetRelativePath($Root,$_.FullName).Replace('\','/');bytes=$_.Length;sha256=(Hash $_.FullName)}
+        }
+    })
+}
+$bindingPath = Join-Path $evidence 'R-A-pre-run-binding.json'
+$ledgerPath = Join-Path $evidence 'contributing-cases.json'
+$recordPath = Join-Path $evidence "$Case.json"
+$startPath = Join-Path $evidence "$Case.started.json"
+$logPath = Join-Path $evidence "$Case.log"
+if ((Test-Path -LiteralPath $recordPath) -or (Test-Path -LiteralPath $startPath)) { throw 'One attempt only; existing start/result requires root reconciliation.' }
+if ((& git -C $workspace rev-parse HEAD) -cne $baseline) { throw 'R-A baseline changed.' }
+$binding = Get-Content -LiteralPath $bindingPath -Raw | ConvertFrom-Json
+if ($binding.baseline -cne $baseline -or $binding.classification -cne 'R-A static-ready source/image binding; C/F unstarted') { throw 'Wrong readiness binding.' }
+$lockPath = Join-Path $workspace '.tmp/pre-s53-refactor-ledger.lock'
+$ledgerLock = [IO.File]::Open($lockPath,[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None)
+if (-not (Test-Path -LiteralPath $ledgerPath)) {
+    Write-NewJson $ledgerPath ([ordered]@{baseline=$baseline;active_limits_seconds=@{C=120.0;F=210.0;P=0.0};reserved_inactive_R_B=@{C=60.0;F=0.0;P=0.0};charged_elapsed_seconds=@{C=0.0;F=0.0;P=0.0};cases=@();rule='Every started attempt retained; no automatic retries or historical budget reuse.'})
+}
+$ledger = Get-Content -LiteralPath $ledgerPath -Raw | ConvertFrom-Json
+if ($ledger.baseline -cne $baseline -or $ledger.active_limits_seconds.C -ne 120 -or $ledger.active_limits_seconds.F -ne 210 -or $ledger.active_limits_seconds.P -ne 0) { throw 'Active R-A budget changed.' }
+if (@($ledger.cases | Where-Object { $_.state -cne 'complete' -or $_.exit_code -ne 0 }).Count) { throw 'Prior incomplete/failed attempt requires root decision.' }
+if ([double]$ledger.active_limits_seconds.($policy.set)-[double]$ledger.charged_elapsed_seconds.($policy.set) -lt $policy.whole) { throw 'Remaining tranche does not cover the whole ceiling.' }
+Write-NewJson $startPath ([ordered]@{case=$Case;set=$policy.set;started_utc=$startedUtc;owner_pid=$PID;work_seconds=$policy.work;whole_seconds=$policy.whole;baseline=$baseline;binding_sha256=(Hash $bindingPath);classification='attempt-start-not-final-result'})
+$ledger.cases = @($ledger.cases) + @([pscustomobject]@{case=$Case;state='started';exit_code=$null;elapsed_seconds=$null;set=$policy.set})
+Replace-Json $ledgerPath $ledger
+$deadline = $null
+$code = 1
+$failure = $null
+$matched = $null
+$summaries = $null
+$completed = $null
+$wrapperExit = $null
+$wrapperReturnedNormally = $false
+$wrapperException = $null
+$logParsed = $false
+$logParseError = $null
+$originRoot = Join-Path $workspace '.tmp/migration-s5-l1/F-small-origin-01'
+$originBefore = $null
+$originAfter = $null
+$originRawUnchanged = $false
+$sourceVerifiedAfter = $false
+$cleanupVerified = $false
+$ownedChildrenAfterCleanup = $null
+$environment = @{}
+foreach ($name in @('CARGO_NET_OFFLINE','KILOGRAM_S5_FIXTURE_DIR','KILOGRAM_S5_CASE','KILOGRAM_S5_POWERSHELL','KILOGRAM_S5_L1_RESUME_DIR','KILOGRAM_TEST_OD1_SCHEDULE','KILOGRAM_TEST_OD1_CLOCK_FILE','KILOGRAM_TEST_OD1_PRIMARY_PAUSE_FILE','KILOGRAM_TEST_MIGRATION_PAUSE_FILE')) { $environment[$name]=[Environment]::GetEnvironmentVariable($name,'Process') }
+try {
+    . (Join-Path $PSScriptRoot 'migration-s5-l1-deadline.ps1')
+    $deadline = [KilogramS5Deadline]::new($policy.work-$timer.Elapsed.TotalSeconds,$policy.whole-$timer.Elapsed.TotalSeconds)
+    . (Join-Path $PSScriptRoot 'cargo-resource-policy.ps1')
+    $null = Set-KilogramCargoResourcePolicy -RequestedJobs 12
+    Verify-Rows $binding.inputs
+    Verify-Rows $binding.images
+    Write-NewJson (Join-Path $evidence "$Case.inputs.json") ([ordered]@{case=$Case;baseline=$baseline;binding_sha256=(Hash $bindingPath);classification='bound_pre_run_inventory';sources=$binding.inputs;images=$binding.images;execution_mode_declared=$ExecutionMode;token_introspection=$false})
+    if (@(Get-Process -ErrorAction SilentlyContinue | Where-Object { $_.ProcessName -like 'kilogram-*' }).Count) { throw 'An existing Kilogram process prevents stable recopy or another active domain.' }
+    foreach ($name in $environment.Keys) { [Environment]::SetEnvironmentVariable($name,$null,'Process') }
+    $env:CARGO_NET_OFFLINE = 'true'
+    $env:KILOGRAM_S5_CASE = $Case
+    $env:KILOGRAM_S5_POWERSHELL = [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+    if ($policy.set -ceq 'F') {
+        if ($ExecutionMode -cne 'NativeToken') { throw 'Field case requires the declared NativeToken launch.' }
+        $producerPath = Join-Path $workspace 'ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/F-small-origin-01.json'
+        $producerLog = Join-Path $workspace 'ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/F-small-origin-01.log'
+        $producer = Get-Content -LiteralPath $producerPath -Raw | ConvertFrom-Json
+        if ($producer.exit_code -ne 0 -or $producer.case -cne 'F-small-origin-01' -or -not ([IO.Path]::GetFullPath($producer.fixture)).Equals($originRoot,[StringComparison]::OrdinalIgnoreCase)) { throw 'Genuine small producer case mismatch.' }
+        $origin = Get-Content -LiteralPath (Join-Path $originRoot 'result.json') -Raw | ConvertFrom-Json
+        $publishedJson = [regex]::Match((Get-Content -LiteralPath $producerLog -Raw),'(?ms)^\{.*^\}\s*$')
+        if (-not $publishedJson.Success) { throw 'Published producer result not found.' }
+        $published = $publishedJson.Value | ConvertFrom-Json
+        if ((ConvertTo-Json -InputObject $origin -Depth 30 -Compress) -cne (ConvertTo-Json -InputObject $published -Depth 30 -Compress) -or $origin.status -cne 'PASS' -or $origin.exe_sha256 -cne 'd9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1' -or $origin.text_count -ne 8) { throw 'Origin differs from the published genuine producer result.' }
+        $originBefore = Origin-Inventory $originRoot
+        Write-NewJson (Join-Path $evidence "$Case.origin-before.json") ([ordered]@{origin=$originRoot;producer_case_sha256=(Hash $producerPath);producer_log_sha256=(Hash $producerLog);public_result_matches_published=$true;classification='current raw integrity snapshot, not a retroactive producer-time inventory';files=$originBefore;typed_original_opened=$false;known_runtime_processes_before=@()})
+        $env:KILOGRAM_S5_FIXTURE_DIR = $originRoot
+    }
+    $deadline.CheckWork()
+    try {
+        & (Join-Path $PSScriptRoot 'run-cargo-tests-stable.ps1') -Package kilogram-cli -CargoJobs 12 -Profile verification -Filter $policy.selector -Run -NoCapture *> $logPath
+        $wrapperExit = $LASTEXITCODE
+        $wrapperReturnedNormally = $true
+    } catch { $wrapperException = $_.Exception.Message }
+    # A late wrapper/cache failure must not erase an already observed kernel.
+    # A thrown PowerShell script has no normal wrapper exit code: keep null.
+    try {
+        $text = Get-Content -LiteralPath $logPath -Raw
+        if ($null -eq $text) { throw 'Test log is empty.' }
+        $matched = [regex]::Matches($text,('(?m)^test (?:[^\s]*::)?'+[regex]::Escape($policy.selector)+' \.\.\.')).Count
+        $summaries = [regex]::Matches($text,'(?m)^test result: ok\. 1 passed; 0 failed; 0 ignored;').Count
+        $completed = [regex]::Matches($text,'(?m)^status=passed\r?$').Count
+        $logParsed = $true
+    } catch { $logParseError = $_.Exception.Message }
+    if (-not $wrapperReturnedNormally -or $wrapperExit -ne 0) { throw "Stable wrapper failed, including finalization: $wrapperException" }
+    if (-not $logParsed) { throw "Test counts unavailable: $logParseError" }
+    if ($matched -ne 1 -or $summaries -ne 1 -or $completed -ne 1) { throw 'Expected exactly one named test, one 1/0 summary and stable completion.' }
+    $deadline.CheckWork()
+    $code = 0
+} catch {
+    $code = 1
+    $failure = $_.Exception.Message
+    try { $_ | Out-String | Add-Content -LiteralPath $logPath }
+    catch { $failure += '; Error log write failed: '+$_.Exception.Message }
+} finally {
+    foreach ($name in $environment.Keys) { [Environment]::SetEnvironmentVariable($name,$environment[$name],'Process') }
+    try {
+        if ($deadline) {
+            $deadline.CleanupChildren(5000)
+            $actualChildren = @($deadline.Children())
+            if ($actualChildren.Count -ne 0) { throw 'Owned children remain after cleanup.' }
+            $ownedChildrenAfterCleanup = $actualChildren.Count
+            $cleanupVerified = $true
+        }
+    } catch { $code=1; $failure=(@($failure,$_.Exception.Message)|Where-Object {$_}) -join '; ' }
+    try {
+        if ($null -ne $originBefore) {
+            $originAfter = Origin-Inventory $originRoot
+            Write-NewJson (Join-Path $evidence "$Case.origin-after.json") ([ordered]@{origin=$originRoot;files=$originAfter;typed_original_opened=$false})
+            if ((ConvertTo-Json -InputObject $originBefore -Depth 6 -Compress) -cne (ConvertTo-Json -InputObject $originAfter -Depth 6 -Compress)) { throw 'Original raw bytes changed during field case.' }
+            $originRawUnchanged = $true
+        }
+        Verify-Rows $binding.inputs
+        Verify-Rows $binding.images
+        $sourceVerifiedAfter = $true
+        if ((& git -C $workspace rev-parse HEAD) -cne $baseline) { throw 'Baseline changed during case.' }
+    } catch { $code=1; $failure=(@($failure,$_.Exception.Message)|Where-Object {$_}) -join '; ' }
+}
+if (-not $deadline) { $code=1; $failure=(@($failure,'Deadline initialization failed; started attempt retained.')|Where-Object {$_}) -join '; ' }
+function Work-Expired { (-not $deadline) -or $deadline.WorkExpired -or $timer.Elapsed.TotalSeconds -ge $policy.work }
+$workExpired = Work-Expired
+if ($workExpired -or -not $cleanupVerified) {
+    $code = 1
+    $failure = (@($failure,'Work deadline expired or owned-child cleanup is unverified after final validation.')|Where-Object {$_}) -join '; '
+}
+$record = [ordered]@{case=$Case;state='complete';set=$policy.set;classification='whole-contributing-runner';baseline=$baseline;selector=$policy.selector;exit_code=$code;error=$failure;elapsed_seconds=$timer.Elapsed.TotalSeconds;matched_tests=$matched;one_test_pass_summaries=$summaries;wrapper_completion_markers=$completed;wrapper_returned_normally=$wrapperReturnedNormally;wrapper_exit_code=$wrapperExit;wrapper_exception=$wrapperException;log_parsed=$logParsed;log_parse_error=$logParseError;source_images_verified_after=$sourceVerifiedAfter;deadline=@{work_seconds=$policy.work;whole_seconds=$policy.whole;work_expired=$workExpired;cleanup_verified=$cleanupVerified;owned_children_after_cleanup=$ownedChildrenAfterCleanup;whole_watchdog='unchanged owned Windows job remains armed through record and ledger writes'};binding_sha256=(Hash $bindingPath);inputs_file="$Case.inputs.json";origin_original_raw_unchanged=$originRawUnchanged;execution_mode_declared=$ExecutionMode;rule='Setup, raw provenance, copies, cached compile/stage, waits, failures, stable-wrapper finalization and cleanup included. Snapshot alone is not whole PASS.'}
+Write-NewJson $recordPath $record
+$ledger.cases = @($ledger.cases | Where-Object {$_.case -cne $Case}) + @($record)
+$ledger.charged_elapsed_seconds.($policy.set) = @($ledger.cases | Where-Object {$_.set -ceq $policy.set} | Measure-Object -Property elapsed_seconds -Sum).Sum
+Replace-Json $ledgerPath $ledger
+# Include the first durable result/ledger pass in the elapsed sample. The final
+# sealing pass and Finish remain under the independent absolute whole watchdog.
+$record.elapsed_seconds = $timer.Elapsed.TotalSeconds
+$ledger.charged_elapsed_seconds.($policy.set) = @($ledger.cases | Where-Object {$_.set -ceq $policy.set} | Measure-Object -Property elapsed_seconds -Sum).Sum
+$record.deadline.work_expired = Work-Expired
+if ($record.deadline.work_expired -or $record.elapsed_seconds -ge $policy.whole -or $ledger.charged_elapsed_seconds.($policy.set) -gt $ledger.active_limits_seconds.($policy.set)) { $record.exit_code=1; $record.error=(@($record.error,'Work/whole/cumulative ceiling exceeded at sealing.')|Where-Object {$_}) -join '; '; $code=1 }
+Replace-Json $recordPath $record
+Replace-Json $ledgerPath $ledger
+if ((Work-Expired) -and $record.exit_code -eq 0) {
+    $code = 1
+    $record.exit_code = 1
+    $record.deadline.work_expired = $true
+    $record.error = 'Work deadline expired during terminal writes.'
+    $record.elapsed_seconds = $timer.Elapsed.TotalSeconds
+    $ledger.charged_elapsed_seconds.($policy.set) = @($ledger.cases | Where-Object {$_.set -ceq $policy.set} | Measure-Object -Property elapsed_seconds -Sum).Sum
+    Replace-Json $recordPath $record
+    Replace-Json $ledgerPath $ledger
+}
+if ($deadline) { $deadline.Finish() }
+$ledgerLock.Dispose()
+$timer.Stop()
+[ordered]@{case=$Case;exit_code=$code;elapsed_seconds=$record.elapsed_seconds;matched_tests=$matched;cleanup_verified=$cleanupVerified;owned_children_after_cleanup=$ownedChildrenAfterCleanup}|ConvertTo-Json -Compress
+exit $code

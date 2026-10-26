@@ -1,0 +1,195 @@
+{
+  "classification": "root-authorized r3 prior charge; all earlier raw evidence retained",
+  "authority": "ai-docs/tasks/pre-s53-refactor-ra-native-continuation.md",
+  "authority_sha256": "18072263269874dacdd24aa93dfb2c1cb6b0f8e514954937c69ab2d1cfd373bf",
+  "prior_cases": [
+    {
+      "case": "C-ready-scope-01",
+      "whole_result": "FAIL",
+      "whole_exit_code": 1,
+      "sampled_lower_bound_seconds": 43.6945432,
+      "measured_final_elapsed_seconds": null,
+      "charge_seconds": 60.0,
+      "basis": "Conservative whole60 allocation; scoped parser assertions accepted, no replay"
+    },
+    {
+      "case": "C-ready-legacy-01",
+      "whole_result": "FAIL",
+      "whole_exit_code": 1,
+      "measured_elapsed_seconds": 10.2520644,
+      "charge_seconds": 10.2520644,
+      "basis": "Measured failed Restricted I/O setup; NativeToken is a comparison, exact syscall unknown"
+    }
+  ],
+  "conservative_prior_C_seconds": 60.0,
+  "measured_prior_C_seconds": 10.2520644,
+  "total_prior_C_charge_seconds": 70.2520644,
+  "remaining_seconds": {
+    "C": 49.7479356,
+    "F": 210.0,
+    "P": 0.0
+  },
+  "original_R_A_ceiling_seconds": {
+    "C": 120.0,
+    "F": 210.0,
+    "P": 0.0
+  },
+  "protected_artifacts": [
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-01.inputs.json",
+      "bytes": 163890,
+      "sha256": "52522b3c21251e02a487eab693c875a0b897c9b6d26fc2c6618741f238a781a7"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-01.json",
+      "bytes": 1639,
+      "sha256": "e8212418ddd62cd13c660c717379ed03b46ac74ca8fa10e0c597f5d79bab2735"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-01.log",
+      "bytes": 2238,
+      "sha256": "194d2262dc09bd15e36843ac7d0087c31da5d44ab1c47a12e3b8159cbdc05890"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-01.started.json",
+      "bytes": 373,
+      "sha256": "5c4cf8252269285cb7b917aa984cfcfe6b9348ad031b513dd112aa64151ad360"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-scope-01-reconciliation.json",
+      "bytes": 2559,
+      "sha256": "c0f14c5fcb959a94d4db22bcf05e4ddea1857b12328b3959071750b2b9e73a45"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-scope-01.inputs.json",
+      "bytes": 161388,
+      "sha256": "a0053022d47ef85a9aa9c45b532eeb56fcc13f65c3aad669d0007f65170014b3"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-scope-01.json",
+      "bytes": 1286,
+      "sha256": "ce888144ce10b607ebac8ba5da9efcf80736d8ec2dd709c4b947207881fc3005"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-scope-01.log",
+      "bytes": 2913,
+      "sha256": "7cff4984426e7a6a8d17bfae74af21e91591b305b85aa7790abb0861d8b62b5d"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-scope-01.started.json",
+      "bytes": 372,
+      "sha256": "98db2bf54cf4568f2d1331941e2871ea5746eecef16bc1e0beb87e5505988185"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/contributing-cases-r2.json",
+      "bytes": 3166,
+      "sha256": "9e03cf909514390205c965d9dfe902cdb14bc64a62fdd40eb82534294e61f118"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/contributing-cases.json",
+      "bytes": 576,
+      "sha256": "50fb687f4f5ffc60211353425992ddab350d949abc06770da76542ccc2901d18"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/R-A-pre-run-binding-r2.json",
+      "bytes": 166375,
+      "sha256": "050503fec6936a6444a9cb1eaea72711ac99d87dfecfa7c5b16089c27e5bbe34"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/R-A-pre-run-binding.json",
+      "bytes": 163452,
+      "sha256": "a561122881f4e1e951473ea9e6e062a6e39688e1e17014c3cc288357cc61ebd1"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-baseline-images.json",
+      "bytes": 1736,
+      "sha256": "68742d15ac0384c4a6ca11ef40c6798b06806c4d7d6e3c5f2c7c7eca88c3bee5"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-build-01.json",
+      "bytes": 317224,
+      "sha256": "654113f279b6c48d341db1a8ec396177feeb8c38bf913e30751771f6edb7ae7c"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-build-01.log",
+      "bytes": 175,
+      "sha256": "4e49791fc6f2ceb7bcc660a851a2619ea2e196e212d458275a3ed4efecc8e318"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-case-wrapper-r2-before-terminal-guard.ps1.txt",
+      "bytes": 17833,
+      "sha256": "ed0cfd441e40415ee022acea5ca74faf653bfdd4c31a152484cffb7a299662ab"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-clippy-01.json",
+      "bytes": 316820,
+      "sha256": "da3153e4196613c52f35ac12ed43cef3520abd621e101f223c68d9539b1f64a7"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-clippy-01.log",
+      "bytes": 175,
+      "sha256": "3a38876262b7128dd436d3f6ff0d0c9f5ab124170f2ee1b1ab1e941bb82d3859"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-compile-01.json",
+      "bytes": 317605,
+      "sha256": "e84329618f16a59a5dd144d80eee5977c53f6843e811f10d1ba98daa8f50d628"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-compile-01.log",
+      "bytes": 1708,
+      "sha256": "ac9478e124d724a4ec3cd6cbdca674628194af427827ca3100312c3fc5185927"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-executed-case-wrapper-r2.ps1.txt",
+      "bytes": 18180,
+      "sha256": "c1fce94bb909ba8cd4945cbd70907a23a1a6654b2e5398960cc88fb43b2c273c"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-executed-case-wrapper-v1.ps1.txt",
+      "bytes": 15659,
+      "sha256": "d9b1a26c05ce42661322632fe26aa95302576b25e7ace4323c93467ee7f92506"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-fmt-01.json",
+      "bytes": 316210,
+      "sha256": "284f8c331082960ca5aeb6b03a4e0263388ab843a0bd6de8a5d54eb89c50ef03"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-fmt-01.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-fmt-check-01.json",
+      "bytes": 316662,
+      "sha256": "1ac5196f3e5e6e4d7857d8b4d1331b6bff9145fed55ac7e417065a8d18b0c21e"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-fmt-check-01.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-record-shape-check-r2.json",
+      "bytes": 618,
+      "sha256": "051a02e125aad4bf92af8ee21305e30830ebb0b4d8c1c1018ad1761b2eee62b0"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-reuse-assessment.json",
+      "bytes": 180918,
+      "sha256": "e780b5f06f84bd4201e81474ea6824f04ac9c1ab302540d4616af9b81230be2e"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-source-equivalence.json",
+      "bytes": 680,
+      "sha256": "4320b1792e14ea790f04b59aca8f29c974239dc862e8f0509ffb2f7f44d4c401"
+    },
+    {
+      "path": "ai-docs/tasks/pre-s53-refactor-evidence/S-ra-terminal-guard-source-comparison.json",
+      "bytes": 631,
+      "sha256": "b0238ea19eb480e51dd8668c274a1729fedf43bdf181704796d2c9e9ec637e96"
+    }
+  ],
+  "R_B_inactive": true
+}

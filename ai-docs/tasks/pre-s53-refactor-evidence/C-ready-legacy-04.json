@@ -1,0 +1,33 @@
+{
+  "case": "C-ready-legacy-04",
+  "state": "complete",
+  "set": "C",
+  "classification": "whole-contributing-runner",
+  "baseline": "eafd0f873eb31b64377e8e65e06bc84a911f6dc6",
+  "selector": "pre_s53_ready1_legacy_refusal_and_fork_boundary",
+  "exit_code": 0,
+  "error": null,
+  "elapsed_seconds": 24.7713883,
+  "matched_tests": 1,
+  "one_test_pass_summaries": 1,
+  "wrapper_completion_markers": 1,
+  "wrapper_returned_normally": true,
+  "wrapper_exit_code": 0,
+  "wrapper_exception": null,
+  "log_parsed": true,
+  "log_parse_error": null,
+  "source_images_verified_after": true,
+  "deadline": {
+    "whole_watchdog": "unchanged owned Windows job remains armed through record and ledger writes",
+    "work_seconds": 40,
+    "owned_children_after_cleanup": 0,
+    "cleanup_verified": true,
+    "whole_seconds": 50,
+    "work_expired": false
+  },
+  "binding_sha256": "15c3c29b8b9f8e84863f0e926405e8a16b94e850d85e5ba9a97d7ee42797d4f1",
+  "inputs_file": "C-ready-legacy-04.inputs.json",
+  "origin_original_raw_unchanged": false,
+  "execution_mode_declared": "NativeToken",
+  "rule": "Setup, raw provenance, copies, cached compile/stage, waits, failures, stable-wrapper finalization and cleanup included. A case file alone is not whole completion."
+}

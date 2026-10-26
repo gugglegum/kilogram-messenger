@@ -1,0 +1,46 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=12
+Compiling Rust test harnesses with profile 'verification' without executing them...
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 1.06s
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 1 test
+test ordered_dialog::repair_tests::pre_s53_ready1_legacy_refusal_and_fork_boundary ... account_id=6b3756880cf7320535cb0a77531d6608c622ad438ee88060abd37c6b9946f818
+device_id=e551a2fbde2d851fdcf01efa0a31d8d8d3ab37658c391b1af82afe2d06eac925
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=6cc5dfe1e292c0ced7e98d75bbf1ee4163e60ac4e9e347a4f1b326d9e7dacad8
+device_id=a61dc5df58baa94f3412b584497e5ebbb258eda15ad320a6db609ed27fea078e
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+Error: OD1 array arity
+FAILED
+
+failures:
+
+failures:
+    ordered_dialog::repair_tests::pre_s53_ready1_legacy_refusal_and_fork_boundary
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 32 filtered out; finished in 4.08s
+
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\invoke-pre-s53-refactor-case.ps1:164
+Line |
+ 164 |  … it -ne 0) { throw "Stable wrapper failed, including finalization: $wr …
+     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Stable wrapper failed, including finalization: Stable test executable failed with exit code 101:
+     | E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+

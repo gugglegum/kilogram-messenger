@@ -1,0 +1,9 @@
+{
+  "classification": "static AST/source comparison only; no extra runtime test",
+  "previous_adapter_sha256": "ed0cfd441e40415ee022acea5ca74faf653bfdd4c31a152484cffb7a299662ab",
+  "current_adapter_sha256": "c1fce94bb909ba8cd4945cbd70907a23a1a6654b2e5398960cc88fb43b2c273c",
+  "actual_aggregation_function_text_identical": true,
+  "PSCustomObject_record_constructor_identical": true,
+  "accepted_in_memory_shape_record_sha256": "051a02e125aad4bf92af8ee21305e30830ebb0b4d8c1c1018ad1761b2eee62b0",
+  "new_guard": "Any listed r2 case with terminal-failure sidecar blocks the next attempt, regardless of stale ledger PASS."
+}

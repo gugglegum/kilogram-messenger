@@ -1,0 +1,3940 @@
+{
+  "classification": "final R-A reuse/accounting assessment; no extra executable run",
+  "baseline": "eafd0f873eb31b64377e8e65e06bc84a911f6dc6",
+  "final_pre_run_binding": {
+    "path": "ai-docs/tasks/pre-s53-refactor-evidence/R-A-pre-run-binding-r5.json",
+    "sha256": "15c3c29b8b9f8e84863f0e926405e8a16b94e850d85e5ba9a97d7ee42797d4f1"
+  },
+  "bound_inputs_verified": 820,
+  "bound_images_verified": 7,
+  "mismatches": 0,
+  "changed_source": [
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/ready1.rs",
+      "baseline_blob": null,
+      "current_blob": "98393884d94846245fa748e2dc9ca37815929003"
+    },
+    {
+      "path": "scripts/invoke-pre-s53-refactor-case.ps1",
+      "baseline_blob": null,
+      "current_blob": "1caff08957a803a1addb9dc14f30a25a35502811"
+    },
+    {
+      "path": "scripts/invoke-pre-s53-refactor-static.ps1",
+      "baseline_blob": null,
+      "current_blob": "1813a93f864efa86a5993d7d2a7164b6a3e043fb"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/engine.rs",
+      "baseline_blob": "3551c870ab83b76f738a164dad4b95e969da16de",
+      "current_blob": "e92a06e6132a0185c2e6125d2933191148c144ac"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/mod.rs",
+      "baseline_blob": "2eecebc3776b188f4493f0103aaddbe50a8b00c2",
+      "current_blob": "dc2298027cb7899e0da4061f5beec1f955dd35ef"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/repair_tests.rs",
+      "baseline_blob": "bda97e730d66bb6f49773a8fbd87412ea9bb29fe",
+      "current_blob": "9ab653f2c2480126b4a5e81993be644836f2269e"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/bootstrap.rs",
+      "baseline_blob": "683c4a7c363a4859f79d2e6986061dd021d1f327",
+      "current_blob": "0b2e442a198772b82a536278187f996f6cc82b69"
+    }
+  ],
+  "unchanged_source_count": 748,
+  "unchanged_source": [
+    {
+      "path": "Cargo.lock",
+      "baseline_blob": "e7c84d5d67474922b28507111b18234b14605a15",
+      "current_blob": "e7c84d5d67474922b28507111b18234b14605a15"
+    },
+    {
+      "path": "Cargo.toml",
+      "baseline_blob": "071076d2d24dbe6eef6d2df0e9eb0efad9556512",
+      "current_blob": "071076d2d24dbe6eef6d2df0e9eb0efad9556512"
+    },
+    {
+      "path": "ai-docs/reviews/repro-2026-10-22/Cargo.toml",
+      "baseline_blob": "9eeb628d760c1d57dd44f0088e21f68571263060",
+      "current_blob": "9eeb628d760c1d57dd44f0088e21f68571263060"
+    },
+    {
+      "path": "ai-docs/reviews/repro-2026-10-22/src/main.rs",
+      "baseline_blob": "0f92d9264da45042b0f9b56e808c8afac2ba99d7",
+      "current_blob": "0f92d9264da45042b0f9b56e808c8afac2ba99d7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/Cargo.toml",
+      "baseline_blob": "96a2a3542e57e679a535bdfec8681d9b6cb13dd6",
+      "current_blob": "96a2a3542e57e679a535bdfec8681d9b6cb13dd6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/Cargo.toml",
+      "baseline_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00",
+      "current_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/authenticated_index.rs",
+      "baseline_blob": "3a40962fc68a4d23350081b55bea2d126bad5740",
+      "current_blob": "3a40962fc68a4d23350081b55bea2d126bad5740"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "baseline_blob": "7a5b09ad9d784db89b949d9945e300d77f3d01e6",
+      "current_blob": "7a5b09ad9d784db89b949d9945e300d77f3d01e6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "baseline_blob": "54d9c245e3e25d2c6cc6eeac3227debdcb99126e",
+      "current_blob": "54d9c245e3e25d2c6cc6eeac3227debdcb99126e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "baseline_blob": "921f7200d53cb78f021cd9775641867642105463",
+      "current_blob": "921f7200d53cb78f021cd9775641867642105463"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs",
+      "baseline_blob": "1163c83cde621a2592bcad8a086d48d9e03e28c0",
+      "current_blob": "1163c83cde621a2592bcad8a086d48d9e03e28c0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/history_cursor.rs",
+      "baseline_blob": "3417bbba1b5095db9d814b80888053f40881e745",
+      "current_blob": "3417bbba1b5095db9d814b80888053f40881e745"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs",
+      "baseline_blob": "0dd4384e2778b7711d033cf9793e6072f13f93cd",
+      "current_blob": "0dd4384e2778b7711d033cf9793e6072f13f93cd"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/history_tests.rs",
+      "baseline_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4",
+      "current_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/history_types.rs",
+      "baseline_blob": "e3993ed7792d1b3e7b1b1de339658ea5828cba62",
+      "current_blob": "e3993ed7792d1b3e7b1b1de339658ea5828cba62"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "baseline_blob": "bfb5b728bb51c21bf6201f25fa779f94add63b7a",
+      "current_blob": "bfb5b728bb51c21bf6201f25fa779f94add63b7a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "baseline_blob": "9b601fc33e8e78d37c9e2c30e3f07c281570390d",
+      "current_blob": "9b601fc33e8e78d37c9e2c30e3f07c281570390d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-before/crates/kilogram-state/tests/a3_s2_root_review.rs",
+      "baseline_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a",
+      "current_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/Cargo.toml",
+      "baseline_blob": "96a2a3542e57e679a535bdfec8681d9b6cb13dd6",
+      "current_blob": "96a2a3542e57e679a535bdfec8681d9b6cb13dd6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/Cargo.toml",
+      "baseline_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00",
+      "current_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/src/vault/authenticated_index.rs",
+      "baseline_blob": "bd397d9009a35b91d942160b05134209ad3e8316",
+      "current_blob": "bd397d9009a35b91d942160b05134209ad3e8316"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "baseline_blob": "021eb684f51f608618d88505fa40582f801e34f7",
+      "current_blob": "021eb684f51f608618d88505fa40582f801e34f7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "baseline_blob": "54d9c245e3e25d2c6cc6eeac3227debdcb99126e",
+      "current_blob": "54d9c245e3e25d2c6cc6eeac3227debdcb99126e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "baseline_blob": "3646215816e000f812ee50eda9ea9089ad96d89a",
+      "current_blob": "3646215816e000f812ee50eda9ea9089ad96d89a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/src/vault/indexed_dialog/history_cache_tests.rs",
+      "baseline_blob": "f9d8e94efba0e7c13e8cc354972531ca3e0b30bb",
+      "current_blob": "f9d8e94efba0e7c13e8cc354972531ca3e0b30bb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs",
+      "baseline_blob": "1163c83cde621a2592bcad8a086d48d9e03e28c0",
+      "current_blob": "1163c83cde621a2592bcad8a086d48d9e03e28c0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/src/vault/indexed_dialog/history_cursor.rs",
+      "baseline_blob": "3417bbba1b5095db9d814b80888053f40881e745",
+      "current_blob": "3417bbba1b5095db9d814b80888053f40881e745"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/src/vault/indexed_dialog/history_profile.rs",
+      "baseline_blob": "027da170e39ae4285efb841e46681f7ff5a91e1c",
+      "current_blob": "027da170e39ae4285efb841e46681f7ff5a91e1c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs",
+      "baseline_blob": "f90ec047a2526f2e6a505aa1fd8355b7d6fb43c3",
+      "current_blob": "f90ec047a2526f2e6a505aa1fd8355b7d6fb43c3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/src/vault/indexed_dialog/history_tests.rs",
+      "baseline_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4",
+      "current_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/src/vault/indexed_dialog/history_types.rs",
+      "baseline_blob": "342f5051b9d6ae3d5a33300a5954c079b8f05c15",
+      "current_blob": "342f5051b9d6ae3d5a33300a5954c079b8f05c15"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "baseline_blob": "a21c511bb1de6c12d10bd86ca6c908cc940e283e",
+      "current_blob": "a21c511bb1de6c12d10bd86ca6c908cc940e283e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/src/vault/indexed_dialog/profile.rs",
+      "baseline_blob": "169ee5c3a7067641e5e9ea77e9d8d8bd215dd09f",
+      "current_blob": "169ee5c3a7067641e5e9ea77e9d8d8bd215dd09f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "baseline_blob": "bf72682b070baa6347c3b605454ed017f162ab57",
+      "current_blob": "bf72682b070baa6347c3b605454ed017f162ab57"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/src/vault/indexed_dialog/verified_values.rs",
+      "baseline_blob": "77f5ba3773150d2b785f62ea335f8c5c02a30456",
+      "current_blob": "77f5ba3773150d2b785f62ea335f8c5c02a30456"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-final/crates/kilogram-state/tests/a3_s2_root_review.rs",
+      "baseline_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a",
+      "current_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-profile-before/Cargo.toml",
+      "baseline_blob": "96a2a3542e57e679a535bdfec8681d9b6cb13dd6",
+      "current_blob": "96a2a3542e57e679a535bdfec8681d9b6cb13dd6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-profile-before/crates/kilogram-state/Cargo.toml",
+      "baseline_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00",
+      "current_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-profile-before/crates/kilogram-state/src/vault/authenticated_index.rs",
+      "baseline_blob": "d0340f8044f99a80781b3bac38bb95e779843310",
+      "current_blob": "d0340f8044f99a80781b3bac38bb95e779843310"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-profile-before/crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "baseline_blob": "3b49f77968fb367907f038d2e7777016585490c1",
+      "current_blob": "3b49f77968fb367907f038d2e7777016585490c1"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-profile-before/crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "baseline_blob": "54d9c245e3e25d2c6cc6eeac3227debdcb99126e",
+      "current_blob": "54d9c245e3e25d2c6cc6eeac3227debdcb99126e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-profile-before/crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "baseline_blob": "888722b7a47fe9c9e820a58465d13783c31ab50e",
+      "current_blob": "888722b7a47fe9c9e820a58465d13783c31ab50e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-profile-before/crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs",
+      "baseline_blob": "1163c83cde621a2592bcad8a086d48d9e03e28c0",
+      "current_blob": "1163c83cde621a2592bcad8a086d48d9e03e28c0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-profile-before/crates/kilogram-state/src/vault/indexed_dialog/history_cursor.rs",
+      "baseline_blob": "3417bbba1b5095db9d814b80888053f40881e745",
+      "current_blob": "3417bbba1b5095db9d814b80888053f40881e745"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-profile-before/crates/kilogram-state/src/vault/indexed_dialog/history_profile.rs",
+      "baseline_blob": "1b60d1c1f1c5004fb9603e7b4cc7bbf532f9d2d0",
+      "current_blob": "1b60d1c1f1c5004fb9603e7b4cc7bbf532f9d2d0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-profile-before/crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs",
+      "baseline_blob": "34a4e8e1a4d0db3b590980b00d1f82bf7f08bf3a",
+      "current_blob": "34a4e8e1a4d0db3b590980b00d1f82bf7f08bf3a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-profile-before/crates/kilogram-state/src/vault/indexed_dialog/history_tests.rs",
+      "baseline_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4",
+      "current_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-profile-before/crates/kilogram-state/src/vault/indexed_dialog/history_types.rs",
+      "baseline_blob": "342f5051b9d6ae3d5a33300a5954c079b8f05c15",
+      "current_blob": "342f5051b9d6ae3d5a33300a5954c079b8f05c15"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-profile-before/crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "baseline_blob": "a21c511bb1de6c12d10bd86ca6c908cc940e283e",
+      "current_blob": "a21c511bb1de6c12d10bd86ca6c908cc940e283e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-profile-before/crates/kilogram-state/src/vault/indexed_dialog/profile.rs",
+      "baseline_blob": "7a3899d3ba49d62f50837577e41b28c955ba36c6",
+      "current_blob": "7a3899d3ba49d62f50837577e41b28c955ba36c6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-profile-before/crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "baseline_blob": "bf72682b070baa6347c3b605454ed017f162ab57",
+      "current_blob": "bf72682b070baa6347c3b605454ed017f162ab57"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-profile-before/crates/kilogram-state/tests/a3_s2_root_review.rs",
+      "baseline_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a",
+      "current_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/Cargo.toml",
+      "baseline_blob": "96a2a3542e57e679a535bdfec8681d9b6cb13dd6",
+      "current_blob": "96a2a3542e57e679a535bdfec8681d9b6cb13dd6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/Cargo.toml",
+      "baseline_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00",
+      "current_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/src/vault/authenticated_index.rs",
+      "baseline_blob": "d0340f8044f99a80781b3bac38bb95e779843310",
+      "current_blob": "d0340f8044f99a80781b3bac38bb95e779843310"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "baseline_blob": "3e6f8856bf8786fefe78fd8d057cf05e29c5ed98",
+      "current_blob": "3e6f8856bf8786fefe78fd8d057cf05e29c5ed98"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "baseline_blob": "54d9c245e3e25d2c6cc6eeac3227debdcb99126e",
+      "current_blob": "54d9c245e3e25d2c6cc6eeac3227debdcb99126e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "baseline_blob": "de93aee356c2259722460a0e70cbe60a19df9540",
+      "current_blob": "de93aee356c2259722460a0e70cbe60a19df9540"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/src/vault/indexed_dialog/history_cache_tests.rs",
+      "baseline_blob": "51a574f46780c02dca3352e805defb190f312852",
+      "current_blob": "51a574f46780c02dca3352e805defb190f312852"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs",
+      "baseline_blob": "1163c83cde621a2592bcad8a086d48d9e03e28c0",
+      "current_blob": "1163c83cde621a2592bcad8a086d48d9e03e28c0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/src/vault/indexed_dialog/history_cursor.rs",
+      "baseline_blob": "3417bbba1b5095db9d814b80888053f40881e745",
+      "current_blob": "3417bbba1b5095db9d814b80888053f40881e745"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/src/vault/indexed_dialog/history_profile.rs",
+      "baseline_blob": "1b60d1c1f1c5004fb9603e7b4cc7bbf532f9d2d0",
+      "current_blob": "1b60d1c1f1c5004fb9603e7b4cc7bbf532f9d2d0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs",
+      "baseline_blob": "34a4e8e1a4d0db3b590980b00d1f82bf7f08bf3a",
+      "current_blob": "34a4e8e1a4d0db3b590980b00d1f82bf7f08bf3a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/src/vault/indexed_dialog/history_tests.rs",
+      "baseline_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4",
+      "current_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/src/vault/indexed_dialog/history_types.rs",
+      "baseline_blob": "342f5051b9d6ae3d5a33300a5954c079b8f05c15",
+      "current_blob": "342f5051b9d6ae3d5a33300a5954c079b8f05c15"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "baseline_blob": "a21c511bb1de6c12d10bd86ca6c908cc940e283e",
+      "current_blob": "a21c511bb1de6c12d10bd86ca6c908cc940e283e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/src/vault/indexed_dialog/profile.rs",
+      "baseline_blob": "96eebb577e74cf5131ad258254b2ee5a09be18ad",
+      "current_blob": "96eebb577e74cf5131ad258254b2ee5a09be18ad"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "baseline_blob": "bf72682b070baa6347c3b605454ed017f162ab57",
+      "current_blob": "bf72682b070baa6347c3b605454ed017f162ab57"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/src/vault/indexed_dialog/verified_values.rs",
+      "baseline_blob": "77f5ba3773150d2b785f62ea335f8c5c02a30456",
+      "current_blob": "77f5ba3773150d2b785f62ea335f8c5c02a30456"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-2/source-value-only/crates/kilogram-state/tests/a3_s2_root_review.rs",
+      "baseline_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a",
+      "current_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/history_scale_before.rs",
+      "baseline_blob": "f90ec047a2526f2e6a505aa1fd8355b7d6fb43c3",
+      "current_blob": "f90ec047a2526f2e6a505aa1fd8355b7d6fb43c3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/Cargo.toml",
+      "baseline_blob": "96a2a3542e57e679a535bdfec8681d9b6cb13dd6",
+      "current_blob": "96a2a3542e57e679a535bdfec8681d9b6cb13dd6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/Cargo.toml",
+      "baseline_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00",
+      "current_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/authenticated_index.rs",
+      "baseline_blob": "bd397d9009a35b91d942160b05134209ad3e8316",
+      "current_blob": "bd397d9009a35b91d942160b05134209ad3e8316"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "baseline_blob": "021eb684f51f608618d88505fa40582f801e34f7",
+      "current_blob": "021eb684f51f608618d88505fa40582f801e34f7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "baseline_blob": "54d9c245e3e25d2c6cc6eeac3227debdcb99126e",
+      "current_blob": "54d9c245e3e25d2c6cc6eeac3227debdcb99126e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "baseline_blob": "3646215816e000f812ee50eda9ea9089ad96d89a",
+      "current_blob": "3646215816e000f812ee50eda9ea9089ad96d89a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_cache_tests.rs",
+      "baseline_blob": "f9d8e94efba0e7c13e8cc354972531ca3e0b30bb",
+      "current_blob": "f9d8e94efba0e7c13e8cc354972531ca3e0b30bb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs",
+      "baseline_blob": "1163c83cde621a2592bcad8a086d48d9e03e28c0",
+      "current_blob": "1163c83cde621a2592bcad8a086d48d9e03e28c0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_cursor.rs",
+      "baseline_blob": "3417bbba1b5095db9d814b80888053f40881e745",
+      "current_blob": "3417bbba1b5095db9d814b80888053f40881e745"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_profile.rs",
+      "baseline_blob": "027da170e39ae4285efb841e46681f7ff5a91e1c",
+      "current_blob": "027da170e39ae4285efb841e46681f7ff5a91e1c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs",
+      "baseline_blob": "de03f06302c236c388ad4cb48a75ad0dbfb5aaa2",
+      "current_blob": "de03f06302c236c388ad4cb48a75ad0dbfb5aaa2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_tests.rs",
+      "baseline_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4",
+      "current_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_types.rs",
+      "baseline_blob": "342f5051b9d6ae3d5a33300a5954c079b8f05c15",
+      "current_blob": "342f5051b9d6ae3d5a33300a5954c079b8f05c15"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "baseline_blob": "a21c511bb1de6c12d10bd86ca6c908cc940e283e",
+      "current_blob": "a21c511bb1de6c12d10bd86ca6c908cc940e283e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/profile.rs",
+      "baseline_blob": "169ee5c3a7067641e5e9ea77e9d8d8bd215dd09f",
+      "current_blob": "169ee5c3a7067641e5e9ea77e9d8d8bd215dd09f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "baseline_blob": "bf72682b070baa6347c3b605454ed017f162ab57",
+      "current_blob": "bf72682b070baa6347c3b605454ed017f162ab57"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/verified_values.rs",
+      "baseline_blob": "77f5ba3773150d2b785f62ea335f8c5c02a30456",
+      "current_blob": "77f5ba3773150d2b785f62ea335f8c5c02a30456"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-3/source-before-run/crates/kilogram-state/tests/a3_s2_root_review.rs",
+      "baseline_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a",
+      "current_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/history_scale_before.rs",
+      "baseline_blob": "de03f06302c236c388ad4cb48a75ad0dbfb5aaa2",
+      "current_blob": "de03f06302c236c388ad4cb48a75ad0dbfb5aaa2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/Cargo.toml",
+      "baseline_blob": "071076d2d24dbe6eef6d2df0e9eb0efad9556512",
+      "current_blob": "071076d2d24dbe6eef6d2df0e9eb0efad9556512"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/Cargo.toml",
+      "baseline_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00",
+      "current_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/authenticated_index.rs",
+      "baseline_blob": "bd397d9009a35b91d942160b05134209ad3e8316",
+      "current_blob": "bd397d9009a35b91d942160b05134209ad3e8316"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "baseline_blob": "021eb684f51f608618d88505fa40582f801e34f7",
+      "current_blob": "021eb684f51f608618d88505fa40582f801e34f7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "baseline_blob": "54d9c245e3e25d2c6cc6eeac3227debdcb99126e",
+      "current_blob": "54d9c245e3e25d2c6cc6eeac3227debdcb99126e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "baseline_blob": "3646215816e000f812ee50eda9ea9089ad96d89a",
+      "current_blob": "3646215816e000f812ee50eda9ea9089ad96d89a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_cache_tests.rs",
+      "baseline_blob": "f9d8e94efba0e7c13e8cc354972531ca3e0b30bb",
+      "current_blob": "f9d8e94efba0e7c13e8cc354972531ca3e0b30bb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs",
+      "baseline_blob": "1163c83cde621a2592bcad8a086d48d9e03e28c0",
+      "current_blob": "1163c83cde621a2592bcad8a086d48d9e03e28c0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_cursor.rs",
+      "baseline_blob": "3417bbba1b5095db9d814b80888053f40881e745",
+      "current_blob": "3417bbba1b5095db9d814b80888053f40881e745"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_profile.rs",
+      "baseline_blob": "027da170e39ae4285efb841e46681f7ff5a91e1c",
+      "current_blob": "027da170e39ae4285efb841e46681f7ff5a91e1c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs",
+      "baseline_blob": "d17875085e562726676dcf33ad8de706eea58025",
+      "current_blob": "d17875085e562726676dcf33ad8de706eea58025"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_tests.rs",
+      "baseline_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4",
+      "current_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_types.rs",
+      "baseline_blob": "342f5051b9d6ae3d5a33300a5954c079b8f05c15",
+      "current_blob": "342f5051b9d6ae3d5a33300a5954c079b8f05c15"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "baseline_blob": "a21c511bb1de6c12d10bd86ca6c908cc940e283e",
+      "current_blob": "a21c511bb1de6c12d10bd86ca6c908cc940e283e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/profile.rs",
+      "baseline_blob": "169ee5c3a7067641e5e9ea77e9d8d8bd215dd09f",
+      "current_blob": "169ee5c3a7067641e5e9ea77e9d8d8bd215dd09f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "baseline_blob": "bf72682b070baa6347c3b605454ed017f162ab57",
+      "current_blob": "bf72682b070baa6347c3b605454ed017f162ab57"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/src/vault/indexed_dialog/verified_values.rs",
+      "baseline_blob": "77f5ba3773150d2b785f62ea335f8c5c02a30456",
+      "current_blob": "77f5ba3773150d2b785f62ea335f8c5c02a30456"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-history-s2-evidence-4/source-before-run/crates/kilogram-state/tests/a3_s2_root_review.rs",
+      "baseline_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a",
+      "current_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/capture-source.ps1",
+      "baseline_blob": "57df587e6f40c744b19fa1964f7db464318553b7",
+      "current_blob": "57df587e6f40c744b19fa1964f7db464318553b7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/collect-verification.ps1",
+      "baseline_blob": "9827b3ca753b8f2331660eda7e685dd26cd61b44",
+      "current_blob": "9827b3ca753b8f2331660eda7e685dd26cd61b44"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/finalize-evidence.ps1",
+      "baseline_blob": "5e90c991f2afa1813603d73e91d794e63d2c59c5",
+      "current_blob": "5e90c991f2afa1813603d73e91d794e63d2c59c5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-evidence/run-check.ps1",
+      "baseline_blob": "86a8a78f4cc99ae2276fe5d01e39469671f3e5d4",
+      "current_blob": "86a8a78f4cc99ae2276fe5d01e39469671f3e5d4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-protocol-s3-root-review-evidence/run-native-probe.ps1",
+      "baseline_blob": "c5c5859689f52a996d68cd0a6688d9434ae02a7a",
+      "current_blob": "c5c5859689f52a996d68cd0a6688d9434ae02a7a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/baseline-l1-control.ps1",
+      "baseline_blob": "7875fa5ac34b01a39ba8c613f47b7c17f719c130",
+      "current_blob": "7875fa5ac34b01a39ba8c613f47b7c17f719c130"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/predecessor-probe.rs",
+      "baseline_blob": "d8684cbe1e60a993fe74fc7a55603536ffbac9dc",
+      "current_blob": "d8684cbe1e60a993fe74fc7a55603536ffbac9dc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-runtime-s4-evidence/run-check.ps1",
+      "baseline_blob": "ecb467a940d3afef3f56e9ea8f79c79b87cde9cc",
+      "current_blob": "ecb467a940d3afef3f56e9ea8f79c79b87cde9cc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-storage-s1-review-1-evidence/regressions-baseline.rs",
+      "baseline_blob": "4fce68af54aa16bf91d7bedc79be7cecd1c2f8a3",
+      "current_blob": "4fce68af54aa16bf91d7bedc79be7cecd1c2f8a3"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-integration-evidence/export-reviewable-patch.ps1",
+      "baseline_blob": "117269e830681d55954df826b32d41a95ee4d311",
+      "current_blob": "117269e830681d55954df826b32d41a95ee4d311"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-integration-iteration2-evidence/export-reviewable-patch.ps1",
+      "baseline_blob": "117269e830681d55954df826b32d41a95ee4d311",
+      "current_blob": "117269e830681d55954df826b32d41a95ee4d311"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-spike/Cargo.toml",
+      "baseline_blob": "e59456d1610c028ca50a3622c1723b17cec72d9c",
+      "current_blob": "e59456d1610c028ca50a3622c1723b17cec72d9c"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-spike/evidence/review-probes.ps1",
+      "baseline_blob": "0ee7218be22b6b0055fad31c33062880d91bdfed",
+      "current_blob": "0ee7218be22b6b0055fad31c33062880d91bdfed"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-spike/src/f1.rs",
+      "baseline_blob": "03719a4f338ae0043026af964ec4fff7c5c8fc0a",
+      "current_blob": "03719a4f338ae0043026af964ec4fff7c5c8fc0a"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-spike/src/f2.rs",
+      "baseline_blob": "370063f12165c2447996d419c2931c1f190a6d05",
+      "current_blob": "370063f12165c2447996d419c2931c1f190a6d05"
+    },
+    {
+      "path": "ai-docs/tasks/lossless-sync-a1-spike/src/main.rs",
+      "baseline_blob": "c7f4e7efff788a0ad95072281ef14f1c30f90784",
+      "current_blob": "c7f4e7efff788a0ad95072281ef14f1c30f90784"
+    },
+    {
+      "path": "apps/kilogram-bootstrap/Cargo.toml",
+      "baseline_blob": "d6de397fef7210ea374fb5830a5f2b1981985a7c",
+      "current_blob": "d6de397fef7210ea374fb5830a5f2b1981985a7c"
+    },
+    {
+      "path": "apps/kilogram-bootstrap/src/account_recovery.rs",
+      "baseline_blob": "c705874cedca65d0d95c0ba69a1bd01d6b3f033a",
+      "current_blob": "c705874cedca65d0d95c0ba69a1bd01d6b3f033a"
+    },
+    {
+      "path": "apps/kilogram-bootstrap/src/device_link.rs",
+      "baseline_blob": "a1322f116c764f24a15e6cee41e012951e98b4d6",
+      "current_blob": "a1322f116c764f24a15e6cee41e012951e98b4d6"
+    },
+    {
+      "path": "apps/kilogram-bootstrap/src/device_removal.rs",
+      "baseline_blob": "a5b408fef0412012083d39d0fbdc7e6e7493403f",
+      "current_blob": "a5b408fef0412012083d39d0fbdc7e6e7493403f"
+    },
+    {
+      "path": "apps/kilogram-bootstrap/src/lib.rs",
+      "baseline_blob": "b1781b729526f5c5fb3f8ac83e651908715278ee",
+      "current_blob": "b1781b729526f5c5fb3f8ac83e651908715278ee"
+    },
+    {
+      "path": "apps/kilogram-bootstrap/src/main.rs",
+      "baseline_blob": "89a1ed31723ee1d170e486e9014d1590be970753",
+      "current_blob": "89a1ed31723ee1d170e486e9014d1590be970753"
+    },
+    {
+      "path": "apps/kilogram-bootstrap/src/recovery_policy.rs",
+      "baseline_blob": "374280ae3d10e93824bc8f9daba5d2aa5bda1566",
+      "current_blob": "374280ae3d10e93824bc8f9daba5d2aa5bda1566"
+    },
+    {
+      "path": "apps/kilogram-bootstrap/src/recovery_quorum.rs",
+      "baseline_blob": "1ad7f48f25f7495226d3a44ce89b5fae2b2b6327",
+      "current_blob": "1ad7f48f25f7495226d3a44ce89b5fae2b2b6327"
+    },
+    {
+      "path": "apps/kilogram-cli/Cargo.toml",
+      "baseline_blob": "99fce7ec9caa46a3d863e6995c3e4baac3c9c59a",
+      "current_blob": "99fce7ec9caa46a3d863e6995c3e4baac3c9c59a"
+    },
+    {
+      "path": "apps/kilogram-cli/src/bin/kilogram-sync-v2-evidence.rs",
+      "baseline_blob": "9e6755effa452c0ab6ef9a8869e2cf2eac916a76",
+      "current_blob": "9e6755effa452c0ab6ef9a8869e2cf2eac916a76"
+    },
+    {
+      "path": "apps/kilogram-cli/src/canonical_sync_v2_runtime.rs",
+      "baseline_blob": "a4456b34b92ab9131c193c190f90dfa1d6278d8d",
+      "current_blob": "a4456b34b92ab9131c193c190f90dfa1d6278d8d"
+    },
+    {
+      "path": "apps/kilogram-cli/src/lib.rs",
+      "baseline_blob": "97c34ec184e07000202be72d435649f527f70e9c",
+      "current_blob": "97c34ec184e07000202be72d435649f527f70e9c"
+    },
+    {
+      "path": "apps/kilogram-cli/src/main.rs",
+      "baseline_blob": "6b60d487fa436cdaf0b45423641aec70e3825716",
+      "current_blob": "6b60d487fa436cdaf0b45423641aec70e3825716"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered2_cli.rs",
+      "baseline_blob": "7ea0076feab992d6ad9ee6d9739957261727c456",
+      "current_blob": "7ea0076feab992d6ad9ee6d9739957261727c456"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered3_cli.rs",
+      "baseline_blob": "c359456148147cf8c95d11046fd592c7d79cfa1c",
+      "current_blob": "c359456148147cf8c95d11046fd592c7d79cfa1c"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_cli.rs",
+      "baseline_blob": "d1448140f0f99d6564f5fb70d906286eec6ae173",
+      "current_blob": "d1448140f0f99d6564f5fb70d906286eec6ae173"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/admin.rs",
+      "baseline_blob": "08ff6cbc763a672e5b17d110bd28b11cc008149a",
+      "current_blob": "08ff6cbc763a672e5b17d110bd28b11cc008149a"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/consent1_admin.rs",
+      "baseline_blob": "3123dac1752079a3ab1b05c0692323ac85ef5bc5",
+      "current_blob": "3123dac1752079a3ab1b05c0692323ac85ef5bc5"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/handshake.rs",
+      "baseline_blob": "fa758950353ab44d61c1d1716272d23bcf89e5a4",
+      "current_blob": "fa758950353ab44d61c1d1716272d23bcf89e5a4"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/ingress.rs",
+      "baseline_blob": "1271cee543eddef8c791fb7b008324d94a74d78d",
+      "current_blob": "1271cee543eddef8c791fb7b008324d94a74d78d"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/outbox.rs",
+      "baseline_blob": "f9e4fb99757fc2adff1b4a4b5c431abdb9d67cb2",
+      "current_blob": "f9e4fb99757fc2adff1b4a4b5c431abdb9d67cb2"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/protocol2_component_tests.rs",
+      "baseline_blob": "6004b5a847f17d04974b7a194b0143af85be9a92",
+      "current_blob": "6004b5a847f17d04974b7a194b0143af85be9a92"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/protocol2_failure_tests.rs",
+      "baseline_blob": "5f39d6ac2fc0808cafe2655652c8544b2db8819e",
+      "current_blob": "5f39d6ac2fc0808cafe2655652c8544b2db8819e"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/protocol2_legacy_tests.rs",
+      "baseline_blob": "009957224d075d48fbc91b1e58169c5f04f5b792",
+      "current_blob": "009957224d075d48fbc91b1e58169c5f04f5b792"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/ratchet.rs",
+      "baseline_blob": "3eebfd579ce7e365c9468a84a4f541134982b9db",
+      "current_blob": "3eebfd579ce7e365c9468a84a4f541134982b9db"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/repair.rs",
+      "baseline_blob": "86f2003e90e91986e7ade7a0b09e6b02398e1d0f",
+      "current_blob": "86f2003e90e91986e7ade7a0b09e6b02398e1d0f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime.rs",
+      "baseline_blob": "fe30077f246999219b4a7585dccf0cdde84f44e3",
+      "current_blob": "fe30077f246999219b4a7585dccf0cdde84f44e3"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/admin.rs",
+      "baseline_blob": "dfc42f29a274b4722627b7716e135a9ae235c0d8",
+      "current_blob": "dfc42f29a274b4722627b7716e135a9ae235c0d8"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/admission.rs",
+      "baseline_blob": "dcd5c76e707a446e3e6d7166dda73bd464bda91e",
+      "current_blob": "dcd5c76e707a446e3e6d7166dda73bd464bda91e"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/config.rs",
+      "baseline_blob": "833232f978d38b443d5c36c86484f9fbbf4c60f5",
+      "current_blob": "833232f978d38b443d5c36c86484f9fbbf4c60f5"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/data.rs",
+      "baseline_blob": "0e48001e34ac80550bad1d3f3cabd469f9a4ca41",
+      "current_blob": "0e48001e34ac80550bad1d3f3cabd469f9a4ca41"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/handshake.rs",
+      "baseline_blob": "dd8d38d743c337136d65e5ada7a39f4bcc854752",
+      "current_blob": "dd8d38d743c337136d65e5ada7a39f4bcc854752"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/hooks.rs",
+      "baseline_blob": "8fbf0a30cb0b75ebfe2eb026960aea5f83718e64",
+      "current_blob": "8fbf0a30cb0b75ebfe2eb026960aea5f83718e64"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/mod.rs",
+      "baseline_blob": "b94876e51b07b5683db71a839d8c8c0f517c7836",
+      "current_blob": "b94876e51b07b5683db71a839d8c8c0f517c7836"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/native.rs",
+      "baseline_blob": "052ee2cd621fbec366b718465033196c95ce51a2",
+      "current_blob": "052ee2cd621fbec366b718465033196c95ce51a2"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/network.rs",
+      "baseline_blob": "b99fa19f588927c0c3879e54e0dad7944c9a96b5",
+      "current_blob": "b99fa19f588927c0c3879e54e0dad7944c9a96b5"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/owner.rs",
+      "baseline_blob": "652d079226a72351244a3e7aceced47aee802ad2",
+      "current_blob": "652d079226a72351244a3e7aceced47aee802ad2"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/policy.rs",
+      "baseline_blob": "9b7e565fa547e0847c7ac3c2e59f2729204b844b",
+      "current_blob": "9b7e565fa547e0847c7ac3c2e59f2729204b844b"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/public_import.rs",
+      "baseline_blob": "ab3dde99e9122aa9054002d0c52946dbe20a7826",
+      "current_blob": "ab3dde99e9122aa9054002d0c52946dbe20a7826"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/resources.rs",
+      "baseline_blob": "d4da96c8a4f3abab0d613dec2c716bdb7c1f5809",
+      "current_blob": "d4da96c8a4f3abab0d613dec2c716bdb7c1f5809"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/runtime.rs",
+      "baseline_blob": "67a4e9daa81bdeff827871125ba937bac73cc9df",
+      "current_blob": "67a4e9daa81bdeff827871125ba937bac73cc9df"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/runtime_tests.rs",
+      "baseline_blob": "49543df8dfcea5989236ae4e7aeb1deba99de768",
+      "current_blob": "49543df8dfcea5989236ae4e7aeb1deba99de768"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/timing.rs",
+      "baseline_blob": "136512d6324a9a14331e01edc43096c461a0d70a",
+      "current_blob": "136512d6324a9a14331e01edc43096c461a0d70a"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime2/window.rs",
+      "baseline_blob": "48e8662d2e90719ce5b8912937c613c23718dac5",
+      "current_blob": "48e8662d2e90719ce5b8912937c613c23718dac5"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/config.rs",
+      "baseline_blob": "cb1fa8c04f1bc9204d83f1bc48b0813500b8c3b0",
+      "current_blob": "cb1fa8c04f1bc9204d83f1bc48b0813500b8c3b0"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/data.rs",
+      "baseline_blob": "e66a5bbbebb0c9005aab1a220d4b529ec3ccd6c2",
+      "current_blob": "e66a5bbbebb0c9005aab1a220d4b529ec3ccd6c2"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/mod.rs",
+      "baseline_blob": "24562a636a4e009485de8214a50ef7a7d635d8ab",
+      "current_blob": "24562a636a4e009485de8214a50ef7a7d635d8ab"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/network.rs",
+      "baseline_blob": "cb45165d1742c917dad84f9c709f4426b886cf14",
+      "current_blob": "cb45165d1742c917dad84f9c709f4426b886cf14"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/owner.rs",
+      "baseline_blob": "cbb40d0c2bb6232c79a2a3ed28b42f2975c72211",
+      "current_blob": "cbb40d0c2bb6232c79a2a3ed28b42f2975c72211"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/protocol.rs",
+      "baseline_blob": "8463ac1e929282fc95eca86f296c787d9914e946",
+      "current_blob": "8463ac1e929282fc95eca86f296c787d9914e946"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/resources.rs",
+      "baseline_blob": "69c31d2ed234ce3aa691e0d03dc29bb28e0bb33f",
+      "current_blob": "69c31d2ed234ce3aa691e0d03dc29bb28e0bb33f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/review1_tests.rs",
+      "baseline_blob": "bd68a2aa859311199e6aab4559b52c56acef4ecf",
+      "current_blob": "bd68a2aa859311199e6aab4559b52c56acef4ecf"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/runtime.rs",
+      "baseline_blob": "1b1aa258b4d16d244d1be912538e49b5ba1a4f26",
+      "current_blob": "1b1aa258b4d16d244d1be912538e49b5ba1a4f26"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/state.rs",
+      "baseline_blob": "2c41966f178f3942846342a4a3df7ef99941b420",
+      "current_blob": "2c41966f178f3942846342a4a3df7ef99941b420"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration.rs",
+      "baseline_blob": "fe22da450ac21c340e7911b8675ec9010ef9dd46",
+      "current_blob": "fe22da450ac21c340e7911b8675ec9010ef9dd46"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration/fold.rs",
+      "baseline_blob": "c7245ab156805fe6d3376b580d11a051c69c99e5",
+      "current_blob": "c7245ab156805fe6d3376b580d11a051c69c99e5"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration/provenance.rs",
+      "baseline_blob": "3dd55ee0407e4894bf51c130589122f097730ba1",
+      "current_blob": "3dd55ee0407e4894bf51c130589122f097730ba1"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration/tests.rs",
+      "baseline_blob": "2c1d0a6a4500c3538e4234cb01e37fe295b3cea9",
+      "current_blob": "2c1d0a6a4500c3538e4234cb01e37fe295b3cea9"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/test_support.rs",
+      "baseline_blob": "d90f4e66875359e57c9e1e0d0f8e4ee92c2c5884",
+      "current_blob": "d90f4e66875359e57c9e1e0d0f8e4ee92c2c5884"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_ingress.rs",
+      "baseline_blob": "efc6250d881fd09d2125849a8571213e6542e131",
+      "current_blob": "efc6250d881fd09d2125849a8571213e6542e131"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_ingress_tests.rs",
+      "baseline_blob": "97772b2b1418becd06a38c27b52e32a867d27bd9",
+      "current_blob": "97772b2b1418becd06a38c27b52e32a867d27bd9"
+    },
+    {
+      "path": "apps/kilogram-cli/src/publication_conflict_ceremony.rs",
+      "baseline_blob": "713571785b182dd0a639518f9b6d0983c843fe38",
+      "current_blob": "713571785b182dd0a639518f9b6d0983c843fe38"
+    },
+    {
+      "path": "apps/kilogram-cli/src/recovery_discovery.rs",
+      "baseline_blob": "d8ff90328bbb83564b94d9ec6707b7d27897ea6f",
+      "current_blob": "d8ff90328bbb83564b94d9ec6707b7d27897ea6f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/recovery_link.rs",
+      "baseline_blob": "f6f4ee07850025c4fe2ef426d1ba3d351373ecfd",
+      "current_blob": "f6f4ee07850025c4fe2ef426d1ba3d351373ecfd"
+    },
+    {
+      "path": "apps/kilogram-cli/src/recovery_plan.rs",
+      "baseline_blob": "799fec5db3e12fd23262a12236ab545663fe03f1",
+      "current_blob": "799fec5db3e12fd23262a12236ab545663fe03f1"
+    },
+    {
+      "path": "apps/kilogram-cli/src/recovery_platform.rs",
+      "baseline_blob": "d6b5f5026ea73b0d754cac7e2c23e51191dabc2f",
+      "current_blob": "d6b5f5026ea73b0d754cac7e2c23e51191dabc2f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/recovery_qr.rs",
+      "baseline_blob": "86498ce3415f33f0e01349400c37c04125f31ca4",
+      "current_blob": "86498ce3415f33f0e01349400c37c04125f31ca4"
+    },
+    {
+      "path": "apps/kilogram-cli/src/recovery_scheduler.rs",
+      "baseline_blob": "b083ca4c58bbd218da7be040c36b758fc8527ff4",
+      "current_blob": "b083ca4c58bbd218da7be040c36b758fc8527ff4"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_endpoint_announcement.rs",
+      "baseline_blob": "15c3b343248c7a6488e0d50871889c34104e7a4c",
+      "current_blob": "15c3b343248c7a6488e0d50871889c34104e7a4c"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_mailbox.rs",
+      "baseline_blob": "98903497588039fdbf89be05756b3a91cc33e84d",
+      "current_blob": "98903497588039fdbf89be05756b3a91cc33e84d"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_own_device_automation.rs",
+      "baseline_blob": "0e2f52bd5e50092d1d9d14e4dc58dfe46a804562",
+      "current_blob": "0e2f52bd5e50092d1d9d14e4dc58dfe46a804562"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_own_device_discovery.rs",
+      "baseline_blob": "a80dda6df1a6298fb7e5d7fde20058abd36c2fb5",
+      "current_blob": "a80dda6df1a6298fb7e5d7fde20058abd36c2fb5"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_own_device_roster.rs",
+      "baseline_blob": "8d925fdcc4d697e1205995cb116da05d3eca8c90",
+      "current_blob": "8d925fdcc4d697e1205995cb116da05d3eca8c90"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_publication.rs",
+      "baseline_blob": "6539fec5d5b885534164888e60fe52fc11057a16",
+      "current_blob": "6539fec5d5b885534164888e60fe52fc11057a16"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_publication_conflict.rs",
+      "baseline_blob": "ffe7ecc5eb2b92065b8dc37e4142ae26885a7bd8",
+      "current_blob": "ffe7ecc5eb2b92065b8dc37e4142ae26885a7bd8"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_publication_resolution.rs",
+      "baseline_blob": "3c6c979b4304d2fe84af00ed591bbc9a1b273f7f",
+      "current_blob": "3c6c979b4304d2fe84af00ed591bbc9a1b273f7f"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_queue.rs",
+      "baseline_blob": "c6bdbdbc3c6e44d9625c7c03a3309e3918580632",
+      "current_blob": "c6bdbdbc3c6e44d9625c7c03a3309e3918580632"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_ticket_automation.rs",
+      "baseline_blob": "e7ce3bab9ad025c6929816ccd17c8a2834cabd2a",
+      "current_blob": "e7ce3bab9ad025c6929816ccd17c8a2834cabd2a"
+    },
+    {
+      "path": "apps/kilogram-cli/src/runtime_ticket_checkpoint.rs",
+      "baseline_blob": "f2361470805cb99831f6f01fb49d84e13be2ead8",
+      "current_blob": "f2361470805cb99831f6f01fb49d84e13be2ead8"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/migration_s5_process.rs",
+      "baseline_blob": "a6024a601d1333f65d782238470082e1d2395f8c",
+      "current_blob": "a6024a601d1333f65d782238470082e1d2395f8c"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process.rs",
+      "baseline_blob": "014f3fbfe03e2c1a3513ab901a61d0626802670d",
+      "current_blob": "014f3fbfe03e2c1a3513ab901a61d0626802670d"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process/bootstrap.rs",
+      "baseline_blob": "15c5105e2d4b2a8259249041b293118e0d95fb6f",
+      "current_blob": "15c5105e2d4b2a8259249041b293118e0d95fb6f"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process/diagnostic.rs",
+      "baseline_blob": "b5ad4232cd57b1eab49e0bff47b3b3015d023fa5",
+      "current_blob": "b5ad4232cd57b1eab49e0bff47b3b3015d023fa5"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process/faults.rs",
+      "baseline_blob": "6ab1373102ba7ca733bc8726b983b704c8c48f57",
+      "current_blob": "6ab1373102ba7ca733bc8726b983b704c8c48f57"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process/lifecycle.rs",
+      "baseline_blob": "13a45323ad3b66e542d0e4d555cedd187658b3e8",
+      "current_blob": "13a45323ad3b66e542d0e4d555cedd187658b3e8"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process/positive.rs",
+      "baseline_blob": "3926c0d6a0f4bb4bb7f77888b7642389888084c7",
+      "current_blob": "3926c0d6a0f4bb4bb7f77888b7642389888084c7"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process/schedule_control.rs",
+      "baseline_blob": "84f13ae27d4ce2ad5fc0539f48d95b2ee15b70e1",
+      "current_blob": "84f13ae27d4ce2ad5fc0539f48d95b2ee15b70e1"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/runtime2_process/versions.rs",
+      "baseline_blob": "85d093b47c147466f43d5164723964717d2c4db3",
+      "current_blob": "85d093b47c147466f43d5164723964717d2c4db3"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1.rs",
+      "baseline_blob": "9a8c16a5f6d131d72e16f50eb0811d38fb02cb25",
+      "current_blob": "9a8c16a5f6d131d72e16f50eb0811d38fb02cb25"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_atomic.rs",
+      "baseline_blob": "33ffbed362484b6d12463d8cef662f194d4ee1cc",
+      "current_blob": "33ffbed362484b6d12463d8cef662f194d4ee1cc"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_exhausted.rs",
+      "baseline_blob": "d2a608a987cafbdb78bd09d6ee97530a328f8993",
+      "current_blob": "d2a608a987cafbdb78bd09d6ee97530a328f8993"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_isolation.rs",
+      "baseline_blob": "c9795e71eaf88d69aa8eb62061e583ed6bec8bf0",
+      "current_blob": "c9795e71eaf88d69aa8eb62061e583ed6bec8bf0"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_obligations.rs",
+      "baseline_blob": "65122e034a360cc5320f20247c07c8fcaf372c51",
+      "current_blob": "65122e034a360cc5320f20247c07c8fcaf372c51"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_policy.rs",
+      "baseline_blob": "8eb364dca0b01f9be17c8b3b0c6350033595af49",
+      "current_blob": "8eb364dca0b01f9be17c8b3b0c6350033595af49"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_review1.rs",
+      "baseline_blob": "59553e49ca6c07da7a682b6d1014bc3ea61d64b9",
+      "current_blob": "59553e49ca6c07da7a682b6d1014bc3ea61d64b9"
+    },
+    {
+      "path": "apps/kilogram-offline/Cargo.toml",
+      "baseline_blob": "8a92f8f82a90fd8f813511246dcc75232ebf9d61",
+      "current_blob": "8a92f8f82a90fd8f813511246dcc75232ebf9d61"
+    },
+    {
+      "path": "apps/kilogram-offline/src/lib.rs",
+      "baseline_blob": "bd2c9d9d7ef04d7ba4d109165091c39d6b0fbd41",
+      "current_blob": "bd2c9d9d7ef04d7ba4d109165091c39d6b0fbd41"
+    },
+    {
+      "path": "apps/kilogram-offline/src/main.rs",
+      "baseline_blob": "48728874b56193a605d1fe2caafc06ff001051c4",
+      "current_blob": "48728874b56193a605d1fe2caafc06ff001051c4"
+    },
+    {
+      "path": "apps/kilogram-ticket-store/Cargo.toml",
+      "baseline_blob": "3c29f553b764ab79e6d6ac3f8fc7a78670ae572f",
+      "current_blob": "3c29f553b764ab79e6d6ac3f8fc7a78670ae572f"
+    },
+    {
+      "path": "apps/kilogram-ticket-store/src/lib.rs",
+      "baseline_blob": "b16d8c93f4c63fe3aeebece11d2a9cf602d0f9ef",
+      "current_blob": "b16d8c93f4c63fe3aeebece11d2a9cf602d0f9ef"
+    },
+    {
+      "path": "apps/kilogram-ticket-store/src/main.rs",
+      "baseline_blob": "e3f28d54ab5c78a7139fd0422b94c91a5732c527",
+      "current_blob": "e3f28d54ab5c78a7139fd0422b94c91a5732c527"
+    },
+    {
+      "path": "apps/kilogram-windows/Cargo.toml",
+      "baseline_blob": "b015701b8245c3fc845b999ef177855fe098a3fe",
+      "current_blob": "b015701b8245c3fc845b999ef177855fe098a3fe"
+    },
+    {
+      "path": "apps/kilogram-windows/src/activation.rs",
+      "baseline_blob": "9cd0bfe26071c5000dbbe05bd9bde38c072eabf1",
+      "current_blob": "9cd0bfe26071c5000dbbe05bd9bde38c072eabf1"
+    },
+    {
+      "path": "apps/kilogram-windows/src/lib.rs",
+      "baseline_blob": "a33fc97156eae46273bdb8d9390561895b10576f",
+      "current_blob": "a33fc97156eae46273bdb8d9390561895b10576f"
+    },
+    {
+      "path": "apps/kilogram-windows/src/main.rs",
+      "baseline_blob": "74910d9af546dc01e162785875a9de8b770fce5c",
+      "current_blob": "74910d9af546dc01e162785875a9de8b770fce5c"
+    },
+    {
+      "path": "apps/kilogram-windows/src/peer_reenrollment.rs",
+      "baseline_blob": "fc0530f487d10091d3d124f51ac4509a7ba8af60",
+      "current_blob": "fc0530f487d10091d3d124f51ac4509a7ba8af60"
+    },
+    {
+      "path": "apps/kilogram-windows/src/rollout_operator.rs",
+      "baseline_blob": "beb06a4485d70f2474921eb7aa23796d9dcf6a6d",
+      "current_blob": "beb06a4485d70f2474921eb7aa23796d9dcf6a6d"
+    },
+    {
+      "path": "apps/kilogram-windows/src/wizard.rs",
+      "baseline_blob": "a565a868c16053389669702ccb4c09425a3f1818",
+      "current_blob": "a565a868c16053389669702ccb4c09425a3f1818"
+    },
+    {
+      "path": "crates/kilogram-bootstrap-contract/Cargo.toml",
+      "baseline_blob": "725f916ea804fc8265aa6d5237eef19bb731259f",
+      "current_blob": "725f916ea804fc8265aa6d5237eef19bb731259f"
+    },
+    {
+      "path": "crates/kilogram-bootstrap-contract/src/lib.rs",
+      "baseline_blob": "9c095aebcaa988df0a251d93cfd08309dbd29a24",
+      "current_blob": "9c095aebcaa988df0a251d93cfd08309dbd29a24"
+    },
+    {
+      "path": "crates/kilogram-crypto/Cargo.toml",
+      "baseline_blob": "b85b94aef22cb5c58bc6b7b3b5978f9f5b9e8c58",
+      "current_blob": "b85b94aef22cb5c58bc6b7b3b5978f9f5b9e8c58"
+    },
+    {
+      "path": "crates/kilogram-crypto/src/lib.rs",
+      "baseline_blob": "1f65f65068da7f87d386837269b1f08c82cb368c",
+      "current_blob": "1f65f65068da7f87d386837269b1f08c82cb368c"
+    },
+    {
+      "path": "crates/kilogram-identity/Cargo.toml",
+      "baseline_blob": "6950a863bc12d21c8cd37bb5d76f65a79fe48ab7",
+      "current_blob": "6950a863bc12d21c8cd37bb5d76f65a79fe48ab7"
+    },
+    {
+      "path": "crates/kilogram-identity/src/account.rs",
+      "baseline_blob": "2f135ab9714d304786c6d50b26ddcb961d2a2b14",
+      "current_blob": "2f135ab9714d304786c6d50b26ddcb961d2a2b14"
+    },
+    {
+      "path": "crates/kilogram-identity/src/lib.rs",
+      "baseline_blob": "f71512f2446e558ab6867e2a9bf3627edfbf3962",
+      "current_blob": "f71512f2446e558ab6867e2a9bf3627edfbf3962"
+    },
+    {
+      "path": "crates/kilogram-identity/src/recovery_policy.rs",
+      "baseline_blob": "88f89b69c45410868051ae3ca5a6f79e4f3c122c",
+      "current_blob": "88f89b69c45410868051ae3ca5a6f79e4f3c122c"
+    },
+    {
+      "path": "crates/kilogram-identity/src/recovery_quorum.rs",
+      "baseline_blob": "238890626c6484d905463b7b77dc4a7bf55e69b8",
+      "current_blob": "238890626c6484d905463b7b77dc4a7bf55e69b8"
+    },
+    {
+      "path": "crates/kilogram-mailbox-client/Cargo.toml",
+      "baseline_blob": "34c1ab4c5aa4ec82ce4092ad5ded37fa32dcb24e",
+      "current_blob": "34c1ab4c5aa4ec82ce4092ad5ded37fa32dcb24e"
+    },
+    {
+      "path": "crates/kilogram-mailbox-client/src/http.rs",
+      "baseline_blob": "91c465bb440e453f398166ad9efd936e1d1856db",
+      "current_blob": "91c465bb440e453f398166ad9efd936e1d1856db"
+    },
+    {
+      "path": "crates/kilogram-mailbox-client/src/ledger.rs",
+      "baseline_blob": "8bb5f7bbe091e3c3ed8c06a1b9c78006844113ec",
+      "current_blob": "8bb5f7bbe091e3c3ed8c06a1b9c78006844113ec"
+    },
+    {
+      "path": "crates/kilogram-mailbox-client/src/lib.rs",
+      "baseline_blob": "16cf13580d32536ee9e110db7aecd36939b448d2",
+      "current_blob": "16cf13580d32536ee9e110db7aecd36939b448d2"
+    },
+    {
+      "path": "crates/kilogram-mailbox-client/src/provider.rs",
+      "baseline_blob": "4c6ec942dd85139a32f0b1788bc9aec90eeda188",
+      "current_blob": "4c6ec942dd85139a32f0b1788bc9aec90eeda188"
+    },
+    {
+      "path": "crates/kilogram-mailbox-client/src/replication.rs",
+      "baseline_blob": "a9d74f34ecd8bbe59b5eb38fced0bb508c4e4dda",
+      "current_blob": "a9d74f34ecd8bbe59b5eb38fced0bb508c4e4dda"
+    },
+    {
+      "path": "crates/kilogram-mailbox-provisioning/Cargo.toml",
+      "baseline_blob": "29bb263cb743d6eeaff06f601d0267441be44083",
+      "current_blob": "29bb263cb743d6eeaff06f601d0267441be44083"
+    },
+    {
+      "path": "crates/kilogram-mailbox-provisioning/src/lib.rs",
+      "baseline_blob": "83e9844ef625baefe28c044fc6a8c1b396d71da1",
+      "current_blob": "83e9844ef625baefe28c044fc6a8c1b396d71da1"
+    },
+    {
+      "path": "crates/kilogram-mailbox/Cargo.toml",
+      "baseline_blob": "a46e73f858ff598b895c9d3b67b7adde87df16a4",
+      "current_blob": "a46e73f858ff598b895c9d3b67b7adde87df16a4"
+    },
+    {
+      "path": "crates/kilogram-mailbox/src/lib.rs",
+      "baseline_blob": "c3724cf22fcfec4949bb5c0695bd57a655430728",
+      "current_blob": "c3724cf22fcfec4949bb5c0695bd57a655430728"
+    },
+    {
+      "path": "crates/kilogram-mailbox/src/store.rs",
+      "baseline_blob": "727566c26c26874756a2e2fc48e728a948d8da38",
+      "current_blob": "727566c26c26874756a2e2fc48e728a948d8da38"
+    },
+    {
+      "path": "crates/kilogram-mailbox/src/wire.rs",
+      "baseline_blob": "67d4b5b04dedb8ebc3305fd791acf688469d970a",
+      "current_blob": "67d4b5b04dedb8ebc3305fd791acf688469d970a"
+    },
+    {
+      "path": "crates/kilogram-peer-capability-store/Cargo.toml",
+      "baseline_blob": "dc6da4cc8be6d68342785f49e1014ee23587bfdc",
+      "current_blob": "dc6da4cc8be6d68342785f49e1014ee23587bfdc"
+    },
+    {
+      "path": "crates/kilogram-peer-capability-store/src/lib.rs",
+      "baseline_blob": "675b9db04cf589dde742b5b0aa0a73818b736003",
+      "current_blob": "675b9db04cf589dde742b5b0aa0a73818b736003"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-consent/Cargo.toml",
+      "baseline_blob": "24a0c6c5d6b78d9e1b42d4ecffc424b962d16ef5",
+      "current_blob": "24a0c6c5d6b78d9e1b42d4ecffc424b962d16ef5"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-consent/src/lib.rs",
+      "baseline_blob": "0b7d891ed5b43194cb8ae279f1657d618816b85a",
+      "current_blob": "0b7d891ed5b43194cb8ae279f1657d618816b85a"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/Cargo.toml",
+      "baseline_blob": "f93e6a87e2196657ce73011907e4ad3bfe4d55c0",
+      "current_blob": "f93e6a87e2196657ce73011907e4ad3bfe4d55c0"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/src/coordinator.rs",
+      "baseline_blob": "5b2a9209695df51817f81888f860e97737b48ebb",
+      "current_blob": "5b2a9209695df51817f81888f860e97737b48ebb"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/src/import.rs",
+      "baseline_blob": "b451e144c7859d908935d9859168ce30586642f0",
+      "current_blob": "b451e144c7859d908935d9859168ce30586642f0"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/src/lib.rs",
+      "baseline_blob": "a9d1bb16e24939720109e5251f54b802ce0c54c7",
+      "current_blob": "a9d1bb16e24939720109e5251f54b802ce0c54c7"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/src/recipient_import.rs",
+      "baseline_blob": "85bfc8e425f295a854d970b019818ecf941bf831",
+      "current_blob": "85bfc8e425f295a854d970b019818ecf941bf831"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/src/recipient_import_round.rs",
+      "baseline_blob": "ff8e5d7cc441f27e86c323edaa999809faa04746",
+      "current_blob": "ff8e5d7cc441f27e86c323edaa999809faa04746"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/src/recipient_import_round_executor.rs",
+      "baseline_blob": "a77113fbc526c48fa9ac657162ed84077c8a336e",
+      "current_blob": "a77113fbc526c48fa9ac657162ed84077c8a336e"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/src/recipient_import_round_intent.rs",
+      "baseline_blob": "4f42d0462bc78bf3cbbf27297420053b5eb2af55",
+      "current_blob": "4f42d0462bc78bf3cbbf27297420053b5eb2af55"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-execution/src/transfer.rs",
+      "baseline_blob": "0f46442b044b9f5344f2202709a946c24150f76d",
+      "current_blob": "0f46442b044b9f5344f2202709a946c24150f76d"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/Cargo.toml",
+      "baseline_blob": "b3c59d3996b49a86fe83ea6d907c2f253b2e76d3",
+      "current_blob": "b3c59d3996b49a86fe83ea6d907c2f253b2e76d3"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/lib.rs",
+      "baseline_blob": "5829a3a4e9ac822e69adea09e8efaebceb429380",
+      "current_blob": "5829a3a4e9ac822e69adea09e8efaebceb429380"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_confirmation.rs",
+      "baseline_blob": "68702c799552681ca591c4c5881a12dd448eade3",
+      "current_blob": "68702c799552681ca591c4c5881a12dd448eade3"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_authorization.rs",
+      "baseline_blob": "d8c9f4645790ed6f113f6c316eefa911ec8d063d",
+      "current_blob": "d8c9f4645790ed6f113f6c316eefa911ec8d063d"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_mutation_adapter.rs",
+      "baseline_blob": "9a0a8beb150bb0abb5f0bdc909119515c8cbf7b3",
+      "current_blob": "9a0a8beb150bb0abb5f0bdc909119515c8cbf7b3"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_read_adapter.rs",
+      "baseline_blob": "fa7c5df297712683029e8cc44d02fff9786bdc93",
+      "current_blob": "fa7c5df297712683029e8cc44d02fff9786bdc93"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_response_dispatcher.rs",
+      "baseline_blob": "f591ead7eca7f5cf10ff68bbc33fc5e926edeb6d",
+      "current_blob": "f591ead7eca7f5cf10ff68bbc33fc5e926edeb6d"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_runtime_attachment.rs",
+      "baseline_blob": "ca9fefa6aea3d5ec3332157e794d132407f31ed2",
+      "current_blob": "ca9fefa6aea3d5ec3332157e794d132407f31ed2"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_runtime_service.rs",
+      "baseline_blob": "58d85982329b8d50633f64c6a92f0b7d2d40dc2a",
+      "current_blob": "58d85982329b8d50633f64c6a92f0b7d2d40dc2a"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_consumption_session_cache.rs",
+      "baseline_blob": "b52e6fe4427c799c5c73f0da3af29cb698495684",
+      "current_blob": "b52e6fe4427c799c5c73f0da3af29cb698495684"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_guided_recovery_host.rs",
+      "baseline_blob": "bb6ea79c58bbf4ffecdbc39861c0145b2a887cee",
+      "current_blob": "bb6ea79c58bbf4ffecdbc39861c0145b2a887cee"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_guided_recovery_launch_authorization.rs",
+      "baseline_blob": "9b36e9ac5c1b56c075fde7cff486658eed87df98",
+      "current_blob": "9b36e9ac5c1b56c075fde7cff486658eed87df98"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_guided_recovery_launch_service.rs",
+      "baseline_blob": "d38ad5997cac177862a9c1c0097e1c13595e60bc",
+      "current_blob": "d38ad5997cac177862a9c1c0097e1c13595e60bc"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_guided_recovery_launch_slot.rs",
+      "baseline_blob": "03e6290dd90d39a6542bf123e3e55d4c0e1b4dfe",
+      "current_blob": "03e6290dd90d39a6542bf123e3e55d4c0e1b4dfe"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_guided_session_controller.rs",
+      "baseline_blob": "893a09110cf69dc74aa8cafe3ad8efe13904d759",
+      "current_blob": "893a09110cf69dc74aa8cafe3ad8efe13904d759"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_guided_session_local_ux.rs",
+      "baseline_blob": "99da91157aabd6efde52147350e30e51efe192ae",
+      "current_blob": "99da91157aabd6efde52147350e30e51efe192ae"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_guided_session_start_producer.rs",
+      "baseline_blob": "a2c378ffd81ed57bae59c81d5583e271df319970",
+      "current_blob": "a2c378ffd81ed57bae59c81d5583e271df319970"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_mutation_adapter.rs",
+      "baseline_blob": "2f1d4020eb6e011bc9122215c35e3b0201018e9c",
+      "current_blob": "2f1d4020eb6e011bc9122215c35e3b0201018e9c"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-runtime/src/recipient_import_read_adapter.rs",
+      "baseline_blob": "5a635a00761ca2d379b89fb128172d0f93f01c6c",
+      "current_blob": "5a635a00761ca2d379b89fb128172d0f93f01c6c"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-transport/Cargo.toml",
+      "baseline_blob": "6543973aa6512875a29be49e5f4a2c0317b2a635",
+      "current_blob": "6543973aa6512875a29be49e5f4a2c0317b2a635"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-transport/src/acceptor.rs",
+      "baseline_blob": "ea3ad4bc41145fea90e0bc53ec59b6d7c5f50cd0",
+      "current_blob": "ea3ad4bc41145fea90e0bc53ec59b6d7c5f50cd0"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-transport/src/executor.rs",
+      "baseline_blob": "fd82b41347380913bf9c35297f0e4c2741b28e99",
+      "current_blob": "fd82b41347380913bf9c35297f0e4c2741b28e99"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-transport/src/lib.rs",
+      "baseline_blob": "345febc31ed2df1daa575260243949220e3dd80e",
+      "current_blob": "345febc31ed2df1daa575260243949220e3dd80e"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-transport/src/outbox.rs",
+      "baseline_blob": "e55bf4eb14d06067cfb6587e6c24b64d0425d323",
+      "current_blob": "e55bf4eb14d06067cfb6587e6c24b64d0425d323"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery-transport/src/scheduler.rs",
+      "baseline_blob": "1641f9d0c86913e713cf3b143241f59de61c9093",
+      "current_blob": "1641f9d0c86913e713cf3b143241f59de61c9093"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery/Cargo.toml",
+      "baseline_blob": "d4c5460cc3abfd7de67742e69ade83d554056dc5",
+      "current_blob": "d4c5460cc3abfd7de67742e69ade83d554056dc5"
+    },
+    {
+      "path": "crates/kilogram-peer-history-recovery/src/lib.rs",
+      "baseline_blob": "7451643e7003f1ec8b4786b10dcd15491bb949cc",
+      "current_blob": "7451643e7003f1ec8b4786b10dcd15491bb949cc"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment-acceptance/Cargo.toml",
+      "baseline_blob": "f754197ab947c0ac81346e1af129c1532b2a3bdb",
+      "current_blob": "f754197ab947c0ac81346e1af129c1532b2a3bdb"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment-acceptance/src/lib.rs",
+      "baseline_blob": "88282b75ed08b0cc0a6685b66f0b1aca97e8d962",
+      "current_blob": "88282b75ed08b0cc0a6685b66f0b1aca97e8d962"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment-runtime/Cargo.toml",
+      "baseline_blob": "9082453f94115e9b4be6b1f8e6d9fd9377e3de50",
+      "current_blob": "9082453f94115e9b4be6b1f8e6d9fd9377e3de50"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment-runtime/src/ceremony.rs",
+      "baseline_blob": "22a04eabe7ca0ecf9bd6f2a4e347a39c0df994c4",
+      "current_blob": "22a04eabe7ca0ecf9bd6f2a4e347a39c0df994c4"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment-runtime/src/lib.rs",
+      "baseline_blob": "472768bd111db2bc00a5eef6c07dad908eb3e593",
+      "current_blob": "472768bd111db2bc00a5eef6c07dad908eb3e593"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment-staging/Cargo.toml",
+      "baseline_blob": "e643ce35abbb04cd35a92d7bcb0697c31d17ddf6",
+      "current_blob": "e643ce35abbb04cd35a92d7bcb0697c31d17ddf6"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment-staging/src/lib.rs",
+      "baseline_blob": "2b2f75b73e5f031cbe1573ff4339e448f0fb63f8",
+      "current_blob": "2b2f75b73e5f031cbe1573ff4339e448f0fb63f8"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment/Cargo.toml",
+      "baseline_blob": "c1b656af018dbf89e5722a994c137e2882c6f146",
+      "current_blob": "c1b656af018dbf89e5722a994c137e2882c6f146"
+    },
+    {
+      "path": "crates/kilogram-peer-reenrollment/src/lib.rs",
+      "baseline_blob": "f64bd72efb4bf27cbd0006918c0baa5210688a0d",
+      "current_blob": "f64bd72efb4bf27cbd0006918c0baa5210688a0d"
+    },
+    {
+      "path": "crates/kilogram-protocol/Cargo.toml",
+      "baseline_blob": "ffa9495d8e559f51bc2498f56c1bfe5da805983e",
+      "current_blob": "ffa9495d8e559f51bc2498f56c1bfe5da805983e"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_account_recovery_policy_v1.rs",
+      "baseline_blob": "f5a23d886c2566882f7f9506699db285f9dab815",
+      "current_blob": "f5a23d886c2566882f7f9506699db285f9dab815"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_account_recovery_v1.rs",
+      "baseline_blob": "1e93dad11103abe537a088b317193e94648108b4",
+      "current_blob": "1e93dad11103abe537a088b317193e94648108b4"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_account_v1.rs",
+      "baseline_blob": "33290520a7b96cfcbd28258d27ae171874fa4af0",
+      "current_blob": "33290520a7b96cfcbd28258d27ae171874fa4af0"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_authority_v1.rs",
+      "baseline_blob": "9ff7bea92a689211a0314f908cfcdc30d09cd10a",
+      "current_blob": "9ff7bea92a689211a0314f908cfcdc30d09cd10a"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_device_link_v1.rs",
+      "baseline_blob": "ec09b8ef2311d7f34980f6040e4745f511bb55ce",
+      "current_blob": "ec09b8ef2311d7f34980f6040e4745f511bb55ce"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_endpoint_announcement_transport_v1.rs",
+      "baseline_blob": "b0f10c0d7c278a1c28e3bde0075b3d8c26b57ad5",
+      "current_blob": "b0f10c0d7c278a1c28e3bde0075b3d8c26b57ad5"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_endpoint_announcement_v1.rs",
+      "baseline_blob": "af8a59f27c11694cdb31a166899ff46114bbc375",
+      "current_blob": "af8a59f27c11694cdb31a166899ff46114bbc375"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_event_v1.rs",
+      "baseline_blob": "bff5ec474411e431d9bac0afa2c697f65d39ea7e",
+      "current_blob": "bff5ec474411e431d9bac0afa2c697f65d39ea7e"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_mailbox_gossip_v1.rs",
+      "baseline_blob": "629a9d71002144341ca2ccda9d695c62079b5e72",
+      "current_blob": "629a9d71002144341ca2ccda9d695c62079b5e72"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_mailbox_provisioning_v1.rs",
+      "baseline_blob": "8e3bfc6b6d4e16151f01bbd9983aa2f99d182ff9",
+      "current_blob": "8e3bfc6b6d4e16151f01bbd9983aa2f99d182ff9"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_mailbox_transport_v1.rs",
+      "baseline_blob": "b6e6b0c8729eaad8e0891d2bbd95907a7e89fc95",
+      "current_blob": "b6e6b0c8729eaad8e0891d2bbd95907a7e89fc95"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_mailbox_v1.rs",
+      "baseline_blob": "e15645533ce4ba944c609717616483f64ecbcf8c",
+      "current_blob": "e15645533ce4ba944c609717616483f64ecbcf8c"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_prekey_selection_v1.rs",
+      "baseline_blob": "dd6d4e4fd66045d1c23e2f7da6c7ebb614a182fa",
+      "current_blob": "dd6d4e4fd66045d1c23e2f7da6c7ebb614a182fa"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_publication_conflict_v1.rs",
+      "baseline_blob": "09d4fe8b03e89d9c8bf48aa1525f32f34bd976c4",
+      "current_blob": "09d4fe8b03e89d9c8bf48aa1525f32f34bd976c4"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_publication_resolution_v1.rs",
+      "baseline_blob": "d96e5ff57f678553c38a4f6ef264dc99b3d38c75",
+      "current_blob": "d96e5ff57f678553c38a4f6ef264dc99b3d38c75"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_ratchet_v1.rs",
+      "baseline_blob": "e87e7367f8138fcfc43b2472ad849466a0206e35",
+      "current_blob": "e87e7367f8138fcfc43b2472ad849466a0206e35"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_recovery_exchange_v1.rs",
+      "baseline_blob": "0499fee4b8fbf7424fbe0e5f5dd2e64d7f43575c",
+      "current_blob": "0499fee4b8fbf7424fbe0e5f5dd2e64d7f43575c"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_recovery_v1.rs",
+      "baseline_blob": "63beeaf326ed76d135e8b9badfdd3a98681b85c5",
+      "current_blob": "63beeaf326ed76d135e8b9badfdd3a98681b85c5"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_rewrap_v1.rs",
+      "baseline_blob": "977c44a05020848e641af2a5333f3c188f17b1bc",
+      "current_blob": "977c44a05020848e641af2a5333f3c188f17b1bc"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_contact_v1.rs",
+      "baseline_blob": "1a33e7a653c43f2d871a17f3cd6e2bbeb5f57c37",
+      "current_blob": "1a33e7a653c43f2d871a17f3cd6e2bbeb5f57c37"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_directory_v1.rs",
+      "baseline_blob": "a5cae629e8ec41632684e8a7812a0e8709534083",
+      "current_blob": "a5cae629e8ec41632684e8a7812a0e8709534083"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_mailbox_mutation_v1.rs",
+      "baseline_blob": "2d5ef8077038f62d2732d99b64ede7f89a2b9174",
+      "current_blob": "2d5ef8077038f62d2732d99b64ede7f89a2b9174"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_mailbox_status_v1.rs",
+      "baseline_blob": "0bf972994182f2d7d1677ea25e7a9b2646e42f6f",
+      "current_blob": "0bf972994182f2d7d1677ea25e7a9b2646e42f6f"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_outbox_v1.rs",
+      "baseline_blob": "01fbd54f6b9314a99d68bebae8044ada4a556e45",
+      "current_blob": "01fbd54f6b9314a99d68bebae8044ada4a556e45"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_own_device_announcement_v1.rs",
+      "baseline_blob": "86e32f7a88638a9951a0e269e9ca246492ea85c4",
+      "current_blob": "86e32f7a88638a9951a0e269e9ca246492ea85c4"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_own_device_discovery_v1.rs",
+      "baseline_blob": "c077a575bdc3d3447df044dbdd1ab5274c4ffbeb",
+      "current_blob": "c077a575bdc3d3447df044dbdd1ab5274c4ffbeb"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_own_device_roster_v1.rs",
+      "baseline_blob": "43b575369b7bf662d958cb745f3e25f8f72ec572",
+      "current_blob": "43b575369b7bf662d958cb745f3e25f8f72ec572"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_provider_v1.rs",
+      "baseline_blob": "6a48b1c035385e4b2e1f1177ea4d5158948f4296",
+      "current_blob": "6a48b1c035385e4b2e1f1177ea4d5158948f4296"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_publication_conflict_v1.rs",
+      "baseline_blob": "2f2861777b01bff036adcef6021370888042fa31",
+      "current_blob": "2f2861777b01bff036adcef6021370888042fa31"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_publication_network_v1.rs",
+      "baseline_blob": "ff8d8f756223da345d3870e68452648be3b46f8e",
+      "current_blob": "ff8d8f756223da345d3870e68452648be3b46f8e"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_publication_v1.rs",
+      "baseline_blob": "bdac43547ea78e4761a749bbc912eeec4d9be3db",
+      "current_blob": "bdac43547ea78e4761a749bbc912eeec4d9be3db"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_queue_v1.rs",
+      "baseline_blob": "3b284477dff8dd9e6efae440f03ec6fbd8283250",
+      "current_blob": "3b284477dff8dd9e6efae440f03ec6fbd8283250"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_read_v1.rs",
+      "baseline_blob": "4497b72e6918816b6b23419343265f5aecf0cce5",
+      "current_blob": "4497b72e6918816b6b23419343265f5aecf0cce5"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_recovery_execution_v1.rs",
+      "baseline_blob": "6d8656750c2ba5fad07ebb6d9f1d9aa71b0ebf30",
+      "current_blob": "6d8656750c2ba5fad07ebb6d9f1d9aa71b0ebf30"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_recovery_plan_v1.rs",
+      "baseline_blob": "f6aa0d42e6b5b712fbac7200f7f063a1ab906adb",
+      "current_blob": "f6aa0d42e6b5b712fbac7200f7f063a1ab906adb"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_ticket_automation_v1.rs",
+      "baseline_blob": "59bd5ed1470febb6ec2935d13c9d0177a533cdf8",
+      "current_blob": "59bd5ed1470febb6ec2935d13c9d0177a533cdf8"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_ipc_v1.rs",
+      "baseline_blob": "ff0e8fe5978a0d6e78fad3b05ed68021d643afbd",
+      "current_blob": "ff0e8fe5978a0d6e78fad3b05ed68021d643afbd"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_runtime_mailbox_v1.rs",
+      "baseline_blob": "c52f9f8edc170afbbfa909ffe7a2a45ec02a5334",
+      "current_blob": "c52f9f8edc170afbbfa909ffe7a2a45ec02a5334"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_history_v2.rs",
+      "baseline_blob": "a7f5d459ef048b6cfa7339228cb236ea00c52e03",
+      "current_blob": "a7f5d459ef048b6cfa7339228cb236ea00c52e03"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_legacy_event_v1.rs",
+      "baseline_blob": "03d50d8127a9041062fad24eb3a18e7f26c68ba8",
+      "current_blob": "03d50d8127a9041062fad24eb3a18e7f26c68ba8"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_responder_session_v2.rs",
+      "baseline_blob": "edd22abded71f5def255d673a63498b6d1e00b82",
+      "current_blob": "edd22abded71f5def255d673a63498b6d1e00b82"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_session_v1.rs",
+      "baseline_blob": "54216e08734a4a62c2b43c0a899b87c4a20e5d5a",
+      "current_blob": "54216e08734a4a62c2b43c0a899b87c4a20e5d5a"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_session_v2.rs",
+      "baseline_blob": "f7f1c28296c77a4b94530d22defddd774670262b",
+      "current_blob": "f7f1c28296c77a4b94530d22defddd774670262b"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_v1.rs",
+      "baseline_blob": "2da4031c921304e9420a6514480a52b5a1e4b9b0",
+      "current_blob": "2da4031c921304e9420a6514480a52b5a1e4b9b0"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_sync_v2.rs",
+      "baseline_blob": "688bf3483292c80bc1574831cfe0b4d6072145e5",
+      "current_blob": "688bf3483292c80bc1574831cfe0b4d6072145e5"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_ticket_publication_v1.rs",
+      "baseline_blob": "24a2b063788626a2c3efc50fd7ac499e91e811b2",
+      "current_blob": "24a2b063788626a2c3efc50fd7ac499e91e811b2"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/canonical_v1.rs",
+      "baseline_blob": "e5e646dad9ef0159fa4193515cddb45488f2f7a2",
+      "current_blob": "e5e646dad9ef0159fa4193515cddb45488f2f7a2"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/decoder_fuzzing.rs",
+      "baseline_blob": "fe3ef55a7cc5fd593bb5b5ebd5ca52732268e19d",
+      "current_blob": "fe3ef55a7cc5fd593bb5b5ebd5ca52732268e19d"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/lib.rs",
+      "baseline_blob": "a6a93fc84bbd9c93a73856fa5588ed6bc9f2e3be",
+      "current_blob": "a6a93fc84bbd9c93a73856fa5588ed6bc9f2e3be"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v1.rs",
+      "baseline_blob": "e46b4c8f1984b20dc217e75fdbc73af4c9376023",
+      "current_blob": "e46b4c8f1984b20dc217e75fdbc73af4c9376023"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2.rs",
+      "baseline_blob": "02bc4d325f6d88345b36b6ec1aaed93ad5847276",
+      "current_blob": "02bc4d325f6d88345b36b6ec1aaed93ad5847276"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/authority.rs",
+      "baseline_blob": "1cf8be4ab3f725d74e421cef0e256b77bc7014e1",
+      "current_blob": "1cf8be4ab3f725d74e421cef0e256b77bc7014e1"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/frame.rs",
+      "baseline_blob": "5958fbc1ae2db54970b517bbb20adf82bfb9e165",
+      "current_blob": "5958fbc1ae2db54970b517bbb20adf82bfb9e165"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/mode.rs",
+      "baseline_blob": "9e687f2d84e3e4045a7270a6ada9fe578d1b7aa9",
+      "current_blob": "9e687f2d84e3e4045a7270a6ada9fe578d1b7aa9"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/runtime_locator.rs",
+      "baseline_blob": "319e7705b27463bf6e0153cf4496de98865ce78d",
+      "current_blob": "319e7705b27463bf6e0153cf4496de98865ce78d"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/tests.rs",
+      "baseline_blob": "9fec5db986b9e4e15aff59107fc1a68f7ab9fd9f",
+      "current_blob": "9fec5db986b9e4e15aff59107fc1a68f7ab9fd9f"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/tests/golden.rs",
+      "baseline_blob": "4e53c6f789e78373523f2abdbd7b7ef8baad65bc",
+      "current_blob": "4e53c6f789e78373523f2abdbd7b7ef8baad65bc"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/tests/matrix.rs",
+      "baseline_blob": "9d4eae6ce3972f8b26419424eaa3e73500406836",
+      "current_blob": "9d4eae6ce3972f8b26419424eaa3e73500406836"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/recovery.rs",
+      "baseline_blob": "cd0edc7a52d352417ea6d6d18944e943b0d18c7e",
+      "current_blob": "cd0edc7a52d352417ea6d6d18944e943b0d18c7e"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/rewrap.rs",
+      "baseline_blob": "c6c53359427911e30ef543182957edc23276beca",
+      "current_blob": "c6c53359427911e30ef543182957edc23276beca"
+    },
+    {
+      "path": "crates/kilogram-protocol/src/wire.rs",
+      "baseline_blob": "9516aaafa883b99a2b20f7485126492102eb3893",
+      "current_blob": "9516aaafa883b99a2b20f7485126492102eb3893"
+    },
+    {
+      "path": "crates/kilogram-protocol/tests/canonical_decoder_mutations.rs",
+      "baseline_blob": "9db77f78616e090d7e7c1df03d2f8853eb7ccf87",
+      "current_blob": "9db77f78616e090d7e7c1df03d2f8853eb7ccf87"
+    },
+    {
+      "path": "crates/kilogram-protocol/tests/canonical_sync_v2_decoder_mutations.rs",
+      "baseline_blob": "89d626e33e22ae1b6a7288a5620fbc11af73d122",
+      "current_blob": "89d626e33e22ae1b6a7288a5620fbc11af73d122"
+    },
+    {
+      "path": "crates/kilogram-protocol/tests/canonical_sync_v2_fuzz_seeds.rs",
+      "baseline_blob": "3b51d2bf27559ca9d9b0ebea7be5acff0bd5bc0c",
+      "current_blob": "3b51d2bf27559ca9d9b0ebea7be5acff0bd5bc0c"
+    },
+    {
+      "path": "crates/kilogram-protocol/tests/ordered_dialog_bounds.rs",
+      "baseline_blob": "ccf3cf0bdde9769df228206fc2168bcd8403dae9",
+      "current_blob": "ccf3cf0bdde9769df228206fc2168bcd8403dae9"
+    },
+    {
+      "path": "crates/kilogram-protocol/tests/support/ordered_dialog_v2.rs",
+      "baseline_blob": "c61c41d1142bd7a683a42858db38241d5db5992f",
+      "current_blob": "c61c41d1142bd7a683a42858db38241d5db5992f"
+    },
+    {
+      "path": "crates/kilogram-publication-conflict/Cargo.toml",
+      "baseline_blob": "c32752adce0f80f8766088ac3f4e02c22d4625e5",
+      "current_blob": "c32752adce0f80f8766088ac3f4e02c22d4625e5"
+    },
+    {
+      "path": "crates/kilogram-publication-conflict/src/lib.rs",
+      "baseline_blob": "1c86d2af8ee6a8f07989a8610f5cac5fc20d016c",
+      "current_blob": "1c86d2af8ee6a8f07989a8610f5cac5fc20d016c"
+    },
+    {
+      "path": "crates/kilogram-ratchet/Cargo.toml",
+      "baseline_blob": "bddd1e5950a27af5118f1ed088d2056a68703e0f",
+      "current_blob": "bddd1e5950a27af5118f1ed088d2056a68703e0f"
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/lib.rs",
+      "baseline_blob": "3c6513832301044f6aae529acbfebfb5e95c9672",
+      "current_blob": "3c6513832301044f6aae529acbfebfb5e95c9672"
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/ordered.rs",
+      "baseline_blob": "54aa88d0d25f37f99fdfa4c4b9bd26fff70e4752",
+      "current_blob": "54aa88d0d25f37f99fdfa4c4b9bd26fff70e4752"
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/ordered_v2.rs",
+      "baseline_blob": "b7e01f2769aff60e8a5a8230ea6aa8fe23e702e6",
+      "current_blob": "b7e01f2769aff60e8a5a8230ea6aa8fe23e702e6"
+    },
+    {
+      "path": "crates/kilogram-ratchet/src/ordered_v2/tests.rs",
+      "baseline_blob": "842026fdcb5868dc3de7dd80fe17ae8a723f7b18",
+      "current_blob": "842026fdcb5868dc3de7dd80fe17ae8a723f7b18"
+    },
+    {
+      "path": "crates/kilogram-ratchet/tests/a3_s3_root_review.rs",
+      "baseline_blob": "53fbe06da88c2e6d787692c6e1347275e00e51f4",
+      "current_blob": "53fbe06da88c2e6d787692c6e1347275e00e51f4"
+    },
+    {
+      "path": "crates/kilogram-rollout/Cargo.toml",
+      "baseline_blob": "1f591f0697a7649c07f82687dc03ef30544daa1c",
+      "current_blob": "1f591f0697a7649c07f82687dc03ef30544daa1c"
+    },
+    {
+      "path": "crates/kilogram-rollout/src/containment_recovery.rs",
+      "baseline_blob": "2c7f639f209b27cdce00400fd726f2c40ba06727",
+      "current_blob": "2c7f639f209b27cdce00400fd726f2c40ba06727"
+    },
+    {
+      "path": "crates/kilogram-rollout/src/end_to_end_rehearsal.rs",
+      "baseline_blob": "9ead351050c4cdd323457347e97f0cd0bd5911c6",
+      "current_blob": "9ead351050c4cdd323457347e97f0cd0bd5911c6"
+    },
+    {
+      "path": "crates/kilogram-rollout/src/lib.rs",
+      "baseline_blob": "cdbb680df93f692624984e5bf05a61f5c3bb623f",
+      "current_blob": "cdbb680df93f692624984e5bf05a61f5c3bb623f"
+    },
+    {
+      "path": "crates/kilogram-rollout/src/rollout_approval.rs",
+      "baseline_blob": "badb8cc121a9dbc4af72bd08fa33dccd46bac635",
+      "current_blob": "badb8cc121a9dbc4af72bd08fa33dccd46bac635"
+    },
+    {
+      "path": "crates/kilogram-rollout/src/trust.rs",
+      "baseline_blob": "e2075054996b595f3c345733c2905b062fede038",
+      "current_blob": "e2075054996b595f3c345733c2905b062fede038"
+    },
+    {
+      "path": "crates/kilogram-rollout/src/trusted_health_store.rs",
+      "baseline_blob": "33dbe341cbd8bb07ad3918d929ba9b89dddb2880",
+      "current_blob": "33dbe341cbd8bb07ad3918d929ba9b89dddb2880"
+    },
+    {
+      "path": "crates/kilogram-rollout/src/trusted_policy.rs",
+      "baseline_blob": "600ecbf3fa53dcc1faeafc62d09c32a9fb6996d7",
+      "current_blob": "600ecbf3fa53dcc1faeafc62d09c32a9fb6996d7"
+    },
+    {
+      "path": "crates/kilogram-rollout/src/trusted_policy_store.rs",
+      "baseline_blob": "b04c31627bafb8d78ea8fd32323219833dee2a79",
+      "current_blob": "b04c31627bafb8d78ea8fd32323219833dee2a79"
+    },
+    {
+      "path": "crates/kilogram-runtime-ipc/Cargo.toml",
+      "baseline_blob": "9fe58e75bf68342b96e5933ed2d04d70f29ff322",
+      "current_blob": "9fe58e75bf68342b96e5933ed2d04d70f29ff322"
+    },
+    {
+      "path": "crates/kilogram-runtime-ipc/src/lib.rs",
+      "baseline_blob": "ad647aa1c8bb4d026ae55ae5098979f39077b491",
+      "current_blob": "ad647aa1c8bb4d026ae55ae5098979f39077b491"
+    },
+    {
+      "path": "crates/kilogram-runtime-ipc/src/peer_reenrollment_contract.rs",
+      "baseline_blob": "43c879815387aa77f3c82de4c2fa2160b1ddbc6d",
+      "current_blob": "43c879815387aa77f3c82de4c2fa2160b1ddbc6d"
+    },
+    {
+      "path": "crates/kilogram-runtime-ipc/src/recipient_import_consumption_contract.rs",
+      "baseline_blob": "b5cef3f174c002c536784fab02ac26ce3c7feaed",
+      "current_blob": "b5cef3f174c002c536784fab02ac26ce3c7feaed"
+    },
+    {
+      "path": "crates/kilogram-runtime-ipc/src/recipient_import_execution_contract.rs",
+      "baseline_blob": "6a6634973681510e1c13c31cd80b4a87c38b7553",
+      "current_blob": "6a6634973681510e1c13c31cd80b4a87c38b7553"
+    },
+    {
+      "path": "crates/kilogram-session/Cargo.toml",
+      "baseline_blob": "0614b4d978d791b074b11220235399151d2831b6",
+      "current_blob": "0614b4d978d791b074b11220235399151d2831b6"
+    },
+    {
+      "path": "crates/kilogram-session/src/canonical_sync_v2_activation.rs",
+      "baseline_blob": "4aab0becdbd987c7e70fa52dd0739e6a8b464914",
+      "current_blob": "4aab0becdbd987c7e70fa52dd0739e6a8b464914"
+    },
+    {
+      "path": "crates/kilogram-session/src/canonical_sync_v2_adapter.rs",
+      "baseline_blob": "eabf0e8ff9bd9dcb6afc959efc3b18e8780869ff",
+      "current_blob": "eabf0e8ff9bd9dcb6afc959efc3b18e8780869ff"
+    },
+    {
+      "path": "crates/kilogram-session/src/lib.rs",
+      "baseline_blob": "15d1c3248175299f3d7a20f892c84cd3b8aa5c72",
+      "current_blob": "15d1c3248175299f3d7a20f892c84cd3b8aa5c72"
+    },
+    {
+      "path": "crates/kilogram-state/Cargo.toml",
+      "baseline_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00",
+      "current_blob": "76a696bed855e0503e08e8b27c97ba5a83b79d00"
+    },
+    {
+      "path": "crates/kilogram-state/src/key_provider.rs",
+      "baseline_blob": "9ef6f1938bd05e9dc0c7f289824cbe0cea447595",
+      "current_blob": "9ef6f1938bd05e9dc0c7f289824cbe0cea447595"
+    },
+    {
+      "path": "crates/kilogram-state/src/key_recovery.rs",
+      "baseline_blob": "97cdb39bb158017e07b4cac4739404d0bf74d890",
+      "current_blob": "97cdb39bb158017e07b4cac4739404d0bf74d890"
+    },
+    {
+      "path": "crates/kilogram-state/src/lib.rs",
+      "baseline_blob": "dbadc98a6ce443c0748afcacb1c120c66155f740",
+      "current_blob": "dbadc98a6ce443c0748afcacb1c120c66155f740"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault.rs",
+      "baseline_blob": "234ffd560da892b48544ebc291639dfbfe5c35f0",
+      "current_blob": "234ffd560da892b48544ebc291639dfbfe5c35f0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/authenticated_index.rs",
+      "baseline_blob": "eff670ecbee278e4adbc74dcf6ae1b942aae2855",
+      "current_blob": "eff670ecbee278e4adbc74dcf6ae1b942aae2855"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "baseline_blob": "2a6eb582be018ef008ab29c6627068f7f6b09f12",
+      "current_blob": "2a6eb582be018ef008ab29c6627068f7f6b09f12"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/backend.rs",
+      "baseline_blob": "07bd825a0e239c794a88eae4e33c2d5780e3440d",
+      "current_blob": "07bd825a0e239c794a88eae4e33c2d5780e3440d"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credit_tests.rs",
+      "baseline_blob": "a493eb7b28499771d22708c4fd9ca24c8335df79",
+      "current_blob": "a493eb7b28499771d22708c4fd9ca24c8335df79"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "baseline_blob": "8092f085de4c70bd3bd7ed93bc197628c42cd05b",
+      "current_blob": "8092f085de4c70bd3bd7ed93bc197628c42cd05b"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history.rs",
+      "baseline_blob": "b1e265a2a1b663db2352e7b8204fe7328cdeb74f",
+      "current_blob": "b1e265a2a1b663db2352e7b8204fe7328cdeb74f"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_cache_tests.rs",
+      "baseline_blob": "f9d8e94efba0e7c13e8cc354972531ca3e0b30bb",
+      "current_blob": "f9d8e94efba0e7c13e8cc354972531ca3e0b30bb"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_codec.rs",
+      "baseline_blob": "d004d4d0313f9c5ab88414b440a53f77de29849f",
+      "current_blob": "d004d4d0313f9c5ab88414b440a53f77de29849f"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_cursor.rs",
+      "baseline_blob": "3417bbba1b5095db9d814b80888053f40881e745",
+      "current_blob": "3417bbba1b5095db9d814b80888053f40881e745"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_profile.rs",
+      "baseline_blob": "027da170e39ae4285efb841e46681f7ff5a91e1c",
+      "current_blob": "027da170e39ae4285efb841e46681f7ff5a91e1c"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_protocol2.rs",
+      "baseline_blob": "0228b5f9a85cdf8475c449e44752f45ef9723a02",
+      "current_blob": "0228b5f9a85cdf8475c449e44752f45ef9723a02"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_protocol2_storage_tests.rs",
+      "baseline_blob": "aee1d77b05b4b6b4d4788961647e721e1bbb25d2",
+      "current_blob": "aee1d77b05b4b6b4d4788961647e721e1bbb25d2"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_protocol2_tests.rs",
+      "baseline_blob": "66ff8189365ebf95f1f6967a1c607c14a9245ae7",
+      "current_blob": "66ff8189365ebf95f1f6967a1c607c14a9245ae7"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_scale.rs",
+      "baseline_blob": "d17875085e562726676dcf33ad8de706eea58025",
+      "current_blob": "d17875085e562726676dcf33ad8de706eea58025"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_source_v2.rs",
+      "baseline_blob": "caad15c2d1d35a35673d56769f8794a6de884883",
+      "current_blob": "caad15c2d1d35a35673d56769f8794a6de884883"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_tests.rs",
+      "baseline_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4",
+      "current_blob": "0623d79d138f6d6fe135800786a77d3307ec82a4"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_types.rs",
+      "baseline_blob": "342f5051b9d6ae3d5a33300a5954c079b8f05c15",
+      "current_blob": "342f5051b9d6ae3d5a33300a5954c079b8f05c15"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/history_writer.rs",
+      "baseline_blob": "875a90aff121ecb07093225c6fe9bb541c812038",
+      "current_blob": "875a90aff121ecb07093225c6fe9bb541c812038"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/integrity_tests.rs",
+      "baseline_blob": "b2e1535a461e4ec9a173e15a2f233664e61e56f1",
+      "current_blob": "b2e1535a461e4ec9a173e15a2f233664e61e56f1"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/memory_tests.rs",
+      "baseline_blob": "222234c1a37f5b27fe4aaba8e33a06c47901b93a",
+      "current_blob": "222234c1a37f5b27fe4aaba8e33a06c47901b93a"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7.rs",
+      "baseline_blob": "7b03475a5d78f391ba2e4644cba533a8b2507939",
+      "current_blob": "7b03475a5d78f391ba2e4644cba533a8b2507939"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/admin.rs",
+      "baseline_blob": "778772b15b421855211c3e8cbb1d35230a51b50a",
+      "current_blob": "778772b15b421855211c3e8cbb1d35230a51b50a"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/codec.rs",
+      "baseline_blob": "ddca00a88280302629153cc74b31b3ae69202ea9",
+      "current_blob": "ddca00a88280302629153cc74b31b3ae69202ea9"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/copy.rs",
+      "baseline_blob": "af569acd58b38ac4addc32f349aafb14cdd2b2f9",
+      "current_blob": "af569acd58b38ac4addc32f349aafb14cdd2b2f9"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/fence.rs",
+      "baseline_blob": "891af5fbd657788c947c265545e0aeafbeb40692",
+      "current_blob": "891af5fbd657788c947c265545e0aeafbeb40692"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs",
+      "baseline_blob": "ffe8efab91b9c16ba62230d6abd4d226da969cc0",
+      "current_blob": "ffe8efab91b9c16ba62230d6abd4d226da969cc0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/data.rs",
+      "baseline_blob": "4269ddbc10fed27e1457cfaf58d3d3b19cdd239e",
+      "current_blob": "4269ddbc10fed27e1457cfaf58d3d3b19cdd239e"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/history.rs",
+      "baseline_blob": "8efb5d689af8784eb7c9bee5cf470291b48459f6",
+      "current_blob": "8efb5d689af8784eb7c9bee5cf470291b48459f6"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops.rs",
+      "baseline_blob": "f91f7ce8ebbadc8ba7429a5407224bd2252aee61",
+      "current_blob": "f91f7ce8ebbadc8ba7429a5407224bd2252aee61"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops_review1_tests.rs",
+      "baseline_blob": "ee36c835a708e7829cd3ef9d5d15e3eccf86cb58",
+      "current_blob": "ee36c835a708e7829cd3ef9d5d15e3eccf86cb58"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/read.rs",
+      "baseline_blob": "02ac1ece4287a7a64733ce5cedaadd44dca4ba6d",
+      "current_blob": "02ac1ece4287a7a64733ce5cedaadd44dca4ba6d"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/tests.rs",
+      "baseline_blob": "9c55fd625e383ceba36c044e0623434737fdc61b",
+      "current_blob": "9c55fd625e383ceba36c044e0623434737fdc61b"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/types.rs",
+      "baseline_blob": "9886812935d481963d374a5a0966ad8f140f0cf8",
+      "current_blob": "9886812935d481963d374a5a0966ad8f140f0cf8"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/load.rs",
+      "baseline_blob": "9a3fc08bdfbf89c15f5f0d5f96fd0a7a1d54e211",
+      "current_blob": "9a3fc08bdfbf89c15f5f0d5f96fd0a7a1d54e211"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/operations.rs",
+      "baseline_blob": "8d2e84b36841ce1c253a8af68089ad6023d7dbb1",
+      "current_blob": "8d2e84b36841ce1c253a8af68089ad6023d7dbb1"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/preview.rs",
+      "baseline_blob": "8d8313caa68247288f5343784656c68e7c96781f",
+      "current_blob": "8d8313caa68247288f5343784656c68e7c96781f"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/records.rs",
+      "baseline_blob": "8351cca3b89e600f712ed2127bbc51cf6356aa8b",
+      "current_blob": "8351cca3b89e600f712ed2127bbc51cf6356aa8b"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/source.rs",
+      "baseline_blob": "b8b4440f0f6930b375deb6103d9fd867926fd7e9",
+      "current_blob": "b8b4440f0f6930b375deb6103d9fd867926fd7e9"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/tests.rs",
+      "baseline_blob": "056739777572048a69b0a536c9c11a04fd2106b0",
+      "current_blob": "056739777572048a69b0a536c9c11a04fd2106b0"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/process_tests.rs",
+      "baseline_blob": "08444872dfd7468e1eb85ac81eeda5e2e1a73e6e",
+      "current_blob": "08444872dfd7468e1eb85ac81eeda5e2e1a73e6e"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/profile.rs",
+      "baseline_blob": "554325509a4e59faa016219110f00b867a5455b9",
+      "current_blob": "554325509a4e59faa016219110f00b867a5455b9"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2.rs",
+      "baseline_blob": "2b7a89ed69c1c337ce58ee86d3e1d91e6530fade",
+      "current_blob": "2b7a89ed69c1c337ce58ee86d3e1d91e6530fade"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2_ops.rs",
+      "baseline_blob": "89a6c7ac4504c28210e8265a4b6eff83b6627679",
+      "current_blob": "89a6c7ac4504c28210e8265a4b6eff83b6627679"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2_read.rs",
+      "baseline_blob": "0725b66e7514cd98b2db96abf6f0987b1a9ceeec",
+      "current_blob": "0725b66e7514cd98b2db96abf6f0987b1a9ceeec"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/runtime2_tests.rs",
+      "baseline_blob": "00dd27fe141ae9a60db60af589e64a7f936d5cf1",
+      "current_blob": "00dd27fe141ae9a60db60af589e64a7f936d5cf1"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/scale_gates.rs",
+      "baseline_blob": "54bad78aeb829f073ae4431d9032f50449ecd1aa",
+      "current_blob": "54bad78aeb829f073ae4431d9032f50449ecd1aa"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/scale_tests.rs",
+      "baseline_blob": "9d534026736a19c060cc343af0cbd8daec5cf899",
+      "current_blob": "9d534026736a19c060cc343af0cbd8daec5cf899"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/tests.rs",
+      "baseline_blob": "f27db7238e38149e72c6fed9cd2280412e041763",
+      "current_blob": "f27db7238e38149e72c6fed9cd2280412e041763"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/types.rs",
+      "baseline_blob": "8335a5bdcfdaafaf14c07f418abf857dd2efc3fb",
+      "current_blob": "8335a5bdcfdaafaf14c07f418abf857dd2efc3fb"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/verified_values.rs",
+      "baseline_blob": "77f5ba3773150d2b785f62ea335f8c5c02a30456",
+      "current_blob": "77f5ba3773150d2b785f62ea335f8c5c02a30456"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/ordered.rs",
+      "baseline_blob": "0bceb8f1b1daeddda1aa1f0a75ca04de7ef5c82f",
+      "current_blob": "0bceb8f1b1daeddda1aa1f0a75ca04de7ef5c82f"
+    },
+    {
+      "path": "crates/kilogram-state/tests/a3_s1_root_review.rs",
+      "baseline_blob": "e973f3060dc26e4348d2efd8157c493a0f4bef3e",
+      "current_blob": "e973f3060dc26e4348d2efd8157c493a0f4bef3e"
+    },
+    {
+      "path": "crates/kilogram-state/tests/a3_s2_root_review.rs",
+      "baseline_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a",
+      "current_blob": "5316f345066bcdab1321998cfafd06e6f9c8a43a"
+    },
+    {
+      "path": "crates/kilogram-store/Cargo.toml",
+      "baseline_blob": "cde30c8875c3a54baba509cde725326a9de8cad6",
+      "current_blob": "cde30c8875c3a54baba509cde725326a9de8cad6"
+    },
+    {
+      "path": "crates/kilogram-store/src/canonical_sync_v2_responder_store.rs",
+      "baseline_blob": "0701134c3b9a44012d429829991a02f6ee1ce1b3",
+      "current_blob": "0701134c3b9a44012d429829991a02f6ee1ce1b3"
+    },
+    {
+      "path": "crates/kilogram-store/src/lib.rs",
+      "baseline_blob": "748d60abe66fb550d7054b1a2e2daf0378d8b9be",
+      "current_blob": "748d60abe66fb550d7054b1a2e2daf0378d8b9be"
+    },
+    {
+      "path": "crates/kilogram-sync-capability/Cargo.toml",
+      "baseline_blob": "d101b83a04886c6106c86f889189bbb7ce76b309",
+      "current_blob": "d101b83a04886c6106c86f889189bbb7ce76b309"
+    },
+    {
+      "path": "crates/kilogram-sync-capability/src/lib.rs",
+      "baseline_blob": "20a45f44570142c12e3e04f10ee01428feb91912",
+      "current_blob": "20a45f44570142c12e3e04f10ee01428feb91912"
+    },
+    {
+      "path": "crates/kilogram-ticket-publication/Cargo.toml",
+      "baseline_blob": "f71802c7554ab55f5fb60bf31708012a8f7a94f4",
+      "current_blob": "f71802c7554ab55f5fb60bf31708012a8f7a94f4"
+    },
+    {
+      "path": "crates/kilogram-ticket-publication/src/lib.rs",
+      "baseline_blob": "840ddb9d4f0727880a254f350e6dcee552f806ad",
+      "current_blob": "840ddb9d4f0727880a254f350e6dcee552f806ad"
+    },
+    {
+      "path": "crates/kilogram-transport-iroh/Cargo.toml",
+      "baseline_blob": "2fcb6ce419aa98f049d2faf6f108bcf24bbea829",
+      "current_blob": "2fcb6ce419aa98f049d2faf6f108bcf24bbea829"
+    },
+    {
+      "path": "crates/kilogram-transport-iroh/examples/s4_loopback_relay.rs",
+      "baseline_blob": "d1b8efdf7d6c76f3179006cde0207d6636b5e649",
+      "current_blob": "d1b8efdf7d6c76f3179006cde0207d6636b5e649"
+    },
+    {
+      "path": "crates/kilogram-transport-iroh/src/lib.rs",
+      "baseline_blob": "ec43900d55f114aa9b1dd8c73928d8b539c272df",
+      "current_blob": "ec43900d55f114aa9b1dd8c73928d8b539c272df"
+    },
+    {
+      "path": "crates/kilogram-transport-iroh/src/ordered.rs",
+      "baseline_blob": "3e0f04e9d1087a51d4b29cc754765a7bd0c14d50",
+      "current_blob": "3e0f04e9d1087a51d4b29cc754765a7bd0c14d50"
+    },
+    {
+      "path": "crates/kilogram-transport-iroh/src/ordered2.rs",
+      "baseline_blob": "f4bb8628654229666a6c4862ee169b47b6acb099",
+      "current_blob": "f4bb8628654229666a6c4862ee169b47b6acb099"
+    },
+    {
+      "path": "crates/kilogram-transport-iroh/tests/local_relay_transport.rs",
+      "baseline_blob": "76306f0a3837bf297b67af6442626cbb30ed8a9a",
+      "current_blob": "76306f0a3837bf297b67af6442626cbb30ed8a9a"
+    },
+    {
+      "path": "fuzz/Cargo.toml",
+      "baseline_blob": "8cba456c86fb9babd7ada98fafab026c38c75e61",
+      "current_blob": "8cba456c86fb9babd7ada98fafab026c38c75e61"
+    },
+    {
+      "path": "fuzz/fuzz_targets/canonical_sync_v2_decoders.rs",
+      "baseline_blob": "35344a3faaca7fa9ad5f4a16fcdd26a6e5630cd7",
+      "current_blob": "35344a3faaca7fa9ad5f4a16fcdd26a6e5630cd7"
+    },
+    {
+      "path": "rust-toolchain.toml",
+      "baseline_blob": "bb4b78852e1d4087ba07bacb4306c1db84263b3a",
+      "current_blob": "bb4b78852e1d4087ba07bacb4306c1db84263b3a"
+    },
+    {
+      "path": "scripts/build-kilogram-offline-reproducible.ps1",
+      "baseline_blob": "73774ab41f3935074aedf37b822fb203b7be96f3",
+      "current_blob": "73774ab41f3935074aedf37b822fb203b7be96f3"
+    },
+    {
+      "path": "scripts/capture-kilogram-mailbox-field-status.ps1",
+      "baseline_blob": "8f9aa52030047ef7a5466688d9f15494203ca977",
+      "current_blob": "8f9aa52030047ef7a5466688d9f15494203ca977"
+    },
+    {
+      "path": "scripts/capture-kilogram-volunteer-field-history.ps1",
+      "baseline_blob": "ac4ac1069904d6967cd9d88efb2e1c3560d79d8a",
+      "current_blob": "ac4ac1069904d6967cd9d88efb2e1c3560d79d8a"
+    },
+    {
+      "path": "scripts/cargo-cache-maintenance.ps1",
+      "baseline_blob": "904fbe625bf5734ef0eef67ceb61fe3a44d48c88",
+      "current_blob": "904fbe625bf5734ef0eef67ceb61fe3a44d48c88"
+    },
+    {
+      "path": "scripts/cargo-resource-policy.ps1",
+      "baseline_blob": "944d30569eddf975e5f73d15eb6f741fc7af00d0",
+      "current_blob": "944d30569eddf975e5f73d15eb6f741fc7af00d0"
+    },
+    {
+      "path": "scripts/check-dependency-advisories.ps1",
+      "baseline_blob": "c1104b56d9d3e217b35bbee355f829e190a6c980",
+      "current_blob": "c1104b56d9d3e217b35bbee355f829e190a6c980"
+    },
+    {
+      "path": "scripts/confirm-kilogram-volunteer-field-sender-offline.ps1",
+      "baseline_blob": "579c0df7deaef52be978ce40dc80ec1d82614223",
+      "current_blob": "579c0df7deaef52be978ce40dc80ec1d82614223"
+    },
+    {
+      "path": "scripts/export-kilogram-volunteer-field-offer.ps1",
+      "baseline_blob": "91e1eaf24f82729c62e41f8f45a8e959814e2edc",
+      "current_blob": "91e1eaf24f82729c62e41f8f45a8e959814e2edc"
+    },
+    {
+      "path": "scripts/import-kilogram-volunteer-field-providers.ps1",
+      "baseline_blob": "c1a9f291e6901d5d4a47993318430e3482ab57df",
+      "current_blob": "c1a9f291e6901d5d4a47993318430e3482ab57df"
+    },
+    {
+      "path": "scripts/invoke-cargo-friendly.ps1",
+      "baseline_blob": "b841f922b22540e7f4f80b024f4eb1a65d77d17a",
+      "current_blob": "b841f922b22540e7f4f80b024f4eb1a65d77d17a"
+    },
+    {
+      "path": "scripts/invoke-kilogram-canonical-sync-v2-dark-launch-local.ps1",
+      "baseline_blob": "50a56d4d208a829ed9fc35601e82d742a017c0fc",
+      "current_blob": "50a56d4d208a829ed9fc35601e82d742a017c0fc"
+    },
+    {
+      "path": "scripts/invoke-kilogram-canonical-sync-v2-dark-launch-two-host.ps1",
+      "baseline_blob": "09464a8ab5f2f8286a7a7676972a9271622d319a",
+      "current_blob": "09464a8ab5f2f8286a7a7676972a9271622d319a"
+    },
+    {
+      "path": "scripts/invoke-kilogram-canonical-sync-v2-fuzz.ps1",
+      "baseline_blob": "98ec34763d3f7ba9bc389bf1ab7f726fe67ca2c7",
+      "current_blob": "98ec34763d3f7ba9bc389bf1ab7f726fe67ca2c7"
+    },
+    {
+      "path": "scripts/invoke-kilogram-canonical-sync-v2-n-minus-one-two-host.ps1",
+      "baseline_blob": "102dd2cac783a116af40e70bb87978fe3fcc16e9",
+      "current_blob": "102dd2cac783a116af40e70bb87978fe3fcc16e9"
+    },
+    {
+      "path": "scripts/invoke-kilogram-m1-acceptance-step.ps1",
+      "baseline_blob": "1539c2bcb38d47316585de0532f8d7ae8d10effb",
+      "current_blob": "1539c2bcb38d47316585de0532f8d7ae8d10effb"
+    },
+    {
+      "path": "scripts/invoke-kilogram-mailbox-field-runtime.ps1",
+      "baseline_blob": "413d8ea78cc9669020002fd87fb6543a601fd472",
+      "current_blob": "413d8ea78cc9669020002fd87fb6543a601fd472"
+    },
+    {
+      "path": "scripts/invoke-kilogram-peer-capability-two-host-rehearsal.ps1",
+      "baseline_blob": "f1fd60108a457661753a6580799a74578c1b48f8",
+      "current_blob": "f1fd60108a457661753a6580799a74578c1b48f8"
+    },
+    {
+      "path": "scripts/invoke-kilogram-peer-reenrollment-two-host-rehearsal.ps1",
+      "baseline_blob": "727349f977f3d4449d8062eea20d45de68c22959",
+      "current_blob": "727349f977f3d4449d8062eea20d45de68c22959"
+    },
+    {
+      "path": "scripts/invoke-kilogram-rollout-two-host-portability.ps1",
+      "baseline_blob": "b94138250b92b43f904c6267539d38329de60f0c",
+      "current_blob": "b94138250b92b43f904c6267539d38329de60f0c"
+    },
+    {
+      "path": "scripts/invoke-kilogram-sync-v2-hosted-evidence.ps1",
+      "baseline_blob": "8dd9c8e04b8f5809aa1d07806f30aae0c8e1246b",
+      "current_blob": "8dd9c8e04b8f5809aa1d07806f30aae0c8e1246b"
+    },
+    {
+      "path": "scripts/invoke-kilogram-volunteer-field-runtime.ps1",
+      "baseline_blob": "f3b28dcc4befefd7e6e98ca0a4d988d995bfc504",
+      "current_blob": "f3b28dcc4befefd7e6e98ca0a4d988d995bfc504"
+    },
+    {
+      "path": "scripts/invoke-migration-s5-case.ps1",
+      "baseline_blob": "ef5536b8995d26d0fb1d9cfc36390f9e7f8200b4",
+      "current_blob": "ef5536b8995d26d0fb1d9cfc36390f9e7f8200b4"
+    },
+    {
+      "path": "scripts/invoke-migration-s5-l1-case.ps1",
+      "baseline_blob": "09d650e035eb4617078c31e641fc8a39b8521d2d",
+      "current_blob": "09d650e035eb4617078c31e641fc8a39b8521d2d"
+    },
+    {
+      "path": "scripts/invoke-migration-s5-l1-static.ps1",
+      "baseline_blob": "a7c89f242ea36b2f2fcce6cc2b1816baec3767ea",
+      "current_blob": "a7c89f242ea36b2f2fcce6cc2b1816baec3767ea"
+    },
+    {
+      "path": "scripts/kilogram-reproducible-linker.ps1",
+      "baseline_blob": "3125aee2369a5cf2c23c58e8f3ce7d37fe8532e3",
+      "current_blob": "3125aee2369a5cf2c23c58e8f3ce7d37fe8532e3"
+    },
+    {
+      "path": "scripts/m0967-simple/1/01_PREPARE_ALICE.ps1",
+      "baseline_blob": "25338e2a9972b93025bb52dbf3d9efd66f9715ce",
+      "current_blob": "25338e2a9972b93025bb52dbf3d9efd66f9715ce"
+    },
+    {
+      "path": "scripts/m0967-simple/1/02_SEND_ALICE.ps1",
+      "baseline_blob": "e80987f914feae5726bbff117ae5d0697b7f3689",
+      "current_blob": "e80987f914feae5726bbff117ae5d0697b7f3689"
+    },
+    {
+      "path": "scripts/m0967-simple/1/03_VERIFY.ps1",
+      "baseline_blob": "9b064b2fb4e65b3e5498ff245440f3d4b8243997",
+      "current_blob": "9b064b2fb4e65b3e5498ff245440f3d4b8243997"
+    },
+    {
+      "path": "scripts/m0967-simple/2/01_START_PROVIDERS.ps1",
+      "baseline_blob": "b3bcb6cd51f65f23fa027411630721012118b975",
+      "current_blob": "b3bcb6cd51f65f23fa027411630721012118b975"
+    },
+    {
+      "path": "scripts/m0967-simple/2/02_RESTART_PROVIDERS_AFTER_FIX.ps1",
+      "baseline_blob": "a090d486e5534bd49afc0ce86bf3fb690fd5487f",
+      "current_blob": "a090d486e5534bd49afc0ce86bf3fb690fd5487f"
+    },
+    {
+      "path": "scripts/m0967-simple/2/03_PUBLISH_OFFERS_FOR_CURRENT_RUN.ps1",
+      "baseline_blob": "85ca15a94c0638c714543d1408c4a87498e8e315",
+      "current_blob": "85ca15a94c0638c714543d1408c4a87498e8e315"
+    },
+    {
+      "path": "scripts/m0967-simple/3/01_PREPARE_BOB.ps1",
+      "baseline_blob": "f78aaeb6f9a36b489a5f5125a23bd72f8b51b82e",
+      "current_blob": "f78aaeb6f9a36b489a5f5125a23bd72f8b51b82e"
+    },
+    {
+      "path": "scripts/m0967-simple/3/02_RECEIVE_BOB.ps1",
+      "baseline_blob": "311cff53e1c07a3aa7b796b38e67b3ae9fcdab1c",
+      "current_blob": "311cff53e1c07a3aa7b796b38e67b3ae9fcdab1c"
+    },
+    {
+      "path": "scripts/m0967-simple/3/03_RETRY_BOB_AFTER_OFFER_SYNC_FIX.ps1",
+      "baseline_blob": "134b53a148425f304c1a80f10704f319ccc137d4",
+      "current_blob": "134b53a148425f304c1a80f10704f319ccc137d4"
+    },
+    {
+      "path": "scripts/m0967-simple/3/04_RETRY_BOB_EXACT_VERSION.ps1",
+      "baseline_blob": "4f9f152368673f4e6fb9d5380b433a7672986b59",
+      "current_blob": "4f9f152368673f4e6fb9d5380b433a7672986b59"
+    },
+    {
+      "path": "scripts/m0967-simple/3/05_RETRY_BOB_FRESH_OFFERS.ps1",
+      "baseline_blob": "fcb2e152722047de53e61d98e10d435da9b0142d",
+      "current_blob": "fcb2e152722047de53e61d98e10d435da9b0142d"
+    },
+    {
+      "path": "scripts/m0967-simple/3/06_RESUME_BOB_AFTER_POST_COMMIT_FIX.ps1",
+      "baseline_blob": "bd2f980e74cc842878c3a847311fb4d80bf2cfc2",
+      "current_blob": "bd2f980e74cc842878c3a847311fb4d80bf2cfc2"
+    },
+    {
+      "path": "scripts/m0967-simple/common.ps1",
+      "baseline_blob": "5ae4038b7894ab3fb1bfc4844a9236b67e590ca8",
+      "current_blob": "5ae4038b7894ab3fb1bfc4844a9236b67e590ca8"
+    },
+    {
+      "path": "scripts/m0969-exact/1/01_PREPARE_ALICE.ps1",
+      "baseline_blob": "d7473624c76a4e425c97265877315612e9b808f7",
+      "current_blob": "d7473624c76a4e425c97265877315612e9b808f7"
+    },
+    {
+      "path": "scripts/m0969-exact/1/02_SEND_ALICE.ps1",
+      "baseline_blob": "af5ef558d1ea4b43ffabb44e49cad57ee909e41c",
+      "current_blob": "af5ef558d1ea4b43ffabb44e49cad57ee909e41c"
+    },
+    {
+      "path": "scripts/m0969-exact/1/03_VERIFY.ps1",
+      "baseline_blob": "a2477c6bf08d39b2107d897ed0e1b23c6f5542d4",
+      "current_blob": "a2477c6bf08d39b2107d897ed0e1b23c6f5542d4"
+    },
+    {
+      "path": "scripts/m0969-exact/2/01_START_PROVIDERS.ps1",
+      "baseline_blob": "7d2c3c744579a6afb3dfd0cdeb52ed3657a0ae25",
+      "current_blob": "7d2c3c744579a6afb3dfd0cdeb52ed3657a0ae25"
+    },
+    {
+      "path": "scripts/m0969-exact/3/01_PREPARE_BOB.ps1",
+      "baseline_blob": "fed7fc2ec1b3c33887ef4c9f1a25b63eafd7242c",
+      "current_blob": "fed7fc2ec1b3c33887ef4c9f1a25b63eafd7242c"
+    },
+    {
+      "path": "scripts/m0969-exact/3/02_RECEIVE_BOB.ps1",
+      "baseline_blob": "b247885cff8611b2e435670bff460856494373b9",
+      "current_blob": "b247885cff8611b2e435670bff460856494373b9"
+    },
+    {
+      "path": "scripts/m0969-exact/common.ps1",
+      "baseline_blob": "41b03f7476c5e8c5db5db5ae17ab3197db590a57",
+      "current_blob": "41b03f7476c5e8c5db5db5ae17ab3197db590a57"
+    },
+    {
+      "path": "scripts/m0987-independent/2/01_START_PROVIDER1.ps1",
+      "baseline_blob": "cb7d92e0b6a884a9329f07515a7532cb15f35287",
+      "current_blob": "cb7d92e0b6a884a9329f07515a7532cb15f35287"
+    },
+    {
+      "path": "scripts/m0987-independent/3/01_START_PROVIDER2.ps1",
+      "baseline_blob": "23f42ddc430818112958c57234aacfdc95f34fa8",
+      "current_blob": "23f42ddc430818112958c57234aacfdc95f34fa8"
+    },
+    {
+      "path": "scripts/migration-s5-l1-deadline.ps1",
+      "baseline_blob": "b146ab3567653e7125a88a6f874ac606206ab3b4",
+      "current_blob": "b146ab3567653e7125a88a6f874ac606206ab3b4"
+    },
+    {
+      "path": "scripts/migration-s5-l1-test-result.ps1",
+      "baseline_blob": "0c9f607df89a80d1d00183a28a8c5638d8fac760",
+      "current_blob": "0c9f607df89a80d1d00183a28a8c5638d8fac760"
+    },
+    {
+      "path": "scripts/new-kilogram-m0967-simple-kit.ps1",
+      "baseline_blob": "c4ebe150a109e2a18f12230f9217c9eaf30491c6",
+      "current_blob": "c4ebe150a109e2a18f12230f9217c9eaf30491c6"
+    },
+    {
+      "path": "scripts/new-kilogram-m0967-volunteer-field-kit.ps1",
+      "baseline_blob": "8b38bbbb09992766e3a11c8afab8f4c1b113c05a",
+      "current_blob": "8b38bbbb09992766e3a11c8afab8f4c1b113c05a"
+    },
+    {
+      "path": "scripts/new-kilogram-m0969-exact-locator-kit.ps1",
+      "baseline_blob": "9d88db88a3245bcd7b24beaf5157e9b52a6ccbe1",
+      "current_blob": "9d88db88a3245bcd7b24beaf5157e9b52a6ccbe1"
+    },
+    {
+      "path": "scripts/new-kilogram-m0972-no-https-kit.ps1",
+      "baseline_blob": "138fd8571484872240863c37230ef79279aaed67",
+      "current_blob": "138fd8571484872240863c37230ef79279aaed67"
+    },
+    {
+      "path": "scripts/new-kilogram-m0973-no-https-kit.ps1",
+      "baseline_blob": "7079142c5cd982844ff19775f7f7fb8e7231154e",
+      "current_blob": "7079142c5cd982844ff19775f7f7fb8e7231154e"
+    },
+    {
+      "path": "scripts/new-kilogram-m0974-no-https-kit.ps1",
+      "baseline_blob": "37c506b0e35750367bfaf93e6c882f7f971516bc",
+      "current_blob": "37c506b0e35750367bfaf93e6c882f7f971516bc"
+    },
+    {
+      "path": "scripts/new-kilogram-m0976-service-free-v2-kit.ps1",
+      "baseline_blob": "5d63096ea1b5784116c9ebced52a5063c553df1f",
+      "current_blob": "5d63096ea1b5784116c9ebced52a5063c553df1f"
+    },
+    {
+      "path": "scripts/new-kilogram-m0987-independent-provider-kit.ps1",
+      "baseline_blob": "6d815135dd8b3ea928c4dc9669413571f0ff8fe1",
+      "current_blob": "6d815135dd8b3ea928c4dc9669413571f0ff8fe1"
+    },
+    {
+      "path": "scripts/new-kilogram-m1-acceptance-kit.ps1",
+      "baseline_blob": "11aa7bfd3a001f7a8a52d49e5ce8ca37c56969ad",
+      "current_blob": "11aa7bfd3a001f7a8a52d49e5ce8ca37c56969ad"
+    },
+    {
+      "path": "scripts/new-kilogram-volunteer-field-provider.ps1",
+      "baseline_blob": "3b811e6a9393d643419235529c7b9bc30280146f",
+      "current_blob": "3b811e6a9393d643419235529c7b9bc30280146f"
+    },
+    {
+      "path": "scripts/package-kilogram-offline.ps1",
+      "baseline_blob": "875e91ac8eb6bea1c1a7083330ab17e01f380a81",
+      "current_blob": "875e91ac8eb6bea1c1a7083330ab17e01f380a81"
+    },
+    {
+      "path": "scripts/prepare-kilogram-canonical-sync-v2-fuzz-corpus.ps1",
+      "baseline_blob": "65f341d7e0e3e2a688bdc54f6e716def74da65a1",
+      "current_blob": "65f341d7e0e3e2a688bdc54f6e716def74da65a1"
+    },
+    {
+      "path": "scripts/preserve-migration-s5-l1-input.ps1",
+      "baseline_blob": "02d7f4e620f768ced3099ddc09405d870307b96d",
+      "current_blob": "02d7f4e620f768ced3099ddc09405d870307b96d"
+    },
+    {
+      "path": "scripts/queue-kilogram-volunteer-field-message.ps1",
+      "baseline_blob": "179fb0c7b690192bfee93d133548f645741ce422",
+      "current_blob": "179fb0c7b690192bfee93d133548f645741ce422"
+    },
+    {
+      "path": "scripts/run-cargo-tests-stable.ps1",
+      "baseline_blob": "9382cadb6ae2ecdc9a9a782e06d2439f9639e723",
+      "current_blob": "9382cadb6ae2ecdc9a9a782e06d2439f9639e723"
+    },
+    {
+      "path": "scripts/stage-migration-s5-images.ps1",
+      "baseline_blob": "d9ce3989167d295676489abd72d984cd996d539e",
+      "current_blob": "d9ce3989167d295676489abd72d984cd996d539e"
+    },
+    {
+      "path": "scripts/test-kilogram-mailbox-store-preflight.ps1",
+      "baseline_blob": "f9aeed7ac05c18a9907d4caa5c247a44c4c27f79",
+      "current_blob": "f9aeed7ac05c18a9907d4caa5c247a44c4c27f79"
+    },
+    {
+      "path": "scripts/test-migration-s5-l1-deadline.ps1",
+      "baseline_blob": "886a148ee03a70cc7db8fc527af292aac904d9ef",
+      "current_blob": "886a148ee03a70cc7db8fc527af292aac904d9ef"
+    },
+    {
+      "path": "scripts/test-migration-s5-l1-preservation.ps1",
+      "baseline_blob": "fd46dae4b1ecd0df7e798f56de92d1e980d79c52",
+      "current_blob": "fd46dae4b1ecd0df7e798f56de92d1e980d79c52"
+    },
+    {
+      "path": "scripts/test-ordered-dialog-fences.ps1",
+      "baseline_blob": "13b04448414a000c112f358c13ba45f73c4e63e1",
+      "current_blob": "13b04448414a000c112f358c13ba45f73c4e63e1"
+    },
+    {
+      "path": "scripts/test-ordered-dialog-process.ps1",
+      "baseline_blob": "cc7d7ba910621f27bcbd587db83a9a988c26af1c",
+      "current_blob": "cc7d7ba910621f27bcbd587db83a9a988c26af1c"
+    },
+    {
+      "path": "scripts/test-ordered-dialog-reopen.ps1",
+      "baseline_blob": "4197b8491e701de7ad1ee47067aca02e810e0cc9",
+      "current_blob": "4197b8491e701de7ad1ee47067aca02e810e0cc9"
+    },
+    {
+      "path": "scripts/verify-kilogram-bootstrap-safe-provider-selection-boundary.ps1",
+      "baseline_blob": "0b2158c98efd3119017f4b4a8e0d4e207a0d7f04",
+      "current_blob": "0b2158c98efd3119017f4b4a8e0d4e207a0d7f04"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-account-boundary.ps1",
+      "baseline_blob": "ab799b2d054b2c19e0c275053e4c8c717b34d9cb",
+      "current_blob": "ab799b2d054b2c19e0c275053e4c8c717b34d9cb"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-account-recovery-boundary.ps1",
+      "baseline_blob": "1c3044ebc60bbb5b8bc7cb2a2fcbd6e1094417ab",
+      "current_blob": "1c3044ebc60bbb5b8bc7cb2a2fcbd6e1094417ab"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-account-recovery-policy-boundary.ps1",
+      "baseline_blob": "4ec4081e66b4120bb6100c38fb29811939bae233",
+      "current_blob": "4ec4081e66b4120bb6100c38fb29811939bae233"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-authority-boundary.ps1",
+      "baseline_blob": "c4f006c36be52018c92eb3e2d9549fa9ee7627f4",
+      "current_blob": "c4f006c36be52018c92eb3e2d9549fa9ee7627f4"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-conformance-boundary.ps1",
+      "baseline_blob": "b71f6db229bc989165650e42944635d5f5912b43",
+      "current_blob": "b71f6db229bc989165650e42944635d5f5912b43"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-coverage-boundary.ps1",
+      "baseline_blob": "f0e4a936b0ac6643f47d2b915ae1531e450d3d71",
+      "current_blob": "f0e4a936b0ac6643f47d2b915ae1531e450d3d71"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-device-link-boundary.ps1",
+      "baseline_blob": "a81f688c2363f5ba51416e678a809300959ce0eb",
+      "current_blob": "a81f688c2363f5ba51416e678a809300959ce0eb"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-endpoint-announcement-boundary.ps1",
+      "baseline_blob": "6d2380fc62b1f3c268fe2dcfb2f5e1cdb9150c10",
+      "current_blob": "6d2380fc62b1f3c268fe2dcfb2f5e1cdb9150c10"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-endpoint-announcement-transport-boundary.ps1",
+      "baseline_blob": "90ccde4450c20d34a86415fe5daff4b16f0b16b8",
+      "current_blob": "90ccde4450c20d34a86415fe5daff4b16f0b16b8"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-event-boundary.ps1",
+      "baseline_blob": "0f9c1c1969afd5a8af3bb619162da65910d97c39",
+      "current_blob": "0f9c1c1969afd5a8af3bb619162da65910d97c39"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-mailbox-boundary.ps1",
+      "baseline_blob": "751dd4ab09474997ff00d797ab75916e8006ca3e",
+      "current_blob": "751dd4ab09474997ff00d797ab75916e8006ca3e"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-mailbox-gossip-boundary.ps1",
+      "baseline_blob": "068ba6573bc5958976c4f1e16d10242207fcf67d",
+      "current_blob": "068ba6573bc5958976c4f1e16d10242207fcf67d"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-mailbox-provisioning-boundary.ps1",
+      "baseline_blob": "35dcd8f81b4870d7452e8e7f01ea3a7e5e0a2b6f",
+      "current_blob": "35dcd8f81b4870d7452e8e7f01ea3a7e5e0a2b6f"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-mailbox-transport-boundary.ps1",
+      "baseline_blob": "ba7f8f35e2529e52e3db207a563a14791a3e9290",
+      "current_blob": "ba7f8f35e2529e52e3db207a563a14791a3e9290"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-migration-boundary.ps1",
+      "baseline_blob": "2434174b5cfda7341c2e186e277ede73fbdd7c87",
+      "current_blob": "2434174b5cfda7341c2e186e277ede73fbdd7c87"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-prekey-selection-boundary.ps1",
+      "baseline_blob": "bcb95a29069d38b73dd11749d389f173f524e053",
+      "current_blob": "bcb95a29069d38b73dd11749d389f173f524e053"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-publication-conflict-boundary.ps1",
+      "baseline_blob": "35f43fc5fb7c260ad7d1a1a086972fed8ae1d935",
+      "current_blob": "35f43fc5fb7c260ad7d1a1a086972fed8ae1d935"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-ratchet-boundary.ps1",
+      "baseline_blob": "6118d2c6b6ba24c9cdb59c7c7edbdff1ad5da7cb",
+      "current_blob": "6118d2c6b6ba24c9cdb59c7c7edbdff1ad5da7cb"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-confirmation-ledger-boundary.ps1",
+      "baseline_blob": "2db702e64ca82d48429f9c5405dc16cb9f5bc196",
+      "current_blob": "2db702e64ca82d48429f9c5405dc16cb9f5bc196"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-authorization-ledger-boundary.ps1",
+      "baseline_blob": "07dc5ddfb08afa9558b8dfbada5b2dbef47cfcaa",
+      "current_blob": "07dc5ddfb08afa9558b8dfbada5b2dbef47cfcaa"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-contract-boundary.ps1",
+      "baseline_blob": "0136b15de359c74f340d5502d4b03d2122830b13",
+      "current_blob": "0136b15de359c74f340d5502d4b03d2122830b13"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-guided-producer-boundary.ps1",
+      "baseline_blob": "2ec60ef826ce3b8646029866d7086c9bcf935a57",
+      "current_blob": "2ec60ef826ce3b8646029866d7086c9bcf935a57"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-mutation-adapter-boundary.ps1",
+      "baseline_blob": "f652e6658a7d2f73eee4bb647ed4519527f99791",
+      "current_blob": "f652e6658a7d2f73eee4bb647ed4519527f99791"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-plan-session-cache-boundary.ps1",
+      "baseline_blob": "6b54bdc1e543f027868ad62ab6065ce97d2c9583",
+      "current_blob": "6b54bdc1e543f027868ad62ab6065ce97d2c9583"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-read-adapter-boundary.ps1",
+      "baseline_blob": "c339cbad5358de5e751b9f92815d5b1c5b710073",
+      "current_blob": "c339cbad5358de5e751b9f92815d5b1c5b710073"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-response-dispatcher-boundary.ps1",
+      "baseline_blob": "e28e322788f34e60bfaf8896c4281982945ed933",
+      "current_blob": "e28e322788f34e60bfaf8896c4281982945ed933"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-runtime-attachment-boundary.ps1",
+      "baseline_blob": "6893fc484ca8c1f0bda0f3eb87b4d8b8cf6b8e22",
+      "current_blob": "6893fc484ca8c1f0bda0f3eb87b4d8b8cf6b8e22"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-consumption-runtime-service-boundary.ps1",
+      "baseline_blob": "ee772e8e80e9a17ad7ddd2395520eec6d16bd1d8",
+      "current_blob": "ee772e8e80e9a17ad7ddd2395520eec6d16bd1d8"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-mutation-adapter-boundary.ps1",
+      "baseline_blob": "9999d48aac122e1282becf87777e656ca76ef281",
+      "current_blob": "9999d48aac122e1282becf87777e656ca76ef281"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recipient-import-read-adapter-boundary.ps1",
+      "baseline_blob": "f3b6087c9fda6397003c36133fc0169d0dfcbc98",
+      "current_blob": "f3b6087c9fda6397003c36133fc0169d0dfcbc98"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recovery-boundary.ps1",
+      "baseline_blob": "2e26277a80023f2d04b97ba2586f191db3a4edc9",
+      "current_blob": "2e26277a80023f2d04b97ba2586f191db3a4edc9"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-recovery-exchange-boundary.ps1",
+      "baseline_blob": "658ce03a7dfa7bbc0b7cd0d0f60914dade01a363",
+      "current_blob": "658ce03a7dfa7bbc0b7cd0d0f60914dade01a363"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-rewrap-boundary.ps1",
+      "baseline_blob": "67276d7e01bf179389daaa41eadba4b4a2c3e8ea",
+      "current_blob": "67276d7e01bf179389daaa41eadba4b4a2c3e8ea"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-boundary.ps1",
+      "baseline_blob": "4ce90525ce7b3ffb03f49a1eb8f95244e837a8e3",
+      "current_blob": "4ce90525ce7b3ffb03f49a1eb8f95244e837a8e3"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-contact-boundary.ps1",
+      "baseline_blob": "71a5dee3b8dc0894340cdbe8ce5fbbf9280c65e2",
+      "current_blob": "71a5dee3b8dc0894340cdbe8ce5fbbf9280c65e2"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-directory-boundary.ps1",
+      "baseline_blob": "e12654632521f1227909a7701c6cb57134cd4991",
+      "current_blob": "e12654632521f1227909a7701c6cb57134cd4991"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-mailbox-mutation-boundary.ps1",
+      "baseline_blob": "a7bde063c309a81fb45d5b5f550874f1e93f1117",
+      "current_blob": "a7bde063c309a81fb45d5b5f550874f1e93f1117"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-mailbox-status-boundary.ps1",
+      "baseline_blob": "7ce98f43b1879d9216ad714272d4c144faf8ea3d",
+      "current_blob": "7ce98f43b1879d9216ad714272d4c144faf8ea3d"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-outbox-boundary.ps1",
+      "baseline_blob": "e9450878c987c7cdaae49cadb7054dce3ac6ff07",
+      "current_blob": "e9450878c987c7cdaae49cadb7054dce3ac6ff07"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-own-device-announcement-boundary.ps1",
+      "baseline_blob": "0561eab9da39eafc9c97665b3537eee0a7ba0fd6",
+      "current_blob": "0561eab9da39eafc9c97665b3537eee0a7ba0fd6"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-own-device-discovery-boundary.ps1",
+      "baseline_blob": "1f40b5929637d839ce920d4dfbad0b7dc51083c8",
+      "current_blob": "1f40b5929637d839ce920d4dfbad0b7dc51083c8"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-own-device-roster-boundary.ps1",
+      "baseline_blob": "1bc765fe5d05989c78aa9f2e204cdb9a3c7d3ce3",
+      "current_blob": "1bc765fe5d05989c78aa9f2e204cdb9a3c7d3ce3"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-peer-reenrollment-contract-boundary.ps1",
+      "baseline_blob": "e48e8f45ef0cc697ee3930fc921729b4451bf4bc",
+      "current_blob": "e48e8f45ef0cc697ee3930fc921729b4451bf4bc"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-peer-reenrollment-desktop-ceremony-boundary.ps1",
+      "baseline_blob": "5bbea41a0eba54509d257624b924672dc1eef167",
+      "current_blob": "5bbea41a0eba54509d257624b924672dc1eef167"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-peer-reenrollment-mutation-adapter-boundary.ps1",
+      "baseline_blob": "ef23bef69894d2905d5cdf02190dc19308d1bef1",
+      "current_blob": "ef23bef69894d2905d5cdf02190dc19308d1bef1"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-peer-reenrollment-read-adapter-boundary.ps1",
+      "baseline_blob": "63ea3a988fbc53afe847e40b55916a39b73ae7f1",
+      "current_blob": "63ea3a988fbc53afe847e40b55916a39b73ae7f1"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-provider-boundary.ps1",
+      "baseline_blob": "1752b70f748d9559bc5e558491d41a33229e4d9a",
+      "current_blob": "1752b70f748d9559bc5e558491d41a33229e4d9a"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-publication-boundary.ps1",
+      "baseline_blob": "ab6551cc73d2e6f6ef1f6c7b17b09d1e064f1c5e",
+      "current_blob": "ab6551cc73d2e6f6ef1f6c7b17b09d1e064f1c5e"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-publication-conflict-boundary.ps1",
+      "baseline_blob": "0b02b6794f375068d849415030946fcab8e475c2",
+      "current_blob": "0b02b6794f375068d849415030946fcab8e475c2"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-publication-network-boundary.ps1",
+      "baseline_blob": "b804a176e32f4bcd79ba0c2e1cb713694f671949",
+      "current_blob": "b804a176e32f4bcd79ba0c2e1cb713694f671949"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-queue-boundary.ps1",
+      "baseline_blob": "c956f732d9329b2f29e4c54253980a3434df37d5",
+      "current_blob": "c956f732d9329b2f29e4c54253980a3434df37d5"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-read-boundary.ps1",
+      "baseline_blob": "8b694c321d549d5eda9174fc666a3a3115874ac6",
+      "current_blob": "8b694c321d549d5eda9174fc666a3a3115874ac6"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-recipient-import-execution-contract-boundary.ps1",
+      "baseline_blob": "083f8028738de71e02ce6f5105b3df99f4672b76",
+      "current_blob": "083f8028738de71e02ce6f5105b3df99f4672b76"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-recovery-execution-boundary.ps1",
+      "baseline_blob": "d1c5d7121ca7969c6b7f7461bed7867da17181d5",
+      "current_blob": "d1c5d7121ca7969c6b7f7461bed7867da17181d5"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-recovery-plan-boundary.ps1",
+      "baseline_blob": "797b7976cfbaf6ff0149d94e8310bbde8c71a3dc",
+      "current_blob": "797b7976cfbaf6ff0149d94e8310bbde8c71a3dc"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-ipc-ticket-automation-boundary.ps1",
+      "baseline_blob": "a88ebd0326f97a5eb17b8e81ab50ffe4e8b13a88",
+      "current_blob": "a88ebd0326f97a5eb17b8e81ab50ffe4e8b13a88"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-runtime-mailbox-boundary.ps1",
+      "baseline_blob": "6b7b2233d38c28254ac9ec689d90a361a6a9a1a6",
+      "current_blob": "6b7b2233d38c28254ac9ec689d90a361a6a9a1a6"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-boundary.ps1",
+      "baseline_blob": "8f908f048daf7589b2c98028e795f80e517629a9",
+      "current_blob": "8f908f048daf7589b2c98028e795f80e517629a9"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-history-v2-boundary.ps1",
+      "baseline_blob": "f477b0ce1c6019de89d4b3cc202f5e73fa22f038",
+      "current_blob": "f477b0ce1c6019de89d4b3cc202f5e73fa22f038"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-legacy-event-boundary.ps1",
+      "baseline_blob": "68eb3de70a1949090540dbbc4b3c34c3742f5c61",
+      "current_blob": "68eb3de70a1949090540dbbc4b3c34c3742f5c61"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-session-boundary.ps1",
+      "baseline_blob": "e67918a5be0b6a38dec4ac26c0cbf08b1669245a",
+      "current_blob": "e67918a5be0b6a38dec4ac26c0cbf08b1669245a"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-session-v2-boundary.ps1",
+      "baseline_blob": "3152d6ff18af185a6143122ed36d6aee7749433a",
+      "current_blob": "3152d6ff18af185a6143122ed36d6aee7749433a"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-activation-authority-boundary.ps1",
+      "baseline_blob": "bb9666b9d921b01813f13d42402d798d4ffe4025",
+      "current_blob": "bb9666b9d921b01813f13d42402d798d4ffe4025"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-activation-policy-boundary.ps1",
+      "baseline_blob": "67b040dbefbf056abd776ebb54c668b74806bb73",
+      "current_blob": "67b040dbefbf056abd776ebb54c668b74806bb73"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-adapter-boundary.ps1",
+      "baseline_blob": "8c5c6ae958eb44c65faca34f8e327a27e7d9c9d3",
+      "current_blob": "8c5c6ae958eb44c65faca34f8e327a27e7d9c9d3"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-atomic-runtime-transition-boundary.ps1",
+      "baseline_blob": "7fd82df0f2ee34e5474d67fa155af01b4cc606e3",
+      "current_blob": "7fd82df0f2ee34e5474d67fa155af01b4cc606e3"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-automated-runtime-enforcement-boundary.ps1",
+      "baseline_blob": "cf5a0a04f7095bfbdc50f26059ba4b3fbf858f67",
+      "current_blob": "cf5a0a04f7095bfbdc50f26059ba4b3fbf858f67"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-boundary.ps1",
+      "baseline_blob": "439bfed96c49439a2fc39862acf74fc11c24f22c",
+      "current_blob": "439bfed96c49439a2fc39862acf74fc11c24f22c"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-containment-recovery-boundary.ps1",
+      "baseline_blob": "1eba8d2e2bed8495fb4b32e11656a6e33785e09a",
+      "current_blob": "1eba8d2e2bed8495fb4b32e11656a6e33785e09a"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-current-peer-invitation-boundary.ps1",
+      "baseline_blob": "2ea86fb1a853e93d9c7f8487a403bcab268f0aaa",
+      "current_blob": "2ea86fb1a853e93d9c7f8487a403bcab268f0aaa"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-decoder-mutations-boundary.ps1",
+      "baseline_blob": "7e514d4a11a033b796ca9579820cb5e15b3f513f",
+      "current_blob": "7e514d4a11a033b796ca9579820cb5e15b3f513f"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-desktop-activation-boundary.ps1",
+      "baseline_blob": "158e38702ceb144631e6ac8c548cd07732ac7eac",
+      "current_blob": "158e38702ceb144631e6ac8c548cd07732ac7eac"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-device-rollout-approval-boundary.ps1",
+      "baseline_blob": "e8af862c4aafeee56483b9647095a87fd5099ca4",
+      "current_blob": "e8af862c4aafeee56483b9647095a87fd5099ca4"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-dormant-rollout-controller-boundary.ps1",
+      "baseline_blob": "a1191047cbd9eb80b00659d28e133188c392ed63",
+      "current_blob": "a1191047cbd9eb80b00659d28e133188c392ed63"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-dual-reader-runtime-boundary.ps1",
+      "baseline_blob": "a06fe6ded3aeb9bbaef17ecf8b7dd437f2707be5",
+      "current_blob": "a06fe6ded3aeb9bbaef17ecf8b7dd437f2707be5"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-durable-client-adapter-boundary.ps1",
+      "baseline_blob": "5c3495a0f46a88a1a1771b8a3a8dbacf671243ee",
+      "current_blob": "5c3495a0f46a88a1a1771b8a3a8dbacf671243ee"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-durable-responder-adapter-boundary.ps1",
+      "baseline_blob": "85d59df5350407dfbc625e3c9e9811365ebdebf9",
+      "current_blob": "85d59df5350407dfbc625e3c9e9811365ebdebf9"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-fuzz-harness-boundary.ps1",
+      "baseline_blob": "4ea1be96e40fc03ceb07fb2a25facbb96cc778cf",
+      "current_blob": "4ea1be96e40fc03ceb07fb2a25facbb96cc778cf"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-fuzz-smoke-boundary.ps1",
+      "baseline_blob": "7a020e0cc37c5a7b69aa05ee744e2be4c4259361",
+      "current_blob": "7a020e0cc37c5a7b69aa05ee744e2be4c4259361"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-fuzz-sustained-boundary.ps1",
+      "baseline_blob": "3a4bd06a37aab95e6bd8f0cfc3ca1046e9fb775e",
+      "current_blob": "3a4bd06a37aab95e6bd8f0cfc3ca1046e9fb775e"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-guided-restart-boundary.ps1",
+      "baseline_blob": "8466b462fce7a2f45e6f64ae8dd830fd3915d8d3",
+      "current_blob": "8466b462fce7a2f45e6f64ae8dd830fd3915d8d3"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-import-checkpoint-boundary.ps1",
+      "baseline_blob": "af87915f4d7f353bcf5463ace2834673948efd1a",
+      "current_blob": "af87915f4d7f353bcf5463ace2834673948efd1a"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-legacy-import-boundary.ps1",
+      "baseline_blob": "9efa6bc0bc4b40f63f601004e1318b1a94bce5c2",
+      "current_blob": "9efa6bc0bc4b40f63f601004e1318b1a94bce5c2"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-membership-policy-boundary.ps1",
+      "baseline_blob": "0f111c0287e69a9f3ef7d5950f13f12bf82aa327",
+      "current_blob": "0f111c0287e69a9f3ef7d5950f13f12bf82aa327"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-mixed-version-downgrade-boundary.ps1",
+      "baseline_blob": "1c8a54ba4e0d1a6c9e87aff5d62037a49f8ec399",
+      "current_blob": "1c8a54ba4e0d1a6c9e87aff5d62037a49f8ec399"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-mutual-candidate-selection-boundary.ps1",
+      "baseline_blob": "6fec0f21bc31d43d3f7443f21d8799a948959730",
+      "current_blob": "6fec0f21bc31d43d3f7443f21d8799a948959730"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-n-minus-one-interop-boundary.ps1",
+      "baseline_blob": "6418936ec7b86f97872e28b6751be0ca0830dc93",
+      "current_blob": "6418936ec7b86f97872e28b6751be0ca0830dc93"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-opt-in-dark-launch-boundary.ps1",
+      "baseline_blob": "8fda1b5c4eb239f57d9624ac0b9ef9b99757cdc7",
+      "current_blob": "8fda1b5c4eb239f57d9624ac0b9ef9b99757cdc7"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-peer-capability-floor-boundary.ps1",
+      "baseline_blob": "8465da6433fc9394617774d9ff2dfea010b70f4d",
+      "current_blob": "8465da6433fc9394617774d9ff2dfea010b70f4d"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-peer-capability-store-boundary.ps1",
+      "baseline_blob": "9253f42e5cb9ace3cf0ece4de3f25400bb25292c",
+      "current_blob": "9253f42e5cb9ace3cf0ece4de3f25400bb25292c"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-peer-capability-transport-enforcement-boundary.ps1",
+      "baseline_blob": "18f8424fda3dff7c8ea3f571c5c7080e96edc050",
+      "current_blob": "18f8424fda3dff7c8ea3f571c5c7080e96edc050"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-peer-capability-two-host-rehearsal-boundary.ps1",
+      "baseline_blob": "130bfca05f2379a6142c7eefc53449c30c9e23b4",
+      "current_blob": "130bfca05f2379a6142c7eefc53449c30c9e23b4"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-peer-reenrollment-acceptance-boundary.ps1",
+      "baseline_blob": "008471c7a4c48b0fedaac9242a57a42501ee45ff",
+      "current_blob": "008471c7a4c48b0fedaac9242a57a42501ee45ff"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-peer-reenrollment-plan-boundary.ps1",
+      "baseline_blob": "1d5407143c5d51f5afda70f6c3b7ee3d194d8d32",
+      "current_blob": "1d5407143c5d51f5afda70f6c3b7ee3d194d8d32"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-peer-reenrollment-runtime-consumption-boundary.ps1",
+      "baseline_blob": "d4d8e8f7143df2c4bd9595788eec86fe09662f0b",
+      "current_blob": "d4d8e8f7143df2c4bd9595788eec86fe09662f0b"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-peer-reenrollment-two-host-rehearsal-boundary.ps1",
+      "baseline_blob": "f7c2ab9188bca635d7c1ab91dd96f67547c48e8e",
+      "current_blob": "f7c2ab9188bca635d7c1ab91dd96f67547c48e8e"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-production-dark-launch-boundary.ps1",
+      "baseline_blob": "8721efd633b568482b1487f5c0bd1570deb0b46a",
+      "current_blob": "8721efd633b568482b1487f5c0bd1570deb0b46a"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-public-rollout-decision-boundary.ps1",
+      "baseline_blob": "dce142e4b3148f0db90a54a05a6eed443f014371",
+      "current_blob": "dce142e4b3148f0db90a54a05a6eed443f014371"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-release-keyring-boundary.ps1",
+      "baseline_blob": "4b28aa95d70023577f2790bec8d37d599cbb0be3",
+      "current_blob": "4b28aa95d70023577f2790bec8d37d599cbb0be3"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-rollback-drill-boundary.ps1",
+      "baseline_blob": "4805e3879f6e8b7c44f5692594c938b947e2e568",
+      "current_blob": "4805e3879f6e8b7c44f5692594c938b947e2e568"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-rollout-containment-rehearsal-boundary.ps1",
+      "baseline_blob": "5a3e60fc965e8747a29de884c6fb41bc0fa47f49",
+      "current_blob": "5a3e60fc965e8747a29de884c6fb41bc0fa47f49"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-rollout-controller-observer-boundary.ps1",
+      "baseline_blob": "97c12e0bbd89af4b0cc9d5d9b1a629294f3ce763",
+      "current_blob": "97c12e0bbd89af4b0cc9d5d9b1a629294f3ce763"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-rollout-end-to-end-rehearsal-boundary.ps1",
+      "baseline_blob": "d202c5d09a17b435694389ab72c8cacd2fa7623e",
+      "current_blob": "d202c5d09a17b435694389ab72c8cacd2fa7623e"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-rollout-local-authority-boundary.ps1",
+      "baseline_blob": "e4289bc4d60b58373532ccba94b282b35ff26b86",
+      "current_blob": "e4289bc4d60b58373532ccba94b282b35ff26b86"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-rollout-operator-ux-boundary.ps1",
+      "baseline_blob": "83829d94c7bdaa8984861812505c4a977b53ab09",
+      "current_blob": "83829d94c7bdaa8984861812505c4a977b53ab09"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-runtime-observability-boundary.ps1",
+      "baseline_blob": "31fa255160a93f437037a9ee8d114934c1ce4d0f",
+      "current_blob": "31fa255160a93f437037a9ee8d114934c1ce4d0f"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-runtime-quarantine-observability-boundary.ps1",
+      "baseline_blob": "8594b5e2968b1f07f12625d5dadaf9d52fb365a9",
+      "current_blob": "8594b5e2968b1f07f12625d5dadaf9d52fb365a9"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-session-bootstrap-boundary.ps1",
+      "baseline_blob": "3bed28bb62ad897be68b985ded1926f6d7e23afd",
+      "current_blob": "3bed28bb62ad897be68b985ded1926f6d7e23afd"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-session-runtime-frame-boundary.ps1",
+      "baseline_blob": "668d246c021cdb9e11d536fd4fd1fb2e562fc06f",
+      "current_blob": "668d246c021cdb9e11d536fd4fd1fb2e562fc06f"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-session-successor-store-boundary.ps1",
+      "baseline_blob": "8f8d670ffd1fd04c9761e3fb03e2822930214817",
+      "current_blob": "8f8d670ffd1fd04c9761e3fb03e2822930214817"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-trusted-policy-bundle-boundary.ps1",
+      "baseline_blob": "1999bf28c9c6e588d6458e5db0d79da633a44956",
+      "current_blob": "1999bf28c9c6e588d6458e5db0d79da633a44956"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-trusted-policy-inbox-boundary.ps1",
+      "baseline_blob": "38f210e9e41b03c35a52d5c6abc30e9c5f7e93cc",
+      "current_blob": "38f210e9e41b03c35a52d5c6abc30e9c5f7e93cc"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-sync-v2-typed-store-boundary.ps1",
+      "baseline_blob": "912194f594300a1aa9b2a521ed1ca67237e215bb",
+      "current_blob": "912194f594300a1aa9b2a521ed1ca67237e215bb"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-ticket-publication-boundary.ps1",
+      "baseline_blob": "7c17fbf4b91e34238f9489e52fc54d3949315ffb",
+      "current_blob": "7c17fbf4b91e34238f9489e52fc54d3949315ffb"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-transport-sync-alpn-boundary.ps1",
+      "baseline_blob": "bf1b37026919ae2e027804ecd1ad86aec89bfedf",
+      "current_blob": "bf1b37026919ae2e027804ecd1ad86aec89bfedf"
+    },
+    {
+      "path": "scripts/verify-kilogram-canonical-wire-boundary.ps1",
+      "baseline_blob": "a8f1e2a1672203743669b74476df56b8f66f3855",
+      "current_blob": "a8f1e2a1672203743669b74476df56b8f66f3855"
+    },
+    {
+      "path": "scripts/verify-kilogram-connection-ticket-sync-capability-migration-boundary.ps1",
+      "baseline_blob": "0207911544d5416e5ed85b83a88035892e4543e7",
+      "current_blob": "0207911544d5416e5ed85b83a88035892e4543e7"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-iroh-session-boundary.ps1",
+      "baseline_blob": "afcbfe0c08b23e27035a3fbd9611365deae270eb",
+      "current_blob": "afcbfe0c08b23e27035a3fbd9611365deae270eb"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-multi-source-scheduler-boundary.ps1",
+      "baseline_blob": "d366fc79ceb79dce474a75591c688f55f1d62f3d",
+      "current_blob": "d366fc79ceb79dce474a75591c688f55f1d62f3d"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-recipient-acceptor-boundary.ps1",
+      "baseline_blob": "dcda6d34cc3d4d4b657691f3592a41af991a72c1",
+      "current_blob": "dcda6d34cc3d4d4b657691f3592a41af991a72c1"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-recipient-coordinator-boundary.ps1",
+      "baseline_blob": "e6e9ee06221dc867a99f7ae23c325c3cc07d0682",
+      "current_blob": "e6e9ee06221dc867a99f7ae23c325c3cc07d0682"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-recipient-import-plan-boundary.ps1",
+      "baseline_blob": "5a1094d38dd485510d1d68e75e418f3e9a25a137",
+      "current_blob": "5a1094d38dd485510d1d68e75e418f3e9a25a137"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-recipient-import-round-boundary.ps1",
+      "baseline_blob": "0616a6e4ad6d7e611b4cdbb2a1edfb903f0fcd8c",
+      "current_blob": "0616a6e4ad6d7e611b4cdbb2a1edfb903f0fcd8c"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-recipient-import-round-executor-boundary.ps1",
+      "baseline_blob": "7f149df78dbe31474933fe2592c1967b8b7e91ea",
+      "current_blob": "7f149df78dbe31474933fe2592c1967b8b7e91ea"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-recipient-import-round-intent-boundary.ps1",
+      "baseline_blob": "d6eb687cebeef33241f0088ae86e1201b36694d5",
+      "current_blob": "d6eb687cebeef33241f0088ae86e1201b36694d5"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-transfer-executor-boundary.ps1",
+      "baseline_blob": "111ca93936f14c23be1d11a738348716c1e4f2b1",
+      "current_blob": "111ca93936f14c23be1d11a738348716c1e4f2b1"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-transfer-inbox-boundary.ps1",
+      "baseline_blob": "d18d91f5da2aa5078521d6e3feccffafa1b14f93",
+      "current_blob": "d18d91f5da2aa5078521d6e3feccffafa1b14f93"
+    },
+    {
+      "path": "scripts/verify-kilogram-history-recovery-transfer-outbox-boundary.ps1",
+      "baseline_blob": "9870b4d1048bb1144934adad823b970c0a4e0680",
+      "current_blob": "9870b4d1048bb1144934adad823b970c0a4e0680"
+    },
+    {
+      "path": "scripts/verify-kilogram-independent-builder-boundary.ps1",
+      "baseline_blob": "138a0382000f89be9496cf7ad6614d469750ca22",
+      "current_blob": "138a0382000f89be9496cf7ad6614d469750ca22"
+    },
+    {
+      "path": "scripts/verify-kilogram-independent-builder.ps1",
+      "baseline_blob": "7f9b439428cec8f53fb3eda504b974cec8b6cc84",
+      "current_blob": "7f9b439428cec8f53fb3eda504b974cec8b6cc84"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0967-simple-kit-boundary.ps1",
+      "baseline_blob": "9bd678198a09b777e6562c747776ebfa8dab2263",
+      "current_blob": "9bd678198a09b777e6562c747776ebfa8dab2263"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0969-exact-locator-evidence.ps1",
+      "baseline_blob": "0e3dabe31201847fb2c223fb2073ed8a62502fa0",
+      "current_blob": "0e3dabe31201847fb2c223fb2073ed8a62502fa0"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0969-exact-locator-kit-boundary.ps1",
+      "baseline_blob": "4e9fd0e1ebd7e6b0e675a5e7640ed4fed99db4a2",
+      "current_blob": "4e9fd0e1ebd7e6b0e675a5e7640ed4fed99db4a2"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0972-no-https-evidence.ps1",
+      "baseline_blob": "c19dac09f231fa89c1ff7211342e1f2fa8254777",
+      "current_blob": "c19dac09f231fa89c1ff7211342e1f2fa8254777"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0972-no-https-kit-boundary.ps1",
+      "baseline_blob": "b7fe86d28b14f3ab8a4d6ec9a41351da02b143f2",
+      "current_blob": "b7fe86d28b14f3ab8a4d6ec9a41351da02b143f2"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0973-no-https-kit-boundary.ps1",
+      "baseline_blob": "e956dbd15d7c4032d723d6c375bdab7cf5732cb6",
+      "current_blob": "e956dbd15d7c4032d723d6c375bdab7cf5732cb6"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0974-no-https-kit-boundary.ps1",
+      "baseline_blob": "6fc85397830cd0fd457e546770f707c40d2290d2",
+      "current_blob": "6fc85397830cd0fd457e546770f707c40d2290d2"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0976-service-free-v2-evidence.ps1",
+      "baseline_blob": "c02e027ece8b4426ccd3a74edae85978473b74ee",
+      "current_blob": "c02e027ece8b4426ccd3a74edae85978473b74ee"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0976-service-free-v2-kit-boundary.ps1",
+      "baseline_blob": "8cd1774d19201fb87eb8f7b398e4f3d03ab23316",
+      "current_blob": "8cd1774d19201fb87eb8f7b398e4f3d03ab23316"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0987-independent-provider-evidence.ps1",
+      "baseline_blob": "87911a4bf80ba6ac4a3f209f1d9a52dcdd0b31ac",
+      "current_blob": "87911a4bf80ba6ac4a3f209f1d9a52dcdd0b31ac"
+    },
+    {
+      "path": "scripts/verify-kilogram-m0987-independent-provider-kit-boundary.ps1",
+      "baseline_blob": "b451d18fdc9f36919f5669415529e187c8954e15",
+      "current_blob": "b451d18fdc9f36919f5669415529e187c8954e15"
+    },
+    {
+      "path": "scripts/verify-kilogram-m1-acceptance-kit-boundary.ps1",
+      "baseline_blob": "cb3686fe2e3627abd8f7ff5ae92a990f545e41bc",
+      "current_blob": "cb3686fe2e3627abd8f7ff5ae92a990f545e41bc"
+    },
+    {
+      "path": "scripts/verify-kilogram-m1-candidate-boundary.ps1",
+      "baseline_blob": "70f9ff99154b842a5066f4cc5a38e04d7b55dcab",
+      "current_blob": "70f9ff99154b842a5066f4cc5a38e04d7b55dcab"
+    },
+    {
+      "path": "scripts/verify-kilogram-m1-candidate.ps1",
+      "baseline_blob": "510a9bde83d9a671564a8bfa92dd4752510d3b49",
+      "current_blob": "510a9bde83d9a671564a8bfa92dd4752510d3b49"
+    },
+    {
+      "path": "scripts/verify-kilogram-m1-readiness-boundary.ps1",
+      "baseline_blob": "796fa8e2e9ccbcea2dc2535120a893ddcfc893e3",
+      "current_blob": "796fa8e2e9ccbcea2dc2535120a893ddcfc893e3"
+    },
+    {
+      "path": "scripts/verify-kilogram-m1-readiness.ps1",
+      "baseline_blob": "c18d30a5908a6a40a4623519c0a96c1ca75be73b",
+      "current_blob": "c18d30a5908a6a40a4623519c0a96c1ca75be73b"
+    },
+    {
+      "path": "scripts/verify-kilogram-m1-tag-acceptance.ps1",
+      "baseline_blob": "9fe06453deee5ac649d05f8383d67ef371bfe044",
+      "current_blob": "9fe06453deee5ac649d05f8383d67ef371bfe044"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-boundary.ps1",
+      "baseline_blob": "4571e418dd223107d971ed35a93bf3290fb849f6",
+      "current_blob": "4571e418dd223107d971ed35a93bf3290fb849f6"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-capability-convergence.ps1",
+      "baseline_blob": "87711a46f66b2d86daa2957efa0704fa51e94120",
+      "current_blob": "87711a46f66b2d86daa2957efa0704fa51e94120"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-capability-lifecycle.ps1",
+      "baseline_blob": "f182ac8dd8994cc60fc64f3f74b4e9e4564ea2ab",
+      "current_blob": "f182ac8dd8994cc60fc64f3f74b4e9e4564ea2ab"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-client-boundary.ps1",
+      "baseline_blob": "f7f048a0d49681bfd53627f3bd91e9b71c4c15df",
+      "current_blob": "f7f048a0d49681bfd53627f3bd91e9b71c4c15df"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-desktop-control.ps1",
+      "baseline_blob": "751cb43ee32eec6d610f90d59f792e7498cce181",
+      "current_blob": "751cb43ee32eec6d610f90d59f792e7498cce181"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-field-evidence.ps1",
+      "baseline_blob": "9c5f0fe3aef8a6c5ff4639b2f3ee7d98429f8677",
+      "current_blob": "9c5f0fe3aef8a6c5ff4639b2f3ee7d98429f8677"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-field-test-boundary.ps1",
+      "baseline_blob": "ab3fb00b5c4cf325bd8424960eab3434e8e443d9",
+      "current_blob": "ab3fb00b5c4cf325bd8424960eab3434e8e443d9"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-https-retirement-boundary.ps1",
+      "baseline_blob": "0abd96a5ae76cc2bd70035f9cbca7ab62ecc1356",
+      "current_blob": "0abd96a5ae76cc2bd70035f9cbca7ab62ecc1356"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-legacy-upgrade-boundary.ps1",
+      "baseline_blob": "3e804b55fa6fad592e34bd1a624e477c77edc015",
+      "current_blob": "3e804b55fa6fad592e34bd1a624e477c77edc015"
+    },
+    {
+      "path": "scripts/verify-kilogram-mailbox-provisioning-boundary.ps1",
+      "baseline_blob": "c31bad812843fa58862b0b3b288329d77aba9448",
+      "current_blob": "c31bad812843fa58862b0b3b288329d77aba9448"
+    },
+    {
+      "path": "scripts/verify-kilogram-offline-boundary.ps1",
+      "baseline_blob": "85f89c69fae4103afb93b182c4d9ef951ea70abf",
+      "current_blob": "85f89c69fae4103afb93b182c4d9ef951ea70abf"
+    },
+    {
+      "path": "scripts/verify-kilogram-offline-reproducibility-record.ps1",
+      "baseline_blob": "3963316677b9a5b7f78344bb0ccb44fd192200c9",
+      "current_blob": "3963316677b9a5b7f78344bb0ccb44fd192200c9"
+    },
+    {
+      "path": "scripts/verify-kilogram-old-history-recovery-consent-store-boundary.ps1",
+      "baseline_blob": "a347b0cdf2cf343c91ca06d3211ec63ddb84d483",
+      "current_blob": "a347b0cdf2cf343c91ca06d3211ec63ddb84d483"
+    },
+    {
+      "path": "scripts/verify-kilogram-old-history-recovery-execution-boundary.ps1",
+      "baseline_blob": "22af98d9394120e5c050416a96992adf71879bd4",
+      "current_blob": "22af98d9394120e5c050416a96992adf71879bd4"
+    },
+    {
+      "path": "scripts/verify-kilogram-peer-reenrollment-old-history-recovery-plan-boundary.ps1",
+      "baseline_blob": "fa4bd700b6c45b5b1cebf08d4a4739f06056a608",
+      "current_blob": "fa4bd700b6c45b5b1cebf08d4a4739f06056a608"
+    },
+    {
+      "path": "scripts/verify-kilogram-protocol-compatibility-boundary.ps1",
+      "baseline_blob": "de717ecc54d17a9625a56919cb9bc48a6739de5b",
+      "current_blob": "de717ecc54d17a9625a56919cb9bc48a6739de5b"
+    },
+    {
+      "path": "scripts/verify-kilogram-provider-admission-work-boundary.ps1",
+      "baseline_blob": "4a80581392d4060a222a7652c4cc2be43700c699",
+      "current_blob": "4a80581392d4060a222a7652c4cc2be43700c699"
+    },
+    {
+      "path": "scripts/verify-kilogram-provider-colocation-avoidance-boundary.ps1",
+      "baseline_blob": "5390969db3bd65b0b1cf0c5a815446a8d0d85752",
+      "current_blob": "5390969db3bd65b0b1cf0c5a815446a8d0d85752"
+    },
+    {
+      "path": "scripts/verify-kilogram-provider-observation-boundary.ps1",
+      "baseline_blob": "4192050b72916e0df091035b7af9ad45cf35af45",
+      "current_blob": "4192050b72916e0df091035b7af9ad45cf35af45"
+    },
+    {
+      "path": "scripts/verify-kilogram-provider-path-domain-boundary.ps1",
+      "baseline_blob": "8790a42fc3b65b9954fdd7ef4b1a5c79a95f0b83",
+      "current_blob": "8790a42fc3b65b9954fdd7ef4b1a5c79a95f0b83"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-history-import-boundary.ps1",
+      "baseline_blob": "ba1abb8bbcc0be2e3e31ca9b7ba039aa21a881c1",
+      "current_blob": "ba1abb8bbcc0be2e3e31ca9b7ba039aa21a881c1"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-assembly-issuer-boundary.ps1",
+      "baseline_blob": "1a6022aa68588b3507e0a44f0a30c1ded3b1baa8",
+      "current_blob": "1a6022aa68588b3507e0a44f0a30c1ded3b1baa8"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-assembly-to-slot-staging-boundary.ps1",
+      "baseline_blob": "8122d6be620735e3c3292b6019f52b4b907b59a2",
+      "current_blob": "8122d6be620735e3c3292b6019f52b4b907b59a2"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-host-boundary.ps1",
+      "baseline_blob": "ae20e3e7b16fb2a11f03ad8aa104773862ea0013",
+      "current_blob": "ae20e3e7b16fb2a11f03ad8aa104773862ea0013"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-host-command-router-boundary.ps1",
+      "baseline_blob": "7863d6def320cfe61caa1fb5a1494d5db64bd1a6",
+      "current_blob": "7863d6def320cfe61caa1fb5a1494d5db64bd1a6"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-host-installation-owner-boundary.ps1",
+      "baseline_blob": "cbe22a53a352cceb22bd2f4a740a83885b27ea74",
+      "current_blob": "cbe22a53a352cceb22bd2f4a740a83885b27ea74"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-installation-owner-retirement-boundary.ps1",
+      "baseline_blob": "34236b5d9728f42df1cb86e60adc73b9c9d5dfce",
+      "current_blob": "34236b5d9728f42df1cb86e60adc73b9c9d5dfce"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-issuer-to-slot-staging-boundary.ps1",
+      "baseline_blob": "d957c486861e2850a7d05a526e8735d3bd7f0b54",
+      "current_blob": "d957c486861e2850a7d05a526e8735d3bd7f0b54"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-launch-authorization-boundary.ps1",
+      "baseline_blob": "6d3583f1f71ff5caa682eb006e6d1c56a4b0469b",
+      "current_blob": "6d3583f1f71ff5caa682eb006e6d1c56a4b0469b"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-launch-service-boundary.ps1",
+      "baseline_blob": "eb669a4eeedeab07bd9d10daad8766d036e19791",
+      "current_blob": "eb669a4eeedeab07bd9d10daad8766d036e19791"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-launch-slot-boundary.ps1",
+      "baseline_blob": "f9446eb79e37660c9bc6f4d0fa3785ad719d0d2c",
+      "current_blob": "f9446eb79e37660c9bc6f4d0fa3785ad719d0d2c"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-raw-host-retirement-boundary.ps1",
+      "baseline_blob": "acf715691cc2adb495a2a62fc17b04f98f092830",
+      "current_blob": "acf715691cc2adb495a2a62fc17b04f98f092830"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-recovery-raw-launch-slot-retirement-boundary.ps1",
+      "baseline_blob": "3d60300927c60d8e0b7df2b8068728fa0dd3664d",
+      "current_blob": "3d60300927c60d8e0b7df2b8068728fa0dd3664d"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-session-controller-boundary.ps1",
+      "baseline_blob": "b7bd0032dd4dd42edf1c3d8a0fa0c870ff23625f",
+      "current_blob": "b7bd0032dd4dd42edf1c3d8a0fa0c870ff23625f"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-session-local-ux-boundary.ps1",
+      "baseline_blob": "4b73ea643d55786eb2e6fde3f6b3d38651ab9c28",
+      "current_blob": "4b73ea643d55786eb2e6fde3f6b3d38651ab9c28"
+    },
+    {
+      "path": "scripts/verify-kilogram-recipient-import-guided-session-start-producer-boundary.ps1",
+      "baseline_blob": "7c8e29e5eea053d16a9ee771ae5206455648ea8a",
+      "current_blob": "7c8e29e5eea053d16a9ee771ae5206455648ea8a"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-cooperative-scheduling.ps1",
+      "baseline_blob": "53d2808edfa32b76dbb57344bd059a55e2fb59bc",
+      "current_blob": "53d2808edfa32b76dbb57344bd059a55e2fb59bc"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-ipc-completion-inventory-boundary.ps1",
+      "baseline_blob": "e7cd37cbd6392ab010e5ae754acf86d68bb70bf1",
+      "current_blob": "e7cd37cbd6392ab010e5ae754acf86d68bb70bf1"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-ipc-conversation-pagination-migration-boundary.ps1",
+      "baseline_blob": "5e2c7e1bbf4935743d407e3c7bd7020a76451d5a",
+      "current_blob": "5e2c7e1bbf4935743d407e3c7bd7020a76451d5a"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-ipc-endpoint-bootstrap-retirement-boundary.ps1",
+      "baseline_blob": "89d56e11916f9db91c9b154be6249a9e0a7e889e",
+      "current_blob": "89d56e11916f9db91c9b154be6249a9e0a7e889e"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-ipc-legacy-mailbox-retirement-boundary.ps1",
+      "baseline_blob": "f218be770f9d143bb4f271faaa3c5ce9ae5f8d55",
+      "current_blob": "f218be770f9d143bb4f271faaa3c5ce9ae5f8d55"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-ipc-recipient-import-consumption-envelope-boundary.ps1",
+      "baseline_blob": "1fcd6f79400f95220ebede5ad06b7b47720f6bc6",
+      "current_blob": "1fcd6f79400f95220ebede5ad06b7b47720f6bc6"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-ipc-recipient-import-consumption-migration-preflight-boundary.ps1",
+      "baseline_blob": "098c2c16730a12390cb50be4d142deac076badcc",
+      "current_blob": "098c2c16730a12390cb50be4d142deac076badcc"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-mailbox-flow.ps1",
+      "baseline_blob": "4ac68434bcff1c67e30ac11fcfb330e343862401",
+      "current_blob": "4ac68434bcff1c67e30ac11fcfb330e343862401"
+    },
+    {
+      "path": "scripts/verify-kilogram-runtime-mailbox-replication-recovery.ps1",
+      "baseline_blob": "4cb995eb3efde52730fbede36732124e2d72760f",
+      "current_blob": "4cb995eb3efde52730fbede36732124e2d72760f"
+    },
+    {
+      "path": "scripts/verify-kilogram-service-free-mailbox-capability-v2.ps1",
+      "baseline_blob": "22b8afe0d01c4fb5d579b1dffef14bb02d484a54",
+      "current_blob": "22b8afe0d01c4fb5d579b1dffef14bb02d484a54"
+    },
+    {
+      "path": "scripts/verify-kilogram-sync-v2-evidence-boundary.ps1",
+      "baseline_blob": "aa073e1c940c6ab77fb466ebc429e2507e4d1ca9",
+      "current_blob": "aa073e1c940c6ab77fb466ebc429e2507e4d1ca9"
+    },
+    {
+      "path": "scripts/verify-kilogram-sync-v2-network-evidence.ps1",
+      "baseline_blob": "86a8c3fe9b5d669b8fa4329c89cf98ec67d26d80",
+      "current_blob": "86a8c3fe9b5d669b8fa4329c89cf98ec67d26d80"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-field-evidence.ps1",
+      "baseline_blob": "53791644fd23e15f688a857b74546df3e5bacc84",
+      "current_blob": "53791644fd23e15f688a857b74546df3e5bacc84"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-field-kit-boundary.ps1",
+      "baseline_blob": "c26ae969a18579c62a7b97740ef0422e2b0f90b3",
+      "current_blob": "c26ae969a18579c62a7b97740ef0422e2b0f90b3"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-iroh-boundary.ps1",
+      "baseline_blob": "9df9551521e42bfa3838bbba5bb741207c146b3b",
+      "current_blob": "9df9551521e42bfa3838bbba5bb741207c146b3b"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-provider-gossip-boundary.ps1",
+      "baseline_blob": "2fd2dcf3728635a3fab5e6b0d97ea766e864fcdf",
+      "current_blob": "2fd2dcf3728635a3fab5e6b0d97ea766e864fcdf"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-provider-selection-boundary.ps1",
+      "baseline_blob": "3d5fca67e2b04cc76a5c84073e83d3f282f057e2",
+      "current_blob": "3d5fca67e2b04cc76a5c84073e83d3f282f057e2"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-replica-locator-boundary.ps1",
+      "baseline_blob": "a8b6b2de4fda698f61b341244b29a62966694c6f",
+      "current_blob": "a8b6b2de4fda698f61b341244b29a62966694c6f"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-replication-boundary.ps1",
+      "baseline_blob": "5f6b17b68c766a7d5931ab45c2a527a9ba252429",
+      "current_blob": "5f6b17b68c766a7d5931ab45c2a527a9ba252429"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-retrieval-boundary.ps1",
+      "baseline_blob": "7b17e6bbe39282ee5b235410eb2e6541600effd1",
+      "current_blob": "7b17e6bbe39282ee5b235410eb2e6541600effd1"
+    },
+    {
+      "path": "scripts/verify-kilogram-volunteer-storage-boundary.ps1",
+      "baseline_blob": "5743685afb0ccba7384b64925211ac3095258cc2",
+      "current_blob": "5743685afb0ccba7384b64925211ac3095258cc2"
+    },
+    {
+      "path": "scripts/verify-kilogram-windows-ci-boundary.ps1",
+      "baseline_blob": "797a56eb1b8a28f314153efc857ce2339876e258",
+      "current_blob": "797a56eb1b8a28f314153efc857ce2339876e258"
+    },
+    {
+      "path": "scripts/verify-migration-s5-l1-frozen-origin.ps1",
+      "baseline_blob": "f448cb8accca3424708c8a064d5e2d9d49aea456",
+      "current_blob": "f448cb8accca3424708c8a064d5e2d9d49aea456"
+    },
+    {
+      "path": "scripts/verify-publication-conflict-boundary.ps1",
+      "baseline_blob": "f3db20274e862b179ed086d4514d7cfde2a2d8dd",
+      "current_blob": "f3db20274e862b179ed086d4514d7cfde2a2d8dd"
+    }
+  ],
+  "immutable_published_S5_2_non_scope_files_checked": 516,
+  "immutable_S5_2_mismatches": 0,
+  "cases": [
+    {
+      "case": "C-ready-scope-01",
+      "raw_record": {
+        "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-scope-01.json",
+        "bytes": 1286,
+        "sha256": "ce888144ce10b607ebac8ba5da9efcf80736d8ec2dd709c4b947207881fc3005"
+      },
+      "actual_whole_exit_code": 1,
+      "charged_seconds": 60.0,
+      "charge_basis": "conservative whole60; draft elapsed43.6945432 is lower bound, not final actual",
+      "raw_record_is_draft": true
+    },
+    {
+      "case": "C-ready-legacy-01",
+      "raw_record": {
+        "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-01.json",
+        "bytes": 1639,
+        "sha256": "e8212418ddd62cd13c660c717379ed03b46ac74ca8fa10e0c597f5d79bab2735"
+      },
+      "actual_whole_exit_code": 1,
+      "charged_seconds": 10.2520644,
+      "charge_basis": "measured whole runner",
+      "raw_record_is_draft": false
+    },
+    {
+      "case": "C-ready-legacy-02",
+      "raw_record": {
+        "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-02.json",
+        "bytes": 1640,
+        "sha256": "142dab6147e9d7d9dfad1b4aa276c052f34ab22b051bc5bf6b2013f2c8610d81"
+      },
+      "actual_whole_exit_code": 1,
+      "charged_seconds": 11.3103439,
+      "charge_basis": "measured whole runner",
+      "raw_record_is_draft": false
+    },
+    {
+      "case": "C-ready-legacy-03",
+      "raw_record": {
+        "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-03.json",
+        "bytes": 1640,
+        "sha256": "437b61c69448ffdd62a82b2653cb147e7ab917a1053c9ea6de4e67db354b5ddc"
+      },
+      "actual_whole_exit_code": 1,
+      "charged_seconds": 11.9990029,
+      "charge_basis": "measured whole runner",
+      "raw_record_is_draft": false
+    },
+    {
+      "case": "C-ready-legacy-04",
+      "raw_record": {
+        "path": "ai-docs/tasks/pre-s53-refactor-evidence/C-ready-legacy-04.json",
+        "bytes": 1277,
+        "sha256": "5eac2493c1f2b3c9a6341397598f71286a6c288652384d83d96111691e5e6261"
+      },
+      "actual_whole_exit_code": 0,
+      "charged_seconds": 24.7713883,
+      "charge_basis": "measured whole runner",
+      "raw_record_is_draft": false
+    },
+    {
+      "case": "F-ready-scope-01",
+      "raw_record": {
+        "path": "ai-docs/tasks/pre-s53-refactor-evidence/F-ready-scope-01.json",
+        "bytes": 1291,
+        "sha256": "d51e89a3bb9e684c71990b5f9f8b2c79aeb9f0a338aec9cd14999e99377c4912"
+      },
+      "actual_whole_exit_code": 0,
+      "charged_seconds": 148.7417507,
+      "charge_basis": "measured whole runner",
+      "raw_record_is_draft": false
+    }
+  ],
+  "charges_seconds": {
+    "C_conservative": 60.0,
+    "C_total": 118.3327995,
+    "C_measured": 58.3327995,
+    "P": 0.0,
+    "F_measured": 148.7417507
+  },
+  "original_R_A_ceiling": {
+    "F": 210,
+    "P": 0,
+    "C": 120
+  },
+  "revised_R_A_ceiling": {
+    "F": 210,
+    "P": 0,
+    "C": 150
+  },
+  "remaining_R_A": {
+    "F": 61.2582493,
+    "P": 0.0,
+    "C": 31.6672005
+  },
+  "R_B_C60_inactive": true,
+  "final_static_reuse": [
+    {
+      "static_case": "S-ra-fixture-fmt-check-01",
+      "all_Rust_Cargo_native_and_compiler_wrapper_inputs_identical": true,
+      "later_changed_inputs": [
+        "scripts/invoke-pre-s53-refactor-case.ps1"
+      ],
+      "reason": "Only authorized remaining budget literal changed in case adapter after static compilation; no Rust or harness drift."
+    },
+    {
+      "static_case": "S-ra-fixture-clippy-01",
+      "all_Rust_Cargo_native_and_compiler_wrapper_inputs_identical": true,
+      "later_changed_inputs": [
+        "scripts/invoke-pre-s53-refactor-case.ps1"
+      ],
+      "reason": "Only authorized remaining budget literal changed in case adapter after static compilation; no Rust or harness drift."
+    },
+    {
+      "static_case": "S-ra-fixture-compile-01",
+      "all_Rust_Cargo_native_and_compiler_wrapper_inputs_identical": true,
+      "later_changed_inputs": [
+        "scripts/invoke-pre-s53-refactor-case.ps1"
+      ],
+      "reason": "Only authorized remaining budget literal changed in case adapter after static compilation; no Rust or harness drift."
+    }
+  ],
+  "product_CLI_reuse": {
+    "original_build": "S-ra-build-01",
+    "test_module_is_cfg_test": true,
+    "only_changed_non_product_inputs": [
+      "apps/kilogram-cli/src/ordered_dialog/repair_tests.rs",
+      "scripts/invoke-pre-s53-refactor-case.ps1"
+    ],
+    "production_inputs_and_fixed_images_identical": true
+  },
+  "parser_scope_reuse": "Actual1/0 in C-ready-scope-01 accepted only by root reconciliation; raw draft/wholeFAIL remain. Later fixture changes affect only cfg(test) characterization; Ready production functions/predicate unchanged.",
+  "other_reuse": "R1 own-F, R2 debt, storage/atomicity/credits/history/isolation and older S5.1 retain original source/image scope; no new image aggregate claim.",
+  "F_original_integrity": {
+    "producer_result_matches_published": true,
+    "not_retroactive_producer_time_inventory": true,
+    "typed_original_opened": false,
+    "files_after": 197,
+    "actual_raw_equality": true,
+    "files_before": 197
+  },
+  "private_exhausted_actions": "None: no traversal, typed open, copy, restore or activation of NCjBHb or backup in R-A.",
+  "R_B_started": false,
+  "S5_3_started": false,
+  "runtime_checks_finished": true,
+  "future_budget_unused": true
+}

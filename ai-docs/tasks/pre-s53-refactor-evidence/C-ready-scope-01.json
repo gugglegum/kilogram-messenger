@@ -1,0 +1,33 @@
+{
+  "case": "C-ready-scope-01",
+  "state": "complete",
+  "set": "C",
+  "classification": "whole-contributing-runner",
+  "baseline": "eafd0f873eb31b64377e8e65e06bc84a911f6dc6",
+  "selector": "indexed_l1_review1_ready_scope_shape_precedes_genesis_classification",
+  "exit_code": 0,
+  "error": null,
+  "elapsed_seconds": 43.6945432,
+  "matched_tests": 1,
+  "one_test_pass_summaries": 1,
+  "wrapper_completion_markers": 1,
+  "wrapper_returned_normally": true,
+  "wrapper_exit_code": 0,
+  "wrapper_exception": null,
+  "log_parsed": true,
+  "log_parse_error": null,
+  "source_images_verified_after": true,
+  "deadline": {
+    "cleanup_verified": true,
+    "owned_children_after_cleanup": 0,
+    "work_seconds": 45,
+    "work_expired": false,
+    "whole_watchdog": "unchanged owned Windows job remains armed through record and ledger writes",
+    "whole_seconds": 60
+  },
+  "binding_sha256": "a561122881f4e1e951473ea9e6e062a6e39688e1e17014c3cc288357cc61ebd1",
+  "inputs_file": "C-ready-scope-01.inputs.json",
+  "origin_original_raw_unchanged": false,
+  "execution_mode_declared": "Restricted",
+  "rule": "Setup, raw provenance, copies, cached compile/stage, waits, failures, stable-wrapper finalization and cleanup included. Snapshot alone is not whole PASS."
+}

@@ -1,0 +1,37 @@
+{
+  "classification": "static full-file comparison",
+  "before_sha256": "fc0077196739056277fe087051f4a3653b0432ba28e083b4baa01025d7c1dddc",
+  "after_sha256": "d3f9d73454c0586de42c4541d7cd1798cd1aceb485068cf6a564d1d9b595a57d",
+  "literal_changes_only": true,
+  "literal_replacements": [
+    [
+      "C-ready-legacy-03",
+      "C-ready-legacy-04"
+    ],
+    [
+      "work=25;whole=35;selector='pre_s53_ready1_legacy_refusal_and_fork_boundary'",
+      "work=40;whole=50;selector='pre_s53_ready1_legacy_refusal_and_fork_boundary'"
+    ],
+    [
+      "R-A-pre-run-binding-r4.json",
+      "R-A-pre-run-binding-r5.json"
+    ],
+    [
+      "contributing-cases-r4.json",
+      "contributing-cases-r5.json"
+    ],
+    [
+      "32d2cb28ee2f705c64688501f976318155133f8c1f63390653f7d9658a5eb781",
+      "fe93a98f831dbfb184be921db4e444a25eaf2174a56650ab166c50e2b18496de"
+    ],
+    [
+      "$ledger.active_limits_seconds.C -ne 38.4375917",
+      "$ledger.active_limits_seconds.C -ne 56.4385888"
+    ],
+    [
+      "R-A-prior-charge-r4.json",
+      "R-A-prior-charge-r5.json"
+    ]
+  ],
+  "environment_execution_parser_cleanup_accounting_deadline_errorguards_unchanged": true
+}
