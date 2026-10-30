@@ -84,7 +84,8 @@ internal sealed class Spec {
             "limits-file-bytes","limits-total-bytes","limits-integer-range",
             "locks-missing-first","locks-nonempty-first","locks-busy-first",
             "payload-writer-before","payload-writer-after",
-            "streams-file-payload","streams-directory-payload"};
+            "streams-file-payload","streams-directory-payload",
+            "aliases-directory-reparse","aliases-payload-hardlink"};
         if(Array.IndexOf(allowed,id)<0 || bytes<=0 || bytes>Limits.Inventory ||
            !Core.IsHash(hash) || files<2 || files>8000 || payload<0 || payload>Limits.Payload)
             throw new ArgumentException("Invalid closed ColdA fixture binding.");
@@ -149,6 +150,15 @@ internal sealed class Spec {
         if(streamLeaf!=null) {
             root=W+@"\.tmp\C-s53-cold-core-named-streams-01-attempt-02\"+streamLeaf;
             negativeAttempt="C-s53-cold-core-named-streams-01-attempt-02/"+streamLeaf;
+        }
+        string aliasLeaf=null;
+        switch(id) {
+            case "aliases-directory-reparse": aliasLeaf="directory-reparse";break;
+            case "aliases-payload-hardlink": aliasLeaf="payload-hardlink";break;
+        }
+        if(aliasLeaf!=null) {
+            root=W+@"\.tmp\C-s53-cold-core-filesystem-aliases-01-attempt-01\"+aliasLeaf;
+            negativeAttempt="C-s53-cold-core-filesystem-aliases-01-attempt-01/"+aliasLeaf;
         }
         return new Spec {O=root+@"\origin",S=root+@"\state",B=root+@"\backup",E=root+@"\proof",
             Attempt=negativeAttempt??(freshSmall?"C-s53-cold-core-01-attempt-02/baseline-small":"C-s53-cold-core-01-attempt-01/"+id),InventoryBytes=bytes,InventoryHash=hash,
@@ -1228,7 +1238,8 @@ function New-S53ColdAFixtureCore {
             'limits-file-bytes','limits-total-bytes','limits-integer-range',
             'locks-missing-first','locks-nonempty-first','locks-busy-first',
             'payload-writer-before','payload-writer-after',
-            'streams-file-payload','streams-directory-payload')]
+            'streams-file-payload','streams-directory-payload',
+            'aliases-directory-reparse','aliases-payload-hardlink')]
         [string]$Case,
         [Parameter(Mandatory)][long]$InventoryBytes,
         [Parameter(Mandatory)][ValidatePattern('\A[0-9a-f]{64}\z')][string]$InventorySha256,
