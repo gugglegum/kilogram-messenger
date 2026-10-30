@@ -48,6 +48,11 @@ internal sealed class Limits {
     internal const long Payload = 64L*1024*1024;
     internal long Output=64L*1024*1024;
     internal static Limits Fixture(string id) {
+        switch(id) {
+            case "resource-row-cap": id="cap-rows";break;
+            case "resource-entry-cap": id="cap-directories";break;
+            case "resource-handle-cap": id="cap-handles";break;
+        }
         var c=new Limits();
         if(id=="cap-rows") c.Rows=2;
         if(id=="cap-directories") c.Entries=7;
@@ -86,7 +91,8 @@ internal sealed class Spec {
             "payload-writer-before","payload-writer-after",
             "streams-file-payload","streams-directory-payload",
             "aliases-directory-reparse","aliases-payload-hardlink",
-            "namespace-extra-backup-directory","namespace-persistent-extra-state"};
+            "namespace-extra-backup-directory","namespace-persistent-extra-state",
+            "resource-row-cap","resource-entry-cap","resource-handle-cap"};
         if(Array.IndexOf(allowed,id)<0 || bytes<=0 || bytes>Limits.Inventory ||
            !Core.IsHash(hash) || files<2 || files>8000 || payload<0 || payload>Limits.Payload)
             throw new ArgumentException("Invalid closed ColdA fixture binding.");
@@ -169,6 +175,16 @@ internal sealed class Spec {
         if(namespaceLeaf!=null) {
             root=W+@"\.tmp\C-s53-cold-core-namespace-observations-01-attempt-01\"+namespaceLeaf;
             negativeAttempt="C-s53-cold-core-namespace-observations-01-attempt-01/"+namespaceLeaf;
+        }
+        string resourceLeaf=null;
+        switch(id) {
+            case "resource-row-cap": resourceLeaf="row-cap";break;
+            case "resource-entry-cap": resourceLeaf="entry-cap";break;
+            case "resource-handle-cap": resourceLeaf="handle-cap";break;
+        }
+        if(resourceLeaf!=null) {
+            root=W+@"\.tmp\C-s53-cold-core-resource-caps-01-attempt-01\"+resourceLeaf;
+            negativeAttempt="C-s53-cold-core-resource-caps-01-attempt-01/"+resourceLeaf;
         }
         return new Spec {O=root+@"\origin",S=root+@"\state",B=root+@"\backup",E=root+@"\proof",
             Attempt=negativeAttempt??(freshSmall?"C-s53-cold-core-01-attempt-02/baseline-small":"C-s53-cold-core-01-attempt-01/"+id),InventoryBytes=bytes,InventoryHash=hash,
@@ -1250,7 +1266,8 @@ function New-S53ColdAFixtureCore {
             'payload-writer-before','payload-writer-after',
             'streams-file-payload','streams-directory-payload',
             'aliases-directory-reparse','aliases-payload-hardlink',
-            'namespace-extra-backup-directory','namespace-persistent-extra-state')]
+            'namespace-extra-backup-directory','namespace-persistent-extra-state',
+            'resource-row-cap','resource-entry-cap','resource-handle-cap')]
         [string]$Case,
         [Parameter(Mandatory)][long]$InventoryBytes,
         [Parameter(Mandatory)][ValidatePattern('\A[0-9a-f]{64}\z')][string]$InventorySha256,
