@@ -1,0 +1,20 @@
+# C2-R producer-size positive: contract task
+
+2026-10-31. Published baseline0cbc322fe3ae06632af7ea4c1538f19b060d22ac verified by root253970 (parent/exact24paths/blobs/raw/index) and fb80e5 (remote master). C2-Q accepted; attempt01 failure retained. This is the last currently identified synthetic gap, not whole S5.3 acceptance.
+
+Deliver one concise contract: C-s53-cold-core-producer-size-01-attempt-01.contract.md in this directory. No implementation/runtime yet. Apply accepted r42+r43 and current source, not abandoned designs. References: ../long-lived-dialog-a3-migration-s5-handoff-cold-preservation-contract-r42.md, ../long-lived-dialog-a3-migration-s5-handoff-cold-preservation-amendment-r43.md, ../long-lived-dialog-a3-migration-s5-handoff-r43-acceptance-and-cold-core-task-r44.md; accepted small-positive/core/output evidence. Do not repeat closed C2-C through Q negatives.
+
+Required single positive:
+- Fresh synthetic, deterministic producer-compatible layout with6956 payload entries/45597399B per mirror; clarify whether zero-byte exact lock rows are included using actual producer/current schema. Full three-array identity/provenance, real existing6 exact locks in fixture, known expected map and historical digest.
+- Independent expected tuple/bytes calculation, fixtures streamed with bounded setup, full held-object capture before hashing, four passes182389596B if expected payload45597399, equality before/after. State exact directories/rows/retained owners/caps and receipt sizes from source; no guessing or silent count reinterpretation.
+- Use production caps for this positive, no convenient cap inflation/verification bypass. Exact success fields, independent restricted four-receipt verification, output ownership/ACL, no missed entries, known cleanup. Keep public reports aggregate-only.
+- Required phase durations and capture-complete count; exact owned-handle peak versus sampled OS handle count (state interval/missed-peak limitation), OS peak working set, arena/scratch peaks. Keep runtime/compiler/setup overhead distinct from Core phases. No RAM claim from arena limits.
+- Reuse accepted worker/supervisor/helper lifecycle and same-clock budget model. Explain where sampling runs without blocking work or changing core safety; own/dispose any sampling resources. Keep observer failure explicit.
+- Source-derived preconditions before launching: producer layout/UTF8 bytecounts/three arrays/digests, path lengths/depth, all resource/output caps, ownership transfer and normal healthy baseline. Explicit JSON timestamp treatment wherever roundtripped; source type checks remain strict.
+- One whole attempt with finite work/whole/cleanup reserve, no automatic retries or per-file log flood. Older C70/85 is a proposal, not activation: propose a realistic bound including creation/verification of both trees and receipts, with arithmetic/source rationale. Do not promise speedup or impose unnecessarily short limits. No timing microbenchmarks before source acceptance. Native plus actual tool-return evidence mandatory.
+
+Contract scope is existing finite obligation only; identify concrete blockers rather than adding broad audit/matrix. Frozen launcher output-helper exception/ownership integration remains a separate known follow-up before private use, not silently certified here. Private preservation/typed-open/G1-G4/final package remain later. No private grant; old grants consumed.
+
+Current ledger: spent S5.3 C1634.6434909/F1562.2882567/P0; combined C2222.0921018/F6278.6084056/P0; ceilings1670/1642/0; active0/inactiveC35.3565091/F79.7117433/P0. Do not change ledger or allocate. Root decides bounded internal ceiling changes after source review.
+
+Allowed now: public source/docs/evidence reads and static in-memory calculations; write only this contract. No existing source edit, fixture/event/.tmp/private operation, project invocation/compile/native/Rust/network runtime, commit/push or S5.4. High/no Fast. Callback with contract/path, decisive prerequisites and proposed budget, then STOP for contract review.

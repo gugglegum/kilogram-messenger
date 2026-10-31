@@ -95,7 +95,11 @@ internal sealed class Spec {
             "namespace-extra-backup-directory","namespace-persistent-extra-state",
             "resource-row-cap","resource-entry-cap","resource-handle-cap",
             "path-absolute","path-ads","path-device","path-trailing-dot","path-case-alias","path-depth",
-            "late-directory-s","late-directory-bkp","receipt-native-close","boundary-output-cap","boundary-directory-collision","native-read-locked","native-streams-unsupported","boundary-output-acl","boundary-inventory-size","deadline-blocked-scan","deadline-blocked-scan-r02"};
+            "late-directory-s","late-directory-bkp","receipt-native-close","boundary-output-cap","boundary-directory-collision","native-read-locked","native-streams-unsupported","boundary-output-acl","boundary-inventory-size","deadline-blocked-scan","deadline-blocked-scan-r02","producer-size-r01","producer-size-r02"};
+        if(id=="producer-size-r01" && (bytes!=3465145L || hash!="c40ffdedd028be593c08ded6b05daba44abe0d1a9e1dac86cb6d78632cbf3843" || files!=6956 || payload!=45597399L))
+            throw new ArgumentException("Invalid closed ColdA producer-size binding.");
+        if(id=="producer-size-r02" && (bytes!=3465145L || hash!="6962b9986b7055d7bceb5e0ea15bfeb70ebec43c3db4d7de2cf0e5cbc693ea12" || files!=6956 || payload!=45597399L))
+            throw new ArgumentException("Invalid closed ColdA producer-size r02 binding.");
         bool inventoryBoundary=id=="boundary-inventory-size";
         if(inventoryBoundary && (bytes!=16777217L || hash!="1003b1b5dc078189799a1216ce0f9fbcebb94e8b6b83c58c4b03345f07f94ced" || files!=5 || payload!=52))
             throw new ArgumentException("Invalid closed ColdA inventory boundary binding.");
@@ -243,6 +247,14 @@ internal sealed class Spec {
         if(id=="deadline-blocked-scan-r02") {
             root=W+@"\.tmp\C-s53-cold-core-blocked-worker-01-attempt-02\blocked-scan";
             negativeAttempt="C-s53-cold-core-blocked-worker-01-attempt-02/blocked-scan";
+        }
+        if(id=="producer-size-r01") {
+            root=W+@"\.tmp\C-s53-cold-core-producer-size-01-attempt-01\producer-size";
+            negativeAttempt="C-s53-cold-core-producer-size-01-attempt-01/producer-size";
+        }
+        if(id=="producer-size-r02") {
+            root=W+@"\.tmp\C-s53-cold-core-producer-size-01-attempt-02\producer-size";
+            negativeAttempt="C-s53-cold-core-producer-size-01-attempt-02/producer-size";
         }
         return new Spec {O=root+@"\origin",S=root+@"\state",B=root+@"\backup",E=root+@"\proof",
             Attempt=negativeAttempt??(freshSmall?"C-s53-cold-core-01-attempt-02/baseline-small":"C-s53-cold-core-01-attempt-01/"+id),InventoryBytes=bytes,InventoryHash=hash,
@@ -1329,7 +1341,7 @@ function New-S53ColdAFixtureCore {
             'namespace-extra-backup-directory','namespace-persistent-extra-state',
             'resource-row-cap','resource-entry-cap','resource-handle-cap',
             'path-absolute','path-ads','path-device','path-trailing-dot','path-case-alias','path-depth',
-            'late-directory-s','late-directory-bkp','receipt-native-close','boundary-output-cap','boundary-directory-collision','native-read-locked','native-streams-unsupported','boundary-output-acl','boundary-inventory-size','deadline-blocked-scan','deadline-blocked-scan-r02')]
+            'late-directory-s','late-directory-bkp','receipt-native-close','boundary-output-cap','boundary-directory-collision','native-read-locked','native-streams-unsupported','boundary-output-acl','boundary-inventory-size','deadline-blocked-scan','deadline-blocked-scan-r02','producer-size-r01','producer-size-r02')]
         [string]$Case,
         [Parameter(Mandatory)][long]$InventoryBytes,
         [Parameter(Mandatory)][ValidatePattern('\A[0-9a-f]{64}\z')][string]$InventorySha256,

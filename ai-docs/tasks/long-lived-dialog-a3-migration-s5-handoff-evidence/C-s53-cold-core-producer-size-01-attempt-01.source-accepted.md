@@ -1,0 +1,15 @@
+# C2-R R2 source acceptance and single-use activation
+
+2026-10-31. Root accepts source on baseline0cbc322fe3ae06632af7ea4c1538f19b060d22ac. No actual compilation/native result yet. R1/contract corrections remain binding.
+
+Rootffa09f verified six exact source/review pins, Core inverse to published HEAD, output inverse to prior15195B/81f625dd3334c5ce6ba5d7efb36d54404ccfefd1bbe03849312121a241da4dea, HEAD/index. Root42a0b8 AST0/functioncounts28,25,3,3,1/shared22 exact and library top-level definition-only. Complete worker/main supervisor/output source reviewed; no blocking static issue found.
+
+Reviewed fixed synthetic scope, raw primitive delegate wiring/R1 lifecycle, current-handle ownership and failure cleanup, output creation/transfer/rechecked six ancestors, capture-before-hash snapshot13935/peak13936 and final13938 proof, four streamed receipts, precise provisional/final distinction, actual Summary checks, same absolute clock/guardian/job/EOF/source pins, strict DateKind String and report limits. Sampler's retained identity, nominal100ms, bounded aggregates, no post-known-exit query, narrow InvalidOperationException+confirmed-exit race and explicit unobserved-tail limits accepted. Native/ABI/serialization/measurement behavior remains to be demonstrated.
+
+Frozen legacy output reflection wrapper remains a separate known failing-path follow-up; this worker uses direct binding with same pending reference, Core-first disposal and only still-open pending close. No certification of that legacy wrapper or private data paths.
+
+Exactly one fresh local synthetic attempt authorized via canonical .root-allocation.json,24 fields. work420/whole480/lane1/retry0; worker cleanup450/reap450/drain460/parent470/hardchild455/self475. Accepted W/S/helper/Core/output/deadline/Root/shell are pinned. Outputs started.json,producer-size.json,watchdog.json each<=65536B/total196608B. Fixture family/case only as contracted; no private/original/network/product/Rust/S5.4 access. Do not run sources independently or run a preliminary fixture. Same native-session polling is continuation, not retry; polling waits <=60s and all chunks/request/finalUTC/actual app result retained. Guardian enforces native lifetime; root separately checks actual native duration and request-to-final overhead.
+
+Internal C ceiling1670->2150 (+480), F1642/P0 unchanged. This is bounded local runtime accounting, not subscription quota. Spent S5.3 C1634.6434909/F1562.2882567/P0; combinedC2222.0921018/F6278.6084056/P0. C480 RESERVED; activeC480/F0/P0; unreservedC35.3565091/F79.7117433/P0. Charge actual request-to-final once, release remainder; no overlapping timer sums. No automatic extension/retry.
+
+Normal acceptance requires actual worker/supervisor exit0 and full independent positive/receipt/cleanup/source/observer evidence, no force/unknown. Failure is retained and reported honestly, with no repair in consumed attempt. Executor may only read public reports/source pins afterward; no extra .tmp probe. Root actual review precedes commit/push. Whole S5.3 remains open/private grants none.
