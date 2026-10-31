@@ -95,7 +95,7 @@ internal sealed class Spec {
             "namespace-extra-backup-directory","namespace-persistent-extra-state",
             "resource-row-cap","resource-entry-cap","resource-handle-cap",
             "path-absolute","path-ads","path-device","path-trailing-dot","path-case-alias","path-depth",
-            "late-directory-s","late-directory-bkp","receipt-native-close","boundary-output-cap","boundary-directory-collision"};
+            "late-directory-s","late-directory-bkp","receipt-native-close","boundary-output-cap","boundary-directory-collision","native-read-locked","native-streams-unsupported"};
         if(Array.IndexOf(allowed,id)<0 || bytes<=0 || bytes>Limits.Inventory ||
            !Core.IsHash(hash) || files<2 || files>8000 || payload<0 || payload>Limits.Payload)
             throw new ArgumentException("Invalid closed ColdA fixture binding.");
@@ -219,6 +219,11 @@ internal sealed class Spec {
             string leaf=id=="boundary-output-cap"?"output-cap":"directory-collision";
             root=W+@"\.tmp\C-s53-cold-core-output-boundaries-01-attempt-01\"+leaf;
             negativeAttempt="C-s53-cold-core-output-boundaries-01-attempt-01/"+leaf;
+        }
+        if(id=="native-read-locked"||id=="native-streams-unsupported") {
+            string leaf=id=="native-read-locked"?"read-locked":"streams-unsupported";
+            root=W+@"\.tmp\C-s53-cold-core-native-read-errors-01-attempt-01\"+leaf;
+            negativeAttempt="C-s53-cold-core-native-read-errors-01-attempt-01/"+leaf;
         }
         return new Spec {O=root+@"\origin",S=root+@"\state",B=root+@"\backup",E=root+@"\proof",
             Attempt=negativeAttempt??(freshSmall?"C-s53-cold-core-01-attempt-02/baseline-small":"C-s53-cold-core-01-attempt-01/"+id),InventoryBytes=bytes,InventoryHash=hash,
@@ -707,7 +712,9 @@ public sealed class Core : IDisposable {
         budget.HandleTake();IntPtr find=new IntPtr(-1);bool slot=true;
         try {
             Work();StreamData data;
-            find=Native.FindFirstStreamW(IoPath(absolute),0,out data,0);
+            uint streamFlags=spec.IsFixture&&spec.Attempt=="C-s53-cold-core-native-read-errors-01-attempt-01/streams-unsupported"&&
+                absolute==Spec.W+@"\.tmp\C-s53-cold-core-native-read-errors-01-attempt-01\streams-unsupported\state\one\state\payload.bin"?1u:0u;
+            find=Native.FindFirstStreamW(IoPath(absolute),0,out data,streamFlags);
             int error=Bad(find)?Marshal.GetLastWin32Error():0;
             if(Bad(find)) {
                 budget.HandleRelease();slot=false;
@@ -1303,7 +1310,7 @@ function New-S53ColdAFixtureCore {
             'namespace-extra-backup-directory','namespace-persistent-extra-state',
             'resource-row-cap','resource-entry-cap','resource-handle-cap',
             'path-absolute','path-ads','path-device','path-trailing-dot','path-case-alias','path-depth',
-            'late-directory-s','late-directory-bkp','receipt-native-close','boundary-output-cap','boundary-directory-collision')]
+            'late-directory-s','late-directory-bkp','receipt-native-close','boundary-output-cap','boundary-directory-collision','native-read-locked','native-streams-unsupported')]
         [string]$Case,
         [Parameter(Mandatory)][long]$InventoryBytes,
         [Parameter(Mandatory)][ValidatePattern('\A[0-9a-f]{64}\z')][string]$InventorySha256,
