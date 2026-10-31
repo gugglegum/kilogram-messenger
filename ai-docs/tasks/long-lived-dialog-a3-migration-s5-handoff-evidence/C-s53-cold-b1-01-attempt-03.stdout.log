@@ -1,0 +1,108 @@
+{
+  "source_graph_sha256": "c8ebcbe54ae800c1e2e026579967a4943e35c35503d5941b0c9e8813fc172e88",
+  "sources": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\build-migration-s53-cold-b-worker.ps1",
+      "bytes": 4145,
+      "sha256": "3624233f0519cb5525d7ce1da7c68c0bcaf9468ab8610e5ed8fa1dd65fe33514"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-cold-preservation.ps1",
+      "bytes": 82999,
+      "sha256": "eb166bce9b53da51863b605a06041e7100aca0d053f21c2b2ece09cf191b259f"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-typed-lock-worker.ps1",
+      "bytes": 13379,
+      "sha256": "45f76ed97aa350cf3b06297d0e42be928c9e3326e96e8966c3cef0f9bc506646"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-held-preservation.cs",
+      "bytes": 20895,
+      "sha256": "b780c396e8971a70f132795959733161ffd8cd62bdb95b4e86f08df6ef76d618"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-cold-b-private.cs",
+      "bytes": 9393,
+      "sha256": "a88399a57110d3cdfe20193bb2f58068a51300aaa087ff7f99caaeb8f4904825"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-root-copy.ps1",
+      "bytes": 25596,
+      "sha256": "a3eefcc9dd4da8bdd9141d8731fc60feaf496d5d357047c0283b53dd8e6c3382"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s53-cold-b-worker.ps1",
+      "bytes": 1969,
+      "sha256": "8dac99689f31eb29821f2cc83a9a0fecf958e4a36374ef85de3dedba733ee975"
+    }
+  ],
+  "composed": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\s53-cold-worker\\worker.cs",
+    "bytes": 129239,
+    "sha256": "aac4840a7b948b3954faa247b0c6beac01a479385d62c40ff8023cf70c10b2a4"
+  },
+  "assembly": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\s53-cold-worker\\worker.dll",
+    "bytes": 142848,
+    "sha256": "8b0fcaa118472474597d6150436f7a76bc4847b333a94c440da104fcde305369"
+  },
+  "frozen_core_edits": 3,
+  "private_activated": false
+}
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s53_cold-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+WARNING: Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 45 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 32 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-migration_s53_cold-tests.exe
+
+running 1 test
+test checks::cold_b1_small_readers_and_exact_negatives ... account_id=2609add16f0fe9a2ec63645726f9a3b158cab783d338b1932c66e89830ba0b96
+device_id=bd7aa6017812c72f9396ad744e8260dddc006cc4bf7d07931ff23180eacd91d2
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=622ad096890fc3ad4c363709b0a1991662dafda1379d79044852d4535b58d42a
+device_id=fb3d47823fb209691a96382735ad843100cddde13b4867312e18f76619e49234
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+cold_b1_small local=0 texts=2 pages=1 b0=51af2493549df1e3ef11669b57f699b78ec90dca7a889cbbcddf621dc4596bc8 full=cb23a62f15025be7ccfa6aada9b98123d88326d11fa0cb74f0cfc212ad93d3a2 receipt_signature_refused=true receipt_binding_refused=true wrong_auth_refused=true invalid_authority_refused=true wrong_account_refused=true peer_without_request=true future_request_refused=true
+cold_b1_small local=1 texts=2 pages=1 b0=34885590331a11a6f6c0faea4ccf5ca0c01f7c9c9675615227f9cea0ab3a22bb full=a3b204bb9175874e316ad44112243c5fca47f9f935eba897304824a0e892b700 receipt_signature_refused=true receipt_binding_refused=true wrong_auth_refused=true invalid_authority_refused=true wrong_account_refused=true peer_without_request=true future_request_refused=true
+ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 24.32s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s
+
+cache_status=skipped_explicitly
+status=passed
+isolated_test_count=0
+owned_children_after=0

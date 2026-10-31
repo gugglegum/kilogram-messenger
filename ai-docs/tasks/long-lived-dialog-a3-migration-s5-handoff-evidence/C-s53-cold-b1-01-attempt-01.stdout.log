@@ -1,0 +1,53 @@
+{
+  "source_graph_sha256": "2aa88ef83960b651bcb94c1907c3ed1788c4f259f8678222b7637cecddc5112b",
+  "sources": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\build-migration-s53-cold-b-worker.ps1",
+      "bytes": 4145,
+      "sha256": "3624233f0519cb5525d7ce1da7c68c0bcaf9468ab8610e5ed8fa1dd65fe33514"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-cold-preservation.ps1",
+      "bytes": 82999,
+      "sha256": "eb166bce9b53da51863b605a06041e7100aca0d053f21c2b2ece09cf191b259f"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-typed-lock-worker.ps1",
+      "bytes": 13379,
+      "sha256": "45f76ed97aa350cf3b06297d0e42be928c9e3326e96e8966c3cef0f9bc506646"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-held-preservation.cs",
+      "bytes": 20895,
+      "sha256": "b780c396e8971a70f132795959733161ffd8cd62bdb95b4e86f08df6ef76d618"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-cold-b-private.cs",
+      "bytes": 9082,
+      "sha256": "0fff45b68f5dfef49762cd006b9901b001d568b456c2df99c791f93c88fcae60"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-root-copy.ps1",
+      "bytes": 25596,
+      "sha256": "a3eefcc9dd4da8bdd9141d8731fc60feaf496d5d357047c0283b53dd8e6c3382"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s53-cold-b-worker.ps1",
+      "bytes": 1969,
+      "sha256": "8dac99689f31eb29821f2cc83a9a0fecf958e4a36374ef85de3dedba733ee975"
+    }
+  ],
+  "composed": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\s53-cold-worker\\worker.cs",
+    "bytes": 128928,
+    "sha256": "b0cb4eb8e537bdf38298a0aca38b5c03dfbf2eab53c0963598a7ae699c9645d5"
+  },
+  "assembly": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\s53-cold-worker\\worker.dll",
+    "bytes": 142848,
+    "sha256": "63f380c2e4d1e0d8f605afaa9efa05ba07b33978b6a50ac597accf2a2f09cf7f"
+  },
+  "frozen_core_edits": 3,
+  "private_activated": false
+}
+owned_children_after=0

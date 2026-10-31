@@ -1,0 +1,17 @@
+{
+  "attempt": "C-s53-cold-b1-01-attempt-03",
+  "start_utc": "2026-10-31T18:51:34.6969822+00:00",
+  "end_utc": "2026-10-31T18:53:00.7451747+00:00",
+  "whole_seconds": 86.0495571,
+  "outer_limit_seconds": 180,
+  "inner_work_whole": [
+    165,
+    175
+  ],
+  "timed_out": false,
+  "child_pid": 25936,
+  "exit_code": 0,
+  "offline": true,
+  "jobs": 2,
+  "priority": "BelowNormal"
+}

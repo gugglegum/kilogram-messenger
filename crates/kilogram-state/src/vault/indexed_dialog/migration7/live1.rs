@@ -14,6 +14,9 @@ mod history;
 mod ops;
 #[path = "live1/read.rs"]
 mod read;
+#[cfg(all(windows, feature = "verification-state-lock-adoption"))]
+#[path = "live1/verification_close.rs"]
+mod verification_close;
 #[cfg(test)]
 #[path = "live1/tests.rs"]
 mod tests;

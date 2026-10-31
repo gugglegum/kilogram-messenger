@@ -1,0 +1,2051 @@
+diff --git a/Cargo.lock b/Cargo.lock
+index 8107381..9d172d5 100644
+--- a/Cargo.lock
++++ b/Cargo.lock
+@@ -3295,6 +3295,7 @@ dependencies = [
+  "rqrr",
+  "serde",
+  "serde_json",
++ "sha2 0.10.9",
+  "tempfile",
+  "tokio",
+  "windows 0.62.2",
+diff --git a/apps/kilogram-cli/Cargo.toml b/apps/kilogram-cli/Cargo.toml
+index 99fce7e..7aed9e4 100644
+--- a/apps/kilogram-cli/Cargo.toml
++++ b/apps/kilogram-cli/Cargo.toml
+@@ -10,6 +10,12 @@ publish = false
+ [features]
+ default = []
+ sync-v2-evidence = ["dep:ed25519-dalek"]
++verification-s53-cold = ["kilogram-state/verification-state-lock-adoption"]
++
++[[test]]
++name = "migration_s53_cold"
++path = "tests/migration_s53_cold.rs"
++required-features = ["verification-s53-cold"]
+ 
+ [[bin]]
+ name = "kilogram-sync-v2-evidence"
+@@ -64,6 +70,7 @@ windows = { version = "0.62.2", features = ["Foundation_Collections", "Networkin
+ 
+ [dev-dependencies]
+ ed25519-dalek.workspace = true
++sha2.workspace = true
+ kilogram-offline = { path = "../kilogram-offline" }
+ 
+ [lints]
+diff --git a/crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs b/crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs
+index 9b1d599..9d1916f 100644
+--- a/crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs
++++ b/crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs
+@@ -19,6 +19,9 @@ mod mixed;
+ mod ops;
+ #[path = "live1/read.rs"]
+ mod read;
++#[cfg(all(windows, feature = "verification-state-lock-adoption"))]
++#[path = "live1/verification_close.rs"]
++mod verification_close;
+ pub use mixed::ExistingData7;
+ use mixed::{data_core7, data_event7};
+ #[cfg(test)]
+diff --git a/crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/verification_close.rs b/crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/verification_close.rs
+new file mode 100644
+index 0000000..a2701ac
+--- /dev/null
++++ b/crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/verification_close.rs
+@@ -0,0 +1,10 @@
++//! Offline verification only: close the database while retaining its actual lease.
++use super::*;
++
++impl L1Repository {
++    pub fn verification_close_to_held_lease(self) -> StateDirectoryLock {
++        // The existing core primitive drops database/backend/crypto before it
++        // returns the very same lease; no reopen, acquisition or recovery.
++        self.core.into_owner_lease().0
++    }
++}
+diff --git a/apps/kilogram-cli/tests/migration_s53_cold.rs b/apps/kilogram-cli/tests/migration_s53_cold.rs
+new file mode 100644
+index 0000000..0fccea0
+--- /dev/null
++++ b/apps/kilogram-cli/tests/migration_s53_cold.rs
+@@ -0,0 +1,26 @@
++#![cfg(windows)]
++//! Offline Cold-B readers; no ordinary runtime entrypoint.
++use anyhow::{Context, Result, ensure};
++use kilogram_cli::ordered_dialog::{
++    handshake::Spec,
++    runtime7::Profile3,
++    state::{self, Head},
++};
++use kilogram_protocol::{ordered_dialog_v1 as old, ordered_dialog_v2 as wire};
++use kilogram_state::indexed_dialog::{self as db, migration7::live1 as store};
++use serde_json::{Value, json};
++use std::{
++    collections::{BTreeMap, BTreeSet},
++    path::{Path, PathBuf},
++    time::{Duration, Instant},
++};
++#[path = "support/s53_cold/checks.rs"]
++mod checks;
++#[path = "support/s53_cold/fixed.rs"]
++mod fixed;
++#[path = "support/s53_cold/history.rs"]
++mod history;
++#[path = "support/s53_cold/readers.rs"]
++mod readers;
++#[path = "support/s53_cold/session.rs"]
++mod session;
+diff --git a/apps/kilogram-cli/tests/support/s53_cold/readers.rs b/apps/kilogram-cli/tests/support/s53_cold/readers.rs
+new file mode 100644
+index 0000000..3924126
+--- /dev/null
++++ b/apps/kilogram-cli/tests/support/s53_cold/readers.rs
+@@ -0,0 +1,434 @@
++//! Borrowed, read-only logical witnesses. No owner, Native constructor or commit.
++use super::*;
++use kilogram_identity::{AccountAuthoritySnapshot, AccountId};
++
++pub struct Digest(blake3::Hasher);
++impl Digest {
++    pub fn new(domain: &[u8]) -> Self {
++        let mut h = blake3::Hasher::new();
++        h.update(domain);
++        Self(h)
++    }
++    pub fn bytes(&mut self, bytes: &[u8]) {
++        self.0.update(&(bytes.len() as u64).to_le_bytes());
++        self.0.update(bytes);
++    }
++    pub fn value(&mut self, value: &impl serde::Serialize) -> Result<()> {
++        self.bytes(&serde_json::to_vec(value)?);
++        Ok(())
++    }
++    pub fn finish(self) -> String {
++        self.0.finalize().to_hex().to_string()
++    }
++}
++pub fn check(until: Instant) -> Result<()> {
++    ensure!(Instant::now() < until, "cold reader deadline");
++    Ok(())
++}
++
++pub fn authority(candidate: &[u8], floor: &[u8], account: AccountId) -> Result<()> {
++    ensure!(
++        candidate.len() <= wire::MAX_AUTH && floor.len() <= wire::MAX_AUTH,
++        "authority cap"
++    );
++    let a = AccountAuthoritySnapshot::decode_and_verify(candidate)?;
++    let f = AccountAuthoritySnapshot::decode_and_verify(floor)?;
++    ensure!(
++        a.encode()? == candidate && f.encode()? == floor,
++        "authority exact encoding"
++    );
++    ensure!(
++        a.account_id() == account && f.account_id() == account,
++        "authority account"
++    );
++    ensure!(a.revision() >= f.revision(), "authority rollback");
++    ensure!(
++        a.revision() != f.revision() || candidate == floor,
++        "authority equal revision conflict"
++    );
++    Ok(())
++}
++
++pub struct Scope {
++    pub verified: wire::VerifiedExistingScope1,
++    pub raw: Vec<u8>,
++    pub head: Head,
++}
++pub fn scope(repo: &mut store::L1Repository, c: u8, local: usize) -> Result<Scope> {
++    let spec = repo.spec(c)?;
++    let parsed = Spec::parse(&spec)?;
++    let head = Head::parse(
++        &repo.head(c)?,
++        parsed.c,
++        parsed.cert_refs()?[local],
++        local as u64,
++    )?;
++    ensure!(head.phase == 3, "original Ready phase");
++    let offer = repo.signed_control(c, head.offer.context("original Offer")?)?;
++    let grant = repo.signed_control(c, head.grant.context("original Grant")?)?;
++    let pair = repo
++        .control(c, store::L1Control::InitialPair)?
++        .context("original pair")?;
++    let mut genesis = Vec::new();
++    let mut ready = Vec::new();
++    for role in 0..2 {
++        genesis.push(old::b(
++            repo.event_at(c, role, 0)?.context("original genesis")?,
++        ));
++        ready.push(old::b(
++            repo.control(c, store::L1Control::Ready(role))?
++                .context("original Ready")?,
++        ));
++    }
++    let raw = old::encode(
++        &old::a([
++            old::u(1),
++            old::b(spec),
++            old::b(offer),
++            old::b(grant),
++            old::b(pair),
++            old::a(genesis),
++            old::a(ready),
++        ]),
++        wire::MAX_EXISTING_ORIGIN,
++    )?;
++    let verified = wire::VerifiedExistingScope1::verify_export(&raw)?;
++    ensure!(
++        head.c == verified.c()
++            && head.d == Some(verified.d())
++            && head.e == Some(verified.e())
++            && head.sid.as_deref() == Some(verified.sid()),
++        "Head original scope"
++    );
++    Ok(Scope {
++        verified,
++        raw,
++        head,
++    })
++}
++
++pub fn b0(
++    repo: &mut store::L1Repository,
++    profile_raw: &[u8],
++    config_raw: &[u8],
++    expected: &fixed::Expected,
++    proofs: &[Vec<u8>; 2],
++    until: Instant,
++) -> Result<String> {
++    check(until)?;
++    let c = 0;
++    let local = expected.local;
++    ensure!(
++        repo.contexts() == [(expected.c, local as u8)],
++        "exact original context map"
++    );
++    ensure!(
++        repo.initialized()? && repo.history_initialized(c)?,
++        "initialized saved history"
++    );
++    let scope = scope(repo, c, local)?;
++    expected.scope(&scope.verified)?;
++    let native = repo.snapshot(c)?;
++    let bytes = native.native.context("opaque original Native")?;
++    let native_hash = old::hash(state::NATIVE_TAG, &bytes);
++    ensure!(
++        native.head == repo.head(c)?
++            && scope.head.native_generation == expected.native_generation
++            && state::hex(&native_hash) == expected.native_hash,
++        "original opaque Native witness"
++    );
++    ensure!(
++        scope.head.blob == Some(native_hash),
++        "Head opaque Native digest"
++    );
++    let meta = repo.metadata(c)?;
++    ensure!(meta.next == expected.next, "original frontiers");
++    ensure!(
++        meta.request_index_ready,
++        "saved complete local request index"
++    );
++    let counts = repo.counts(c)?;
++    ensure!(
++        counts.sources == expected.next.iter().sum::<u64>()
++            && counts.receipts == expected.next.map(|n| n - 1)
++            && counts.queued == 0
++            && counts.pending == 0
++            && counts.debt == 0,
++        "original source/receipt/queue counts"
++    );
++    let existing = repo.existing_state(c)?;
++    ensure!(
++        existing.mode == store::ExistingMode::L1
++            && existing.q.is_none()
++            && existing.cuts == [None, None]
++            && existing.previous == [None, None]
++            && existing.propose.is_none()
++            && existing.accept.is_none()
++            && existing.select.is_none()
++            && existing.committed.is_none()
++            && existing.selected_consent.is_none()
++            && existing.current_consent.is_none()
++            && existing.local_intent.is_none()
++            && existing.local_outcomes.is_empty()
++            && existing.peer_intent.is_none()
++            && existing.peer_q_hint.is_none()
++            && !existing.control_debt,
++        "no Q/cuts/intents/transition"
++    );
++    let mut digest = Digest::new(b"kg:s53:cold:B0:1\0");
++    digest.bytes(profile_raw);
++    digest.bytes(config_raw);
++    digest.bytes(&scope.raw);
++    digest.bytes(&native.head);
++    digest.bytes(&bytes);
++    digest.value(&native.meta)?;
++    digest.value(&meta)?;
++    digest.value(&existing)?;
++    digest.value(&counts)?;
++    digest.value(&repo.contexts())?;
++    digest.value(&repo.generation())?;
++    digest.bytes(&repo.last_commit()?);
++    digest.value(&repo.config_revision())?;
++    digest.bytes(&repo.source_id());
++    digest.bytes(&repo.migration_id());
++    digest.value(&repo.next_author_sequence()?)?;
++    digest.value(&(
++        repo.initialized()?,
++        repo.history_initialized(c)?,
++        repo.requires_reopen(),
++    ))?;
++    for control in [
++        store::L1Control::Consent,
++        store::L1Control::InitialPair,
++        store::L1Control::Ready(0),
++        store::L1Control::Ready(1),
++        store::L1Control::CurrentAuth,
++        store::L1Control::BlockedFork,
++        store::L1Control::Locator(false),
++        store::L1Control::Locator(true),
++    ] {
++        digest.value(&repo.control(c, control)?)?;
++    }
++    for (role, proof) in proofs.iter().enumerate() {
++        let peer = &scope.verified.peers()[role];
++        let account = peer.certificate().account_id();
++        let floor = repo.authority(*account.as_bytes())?;
++        authority(proof, &floor, account)?;
++        let current = wire::RootVerifiedCredential::from_parts(
++            peer.certificate().clone(),
++            AccountAuthoritySnapshot::decode_and_verify(proof)?,
++        )?;
++        ensure!(
++            current.cert_ref() == scope.verified.certs()[role],
++            "current original certificate"
++        );
++        digest.bytes(&floor);
++        digest.bytes(proof);
++    }
++    Ok(digest.finish())
++}
++
++pub fn credential(
++    repo: &mut store::L1Repository,
++    reference: old::Id,
++) -> Result<(Vec<u8>, wire::RootVerifiedCredential)> {
++    let raw = repo
++        .auth(0, reference)?
++        .context("saved credential reference")?;
++    let verified = wire::ParsedCredentialBundle::parse(&raw)?.verify_root()?;
++    ensure!(
++        verified.reference() == reference,
++        "saved credential exact reference"
++    );
++    Ok((raw, verified))
++}
++pub fn verified_source(
++    scope: &wire::VerifiedExistingScope1,
++    raw: &[u8],
++    author_raw: &[u8],
++    role: usize,
++    n: u64,
++) -> Result<wire::VerifiedLegacyEvent> {
++    let author = wire::ParsedCredentialBundle::parse(author_raw)?.verify_root()?;
++    let event = scope.verify_event(raw, &author)?;
++    ensure!(
++        event.event().core.role == role as u64
++            && event.event().core.n == n
++            && event.event().core.kind == if n == 0 { role as u64 + 1 } else { 3 },
++        "exact original lane/ordinal/kind"
++    );
++    Ok(event)
++}
++pub fn verified_receipt(
++    scope: &wire::VerifiedExistingScope1,
++    source: &wire::VerifiedLegacyEvent,
++    raw: &[u8],
++    receiver_raw: &[u8],
++) -> Result<()> {
++    let receiver = wire::ParsedCredentialBundle::parse(receiver_raw)?.verify_root()?;
++    wire::ParsedReceipt1::parse(raw)?.verify_pre_q(source, scope, &receiver)?;
++    Ok(())
++}
++pub fn local_request(
++    local: usize,
++    role: usize,
++    actual: Option<&store::L1Request>,
++    id: old::Id,
++    text: &str,
++) -> Result<()> {
++    if local == role {
++        let request = actual.context("local request required")?;
++        ensure!(
++            request.event == Some(id)
++                && request.queue_sequence.is_none()
++                && request.text_hash == old::hash(b"kg:od1:request-text\0", text.as_bytes()),
++            "local request source/text"
++        );
++    }
++    Ok(())
++}
++pub fn absent_request(actual: Option<&store::L1Request>) -> Result<()> {
++    ensure!(actual.is_none(), "future local request present");
++    Ok(())
++}
++
++pub struct Full {
++    pub digest: String,
++    pub history_digest: String,
++    pub text_count: usize,
++    pub pages: usize,
++}
++pub fn full(
++    repo: &mut store::L1Repository,
++    expected: &fixed::Expected,
++    proofs: &[Vec<u8>; 2],
++    until: Instant,
++) -> Result<Full> {
++    let scope = scope(repo, 0, expected.local)?;
++    expected.scope(&scope.verified)?;
++    let mut digest = Digest::new(b"kg:s53:cold:B1:1\0");
++    digest.bytes(&scope.raw);
++    let mut history = BTreeMap::new();
++    let mut ids = BTreeSet::new();
++    for role in 0..2 {
++        let mut previous = None;
++        for n in 0..expected.next[role] {
++            check(until)?;
++            let raw = repo
++                .event_at(0, role as u8, n)?
++                .context("original bounded source missing")?;
++            // Decode the signed source with the original role key to discover its
++            // exact AuthRecords reference, then verify through the scope again.
++            let parsed =
++                old::Event::parse(&raw, scope.verified.peers()[role].certificate().device_id())?;
++            let (auth, author) = credential(repo, parsed.core.author_auth)?;
++            authority(
++                &proofs[role],
++                &author.authority().encode()?,
++                author.certificate().account_id(),
++            )?;
++            let verified = verified_source(&scope.verified, &raw, &auth, role, n)?;
++            let e = verified.event();
++            let id = e.id()?;
++            ensure!(
++                ids.insert(id) && e.core.previous == previous,
++                "source uniqueness/previous chain"
++            );
++            previous = Some(id);
++            digest.bytes(&raw);
++            digest.bytes(&auth);
++            if n == 0 {
++                continue;
++            }
++            let (request, text) = expected.text(role, n);
++            ensure!(
++                e.core.request == request,
++                "original source request convention"
++            );
++            ensure!(
++                !fixed::future_ids().contains(&e.core.request),
++                "future source present"
++            );
++            let projection = repo.projection(0, id)?;
++            ensure!(projection.text == text, "original saved body convention");
++            digest.bytes(&projection.encode()?);
++            // Imported snapshot and full-L1 proof pointers remain distinguished;
++            // history() independently validates their paid authenticated bindings.
++            let proof = repo.full_l1_proof(0, id)?;
++            digest.value(&proof)?;
++            if let Some(ref proof) = proof {
++                for reference in std::iter::once(Some(proof.original))
++                    .chain([
++                        proof.admission,
++                        proof.final_auth,
++                        proof.receiver,
++                        proof.receiver_overlay,
++                    ])
++                    .flatten()
++                {
++                    let (bytes, cred) = credential(repo, reference)?;
++                    let r = scope
++                        .verified
++                        .certs()
++                        .iter()
++                        .position(|c| *c == cred.cert_ref())
++                        .context("proof credential original peer")?;
++                    authority(
++                        &proofs[r],
++                        &cred.authority().encode()?,
++                        cred.certificate().account_id(),
++                    )?;
++                    digest.bytes(&bytes);
++                }
++            }
++            let receipt = repo
++                .receipt(0, role as u8, n)?
++                .context("original Receipt1")?;
++            if role == 1 && n == 17 {
++                ensure!(
++                    blake3::hash(&receipt).to_hex().as_str()
++                        == "338a74bcbee1249cb1655fa21962833d6d680394769861ca2df4ab98475a4760",
++                    "original B17 receipt byte pin"
++                );
++            }
++            let decoded = old::decode(&receipt, 1024)?;
++            let reference = decoded.fields(2)?[0].fields(8)?[7].fixed()?;
++            let (receiver, cred) = credential(repo, reference)?;
++            let opposite = 1 - role;
++            ensure!(
++                cred.cert_ref() == scope.verified.certs()[opposite],
++                "opposite Receipt1 signer"
++            );
++            authority(
++                &proofs[opposite],
++                &cred.authority().encode()?,
++                cred.certificate().account_id(),
++            )?;
++            verified_receipt(&scope.verified, &verified, &receipt, &receiver)?;
++            digest.bytes(&receipt);
++            digest.bytes(&receiver);
++            // Only the local author's request index is a required stored witness.
++            if role == expected.local {
++                let local = repo.request(0, request)?;
++                local_request(expected.local, role, local.as_ref(), id, &text)?;
++                digest.value(&local)?;
++            }
++            history.insert(state::hex(&id),json!({"format":1,"id":state::hex(&id),"role":role,"ordinal":n,"sequence":e.core.sequence,"request":state::hex(&request),"text":text,"proof_kind":if proof.is_some(){"FullL1"}else{"LegacySnapshot"},"delivered":true}));
++        }
++        ensure!(
++            repo.event_at(0, role as u8, expected.next[role])?.is_none(),
++            "future lane source present"
++        );
++    }
++    let future = fixed::future_ids()[expected.local];
++    absent_request(repo.request(0, future)?.as_ref())?;
++    let pages = super::history::read(repo, &history, expected.next, until, &mut digest)?;
++    let mut hd = Digest::new(b"kg:s53:cold:history:1\0");
++    hd.value(&history)?;
++    Ok(Full {
++        digest: digest.finish(),
++        history_digest: hd.finish(),
++        text_count: history.len(),
++        pages,
++    })
++}
+diff --git a/apps/kilogram-cli/tests/support/s53_cold/history.rs b/apps/kilogram-cli/tests/support/s53_cold/history.rs
+new file mode 100644
+index 0000000..52298f9
+--- /dev/null
++++ b/apps/kilogram-cli/tests/support/s53_cold/history.rs
+@@ -0,0 +1,71 @@
++//! Complete authenticated pagination from the same already-open repository.
++use super::*;
++use kilogram_state::indexed_dialog::HistoryCursor;
++pub fn read(
++    repo: &mut store::L1Repository,
++    expected: &BTreeMap<String, Value>,
++    frontiers: [u64; 2],
++    until: Instant,
++    digest: &mut readers::Digest,
++) -> Result<usize> {
++    let mut cursor = None;
++    let mut seen_cursors = BTreeSet::new();
++    let mut seen = BTreeSet::new();
++    let mut bytes = 0usize;
++    let mut view = None;
++    for page_no in 1..=32 {
++        readers::check(until)?;
++        let raw = repo.history(0, cursor.as_ref(), 32)?;
++        bytes = bytes
++            .checked_add(raw.len())
++            .context("history byte overflow")?;
++        ensure!(
++            bytes <= 4 * 1024 * 1024 && raw.len() <= 48 * 1024,
++            "history encoded byte cap"
++        );
++        let page: Value = serde_json::from_slice(&raw)?;
++        ensure!(
++            page["version"] == 3 && page["F"] == json!(frontiers),
++            "history original frontiers/version"
++        );
++        let now = page["view"].as_str().context("history view")?;
++        ensure!(
++            now.len() == 64 && now.bytes().all(|b| b.is_ascii_hexdigit()),
++            "history view encoding"
++        );
++        if let Some(old) = &view {
++            ensure!(old == now, "history view drift")
++        } else {
++            view = Some(now.to_owned())
++        }
++        let items = page["items"].as_array().context("history items")?;
++        ensure!(
++            !items.is_empty() && items.len() <= 32,
++            "history progress/page cap"
++        );
++        for row in items {
++            let id = row["id"].as_str().context("history source ID")?;
++            ensure!(seen.insert(id.to_owned()), "history duplicate source");
++            ensure!(
++                expected.get(id) == Some(row),
++                "history exact source/body/receipt correspondence"
++            );
++        }
++        let encoded = page["cursor"].as_str().context("authenticated cursor")?;
++        ensure!(
++            seen_cursors.insert(encoded.to_owned()),
++            "history repeated cursor"
++        );
++        digest.bytes(&raw);
++        if page["finished"] == true {
++            ensure!(seen.len() == expected.len(), "history truncation");
++            return Ok(page_no);
++        }
++        ensure!(
++            page["finished"] == false && seen.len() < expected.len(),
++            "history terminal/progress"
++        );
++        cursor = Some(HistoryCursor::from_base64(encoded)?);
++    }
++    anyhow::bail!("history page cap")
++}
+diff --git a/apps/kilogram-cli/tests/support/s53_cold/fixed.rs b/apps/kilogram-cli/tests/support/s53_cold/fixed.rs
+new file mode 100644
+index 0000000..1d80849
+--- /dev/null
++++ b/apps/kilogram-cli/tests/support/s53_cold/fixed.rs
+@@ -0,0 +1,216 @@
++//! Fixed original lineage. These literals do not inspect/activate private data.
++use super::*;
++use kilogram_state::StateDirectoryLock;
++pub const WORKSPACE: &str = r"E:\AI-Projects\kilogram-p2p-messenger";
++pub const STATE: &str =
++    r"E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-storage\l1-exhausted-observed-NCjBHb";
++pub const PROOF: &str = r"E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-admin\P2-s53-exhausted-roots-01-attempt-01\proof";
++pub const ATTEMPT: &str = "P2-s53-exhausted-cold-b-01-attempt-01";
++pub const EVIDENCE: &str = r"E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-preparation-evidence\P2-s53-exhausted-cold-b-01-attempt-01";
++pub const SHELL: &str = r"C:\Users\Paul\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe";
++pub const ACCOUNTS: [&str; 2] = [
++    "7a87df0a69a322c4ec28fb94e175e26e77c428151a6e67336f6d0c8eb0abb2ce",
++    "9a16920200c69f6507bdf7ed94ede32b3f1dd36158e32be35159b1ac9fe25f0e",
++];
++pub const DEVICES: [&str; 2] = [
++    "55f714cd9cebfc84d1af03d515373e851704c0f1a87ce1d7b84cd4cffb2e69bb",
++    "a227497b8c0e9029a96b668939cc3ccc96d7a42f054c47927f486d4ca3d305f8",
++];
++pub const CONTEXT: &str = "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810";
++pub fn future_ids() -> [[u8; 16]; 2] {
++    [600u64, 601].map(|n| {
++        let mut id = [0; 16];
++        id[0] = 0xfa;
++        id[8..].copy_from_slice(&n.to_be_bytes());
++        id
++    })
++}
++pub struct Expected {
++    pub local: usize,
++    pub c: old::Id,
++    pub accounts: [old::Id; 2],
++    pub devices: [old::Id; 2],
++    pub sid: String,
++    pub next: [u64; 2],
++    pub native_generation: u64,
++    pub native_hash: String,
++}
++impl Expected {
++    pub fn production(local: usize) -> Result<Self> {
++        Ok(Self {
++            local,
++            c: state::parse_id(CONTEXT)?,
++            accounts: [state::parse_id(ACCOUNTS[0])?, state::parse_id(ACCOUNTS[1])?],
++            devices: [state::parse_id(DEVICES[0])?, state::parse_id(DEVICES[1])?],
++            sid: "TflibOtoo5vbulwTkVuDsE6DrSVTFMHdGT2ZHDDx+oE".into(),
++            next: [512, 18],
++            native_generation: [517, 88][local],
++            native_hash: [
++                "6c50ea198a9d1c9fc6338c873a7bcda7d169c421d32d65fbe5369c3695c2d247",
++                "e6e4abc55d1216a3514b40261005d6eb29e9fdecbc0312a78bddfc21fccccf1f",
++            ][local]
++                .into(),
++        })
++    }
++    pub fn scope(&self, scope: &wire::VerifiedExistingScope1) -> Result<()> {
++        ensure!(
++            scope.c() == self.c && scope.sid() == self.sid,
++            "original context/SID"
++        );
++        for role in 0..2 {
++            ensure!(
++                scope.peers()[role].certificate().account_id().as_bytes() == &self.accounts[role]
++                    && scope.peers()[role].certificate().device_id().as_bytes()
++                        == &self.devices[role],
++                "original account/device/role"
++            );
++        }
++        Ok(())
++    }
++    pub fn text(&self, role: usize, n: u64) -> ([u8; 16], String) {
++        let mut request = [0; 16];
++        if role == 1 && n == 17 {
++            request[0] = 0xfa;
++            request[8..].copy_from_slice(&9001u64.to_be_bytes());
++            return (
++                request,
++                "frozen B may send17 while indexed A own lane is exhausted".into(),
++            );
++        }
++        request[..8].copy_from_slice(&(if role == 0 { 2u64 } else { 1 }).to_be_bytes());
++        request[8..].copy_from_slice(&n.to_be_bytes());
++        (
++            request,
++            format!("OD1/{}/{n}/Привет", if role == 0 { "two" } else { "one" }),
++        )
++    }
++}
++pub fn literal(path: &Path) -> Result<String> {
++    let text = path.to_str().context("Unicode drive path")?;
++    let text = text
++        .strip_prefix(r"\\?\")
++        .unwrap_or(text)
++        .replace('/', r"\");
++    ensure!(
++        text.len() > 3
++            && text.as_bytes()[1] == b':'
++            && text.as_bytes()[2] == b'\\'
++            && !text[3..].split('\\').any(|s| s.is_empty()
++                || s == "."
++                || s == ".."
++                || s.contains(':')
++                || s.ends_with(['.', ' '])),
++        "literal drive path"
++    );
++    Ok(text)
++}
++fn exact(path: &Path, expected: &Path) -> Result<()> {
++    ensure!(
++        literal(path)? == literal(expected)?,
++        "fixed original path mismatch"
++    );
++    Ok(())
++}
++fn existing(path: &Path, directory: bool, cap: u64) -> Result<()> {
++    use std::os::windows::fs::MetadataExt;
++    for component in path.ancestors() {
++        let meta = std::fs::symlink_metadata(component)?;
++        ensure!(
++            meta.file_attributes() & 0x400 == 0,
++            "original reparse input"
++        );
++    }
++    let meta = std::fs::metadata(path)?;
++    ensure!(
++        meta.is_dir() == directory
++            && if directory {
++                true
++            } else {
++                meta.is_file() && meta.len() > 0 && meta.len() <= cap
++            },
++        "original existing input kind/cap"
++    );
++    Ok(())
++}
++pub struct Prepared {
++    pub profile: Profile3,
++    pub config: db::migration7::MigrationConfig,
++    pub profile_raw: Vec<u8>,
++    pub config_raw: Vec<u8>,
++}
++pub fn prepare(base: &Path, local: usize) -> Result<Prepared> {
++    let expected = Path::new(STATE).join(if local == 0 { "two" } else { "one" });
++    exact(base, &expected)?;
++    let profile_path = base.join("indexed.profile");
++    let config_path = base.join("migration.json");
++    for path in [
++        &profile_path,
++        &config_path,
++        &base.join("state/state-vault.key"),
++    ] {
++        existing(path, false, 64 * 1024)?;
++    }
++    existing(
++        &base.join("state/state-vault.redb"),
++        false,
++        64 * 1024 * 1024,
++    )?;
++    let profile_raw = std::fs::read(&profile_path)?;
++    let config_raw = std::fs::read(&config_path)?;
++    // Deserialize and validate all path/identity fields BEFORE Profile3::load or
++    // any key/database loader. The held raw baseline pins these original bytes.
++    let profile: Profile3 = serde_json::from_slice(&profile_raw)?;
++    let config: db::migration7::MigrationConfig = serde_json::from_slice(&config_raw)?;
++    exact(&profile.state_dir, &base.join("state"))?;
++    exact(&profile.ipc_file, &base.join("indexed.ipc"))?;
++    exact(&profile.locator_directory, &base.join("indexed.locators"))?;
++    exact(&config.output_profile, &profile_path)?;
++    exact(&config.control_ipc_file, &profile.ipc_file)?;
++    exact(&config.locator_directory, &profile.locator_directory)?;
++    ensure!(
++        profile.account == ACCOUNTS[local]
++            && profile.device == DEVICES[local]
++            && profile.enabled_contexts == [CONTEXT]
++            && profile.logical_quota == config.logical_quota
++            && profile.physical_capacity == config.physical_capacity,
++        "original profile/config identity/quotas"
++    );
++    existing(&profile.state_dir, true, 0)?;
++    let checked = Profile3::load(&profile_path)?;
++    ensure!(
++        serde_json::to_vec(&checked)? == serde_json::to_vec(&profile)?,
++        "profile preflight/readback drift"
++    );
++    Ok(Prepared {
++        profile,
++        config,
++        profile_raw,
++        config_raw,
++    })
++}
++pub fn open(prepared: &Prepared, lease: StateDirectoryLock) -> Result<store::L1Repository> {
++    let p = &prepared.profile;
++    let config = db::migration7::MigrationConfig {
++        output_profile: std::fs::canonicalize(&prepared.config.output_profile)?,
++        control_ipc_file: p.ipc_file.clone(),
++        locator_directory: p.locator_directory.clone(),
++        logical_quota: p.logical_quota,
++        physical_capacity: p.physical_capacity,
++    };
++    let repo = store::L1Repository::open_ready(
++        lease,
++        db::ExpectedOwner {
++            account: state::parse_id(&p.account)?,
++            claim: state::parse_id(&p.claim)?,
++        },
++        state::parse_id(&p.device)?,
++        config,
++    )?;
++    ensure!(
++        repo.source_id() == state::parse_id(&p.source_id)?
++            && repo.migration_id() == state::parse_id(&p.migration_id)?
++            && repo.config_revision() == p.config_revision,
++        "stored original profile origin/config"
++    );
++    Ok(repo)
++}
+diff --git a/apps/kilogram-cli/tests/support/s53_cold/session.rs b/apps/kilogram-cli/tests/support/s53_cold/session.rs
+new file mode 100644
+index 0000000..c0f2750
+--- /dev/null
++++ b/apps/kilogram-cli/tests/support/s53_cold/session.rs
+@@ -0,0 +1,522 @@
++//! One fixed, explicitly activated held session. Never selected by focused tests.
++use super::*;
++use kilogram_state::{
++    StateDirectoryLock,
++    verification_lock::{ExistingStateLockInputs, FileIdentity},
++};
++use sha2::{Digest as _, Sha256};
++use std::{
++    fs::{self, File, OpenOptions},
++    io::{BufRead, BufReader, Read, Write},
++    os::windows::{fs::OpenOptionsExt, io::AsRawHandle, process::CommandExt},
++    process::{Child, ChildStdin, Command, Stdio},
++    sync::mpsc::{self, Receiver},
++    thread::{self, JoinHandle},
++};
++
++fn sha(raw: &[u8]) -> String {
++    format!("{:x}", Sha256::digest(raw))
++}
++fn public(path: &Path, cap: u64) -> Result<Vec<u8>> {
++    use std::os::windows::fs::MetadataExt;
++    for parent in path.ancestors() {
++        ensure!(
++            fs::symlink_metadata(parent)?.file_attributes() & 0x400 == 0,
++            "input reparse ancestor"
++        );
++    }
++    let mut file = OpenOptions::new()
++        .read(true)
++        .share_mode(1)
++        .custom_flags(0x0020_0000)
++        .open(path)?;
++    let before = file.metadata()?;
++    ensure!(
++        before.is_file() && before.file_attributes() & 0x400 == 0 && before.len() <= cap,
++        "bounded no-follow input"
++    );
++    let mut raw = Vec::new();
++    Read::by_ref(&mut file)
++        .take(cap + 1)
++        .read_to_end(&mut raw)?;
++    let after = file.metadata()?;
++    ensure!(
++        raw.len() as u64 <= cap
++            && raw.len() as u64 == before.len()
++            && before.len() == after.len()
++            && before.last_write_time() == after.last_write_time(),
++        "bounded stable input read"
++    );
++    Ok(raw)
++}
++fn private(name: &str, value: &impl serde::Serialize, cap: usize) -> Result<()> {
++    ensure!(
++        ["typed.private.json", "failure.private.json"].contains(&name),
++        "fixed private receipt name"
++    );
++    let raw = serde_json::to_vec(value)?;
++    ensure!(raw.len() <= cap, "private typed receipt cap");
++    let mut file = OpenOptions::new()
++        .write(true)
++        .create_new(true)
++        .share_mode(0)
++        .open(Path::new(fixed::EVIDENCE).join(name))?;
++    file.write_all(&raw)?;
++    file.sync_all()?;
++    Ok(())
++}
++struct Worker {
++    child: Child,
++    input: Option<ChildStdin>,
++    events: Receiver<Result<Vec<u8>, String>>,
++    pump: Option<JoinHandle<()>>,
++    error_pump: Option<JoinHandle<std::result::Result<(), String>>>,
++    transcript: File,
++    transcript_bytes: usize,
++    nonce: String,
++    source: String,
++    frames: usize,
++    until: Instant,
++    stderr: PathBuf,
++}
++impl Worker {
++    fn new(
++        source: String,
++        assembly: String,
++        decision: &str,
++        ticks: u64,
++        until: Instant,
++    ) -> Result<Self> {
++        let mut random = [0; 16];
++        getrandom::fill(&mut random)?;
++        let nonce = state::hex(&random);
++        let stderr = Path::new(fixed::EVIDENCE).join("worker.stderr.private.log");
++        let mut error = OpenOptions::new()
++            .write(true)
++            .create_new(true)
++            .share_mode(0)
++            .open(&stderr)?;
++        let transcript = OpenOptions::new()
++            .write(true)
++            .create_new(true)
++            .share_mode(0)
++            .open(Path::new(fixed::EVIDENCE).join("worker.control.private.jsonl"))?;
++        let mut child = Command::new(fixed::SHELL)
++            .args([
++                "-NoLogo",
++                "-NoProfile",
++                "-NonInteractive",
++                "-OutputFormat",
++                "Text",
++                "-File",
++            ])
++            .arg(Path::new(fixed::WORKSPACE).join("scripts/invoke-migration-s53-cold-b-worker.ps1"))
++            .args([
++                "-AssemblySha256",
++                &assembly,
++                "-SourceSha256",
++                &source,
++                "-DecisionSha256",
++                decision,
++                "-WorkDeadlineTimestamp",
++                &ticks.to_string(),
++            ])
++            .creation_flags(0x0800_4000)
++            .stdin(Stdio::piped())
++            .stdout(Stdio::piped())
++            .stderr(Stdio::piped())
++            .spawn()?;
++        let input = child.stdin.take().context("worker stdin")?;
++        let output = child.stdout.take().context("worker stdout")?;
++        let mut error_pipe = child.stderr.take().context("worker stderr")?;
++        let (sender, events) = mpsc::sync_channel(16);
++        let error_sender = sender.clone();
++        let error_pump = thread::spawn(move || {
++            let capture = (|| -> std::result::Result<(), String> {
++                let mut scratch = [0u8; 8192];
++                let mut total = 0;
++                loop {
++                    let n = error_pipe.read(&mut scratch).map_err(|_| "stderr read")?;
++                    if n == 0 {
++                        break;
++                    }
++                    if n > 131072 - total {
++                        return Err("stderr cap".into());
++                    }
++                    error.write_all(&scratch[..n]).map_err(|_| "stderr write")?;
++                    total += n;
++                }
++                error.sync_all().map_err(|_| "stderr sync")?;
++                Ok(())
++            })();
++            if let Err(ref reason) = capture {
++                let _ = error.sync_all();
++                let _ = error_sender.try_send(Err(reason.clone()));
++            }
++            capture
++        });
++        let pump = thread::spawn(move || {
++            let mut reader = BufReader::new(output);
++            for _ in 0..16 {
++                let mut frame = Vec::with_capacity(4097);
++                let event = match reader.by_ref().take(4097).read_until(b'\n', &mut frame) {
++                    Ok(0) => Err("EOF".into()),
++                    Ok(_) if frame.len() > 4096 || frame.last() != Some(&b'\n') => {
++                        Err("frame cap".into())
++                    }
++                    Ok(_) => Ok(frame),
++                    Err(_) => Err("pipe read".into()),
++                };
++                let end = event.is_err();
++                if sender.send(event).is_err() || end {
++                    return;
++                }
++            }
++            let _ = sender.send(Err("frame count".into()));
++        });
++        Ok(Self {
++            child,
++            input: Some(input),
++            events,
++            pump: Some(pump),
++            error_pump: Some(error_pump),
++            transcript,
++            transcript_bytes: 0,
++            nonce,
++            source,
++            frames: 0,
++            until,
++            stderr,
++        })
++    }
++    fn common(&self, kind: &str) -> Value {
++        json!({"kind":kind,"version":1,"nonce":self.nonce,"source_sha256":self.source,"attempt":fixed::ATTEMPT})
++    }
++    fn send(&mut self, frame: &Value) -> Result<()> {
++        readers::check(self.until)?;
++        self.frames += 1;
++        let raw = serde_json::to_vec(frame)?;
++        ensure!(
++            self.frames <= 16 && raw.len() < 4096,
++            "outgoing protocol cap"
++        );
++        let input = self.input.as_mut().context("worker stdin closed")?;
++        input.write_all(&raw)?;
++        input.write_all(b"\n")?;
++        input.flush()?;
++        Ok(())
++    }
++    fn receive(&mut self, kind: &str) -> Result<Value> {
++        let left = self
++            .until
++            .checked_duration_since(Instant::now())
++            .context("worker deadline")?;
++        let raw = self
++            .events
++            .recv_timeout(left)
++            .context("worker bounded receive")?
++            .map_err(anyhow::Error::msg)?;
++        self.frames += 1;
++        ensure!(self.frames <= 16, "incoming protocol count");
++        self.transcript_bytes = self
++            .transcript_bytes
++            .checked_add(raw.len())
++            .context("control transcript overflow")?;
++        ensure!(self.transcript_bytes <= 16 * 4096, "control transcript cap");
++        self.transcript.write_all(&raw)?;
++        self.transcript.sync_all()?;
++        let frame: Value = serde_json::from_slice(&raw)?;
++        ensure!(
++            frame["version"] == 1
++                && frame["nonce"] == self.nonce
++                && frame["source_sha256"] == self.source
++                && frame["attempt"] == fixed::ATTEMPT,
++            "worker binding"
++        );
++        ensure!(frame["kind"] == kind, "worker phase refused");
++        Ok(frame)
++    }
++    fn reap(&mut self) -> Result<i32> {
++        self.input.take();
++        let end = (Instant::now() + Duration::from_secs(3)).min(self.until);
++        let status = loop {
++            if let Some(status) = self.child.try_wait()? {
++                break status;
++            }
++            readers::check(end)?;
++            thread::sleep(Duration::from_millis(5));
++        };
++        while self.pump.as_ref().is_some_and(|p| !p.is_finished()) {
++            readers::check(end)?;
++            thread::sleep(Duration::from_millis(5));
++        }
++        if let Some(p) = self.pump.take() {
++            p.join().map_err(|_| anyhow::anyhow!("stdout pump panic"))?;
++        }
++        while self.error_pump.as_ref().is_some_and(|p| !p.is_finished()) {
++            readers::check(end)?;
++            thread::sleep(Duration::from_millis(5));
++        }
++        if let Some(p) = self.error_pump.take() {
++            p.join()
++                .map_err(|_| anyhow::anyhow!("stderr pump panic"))?
++                .map_err(anyhow::Error::msg)?;
++        }
++        ensure!(
++            fs::metadata(&self.stderr)?.len() <= 131072,
++            "worker stderr cap"
++        );
++        status.code().context("worker native exit")
++    }
++}
++impl Drop for Worker {
++    fn drop(&mut self) {
++        self.input.take();
++        if !matches!(self.child.try_wait(), Ok(Some(_))) {
++            let _ = self.child.kill();
++            let end = Instant::now() + Duration::from_secs(1);
++            while Instant::now() < end && !matches!(self.child.try_wait(), Ok(Some(_))) {
++                thread::sleep(Duration::from_millis(5));
++            }
++        }
++        if self.pump.as_ref().is_some_and(|p| p.is_finished())
++            && let Some(p) = self.pump.take()
++        {
++            let _ = p.join();
++        }
++        if self.error_pump.as_ref().is_some_and(|p| p.is_finished())
++            && let Some(p) = self.error_pump.take()
++        {
++            let _ = p.join();
++        }
++        let _ = self.transcript.sync_all();
++    }
++}
++
++fn identities(path: &Path, directory: bool) -> Result<FileIdentity> {
++    let file = OpenOptions::new()
++        .access_mode(0)
++        .share_mode(3)
++        .custom_flags(0x0220_0000)
++        .open(path)?;
++    let meta = file.metadata()?;
++    ensure!(meta.is_dir() == directory, "typed input kind");
++    Ok(FileIdentity::from_file(&file)?)
++}
++fn artifact() -> Result<(String, String)> {
++    let base = Path::new(fixed::WORKSPACE).join("target/verification/s53-cold-worker");
++    let source = std::env::var("KILOGRAM_S53_COLD_SOURCE_SHA256")?;
++    let assembly = std::env::var("KILOGRAM_S53_COLD_ASSEMBLY_SHA256")?;
++    ensure!(
++        source.len() == 64
++            && assembly.len() == 64
++            && sha(&public(&base.join("worker.cs"), 256 * 1024)?) == source
++            && sha(&public(&base.join("worker.dll"), 4 * 1024 * 1024)?) == assembly,
++        "reviewed materialized artifacts"
++    );
++    Ok((source, assembly))
++}
++
++#[test]
++fn cold_b_private_one_session() -> Result<()> {
++    // Fixed opt-in is checked before any original private path/stat/open. The
++    // root-approved outer guardian owns E creation, process tree and deadline.
++    ensure!(
++        std::env::var("KILOGRAM_S53_COLD_ATTEMPT")? == fixed::ATTEMPT,
++        "root-dispatched exact private selector"
++    );
++    for name in [
++        "KILOGRAM_TEST_OD1_SCHEDULE",
++        "KILOGRAM_TEST_OD1_CLOCK_FILE",
++        "KILOGRAM_TEST_OD1_PRIMARY_PAUSE_FILE",
++        "KILOGRAM_TEST_MIGRATION_PAUSE_FILE",
++    ] {
++        ensure!(
++            std::env::var_os(name).is_none(),
++            "private inherited test hook"
++        );
++    }
++    let (source, assembly) = artifact()?;
++    let decision = std::env::var("KILOGRAM_S53_COLD_DECISION_SHA256")?;
++    ensure!(
++        decision.len() == 64 && decision.bytes().all(|b| b.is_ascii_hexdigit()),
++        "reviewed invocation decision hash"
++    );
++    let absolute = std::env::var("KILOGRAM_S53_COLD_UNTIL_UNIX_MS")?.parse::<u128>()?;
++    let now = std::time::SystemTime::now()
++        .duration_since(std::time::UNIX_EPOCH)?
++        .as_millis();
++    ensure!(
++        absolute > now && absolute - now <= 210_000,
++        "common absolute work deadline"
++    );
++    let until = Instant::now() + Duration::from_millis((absolute - now) as u64);
++    let ticks = std::env::var("KILOGRAM_S53_COLD_DEADLINE_TICKS")?.parse::<u64>()?;
++    let mut inputs = Vec::new();
++    let mut held = Vec::new();
++    let mut locks = Vec::new();
++    for side in ["two", "one"] {
++        readers::check(until)?;
++        let root = Path::new(fixed::STATE).join(side).join("state");
++        let path = root.join(".kilogram-state.lock");
++        let dir = identities(&root, true)?;
++        let lock = identities(&path, false)?;
++        let input = ExistingStateLockInputs::open_existing(&root, dir, lock)?;
++        held.push(Some(StateDirectoryLock::adopt_existing_no_recovery(
++            input.try_clone()?,
++        )?));
++        locks.push(json!({"handle":input.borrow_lock_handle().as_raw_handle()as usize as u64,"path":fs::canonicalize(&root)?.join(".kilogram-state.lock"),"volume":lock.volume_serial_number,"index":lock.file_index}));
++        inputs.push(input);
++    }
++    let mut worker = Worker::new(source, assembly, &decision, ticks, until)?;
++    let mut bind = worker.common("bind");
++    bind["parent_pid"] = json!(std::process::id());
++    bind["locks"] = json!(locks);
++    worker.send(&bind)?;
++    let baseline = worker.receive("baseline")?;
++    ensure!(
++        baseline["core"]["baseline_completed"] == true && baseline["core"]["slots_released"] == 0,
++        "held pre-open equality ACK"
++    );
++    let mut repositories: Vec<Option<store::L1Repository>> = vec![None, None];
++    let mut b0 = Vec::new();
++    let mut b1 = Vec::new();
++    let mut release_attempted = false;
++    let typed = (|| -> Result<()> {
++        let prepared = [
++            fixed::prepare(&Path::new(fixed::STATE).join("two"), 0)?,
++            fixed::prepare(&Path::new(fixed::STATE).join("one"), 1)?,
++        ];
++        let mut proofs = [Vec::new(), Vec::new()];
++        for (role, name) in ["a.authority", "b.authority"].into_iter().enumerate() {
++            proofs[role] = public(&Path::new(fixed::PROOF).join(name), 16384)?;
++            ensure!(
++                proofs[role].len() == 100
++                    && sha(&proofs[role])
++                        == [
++                            "6ff24b4dd8e598b1c1b8ea0c3466a75f276753a34b387ff9cb69d373c5a0d912",
++                            "3f0b172d5f8eb4a8a43e82856d666768ca71593612d4bcb011bb41e691004dc9"
++                        ][role],
++                "original R proof byte pin"
++            );
++        }
++        release_attempted = true;
++        worker.send(&worker.common("release-slots"))?;
++        let released = worker.receive("slots")?;
++        ensure!(
++            released["core"]["slots_released"] == 4,
++            "exact selective slot ACK"
++        );
++        for role in 0..2 {
++            readers::check(until)?;
++            let lease = held[role].take().context("actual adopted lease")?;
++            repositories[role] = Some(fixed::open(&prepared[role], lease)?);
++        }
++        for role in 0..2 {
++            b0.push(readers::b0(
++                repositories[role].as_mut().context("open repo")?,
++                &prepared[role].profile_raw,
++                &prepared[role].config_raw,
++                &fixed::Expected::production(role)?,
++                &proofs,
++                until,
++            )?);
++        }
++        for (role, repository) in repositories.iter_mut().enumerate() {
++            let expected = fixed::Expected::production(role)?;
++            let repo = repository.as_mut().context("open repo")?;
++            let first = readers::full(repo, &expected, &proofs, until)?;
++            let second = readers::full(repo, &expected, &proofs, until)?;
++            ensure!(
++                first.digest == second.digest
++                    && first.history_digest == second.history_digest
++                    && first.text_count == 528,
++                "B1 complete logical repeat"
++            );
++            b1.push(json!({"digest":first.digest,"history":first.history_digest,"texts":first.text_count,"pages":first.pages}));
++        }
++        for role in 0..2 {
++            let base = Path::new(fixed::STATE).join(if role == 0 { "two" } else { "one" });
++            let profile_after = public(&base.join("indexed.profile"), 64 * 1024)?;
++            let config_after = public(&base.join("migration.json"), 64 * 1024)?;
++            let after = readers::b0(
++                repositories[role].as_mut().context("open repo")?,
++                &profile_after,
++                &config_after,
++                &fixed::Expected::production(role)?,
++                &proofs,
++                until,
++            )?;
++            ensure!(after == b0[role], "B0 unchanged after B1");
++        }
++        private(
++            "typed.private.json",
++            &json!({"b0_before_after":b0,"b1_readback":b1,"both_open_same_session":true}),
++            8 * 1024 * 1024,
++        )?;
++        Ok(())
++    })();
++    for role in 0..2 {
++        if let Some(repo) = repositories[role].take() {
++            held[role] = Some(repo.verification_close_to_held_lease());
++        }
++    }
++    let lease_count = held.iter().filter(|x| x.is_some()).count();
++    if let Err(error) = &typed {
++        private(
++            "failure.private.json",
++            &json!({"phase":"typed","error":format!("{error:#}"),"actual_rust_leases_retained":lease_count,"no_restore":true}),
++            65536,
++        )?;
++    }
++    // Pre-loader refusal still advances the already-bound worker through its
++    // exact release/recapture path, with typed_ok=false and no logical success.
++    if !release_attempted {
++        worker.send(&worker.common("release-slots"))?;
++        worker.receive("slots")?;
++    }
++    let mut d0 = readers::Digest::new(b"B0-pair");
++    d0.value(&b0)?;
++    let mut d1 = readers::Digest::new(b"B1-pair");
++    d1.value(&b1)?;
++    let mut complete = worker.common("typed-complete");
++    complete["typed_ok"] = json!(typed.is_ok());
++    complete["leases_held"] = json!(lease_count);
++    complete["b0"] = json!(d0.finish());
++    complete["b1"] = json!(d1.finish());
++    worker.send(&complete)?;
++    let final_frame = worker.receive("final")?;
++    worker.send(&worker.common("finish"))?;
++    let done = worker.receive(if typed.is_ok() { "done" } else { "refused" })?;
++    let exit = worker.reap()?;
++    ensure!(
++        done["transport_cleanup_ok"] == true
++            && done["transport_handles_after"] == 0
++            && done["core"]["remaining_owned_handles"] == 0
++            && done["core"]["cleanup_unknown"] == false,
++        "actual worker/Core cleanup"
++    );
++    for lease in held.into_iter().flatten() {
++        lease.release_adopted()?;
++    }
++    drop(inputs);
++    // Public output contains only aggregate digests/pinned public identities.
++    ensure!(
++        typed.is_ok(),
++        "typed reader failure; protected failure receipt retained"
++    );
++    ensure!(
++        lease_count == 2
++            && exit == 0
++            && final_frame["typed_ok"] == true
++            && final_frame["both_actual_rust_leases_retained"] == true
++            && final_frame["core"]["final_verified"] == true
++            && final_frame["core"]["hash_passes"] == 8,
++        "combined typed/physical success"
++    );
++    println!(
++        "cold_b_public={}",
++        json!({"attempt":fixed::ATTEMPT,"accounts":fixed::ACCOUNTS,"devices":fixed::DEVICES,"context":fixed::CONTEXT,"b0":b0,"b1":b1,"physical":final_frame["core"],"private_receipts":final_frame["private_receipts"],"cleanup":done["core"],"worker_exit":exit})
++    );
++    Ok(())
++}
+diff --git a/apps/kilogram-cli/tests/support/s53_cold/checks.rs b/apps/kilogram-cli/tests/support/s53_cold/checks.rs
+new file mode 100644
+index 0000000..be3c062
+--- /dev/null
++++ b/apps/kilogram-cli/tests/support/s53_cold/checks.rs
+@@ -0,0 +1,156 @@
++use super::*;
++#[path = "fixture.rs"]
++mod fixture;
++
++#[test]
++fn cold_b1_small_readers_and_exact_negatives() -> Result<()> {
++    // Positive controls precede every negative; only two real Text events.
++    let until = Instant::now() + Duration::from_secs(100);
++    let mut fixture = fixture::small()?;
++    for local in 0..2 {
++        let repo = &mut fixture.repositories[local];
++        let expected = &fixture.expected[local];
++        let before = readers::b0(
++            repo,
++            &fixture.profiles[local],
++            &fixture.configs[local],
++            expected,
++            &fixture.proofs,
++            until,
++        )?;
++        let first = readers::full(repo, expected, &fixture.proofs, until)?;
++        let second = readers::full(repo, expected, &fixture.proofs, until)?;
++        ensure!(
++            first.digest == second.digest
++                && first.history_digest == second.history_digest
++                && first.text_count == 2
++                && first.pages == 1,
++            "complete logical repeat"
++        );
++        let after = readers::b0(
++            repo,
++            &fixture.profiles[local],
++            &fixture.configs[local],
++            expected,
++            &fixture.proofs,
++            until,
++        )?;
++        ensure!(before == after, "B0 full readback");
++        let scope = readers::scope(repo, 0, local)?;
++        let raw = repo.event_at(0, 0, 1)?.context("positive source")?;
++        let parsed = old::Event::parse(&raw, scope.verified.peers()[0].certificate().device_id())?;
++        let (auth, _) = readers::credential(repo, parsed.core.author_auth)?;
++        let source = readers::verified_source(&scope.verified, &raw, &auth, 0, 1)?;
++        let receipt = repo.receipt(0, 0, 1)?.context("positive receipt")?;
++        let v = old::decode(&receipt, 1024)?;
++        let reference = v.fields(2)?[0].fields(8)?[7].fixed()?;
++        let (receiver, _) = readers::credential(repo, reference)?;
++        readers::verified_receipt(&scope.verified, &source, &receipt, &receiver)?;
++        let mut altered = receipt.clone();
++        let end = altered.len() - 1;
++        altered[end] ^= 1;
++        wire::ParsedReceipt1::parse(&altered)?; // Parsing succeeds; signature must fail.
++        ensure!(
++            readers::verified_receipt(&scope.verified, &source, &altered, &receiver).is_err(),
++            "altered receipt signature refused"
++        );
++        let mut fields = v.fields(2)?.to_vec();
++        let mut body = fields[0].fields(8)?.to_vec();
++        body[4] = old::u(2);
++        fields[0] = old::a(body);
++        let binding = old::encode(&old::a(fields), 1024)?;
++        wire::ParsedReceipt1::parse(&binding)?;
++        let error = readers::verified_receipt(&scope.verified, &source, &binding, &receiver)
++            .err()
++            .context("changed receipt binding accepted")?;
++        ensure!(
++            error.to_string().contains("pre-Q Receipt1 source/receiver"),
++            "exact receipt binding premise"
++        );
++        ensure!(
++            readers::verified_receipt(&scope.verified, &source, &receipt, &auth).is_err(),
++            "wrong receipt auth refused"
++        );
++        let account = scope.verified.peers()[0].certificate().account_id();
++        readers::authority(&fixture.proofs[0], &fixture.proofs[0], account)?;
++        let error = readers::authority(&fixture.proofs[1], &fixture.proofs[0], account)
++            .err()
++            .context("wrong account accepted")?;
++        ensure!(
++            error.to_string() == "authority account",
++            "exact account premise"
++        );
++        let mut invalid = fixture.proofs[0].clone();
++        let last = invalid.len() - 1;
++        invalid[last] ^= 1;
++        ensure!(
++            readers::authority(&invalid, &fixture.proofs[0], account).is_err(),
++            "invalid authority signature"
++        );
++        let peer = 1 - local;
++        let (id, text) = expected.text(peer, 1);
++        let event = repo.event_at(0, peer as u8, 1)?.context("peer source")?;
++        let event = old::Event::parse(
++            &event,
++            scope.verified.peers()[peer].certificate().device_id(),
++        )?;
++        ensure!(
++            repo.request(0, id)?.is_none(),
++            "positive peer source has no local request"
++        );
++        readers::local_request(local, peer, None, event.id()?, &text)?;
++        let absent = repo.request(0, fixed::future_ids()[local])?;
++        readers::absent_request(absent.as_ref())?;
++        let present = store::L1Request {
++            queue_sequence: Some(1),
++            event: None,
++            text_hash: [3; 32],
++        };
++        let error = readers::absent_request(Some(&present))
++            .err()
++            .context("future request accepted")?;
++        ensure!(
++            error.to_string() == "future local request present",
++            "exact future-request premise"
++        );
++        println!(
++            "cold_b1_small local={local} texts={} pages={} b0={} full={} receipt_signature_refused=true receipt_binding_refused=true wrong_auth_refused=true invalid_authority_refused=true wrong_account_refused=true peer_without_request=true future_request_refused=true",
++            first.text_count, first.pages, before, first.digest
++        );
++    }
++    let original = fixture.proofs[0].clone();
++    // Genuine Root-signed revision2 floor, revoking an unrelated synthetic ID.
++    let root = kilogram_identity::AccountRootState::create(
++        Path::new(fixed::WORKSPACE)
++            .join(".tmp/C-s53-cold-b1-synthetic")
++            .join(format!("floor-{}", std::process::id())),
++    )?;
++    let old = root.authority_snapshot()?.encode()?;
++    root.revoke_device(
++        kilogram_identity::DeviceIdentity::from_secret_bytes([193; 32]).device_id(),
++    )?;
++    let new = root.authority_snapshot()?.encode()?;
++    readers::authority(&new, &old, root.account_id())?;
++    let error = readers::authority(&old, &new, root.account_id())
++        .err()
++        .context("stale floor accepted")?;
++    ensure!(
++        error.to_string() == "authority rollback",
++        "exact rollback premise"
++    );
++    ensure!(
++        fixture.proofs[0] == original,
++        "original fixture proof unchanged"
++    );
++    // Database close happens before the actual adopted-or-normal test lease is
++    // returned; retaining the value is independently exercised here.
++    for repo in fixture.repositories {
++        let lease = repo.verification_close_to_held_lease();
++        let error = kilogram_state::StateDirectoryLock::acquire(lease.root())
++            .err()
++            .context("returned lease released early")?;
++        let _ = error;
++        drop(lease);
++    }
++    Ok(())
++}
+diff --git a/apps/kilogram-cli/tests/support/s53_cold/fixture.rs b/apps/kilogram-cli/tests/support/s53_cold/fixture.rs
+new file mode 100644
+index 0000000..18aa3d8
+--- /dev/null
++++ b/apps/kilogram-cli/tests/support/s53_cold/fixture.rs
+@@ -0,0 +1,293 @@
++//! Small genuine L1 fixture: reviewed Pair construction/admission/activation
++//! reused from ordered_dialog/repair_tests.rs; two texts, no exhausted fixture.
++use super::*;
++use kilogram_cli::ordered_dialog::{
++    admin,
++    engine::{self, Engine, Lease},
++    handshake,
++};
++use kilogram_identity::{AccountId, AccountRootState};
++use kilogram_protocol::ordered_dialog_v1::{self as wire, Frame, Id, a, b, u};
++use kilogram_state::{OrderedVault, StateDirectoryLock};
++pub(super) struct Pair {
++    pub(super) _tmp: tempfile::TempDir,
++    pub(super) accounts: [PathBuf; 2],
++    pub(super) a: Engine,
++    pub(super) b: Engine,
++    pub(super) c: Id,
++    pub(super) binding: Id,
++}
++impl Pair {
++    pub(super) fn new_in(parent: &std::path::Path) -> Result<Self> {
++        Self::from_temp(
++            tempfile::Builder::new()
++                .prefix("genuine-l1-")
++                .tempdir_in(parent)?,
++        )
++    }
++    fn from_temp(tmp: tempfile::TempDir) -> Result<Self> {
++        let mut stores = Vec::new();
++        for i in 0..2 {
++            let owner = tmp.path().join(format!("owner{i}"));
++            AccountRootState::create(&owner)?;
++            let root = tmp.path().join(format!("device{i}"));
++            admin::enroll(StateDirectoryLock::acquire(&root)?, &owner, None)?;
++            let store = OrderedVault::open(StateDirectoryLock::acquire(root)?)?;
++            stores.push((admin::credentials(&store)?.cert.device_id(), owner, store));
++        }
++        stores.sort_by_key(|(id, _, _)| *id);
++        let (_, owner_b, mut sb) = stores.pop().context("B")?;
++        let (_, owner_a, mut sa) = stores.pop().context("A")?;
++        let ca = admin::credentials(&sa)?;
++        let cb = admin::credentials(&sb)?;
++        let now = engine::now()?;
++        let (c, invitation) =
++            admin::create_context(&sa, &owner_a, &cb.raw, cb.cert.account_id(), now)?;
++        let (_, complete) = admin::import_context(
++            &mut sb,
++            Some(&owner_b),
++            &invitation,
++            ca.cert.account_id(),
++            now,
++        )?;
++        admin::import_context(&mut sa, None, &complete, cb.cert.account_id(), now)?;
++        Ok(Self {
++            _tmp: tmp,
++            accounts: [owner_a, owner_b],
++            a: Engine::new(sa)?,
++            b: Engine::new(sb)?,
++            c,
++            binding: [0; 32],
++        })
++    }
++    fn pair_with_refs(&self, refs: [Id; 2], binding: Id) -> Result<Vec<u8>> {
++        let mut hellos = Vec::new();
++        for (role, engine) in [&self.a, &self.b].into_iter().enumerate() {
++            let spec = engine.spec(self.c)?;
++            let body = a([
++                b(self.c),
++                u(role as u64),
++                b([role as u8; 32]),
++                b([1 - role as u8; 32]),
++                b(admin::random::<32>()?),
++                a([u(1)]),
++                a([u(1)]),
++                b(admin::credentials(&engine.store)?.raw),
++                b(&spec.membership),
++                b(refs[role]),
++                b([7; 32]),
++            ]);
++            hellos.push(
++                Frame::signed(
++                    1,
++                    binding,
++                    admin::random::<16>()?,
++                    body,
++                    engine.device.identity(),
++                )?
++                .raw()?,
++            );
++        }
++        let t = handshake::transcript(binding, &hellos[0], &hellos[1])?;
++        let certs = self.a.spec(self.c)?.cert_refs()?;
++        let proofs = [&self.a, &self.b]
++            .into_iter()
++            .map(|e| {
++                Frame::signed(
++                    2,
++                    binding,
++                    [1; 16],
++                    a([b(t), b(self.c), u(1), u(1), b(certs[0]), b(certs[1])]),
++                    e.device.identity(),
++                )
++                .and_then(|f| f.raw())
++            })
++            .collect::<wire::Result<Vec<_>>>()?;
++        handshake::initial_pair(
++            t,
++            hellos[0].clone(),
++            hellos[1].clone(),
++            proofs[0].clone(),
++            proofs[1].clone(),
++        )
++    }
++    pub(super) fn admit(&mut self) -> Result<Vec<u8>> {
++        self.binding = admin::random()?;
++        for e in [&mut self.a, &mut self.b] {
++            e.policy(self.c)?;
++            e.leases.insert(
++                self.c,
++                Lease {
++                    binding: self.binding,
++                    generation: 1,
++                    deadline: engine::now()? + 300,
++                },
++            );
++        }
++        let consent = admin::required(&self.a.store, &admin::consent_path(self.c))?;
++        self.pair_with_refs([wire::hash(handshake::CONSENT, &consent); 2], self.binding)
++    }
++    pub(super) fn activate(&mut self, pair: &[u8]) -> Result<()> {
++        let offer = self.a.ensure_offer(self.c, pair, self.binding)?;
++        let grant = self.b.grant(self.c, &offer, pair, self.binding)?;
++        let init = self.a.init(self.c, &grant, self.binding)?;
++        let confirm = self.b.confirm(self.c, &init, self.binding)?;
++        let ready_a = self.a.receive_confirm(self.c, &confirm, self.binding)?;
++        let ready_b = self.b.ready(self.c, &ready_a, self.binding)?;
++        self.a.ready(self.c, &ready_b, self.binding)?;
++        Ok(())
++    }
++}
++
++pub struct Small {
++    pub repositories: Vec<store::L1Repository>,
++    pub profiles: Vec<Vec<u8>>,
++    pub configs: Vec<Vec<u8>>,
++    pub expected: Vec<fixed::Expected>,
++    pub proofs: [Vec<u8>; 2],
++}
++pub fn small() -> Result<Small> {
++    let parent = Path::new(fixed::WORKSPACE).join(".tmp/C-s53-cold-b1-synthetic");
++    std::fs::create_dir_all(&parent)?;
++    let mut pair = Pair::new_in(&parent)?;
++    let initial = pair.admit()?;
++    pair.activate(&initial)?;
++    for role in 0..2 {
++        let mut id = [0; 16];
++        id[..8].copy_from_slice(&(if role == 0 { 2u64 } else { 1 }).to_be_bytes());
++        id[8..].copy_from_slice(&1u64.to_be_bytes());
++        let text = format!("OD1/{}/1/Привет", if role == 0 { "two" } else { "one" });
++        let (sender, receiver) = if role == 0 {
++            (&mut pair.a, &mut pair.b)
++        } else {
++            (&mut pair.b, &mut pair.a)
++        };
++        sender.queue(pair.c, id, &text)?;
++        let event = sender
++            .materialize_one(pair.c, pair.binding)?
++            .context("small actual Text")?;
++        let frame = sender.deliver_frame(pair.c, &[event], pair.binding, id)?;
++        let result = receiver.accept_data_frame(pair.c, &frame)?;
++        ensure!(
++            result.error.is_none() && result.readable == 1,
++            "small actual receive"
++        );
++        let (ack, ordinals) = receiver
++            .ack_intents(pair.c, pair.binding)?
++            .context("small actual ACK")?;
++        sender.accept_ack_frame(pair.c, &ack)?;
++        receiver.mark_ack_intents(pair.c, pair.binding, &ordinals, 2)?;
++    }
++    let proofs = [
++        AccountRootState::load(&pair.accounts[0])?
++            .authority_snapshot()?
++            .encode()?,
++        AccountRootState::load(&pair.accounts[1])?
++            .authority_snapshot()?
++            .encode()?,
++    ];
++    let c = pair.c;
++    let base = pair._tmp.keep();
++    let mut repositories = Vec::new();
++    let mut profiles = Vec::new();
++    let mut configs = Vec::new();
++    let mut expected = Vec::new();
++    for (local, engine) in [pair.a, pair.b].into_iter().enumerate() {
++        let root = engine.store.root().to_path_buf();
++        let cred = admin::credentials(&engine.store)?;
++        let account = AccountId::from_bytes(*cred.cert.account_id().as_bytes());
++        let device = cred.cert.device_id();
++        drop(engine);
++        let path = base.join(format!("{local}.profile"));
++        let config = db::migration7::MigrationConfig {
++            logical_quota: [512 * 1024 * 1024; 2],
++            physical_capacity: 2 * 1024 * 1024 * 1024,
++            output_profile: path.clone(),
++            control_ipc_file: base.join(format!("{local}.ipc")),
++            locator_directory: base.join(format!("{local}.locators")),
++        };
++        kilogram_cli::ordered_dialog::storage_migration::upgrade(
++            StateDirectoryLock::acquire(&root)?,
++            account,
++            device,
++            &config,
++            false,
++            None,
++        )?;
++        let profile = Profile3::load(&path)?;
++        let mut repo = store::L1Repository::open_ready(
++            StateDirectoryLock::acquire(&root)?,
++            db::ExpectedOwner {
++                account: state::parse_id(&profile.account)?,
++                claim: state::parse_id(&profile.claim)?,
++            },
++            state::parse_id(&profile.device)?,
++            db::migration7::MigrationConfig {
++                output_profile: path.canonicalize()?,
++                ..config.clone()
++            },
++        )?;
++        // Fresh synthetic migration only: mirror Owner7::new's saved initialization
++        // without constructing an owner/device secret service or starting a network.
++        let spec = kilogram_cli::ordered_dialog::handshake::Spec::parse(&repo.spec(0)?)?;
++        let accounts = spec
++            .peers
++            .each_ref()
++            .map(|p| *p.cert.account_id().as_bytes());
++        let mut pins = Vec::new();
++        for account in accounts {
++            let raw = repo.authority(account)?;
++            let authority = kilogram_identity::AccountAuthoritySnapshot::decode_and_verify(&raw)?;
++            pins.push(store::L1Authority {
++                account,
++                revision: authority.revision(),
++                raw,
++            });
++        }
++        repo.initialize(vec![accounts], pins)?;
++        for _ in 0..4 {
++            if repo.metadata(0)?.request_index_ready {
++                break;
++            }
++            repo.commit(store::L1Operation::PrepareRequests { context: 0 }, None)?;
++        }
++        ensure!(
++            repo.metadata(0)?.request_index_ready,
++            "small saved request index ready"
++        );
++        repo.commit(store::L1Operation::InitializeHistory { context: 0 }, None)?;
++        let scope = readers::scope(&mut repo, 0, local)?;
++        let snapshot = repo.snapshot(0)?;
++        expected.push(fixed::Expected {
++            local,
++            c,
++            accounts: scope
++                .verified
++                .peers()
++                .each_ref()
++                .map(|p| *p.certificate().account_id().as_bytes()),
++            devices: scope
++                .verified
++                .peers()
++                .each_ref()
++                .map(|p| *p.certificate().device_id().as_bytes()),
++            sid: scope.verified.sid().into(),
++            next: [2, 2],
++            native_generation: scope.head.native_generation,
++            native_hash: state::hex(&wire::hash(
++                state::NATIVE_TAG,
++                &snapshot.native.context("small opaque Native")?,
++            )),
++        });
++        profiles.push(std::fs::read(path)?);
++        configs.push(serde_json::to_vec(&config)?);
++        repositories.push(repo);
++    }
++    Ok(Small {
++        repositories,
++        profiles,
++        configs,
++        expected,
++        proofs,
++    })
++}
+diff --git a/scripts/build-migration-s53-cold-b-worker.ps1 b/scripts/build-migration-s53-cold-b-worker.ps1
+new file mode 100644
+index 0000000..52d1b78
+--- /dev/null
++++ b/scripts/build-migration-s53-cold-b-worker.ps1
+@@ -0,0 +1,37 @@
++[CmdletBinding()]
++param()
++$ErrorActionPreference='Stop'
++$w=Split-Path -Parent $PSScriptRoot
++$out=Join-Path $w 'target/verification/s53-cold-worker'
++if(Test-Path -LiteralPath $out){throw 'Materialized artifact collision; preserve previous build before a new explicit attempt'}
++$paths=@($PSCommandPath,(Join-Path $PSScriptRoot 'migration-s53-cold-preservation.ps1'),(Join-Path $PSScriptRoot 'migration-s53-typed-lock-worker.ps1'),(Join-Path $PSScriptRoot 'migration-s53-held-preservation.cs'),(Join-Path $PSScriptRoot 'migration-s53-cold-b-private.cs'),(Join-Path $PSScriptRoot 'migration-s53-root-copy.ps1'),(Join-Path $PSScriptRoot 'invoke-migration-s53-cold-b-worker.ps1'))
++$core=[IO.File]::ReadAllBytes($paths[1])
++if($core.Length -ne 82999 -or (Get-FileHash -LiteralPath $paths[1] -Algorithm SHA256).Hash.ToLowerInvariant() -cne 'eb166bce9b53da51863b605a06041e7100aca0d053f21c2b2ece09cf191b259f'){throw 'Frozen Core pin'}
++$m=[regex]::Match([Text.UTF8Encoding]::new($false,$true).GetString($core),'(?s)\$source = @\x27\r?\n(?<cs>.*?)\r?\n\x27@')
++if(-not $m.Success){throw 'Frozen heredoc boundary'}
++$original=$m.Groups['cs'].Value;$composed=$original
++$edits=@(
++ @('public sealed class Core : IDisposable {','public sealed partial class Core : IDisposable {'),
++ @('    void Empty(Owned item) {','    void Empty(Owned item) { if(IsHeldTyped(item)){HeldEmpty(item);return;}'),
++ @('    byte[] Hash(Owned item,long length) {','    byte[] Hash(Owned item,long length) { if(IsHeldTyped(item))return HeldHash(item,length);')
++)
++foreach($edit in $edits){if(([regex]::Matches($composed,[regex]::Escape($edit[0]))).Count -ne 1){throw 'Frozen sentinel count'};$composed=$composed.Replace($edit[0],$edit[1])}
++$restored=$composed;foreach($edit in $edits){$restored=$restored.Replace($edit[1],$edit[0])};if($restored -cne $original){throw 'Unexpected frozen edit'}
++$bodies=@();$headers=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
++foreach($pair in @(@($paths[2],'public static partial class S53TypedLockWorker {'),@($paths[5],'public static class S53RootNativeR38 {'))){
++ $text=[IO.File]::ReadAllText($pair[0]);$m=[regex]::Match($text,'(?s)Add-Type -(?:Language CSharp -TypeDefinition|TypeDefinition) @\x27\r?\n(?<cs>.*?)\r?\n\x27@')
++ if(-not $m.Success){throw 'Helper heredoc boundary'};$cs=$m.Groups['cs'].Value;$at=$cs.IndexOf($pair[1],[StringComparison]::Ordinal)
++ if($at -lt 0 -or ([regex]::Matches($cs,[regex]::Escape($pair[1]))).Count -ne 1){throw 'Helper type boundary'}
++ foreach($line in ($cs.Substring(0,$at) -split '\r?\n')){if([string]::IsNullOrWhiteSpace($line)){continue};if($line -cnotmatch '\Ausing [A-Za-z0-9_.]+;\z'){throw 'Helper header'};if(-not $original.Contains($line)){$null=$headers.Add($line)}}
++ $bodies+=@($cs.Substring($at))
++}
++$definition=(@($headers|Sort-Object)+@($composed)+@($bodies)+@([IO.File]::ReadAllText($paths[3]),[IO.File]::ReadAllText($paths[4]))) -join [Environment]::NewLine
++$hash=[Security.Cryptography.IncrementalHash]::CreateHash([Security.Cryptography.HashAlgorithmName]::SHA256)
++try{foreach($path in $paths){$bytes=[IO.File]::ReadAllBytes($path);if($bytes.Length -gt 256KB){throw 'Source cap'};$hash.AppendData([BitConverter]::GetBytes([long]$bytes.Length));$hash.AppendData($bytes)};$graph=[Convert]::ToHexString($hash.GetHashAndReset()).ToLowerInvariant()}finally{$hash.Dispose()}
++$null=New-Item -ItemType Directory -Path $out
++[IO.File]::WriteAllText((Join-Path $out 'worker.cs'),$definition,[Text.UTF8Encoding]::new($false))
++Add-Type -Language CSharp -TypeDefinition $definition -OutputAssembly (Join-Path $out 'worker.dll')
++function Pin([string]$path){[ordered]@{path=$path;bytes=(Get-Item -LiteralPath $path).Length;sha256=(Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()}}
++$receipt=[ordered]@{source_graph_sha256=$graph;sources=@($paths|ForEach-Object{Pin $_});composed=(Pin (Join-Path $out 'worker.cs'));assembly=(Pin (Join-Path $out 'worker.dll'));frozen_core_edits=3;private_activated=$false}
++[IO.File]::WriteAllText((Join-Path $out 'artifact.json'),($receipt|ConvertTo-Json -Depth 6),[Text.UTF8Encoding]::new($false))
++$receipt|ConvertTo-Json -Depth 6
+diff --git a/scripts/invoke-migration-s53-cold-b-worker.ps1 b/scripts/invoke-migration-s53-cold-b-worker.ps1
+new file mode 100644
+index 0000000..6456f15
+--- /dev/null
++++ b/scripts/invoke-migration-s53-cold-b-worker.ps1
+@@ -0,0 +1,24 @@
++[CmdletBinding()]
++param([Parameter(Mandatory)][ValidatePattern('\A[a-f0-9]{64}\z')][string]$AssemblySha256,
++ [Parameter(Mandatory)][ValidatePattern('\A[a-f0-9]{64}\z')][string]$SourceSha256,
++ [Parameter(Mandatory)][ValidatePattern('\A[a-f0-9]{64}\z')][string]$DecisionSha256,
++ [Parameter(Mandatory)][long]$WorkDeadlineTimestamp)
++$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
++$w='E:\AI-Projects\kilogram-p2p-messenger'
++$artifact="$w\target\verification\s53-cold-worker"
++$e="$w\.tmp\migration-s5-preparation-evidence\P2-s53-exhausted-cold-b-01-attempt-01"
++if([Environment]::ProcessPath -cne 'C:\Users\Paul\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe' -or $WorkDeadlineTimestamp -le [Diagnostics.Stopwatch]::GetTimestamp()){throw 'Fixed shell/deadline'}
++if((Get-FileHash -LiteralPath "$artifact\worker.dll" -Algorithm SHA256).Hash.ToLowerInvariant() -cne $AssemblySha256 -or (Get-FileHash -LiteralPath "$artifact\worker.cs" -Algorithm SHA256).Hash.ToLowerInvariant() -cne $SourceSha256){throw 'Reviewed assembly/source mismatch'}
++# Loads only the previously materialized assembly. No activation-time Add-Type.
++[Reflection.Assembly]::LoadFrom("$artifact\worker.dll")|Out-Null
++. "$w\scripts\migration-s53-root-copy.ps1"
++Assert-S53RootPrivateAcl $e $true
++$directory=[S53RootNativeR38]::DirectoryHandle($e)
++$creator=[Func[string,Microsoft.Win32.SafeHandles.SafeFileHandle]]{
++ param($path)
++ if($path -cne "$e\comparison.private.jsonl"){throw 'Exact private report path'}
++ $stream=[S53RootNativeR38]::NewFile($path)
++ try{$handle=[S53TypedLockWorker]::DuplicateOutput($stream.SafeFileHandle);Assert-S53RootPrivateAcl $path $false;return $handle}finally{$stream.Dispose()}
++}
++$acl=[Action[string]]{param($path) Assert-S53RootPrivateAcl $path ($path -ceq $e)}
++exit ([S53TypedLockWorker]::RunPrivate($SourceSha256,'P2-s53-exhausted-cold-b-01-attempt-01',$WorkDeadlineTimestamp,$directory,$creator,$acl,$DecisionSha256))
+diff --git a/scripts/migration-s53-cold-b-private.cs b/scripts/migration-s53-cold-b-private.cs
+new file mode 100644
+index 0000000..4045b86
+--- /dev/null
++++ b/scripts/migration-s53-cold-b-private.cs
+@@ -0,0 +1,90 @@
++// Fixed Cold-B wiring only. Frozen Core and synthetic factory are unchanged.
++namespace Kilogram.S53.ColdA {
++public sealed partial class Core {
++    public static Core HeldPrivate(long absoluteDeadline) {
++        if(absoluteDeadline<=Stopwatch.GetTimestamp())Refuse("deadline");
++        var spec=Spec.Production();
++        spec.Attempt="P2-s53-exhausted-cold-b-01-attempt-01";
++        spec.E=Spec.W+@"\.tmp\migration-s5-preparation-evidence\P2-s53-exhausted-cold-b-01-attempt-01";
++        spec.Caps.Output=48L*1024*1024;
++        var core=new Core(spec,absoluteDeadline);
++        core.budget.Record(8192);
++        core.heldTyped=new HashSet<Owned>(2);core.heldDbGuards=new List<SafeFileHandle>(2);core.heldOldSlots=new Owned[4];
++        core.heldOldDirectories=new Dictionary<Owned,FileInfo>(2);core.heldExplainedParents=new HashSet<string>(2,StringComparer.Ordinal);
++        core.heldChanges=new List<object>(4);core.heldDirectoryDeltas=new List<object>(2);core.heldFault="none";
++        return core;
++    }
++    public void WriteHeldPrivateReport(bool typedOk,bool bothLeases,string b0,string b1) {
++        if(receiptsStarted||disposed||outputDirectory==null||createRestricted==null||assertPrivateAcl==null)Fail("output_boundary");
++        receiptsStarted=true;assertPrivateAcl(spec.E);
++        using(var output=new Receipt(this,"comparison.private.jsonl",32L*1024*1024)) {
++            output.Record(w=>{w.WriteStartObject();w.WriteString("classification","cold-b-held-physical-final-observation");w.WriteString("attempt",spec.Attempt);
++                w.WriteBoolean("typed_ok",typedOk);w.WriteBoolean("both_actual_rust_leases_retained",bothLeases);
++                w.WriteString("b0",b0);w.WriteString("b1",b1);w.WritePropertyName("aggregate");JsonSerializer.Serialize(w,HeldReport());w.WriteEndObject();});
++            for(int i=0;i<rowCount;i++) {
++                Work();int index=i;
++                output.Record(w=>{var historical=rows[index];var current=heldFinalRows==null?null:heldFinalRows[index];
++                    w.WriteStartObject();w.WriteString("path",historical.Relative);w.WriteNumber("historical_bytes",historical.Bytes);w.WriteString("historical_sha256",Hex(historical.Hash));
++                    w.WritePropertyName("historical_s_stamp");Owned old=s.Files[index];for(int n=0;n<4;n++)if(heldOldSlots[n]!=null&&rows[index].Relative==HeldSlotPaths()[n].Substring(spec.S.Length+1).Replace('\\','/'))old=heldOldSlots[n];
++                    if(old==null)w.WriteNullValue();else JsonSerializer.Serialize(w,HeldStamp(old.Initial));
++                    w.WritePropertyName("final_s_stamp");if(s.Files[index]==null||s.Files[index].CloseAttempted)w.WriteNullValue();else JsonSerializer.Serialize(w,HeldStamp(s.Files[index].Initial));
++                    if(current==null){w.WriteNull("final_s_sha256");w.WriteNull("final_s_bytes");}else{w.WriteString("final_s_sha256",Hex(current.Hash));w.WriteNumber("final_s_bytes",current.Bytes);}
++                    w.WriteString("bkp_before_sha256",b.Files[index].BeforeHash==null?null:Hex(b.Files[index].BeforeHash));w.WriteString("bkp_after_sha256",b.Files[index].AfterHash==null?null:Hex(b.Files[index].AfterHash));w.WriteEndObject();});
++            }
++            // Persist full old/new slot stamps and directory stamps. The public
++            // delta_stamp_sha256 is not the only remaining representation.
++            for(int n=0;n<4;n++){int slot=n;output.Record(w=>{string path=HeldSlotPaths()[slot];string rel=path.Substring(spec.S.Length+1).Replace('\\','/');Row row;Owned final=null;if(expected.TryGetValue(rel,out row))final=s.Files[row.Index];
++                w.WriteStartObject();w.WriteString("slot",rel);w.WritePropertyName("historical_stamp");if(heldOldSlots[slot]==null)w.WriteNullValue();else JsonSerializer.Serialize(w,HeldStamp(heldOldSlots[slot].Initial));
++                w.WritePropertyName("final_stamp");if(final==null||final.CloseAttempted)w.WriteNullValue();else JsonSerializer.Serialize(w,HeldStamp(final.Initial));w.WriteEndObject();});}
++            foreach(var directory in heldOldDirectories)output.Record(w=>{w.WriteStartObject();w.WriteString("directory",directory.Key.Relative);w.WritePropertyName("historical_stamp");JsonSerializer.Serialize(w,HeldStamp(directory.Value));w.WritePropertyName("final_stamp");JsonSerializer.Serialize(w,HeldStamp(directory.Key.Initial));w.WriteEndObject();});
++            output.Complete();
++        }
++    }
++    public object PrivateReceiptPins(){return facts.PrivateReceiptDigests;}
++}
++}
++public static partial class S53TypedLockWorker {
++    sealed partial class Session {
++        internal int RunPrivate(long deadline,SafeFileHandle outputDirectory,Func<string,SafeFileHandle> creator,Action<string> verifier,string decision) {
++            Kilogram.S53.ColdA.Core core=null;string failure=null,b0=null,b1=null;int native=0;bool typedOk=false,both=false,reportAttempted=false;
++            try {
++                Need(attempt=="P2-s53-exhausted-cold-b-01-attempt-01","binding");BindInputs(false);
++                string root=@"E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-storage\l1-exhausted-observed-NCjBHb";
++                for(int n=0;n<2;n++){string actual=boundPaths[n];if(actual.StartsWith(@"\\?\",StringComparison.Ordinal))actual=actual.Substring(4);
++                    Need(actual==root+(n==0?@"\two\state\.kilogram-state.lock":@"\one\state\.kilogram-state.lock"),"binding");}
++                core=Kilogram.S53.ColdA.Core.HeldPrivate(deadline);
++                var transferred=outputDirectory;outputDirectory=null;core.BindOwnedOutput(transferred,creator,verifier,decision,source);
++                for(int n=0;n<2;n++){IntPtr raw=held[n];held[n]=IntPtr.Zero;core.AttachTypedLock(root+(n==0?@"\two\state\.kilogram-state.lock":@"\one\state\.kilogram-state.lock"),raw);}
++                phase="baseline";core.CaptureHeldBaseline();Send(new{kind="baseline",version=1,nonce,source_sha256=source,attempt,core=core.HeldReport()});
++                using(var d=Read()){Fields(d.RootElement,"kind","version","nonce","source_sha256","attempt");CheckCommon(d.RootElement,"release-slots");}
++                phase="release";core.ReleaseHeldSlots();Send(new{kind="slots",version=1,nonce,source_sha256=source,attempt,core=core.HeldReport()});
++                using(var d=Read()){var r=d.RootElement;Fields(r,"kind","version","nonce","source_sha256","attempt","typed_ok","leases_held","b0","b1");CheckCommon(r,"typed-complete");
++                    typedOk=r.GetProperty("typed_ok").GetBoolean();both=r.GetProperty("leases_held").GetInt32()==2;b0=r.GetProperty("b0").GetString();b1=r.GetProperty("b1").GetString();
++                    Need(!typedOk||(both&&Hex(b0,64)&&Hex(b1,64)),"binding");}
++                if(!typedOk)failure=both?"typed_reader_failed":"typed_open_lease_consumed";
++                phase="final";if(both)core.AuditHeldFinal();
++                reportAttempted=true;core.WriteHeldPrivateReport(typedOk,both,b0,b1);
++                Send(new{kind="final",version=1,nonce,source_sha256=source,attempt,typed_ok=typedOk,both_actual_rust_leases_retained=both,core=core.HeldReport(),private_receipts=core.PrivateReceiptPins()});
++                using(var d=Read()){Fields(d.RootElement,"kind","version","nonce","source_sha256","attempt");CheckCommon(d.RootElement,"finish");}
++            }catch(Refusal error){failure=error.Code;native=error.Native;}
++             catch(Exception error){failure=error.Data["colda_code"] as string??"internal";if(core!=null){core.HeldFailure(error);native=core.HeldNativeError();}}
++            finally {
++                // Preserve bounded partial observations before clearing hashes
++                // and historical stamps. A failed receipt never becomes PASS.
++                if(core!=null&&!reportAttempted)try{core.WriteHeldPrivateReport(typedOk,both,b0,b1);}catch{}
++                if(core!=null)try{core.HeldDispose();}catch{failure="cleanup";}
++                if(outputDirectory!=null)outputDirectory.Dispose();
++                for(int n=1;n>=0;n--)Close(ref held[n]);Close(ref parent);
++            }
++            bool clean=cleanup&&snapshotClosed&&parent==IntPtr.Zero&&held[0]==IntPtr.Zero&&held[1]==IntPtr.Zero&&(core==null||core.HeldCleanupOk());
++            if(!clean)failure="cleanup";
++            try{Send(new{kind=failure==null?"done":"refused",version=1,nonce,source_sha256=source,attempt,phase,code=failure,native_error=native,typed_ok=typedOk,both_actual_rust_leases_retained=both,transport_cleanup_ok=clean,transport_handles_after=(parent==IntPtr.Zero?0:1)+(held[0]==IntPtr.Zero?0:1)+(held[1]==IntPtr.Zero?0:1),core=core==null?null:core.HeldReport()});}catch{return 42;}
++            return failure==null&&typedOk&&both&&clean?0:40;
++        }
++    }
++    public static SafeFileHandle DuplicateOutput(SafeFileHandle input) {
++        IntPtr duplicate;NativeOutput(DuplicateHandle(GetCurrentProcess(),input.DangerousGetHandle(),GetCurrentProcess(),out duplicate,0,false,2));return new SafeFileHandle(duplicate,true);
++    }
++    static void NativeOutput(bool ok){if(!ok)throw new System.ComponentModel.Win32Exception(Marshal.GetLastWin32Error());}
++    public static int RunPrivate(string source,string attempt,long deadline,SafeFileHandle directory,Func<string,SafeFileHandle> creator,Action<string> verifier,string decision){return new Session(source,attempt).RunPrivate(deadline,directory,creator,verifier,decision);}
++}
+diff --git a/scripts/invoke-migration-s53-cold-b.ps1 b/scripts/invoke-migration-s53-cold-b.ps1
+new file mode 100644
+index 0000000..8f13503
+--- /dev/null
++++ b/scripts/invoke-migration-s53-cold-b.ps1
+@@ -0,0 +1,49 @@
++[CmdletBinding()]
++param([Parameter(Mandatory)][ValidatePattern('\A[a-f0-9]{64}\z')][string]$HarnessSha256,
++ [Parameter(Mandatory)][ValidatePattern('\A[a-f0-9]{64}\z')][string]$AssemblySha256,
++ [Parameter(Mandatory)][ValidatePattern('\A[a-f0-9]{64}\z')][string]$ComposedSha256,
++ [Parameter(Mandatory)][ValidatePattern('\A[a-f0-9]{64}\z')][string]$DecisionSha256)
++$ErrorActionPreference='Stop'
++$w='E:\AI-Projects\kilogram-p2p-messenger'
++$e="$w\.tmp\migration-s5-preparation-evidence\P2-s53-exhausted-cold-b-01-attempt-01"
++$exe="$w\target\verification\deps\kilogram-cli-test-migration_s53_cold-tests.exe"
++$dll="$w\target\verification\s53-cold-worker\worker.dll"
++$cs="$w\target\verification\s53-cold-worker\worker.cs"
++if([Environment]::ProcessPath -cne 'C:\Users\Paul\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe'){throw 'Fixed shell'}
++foreach($p in @(@($exe,$HarnessSha256),@($dll,$AssemblySha256),@($cs,$ComposedSha256))){if((Get-FileHash -LiteralPath $p[0] -Algorithm SHA256).Hash.ToLowerInvariant() -cne $p[1]){throw 'Reviewed image mismatch'}}
++# This source is submitted now; root separately activates its future F run.
++[Diagnostics.Process]::GetCurrentProcess().PriorityClass=[Diagnostics.ProcessPriorityClass]::BelowNormal
++. "$w\scripts\migration-s5-l1-deadline.ps1"
++$ticks=[Diagnostics.Stopwatch]::GetTimestamp()+210L*[Diagnostics.Stopwatch]::Frequency
++$utc=[DateTimeOffset]::UtcNow.AddSeconds(210).ToUnixTimeMilliseconds()
++$guard=[KilogramS5Deadline]::new(210,235)
++$code=1;$capture=$null;$child=$null;$created=$false;$phase='bootstrap';$output=$null;$errorLog=$null
++try {
++ [Reflection.Assembly]::LoadFrom($dll)|Out-Null
++ . "$w\scripts\migration-s53-root-copy.ps1"
++ # Existing parent only; never change its ACL or create a substitute parent.
++ $phase='new-e';$parent=[S53RootNativeR38]::DirectoryHandle([IO.Path]::GetDirectoryName($e))
++ try{New-S53RootDirectory $e {$script:created=$true}}finally{$parent.Dispose()}
++ Assert-S53RootPrivateAcl $e $true
++ $env:KILOGRAM_S53_COLD_ATTEMPT='P2-s53-exhausted-cold-b-01-attempt-01'
++ $env:KILOGRAM_S53_COLD_SOURCE_SHA256=$ComposedSha256;$env:KILOGRAM_S53_COLD_ASSEMBLY_SHA256=$AssemblySha256
++ $env:KILOGRAM_S53_COLD_DECISION_SHA256=$DecisionSha256;$env:KILOGRAM_S53_COLD_DEADLINE_TICKS=[string]$ticks;$env:KILOGRAM_S53_COLD_UNTIL_UNIX_MS=[string]$utc
++ $start=[Diagnostics.ProcessStartInfo]::new($exe);$start.UseShellExecute=$false;$start.CreateNoWindow=$true;$start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
++ foreach($name in @('KILOGRAM_TEST_OD1_SCHEDULE','KILOGRAM_TEST_OD1_CLOCK_FILE','KILOGRAM_TEST_OD1_PRIMARY_PAUSE_FILE','KILOGRAM_TEST_MIGRATION_PAUSE_FILE')){[void]$start.Environment.Remove($name)}
++ foreach($arg in @('session::cold_b_private_one_session','--exact','--nocapture','--test-threads=1')){$start.ArgumentList.Add($arg)}
++ $output=[S53RootNativeR38]::NewFile("$e\harness.stdout.private.log");$errorLog=[S53RootNativeR38]::NewFile("$e\harness.stderr.private.log")
++ $phase='harness';$child=[Diagnostics.Process]::Start($start);$guard.VerifyChild($child)
++ $capture=[S53RootCaptureR38]::new($child,$output,$errorLog)
++ while(-not $child.WaitForExit(50)){$guard.CheckWork();if($capture.Faulted){throw 'Bounded capture failure'}}
++ while(-not $capture.Completed){$guard.CheckWork();[Threading.Thread]::Sleep(10)}
++ $null=$capture.CloseCompleted();$capture=$null;$output=$null;$errorLog=$null;$child.Refresh();$code=$child.ExitCode
++} catch {
++ if($created){try{$reason=$_.Exception.ToString();if($reason.Length -gt 8192){$reason=$reason.Substring(0,8192)};Write-S53RootPrivate "$e\outer-failure.private.json" ([Text.UTF8Encoding]::new($false).GetBytes((@{phase=$phase;error=$reason;no_restore=$true}|ConvertTo-Json -Compress))) 65536}catch{}}
++ Write-Output 'cold_b_attempt_failed_or_unknown=true';$code=1
++}
++finally {
++ try{$guard.CleanupChildren(1000);$count=$guard.Children().Length;if($capture){if($capture.Completed){$null=$capture.CloseCompleted();$capture=$null;$output=$null;$errorLog=$null}else{$code=1}};if($output){$output.Dispose()};if($errorLog){$errorLog.Dispose()};if($child){$child.Dispose()};$guard.Finish();if($count -ne 0){$code=1};Write-Output ('owned_children_after='+$count)}catch{$code=1}
++ if($created){try{Write-S53RootPrivate "$e\result.private.json" ([Text.UTF8Encoding]::new($false).GetBytes((@{attempt=$env:KILOGRAM_S53_COLD_ATTEMPT;exit_code=$code;work_seconds=210;whole_seconds=235;no_restore=$true}|ConvertTo-Json -Compress)))}catch{$code=1}}
++}
++Write-Output ('native_exit='+$code)
++exit $code

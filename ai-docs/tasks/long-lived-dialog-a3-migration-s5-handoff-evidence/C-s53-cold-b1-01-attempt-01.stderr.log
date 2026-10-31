@@ -1,0 +1,1 @@
+Write-Error: The variable '$LASTEXITCODE' cannot be retrieved because it has not been set.

@@ -1,0 +1,568 @@
+{
+  "schema_version": 1,
+  "status": "B1-implementation-and-focused-checks-ready-for-root-review-not-activated-not-published",
+  "parent": "300d0c6afa59f17e7c6f8729f42c4c614d0609fa",
+  "source": [
+    {
+      "path": "Cargo.lock",
+      "bytes": 194192,
+      "sha256": "c92ea8b1ccc1f3c94eeb0f4c1f3fbaff0591aac672bab5f43ca215892a60b806",
+      "blob": "9d172d52345f8d334317d3f89f3ce4146fed0349"
+    },
+    {
+      "path": "apps/kilogram-cli/Cargo.toml",
+      "bytes": 3138,
+      "sha256": "442fccc90f1d113456e20f7fe5a9589183a128186f512d27e64fa3e39ac014dd",
+      "blob": "7aed9e4c8f444f0cd939ee42944b29f99ff688a2"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs",
+      "bytes": 14569,
+      "sha256": "e3fce00592826546530546559981b047a817f9e45c35ab2dab25cf0bd01caea0",
+      "blob": "9d1916f4077de67521240f724b9c5ca5ccd1bce2"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/verification_close.rs",
+      "bytes": 395,
+      "sha256": "1d2f6d35dcf6ebb400dbcb0036570426c69d5c5ec4566eaf1cd27795a2a29c5c",
+      "blob": "a2701ac021fd798c8389c817f6b3f7ac652ad6a1"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/migration_s53_cold.rs",
+      "bytes": 782,
+      "sha256": "2132136dcd7f03088e47c53af0c127c8cff23a64f7448e547e6fa345842dc53e",
+      "blob": "0fccea00199e5e91702e95ec576999c6052ae5eb"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/readers.rs",
+      "bytes": 15323,
+      "sha256": "c9ed7db609eb11ce89ca4b1a420caefa7a0e8f21e24ccd281dbc89004cc3538e",
+      "blob": "392412648bd0396599839556e08e5f5081b1d9f6"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/history.rs",
+      "bytes": 2559,
+      "sha256": "7194051eb9169b52eaa918b87793b9e5ce9817b12d2e57e693750c222b56871e",
+      "blob": "52298f94fa2e769a68d827a48387d0d972e4eafe"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/fixed.rs",
+      "bytes": 8193,
+      "sha256": "f797140af66148e9168d00bf4dfe5ed81c9293451a6e6e5b076d0a5d23d794f7",
+      "blob": "1d8084909f9c32668376e4da5323e098a4541db7"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/session.rs",
+      "bytes": 19924,
+      "sha256": "1a5354491052617f43330ce8e7514898fe1f9fb3397c11c8a46627c7beadfe61",
+      "blob": "c0f2750db3160e8b4ddd7bc5b00b0db00f4920a5"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/checks.rs",
+      "bytes": 6641,
+      "sha256": "4b691ae147ac98bff54d4b1d2a6f18a3ccb215d484331f0d6ef9934317f0bdab",
+      "blob": "be3c0624a824e779b17af6a4e60627968116d4d1"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/fixture.rs",
+      "bytes": 11065,
+      "sha256": "09c7effcca8a5e9d40fa89485954c48f467cd2fbd50d878fde37fa4e01ba332b",
+      "blob": "18aa3d80db1abd115a7d48c34734ba717c54aa8f"
+    },
+    {
+      "path": "scripts/build-migration-s53-cold-b-worker.ps1",
+      "bytes": 4145,
+      "sha256": "3624233f0519cb5525d7ce1da7c68c0bcaf9468ab8610e5ed8fa1dd65fe33514",
+      "blob": "52d1b789ebedf6e5c4f2b6ac3e1df9d4b72c0ad6"
+    },
+    {
+      "path": "scripts/invoke-migration-s53-cold-b-worker.ps1",
+      "bytes": 1969,
+      "sha256": "8dac99689f31eb29821f2cc83a9a0fecf958e4a36374ef85de3dedba733ee975",
+      "blob": "6456f154efefde3680286ea576d951bbbb41afe6"
+    },
+    {
+      "path": "scripts/migration-s53-cold-b-private.cs",
+      "bytes": 9393,
+      "sha256": "a88399a57110d3cdfe20193bb2f58068a51300aaa087ff7f99caaeb8f4904825",
+      "blob": "4045b861b6c387cc988ddbecee9a4608bab51e20"
+    },
+    {
+      "path": "scripts/invoke-migration-s53-cold-b.ps1",
+      "bytes": 4530,
+      "sha256": "c90bd6a79f58772045b1e60ab12383721b1cf85ad2918b4c27dedcf6324521ae",
+      "blob": "8f13503ba4818d910fc92028cf5e537fa93473ea"
+    }
+  ],
+  "introduced_patch": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01.introduced.patch",
+    "bytes": 91471,
+    "sha256": "6e88e03345a788fa34f872843a8f3fe01d8ab45909ad5f620a7f99383c6ad1ac",
+    "blob": "55c4f4b145971df9458cc5da458e8842a0cf9e1e"
+  },
+  "live1_introduced_hunk": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01.live1-introduced.patch",
+    "bytes": 620,
+    "sha256": "c6235beeb3ef14081deb9526e16668aab65cb2d067e2cf211c6c1f014417638d",
+    "blob": "346ed0d24dda8fc72e9a9b514a7fd8615fcc398d"
+  },
+  "live1": {
+    "prior_working_input": {
+      "path": ".tmp/C-s53-cold-b1-source-before/1.before",
+      "bytes": 14438,
+      "sha256": "3401379b7a9c634f16191d7383a5f700bd2299f74bead21958d0a687251af26e",
+      "blob": "9b1d599a8926b1ddfe7453e3f639b869077361b6"
+    },
+    "current_build_input_blob": "9d1916f4077de67521240f724b9c5ca5ccd1bce2",
+    "publication_candidate_head_plus_only_B1": {
+      "path": ".tmp/C-s53-cold-b1-source-before/live1.head-plus-b1",
+      "bytes": 13361,
+      "sha256": "1d6fcc369f9c8cbf270f71dfa7506a65f3ecc7551063f453f5ce60c1265a7c69",
+      "blob": "0ca3462f4374d5989b2891774091724daba1f738"
+    },
+    "publication_rule": "Stage only the supplied B1 cfg registration hunk relative to HEAD. Never stage entire dirty live1.rs. Preserve all older unpublished hunks."
+  },
+  "current_inputs": {
+    "count": 507,
+    "before_after_equal": true,
+    "before": "C-s53-cold-b1-01-attempt-06.inputs.before.json",
+    "after": "C-s53-cold-b1-01-attempt-06.inputs.after.json",
+    "scope": "All git-visible workspace Rust/C/Cargo source inputs plus listed worker/launcher/resource/deadline scripts; actual working inputs include older unpublished source changes. Not a claim that those changes belong to B1."
+  },
+  "images": [
+    {
+      "path": "target/verification/deps/kilogram-cli-test-migration_s53_cold-tests.exe",
+      "bytes": 17871360,
+      "sha256": "e31573a26d60a745e503ba28cb9ff22c24d46bd79c796450445dfec277051dd6"
+    },
+    {
+      "path": "target/verification/s53-cold-worker/worker.cs",
+      "bytes": 129239,
+      "sha256": "aac4840a7b948b3954faa247b0c6beac01a479385d62c40ff8023cf70c10b2a4"
+    },
+    {
+      "path": "target/verification/s53-cold-worker/worker.dll",
+      "bytes": 142848,
+      "sha256": "8b0fcaa118472474597d6150436f7a76bc4847b333a94c440da104fcde305369"
+    },
+    {
+      "path": "target/verification/s53-cold-worker/artifact.json",
+      "bytes": 2214,
+      "sha256": "c37340fb15ae2a78150df512ebf9c397bf399777942239487db919ae40aa5d93"
+    }
+  ],
+  "composition": {
+    "source_graph_sha256": "c8ebcbe54ae800c1e2e026579967a4943e35c35503d5941b0c9e8813fc172e88",
+    "sources": [
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\build-migration-s53-cold-b-worker.ps1",
+        "bytes": 4145,
+        "sha256": "3624233f0519cb5525d7ce1da7c68c0bcaf9468ab8610e5ed8fa1dd65fe33514"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-cold-preservation.ps1",
+        "bytes": 82999,
+        "sha256": "eb166bce9b53da51863b605a06041e7100aca0d053f21c2b2ece09cf191b259f"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-typed-lock-worker.ps1",
+        "bytes": 13379,
+        "sha256": "45f76ed97aa350cf3b06297d0e42be928c9e3326e96e8966c3cef0f9bc506646"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-held-preservation.cs",
+        "bytes": 20895,
+        "sha256": "b780c396e8971a70f132795959733161ffd8cd62bdb95b4e86f08df6ef76d618"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-cold-b-private.cs",
+        "bytes": 9393,
+        "sha256": "a88399a57110d3cdfe20193bb2f58068a51300aaa087ff7f99caaeb8f4904825"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-root-copy.ps1",
+        "bytes": 25596,
+        "sha256": "a3eefcc9dd4da8bdd9141d8731fc60feaf496d5d357047c0283b53dd8e6c3382"
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s53-cold-b-worker.ps1",
+        "bytes": 1969,
+        "sha256": "8dac99689f31eb29821f2cc83a9a0fecf958e4a36374ef85de3dedba733ee975"
+      }
+    ],
+    "composed": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\s53-cold-worker\\worker.cs",
+      "bytes": 129239,
+      "sha256": "aac4840a7b948b3954faa247b0c6beac01a479385d62c40ff8023cf70c10b2a4"
+    },
+    "assembly": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\s53-cold-worker\\worker.dll",
+      "bytes": 142848,
+      "sha256": "8b0fcaa118472474597d6150436f7a76bc4847b333a94c440da104fcde305369"
+    },
+    "frozen_core_edits": 3,
+    "private_activated": false
+  },
+  "verification": {
+    "focused03": {
+      "native_session": 98669,
+      "start_chunk": "727d82",
+      "final_chunk": "f0f840",
+      "exit": 0,
+      "test": "checks::cold_b1_small_readers_and_exact_negatives",
+      "passed": 1,
+      "failed": 0,
+      "seconds": 24.32,
+      "actual_scope": "One small genuine two-Text original L1 fixture; both repositories; no network. Other harnesses zero matches. No original private data.",
+      "positive_and_negative": [
+        "Both B0 before/after digests equal; both complete source/auth/Receipt1/projection/local-request/history digests repeated equal",
+        "Altered parseable receipt signature fails; altered source binding fails exact pre-Q Receipt1 source/receiver invariant; wrong receiver auth fails",
+        "Invalid authority signature and wrong authority account fail; valid Root-signed newer floor accepts old-to-new and rejects rollback exactly",
+        "Valid peer source has no local request index and is accepted",
+        "Actual local future request absent, explicit present L1Request fails exact future local request invariant",
+        "Returned close-to-held lease continues excluding acquire until drop"
+      ],
+      "image_note": "The focused03 EXE hash was not captured before later compilation; no retrospective image hash is claimed. Final06 pins identify the current reviewed future private image."
+    },
+    "final06": {
+      "native_session": 21875,
+      "start_chunk": "71a038",
+      "final_chunk": "d306f9",
+      "exit": 0,
+      "strict_affected_CLI_clippy": "PASS -D warnings --lib --test migration_s53_cold --features verification-s53-cold",
+      "strict_state_clippy": "PASS -D warnings --lib --features verification-state-lock-adoption",
+      "default_feature_compile": "PASS cargo check CLI --lib --no-default-features (also builds default state)",
+      "final_test_compile": "PASS locked/offline --no-run",
+      "stable_runner": "compiled-only; exact stable EXE staged; no runtime repeat",
+      "scoped_rustfmt": "PASS",
+      "owned_children_after": 0
+    },
+    "post_focused_changes": "Private proof/artifact no-follow capped reads; actual config/profile after-read; inherited test hook exclusion; iterator Clippy correction. B0 explicitly requires saved request_index_ready, already established/asserted by the same small fixture before focused03 snapshots.",
+    "source_self_review": [
+      "Readers borrow L1 repositories; no live controls, private Root load, Native constructor, initialization, commit or migration/resume in private path",
+      "Original signed scope independently reconstructed/verified from saved Spec/Head/Offer/Grant/InitialPair/genesis/Ready; original accounts/devices/context/SID checked",
+      "Four actual authority floors verify signatures/accounts/revisions and equal-revision encoding against exact pinned R proofs",
+      "All original genesis and Text signatures, lane/ordinal/previous chain, request/body convention, saved proof/auth bytes, opposite-receiver signed Receipt1 and exact historical B17 receipt byte hash verified",
+      "Only local authored requests required; future A600/B601 request/source/history absence checked; bounded <=32 rows/page <=32 pages <=4MiB authenticated pagination and repeated same-session digests",
+      "Actual original two adopted leases outlive successful DB close and final physical audit; consumed failed-open lease yields explicit failure and no successful both-lease final claim",
+      "Frozen Core remains byte-identical with only3 deterministic substitutions in materialized composition; synthetic factory unchanged, new fixed private factory shares approved absolute deadline",
+      "Full old/final changed-slot and directory stamps persisted through frozen bounded Receipt writer; private control transcript saved before expected-kind checks; stderr cap enforced while pumping",
+      "Restricted CreateNew E only; child environment removes exactly four historical test hooks; pinned source/DLL/harness loaded without activation-time compilation"
+    ]
+  },
+  "attempts": [
+    {
+      "attempt": "C-s53-cold-b1-01-attempt-01",
+      "start_utc": "2026-10-31T23:48:01.9251083+05:00",
+      "end_utc": "2026-10-31T23:48:03.6824949+05:00",
+      "whole_seconds": 1.7582789,
+      "outer_limit_seconds": 180,
+      "inner_work_whole": [
+        165,
+        175
+      ],
+      "timed_out": false,
+      "child_pid": 53812,
+      "exit_code": 1,
+      "offline": true,
+      "jobs": 2,
+      "priority": "BelowNormal"
+    },
+    {
+      "attempt": "C-s53-cold-b1-01-attempt-02",
+      "start_utc": "2026-10-31T23:48:20.2192711+05:00",
+      "end_utc": "2026-10-31T23:49:57.4905009+05:00",
+      "whole_seconds": 97.2724224,
+      "outer_limit_seconds": 180,
+      "inner_work_whole": [
+        165,
+        175
+      ],
+      "timed_out": false,
+      "child_pid": 31952,
+      "exit_code": 0,
+      "offline": true,
+      "jobs": 2,
+      "priority": "BelowNormal"
+    },
+    {
+      "attempt": "C-s53-cold-b1-01-attempt-03",
+      "start_utc": "2026-10-31T23:51:34.6969822+05:00",
+      "end_utc": "2026-10-31T23:53:00.7451747+05:00",
+      "whole_seconds": 86.0495571,
+      "outer_limit_seconds": 180,
+      "inner_work_whole": [
+        165,
+        175
+      ],
+      "timed_out": false,
+      "child_pid": 25936,
+      "exit_code": 0,
+      "offline": true,
+      "jobs": 2,
+      "priority": "BelowNormal"
+    },
+    {
+      "attempt": "C-s53-cold-b1-01-attempt-04",
+      "start_utc": "2026-10-31T23:56:16.2761718+05:00",
+      "end_utc": "2026-10-31T23:56:17.6242033+05:00",
+      "whole_seconds": 1.3488133,
+      "outer_limit_seconds": 180,
+      "inner_work_whole": [
+        165,
+        175
+      ],
+      "timed_out": false,
+      "child_pid": 32540,
+      "exit_code": 1,
+      "offline": true,
+      "jobs": 2,
+      "priority": "BelowNormal"
+    },
+    {
+      "attempt": "C-s53-cold-b1-01-attempt-05",
+      "start_utc": "2026-10-31T23:56:35.7877193+05:00",
+      "end_utc": "2026-10-31T23:57:07.6406697+05:00",
+      "whole_seconds": 31.854307,
+      "outer_limit_seconds": 180,
+      "inner_work_whole": [
+        165,
+        175
+      ],
+      "timed_out": false,
+      "child_pid": 17692,
+      "exit_code": 1,
+      "offline": true,
+      "jobs": 2,
+      "priority": "BelowNormal"
+    },
+    {
+      "attempt": "C-s53-cold-b1-01-attempt-06",
+      "start_utc": "2026-10-31T23:57:48.7912486+05:00",
+      "end_utc": "2026-10-31T23:58:22.1536394+05:00",
+      "whole_seconds": 33.3626715,
+      "outer_limit_seconds": 180,
+      "inner_work_whole": [
+        165,
+        175
+      ],
+      "timed_out": false,
+      "child_pid": 14024,
+      "exit_code": 0,
+      "offline": true,
+      "jobs": 2,
+      "priority": "BelowNormal"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-01.invocation.ps1",
+      "bytes": 1013,
+      "sha256": "7f0b9e6f3535e3bf806ca02a5dc5da67286062eda77b664bfd8ac88a9ac87471",
+      "blob": "2ae18a41c67e9ca7459077e17090a85ee605f3db"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-01.result.json",
+      "bytes": 393,
+      "sha256": "99f3b971e52d2cd179d5db7e34ca66d56d10aad915cf8dc91027e00d18bff822",
+      "blob": "c9a7378f4dcbd85d3539e179747280e7c42dbbad"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-01.stderr.log",
+      "bytes": 92,
+      "sha256": "df746ab573188c7a31d69dac8c16d3c41f43b733b08a3b475ca665a32de3b2ec",
+      "blob": "88e146725242f4557ac63236465431610128b44b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-01.stdout.log",
+      "bytes": 2240,
+      "sha256": "5a627309403a847a290e6819f363bc3c3494ed4f48373d714e9962daba26b9d4",
+      "blob": "c9fb21f3cbd6d28f862af73273345a9c759fe5f5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-02.invocation.ps1",
+      "bytes": 859,
+      "sha256": "f698826d67c5c7e953b404e147dbab2ebddc12f394ed70b628c4fd6a0aa0a806",
+      "blob": "8578dc5b41bca275ab5db19365a65304510aaca2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-02.result.json",
+      "bytes": 394,
+      "sha256": "231bde2ef2ef246e916ac84e02ee471fbc3b25732900c2e231d8c30fb282ae73",
+      "blob": "598fec4af002a16e2d491feb289faf085008d1db"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-02.stderr.log",
+      "bytes": 3970,
+      "sha256": "75bf991f97e6a55572e7590207312713b0f5b83570c70f66fd1d800d044d93e6",
+      "blob": "ba6aa332088d3e1b0119ed55057cbcf13e7911cd"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-02.stdout.log",
+      "bytes": 24,
+      "sha256": "f2f71f3390fa3c2b65763ffe145f7247352ebd9fba6b935d83e308de72cbea3e",
+      "blob": "69df15923d40d8c675d373ec3a26d692c1c6c187"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-03.invocation.ps1",
+      "bytes": 1799,
+      "sha256": "32b6ca61d177d44d246bb5072dd46f016a91aca9b900c2af70dbfa9847bb8a59",
+      "blob": "0417b39d97c7bff7f37a88e9b710a2aa050132ed"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-03.result.json",
+      "bytes": 394,
+      "sha256": "0ee574c46b94bf0f61cfb2ea553552800e659672943aa65b351df922946cc635",
+      "blob": "f3291438646c6b0ea726cd01c463096c90b5892f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-03.stderr.log",
+      "bytes": 173,
+      "sha256": "969cb969bc249300fea233bb208028473d0b7a73d4af04cf91caa6d5e67d9006",
+      "blob": "4fcba71358c3ab247cd3097dc5c14865719bf6f3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-03.stdout.log",
+      "bytes": 5763,
+      "sha256": "bc58c1bd07959142a5eeac184cd2623a946370682c70ad61d1dcc1cf7c4f19f3",
+      "blob": "c7e75dec5dff1d564368a0696406b1c67862983f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-04.invocation.ps1",
+      "bytes": 4302,
+      "sha256": "cd252546737c097827b5ea3f82491f6eab2c0eca7d2d6ca822e87ed05f0935b1",
+      "blob": "714633147303c211d703378d67fbc16f278b1d99"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-04.result.json",
+      "bytes": 393,
+      "sha256": "60426f5dbd9304d6e4ace2dbce375ebc423851a5cccbbfca853ce1f6bb244d99",
+      "blob": "b99acbcf51bad96cf02b1cb56baae32c2533c0a2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-04.stderr.log",
+      "bytes": 79,
+      "sha256": "0f26ab807715257ff580319cf6ccbdff35ab73a2457e035b7ba08d51ce0aa4ca",
+      "blob": "88f1c0555aa86503be70ef55612d0e8e2bb44f2d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-04.stdout.log",
+      "bytes": 24,
+      "sha256": "f2f71f3390fa3c2b65763ffe145f7247352ebd9fba6b935d83e308de72cbea3e",
+      "blob": "69df15923d40d8c675d373ec3a26d692c1c6c187"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-05.inputs.before.json",
+      "bytes": 86870,
+      "sha256": "831f5d2ddacbf866cd993037d92af43f39e4ba64abd6fe02d01e7ac759af554d",
+      "blob": "6ccb35485000ecdf128991fc6b057c4aa6923c36"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-05.invocation.ps1",
+      "bytes": 4378,
+      "sha256": "dc0d06ae55dd742f286272fc7b18e26bb00f646c5833bfba1b3f6c9d0182fd66",
+      "blob": "059f3c28f54f7d8a490c615a3276e62e324222be"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-05.result.json",
+      "bytes": 393,
+      "sha256": "713238396273db4bdd45f267d461638eac91e582cd027c21a2aebf0b56a926ad",
+      "blob": "1aaaa76bda21036d2deb9bd2060e4913ff5daee4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-05.stderr.log",
+      "bytes": 4074,
+      "sha256": "6262adf54bfd34140dbf25374ca3541be4af8e36ae8c724c1482c877d747681e",
+      "blob": "960023d4c5cb326aaa8970a8934f5aad17e7a073"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-05.stdout.log",
+      "bytes": 24,
+      "sha256": "f2f71f3390fa3c2b65763ffe145f7247352ebd9fba6b935d83e308de72cbea3e",
+      "blob": "69df15923d40d8c675d373ec3a26d692c1c6c187"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-06.images.json",
+      "bytes": 624,
+      "sha256": "0c223a8d48a3b3a8099135b407d0d8a805c2fbc6584de4c27c79719a95f378b6",
+      "blob": "e0d5d51f7ba74bdd25909f7c947797100b54de46"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-06.inputs.after.json",
+      "bytes": 86870,
+      "sha256": "dddb9a1e5864b6b204476afd491b90a365cb0f7f1293dddc563c002979ac3062",
+      "blob": "e1e956accc9fa8d4ed09ae4e9114cc6ab5c135bf"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-06.inputs.before.json",
+      "bytes": 86870,
+      "sha256": "dddb9a1e5864b6b204476afd491b90a365cb0f7f1293dddc563c002979ac3062",
+      "blob": "e1e956accc9fa8d4ed09ae4e9114cc6ab5c135bf"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-06.invocation.ps1",
+      "bytes": 4378,
+      "sha256": "ed029881e10e5fa712b9974e9b92ad7525c1062a0281ad2efecfea965c89ab8b",
+      "blob": "f889031db73c1592ab0844b7460fe4afbab984a3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-06.result.json",
+      "bytes": 394,
+      "sha256": "bc0a645ba785ebaab9629b73b264c0828cb337f18aff60432bb3f7fe394ea698",
+      "blob": "77cef5fdd6308b6a9a4d8422cb88dd7506b4f3d4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-06.stderr.log",
+      "bytes": 3742,
+      "sha256": "de7df4f62c32b5ab3c03be0ac8362a09daa23d36bd448fd63a525581a8c12bfb",
+      "blob": "d29654905a2284937a9af77c260d9a0f0c83e605"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b1-01-attempt-06.stdout.log",
+      "bytes": 1011,
+      "sha256": "4fa17218816c3d0930fcc2df7acaaa03e98f77833715814ecd9fc0ffadf18431",
+      "blob": "be2e9e98786ae5323a842474ae2ad79df5d4deb6"
+    }
+  ],
+  "failed_attempts": {
+    "attempt01": "FAIL wrapper LASTEXITCODE unset after successful materialization; Cargo not reached; initial3 artifacts archived/hash-preserved",
+    "attempt04": "FAIL optional missing .cargo/config.toml during input collection; checks and before sidecar not reached",
+    "attempt05": "FAIL strict Clippy needless_range_loop in new controller; before sidecar retained, after/images not created"
+  },
+  "proposed_private_plan": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/Cold-B-B1-combined-private-invocation.json",
+    "bytes": 6584,
+    "sha256": "83f0fef7d9dfc37f6d2cd35d7f4e592dc23df58064d351c2879cdcb8d278e9cd",
+    "blob": "3eb8dde08f2109d6bac1f0e13f6f1b81b198c5d3"
+  },
+  "limitations": [
+    "Original exhausted530 sources/528 Text/full pagination and actual backend/key effects have not been read or measured in B1; private selector not executed",
+    "Small fixture has2 Text rows and1 authenticated page per side, not a528-message calibration",
+    "Private worker/factory/ACL callbacks are compiled/materialized and source-reviewed here; fixed private integration remains unexecuted pending root activation",
+    "Two production logical digests would be measured before close; approved close-time DB changes have no independent post-close decrypt witness",
+    "No both-DB rename/delete matrix beyond accepted B0c coverage; no new large fixture, historical full-suite rerun, commit/push, G1 or S5.4"
+  ],
+  "budget": {
+    "allowance_C_seconds": 480,
+    "measured_C_seconds": 251.6460502,
+    "remaining_C_seconds": 228.3539498,
+    "F_seconds": 0,
+    "P_seconds": 0,
+    "root_start_S53_C": 2389.5134904,
+    "root_start_combined_C": 2976.9621013,
+    "proposed_root_reconciled_S53_C": 2641.1595406,
+    "proposed_root_reconciled_combined_C": 3228.6081515,
+    "ledger_changed_by_executor": false,
+    "last_after03_C_delta": 66.5657918
+  },
+  "boundaries": {
+    "private_S_O_BKP_R_E_access": false,
+    "index_empty": true,
+    "root_navigation_edits": false,
+    "product_runtime_changes": false,
+    "commit_push_started": false,
+    "all_own_test_sessions_completed": true,
+    "old_failed_evidence_preserved": true
+  },
+  "next": "Root review of exact introduced diff/current working inputs, final image/composition pins and proposed210/235/240 single combined private invocation. Root separately activates F and supplies prior decision SHA; no private load or publication until dispatch."
+}

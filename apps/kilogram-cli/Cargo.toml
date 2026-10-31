@@ -10,6 +10,12 @@ publish = false
 [features]
 default = []
 sync-v2-evidence = ["dep:ed25519-dalek"]
+verification-s53-cold = ["kilogram-state/verification-state-lock-adoption"]
+
+[[test]]
+name = "migration_s53_cold"
+path = "tests/migration_s53_cold.rs"
+required-features = ["verification-s53-cold"]
 
 [[bin]]
 name = "kilogram-sync-v2-evidence"
@@ -64,6 +70,7 @@ windows = { version = "0.62.2", features = ["Foundation_Collections", "Networkin
 
 [dev-dependencies]
 ed25519-dalek.workspace = true
+sha2.workspace = true
 kilogram-offline = { path = "../kilogram-offline" }
 
 [lints]

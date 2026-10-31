@@ -1,0 +1,122 @@
+{
+  "schema_version": 1,
+  "classification": "proposed-combined-Cold-B-invocation-for-root-review",
+  "activated": false,
+  "attempt": "P2-s53-exhausted-cold-b-01-attempt-01",
+  "entry": {
+    "path": "scripts/invoke-migration-s53-cold-b.ps1",
+    "bytes": 4530,
+    "sha256": "c90bd6a79f58772045b1e60ab12383721b1cf85ad2918b4c27dedcf6324521ae",
+    "blob": "8f13503ba4818d910fc92028cf5e537fa93473ea"
+  },
+  "shell": {
+    "path": "C:/Users/Paul/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe",
+    "bytes": 301368,
+    "sha256": "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139",
+    "blob": "2185ef59b21d8e1b93243699f4e0b8f0ee05cb25"
+  },
+  "deadline_helper": {
+    "path": "scripts/migration-s5-l1-deadline.ps1",
+    "bytes": 6038,
+    "sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45",
+    "blob": "b146ab3567653e7125a88a6f874ac606206ab3b4"
+  },
+  "native_outer_limit_seconds": 240,
+  "work_seconds": 210,
+  "whole_seconds": 235,
+  "retries": 0,
+  "lanes": 1,
+  "priority": "BelowNormal",
+  "network": false,
+  "rebuild_during_activation": false,
+  "selector": "session::cold_b_private_one_session",
+  "selector_arguments": [
+    "session::cold_b_private_one_session",
+    "--exact",
+    "--nocapture",
+    "--test-threads=1"
+  ],
+  "stable_harness": {
+    "path": "target/verification/deps/kilogram-cli-test-migration_s53_cold-tests.exe",
+    "bytes": 17871360,
+    "sha256": "e31573a26d60a745e503ba28cb9ff22c24d46bd79c796450445dfec277051dd6",
+    "blob": "e6537d3e7fc63db92062611b468b97aece23c070"
+  },
+  "composed": {
+    "path": "target/verification/s53-cold-worker/worker.cs",
+    "bytes": 129239,
+    "sha256": "aac4840a7b948b3954faa247b0c6beac01a479385d62c40ff8023cf70c10b2a4",
+    "blob": "19d00bb8e913615cf9ad56850934e26a0704197a"
+  },
+  "assembly": {
+    "path": "target/verification/s53-cold-worker/worker.dll",
+    "bytes": 142848,
+    "sha256": "8b0fcaa118472474597d6150436f7a76bc4847b333a94c440da104fcde305369",
+    "blob": "162b18ba2cd2c19f473e0f41f0180ca1cebe827d"
+  },
+  "artifact_receipt": {
+    "path": "target/verification/s53-cold-worker/artifact.json",
+    "bytes": 2214,
+    "sha256": "c37340fb15ae2a78150df512ebf9c397bf399777942239487db919ae40aa5d93",
+    "blob": "d91eaf9c06f16d43e4cea8f5c47e9db3ce092768"
+  },
+  "decision_argument": "The exact SHA256 of the separately issued prior root activation decision; root code/invocation review must precede it. No current F activation.",
+  "command_template": "& 'C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe' -NoProfile -NonInteractive -File 'E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s53-cold-b.ps1' -HarnessSha256 e31573a26d60a745e503ba28cb9ff22c24d46bd79c796450445dfec277051dd6 -AssemblySha256 8b0fcaa118472474597d6150436f7a76bc4847b333a94c440da104fcde305369 -ComposedSha256 aac4840a7b948b3954faa247b0c6beac01a479385d62c40ff8023cf70c10b2a4 -DecisionSha256 [root-issued-prior-activation-decision-sha256]",
+  "outer_rule": "Owned hidden shell process only; wait at most240s, then terminate that owned process tree and preserve all evidence. Record actual request-to-return/native exit once. The entry internal job is210/235s.",
+  "fixed_roles": {
+    "O": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-l1\\F-exhausted-origin-01",
+    "S": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb",
+    "BKP": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preserved\\F-exhausted-preservation-01",
+    "R_proof": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-admin\\P2-s53-exhausted-roots-01-attempt-01\\proof",
+    "E": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preparation-evidence\\P2-s53-exhausted-cold-b-01-attempt-01"
+  },
+  "before_private": "Verify entry/helpers/source/assembly/harness pins against reviewed receipt; clear four inherited test hooks only in child environment. Internal common deadline begins before E creation/private I/O. Existing parent only, restricted CreateNew E, collisions refuse.",
+  "phases": [
+    "two actual Rust typed no-create/no-recovery adoptions",
+    "worker duplicates actual handles; frozen Core locks/inventory/full held baseline",
+    "fixed profile/config preflight and pinned R proofs",
+    "release exact2 DB+2 key slots with actual READ/share3 DB guards",
+    "open_ready consumes adopted leases; B0-before both sides",
+    "all genesis+528 Text signatures/auth/projection/Receipt1/local requests and complete authenticated pages; repeat digests without reopen",
+    "B0-after actual config/profile bytes and all logical subset values",
+    "close DBs and recover successful actual leases",
+    "final8-total-pass physical delta audit under both leases",
+    "bounded private raw/typed/transcript reports, worker/Core cleanup/reap, fallible actual lease release, native final return"
+  ],
+  "physical_writes": [
+    "S exact two state-vault.redb existing repair/open/close",
+    "S exact two state-vault.key same-key platform rewrap plus loader-owned temporary lifecycle",
+    "restricted CreateNew receipts/logs in new fixed E"
+  ],
+  "forbidden": [
+    "O account/key/DB load or traversal",
+    "BKP typed open/write",
+    "Root secret load/signing",
+    "missing state/key/DB/lock creation",
+    "journal recovery",
+    "logical commits/initialization/migration/resume",
+    "Owner7/runtime/network/Native constructor",
+    "restore/rebaseline/retry/G1/S5.4"
+  ],
+  "cleanup_failure": "Failed open may consume its Rust lease: FAIL, no both-lease successful final claim. Reader failure with both leases attempts final observations with typed_ok=false; partial reports best-effort and bounded transcript retained. Timeouts never prove cleanup.",
+  "private_caps": {
+    "core_comparison_bytes": 33554432,
+    "typed_bytes": 8388608,
+    "controller_failure_bytes": 65536,
+    "worker_control_bytes": 65536,
+    "worker_stderr_bytes": 131072,
+    "outer_stdout_bytes": 131072,
+    "outer_stderr_bytes": 131072,
+    "outer_failure_bytes": 65536,
+    "result_bytes": 65536,
+    "aggregate_less_than_bytes": 50331648
+  },
+  "F_budget": {
+    "activated": false,
+    "proposed_seconds": 240,
+    "old_remaining_seconds": 64.3427433,
+    "shortfall_seconds": 175.6572567,
+    "root_internal_ceiling_decision_required": true,
+    "new_user_permission_required": false
+  }
+}

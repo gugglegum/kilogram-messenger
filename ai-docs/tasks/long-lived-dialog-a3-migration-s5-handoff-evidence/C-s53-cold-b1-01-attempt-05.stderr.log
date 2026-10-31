@@ -1,0 +1,50 @@
+    Checking windows-sys v0.52.0
+    Checking kilogram-mailbox v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox)
+    Checking kilogram-ticket-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-ticket-store)
+    Checking tempfile v3.27.0
+    Checking rustls-platform-verifier v0.7.0
+    Checking kilogram-identity v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-identity)
+    Checking reqwest v0.13.4
+    Checking winapi-util v0.1.11
+    Checking kilogram-sync-capability v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-sync-capability)
+    Checking kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+    Checking kilogram-peer-capability-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-capability-store)
+    Checking kilogram-peer-reenrollment v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment)
+    Checking kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+    Checking kilogram-peer-reenrollment-acceptance v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-acceptance)
+    Checking kilogram-peer-reenrollment-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-runtime)
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Checking iroh-relay v1.1.0
+    Checking kilogram-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-store)
+    Checking kilogram-peer-history-recovery v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery)
+    Checking iroh v1.1.0
+    Checking kilogram-peer-history-recovery-consent v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-consent)
+    Checking kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+    Checking kilogram-session v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-session)
+    Checking kilogram-runtime-ipc v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-runtime-ipc)
+    Checking kilogram-publication-conflict v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-publication-conflict)
+    Checking kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+    Checking kilogram-rollout v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-rollout)
+    Checking kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+    Checking kilogram-peer-reenrollment-staging v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-staging)
+    Checking kilogram-mailbox-provisioning v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-provisioning)
+    Checking kilogram-mailbox-client v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-client)
+    Checking kilogram-offline v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-offline)
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: the loop variable `role` is used to index `repositories`
+   --> apps\kilogram-cli\tests\support\s53_cold\session.rs:425:21
+    |
+425 |         for role in 0..2 {
+    |                     ^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+    = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator and enumerate()
+    |
+425 -         for role in 0..2 {
+425 +         for (role, <item>) in repositories.iter_mut().enumerate().take(2) {
+    |
+
+error: could not compile `kilogram-cli` (test "migration_s53_cold") due to 1 previous error
+Exception: Strict affected CLI Clippy exit 101

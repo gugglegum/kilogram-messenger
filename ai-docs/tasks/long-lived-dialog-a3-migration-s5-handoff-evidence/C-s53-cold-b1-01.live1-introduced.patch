@@ -1,0 +1,14 @@
+diff --git a/crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs b/crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs
+index 9b1d599..9d1916f 100644
+--- a/crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs
++++ b/crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs
+@@ -19,6 +19,9 @@ mod mixed;
+ mod ops;
+ #[path = "live1/read.rs"]
+ mod read;
++#[cfg(all(windows, feature = "verification-state-lock-adoption"))]
++#[path = "live1/verification_close.rs"]
++mod verification_close;
+ pub use mixed::ExistingData7;
+ use mixed::{data_core7, data_event7};
+ #[cfg(test)]

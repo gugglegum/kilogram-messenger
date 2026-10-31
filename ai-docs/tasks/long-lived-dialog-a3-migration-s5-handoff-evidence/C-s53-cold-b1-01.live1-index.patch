@@ -1,0 +1,13 @@
+diff --git a/crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs b/crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs
+--- a/crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs
++++ b/crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs
+@@ -14,6 +14,9 @@
+ mod ops;
+ #[path = "live1/read.rs"]
+ mod read;
++#[cfg(all(windows, feature = "verification-state-lock-adoption"))]
++#[path = "live1/verification_close.rs"]
++mod verification_close;
+ #[cfg(test)]
+ #[path = "live1/tests.rs"]
+ mod tests;
