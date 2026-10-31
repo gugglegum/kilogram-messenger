@@ -1,0 +1,28 @@
+{
+  "schema_version": 1,
+  "classification": "source-only-cold-a-native-plan",
+  "activated": false,
+  "workspace": "E:\\AI-Projects\\kilogram-p2p-messenger",
+  "shell": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+  "entry": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s53-cold-preservation.ps1",
+  "draft_decision_path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\P2-s53-exhausted-cold-a-01-attempt-01.D1.draft.json",
+  "draft_decision_sha256": "9a2e26febc8e6f241de4ba9465df527a465a2dcd503f08d0604d50d792d4675b",
+  "decision_path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\P2-s53-exhausted-cold-a-01-attempt-01.D1.json",
+  "decision_bytes": 4769,
+  "decision_sha256": "f93374eb068eb65250b115722f74494386b0be43a34d34e53b257a5fb46efafb",
+  "arguments": [
+    "-NoLogo",
+    "-NoProfile",
+    "-NonInteractive",
+    "-Mta",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s53-cold-preservation.ps1",
+    "-DecisionSha256",
+    "f93374eb068eb65250b115722f74494386b0be43a34d34e53b257a5fb46efafb"
+  ],
+  "work_seconds": 45,
+  "whole_seconds": 60,
+  "lane_count": 1,
+  "retry_count": 0,
+  "network": false
+}
