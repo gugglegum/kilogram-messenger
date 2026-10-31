@@ -1,0 +1,41 @@
+{
+  "attempt": "P2-s53-exhausted-cold-b-01-attempt-02",
+  "decision_sha256": "0cb091bd7df90394581c1e7b3b126d143867954e9be4560272fb373cef66a85f",
+  "source_input_count": 743,
+  "source_before_after_sha256": "3ce85def1fd0d10eef8802517182ce3667c10e732b64199a50f0c66dca1f8ca3",
+  "reviewed_inputs_current": true,
+  "composition_sources_current": true,
+  "images": [
+    {
+      "path": "target/verification-scale/deps/kilogram-cli-test-migration_s53_cold-tests.exe",
+      "bytes": 9669632,
+      "sha256": "9f8c09868ad985f0c35b5e742173d6eb6f9ba5be0771aeb3d6ea12f81390afd5"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 7306752,
+      "sha256": "0f3f93ae7f2fbb986f42340e19419069feb537c71d91a6b90d87b66ebaf89e8b"
+    },
+    {
+      "path": "target/verification-scale/s53-cold-worker/worker.cs",
+      "bytes": 139850,
+      "sha256": "fe2559027a747fd0496ebf88e968787d9b64df56a9fe3b7e9f09551a492869de"
+    },
+    {
+      "path": "target/verification-scale/s53-cold-worker/worker.dll",
+      "bytes": 172544,
+      "sha256": "46af21bee2fabca2c9ffa84b1c80afd57f4f1014d0833e0a8e10548398c9bb30"
+    },
+    {
+      "path": "target/verification-scale/s53-cold-worker/artifact.json",
+      "bytes": 2451,
+      "sha256": "29198cd95c5525344c5b3fd00943b93992e7b2d45bcf5c2ea5c9549b3331e003"
+    }
+  ],
+  "work_seconds": 210,
+  "whole_seconds": 235,
+  "native_outer_seconds": 240,
+  "retries": 0,
+  "network": false,
+  "rebuild": false
+}

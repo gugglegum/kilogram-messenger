@@ -1,0 +1,22 @@
+{
+  "attempt": "P2-s53-exhausted-cold-b-01-attempt-02",
+  "start_utc": "2026-10-31T20:52:50.0215515+00:00",
+  "end_utc": "2026-10-31T20:53:16.4698252+00:00",
+  "whole_seconds": 26.4292894,
+  "work_seconds": 210,
+  "inner_whole_seconds": 235,
+  "native_outer_limit_seconds": 240,
+  "timed_out": false,
+  "preflight_passed": true,
+  "owned_shell_pid": 848,
+  "owned_shell_exited": true,
+  "outer_capture_closed": true,
+  "inner_owned_children_after": 0,
+  "exit_code": 0,
+  "failure": null,
+  "network": false,
+  "rebuild": false,
+  "retry": 0,
+  "priority": "BelowNormal",
+  "decision_sha256": "0cb091bd7df90394581c1e7b3b126d143867954e9be4560272fb373cef66a85f"
+}

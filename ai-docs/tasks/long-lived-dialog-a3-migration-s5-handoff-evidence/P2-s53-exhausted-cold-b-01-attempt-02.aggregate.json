@@ -1,0 +1,535 @@
+{
+  "schema_version": 1,
+  "classification": "actual-Cold-B-attempt02-success-for-root-review",
+  "attempt": "P2-s53-exhausted-cold-b-01-attempt-02",
+  "native": {
+    "attempt": "P2-s53-exhausted-cold-b-01-attempt-02",
+    "start_utc": "2026-10-31T20:52:50.0215515+00:00",
+    "end_utc": "2026-10-31T20:53:16.4698252+00:00",
+    "whole_seconds": 26.4292894,
+    "work_seconds": 210,
+    "inner_whole_seconds": 235,
+    "native_outer_limit_seconds": 240,
+    "timed_out": false,
+    "preflight_passed": true,
+    "owned_shell_pid": 848,
+    "owned_shell_exited": true,
+    "outer_capture_closed": true,
+    "inner_owned_children_after": 0,
+    "exit_code": 0,
+    "failure": null,
+    "network": false,
+    "rebuild": false,
+    "retry": 0,
+    "priority": "BelowNormal",
+    "decision_sha256": "0cb091bd7df90394581c1e7b3b126d143867954e9be4560272fb373cef66a85f"
+  },
+  "cold_b_public": {
+    "accounts": [
+      "7a87df0a69a322c4ec28fb94e175e26e77c428151a6e67336f6d0c8eb0abb2ce",
+      "9a16920200c69f6507bdf7ed94ede32b3f1dd36158e32be35159b1ac9fe25f0e"
+    ],
+    "attempt": "P2-s53-exhausted-cold-b-01-attempt-02",
+    "b0": [
+      "244de8dd35fc6247f46cd824bf1ab0ca4969dc66e42ef4c5df9ddaf2afa3a772",
+      "7d75b1856c6600f07b6cd20d0a7f6792be3471bac1e361f83f0a4fd52f7cb6fd"
+    ],
+    "b1": [
+      {
+        "digest": "955e68c7d18222f910d1411aa389556eba25a240b23f2304301cd1a72fc90ef9",
+        "history": "749847c5d0555002adb8291e200c3a5a8e2e0a2d882411820304cff4430ac63e",
+        "pages": 17,
+        "texts": 528
+      },
+      {
+        "digest": "5b5e77ae80e850f1e5310a141e25f629cef0bf6047d54751f6055713b1cf2de7",
+        "history": "6f10324a9708c4ed5eeaedcb638a6fefbc0fe54970851a5a575553631cac08d6",
+        "pages": 17,
+        "texts": 528
+      }
+    ],
+    "cleanup": {
+      "baseline_completed": true,
+      "bkp_after": "7099e5259d9ec98ba4fb0dff98c610259f2416e5dbae517c6ca507913754b3b5",
+      "bkp_before": "7099e5259d9ec98ba4fb0dff98c610259f2416e5dbae517c6ca507913754b3b5",
+      "changed_slot_count": 2,
+      "cleanup_native_error": 0,
+      "cleanup_unknown": false,
+      "continuation": {
+        "allowed_mask": 2,
+        "allowed_offset": 9,
+        "database_count": 2,
+        "enabled": true,
+        "entry_baseline_verified": true,
+        "entry_s_after": "4b703f740c231964a549cb7742e6c2f5983aba3f51ce54a8927cd0959e177efe",
+        "entry_s_before": "4b703f740c231964a549cb7742e6c2f5983aba3f51ce54a8927cd0959e177efe",
+        "final_differs_from_entry": true,
+        "final_equals_historical": false,
+        "normalization_read_bytes": 40181760,
+        "original_raw_equal_claim": false
+      },
+      "delta_complete": true,
+      "delta_stamp_sha256": "576ed52028ca40b0504d3673fdd49f4b20827fc08b30fa7e3f6eb6a662087fbd",
+      "failure_cause": null,
+      "failure_code": null,
+      "failure_phase": null,
+      "final_s_after": "7fbde6c66b31572b0d658374320de04518df1e671288d826b1ba1445db13f8f1",
+      "final_s_before": "7fbde6c66b31572b0d658374320de04518df1e671288d826b1ba1445db13f8f1",
+      "final_verified": true,
+      "hash_passes": 8,
+      "historical_rows_unchanged_before_cleanup": true,
+      "historical_tuple_digest": "7099e5259d9ec98ba4fb0dff98c610259f2416e5dbae517c6ca507913754b3b5",
+      "input_handles_released": true,
+      "native_error": 0,
+      "remaining_owned_handles": 0,
+      "slots_recaptured": 4,
+      "slots_released": 4,
+      "typed_lock_read_bytes": 0,
+      "typed_metadata_checks": 14
+    },
+    "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+    "devices": [
+      "55f714cd9cebfc84d1af03d515373e851704c0f1a87ce1d7b84cd4cffb2e69bb",
+      "a227497b8c0e9029a96b668939cc3ccc96d7a42f054c47927f486d4ca3d305f8"
+    ],
+    "physical": {
+      "baseline_completed": true,
+      "bkp_after": "7099e5259d9ec98ba4fb0dff98c610259f2416e5dbae517c6ca507913754b3b5",
+      "bkp_before": "7099e5259d9ec98ba4fb0dff98c610259f2416e5dbae517c6ca507913754b3b5",
+      "changed_slot_count": 2,
+      "cleanup_native_error": 0,
+      "cleanup_unknown": false,
+      "continuation": {
+        "allowed_mask": 2,
+        "allowed_offset": 9,
+        "database_count": 2,
+        "enabled": true,
+        "entry_baseline_verified": true,
+        "entry_s_after": "4b703f740c231964a549cb7742e6c2f5983aba3f51ce54a8927cd0959e177efe",
+        "entry_s_before": "4b703f740c231964a549cb7742e6c2f5983aba3f51ce54a8927cd0959e177efe",
+        "final_differs_from_entry": true,
+        "final_equals_historical": false,
+        "normalization_read_bytes": 40181760,
+        "original_raw_equal_claim": false
+      },
+      "delta_complete": true,
+      "delta_stamp_sha256": "576ed52028ca40b0504d3673fdd49f4b20827fc08b30fa7e3f6eb6a662087fbd",
+      "failure_cause": null,
+      "failure_code": null,
+      "failure_phase": null,
+      "final_s_after": "7fbde6c66b31572b0d658374320de04518df1e671288d826b1ba1445db13f8f1",
+      "final_s_before": "7fbde6c66b31572b0d658374320de04518df1e671288d826b1ba1445db13f8f1",
+      "final_verified": true,
+      "hash_passes": 8,
+      "historical_rows_unchanged_before_cleanup": true,
+      "historical_tuple_digest": "7099e5259d9ec98ba4fb0dff98c610259f2416e5dbae517c6ca507913754b3b5",
+      "input_handles_released": false,
+      "native_error": 0,
+      "remaining_owned_handles": 14076,
+      "slots_recaptured": 4,
+      "slots_released": 4,
+      "typed_lock_read_bytes": 0,
+      "typed_metadata_checks": 14
+    },
+    "private_receipts": {
+      "comparison.private.jsonl": "b9cab01da78e84354855ffe94fdc891a3520896cb24ce53bdfce70abfc679b67",
+      "continuation-baseline.private.json": "5d6c0543e0765d33606389a2516bc5a4911dfd52dcfdf15994f8f9e09f38b843"
+    },
+    "worker_exit": 0
+  },
+  "progress": {
+    "records": 211,
+    "bytes": 15672,
+    "milestones": [
+      {
+        "completed": 0,
+        "elapsed_ms": 0,
+        "pass": 0,
+        "phase": "entry",
+        "side": null
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 75,
+        "pass": 0,
+        "phase": "baseline.start",
+        "side": null
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 11461,
+        "pass": 0,
+        "phase": "baseline.done",
+        "side": null
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 11469,
+        "pass": 0,
+        "phase": "slots.start",
+        "side": null
+      },
+      {
+        "completed": 4,
+        "elapsed_ms": 11479,
+        "pass": 0,
+        "phase": "slots.done",
+        "side": null
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 11484,
+        "pass": 0,
+        "phase": "open.start",
+        "side": 0
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 11777,
+        "pass": 0,
+        "phase": "open.done",
+        "side": 0
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 11782,
+        "pass": 0,
+        "phase": "open.start",
+        "side": 1
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 12042,
+        "pass": 0,
+        "phase": "open.done",
+        "side": 1
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 12045,
+        "pass": 0,
+        "phase": "b0.before.start",
+        "side": 0
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 12051,
+        "pass": 0,
+        "phase": "b0.before.done",
+        "side": 0
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 12052,
+        "pass": 0,
+        "phase": "b0.before.start",
+        "side": 1
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 12059,
+        "pass": 0,
+        "phase": "b0.before.done",
+        "side": 1
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 12061,
+        "pass": 1,
+        "phase": "full.start",
+        "side": 0
+      },
+      {
+        "completed": 530,
+        "elapsed_ms": 13195,
+        "pass": 1,
+        "phase": "sources.done",
+        "side": 0
+      },
+      {
+        "completed": 528,
+        "elapsed_ms": 13436,
+        "pass": 1,
+        "phase": "full.done",
+        "side": 0
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 13439,
+        "pass": 2,
+        "phase": "readback.start",
+        "side": 0
+      },
+      {
+        "completed": 530,
+        "elapsed_ms": 14523,
+        "pass": 2,
+        "phase": "sources.done",
+        "side": 0
+      },
+      {
+        "completed": 528,
+        "elapsed_ms": 14709,
+        "pass": 2,
+        "phase": "readback.done",
+        "side": 0
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 14710,
+        "pass": 1,
+        "phase": "full.start",
+        "side": 1
+      },
+      {
+        "completed": 530,
+        "elapsed_ms": 15819,
+        "pass": 1,
+        "phase": "sources.done",
+        "side": 1
+      },
+      {
+        "completed": 528,
+        "elapsed_ms": 16021,
+        "pass": 1,
+        "phase": "full.done",
+        "side": 1
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 16022,
+        "pass": 2,
+        "phase": "readback.start",
+        "side": 1
+      },
+      {
+        "completed": 530,
+        "elapsed_ms": 17071,
+        "pass": 2,
+        "phase": "sources.done",
+        "side": 1
+      },
+      {
+        "completed": 528,
+        "elapsed_ms": 17290,
+        "pass": 2,
+        "phase": "readback.done",
+        "side": 1
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 17293,
+        "pass": 0,
+        "phase": "b0.after.start",
+        "side": 0
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 17300,
+        "pass": 0,
+        "phase": "b0.after.done",
+        "side": 0
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 17303,
+        "pass": 0,
+        "phase": "b0.after.start",
+        "side": 1
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 17310,
+        "pass": 0,
+        "phase": "b0.after.done",
+        "side": 1
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 17318,
+        "pass": 0,
+        "phase": "close.start",
+        "side": 0
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 17334,
+        "pass": 0,
+        "phase": "close.done",
+        "side": 0
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 17337,
+        "pass": 0,
+        "phase": "close.start",
+        "side": 1
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 17343,
+        "pass": 0,
+        "phase": "close.done",
+        "side": 1
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 17344,
+        "pass": 0,
+        "phase": "final.start",
+        "side": null
+      },
+      {
+        "completed": 0,
+        "elapsed_ms": 24211,
+        "pass": 0,
+        "phase": "final.done",
+        "side": null
+      }
+    ],
+    "phase_record_counts": {
+      "entry": 1,
+      "baseline.start": 1,
+      "baseline.done": 1,
+      "slots.start": 1,
+      "slots.done": 1,
+      "open.start": 2,
+      "open.done": 2,
+      "b0.before.start": 2,
+      "b0.before.done": 2,
+      "full.start": 2,
+      "full.scope.start": 4,
+      "full.scope.done": 4,
+      "source": 32,
+      "sources.done": 4,
+      "page.start": 68,
+      "page.done": 68,
+      "full.done": 2,
+      "readback.start": 2,
+      "readback.done": 2,
+      "b0.after.start": 2,
+      "b0.after.done": 2,
+      "close.start": 2,
+      "close.done": 2,
+      "final.start": 1,
+      "final.done": 1
+    }
+  },
+  "private_evidence_hashes": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preparation-evidence\\P2-s53-exhausted-cold-b-01-attempt-02\\comparison.private.jsonl",
+      "bytes": 7635985,
+      "sha256": "b9cab01da78e84354855ffe94fdc891a3520896cb24ce53bdfce70abfc679b67"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preparation-evidence\\P2-s53-exhausted-cold-b-01-attempt-02\\continuation-baseline.private.json",
+      "bytes": 1672,
+      "sha256": "5d6c0543e0765d33606389a2516bc5a4911dfd52dcfdf15994f8f9e09f38b843"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preparation-evidence\\P2-s53-exhausted-cold-b-01-attempt-02\\harness.stderr.private.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preparation-evidence\\P2-s53-exhausted-cold-b-01-attempt-02\\harness.stdout.private.log",
+      "bytes": 4088,
+      "sha256": "f8f6372302011bf84c8ee0021018855eb8d969578aded8f8b66f138636d2031e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preparation-evidence\\P2-s53-exhausted-cold-b-01-attempt-02\\progress.private.jsonl",
+      "bytes": 15672,
+      "sha256": "dfeada1482aa3a44d38e453a758027c1c3d534a1544e7b2da5972d6fcfa603d1"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preparation-evidence\\P2-s53-exhausted-cold-b-01-attempt-02\\result.private.json",
+      "bytes": 122,
+      "sha256": "9446283c013d509c1878f00737d24a71d0b02ec3a8add6b1e6a862370a369c3d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preparation-evidence\\P2-s53-exhausted-cold-b-01-attempt-02\\typed.private.json",
+      "bytes": 557,
+      "sha256": "64f1f15a537d188d670acdf54a6c779aa8b5174d13314e9c5ffe683988f0e152"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preparation-evidence\\P2-s53-exhausted-cold-b-01-attempt-02\\worker.control.private.jsonl",
+      "bytes": 6502,
+      "sha256": "8b1002956bf7893d7b6c6d5761a869e33bcd0b69766b98edc37850423e2faef8"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preparation-evidence\\P2-s53-exhausted-cold-b-01-attempt-02\\worker.stderr.private.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "sources_after": {
+    "count": 743,
+    "all_current": true
+  },
+  "images_after": [
+    {
+      "path": "target/verification-scale/deps/kilogram-cli-test-migration_s53_cold-tests.exe",
+      "bytes": 9669632,
+      "sha256": "9f8c09868ad985f0c35b5e742173d6eb6f9ba5be0771aeb3d6ea12f81390afd5"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 7306752,
+      "sha256": "0f3f93ae7f2fbb986f42340e19419069feb537c71d91a6b90d87b66ebaf89e8b"
+    },
+    {
+      "path": "target/verification-scale/s53-cold-worker/worker.cs",
+      "bytes": 139850,
+      "sha256": "fe2559027a747fd0496ebf88e968787d9b64df56a9fe3b7e9f09551a492869de"
+    },
+    {
+      "path": "target/verification-scale/s53-cold-worker/worker.dll",
+      "bytes": 172544,
+      "sha256": "46af21bee2fabca2c9ffa84b1c80afd57f4f1014d0833e0a8e10548398c9bb30"
+    },
+    {
+      "path": "target/verification-scale/s53-cold-worker/artifact.json",
+      "bytes": 2451,
+      "sha256": "29198cd95c5525344c5b3fd00943b93992e7b2d45bcf5c2ea5c9549b3331e003"
+    }
+  ],
+  "public_native_evidence": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\P2-s53-exhausted-cold-b-01-attempt-02.native.invocation.ps1",
+      "bytes": 655,
+      "sha256": "5f4c5a1e249a79343b4eda191c1f2d6eefbb1502ddb1dae030fec16dea73a680"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\P2-s53-exhausted-cold-b-01-attempt-02.native.outer.ps1",
+      "bytes": 6820,
+      "sha256": "5ddd23b4a5d822d3ac41184ed7fbd12446826f4b544e6ec55bbbe4f8bd42b498"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\P2-s53-exhausted-cold-b-01-attempt-02.native.preflight.json",
+      "bytes": 1534,
+      "sha256": "651a2a930ca0228fbf30ffd070c06081c01b0e66bba6d518387ba2f633458717"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\P2-s53-exhausted-cold-b-01-attempt-02.native.result.json",
+      "bytes": 682,
+      "sha256": "860ac4b6ebbe209005f89c098d1fcfcd0d98f16fd01ea3ead82b6e2c7dd2ea9a"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\P2-s53-exhausted-cold-b-01-attempt-02.native.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\P2-s53-exhausted-cold-b-01-attempt-02.native.stdout.log",
+      "bytes": 39,
+      "sha256": "8582db1717976ee455833d8d4b87cd874100532bd1f78becbc80afd11a3d2502"
+    }
+  ],
+  "next_gate": "Root review; no G1, automatic retry, restore, rebaseline or runtime-evidence commit",
+  "proposed_F_accounting": {
+    "actual": "26.4292894",
+    "S53_F": "1881.1650628",
+    "combined_F": "6597.4852117",
+    "root_ledger_owner": true
+  }
+}
