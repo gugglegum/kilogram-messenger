@@ -1,0 +1,29 @@
+# B0c: held preservation session, synthetic implementation slice
+
+2026-10-31. Root-prepared next contract. Dispatch only after B0b acceptance and verified publication. This slice implements and tests the held raw-preservation lifecycle. It does not open the exhausted replicas, their keys or databases, and does not start G1.
+
+## Reuse and corrected ownership
+
+Apply the fixed paths, caps, write classes, before/after distinctions and one combined future B0/B1 private session from `P2-s53-exhausted-cold-b-01.typed-open-contract.md`. Its C#-origin/raw-File import direction is superseded by accepted B0a and B0b: Rust opens the two exact default streams with the typed opener, adopts both actual leases, and keeps them throughout the protected interval; its owned worker duplicates those actual handles. There is no arbitrary File ingress, fabricated ownership boolean or second state-lock open.
+
+Keep frozen `scripts/migration-s53-cold-preservation.ps1` byte-identical (82999 bytes; SHA256 eb166bce9b53da51863b605a06041e7100aca0d053f21c2b2ece09cf191b259f). Use its exact C# heredoc plus a new partial Core. Composition permits only the three previously reviewed single-occurrence substitutions: partial Core, metadata-only typed-lock branch in Empty, and the corresponding branch in Hash. Pin base and sentinels and fail on mismatch. The new partial can register the two validated worker-owned duplicates in the existing registry before CaptureLocks; this avoids changing Acquire/Fixed or importing the other 14k objects into Rust. Account for each handle exactly once and transfer ownership explicitly. Reuse the B0b parent/provenance and bounded anonymous-pipe machinery; a small extraction into shared helper code is preferable to a second independent implementation. Any extraction must retain B0b tests.
+
+The lock branches apply only to those two registered, validated S entries. Check identity/path/default-stream/kind/length and retained metadata before deriving the empty digest. No byte read through a held range lock. The other four maintenance locks and all other payloads retain the existing actual-byte checks. Fixed production paths are prepared in source only; synthetic factory paths must be confined to a newly created fixture directory under workspace `.tmp`, with no fallback to production.
+
+## Minimal lifecycle
+
+1. Parent adopts both synthetic typed leases. Worker duplicates, validates and registers their handles. Parent retains leases until final cleanup; no early RELEASED as in the B0b demonstration.
+2. Capture the existing inventory, remaining locks, ancestors and payload registry with existing Core primitives. Scan and perform the four initial mirror hash passes under both real leases. Preserve historical rows and their digest unchanged.
+3. Release only the exact two S database and two S key slots for the future typed loader. Keep other objects, path guards, original metadata and identities. In this slice a bounded synthetic mutation replaces the typed loader. Permit database same-ID byte changes and key replacement at the exact allowed paths; refuse any unexplained object/namespace/directory-ID change.
+4. Recapture the four allowed slots after synthetic close. Verify a separately represented final delta; never overwrite the historical inventory/rows or relabel final S bytes as historical. The only permitted directory write-time differences are the two S state directories and must accompany explained loader-class activity. Keep final observations distinct from historical stamps. Reuse existing Scan/Hash primitives where their assumptions hold; narrowly scoped final-phase iteration is acceptable where historical equality makes them inapplicable. Do not create another general parser or traversal engine.
+5. Run the four final mirror hash passes and stable final metadata checks. BKP and all other S entries remain historical; allowed S deltas must be identical across final observations. Record historical and final tuple digests, explained changed paths, exact phase and cleanup result. Close/reap actual owned resources even on failure. A timeout alone never establishes successful cleanup.
+
+Use the existing bounded deadline job, fixed shell and stable Rust executable path. The fixed control protocol can rename B0b lifecycle messages for this flow, but remains at most 16 frames/4KiB per frame, source/attempt/nonce bound, with no generic RPC or control-file mailbox. Tests must establish that baseline ACK precedes release of the four slots and final ACK precedes parent lease release.
+
+## Focused verification and delivery
+
+Self-review plus focused synthetic runs are authorized as part of implementation; no additional source-only stop is required. Cover unchanged success, allowed database/key delta with immutable BKP, disallowed payload/namespace change, failure during partial selective release/recapture, premature EOF and cleanup. Reuse already accepted negatives; do not rerun the entire historical corpus or create a new manifest/activation framework. Prefer a small fixture with the real path classes over a second large-scale calibration.
+
+Compile locked/offline --no-run, use the stable runner, CargoJobs2/BelowNormal, and targeted formatting/strict Clippy for affected Rust. Proposed allowance C300 seconds aggregate, at most180 seconds per command; actual envelopes charged once. This allowance becomes active on root dispatch; root updates the internal ceiling if necessary. No F/private activation is granted by this document.
+
+Submit the implementation, actual focused results, short limitations and machine-generated hashes. Root acceptance precedes exact scoped commit/push. Full B0 logical and B1 authenticated history readers are the next code slice; the future private Cold-B session starts only after those readers and this lifecycle are reviewed together. No S5.3 completion or S5.4 advancement is implied.

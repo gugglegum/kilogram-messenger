@@ -17,7 +17,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.ComponentModel;
 
-public static class S53TypedLockWorker {
+public static partial class S53TypedLockWorker {
     [StructLayout(LayoutKind.Sequential)] struct Info {
         public uint Attributes,CreateLow,CreateHigh,AccessLow,AccessHigh,WriteLow,WriteHigh,Volume,SizeHigh,SizeLow,Links,IndexHigh,IndexLow;
     }
@@ -46,7 +46,7 @@ public static class S53TypedLockWorker {
         internal readonly int Native;
         internal Refusal(string code,int native=0){Code=code;Native=native;}
     }
-    sealed class Session {
+    sealed partial class Session {
         readonly string source,attempt;
         readonly Stream input=Console.OpenStandardInput(),output=Console.OpenStandardOutput();
         readonly IntPtr[] held=new IntPtr[2];
@@ -56,6 +56,8 @@ public static class S53TypedLockWorker {
         bool cleanup=true,snapshotClosed=true;
         IntPtr parent;
         uint parentPid;
+        readonly string[] boundPaths=new string[2];
+        JsonElement preservation;
         internal Session(string hash,string name){source=hash;attempt=name;}
         static void Need(bool ok,string code){if(!ok)throw new Refusal(code);}
         static void Native(bool ok){if(!ok)throw new Refusal("native",Marshal.GetLastWin32Error());}
@@ -142,12 +144,12 @@ public static class S53TypedLockWorker {
                 && index==expected.GetProperty("index").GetUInt64(),"identity");
             return new {path,volume=(ulong)info.Volume,index,links=info.Links,bytes=0,noninheritable=true};
         }
-        internal int Run(){
-            string failure=null;int native=0;object[] witnesses=new object[2];
-            try{
+        object[] BindInputs(bool preservationMode){
+            object[] witnesses=new object[2];
                 using(var doc=Read()){
                     var root=doc.RootElement;
-                    Fields(root,"kind","version","nonce","source_sha256","attempt","parent_pid","locks");
+                    if(preservationMode){Fields(root,"kind","version","nonce","source_sha256","attempt","parent_pid","locks","preservation");preservation=root.GetProperty("preservation").Clone();}
+                    else Fields(root,"kind","version","nonce","source_sha256","attempt","parent_pid","locks");
                     nonce=root.GetProperty("nonce").GetString();
                     Need(Hex(nonce,32),"binding");CheckCommon(root,"bind");
                     parentPid=ActualParent();
@@ -166,10 +168,16 @@ public static class S53TypedLockWorker {
                         IntPtr copy;
                         Native(DuplicateHandle(parent,new IntPtr((long)raw),GetCurrentProcess(),out copy,0,false,2));
                         held[n]=copy;created++;
-                        witnesses[n]=Inspect(copy,item);
+                        witnesses[n]=Inspect(copy,item);boundPaths[n]=item.GetProperty("path").GetString();
                     }
                     LiveParent();Close(ref parent);Need(cleanup&&parent==IntPtr.Zero,"cleanup");
                 }
+            return witnesses;
+        }
+        internal int Run(){
+            string failure=null;int native=0;object[] witnesses=new object[2];
+            try{
+                witnesses=BindInputs(false);
                 Send(new {kind="duplicated",version=1,nonce,source_sha256=source,attempt,parent_pid=parentPid,locks=witnesses,read_attempts=reads,owned_handles=2,parent_closed=true,snapshot_closed=snapshotClosed});
                 phase="release";
                 using(var doc=Read()){

@@ -1,0 +1,199 @@
+{
+  "schema_version": 1,
+  "status": "paused-by-explicit-user-request",
+  "checkpoint_utc": "2026-10-31T16:29:14.0476973+00:00",
+  "resume_rule": "Only a new explicit user resume; cable restoration or 10-15 minutes elapsed is not authorization.",
+  "head": "a203ffadcaa5da64896c20d8b96eaf4e1ac26471",
+  "index_empty": true,
+  "current_scope": "B0c synthetic held preservation lifecycle; not yet accepted or published",
+  "source": [
+    {
+      "path": "crates/kilogram-state/src/verification_lock.rs",
+      "bytes": 13350,
+      "sha256": "e55e7e740e5e49ec796b460db6ba8ae7761da7f12f5b24225c50a3aaaea6a4bc",
+      "blob": "9855a229171011bb95f84549afce37205f49b103"
+    },
+    {
+      "path": "crates/kilogram-state/src/verification_worker_tests.rs",
+      "bytes": 16929,
+      "sha256": "532da247e50dc115604d7a5ec65695c77f5777f8b415acf765f7ab9a9422e606",
+      "blob": "23457219681a7ebcc59b4dc044a64c419de3cd33"
+    },
+    {
+      "path": "crates/kilogram-state/src/verification_held_tests.rs",
+      "bytes": 15942,
+      "sha256": "830f9acee8f709196fba6484845fbb7b996ab172813ed59005f0e86a2c2ccb6d",
+      "blob": "7960e1c519eb66208488c4bab837c02c792f9b87"
+    },
+    {
+      "path": "scripts/migration-s53-typed-lock-worker.ps1",
+      "bytes": 13379,
+      "sha256": "45f76ed97aa350cf3b06297d0e42be928c9e3326e96e8966c3cef0f9bc506646",
+      "blob": "179e86b9e07012a57ea0817664d8a005caff3500"
+    },
+    {
+      "path": "scripts/migration-s53-held-preservation.cs",
+      "bytes": 20895,
+      "sha256": "b780c396e8971a70f132795959733161ffd8cd62bdb95b4e86f08df6ef76d618",
+      "blob": "1bb26f4f5e4fa7ed440f94460c5dbe8082b24b63"
+    },
+    {
+      "path": "scripts/invoke-migration-s53-held-preservation-synthetic.ps1",
+      "bytes": 3320,
+      "sha256": "bf53893a6b8af127b5bb01646e76c7e77a40cb96721c9483ecb37e6360978d4f",
+      "blob": "8092175b9732fa606d6711b96360a836fda7b5d6"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0c-01-attempt-01.invocation.ps1",
+      "bytes": 1197,
+      "sha256": "9012b17d4215946455b4baf576926c30453a20ac95381af269dbfec0193828be"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0c-01-attempt-01.stdout.log",
+      "bytes": 10951,
+      "sha256": "3e5cb5365484a94c486db8b727c1742fe859d0083ae35afb14349baed27710f5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0c-01-attempt-01.stderr.log",
+      "bytes": 569,
+      "sha256": "5ca8e677a48dee3a97b324ebd176def17a3184ff89937661954b076f08d5683d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0c-01-attempt-01.result.json",
+      "bytes": 395,
+      "sha256": "fc0c4375ef00279b8adb96c1f06083b1a94422a78b101d7375448a9c8b33b748"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0c-01-attempt-02.invocation.ps1",
+      "bytes": 3852,
+      "sha256": "9a57cc11bf528e6514f9a0277c87d717b839257524654e7faff5fc83183029c7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0c-01-attempt-02.stdout.log",
+      "bytes": 17910,
+      "sha256": "d9ece8b8a284157ad73bf9133b15d7da51723271211f910cec2eed0956bf2cc8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0c-01-attempt-02.stderr.log",
+      "bytes": 774,
+      "sha256": "0502825f0ba8d93f381e6ef8e8edb0d7d016042681018b8e880ef98d7987fb29"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0c-01-attempt-02.result.json",
+      "bytes": 395,
+      "sha256": "fb86ed57cca6f11d5bc0f3c660b77b65e764549d26f9114623384baf95eebe98"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0c-01-attempt-03.invocation.ps1",
+      "bytes": 1197,
+      "sha256": "9012b17d4215946455b4baf576926c30453a20ac95381af269dbfec0193828be"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0c-01-attempt-03.stdout.log",
+      "bytes": 11167,
+      "sha256": "7c02595155e1e90ea7b03395d81a2d9f03d6091d2abb8faac553fabfde3f37d8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0c-01-attempt-03.stderr.log",
+      "bytes": 569,
+      "sha256": "449b9e9a2276873e969802c2e442d1bd1fb60be9c403a55e989e3632ccb2f019"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0c-01-attempt-03.result.json",
+      "bytes": 394,
+      "sha256": "d7696e39368e10f453e2a9619ff283188b00c85686a522ccecac9130339424fe"
+    }
+  ],
+  "attempt02_inputs_before": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0c-01-attempt-02.inputs.before.json",
+    "bytes": 2105,
+    "sha256": "696c6577d6be5defe6fb517d10002c4b4602bfca251863680a49bd65a688eb62"
+  },
+  "attempt02_finalization_not_created": [
+    "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0c-01-attempt-02.inputs.after.json",
+    "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0c-01-attempt-02.images.json"
+  ],
+  "attempts": [
+    {
+      "attempt": "C-s53-cold-b0c-01-attempt-01",
+      "exit_code": 0,
+      "whole_seconds": 25.0672994,
+      "timed_out": false
+    },
+    {
+      "attempt": "C-s53-cold-b0c-01-attempt-02",
+      "exit_code": 1,
+      "whole_seconds": 36.7723329,
+      "timed_out": false
+    },
+    {
+      "attempt": "C-s53-cold-b0c-01-attempt-03",
+      "exit_code": 0,
+      "whole_seconds": 19.870422,
+      "timed_out": false
+    }
+  ],
+  "actual_native": [
+    {
+      "attempt": 1,
+      "session": 41710,
+      "final_chunk": "b49efa",
+      "exit": 0,
+      "result": "targeted unchanged/allowed passed before later DB-delete guard probe"
+    },
+    {
+      "attempt": 2,
+      "session": 50568,
+      "final_chunk": "f29760",
+      "exit": 1,
+      "result": "3 held tests passed; allowed test failed database delete guard lost; B0b regression and strict Clippy not reached"
+    },
+    {
+      "attempt": 3,
+      "session": 83790,
+      "final_chunk": "79e6fb",
+      "exit": 0,
+      "result": "targeted unchanged/allowed passed after GENERIC_READ/share3 DB guard fix"
+    }
+  ],
+  "guard_fix": {
+    "current": "GENERIC_READ(0x80000000), share READ|WRITE(3), OPEN_EXISTING/no-follow; metadata inspection only, no DB byte reads by guard",
+    "measured": "one/state DB remove_file denied32; read/write open + try_lock/write/sync/unlock worked on both DBs; DB IDs retained, keys replaced, eight hash passes, immutable BKP and historical digest, Core/transport cleanup zero",
+    "exact_probe_limit": "delete probe covers one/state DB; both-DB rename/delete probes were not added or run before pause",
+    "source_frozen_Core": {
+      "bytes": 82999,
+      "sha256": "eb166bce9b53da51863b605a06041e7100aca0d053f21c2b2ece09cf191b259f",
+      "unchanged": true
+    }
+  },
+  "stopped": {
+    "last_job_owned_children_after": 0,
+    "all_own_test_tool_sessions_completed": true,
+    "active_own_test_processes": 0,
+    "basis": "Native sessions above completed; last stdout ends owned_children_after=0; Core and transport handles_after/remaining_owned_handles=0, cleanup_unknown=false.",
+    "command04_started": false,
+    "new_tests_after_pause": false,
+    "commit_push_started": false
+  },
+  "remaining_after_explicit_resume": [
+    "Complete final B0c focused verification with current guard; root may first require both-DB rename/delete probes.",
+    "Run retained B0b regression because shared helpers were extracted; it was not reached in failed attempt02.",
+    "Scoped strict Clippy/fmt and final stable source/EXE pins remain incomplete; no claim of final suite PASS.",
+    "Root implementation review/acceptance before any B0c commit/push.",
+    "Logical readers and one combined private Cold-B session are later separate scoped work; no G1/S5.4."
+  ],
+  "budget": {
+    "C300_allowance": true,
+    "measured_invocation_envelopes_seconds": "81.7100543",
+    "remaining_by_same_measure_seconds": "218.2899457",
+    "ledger_changed_by_executor": false,
+    "F": 0
+  },
+  "boundaries": {
+    "private_S_O_BKP_R_E_access": false,
+    "navigation_edits": false,
+    "failed_fixtures_and_attempts_preserved": true
+  }
+}

@@ -350,6 +350,9 @@ thread_local! {
     static POST_LOCK_HOOK: std::cell::RefCell<Option<PostLockHook>> = const { std::cell::RefCell::new(None) };
 }
 #[cfg(test)]
+#[path = "verification_held_tests.rs"]
+mod held_tests;
+#[cfg(test)]
 #[path = "verification_lock_tests.rs"]
 mod tests;
 #[cfg(test)]

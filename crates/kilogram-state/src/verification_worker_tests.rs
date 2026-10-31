@@ -11,12 +11,12 @@ use std::{
     time::{Duration, Instant},
 };
 
-type TestResult<T = ()> = Result<T, Box<dyn Error>>;
+pub(super) type TestResult<T = ()> = Result<T, Box<dyn Error>>;
 const SHELL: &str = r"C:\Users\Paul\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe";
-const START: Duration = Duration::from_secs(15);
-const STEP: Duration = Duration::from_secs(3);
+pub(super) const START: Duration = Duration::from_secs(15);
+pub(super) const STEP: Duration = Duration::from_secs(3);
 
-struct Pair {
+pub(super) struct Pair {
     leases: Vec<StateDirectoryLock>,
     inputs: Vec<ExistingStateLockInputs>,
     // Retain the actual Rust-origin guards even when data handles are released.
@@ -25,7 +25,7 @@ struct Pair {
     locks: Value,
 }
 impl Pair {
-    fn new() -> TestResult<Self> {
+    pub(super) fn new() -> TestResult<Self> {
         let base =
             Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.tmp/C-s53-cold-b0b-synthetic");
         fs::create_dir_all(&base)?;
@@ -33,6 +33,16 @@ impl Pair {
             .prefix("b0b-")
             .tempdir_in(fs::canonicalize(base)?)?
             .keep();
+        let mut roots = Vec::new();
+        for role in ["a", "b"] {
+            let root = run.join(role);
+            fs::create_dir(&root)?;
+            fs::write(root.join(LOCK_FILE), [])?;
+            roots.push(root);
+        }
+        Self::from_roots(roots)
+    }
+    pub(super) fn from_roots(roots: Vec<PathBuf>) -> TestResult<Self> {
         let mut pair = Self {
             leases: Vec::new(),
             inputs: Vec::new(),
@@ -41,10 +51,7 @@ impl Pair {
             locks: json!([]),
         };
         let mut rows = Vec::new();
-        for role in ["a", "b"] {
-            let root = run.join(role);
-            fs::create_dir(&root)?;
-            fs::write(root.join(LOCK_FILE), [])?;
+        for root in roots {
             let dir = FileIdentity::from_file(&guard(&root, true)?)?;
             let lock = FileIdentity::from_file(&guard(&root.join(LOCK_FILE), false)?)?;
             let inputs = ExistingStateLockInputs::open_existing(&root, dir, lock)?;
@@ -61,14 +68,14 @@ impl Pair {
         pair.locks = Value::Array(rows);
         Ok(pair)
     }
-    fn release(&mut self) -> TestResult {
+    pub(super) fn release(&mut self) -> TestResult {
         for lease in self.leases.drain(..) {
             lease.release_adopted()?;
         }
         self.inputs.clear();
         Ok(())
     }
-    fn excluded(&self) -> TestResult {
+    pub(super) fn excluded(&self) -> TestResult {
         for root in &self.roots {
             let error = match OpenOptions::new()
                 .read(true)
@@ -82,7 +89,7 @@ impl Pair {
         }
         Ok(())
     }
-    fn released(&self) -> TestResult {
+    pub(super) fn released(&self) -> TestResult {
         for root in &self.roots {
             let file = OpenOptions::new()
                 .read(true)
@@ -97,7 +104,7 @@ impl Pair {
 }
 
 #[derive(Debug, thiserror::Error)]
-enum ReceiveError {
+pub(super) enum ReceiveError {
     #[error("worker stdout EOF")]
     Eof,
     #[error("worker response deadline")]
@@ -117,7 +124,7 @@ enum Event {
     Limit,
     Io(io::Error),
 }
-struct Worker {
+pub(super) struct Worker {
     child: Child,
     input: Option<ChildStdin>,
     events: Receiver<Event>,
@@ -128,12 +135,38 @@ struct Worker {
     frames: usize,
 }
 impl Worker {
-    fn spawn(case: &str, early_eof: bool) -> TestResult<Self> {
-        let script = fs::canonicalize(
-            Path::new(env!("CARGO_MANIFEST_DIR"))
-                .join("../../scripts/migration-s53-typed-lock-worker.ps1"),
-        )?;
-        let hash = format!("{:x}", Sha256::digest(fs::read(&script)?));
+    pub(super) fn spawn(case: &str, early_eof: bool) -> TestResult<Self> {
+        Self::spawn_mode(case, early_eof, false)
+    }
+    pub(super) fn spawn_held(case: &str) -> TestResult<Self> {
+        Self::spawn_mode(case, false, true)
+    }
+    fn spawn_mode(case: &str, early_eof: bool, held: bool) -> TestResult<Self> {
+        let sources = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts");
+        let script = fs::canonicalize(sources.join(if held {
+            "invoke-migration-s53-held-preservation-synthetic.ps1"
+        } else {
+            "migration-s53-typed-lock-worker.ps1"
+        }))?;
+        let hash = if held {
+            let mut digest = Sha256::new();
+            for path in [
+                script.clone(),
+                sources.join("migration-s53-typed-lock-worker.ps1"),
+                sources.join("migration-s53-cold-preservation.ps1"),
+                sources.join("migration-s53-held-preservation.cs"),
+            ] {
+                let bytes = fs::read(path)?;
+                if bytes.len() > 256 * 1024 {
+                    return Err("composition source cap".into());
+                }
+                digest.update((bytes.len() as u64).to_le_bytes());
+                digest.update(bytes);
+            }
+            format!("{:x}", digest.finalize())
+        } else {
+            format!("{:x}", Sha256::digest(fs::read(&script)?))
+        };
         // -File with a verbatim \\?\ path can fail AuthorizationManager.
         // Keep the canonical source pin, but invoke its checked ordinary path.
         let command_script = literal(&script)?;
@@ -143,7 +176,7 @@ impl Worker {
         let mut random = [0u8; 16];
         getrandom::fill(&mut random)?;
         let nonce = random.iter().map(|byte| format!("{byte:02x}")).collect();
-        let attempt = format!("C-s53-cold-b0b-{case}");
+        let attempt = format!("C-s53-cold-{}-{case}", if held { "b0c" } else { "b0b" });
         let mut command = Command::new(SHELL);
         command
             .args([
@@ -199,16 +232,19 @@ impl Worker {
             frames: 0,
         })
     }
-    fn common(&self, kind: &str) -> Value {
+    pub(super) fn close_input(&mut self) {
+        self.input.take();
+    }
+    pub(super) fn common(&self, kind: &str) -> Value {
         json!({"kind":kind,"version":1,"attempt":self.attempt,"nonce":self.nonce,"source_sha256":self.hash})
     }
-    fn bind(&self, pair: &Pair) -> Value {
+    pub(super) fn bind(&self, pair: &Pair) -> Value {
         let mut frame = self.common("bind");
         frame["parent_pid"] = json!(std::process::id());
         frame["locks"] = pair.locks.clone();
         frame
     }
-    fn send(&mut self, frame: &Value) -> TestResult {
+    pub(super) fn send(&mut self, frame: &Value) -> TestResult {
         self.frames += 1;
         let bytes = serde_json::to_vec(frame)?;
         if self.frames > 16 || bytes.len() + 1 > 4096 {
@@ -220,7 +256,7 @@ impl Worker {
         input.flush()?;
         Ok(())
     }
-    fn receive(&mut self, timeout: Duration) -> Result<Value, ReceiveError> {
+    pub(super) fn receive(&mut self, timeout: Duration) -> Result<Value, ReceiveError> {
         let event = match self.events.recv_timeout(timeout) {
             Ok(event) => event,
             Err(mpsc::RecvTimeoutError::Timeout) => return Err(ReceiveError::Deadline),
@@ -247,7 +283,7 @@ impl Worker {
             }
         }
     }
-    fn reap(&mut self) -> TestResult<ExitStatus> {
+    pub(super) fn reap(&mut self) -> TestResult<ExitStatus> {
         self.input.take();
         let until = Instant::now() + STEP;
         let status = loop {
