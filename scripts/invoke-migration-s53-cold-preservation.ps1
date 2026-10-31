@@ -277,8 +277,8 @@ function Validate-Report([string]$Role,$Object) {
         Fields $Object.parent_guards @('parent_created','parent_existing_verified','acl_rechecked','remaining','peak','open_attempts','native_close_attempts','native_closed','cleanup_unknown','native_error','disposed')
         foreach($k in @('created','transferred','cleanup_unknown','disposed','partial','retained_if_created')){Need ((Value $Object.output $k) -is [bool]) 'public_output'}
         foreach($k in @('parent_created','parent_existing_verified','acl_rechecked','cleanup_unknown','disposed')){Need ((Value $Object.parent_guards $k) -is [bool]) 'public_guard'}
-        foreach($k in @('ancestry','prepared','remaining','receipt_mask','receipt_transfers','native_error')){Need ((Value $Object.output $k) -is [int]) 'public_output'}
-        foreach($k in @('remaining','peak','open_attempts','native_close_attempts','native_closed','native_error')){Need ((Value $Object.parent_guards $k) -is [int]) 'public_guard'}
+        foreach($k in @('ancestry','prepared','remaining','receipt_mask','receipt_transfers','native_error')){$v=Value $Object.output $k;Need (($v -is [int] -or $v -is [long]) -and $v -ge [int]::MinValue -and $v -le [int]::MaxValue) 'public_output'}
+        foreach($k in @('remaining','peak','open_attempts','native_close_attempts','native_closed','native_error')){$v=Value $Object.parent_guards $k;Need (($v -is [int] -or $v -is [long]) -and $v -ge [int]::MinValue -and $v -le [int]::MaxValue) 'public_guard'}
         Fields $Object.compiler @('failed','diagnostics','fresh_types','initializers')
         Need ($Object.compiler.failed -is [bool] -and @($Object.compiler.diagnostics).Count -le 16) 'public_compiler'
         foreach($v in $Object.compiler.diagnostics){Fields $v @('type','error');Need ($v.type -is [string] -and $v.type -cmatch '\A[A-Za-z0-9_.+]{1,128}\z' -and $v.error -is [bool]) 'public_compiler'}
@@ -291,7 +291,7 @@ function Validate-Report([string]$Role,$Object) {
         }
     }
     if($Role -ceq 'supervisor'){
-        Need ($Object.stdout_chars -is [int] -and $Object.stderr_chars -is [int] -and $Object.stdout_chars -ge 0 -and $Object.stdout_chars -le 4096 -and $Object.stderr_chars -ge 0 -and $Object.stderr_chars -le 4096) 'public_stdio'
+        Need (($Object.stdout_chars -is [int] -or $Object.stdout_chars -is [long]) -and ($Object.stderr_chars -is [int] -or $Object.stderr_chars -is [long]) -and $Object.stdout_chars -ge 0 -and $Object.stdout_chars -le 4096 -and $Object.stderr_chars -ge 0 -and $Object.stderr_chars -le 4096) 'public_stdio'
         Validate-SourceMap $Object.source_after
     }
 }

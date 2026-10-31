@@ -1,0 +1,13 @@
+# Numeric validation: source acceptance and bounded regression
+
+2026-10-31. Root bc2922 inspected the exact three changed predicates and full126-line test. Counter Int32 domain is preserved while decoded Int64 values in that domain are accepted; stdio remains0..4096. Actual AST statements and minimal source dependencies are extracted and pinned; candidates independently test all14 members. No entrypoint/full validator/private/native-helper/network call. Root5394e2 verified launcher71513/8cb43e3e6dfba31b21f014ea4f82be1451417a15424ed046d87d2d455d6f3557, test7823/5d6e6853f4d140941d872abfb8e5c1a5237648218be99d628bb16fe3c086d38b and source review4446/f0672bb240ef335188316958d457a71a5dd53ce45749721b99dce536331a304e; HEAD3ac9e55, empty index.
+
+Root authorizes one direct invocation of the fixed in-memory numeric regression using bundled pwsh. Reserve C30, lane1/retry0, from existing inactive C690.8415091; inactive after reservation C660.8415091. Finite292 candidate validations plus28 type observations, no waiting/spawn/native compilation or fixture I/O in test; only pinned public source read and stdout. This small pure computation uses the ordinary command runner, not another integration harness. No private grant, production activation or full end-to-end claim. Actual return must precede implementation acceptance/publication.
+
+## Actual result and implementation acceptance
+
+Root single invocation2fa0cd returned exit0, complete JSON: accepted134, refused158, JSON Int64 observations28; no private access/entrypoint/native helper. Request2026-10-31T09:15:00.000Z to final09:15:01.724Z =1.724s; native1.5435998s is overlapping, not additive. No retry. Scope is actual numeric AST statements, not complete report/production execution. Root accepts the minimal fix.
+
+C30 reservation closed: charge1.724/release28.276. S5.3 C1940.8824909/F1562.2882567/P0; combined C2528.3311018/F6278.6084056/P0; ceilings2630/1642/0; active0/inactive C689.1175091/F79.7117433/P0. Private grants absent.
+
+Publish exactly four files: scripts/invoke-migration-s53-cold-preservation.ps1; this acceptance; adjacent P2-s53-exhausted-cold-a-01.numeric-regression.ps1 and P2-s53-exhausted-cold-a-01.numeric-validation-source-review.md. Parent3ac9e55f08763111897ef7290f5f0f8ec469d9ad. Exclude old inert preparation drafts and all navigation/unrelated changes. Root freezes raw/tree blobs before dispatch and verifies publication. Existing C2-T test evidence retains its historical source pins; it is not rerun or relabeled as evidence for the new full launcher. Repin Cold-A drafts only in a later preparation slice.
