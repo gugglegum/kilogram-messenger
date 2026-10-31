@@ -52,6 +52,7 @@ internal sealed class Limits {
             case "resource-row-cap": id="cap-rows";break;
             case "resource-entry-cap": id="cap-directories";break;
             case "resource-handle-cap": id="cap-handles";break;
+            case "boundary-output-cap": id="cap-output";break;
         }
         var c=new Limits();
         if(id=="cap-rows") c.Rows=2;
@@ -94,7 +95,7 @@ internal sealed class Spec {
             "namespace-extra-backup-directory","namespace-persistent-extra-state",
             "resource-row-cap","resource-entry-cap","resource-handle-cap",
             "path-absolute","path-ads","path-device","path-trailing-dot","path-case-alias","path-depth",
-            "late-directory-s","late-directory-bkp","receipt-native-close"};
+            "late-directory-s","late-directory-bkp","receipt-native-close","boundary-output-cap","boundary-directory-collision"};
         if(Array.IndexOf(allowed,id)<0 || bytes<=0 || bytes>Limits.Inventory ||
            !Core.IsHash(hash) || files<2 || files>8000 || payload<0 || payload>Limits.Payload)
             throw new ArgumentException("Invalid closed ColdA fixture binding.");
@@ -213,6 +214,11 @@ internal sealed class Spec {
         if(id=="receipt-native-close") {
             root=W+@"\.tmp\C-s53-cold-core-receipt-close-01-attempt-01\receipt-close";
             negativeAttempt="C-s53-cold-core-receipt-close-01-attempt-01/receipt-close";
+        }
+        if(id=="boundary-output-cap"||id=="boundary-directory-collision") {
+            string leaf=id=="boundary-output-cap"?"output-cap":"directory-collision";
+            root=W+@"\.tmp\C-s53-cold-core-output-boundaries-01-attempt-01\"+leaf;
+            negativeAttempt="C-s53-cold-core-output-boundaries-01-attempt-01/"+leaf;
         }
         return new Spec {O=root+@"\origin",S=root+@"\state",B=root+@"\backup",E=root+@"\proof",
             Attempt=negativeAttempt??(freshSmall?"C-s53-cold-core-01-attempt-02/baseline-small":"C-s53-cold-core-01-attempt-01/"+id),InventoryBytes=bytes,InventoryHash=hash,
@@ -1297,7 +1303,7 @@ function New-S53ColdAFixtureCore {
             'namespace-extra-backup-directory','namespace-persistent-extra-state',
             'resource-row-cap','resource-entry-cap','resource-handle-cap',
             'path-absolute','path-ads','path-device','path-trailing-dot','path-case-alias','path-depth',
-            'late-directory-s','late-directory-bkp','receipt-native-close')]
+            'late-directory-s','late-directory-bkp','receipt-native-close','boundary-output-cap','boundary-directory-collision')]
         [string]$Case,
         [Parameter(Mandatory)][long]$InventoryBytes,
         [Parameter(Mandatory)][ValidatePattern('\A[0-9a-f]{64}\z')][string]$InventorySha256,

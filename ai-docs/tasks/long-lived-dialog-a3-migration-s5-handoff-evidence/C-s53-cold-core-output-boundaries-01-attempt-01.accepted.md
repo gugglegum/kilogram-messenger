@@ -1,0 +1,15 @@
+# C2-M accepted: output cap and directory collision
+
+2026-10-31. Baseline b24b31533b1388bf5c0809aa6b8aed59d9545567. Root source review d44e1d confirmed Core inverse, healthy inventory/path/record models and mandatory owner-record subset546>fixture output cap512; default production behavior unchanged.
+
+One synthetic batch, no retry or source repair. Actual turn01a18f99-89be-70c2-93a8-e7a8d4bba809, app item exec-5bf8f159-7bb0-44de-9a76-3e66b67e97e1, native chunk4beddb, exit0/native5.8267734s. Root independently matched the actual app item to [run evidence](C-s53-cold-core-output-boundaries-01-attempt-01.run.json). Request UTC01:36:22.209Z through01:36:29.923Z =7.714s. Worker4.765132s/supervisor5.4661121s overlap and are not added. No continuation/session.
+
+[Cases](C-s53-cold-core-output-boundaries-01-attempt-01.cases.json): output-cap completed healthy capture, then exact output_cap/receipts/receipts semantic three-node refusal/native0 before charge/write. One fresh empty receipt, charged/knownwritten0, no completion/write-unknown/digest. Same-ID/private-ACL/size0/EOF verification succeeded after Core disposal. Core remaining0/cleanup known; helper verification+six ancestor closes7, remaining0.
+
+Directory-collision independently created and retained its fixed private E after capture; second owner CreateDirectoryW returned false183. Exact MethodInvocationException→Win32Exception183/E_FAIL chain. Failed output owner DirectoryCreated=false, fixture-preexisting=true, no Core binding/write call or invented Core failure, no receipts. Retained directory identity/non-access stamp/ACL rechecked after collision and Core disposal; failed-owner6 and retained-owner7 closes, both remaining0. No directory mutation/deletion/repair, no output ADS/namespace enumeration claim.
+
+Root independently checked all seven38-field Core observations and eight28-field helper observations, branch-specific errors, ordered phases/QPCs, creation/ownership/cleanup. Each capture acquired10/locks6/four hashes208/all five H digests, input release, peak35/record12087312; paths7112/7488, inventories3590/3626. Controller ledger35 returned/closed/remaining0; each setup39 files/30 enumerators closed. Geometry33 directories27 files113 input stream observations7424 bytes. All five fresh types/three initializers once, no compiler diagnostics. Child26964 exit0/reaped, both EOF, stdio/managed closed, no forced termination/output cap/unknown cleanup, owned children0. Native reports33722B. Root 9fa188 verified13 raw pins (nine approved inputs/four evidence files).
+
+C30 CLOSED: charge7.714/release22.286 once. S5.3 C1587.6924909/F1562.2882567/P0; combined C2175.1411018/F6278.6084056/P0. Ceilings1620/1642/0; active0; inactiveC32.3075091/F79.7117433/P0.
+
+Closes the r42 aggregate output-cap and E-collision synthetic obligations. Whole-attempt/S5.3/G1/S5.4 remain open; no private access authority. Publish only Core plus this attempt's nine source/allocation/evidence/acceptance files, excluding navigation/unrelated work.
