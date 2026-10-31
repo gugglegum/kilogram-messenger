@@ -9,7 +9,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $w='E:\AI-Projects\kilogram-p2p-messenger'
 $taskRoot="$w\ai-docs\tasks";$e="$taskRoot\long-lived-dialog-a3-migration-s5-handoff-evidence"
-$attempt='P2-s53-exhausted-cold-a-01-attempt-01'
+$attempt='P2-s53-exhausted-cold-a-01-attempt-02'
 $entry="$w\scripts\invoke-migration-s53-cold-preservation.ps1"
 $corePath="$w\scripts\migration-s53-cold-preservation.ps1";$outputPath="$w\scripts\migration-s53-cold-output.ps1"
 $rootNative="$w\scripts\migration-s53-root-copy.ps1";$deadlinePath="$w\scripts\migration-s5-l1-deadline.ps1"
@@ -133,7 +133,7 @@ function Array-Exact($Actual,[string[]]$Expected){
 }
 function Pin-Spec {
     return [ordered]@{
-        launcher=@($entry,0,'');core=@($corePath,82999,'59787bd263052b12cc77ab524ce48b27f18e2e7a83e0039d9b40f8c3066573af');output=@($outputPath,21721,'331bfdde271d6386f78e2198da2ef9480b3c16f5e45dc3180747601d8cac9b98')
+        launcher=@($entry,0,'');core=@($corePath,82999,'eb166bce9b53da51863b605a06041e7100aca0d053f21c2b2ece09cf191b259f');output=@($outputPath,21721,'ced08d88656e7bad142d1e23a826c42e7be4f75da8380c838167610504db7ae0')
         root_native=@($rootNative,25596,'a3eefcc9dd4da8bdd9141d8731fc60feaf496d5d357047c0283b53dd8e6c3382')
         deadline=@($deadlinePath,6038,'0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45')
         shell=@($fixedShell,301368,'362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139')
@@ -233,7 +233,7 @@ function Report-Fields([string]$Role) {
             'managed_public_close_native_observed','job_finished','children_after','processes_disposed','observed_seconds')}
         'supervisor' {@('result','failure','cause','parent_pid','parent_started_utc','retained_process_handle','child_exit','child_reaped','stdout_chars','stderr_chars','stdout_eof','stderr_eof','registered_child_released'
             'stdio_disposed','managed_public_disposed','managed_public_close_native_observed','public_peak','public_remaining','forced','cleanup_kill_attempted','cleanup_unknown','observer','completion','wait_trace'
-            'source_after','claim_sha256','parent_sha256','p2_sha256','observed_seconds')}
+            'source_after','claim_sha256','parent_sha256','p2_sha256','diagnostics','observed_seconds')}
         default {Stop-Cold 'public_role'}
     }
     return @($common)+@($extra)
@@ -293,6 +293,9 @@ function Validate-Report([string]$Role,$Object) {
     if($Role -ceq 'supervisor'){
         Need (($Object.stdout_chars -is [int] -or $Object.stdout_chars -is [long]) -and ($Object.stderr_chars -is [int] -or $Object.stderr_chars -is [long]) -and $Object.stdout_chars -ge 0 -and $Object.stdout_chars -le 4096 -and $Object.stderr_chars -ge 0 -and $Object.stderr_chars -le 4096) 'public_stdio'
         Validate-SourceMap $Object.source_after
+        Fields $Object.diagnostics @('state','cause')
+        Need ($Object.diagnostics.state -is [string] -and $Object.diagnostics.state -cin @('not_collected','normal_validated','bound','unknown')) 'public_diagnostics'
+        Validate-Cause $Object.diagnostics.cause
     }
 }
 function Write-To([IO.FileStream]$File,[string]$Role,$Object) {
@@ -749,6 +752,82 @@ function Check-ChildReports($Claim,$P2,$Parent) {
     foreach($key in $sourcePins.Keys){Exact $p.source_before ([ordered]@{$key=$sourcePins[$key]});Exact $p.source_after ([ordered]@{$key=$sourcePins[$key]})}
     Need ($p.p2_qpc -ge $p.core.capture_complete_timestamp -and $p.p2_qpc -lt ($StartTimestamp+50L*[Diagnostics.Stopwatch]::Frequency)) 'child_clock'
 }
+function Complete-ChildCleanup([bool]$Started,$State) {
+    if($child -and $Started){
+        try {
+            # Cooperative cleanup/reporting uses the original clock; work never resumes.
+            while((Age) -lt 51 -and -not $reaped){Wait-ForReap 'cleanup' 51;Pump $out;Pump $err}
+            if(-not $reaped){
+                if($child.HasExited){Note-ExitIndication 'cleanup_has_exited'}
+                else{$State.kill_attempted=$true;$child.Kill()}
+            }
+            while((Age) -lt 52 -and -not $reaped){Wait-ForReap 'cleanup' 52;Pump $out;Pump $err}
+            if(-not $reaped){$control.Unknown=$true}
+        }catch{$control.Unknown=$true;$State.cause=Cause $_.Exception}
+        while((Age) -lt 54 -and (($out -and -not $out.Eof) -or ($err -and -not $err.Eof))){
+            try{Pump $out;Pump $err}catch{$control.Unknown=$true;if(-not $State.cause){$State.cause=Cause $_.Exception};break}
+            [Threading.Thread]::Sleep(5)
+        }
+        if(($out -and -not $out.Eof) -or ($err -and -not $err.Eof)){$control.Unknown=$true}
+    }
+}
+function Check-DiagnosticBindings($Claim,$P2,$Parent) {
+    $c=$Claim.Data;$p=$P2.Data;$r=$Parent.Data
+    Exact $c ([ordered]@{supervisor_pid=$self.Id;parent_pid=$childId;parent_started_utc=$childStartedUtc;started_sha256=$startedHash})
+    Exact $r ([ordered]@{parent_pid=$childId;parent_started_utc=$childStartedUtc;p2_sha256=$P2.Sha256;failure=$p.failure
+        output_remaining=$p.output.remaining;guard_remaining=$p.parent_guards.remaining;managed_public_close_native_observed=$false})
+    Exact $p ([ordered]@{managed_public_close_native_observed=$false;external_bound=59})
+    Need (($p.result -ceq 'raw_preservation_observed' -and $r.result -ceq 'completed') -or
+        ($p.result -ceq 'failed_or_unknown' -and $r.result -ceq 'failed_or_unknown')) 'diagnostic_result'
+    Fields $p.source_before @($sourcePins.Keys);Exact $p.source_before $sourcePins
+    if(@(Keys $p.source_after).Count -gt 0){Fields $p.source_after @($sourcePins.Keys);Exact $p.source_after $sourcePins}
+    foreach($k in @('cleanup_known','job_finished','processes_disposed')){Need ((Value $r $k) -is [bool]) 'diagnostic_type'}
+    foreach($k in @('managed_public_disposed','core_dispose_attempted','interval_ended_before_receipts')){Need ((Value $p $k) -is [bool]) 'diagnostic_type'}
+    foreach($k in @('core_remaining','children_after')){
+        $v=Value $r $k;Need ($null -eq $v -or (($v -is [int] -or $v -is [long]) -and $v -ge 0 -and $v -le 40126)) 'diagnostic_type'
+    }
+    foreach($o in @($p,$r)){
+        foreach($k in @('public_remaining','public_peak')){$v=Value $o $k;Need (($v -is [int] -or $v -is [long]) -and $v -ge 0 -and $v -le 24) 'diagnostic_type'}
+    }
+    Need (($p.p2_qpc -is [int] -or $p.p2_qpc -is [long]) -and $p.p2_qpc -ge $StartTimestamp -and
+        $p.p2_qpc -lt ($StartTimestamp+50L*[Diagnostics.Stopwatch]::Frequency)) 'diagnostic_clock'
+    Need (($r.observed_seconds -is [double] -or $r.observed_seconds -is [int] -or $r.observed_seconds -is [long]) -and
+        [double]::IsFinite([double]$r.observed_seconds) -and $r.observed_seconds -ge 0 -and $r.observed_seconds -lt 50 -and
+        $r.observed_seconds -ge (($p.p2_qpc-$StartTimestamp)/[double][Diagnostics.Stopwatch]::Frequency)) 'diagnostic_clock'
+    if($p.core){
+        Exact $r ([ordered]@{core_remaining=$p.core.remaining_owned_handles})
+        Need ($p.p2_qpc -ge $p.core.capture_complete_timestamp -and
+            ($p.core.capture_complete_timestamp -eq 0 -or $p.core.capture_complete_timestamp -ge $StartTimestamp)) 'diagnostic_clock'
+    }
+    else{Exact $r ([ordered]@{core_remaining=$null});Need (-not $r.cleanup_known) 'diagnostic_cleanup'}
+    if($r.cleanup_known){
+        Need ($p.core -and $p.core.input_handles_released -and $p.core.remaining_owned_handles -eq 0 -and -not $p.core.cleanup_unknown -and
+            $p.output.remaining -eq 0 -and -not $p.output.cleanup_unknown -and
+            $p.parent_guards.remaining -eq 0 -and -not $p.parent_guards.cleanup_unknown -and
+            $p.managed_public_disposed -and $p.public_remaining -eq 0 -and $r.public_remaining -eq 0 -and
+            $r.job_finished -and $r.children_after -eq 0 -and $r.processes_disposed -and
+            $null -eq $p.cause.cleanup -and $null -eq $r.cause.cleanup) 'diagnostic_cleanup'
+        if($p.wrapper_cleanup){Exact $p.wrapper_cleanup ([ordered]@{diagnostics_complete=$true;cleanup_unknown=$false;native_close_unknown=$false})}
+    }
+}
+function Collect-FailedReports {
+    $r=[pscustomobject]@{state='unknown';cause=$null;claim=$null;p2=$null;parent=$null}
+    try {
+        Need ($reaped -and $out -and $err -and $out.Eof -and $err.Eof) 'diagnostic_incomplete'
+        $c=Read-Report 'claim';$p=Read-Report 'p2';$a=Read-Report 'parent'
+        Check-DiagnosticBindings $c $p $a
+        $r.claim=$c;$r.p2=$p;$r.parent=$a;$r.state='bound'
+    }catch{$r.cause=Cause $_.Exception}
+    finally{
+        Public-CloseAll
+        if($managedCloseUnknown -or $publicOwned -ne 0){
+            $control.Unknown=$true;$r.state='unknown'
+            if(-not $r.cause){try{Stop-Cold 'diagnostic_close_unknown'}catch{$r.cause=Cause $_.Exception}}
+        }
+        if($r.state -cne 'bound'){$r.claim=$null;$r.p2=$null;$r.parent=$null}
+    }
+    return $r
+}
 function Invoke-Supervisor {
     $authorized=$false;$claimed=$false;$startFile=$null;$startedHash=$null;$failure=$null;$failureCause=$null;$cleanupFirstCause=$null;$normalCandidate=$false;$good=$false
     $script:child=$null;$childStarted=$false;$script:childId=0;$script:childStartedUtc=$null;$script:retainedProcessHandle=0L;$registeredChildReleased=$false
@@ -764,6 +843,7 @@ function Invoke-Supervisor {
         cleanup_wait_attempts=0;cleanup_wait_true=0;cleanup_wait_false=0;cleanup_first_wait_seen=$false;false_after_exit_seen=$false;false_after_eof_seen=$false
         last_wait_qpc=0L;last_wait_result=$null;normal_gate=$null;normal_gate_passed=$false;pre_cleanup_gate=$null;pre_cleanup_first_reason=$null;first_failure_reason=$null}
     $sourceAfter=[ordered]@{};$claimReport=$null;$p2Report=$null;$parentReport=$null;$result=1
+    $diagnostics=[ordered]@{state='not_collected';cause=$null}
     try {
         Need ($StartTimestamp -gt 0) 'clock'
         $decision=Validate-Decision;$authorized=$true
@@ -800,6 +880,7 @@ function Invoke-Supervisor {
         $script:normalStage='reports'
         $claimReport=Read-Report 'claim';$p2Report=Read-Report 'p2';$parentReport=Read-Report 'parent'
         Check-ChildReports $claimReport $p2Report $parentReport
+        $diagnostics.state='normal_validated'
         Need ($out.Text.Length -eq 0 -and $err.Text.Length -eq 0 -and -not $out.Cap -and -not $err.Cap) 'child_output'
         $sourceAfter=Source-Pins;Check;$normalCandidate=$true;$script:normalStage='completed'
     }catch{
@@ -809,21 +890,17 @@ function Invoke-Supervisor {
         $completion.pre_cleanup_gate=Completion-Gate;$completion.pre_cleanup_first_reason=$completion.first_failure_reason
         $script:normalStage='cleanup';$script:cleanupReserve=$true
         if($startFile){try{Public-Close $startFile}catch{$control.Unknown=$true}}
-        if($child -and $childStarted){
-            try {
-                if(-not $reaped){if($child.HasExited){Note-ExitIndication 'cleanup_has_exited'}else{$cleanupKillAttempted=$true;$child.Kill()}}
-                while((Age) -lt 52 -and -not $reaped){Wait-ForReap 'cleanup' 52;Pump $out;Pump $err}
-                if(-not $reaped){$control.Unknown=$true}
-            }catch{$control.Unknown=$true;$cleanupFirstCause=Cause $_.Exception}
-            while((Age) -lt 54 -and (($out -and -not $out.Eof) -or ($err -and -not $err.Eof))){
-                try{Pump $out;Pump $err}catch{$control.Unknown=$true;if(-not $cleanupFirstCause){$cleanupFirstCause=Cause $_.Exception};break}
-                [Threading.Thread]::Sleep(5)
-            }
-            if(($out -and -not $out.Eof) -or ($err -and -not $err.Eof)){$control.Unknown=$true}
-        }
+        $cleanupState=[pscustomobject]@{kill_attempted=$false;cause=$null}
+        Complete-ChildCleanup $childStarted $cleanupState
+        $cleanupKillAttempted=$cleanupState.kill_attempted;$cleanupFirstCause=$cleanupState.cause
         Public-CloseAll
         try{if($out){$out.Reader.Dispose()};if($err){$err.Reader.Dispose()};$stdioDisposed=$true}catch{$control.Unknown=$true;if(-not $cleanupFirstCause){$cleanupFirstCause=Cause $_.Exception}}
         if($child -and ($reaped -or -not $childStarted)){try{$control.Child=$null;$child.Dispose();$registeredChildReleased=$true}catch{$control.Unknown=$true}}
+    }
+    if(-not $normalCandidate){
+        $collected=Collect-FailedReports
+        $diagnostics.state=$collected.state;$diagnostics.cause=$collected.cause
+        $claimReport=$collected.claim;$p2Report=$collected.p2;$parentReport=$collected.parent
     }
     try {
         Check
@@ -842,7 +919,8 @@ function Invoke-Supervisor {
             $report.forced=$control.Forced;$report.cleanup_kill_attempted=$cleanupKillAttempted;$report.cleanup_unknown=$control.Unknown
             $report.observer=$metrics;$report.completion=$completion;$report.wait_trace=$waitTrace.ToArray();$report.source_after=$sourceAfter
             $report.claim_sha256=if($claimReport){$claimReport.Sha256}else{$null};$report.parent_sha256=if($parentReport){$parentReport.Sha256}else{$null};$report.p2_sha256=if($p2Report){$p2Report.Sha256}else{$null}
-            $report.observed_seconds=Age;$null=Write-Report 'supervisor' $report
+            $report.diagnostics=$diagnostics
+        $report.observed_seconds=Age;$null=Write-Report 'supervisor' $report
         }
         Public-CloseAll;Check;if($good -and $publicOwned -eq 0 -and -not $managedCloseUnknown){$result=0}
     }catch{$result=1}

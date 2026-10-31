@@ -65,7 +65,7 @@ internal sealed class Limits {
 }
 internal sealed class Spec {
     internal const string W=@"E:\AI-Projects\kilogram-p2p-messenger";
-    internal const string ProductionAttempt="P2-s53-exhausted-cold-a-01-attempt-01";
+    internal const string ProductionAttempt="P2-s53-exhausted-cold-a-01-attempt-02";
     internal string O,S,B,E,Attempt,InventoryHash;
     internal long InventoryBytes, ExpectedBytes;
     internal int ExpectedFiles;
