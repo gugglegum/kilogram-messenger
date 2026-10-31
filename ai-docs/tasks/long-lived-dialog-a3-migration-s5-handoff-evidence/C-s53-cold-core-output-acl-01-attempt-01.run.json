@@ -1,0 +1,271 @@
+{
+  "schema_version": 1,
+  "classification": "cold-core-output-acl-c2-executor-actual-return-r01",
+  "attempt": "C-s53-cold-core-output-acl-01-attempt-01",
+  "executor_thread_id": "01a1653c-0154-7611-8e8c-044fbe1e4d7a",
+  "root_thread_id": "01a164ec-589c-7b41-bc34-3ba158d1f22b",
+  "allocation_sha256": "39670fe44a178c0c76bc9508b2a5ce89064ed6d9695346e32ff5dbb49c2bf63c",
+  "before_utc": "2026-10-31 02:43:14 UTC",
+  "request_utc": "2026-10-31T02:43:14.799Z",
+  "complete_utc": "2026-10-31T02:43:21.409Z",
+  "clock_sources": {
+    "before_utc": "clock.curr_time, UTC second precision immediately before request",
+    "request_utc": "executor Date.toISOString immediately before exec_command",
+    "complete_utc": "executor Date.toISOString immediately after exec_command returned",
+    "app_item": "codex_app.read_thread actual completed commandExecution; no start/complete UTC fields supplied by app"
+  },
+  "tool_name": "exec_command",
+  "tool_arguments": {
+    "cmd": "& 'C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe' -NoLogo -NoProfile -NonInteractive -File 'E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\C-s53-cold-core-output-acl-01-attempt-01.watchdog.ps1' -AllocationSha256 '39670fe44a178c0c76bc9508b2a5ce89064ed6d9695346e32ff5dbb49c2bf63c'",
+    "shell": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+    "login": false,
+    "workdir": "E:\\AI-Projects\\kilogram-p2p-messenger",
+    "yield_time_ms": 10000,
+    "max_output_tokens": 4000,
+    "sandbox_permissions": "require_escalated",
+    "justification": "Один разрешённый локальный synthetic ACL-negative тест до 30 секунд: сужение прав только новой пустой fixture E, без исходных данных, ключей и сети."
+  },
+  "native_result": {
+    "chunk_id": "9a3487",
+    "wall_time_seconds": 4.3178781,
+    "exit_code": 0,
+    "original_token_count": 19,
+    "output": "ColdA output-acl supervisor returned; root actual-return review required.\r\n"
+  },
+  "actual_app_item": {
+    "type": "commandExecution",
+    "id": "exec-a12791cc-8b77-4742-9b17-edeb2314bf1e",
+    "command": "\"C:\\\\Users\\\\Paul\\\\.cache\\\\codex-runtimes\\\\codex-primary-runtime\\\\dependencies\\\\native\\\\powershell\\\\pwsh.exe\" -NoProfile -Command \"& 'C:\\\\Users\\\\Paul\\\\.cache\\\\codex-runtimes\\\\codex-primary-runtime\\\\dependencies\\\\native\\\\powershell\\\\pwsh.exe' -NoLogo -NoProfile -NonInteractive -File 'E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\ai-docs\\\\tasks\\\\long-lived-dialog-a3-migration-s5-handoff-evidence\\\\C-s53-cold-core-output-acl-01-attempt-01.watchdog.ps1' -AllocationSha256 '39670fe44a178c0c76bc9508b2a5ce89064ed6d9695346e32ff5dbb49c2bf63c'\"",
+    "cwd": "E:\\AI-Projects\\kilogram-p2p-messenger",
+    "status": "completed",
+    "exitCode": 0,
+    "durationMs": 4317,
+    "output": {
+      "text": "ColdA output-acl supervisor returned; root actual-return review required.\r\n",
+      "truncated": false
+    }
+  },
+  "public_preflight_app_item": {
+    "type": "commandExecution",
+    "id": "exec-92558ca3-c8f2-4d39-ba0d-61e280805fc3",
+    "command": "\"C:\\\\Users\\\\Paul\\\\.cache\\\\codex-runtimes\\\\codex-primary-runtime\\\\dependencies\\\\native\\\\powershell\\\\pwsh.exe\" -NoProfile -Command '$ErrorActionPreference='\"'Stop'\n\"'$base='\"'E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\ai-docs\\\\tasks\\\\long-lived-dialog-a3-migration-s5-handoff-evidence\\\\C-s53-cold-core-output-acl-01-attempt-01'\nGet-Content -LiteralPath (\"'$base+'\"'.source-accepted.md')\nGet-Content -LiteralPath (\"'$base+'\"'.root-allocation.json')\n\"'$paths=@('\"'E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\scripts\\\\migration-s53-cold-preservation.ps1',(\"'$base+'\"'.preflight.ps1'),(\"'$base+'\"'.watchdog.ps1'),(\"'$base+'\"'.source-review.md'),(\"'$base+'\"'.root-allocation.json'),'E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\scripts\\\\migration-s53-root-copy.ps1','E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\scripts\\\\migration-s5-l1-deadline.ps1','C:\\\\Users\\\\Paul\\\\.cache\\\\codex-runtimes\\\\codex-primary-runtime\\\\dependencies\\\\native\\\\powershell\\\\pwsh.exe')\n\"'$rows=foreach($p in $paths){[ordered]@{path=$p;bytes=(Get-Item -LiteralPath $p).Length;sha256=(Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash.ToLowerInvariant()}}\nConvertTo-Json -InputObject @($rows) -Depth 5 -Compress'",
+    "cwd": "E:\\AI-Projects\\kilogram-p2p-messenger",
+    "status": "completed",
+    "exitCode": 0,
+    "durationMs": 700,
+    "output": {
+      "text": "# C2-O source accepted and one synthetic run allocated\r\n\r\n2026-10-31. Baseline 1d9946fcb1ed9e918de8015e6353fcf41591410c. [Contract](C-s53-cold-core-output-acl-01-attempt-01.contract-accepted.md) remains applicable.\r\n\r\nRoot source review f71eb6 independently verified the exact Core selector inverse to HEAD, unchanged real AssertPrivate/TakeDirectory/verifier behavior, healthy inventory equality to the accepted fixture with only fixed-root substitution, inventory3562/SHA2561daa4c64c070458b8b0c494131b7f31eaa8058947c85fd906ef671b2c3a3d579, path6800/37strings and record12087312. Gate c0f834 parsed Core/W/S without errors and compared all25 shared functions exactly.\r\n\r\nThe new DACL editor is restricted to newly created empty E. It removes only BA, preserves user/SYSTEM ACE bytes and owner/group/protection, checks valid present non-null DACL and direct native result, and releases its descriptor pin. Retained no-delete directory identities protect the path-based ACL readback within the cooperative fixture scope. Root reviewed empty-search cleanup, current/editor ownership, guarded native closure and no permission restoration.\r\n\r\nBinding uses the actual verifier. Its exact output_acl/output_binding/output failure, original marks/HResult, verifier count, closed original wrapper and known-zero Core ownership are asserted immediately at return before Dispose; later Dispose/fixture cleanup are separate. Directory creation/transfer remain true; successful binding/receipts/positive proof remain false. Source review is not evidence that native execution succeeded. Frozen helper inference issue remains deferred to launcher integration.\r\n\r\nThe [allocation](C-s53-cold-core-output-acl-01-attempt-01.root-allocation.json) activates exactly one work20/whole30, lane1/retry0 run through the reviewed watchdog. Only fresh synthetic fixed-family data are permitted, including the restrictive DACL edit on its new E. No private dataset, original messages/keys, external network, production runtime or S5.4 access. Compilation and fixture/native operations occur only inside that one reviewed wrapper. No fallback, repairs or retries of the consumed attempt; retain any failure evidence.\r\n\r\nC ceiling explicitly rises from1620 to1640 for this continuation; F1642/P0 unchanged. Prior actual S5.3 C1593.4174909/F1562.2882567/P0; combined C2180.8661018/F6278.6084056/P0. Reserve C30 only, leaving unreserved C16.5825091/F79.7117433/P0. Charge actual request-to-complete once after return, release unused reservation then; overlapping worker/supervisor times are not added. No private grant is created.\r\n\r\nExecutor must return exact tool arguments/native return/app item, source pins before/after, three bounded native reports and run.json. Root actual review precedes commit/push. No repeated unchanged regressions are required.\r\n{\"schema_version\":1,\"classification\":\"root-approved-cold-core-output-acl-c2-r01\",\"root_thread_id\":\"01a164ec-589c-7b41-bc34-3ba158d1f22b\",\"activated\":true,\"attempt\":\"C-s53-cold-core-output-acl-01-attempt-01\",\"operation_set\":\"cold-output-acl-one-only-r01\",\"workspace\":\"E:\\\\AI-Projects\\\\kilogram-p2p-messenger\",\"fixture_parent\":\"E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\.tmp\\\\C-s53-cold-core-output-acl-01-attempt-01\",\"fixture_cases\":[\"boundary-output-acl\"],\"preflight_sha256\":\"8bb6d0ec31984da3d18612906bc6cee5b16d45cfd3a862c6bcc390e005cedd43\",\"watchdog_sha256\":\"82b588f84e92691e75260bf06862b9e2ccadd563bcee0ef2c30b3a93fc1e4e13\",\"core_sha256\":\"ec3cd2190c4b67c201c02eeda6c68e5832e95ac114a2e570954e4a25a05f3bb9\",\"root_native_sha256\":\"a3eefcc9dd4da8bdd9141d8731fc60feaf496d5d357047c0283b53dd8e6c3382\",\"deadline_sha256\":\"0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45\",\"shell_sha256\":\"362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139\",\"work_seconds\":20,\"whole_seconds\":30,\"retry_count\":0,\"lane_count\":1,\"outputs\":[\"started.json\",\"cases.json\",\"watchdog.json\"],\"public_report_bytes\":65536,\"public_total_bytes\":196608}\r\n[{\"path\":\"E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\scripts\\\\migration-s53-cold-preservation.ps1\",\"bytes\":79709,\"sha256\":\"ec3cd2190c4b67c201c02eeda6c68e5832e95ac114a2e570954e4a25a05f3bb9\"},{\"path\":\"E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\ai-docs\\\\tasks\\\\long-lived-dialog-a3-migration-s5-handoff-evidence\\\\C-s53-cold-core-output-acl-01-attempt-01.preflight.ps1\",\"bytes\":106242,\"sha256\":\"8bb6d0ec31984da3d18612906bc6cee5b16d45cfd3a862c6bcc390e005cedd43\"},{\"path\":\"E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\ai-docs\\\\tasks\\\\long-lived-dialog-a3-migration-s5-handoff-evidence\\\\C-s53-cold-core-output-acl-01-attempt-01.watchdog.ps1\",\"bytes\":33729,\"sha256\":\"82b588f84e92691e75260bf06862b9e2ccadd563bcee0ef2c30b3a93fc1e4e13\"},{\"path\":\"E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\ai-docs\\\\tasks\\\\long-lived-dialog-a3-migration-s5-handoff-evidence\\\\C-s53-cold-core-output-acl-01-attempt-01.source-review.md\",\"bytes\":7982,\"sha256\":\"8a6c0ab8a2e0fe4c85bc86bccce98435bf9df6420e51d8a82efc133538a2c21d\"},{\"path\":\"E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\ai-docs\\\\tasks\\\\long-lived-dialog-a3-migration-s5-handoff-evidence\\\\C-s53-cold-core-output-acl-01-attempt-01.root-allocation.json\",\"bytes\":1143,\"sha256\":\"39670fe44a178c0c76bc9508b2a5ce89064ed6d9695346e32ff5dbb49c2bf63c\"},{\"path\":\"E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\scripts\\\\migration-s53-root-copy.ps1\",\"bytes\":25596,\"sha256\":\"a3eefcc9dd4da8bdd9141d8731fc60feaf496d5d357047c0283b53dd8e6c3382\"},{\"path\":\"E:\\\\AI-Projects\\\\kilogram-p2p-messenger\\\\scripts\\\\migration-s5-l1-deadline.ps1\",\"bytes\":6038,\"sha256\":\"0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45\"},{\"path\":\"C:\\\\Users\\\\Paul\\\\.cache\\\\codex-runtimes\\\\codex-primary-runtime\\\\dependencies\\\\native\\\\powershell\\\\pwsh.exe\",\"bytes\":301368,\"sha256\":\"362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139\"}]\r\n",
+      "truncated": false
+    }
+  },
+  "request_to_complete_seconds": 6.61,
+  "native_wall_seconds": 4.3178781,
+  "app_duration_ms": 4317,
+  "session_id_supplied": false,
+  "input_pins_before": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-cold-preservation.ps1",
+      "bytes": 79709,
+      "sha256": "ec3cd2190c4b67c201c02eeda6c68e5832e95ac114a2e570954e4a25a05f3bb9"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\C-s53-cold-core-output-acl-01-attempt-01.preflight.ps1",
+      "bytes": 106242,
+      "sha256": "8bb6d0ec31984da3d18612906bc6cee5b16d45cfd3a862c6bcc390e005cedd43"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\C-s53-cold-core-output-acl-01-attempt-01.watchdog.ps1",
+      "bytes": 33729,
+      "sha256": "82b588f84e92691e75260bf06862b9e2ccadd563bcee0ef2c30b3a93fc1e4e13"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\C-s53-cold-core-output-acl-01-attempt-01.source-review.md",
+      "bytes": 7982,
+      "sha256": "8a6c0ab8a2e0fe4c85bc86bccce98435bf9df6420e51d8a82efc133538a2c21d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\C-s53-cold-core-output-acl-01-attempt-01.root-allocation.json",
+      "bytes": 1143,
+      "sha256": "39670fe44a178c0c76bc9508b2a5ce89064ed6d9695346e32ff5dbb49c2bf63c"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-root-copy.ps1",
+      "bytes": 25596,
+      "sha256": "a3eefcc9dd4da8bdd9141d8731fc60feaf496d5d357047c0283b53dd8e6c3382"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s5-l1-deadline.ps1",
+      "bytes": 6038,
+      "sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45"
+    },
+    {
+      "path": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "bytes": 301368,
+      "sha256": "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139"
+    }
+  ],
+  "input_pins_after": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-cold-preservation.ps1",
+      "bytes": 79709,
+      "sha256": "ec3cd2190c4b67c201c02eeda6c68e5832e95ac114a2e570954e4a25a05f3bb9"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\C-s53-cold-core-output-acl-01-attempt-01.preflight.ps1",
+      "bytes": 106242,
+      "sha256": "8bb6d0ec31984da3d18612906bc6cee5b16d45cfd3a862c6bcc390e005cedd43"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\C-s53-cold-core-output-acl-01-attempt-01.watchdog.ps1",
+      "bytes": 33729,
+      "sha256": "82b588f84e92691e75260bf06862b9e2ccadd563bcee0ef2c30b3a93fc1e4e13"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\C-s53-cold-core-output-acl-01-attempt-01.source-review.md",
+      "bytes": 7982,
+      "sha256": "8a6c0ab8a2e0fe4c85bc86bccce98435bf9df6420e51d8a82efc133538a2c21d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\C-s53-cold-core-output-acl-01-attempt-01.root-allocation.json",
+      "bytes": 1143,
+      "sha256": "39670fe44a178c0c76bc9508b2a5ce89064ed6d9695346e32ff5dbb49c2bf63c"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-root-copy.ps1",
+      "bytes": 25596,
+      "sha256": "a3eefcc9dd4da8bdd9141d8731fc60feaf496d5d357047c0283b53dd8e6c3382"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s5-l1-deadline.ps1",
+      "bytes": 6038,
+      "sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45"
+    },
+    {
+      "path": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "bytes": 301368,
+      "sha256": "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139"
+    }
+  ],
+  "input_pins_unchanged": true,
+  "reports": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\C-s53-cold-core-output-acl-01-attempt-01.started.json",
+      "bytes": 1024,
+      "sha256": "b3011d73c6aba5fc9b796ddcd0d6212d83498608046b07e5b901666be4fb8cf7"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\C-s53-cold-core-output-acl-01-attempt-01.cases.json",
+      "bytes": 16939,
+      "sha256": "5e99c84913d485dc9dcb38d954745ae7afcc483e492dfe8adae7ea00859ed17f"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\C-s53-cold-core-output-acl-01-attempt-01.watchdog.json",
+      "bytes": 688,
+      "sha256": "261a105f8cb700f5e57d0a5f80c656ce42943cb7e6306fe2f04b846241f83d27"
+    }
+  ],
+  "native_report_total_bytes": 18651,
+  "report_bounds": {
+    "each": 65536,
+    "total": 196608,
+    "all_within_bounds": true
+  },
+  "observed": {
+    "executor_checks_passed": true,
+    "worker_result": "observed",
+    "supervisor_result": "observed",
+    "native_exit_code": 0,
+    "child_exit_code": 0,
+    "child_reaped": true,
+    "stdout_eof": true,
+    "stderr_eof": true,
+    "forced": false,
+    "cleanup_unknown": false,
+    "worker_observed_seconds": 3.4905052,
+    "supervisor_observed_seconds": 4.0270569,
+    "real_verifier_calls": 1,
+    "consumption_proof_qpc": 2646977427959,
+    "core_dispose_before_qpc": 2646977428021,
+    "closed_at_bind_return": true,
+    "core_failure": {
+      "code": "output_acl",
+      "phase": "output_binding",
+      "role": "output",
+      "native_error": 0,
+      "hresult": -2146233079,
+      "cause_kind": "unexpected"
+    },
+    "exception_chain": [
+      {
+        "type": "System.Management.Automation.MethodInvocationException",
+        "hresult": -2146233087
+      },
+      {
+        "type": "System.InvalidOperationException",
+        "hresult": -2146233079
+      },
+      {
+        "type": "System.InvalidOperationException",
+        "hresult": -2146233079
+      }
+    ],
+    "core_snapshot_field_counts": [
+      38,
+      38,
+      38
+    ],
+    "owner_snapshot_field_counts": [
+      37,
+      37,
+      37,
+      37
+    ],
+    "owner_owned_handle_stages": [
+      7,
+      8,
+      7,
+      0
+    ],
+    "directory_created": true,
+    "directory_transferred": true,
+    "output_bound": false,
+    "proof_directory_created": true,
+    "positive_proof": false,
+    "receipt_count": 0,
+    "geometry": {
+      "directories": 17,
+      "files": 13,
+      "stream_checks": 57,
+      "logical_file_bytes": 3666,
+      "named_stream_bytes": 0,
+      "all_logical_stream_bytes": 3666
+    },
+    "core_peak_handles": 35,
+    "core_path_bytes": 6800,
+    "core_record_bytes": 12087312,
+    "hash_passes": 4,
+    "hash_bytes": 208
+  },
+  "boundaries": {
+    "one_wrapper_execution": true,
+    "work_seconds": 20,
+    "whole_seconds": 30,
+    "lane_count": 1,
+    "retry_count": 0,
+    "synthetic_only": true,
+    "fixture_retained": true,
+    "private_access": false,
+    "network_runtime": false,
+    "product_runtime": false,
+    "source_modified_after_acceptance": false,
+    "extra_fixture_probes": false,
+    "retry_or_repair": false,
+    "ledger_modified_by_executor": false,
+    "charge_release_owner": "root after actual review; worker/supervisor times overlap and are not summed",
+    "commit_push": false,
+    "s54": false,
+    "whole_attempt_verdict": "not_established"
+  },
+  "verdict": "observed_single_synthetic_negative_pending_root_actual_review",
+  "stop": "Await root actual-return review; no repeat, repair, commit or push."
+}
