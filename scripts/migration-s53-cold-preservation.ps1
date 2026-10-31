@@ -92,7 +92,8 @@ internal sealed class Spec {
             "streams-file-payload","streams-directory-payload",
             "aliases-directory-reparse","aliases-payload-hardlink",
             "namespace-extra-backup-directory","namespace-persistent-extra-state",
-            "resource-row-cap","resource-entry-cap","resource-handle-cap"};
+            "resource-row-cap","resource-entry-cap","resource-handle-cap",
+            "path-absolute","path-ads","path-device","path-trailing-dot","path-case-alias","path-depth"};
         if(Array.IndexOf(allowed,id)<0 || bytes<=0 || bytes>Limits.Inventory ||
            !Core.IsHash(hash) || files<2 || files>8000 || payload<0 || payload>Limits.Payload)
             throw new ArgumentException("Invalid closed ColdA fixture binding.");
@@ -185,6 +186,19 @@ internal sealed class Spec {
         if(resourceLeaf!=null) {
             root=W+@"\.tmp\C-s53-cold-core-resource-caps-01-attempt-01\"+resourceLeaf;
             negativeAttempt="C-s53-cold-core-resource-caps-01-attempt-01/"+resourceLeaf;
+        }
+        string pathLeaf=null;
+        switch(id) {
+            case "path-absolute": pathLeaf="absolute-path";break;
+            case "path-ads": pathLeaf="ads-path";break;
+            case "path-device": pathLeaf="device-path";break;
+            case "path-trailing-dot": pathLeaf="trailing-dot";break;
+            case "path-case-alias": pathLeaf="case-alias";break;
+            case "path-depth": pathLeaf="excessive-depth";break;
+        }
+        if(pathLeaf!=null) {
+            root=W+@"\.tmp\C-s53-cold-core-path-boundaries-01-attempt-01\"+pathLeaf;
+            negativeAttempt="C-s53-cold-core-path-boundaries-01-attempt-01/"+pathLeaf;
         }
         return new Spec {O=root+@"\origin",S=root+@"\state",B=root+@"\backup",E=root+@"\proof",
             Attempt=negativeAttempt??(freshSmall?"C-s53-cold-core-01-attempt-02/baseline-small":"C-s53-cold-core-01-attempt-01/"+id),InventoryBytes=bytes,InventoryHash=hash,
@@ -1267,7 +1281,8 @@ function New-S53ColdAFixtureCore {
             'streams-file-payload','streams-directory-payload',
             'aliases-directory-reparse','aliases-payload-hardlink',
             'namespace-extra-backup-directory','namespace-persistent-extra-state',
-            'resource-row-cap','resource-entry-cap','resource-handle-cap')]
+            'resource-row-cap','resource-entry-cap','resource-handle-cap',
+            'path-absolute','path-ads','path-device','path-trailing-dot','path-case-alias','path-depth')]
         [string]$Case,
         [Parameter(Mandatory)][long]$InventoryBytes,
         [Parameter(Mandatory)][ValidatePattern('\A[0-9a-f]{64}\z')][string]$InventorySha256,
