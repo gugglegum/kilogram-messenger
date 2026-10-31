@@ -1,0 +1,15 @@
+# C2-S: legacy output binding wrapper, focused contract task
+
+2026-10-31. Follows accepted C2-R producer-size positive. Dispatch only after root verifies C2-R publication.
+
+Goal: resolve the known failure-path ownership inference in scripts/migration-s53-cold-output.ps1::Bind-S53ColdBaselineSmallOutput before private launcher use. Its reflection wrapper infers Core entry from TargetInvocationException in the PowerShell-visible exception chain. The C2-O actual ACL-refusal case showed why that inference is insufficient after exception unwrapping. An already-closed SafeHandle.Dispose is not proof of a second native close; describe the real gap without inventing corruption.
+
+First deliver ONLY a compact contract/proposed minimal diff, with exact current source references. No implementation/compilation/native test/fixture/allocation/private access yet. Keep runtime ledger and navigation unchanged. Root reviews this contract before implementation.
+
+Inspect actual BindOwnedOutput ownership contract, wrapper callers and output-owner TakeDirectory/Dispose; preserve original failure classification/cause and cleanup evidence. Explain ownership before method entry, successful transfer, in-method refusal, and uncertain cleanup. Prefer one authoritative ownership path and the smallest change; do not add a general reflection framework, new retry machinery, arbitrary filesystem paths, or weaken deadlines/ACL/provenance. Do not infer native entry from exception type alone. Distinguish a still-open pending wrapper, closed incoming wrapper, Core ownership, and actual native-close unknown status. Specify who disposes Core on failure and why no valid caller state is unexpectedly destroyed. Preserve the primary error if cleanup also fails.
+
+Existing evidence to reuse: C2-O output-acl attempt01 contract/source/accepted for actual verifier/refusal/closed incoming owner; C2-M small positive for existing wrapper callers; C2-R for direct binding and healthy output transfer. No repeated full matrix or large producer setup.
+
+Propose only the smallest focused synthetic evidence needed for changed wrapper: healthy wrapper binding and real in-Core ACL refusal/ownership cleanup through that same wrapper. Identify setup/selector feasibility before proposing a run; fixed fresh synthetic paths, stable short bounded wrapper, no private originals. Before-entry type/signature checks may be established statically unless actual source change makes that insufficient; justify any extra runtime case specifically. Existing guardian/reap/EOF pattern may be reused with exact pins and current completion fix where applicable. Caps and prospective time bound are proposals, not allocations.
+
+Deliver one concise contract with prerequisites, minimal source scope, exact success/failure witnesses, cleanup ownership, honest limits and prospective runtime. Callback root then STOP. Whole S5.3 remains open; G1-G4/private typed-open/S5.4 not activated. After accepted implementation/actual evidence, scoped commit/push follows normal root acceptance.

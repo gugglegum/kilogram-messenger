@@ -78,6 +78,12 @@ public sealed class BaselineSmallOwner : IDisposable {
     public static BaselineSmallOwner Create(long absoluteWorkDeadline) {return new BaselineSmallOwner(absoluteWorkDeadline);}
     public static BaselineSmallOwner CreateProducerSize(long absoluteWorkDeadline) {return new BaselineSmallOwner(absoluteWorkDeadline,true);}
     public static BaselineSmallOwner CreateProducerSizeR02(long absoluteWorkDeadline) {return new BaselineSmallOwner(absoluteWorkDeadline,2);}
+    BaselineSmallOwner(long absoluteWorkDeadline,string fixedWrapperCase) : this(absoluteWorkDeadline,false) {
+        if(fixedWrapperCase!="healthy"&&fixedWrapperCase!="output-acl")throw Refusal("binding");
+        activeProof=@"E:\AI-Projects\kilogram-p2p-messenger\.tmp\C-s53-cold-output-wrapper-01-attempt-01\"+fixedWrapperCase+@"\proof";
+    }
+    public static BaselineSmallOwner CreateWrapperHealthyR01(long deadline) {return new BaselineSmallOwner(deadline,"healthy");}
+    public static BaselineSmallOwner CreateWrapperAclR01(long deadline) {return new BaselineSmallOwner(deadline,"output-acl");}
     static Exception Refusal(string code) {
         var e=new InvalidOperationException("Cold output bounded refusal");e.Data["cold_output_code"]=code;
         if(code=="private_acl")e.Data["rootcopies_code"]="private_acl";
@@ -248,6 +254,7 @@ function Bind-S53ColdBaselineSmallOutput {
         [Parameter(Mandatory)][ValidatePattern('\A[0-9a-f]{64}\z')][string]$DecisionSha256,
         [Parameter(Mandatory)][ValidatePattern('\A[0-9a-f]{64}\z')][string]$CoreSha256
     )
+    # Exclusive, non-reentrant fresh Core before first capture; observations are a rejection filter only.
     if($Core.GetType().FullName -cne 'Kilogram.S53.ColdA.Core' -or
        $Owner.GetType().FullName -cne 'Kilogram.S53.ColdOutput.BaselineSmallOwner') { throw 'Cold output binding types.' }
     $method=$Core.GetType().GetMethod('BindOwnedOutput',[Reflection.BindingFlags]'Public,Instance')
@@ -258,24 +265,75 @@ function Bind-S53ColdBaselineSmallOutput {
     if($parameters[0].ParameterType -ne [Microsoft.Win32.SafeHandles.SafeFileHandle] -or
        $parameters[1].ParameterType -ne $creator.GetType() -or $parameters[2].ParameterType -ne $verifier.GetType() -or
        $parameters[3].ParameterType -ne [string] -or $parameters[4].ParameterType -ne [string]) { throw 'Cold output binding signature.' }
-    $pending=$Owner.TakeDirectory()
-    $consumed=$false
+    $fresh=$Core.GetObservation()
+    if($fresh.RemainingOwnedHandles -ne 0 -or $fresh.PeakOwnedHandles -ne 0 -or
+       $fresh.HashPasses -ne 0 -or $fresh.HashBytes -ne 0 -or $fresh.CaptureCompleteTimestamp -ne 0 -or
+       $fresh.ReceiptBytesCharged -ne 0 -or $fresh.ReceiptBytesKnownWritten -ne 0 -or
+       $fresh.Completed -or $fresh.ExpectedSetCapturedBeforeHash -or $fresh.InputHandlesReleased -or
+       $fresh.ReceiptsCompleted -or $null -ne $fresh.FailureCode -or $fresh.CleanupUnknown) { throw 'Cold output binding requires exclusive fresh Core.' }
+    # Allocate before ownership transfer. Take and every subsequent assignment are inside the protected scope.
+    $arguments=[object[]]@($null,$creator,$verifier,$DecisionSha256,$CoreSha256)
+    $d=@{catch_qpc=0L;pending_observed=$false;pending_closed=$false;pending_invalid=$false
+        before_observed=$false;before_owned=-1L;before_unknown=$true;before_native=0;before_failure=$null;before_phase=$null;before_role=$null
+        core_dispose_qpc=0L;core_disposed=$false;after_observed=$false;after_owned=-1L;after_unknown=$true;after_native=0
+        fallback_needed=$false;fallback_used=$false;fallback_skipped_unknown=$false;pending_closed_after=$false
+        cleanup_unknown=$false;native_close_unknown=$false;secondary_type=$null;secondary_hresult=0}
+    $pending=$null
     try {
-        $arguments=[object[]]@($pending,$creator,$verifier,$DecisionSha256,$CoreSha256)
+        $pending=$Owner.TakeDirectory()
+        $arguments[0]=$pending
+        $null=$method.Invoke($Core,$arguments)
+    } catch {
+        $primary=$_
+        if($null -eq $pending) { $PSCmdlet.ThrowTerminatingError($primary) }
+        # Any post-Take failure ends this fresh transaction. Exception shape never establishes entry.
+        try { $d.catch_qpc=[Diagnostics.Stopwatch]::GetTimestamp();$d.pending_closed=$pending.IsClosed;$d.pending_invalid=$pending.IsInvalid;$d.pending_observed=$true }
+        catch { $d.cleanup_unknown=$true;$d.native_close_unknown=$true;$d.secondary_type=$_.Exception.GetType().FullName;$d.secondary_hresult=$_.Exception.HResult }
         try {
-            $null=$method.Invoke($Core,$arguments)
-            $consumed=$true
+            $o=$Core.GetObservation();$d.before_owned=$o.RemainingOwnedHandles;$d.before_unknown=$o.CleanupUnknown
+            $d.before_native=$o.CleanupNativeError;$d.before_failure=$o.FailureCode;$d.before_phase=$o.FailurePhase;$d.before_role=$o.FailureRole;$d.before_observed=$true
+            if($o.CleanupUnknown -or $o.CleanupNativeError -ne 0 -or $o.RemainingOwnedHandles -lt 0 -or $o.RemainingOwnedHandles -gt 1){$d.cleanup_unknown=$true;$d.native_close_unknown=$true}
         } catch {
-            # PowerShell can wrap MethodInfo.Invoke's TargetInvocationException.
-            for($at=$_.Exception;$null -ne $at;$at=$at.InnerException) {
-                if($at -is [Reflection.TargetInvocationException]) { $consumed=$true;break }
-            }
-            throw
+            $d.cleanup_unknown=$true;$d.native_close_unknown=$true
+            if($null -eq $d.secondary_type){$d.secondary_type=$_.Exception.GetType().FullName;$d.secondary_hresult=$_.Exception.HResult}
         }
+        try { $d.core_dispose_qpc=[Diagnostics.Stopwatch]::GetTimestamp();$Core.Dispose();$d.core_disposed=$true }
+        catch {
+            $d.cleanup_unknown=$true;$d.native_close_unknown=$true
+            if($null -eq $d.secondary_type){$d.secondary_type=$_.Exception.GetType().FullName;$d.secondary_hresult=$_.Exception.HResult}
+        }
+        try {
+            $o=$Core.GetObservation();$d.after_owned=$o.RemainingOwnedHandles;$d.after_unknown=$o.CleanupUnknown;$d.after_native=$o.CleanupNativeError;$d.after_observed=$true
+            if($o.CleanupUnknown -or $o.CleanupNativeError -ne 0 -or $o.RemainingOwnedHandles -ne 0){$d.cleanup_unknown=$true;$d.native_close_unknown=$true}
+        } catch {
+            $d.cleanup_unknown=$true;$d.native_close_unknown=$true
+            if($null -eq $d.secondary_type){$d.secondary_type=$_.Exception.GetType().FullName;$d.secondary_hresult=$_.Exception.HResult}
+        }
+        try {
+            $d.fallback_needed=-not $pending.IsClosed
+            if($d.fallback_needed) {
+                # A failed/unknown Core close is never a safe pre-entry fallback; never retry a raw close.
+                if($d.core_disposed -and $d.before_observed -and -not $d.before_unknown -and
+                   $d.after_observed -and -not $d.after_unknown -and $d.after_owned -eq 0 -and -not $d.cleanup_unknown) {
+                    $d.fallback_used=$true;$d.cleanup_unknown=$true;$d.native_close_unknown=$true
+                    $pending.Dispose() # managed result only; native ReleaseHandle outcome is not instrumented
+                } else { $d.fallback_skipped_unknown=$true;$d.cleanup_unknown=$true;$d.native_close_unknown=$true }
+            }
+            $d.pending_closed_after=$pending.IsClosed
+        } catch {
+            $d.cleanup_unknown=$true;$d.native_close_unknown=$true
+            if($null -eq $d.secondary_type){$d.secondary_type=$_.Exception.GetType().FullName;$d.secondary_hresult=$_.Exception.HResult}
+        }
+        if($d.before_unknown -or -not $d.pending_observed -or -not $d.pending_closed_after){$d.cleanup_unknown=$true;$d.native_close_unknown=$true}
+        try {
+            foreach($key in $d.Keys){$primary.Exception.Data['s53_wrapper_'+$key]=$d[$key]}
+            $primary.Exception.Data['s53_wrapper_diagnostics_complete']=$true # commit marker, written last
+        } catch {
+            # The primary record still wins; an absent commit marker means diagnostics/cleanup cannot pass.
+        }
+        $PSCmdlet.ThrowTerminatingError($primary)
     } finally {
-        # Reflection/binding failure before method entry leaves ownership with this scope.
-        # Such a failure is never a passing case; disposal here is best-effort managed cleanup.
-        if(-not $consumed -and $pending) { $pending.Dispose() }
+        $arguments[0]=$null
         $pending=$null
     }
 }

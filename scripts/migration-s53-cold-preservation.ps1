@@ -95,11 +95,15 @@ internal sealed class Spec {
             "namespace-extra-backup-directory","namespace-persistent-extra-state",
             "resource-row-cap","resource-entry-cap","resource-handle-cap",
             "path-absolute","path-ads","path-device","path-trailing-dot","path-case-alias","path-depth",
-            "late-directory-s","late-directory-bkp","receipt-native-close","boundary-output-cap","boundary-directory-collision","native-read-locked","native-streams-unsupported","boundary-output-acl","boundary-inventory-size","deadline-blocked-scan","deadline-blocked-scan-r02","producer-size-r01","producer-size-r02"};
+            "late-directory-s","late-directory-bkp","receipt-native-close","boundary-output-cap","boundary-directory-collision","native-read-locked","native-streams-unsupported","boundary-output-acl","boundary-inventory-size","deadline-blocked-scan","deadline-blocked-scan-r02","producer-size-r01","producer-size-r02","wrapper-healthy-r01","wrapper-output-acl-r01"};
         if(id=="producer-size-r01" && (bytes!=3465145L || hash!="c40ffdedd028be593c08ded6b05daba44abe0d1a9e1dac86cb6d78632cbf3843" || files!=6956 || payload!=45597399L))
             throw new ArgumentException("Invalid closed ColdA producer-size binding.");
         if(id=="producer-size-r02" && (bytes!=3465145L || hash!="6962b9986b7055d7bceb5e0ea15bfeb70ebec43c3db4d7de2cf0e5cbc693ea12" || files!=6956 || payload!=45597399L))
             throw new ArgumentException("Invalid closed ColdA producer-size r02 binding.");
+        if(id=="wrapper-healthy-r01" && (bytes!=2013L || hash!="3de9737b02c04660f89b36eda638267f846a2c66e8ba3286022274791620a136" || files!=2 || payload!=0L))
+            throw new ArgumentException("Invalid closed ColdA wrapper healthy binding.");
+        if(id=="wrapper-output-acl-r01" && (bytes!=2025L || hash!="ea7a2bdab58553178221136f7fd467e24f29199f506529bb0aaf05a8a1ccd4e1" || files!=2 || payload!=0L))
+            throw new ArgumentException("Invalid closed ColdA wrapper ACL binding.");
         bool inventoryBoundary=id=="boundary-inventory-size";
         if(inventoryBoundary && (bytes!=16777217L || hash!="1003b1b5dc078189799a1216ce0f9fbcebb94e8b6b83c58c4b03345f07f94ced" || files!=5 || payload!=52))
             throw new ArgumentException("Invalid closed ColdA inventory boundary binding.");
@@ -255,6 +259,11 @@ internal sealed class Spec {
         if(id=="producer-size-r02") {
             root=W+@"\.tmp\C-s53-cold-core-producer-size-01-attempt-02\producer-size";
             negativeAttempt="C-s53-cold-core-producer-size-01-attempt-02/producer-size";
+        }
+        if(id=="wrapper-healthy-r01" || id=="wrapper-output-acl-r01") {
+            string leaf=id=="wrapper-healthy-r01"?"healthy":"output-acl";
+            root=W+@"\.tmp\C-s53-cold-output-wrapper-01-attempt-01\"+leaf;
+            negativeAttempt="C-s53-cold-output-wrapper-01-attempt-01/"+leaf;
         }
         return new Spec {O=root+@"\origin",S=root+@"\state",B=root+@"\backup",E=root+@"\proof",
             Attempt=negativeAttempt??(freshSmall?"C-s53-cold-core-01-attempt-02/baseline-small":"C-s53-cold-core-01-attempt-01/"+id),InventoryBytes=bytes,InventoryHash=hash,
@@ -1341,7 +1350,7 @@ function New-S53ColdAFixtureCore {
             'namespace-extra-backup-directory','namespace-persistent-extra-state',
             'resource-row-cap','resource-entry-cap','resource-handle-cap',
             'path-absolute','path-ads','path-device','path-trailing-dot','path-case-alias','path-depth',
-            'late-directory-s','late-directory-bkp','receipt-native-close','boundary-output-cap','boundary-directory-collision','native-read-locked','native-streams-unsupported','boundary-output-acl','boundary-inventory-size','deadline-blocked-scan','deadline-blocked-scan-r02','producer-size-r01','producer-size-r02')]
+            'late-directory-s','late-directory-bkp','receipt-native-close','boundary-output-cap','boundary-directory-collision','native-read-locked','native-streams-unsupported','boundary-output-acl','boundary-inventory-size','deadline-blocked-scan','deadline-blocked-scan-r02','producer-size-r01','producer-size-r02','wrapper-healthy-r01','wrapper-output-acl-r01')]
         [string]$Case,
         [Parameter(Mandatory)][long]$InventoryBytes,
         [Parameter(Mandatory)][ValidatePattern('\A[0-9a-f]{64}\z')][string]$InventorySha256,

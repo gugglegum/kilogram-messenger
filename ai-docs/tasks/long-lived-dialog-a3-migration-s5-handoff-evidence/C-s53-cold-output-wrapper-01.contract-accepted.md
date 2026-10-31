@@ -1,0 +1,17 @@
+# C2-S contract acceptance and source task
+
+2026-10-31. Root accepts contract11531B/SHA256 d45befe07bb943e3e88b50d99eb92ba008451d907fd52e3a7af02e0ac271027e on published21f800da49d9c70fcf72b532e028f89d648f322c. Root7df67e verified contract pin/HEAD/empty index; source reads2f1e69/cf401f/fedbde checked actual constructor/observation, Phase, BindOwnedOutput, CloseFile/CloseInputs/Dispose, owner transfer/ACL/disposal and small caller ordering.
+
+The fresh admission filter is feasible: a fresh constructor has no filesystem handles/capture/release/failure; prior binding leaves nonzero peak handles, a normally disposed fresh Core sets InputHandlesReleased, and failed/unknown objects are rejected. This is a defensive filter with reviewed exclusive non-reentrant caller provenance, not concurrency protection. Preserve that prerequisite and reject before TakeDirectory without destroying previous state.
+
+Accepted minimal policy: remove exception-shape consumption inference, protect pending transfer, keep primary ErrorRecord, Core-first cleanup and only safely still-open pending managed fallback, preserve native-close uncertainty. No retry of uncertain native close. At source review explicitly trace the cleanup-exception/unknown branch: it must not turn uncertain Core close into a claimed safe pre-entry fallback or successful cleanup. No new framework or runtime fault matrix is requested.
+
+All potentially failing argument/delegate preparation that can occur before transfer belongs there; successful TakeDirectory and subsequent argument assignment/invocation must be protected without an unguarded ownership gap. Catch the original record before any secondary observation. Diagnostic flags must remain bounded primitives and fail closed if observations/cleanup cannot be established; no output stream pollution. Existing outer caller Core.Dispose remains idempotent and owner ancestry cleanup remains caller-owned.
+
+Microsoft ThrowTerminatingError documentation was checked: it forwards ErrorRecord information, but does not guarantee an invariant outer exception wrapper. Actual focused refusal must verify original Core/private_acl marks and HResult, not assumed exception nesting. No API behavior proof from documentation alone.
+
+Two focused bind-only cases accepted: healthy and real narrowed-DACL refusal through the changed legacy wrapper with exact real types/delegates. Closed fresh selectors/factories and pinned two-row metadata only; no inventory/input-tree read, payload capture, receipts, private data or repeated producer run. Show exact root-depth/ancestry/resource/ACL editor counts and bounded reports in source review; use existing patterns rather than general machinery.
+
+Next deliver minimal implementation and focused worker/supervisor/helper source plus concise source review. Preserve all published evidence. New source may be parsed and pure in-memory metadata independently computed, but no compilation/dot-source/helper/native/fixture invocation, allocation, private probe, ledger/nav edits, commit/push yet. Source review precedes activation. Prospective work20/whole30/lane1/retry0 remains unallocated; use confirmed signal-reap plus EOF completion and absolute deadlines.
+
+Ledger unchanged: S5.3 C1924.7294909/F1562.2882567/P0; combinedC2512.1781018/F6278.6084056/P0; ceilings2630/1642/0; active0/inactiveC705.2705091/F79.7117433/P0. Whole S5.3 open; private grants none; G1-G4/S5.4 inactive. Callback root and STOP for source review.
