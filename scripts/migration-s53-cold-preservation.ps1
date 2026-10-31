@@ -95,7 +95,7 @@ internal sealed class Spec {
             "namespace-extra-backup-directory","namespace-persistent-extra-state",
             "resource-row-cap","resource-entry-cap","resource-handle-cap",
             "path-absolute","path-ads","path-device","path-trailing-dot","path-case-alias","path-depth",
-            "late-directory-s","late-directory-bkp","receipt-native-close","boundary-output-cap","boundary-directory-collision","native-read-locked","native-streams-unsupported","boundary-output-acl","boundary-inventory-size"};
+            "late-directory-s","late-directory-bkp","receipt-native-close","boundary-output-cap","boundary-directory-collision","native-read-locked","native-streams-unsupported","boundary-output-acl","boundary-inventory-size","deadline-blocked-scan","deadline-blocked-scan-r02"};
         bool inventoryBoundary=id=="boundary-inventory-size";
         if(inventoryBoundary && (bytes!=16777217L || hash!="1003b1b5dc078189799a1216ce0f9fbcebb94e8b6b83c58c4b03345f07f94ced" || files!=5 || payload!=52))
             throw new ArgumentException("Invalid closed ColdA inventory boundary binding.");
@@ -235,6 +235,14 @@ internal sealed class Spec {
         if(inventoryBoundary) {
             root=W+@"\.tmp\C-s53-cold-core-inventory-boundary-01-attempt-01\inventory-size";
             negativeAttempt="C-s53-cold-core-inventory-boundary-01-attempt-01/inventory-size";
+        }
+        if(id=="deadline-blocked-scan") {
+            root=W+@"\.tmp\C-s53-cold-core-blocked-worker-01-attempt-01\blocked-scan";
+            negativeAttempt="C-s53-cold-core-blocked-worker-01-attempt-01/blocked-scan";
+        }
+        if(id=="deadline-blocked-scan-r02") {
+            root=W+@"\.tmp\C-s53-cold-core-blocked-worker-01-attempt-02\blocked-scan";
+            negativeAttempt="C-s53-cold-core-blocked-worker-01-attempt-02/blocked-scan";
         }
         return new Spec {O=root+@"\origin",S=root+@"\state",B=root+@"\backup",E=root+@"\proof",
             Attempt=negativeAttempt??(freshSmall?"C-s53-cold-core-01-attempt-02/baseline-small":"C-s53-cold-core-01-attempt-01/"+id),InventoryBytes=bytes,InventoryHash=hash,
@@ -1321,7 +1329,7 @@ function New-S53ColdAFixtureCore {
             'namespace-extra-backup-directory','namespace-persistent-extra-state',
             'resource-row-cap','resource-entry-cap','resource-handle-cap',
             'path-absolute','path-ads','path-device','path-trailing-dot','path-case-alias','path-depth',
-            'late-directory-s','late-directory-bkp','receipt-native-close','boundary-output-cap','boundary-directory-collision','native-read-locked','native-streams-unsupported','boundary-output-acl','boundary-inventory-size')]
+            'late-directory-s','late-directory-bkp','receipt-native-close','boundary-output-cap','boundary-directory-collision','native-read-locked','native-streams-unsupported','boundary-output-acl','boundary-inventory-size','deadline-blocked-scan','deadline-blocked-scan-r02')]
         [string]$Case,
         [Parameter(Mandatory)][long]$InventoryBytes,
         [Parameter(Mandatory)][ValidatePattern('\A[0-9a-f]{64}\z')][string]$InventorySha256,
