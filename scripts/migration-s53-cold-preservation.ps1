@@ -93,7 +93,8 @@ internal sealed class Spec {
             "aliases-directory-reparse","aliases-payload-hardlink",
             "namespace-extra-backup-directory","namespace-persistent-extra-state",
             "resource-row-cap","resource-entry-cap","resource-handle-cap",
-            "path-absolute","path-ads","path-device","path-trailing-dot","path-case-alias","path-depth"};
+            "path-absolute","path-ads","path-device","path-trailing-dot","path-case-alias","path-depth",
+            "late-directory-s","late-directory-bkp"};
         if(Array.IndexOf(allowed,id)<0 || bytes<=0 || bytes>Limits.Inventory ||
            !Core.IsHash(hash) || files<2 || files>8000 || payload<0 || payload>Limits.Payload)
             throw new ArgumentException("Invalid closed ColdA fixture binding.");
@@ -199,6 +200,15 @@ internal sealed class Spec {
         if(pathLeaf!=null) {
             root=W+@"\.tmp\C-s53-cold-core-path-boundaries-01-attempt-01\"+pathLeaf;
             negativeAttempt="C-s53-cold-core-path-boundaries-01-attempt-01/"+pathLeaf;
+        }
+        string directoryLeaf=null;
+        switch(id) {
+            case "late-directory-s": directoryLeaf="state-directory";break;
+            case "late-directory-bkp": directoryLeaf="backup-directory";break;
+        }
+        if(directoryLeaf!=null) {
+            root=W+@"\.tmp\C-s53-cold-core-final-directory-01-attempt-01\"+directoryLeaf;
+            negativeAttempt="C-s53-cold-core-final-directory-01-attempt-01/"+directoryLeaf;
         }
         return new Spec {O=root+@"\origin",S=root+@"\state",B=root+@"\backup",E=root+@"\proof",
             Attempt=negativeAttempt??(freshSmall?"C-s53-cold-core-01-attempt-02/baseline-small":"C-s53-cold-core-01-attempt-01/"+id),InventoryBytes=bytes,InventoryHash=hash,
@@ -1282,7 +1292,8 @@ function New-S53ColdAFixtureCore {
             'aliases-directory-reparse','aliases-payload-hardlink',
             'namespace-extra-backup-directory','namespace-persistent-extra-state',
             'resource-row-cap','resource-entry-cap','resource-handle-cap',
-            'path-absolute','path-ads','path-device','path-trailing-dot','path-case-alias','path-depth')]
+            'path-absolute','path-ads','path-device','path-trailing-dot','path-case-alias','path-depth',
+            'late-directory-s','late-directory-bkp')]
         [string]$Case,
         [Parameter(Mandatory)][long]$InventoryBytes,
         [Parameter(Mandatory)][ValidatePattern('\A[0-9a-f]{64}\z')][string]$InventorySha256,
