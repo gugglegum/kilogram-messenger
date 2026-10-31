@@ -12,6 +12,8 @@ use thiserror::Error;
 mod key_provider;
 mod key_recovery;
 mod vault;
+#[cfg(all(windows, feature = "verification-state-lock-adoption"))]
+pub mod verification_lock;
 
 pub use key_provider::{VaultKeyLoadOutcome, VaultKeyProtection};
 pub use key_recovery::{VaultKeyRecoveryExport, VaultKeyRecoveryImport, VaultRecoveryWitness};
@@ -376,6 +378,8 @@ pub enum StateError {
 pub struct StateDirectoryLock {
     root: PathBuf,
     _file: File,
+    #[cfg(all(windows, feature = "verification-state-lock-adoption"))]
+    _verification_adoption: Option<Box<verification_lock::Adoption>>,
 }
 
 impl StateDirectoryLock {
@@ -403,7 +407,12 @@ impl StateDirectoryLock {
             };
         }
         recover(&root)?;
-        Ok(Self { root, _file: file })
+        Ok(Self {
+            root,
+            _file: file,
+            #[cfg(all(windows, feature = "verification-state-lock-adoption"))]
+            _verification_adoption: None,
+        })
     }
 
     pub fn root(&self) -> &Path {

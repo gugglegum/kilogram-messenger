@@ -1,0 +1,27 @@
+   Compiling windows-sys v0.52.0
+   Compiling tempfile v3.27.0
+   Compiling winapi-util v0.1.11
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+error[E0282]: type annotations needed
+   --> crates\kilogram-state\src\verification_lock_tests.rs:113:5
+    |
+113 |     assert_eq!(fs::read(renamed.join(LOCK_FILE))?, []);
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+
+error[E0283]: type annotations needed
+   --> crates\kilogram-state\src\verification_lock_tests.rs:113:5
+    |
+113 |     assert_eq!(fs::read(renamed.join(LOCK_FILE))?, []);
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cannot infer type
+    |
+    = note: multiple `impl`s satisfying `u8: PartialEq<_>` found in the following crates: `core`, `serde_json`:
+            - impl PartialEq for u8;
+            - impl PartialEq<serde_json::Value> for u8;
+    = note: required for `Vec<u8>` to implement `PartialEq<[_; 0]>`
+
+Some errors have detailed explanations: E0282, E0283.
+For more information about an error, try `rustc --explain E0282`.
+error: could not compile `kilogram-state` (lib test) due to 2 previous errors
+warning: build failed, waiting for other jobs to finish...
+#< CLIXML
+<Objs Version="1.1.0.1" xmlns="http://schemas.microsoft.com/powershell/2004/04"><S S="Error">Exception: Compile-only exit 101_x000D__x000A_</S></Objs>

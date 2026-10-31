@@ -1,0 +1,246 @@
+{
+  "schema_version": 1,
+  "classification": "B0a-typed-default-stream-inputs-review-candidate",
+  "head": "32c4361c58a90a4ce4ad46edb742f4234eae74f4",
+  "previous_acceptance": "revoked after actual ADS regression08; previous publication manifest inactive",
+  "scope": {
+    "feature": "verification-state-lock-adoption",
+    "windows_only": true,
+    "nondefault": true,
+    "unsafe_policy_unchanged": true,
+    "arbitrary_file_ingress": false,
+    "cross_process_bridge": false,
+    "private_production_roots_accessed": false,
+    "executor_navigation_edits": false,
+    "commit_push_performed": false
+  },
+  "provenance": {
+    "constructor": "ExistingStateLockInputs::open_existing: guarded existing literal directory + fixed default-stream LOCK_FILE, read-only/share0 std open",
+    "clone": "safe File::try_clone with shared immutable Origin and one-shot AtomicBool",
+    "claim": "one attempt per lineage, including refused attempts; no reset on release, no OS try_lock on repeated/concurrent claim",
+    "cleanup": "fallible release_adopted; explicit unlock rollback for post-lock refusal; Drop best effort only",
+    "range_test": "private compatible-sharing default-stream opener used only in unit tests to independently observe range lifetime while producer duplicates survive; public open_existing hardcodes share0"
+  },
+  "source": [
+    {
+      "path": "Cargo.lock",
+      "bytes": 194160,
+      "sha256": "fddcd495f4e914a423c44e22528e38d2fb4f36fa71334d3a961c7fd4abf6e191",
+      "git_blob": "576b25e8bd61419154ca1bba2e05102b3522a9c7"
+    },
+    {
+      "path": "crates/kilogram-state/Cargo.toml",
+      "bytes": 906,
+      "sha256": "d3380303440f9e89798a8d9fe29e8684dd608e7b1e5c5ebc71c255dbf383b433",
+      "git_blob": "2f55fe07c6708c4ff97e7ad01c1b6436484e4a62"
+    },
+    {
+      "path": "crates/kilogram-state/src/lib.rs",
+      "bytes": 68996,
+      "sha256": "12ac2f138b6a6f574b804d391d83d27e6120894fd81b776658082a73168819c6",
+      "git_blob": "d15df2283781cbe899d93d74880bee95250dcc3c"
+    },
+    {
+      "path": "crates/kilogram-state/src/verification_lock.rs",
+      "bytes": 12876,
+      "sha256": "30fe00f7a0da8a057dedcf91e23443451cded76431684a266d6ae85626520f6b",
+      "git_blob": "07bb91f5bef276c9e140928df8d1b3a043338e88"
+    },
+    {
+      "path": "crates/kilogram-state/src/verification_lock_tests.rs",
+      "bytes": 15126,
+      "sha256": "6e63e982483abe40bd35e87def49db751b197a275613e7c28b58add202f815b5",
+      "git_blob": "6829106bc34b050aa2b16d9107699ea649532a36"
+    }
+  ],
+  "new_evidence": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0a-01-attempt-08.invocation.ps1",
+      "bytes": 1195,
+      "sha256": "d6a2141bb8877775366225cf5db418cd9276d6e8a63c63947818f019586035b8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0a-01-attempt-08.stdout.log",
+      "bytes": 1190,
+      "sha256": "c899d6372e2a722ea39958493cead2d5305be6c95c998993b21a7db1a933143c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0a-01-attempt-08.stderr.log",
+      "bytes": 843,
+      "sha256": "bd146899dfa6077c2d5ea2017e00bae99602d4ceede31b0fcf43377d2cadca92"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0a-01-attempt-08.result.json",
+      "bytes": 395,
+      "sha256": "56b1c3614f165cd8c761fc31cd4e1c9995e3f43d0506c47d836ded40fe6bc078"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0a-01-attempt-09.invocation.ps1",
+      "bytes": 1852,
+      "sha256": "b7824e7a7f51f5450b8b03c035b4d50ecb65d6d12741b4caceafcbbda4ffd4de"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0a-01-attempt-09.stdout.log",
+      "bytes": 3318,
+      "sha256": "ce333ac0e94a318f7a0c780a4b23ef171c709f32305e9797636c5360708cca84"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0a-01-attempt-09.stderr.log",
+      "bytes": 1591,
+      "sha256": "0f847b1698298f2e70363339b3928ade89e7e1fdcbcc436db9cdb1b945f4395a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0a-01-attempt-09.result.json",
+      "bytes": 394,
+      "sha256": "fd296c376ed4f8f31c3e3807ecd05335206a22bb3d6dda30c1d98c37e2a1c2c0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0a-01-attempt-10.invocation.ps1",
+      "bytes": 3700,
+      "sha256": "11545a097f132b282a7dc7455f3dfd0ddcffc710a6f61d34f70c141f169475ec"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0a-01-attempt-10.stdout.log",
+      "bytes": 2663,
+      "sha256": "0943057842617784aa53137d8e546f72c4f50231ab705f306755d0a0c17c92c1"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0a-01-attempt-10.stderr.log",
+      "bytes": 1137,
+      "sha256": "fa7009aa8feb7d3ecf2400db037cc7ef9cf21309e6a688a0ad2ff2f4dcbb6b56"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0a-01-attempt-10.result.json",
+      "bytes": 395,
+      "sha256": "f228018d633fd623d424168fb3e2b257d8787f238d66fa9ecbf2ed36b8fc9081"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0a-01-attempt-10.inputs.before.json",
+      "bytes": 1200,
+      "sha256": "9bb21cac8589d0e32a9a2c67d3733cda786f5f3d323c4513e121d3d6b2000d38"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0a-01-attempt-10.inputs.after.json",
+      "bytes": 1200,
+      "sha256": "9bb21cac8589d0e32a9a2c67d3733cda786f5f3d323c4513e121d3d6b2000d38"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0a-01-attempt-10.images.json",
+      "bytes": 526,
+      "sha256": "e986b4b7826316f70f3a495548d92b3cf3e23517ec19b8efb3da184a8f1bc044"
+    }
+  ],
+  "actual_images": [
+    {
+      "path": "target/verification/deps/kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 11530752,
+      "sha256": "b5d30191acb700df7b1d7640f3d4c5b0189ba443a22b6de78680c4c222e20b5b"
+    },
+    {
+      "path": "target/verification/deps/kilogram-state-test-a3_s1_root_review-tests.exe",
+      "bytes": 7385088,
+      "sha256": "7ea875d046eb1fc31587c84c20f6ff81b9abc6fa79ad5640ae6d33b16070d038"
+    },
+    {
+      "path": "target/verification/deps/kilogram-state-test-a3_s2_root_review-tests.exe",
+      "bytes": 7642112,
+      "sha256": "baf681dd315d0acaef40afc72890c25e1aa089e2e76705606ab302d0e7546609"
+    }
+  ],
+  "final_inputs_stable": true,
+  "native_returns": [
+    {
+      "attempt": 8,
+      "start_chunk": "20c563",
+      "session": 86764,
+      "final_chunk": "fe2a4a",
+      "exit": 1,
+      "result": "confirmed unsafe ADS acceptance in superseded arbitrary-File candidate"
+    },
+    {
+      "attempt": 9,
+      "start_chunk": "c9bdd5",
+      "session": 54367,
+      "final_chunk": "96c14b",
+      "exit": 1,
+      "result": "ADS and concurrent claim focused tests passed; strict Clippy cmp_owned refused"
+    },
+    {
+      "attempt": 10,
+      "start_chunk": "08a0d4",
+      "session": 15580,
+      "final_chunk": "75749a",
+      "exit": 0,
+      "result": "10 focused tests passed; strict Clippy/rustfmt passed; default and adoption compile-only passed"
+    }
+  ],
+  "new_attempts": [
+    {
+      "attempt": "C-s53-cold-b0a-01-attempt-08",
+      "start_utc": "2026-10-31T19:55:17.4704932+05:00",
+      "end_utc": "2026-10-31T19:55:32.7941395+05:00",
+      "whole_seconds": 15.3244293,
+      "outer_limit_seconds": 180,
+      "inner_work_whole": [
+        165,
+        175
+      ],
+      "timed_out": false,
+      "child_pid": 26156,
+      "exit_code": 1,
+      "offline": true,
+      "jobs": 2,
+      "priority": "BelowNormal"
+    },
+    {
+      "attempt": "C-s53-cold-b0a-01-attempt-09",
+      "start_utc": "2026-10-31T20:05:53.7221137+05:00",
+      "end_utc": "2026-10-31T20:06:31.2131805+05:00",
+      "whole_seconds": 37.4918662,
+      "outer_limit_seconds": 180,
+      "inner_work_whole": [
+        165,
+        175
+      ],
+      "timed_out": false,
+      "child_pid": 4860,
+      "exit_code": 1,
+      "offline": true,
+      "jobs": 2,
+      "priority": "BelowNormal"
+    },
+    {
+      "attempt": "C-s53-cold-b0a-01-attempt-10",
+      "start_utc": "2026-10-31T20:07:22.3936828+05:00",
+      "end_utc": "2026-10-31T20:07:56.1821025+05:00",
+      "whole_seconds": 33.7896942,
+      "outer_limit_seconds": 180,
+      "inner_work_whole": [
+        165,
+        175
+      ],
+      "timed_out": false,
+      "child_pid": 26464,
+      "exit_code": 0,
+      "offline": true,
+      "jobs": 2,
+      "priority": "BelowNormal"
+    }
+  ],
+  "measured_budget": {
+    "bounded_01_07_seconds": "126.9469098",
+    "additional_08_10_seconds": "86.6059897",
+    "bounded_total_seconds": "213.5528995",
+    "original_ceiling_seconds": 600,
+    "remaining_by_same_envelope_seconds": "386.4471005",
+    "standalone_formatter_seconds_approx": 2.59,
+    "ledger_changed_by_executor": false
+  },
+  "limitations": [
+    "same-process duplication only; future Rust-origin to owned C# worker duplication is separate",
+    "no private S/O/BKP/R/E access, preservation worker/lifecycle/channel, full readers or S5.3 private run",
+    "default-stream provenance relies on private typed constructor, not volume/file ID distinguishing streams",
+    "a failed lineage is deliberately unusable; all its clones must be released before fresh opening",
+    "Drop cannot attest OS unlock success; use fallible release_adopted for cleanup evidence"
+  ]
+}

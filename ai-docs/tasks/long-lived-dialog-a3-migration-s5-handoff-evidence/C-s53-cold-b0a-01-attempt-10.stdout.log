@@ -1,0 +1,42 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+WARNING: Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 10 tests
+test verification_lock::tests::active_journals_are_preserved_without_recovery ... ok
+test verification_lock::tests::concurrent_clones_have_one_adoption_attempt ... ok
+test verification_lock::tests::default_stream_provenance_with_existing_ads ... ok
+test verification_lock::tests::directory_junction_is_rejected_without_following ... соединение создано для E:\AI-Projects\kilogram-p2p-messenger\.tmp\C-s53-cold-b0a-synthetic\b0a-MzrNJa\state\junction <<===>> E:\AI-Projects\kilogram-p2p-messenger\.tmp\C-s53-cold-b0a-synthetic\b0a-fkHGe3\state
+ok
+test verification_lock::tests::missing_existing_paths_are_not_created ... ok
+test verification_lock::tests::ordinary_acquire_still_creates_and_recovers ... ok
+test verification_lock::tests::readonly_share0_duplicates_hold_exclusion_and_directory ... ok
+test verification_lock::tests::separate_owner_is_rejected_before_adoption ... ok
+test verification_lock::tests::unlocks_on_drop_explicit_release_and_post_lock_refusal ... ok
+test verification_lock::tests::wrong_identity_path_type_and_nonempty_refuse_without_writes ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 97 filtered out; finished in 0.09s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+cache_status=skipped_explicitly
+status=passed
+isolated_test_count=0
+owned_children_after=0

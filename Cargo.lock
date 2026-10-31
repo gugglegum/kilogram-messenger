@@ -3689,6 +3689,7 @@ dependencies = [
  "stellar-agent-windows-identity",
  "tempfile",
  "thiserror 2.0.20",
+ "winapi-util",
  "zeroize",
 ]
 

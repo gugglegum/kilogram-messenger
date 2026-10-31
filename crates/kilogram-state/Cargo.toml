@@ -7,6 +7,10 @@ rust-version.workspace = true
 license.workspace = true
 publish = false
 
+[features]
+# Explicit opt-in for offline Windows verification; not part of default builds.
+verification-state-lock-adoption = ["dep:winapi-util"]
+
 [dependencies]
 argon2.workspace = true
 base64.workspace = true
@@ -23,6 +27,7 @@ zeroize.workspace = true
 
 [target.'cfg(windows)'.dependencies]
 stellar-agent-windows-identity = "=0.1.0-alpha.6"
+winapi-util = { version = "=0.1.11", optional = true }
 
 [dev-dependencies]
 tempfile.workspace = true

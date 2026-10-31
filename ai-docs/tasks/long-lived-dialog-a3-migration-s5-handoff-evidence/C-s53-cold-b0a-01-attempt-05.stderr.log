@@ -1,0 +1,37 @@
+    Checking windows-sys v0.52.0
+    Checking tempfile v3.27.0
+    Checking winapi-util v0.1.11
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+error: the `Err`-variant returned from this function is very large
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\live1.rs:165:28
+    |
+165 |     pub fn reopen(self) -> std::result::Result<Self, L1ReopenFailure> {
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the `Err`-variant is at least 144 bytes
+    |
+    = help: try reducing the size of `vault::indexed_dialog::migration7::live1::L1ReopenFailure`, for example by boxing large elements or replacing it with `Box<vault::indexed_dialog::migration7::live1::L1ReopenFailure>`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#result_large_err
+    = note: `-D clippy::result-large-err` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::result_large_err)]`
+
+error: the `Err`-variant returned from this function is very large
+   --> crates\kilogram-state\src\vault\indexed_dialog\migration7\live1.rs:282:10
+    |
+282 |     ) -> std::result::Result<(Self, Result<()>), L1ReopenFailure> {
+    |          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the `Err`-variant is at least 144 bytes
+    |
+    = help: try reducing the size of `vault::indexed_dialog::migration7::live1::L1ReopenFailure`, for example by boxing large elements or replacing it with `Box<vault::indexed_dialog::migration7::live1::L1ReopenFailure>`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#result_large_err
+
+error: the `Err`-variant returned from this function is very large
+   --> crates\kilogram-state\src\vault\indexed_dialog\runtime2.rs:417:28
+    |
+417 |     pub fn reopen(self) -> std::result::Result<Self, RuntimeReopenFailure> {
+    |                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the `Err`-variant is at least 144 bytes
+    |
+    = help: try reducing the size of `vault::indexed_dialog::runtime2::RuntimeReopenFailure`, for example by boxing large elements or replacing it with `Box<vault::indexed_dialog::runtime2::RuntimeReopenFailure>`
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#result_large_err
+
+error: could not compile `kilogram-state` (lib) due to 3 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `kilogram-state` (lib test) due to 3 previous errors
+Exception: Scoped Clippy exit 101

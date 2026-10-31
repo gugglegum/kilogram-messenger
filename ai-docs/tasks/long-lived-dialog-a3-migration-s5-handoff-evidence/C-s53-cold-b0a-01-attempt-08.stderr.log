@@ -1,0 +1,8 @@
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 11.28s
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_state-10b2f02ffe05dc8a.exe)
+  Executable tests\a3_s1_root_review.rs (target\verification\deps\a3_s1_root_review-d6ddbcb1e6f49093.exe)
+  Executable tests\a3_s2_root_review.rs (target\verification\deps\a3_s2_root_review-436babf058987124.exe)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 0.45s
+Error: "ADS accepted with the same FileIdentity while default-stream range ownership remained available"
+Exception: Stable test executable failed with exit code 101: E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
