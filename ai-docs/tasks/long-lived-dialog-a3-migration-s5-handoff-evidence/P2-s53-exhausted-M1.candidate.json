@@ -1,0 +1,479 @@
+{
+  "schema_version": 1,
+  "classification": "s53-exhausted-exact-path-public-prerequisite-manifest",
+  "status": "candidate-for-root-review",
+  "prepared_date_local": "2026-11-01",
+  "timezone": "Asia/Yekaterinburg",
+  "case": "F-s53-exhausted-integrated-01",
+  "runtime_activated": false,
+  "prerequisite_row_classification": "root-allocated public replica manifest; no preparation performed by adapter",
+  "context": "ef689629a47207362fbc870bf610d921c8e28ca0646471914bd93218fff43810",
+  "original_session_id": "TflibOtoo5vbulwTkVuDsE6DrSVTFMHdGT2ZHDDx+oE",
+  "root_decision_sha256": "17cb30232565f8d59c7467c9512a519cbfeac4a49ee6759951f4f13f2af06f72",
+  "root_decision_evidence": "prior_D1",
+  "source_preservation_sha256": "a0efc865407cf0202644b7fa8ce584d564f16b0747ba8b2a31290f15d4996b06",
+  "copy_inventory_sha256": "af94e87d1f383fd11db68a0ba6c197a960ad3ca50b6880d221a74d14c6fc161d",
+  "digest_bindings": {
+    "source_preservation_sha256": {
+      "kind": "SHA256 of completed public P2 Cold-B aggregate",
+      "evidence": "cold",
+      "scope": "accepted held historical-BKP/entry/final comparison; never a promise that current S raw bytes equal BKP"
+    },
+    "copy_inventory_sha256": {
+      "kind": "SHA256 of completed public RootCopies P2 report",
+      "evidence": "rootcopies",
+      "scope": "original O account copies into R, equality before typed loading; no S restore/copy",
+      "protected_copy_before_load_receipt_sha256": "1ac9196881af20904385fd58a5b6a9e59281d8663cb153780320f6c88c63c2d6",
+      "observed_copy_tuple": {
+        "source_file_count": 9,
+        "source_directory_count": 6,
+        "source_bytes": 768,
+        "pre_load_copy_equality": true,
+        "o_preserved_after": true
+      }
+    }
+  },
+  "exact_original_state_path": true,
+  "nodes": [
+    {
+      "role": "A",
+      "local_index": 0,
+      "producer_side": "two",
+      "account": "7a87df0a69a322c4ec28fb94e175e26e77c428151a6e67336f6d0c8eb0abb2ce",
+      "device": "55f714cd9cebfc84d1af03d515373e851704c0f1a87ce1d7b84cd4cffb2e69bb",
+      "base": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two",
+      "profile": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed.profile",
+      "exact_state_path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\state",
+      "ipc": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed.ipc",
+      "locators": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\indexed.locators",
+      "migration_config": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\two\\migration.json",
+      "own_root": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-admin\\P2-s53-exhausted-roots-01-attempt-01\\two.account",
+      "profile_pin": {
+        "bytes": 1153,
+        "sha256": "69a8ed874a7ec2c8269b7a9c0fbda5c9811b603099c4905af655a000ea3bb8fd",
+        "evidence": "p1#/observations/profile_config",
+        "continuity": "Cold-B strict historical non-DB baseline plus unchanged B0 profile/config before/after"
+      },
+      "config_pin": {
+        "bytes": 525,
+        "sha256": "9e7289ddc5c71fd3521d7a15cd821fce8aa8f45f30515e6abd8e1c80d5989c1a"
+      },
+      "path_validation": {
+        "observed_in": "cold",
+        "before_typed_open": true,
+        "exact_original_state_path": true,
+        "account_device_context_and_profile_config_quotas_matched": true,
+        "stored_claim_source_id_migration_id_config_revision_matched": true,
+        "literals_not_exported": [
+          "claim",
+          "source_id",
+          "migration_id",
+          "config_revision",
+          "logical_quota",
+          "physical_capacity"
+        ]
+      },
+      "authority": {
+        "root_show": {
+          "account": "7a87df0a69a322c4ec28fb94e175e26e77c428151a6e67336f6d0c8eb0abb2ce",
+          "protection": "windows-dpapi-current-user",
+          "load": "already-current"
+        },
+        "root_show_observation": "rootcopies",
+        "signed_snapshot": {
+          "account": "7a87df0a69a322c4ec28fb94e175e26e77c428151a6e67336f6d0c8eb0abb2ce",
+          "revision": 1,
+          "revocations": 0,
+          "bytes": 100,
+          "sha256": "6ff24b4dd8e598b1c1b8ea0c3466a75f276753a34b387ff9cb69d373c5a0d912",
+          "signing_proof": "pinned-cli-encode-and-exact-file",
+          "literal_path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-admin\\P2-s53-exhausted-roots-01-attempt-01\\proof\\a.authority"
+        },
+        "stored_floor_compatibility": {
+          "observed_in": "cold",
+          "candidate_revision_not_below_floor": true,
+          "equal_revision_requires_exact_bytes": true,
+          "original_peer_certificate_verified": true,
+          "stored_floor_revision_literal_exported": false
+        },
+        "availability_observation_is_time_bound": true,
+        "permission_for_future_Consent2": "must be checked freshly"
+      },
+      "native": {
+        "generation": 517,
+        "hash": "6c50ea198a9d1c9fc6338c873a7bcda7d169c421d32d65fbe5369c3695c2d247",
+        "hash_scheme": "ordered_dialog_v1::hash(state::NATIVE_TAG, opaque Native bytes)",
+        "revalidated_by": "cold B0 before/after, exact fixed original generation/hash"
+      },
+      "logical": {
+        "mode": "L1",
+        "head_phase": 3,
+        "next": [
+          512,
+          18
+        ],
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            511,
+            17
+          ],
+          "sources": 530
+        },
+        "Q": null,
+        "cuts": [
+          null,
+          null
+        ],
+        "transition_intents_controls_and_control_debt_absent": true,
+        "request_index_ready": true,
+        "own_text_requests_verified": 511,
+        "peer_request_indices_not_required": true,
+        "own_future_request": {
+          "id": "fa000000000000000000000000000258",
+          "local_request_absent": true,
+          "all_original_sources_exclude_both_future_ids": true
+        }
+      },
+      "witnesses": {
+        "B0_digest": "244de8dd35fc6247f46cd824bf1ab0ca4969dc66e42ef4c5df9ddaf2afa3a772",
+        "B0_before_equals_after": true,
+        "B1_digest": "955e68c7d18222f910d1411aa389556eba25a240b23f2304301cd1a72fc90ef9",
+        "B1_repeat_digest_equal": true,
+        "history_digest": "749847c5d0555002adb8291e200c3a5a8e2e0a2d882411820304cff4430ac63e",
+        "history_pages": 17,
+        "history_text_items": 528,
+        "signed_sources_including_genesis": 530,
+        "complete_history_including_first_page": true,
+        "all_source_auth_projection_Receipt1_checks": true,
+        "aggregate_digest_scheme": "BLAKE3, length-framed; exact Cold-B readers/history source pinned in evidence"
+      }
+    },
+    {
+      "role": "B",
+      "local_index": 1,
+      "producer_side": "one",
+      "account": "9a16920200c69f6507bdf7ed94ede32b3f1dd36158e32be35159b1ac9fe25f0e",
+      "device": "a227497b8c0e9029a96b668939cc3ccc96d7a42f054c47927f486d4ca3d305f8",
+      "base": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one",
+      "profile": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\indexed.profile",
+      "exact_state_path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\state",
+      "ipc": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\indexed.ipc",
+      "locators": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\indexed.locators",
+      "migration_config": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb\\one\\migration.json",
+      "own_root": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-admin\\P2-s53-exhausted-roots-01-attempt-01\\one.account",
+      "profile_pin": {
+        "bytes": 1153,
+        "sha256": "bf10b1d6517d2d818dc63bdf1fe4e7b95d9b454857d349c111b50f34c1d6618d",
+        "evidence": "p1#/observations/profile_config",
+        "continuity": "Cold-B strict historical non-DB baseline plus unchanged B0 profile/config before/after"
+      },
+      "config_pin": {
+        "bytes": 525,
+        "sha256": "1e902c27aa51b1fa63752b5ded1141ac75ec1422e8571b5fab6b5b5588cde28f"
+      },
+      "path_validation": {
+        "observed_in": "cold",
+        "before_typed_open": true,
+        "exact_original_state_path": true,
+        "account_device_context_and_profile_config_quotas_matched": true,
+        "stored_claim_source_id_migration_id_config_revision_matched": true,
+        "literals_not_exported": [
+          "claim",
+          "source_id",
+          "migration_id",
+          "config_revision",
+          "logical_quota",
+          "physical_capacity"
+        ]
+      },
+      "authority": {
+        "root_show": {
+          "account": "9a16920200c69f6507bdf7ed94ede32b3f1dd36158e32be35159b1ac9fe25f0e",
+          "protection": "windows-dpapi-current-user",
+          "load": "already-current"
+        },
+        "root_show_observation": "rootcopies",
+        "signed_snapshot": {
+          "account": "9a16920200c69f6507bdf7ed94ede32b3f1dd36158e32be35159b1ac9fe25f0e",
+          "revision": 1,
+          "revocations": 0,
+          "bytes": 100,
+          "sha256": "3f0b172d5f8eb4a8a43e82856d666768ca71593612d4bcb011bb41e691004dc9",
+          "signing_proof": "pinned-cli-encode-and-exact-file",
+          "literal_path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-admin\\P2-s53-exhausted-roots-01-attempt-01\\proof\\b.authority"
+        },
+        "stored_floor_compatibility": {
+          "observed_in": "cold",
+          "candidate_revision_not_below_floor": true,
+          "equal_revision_requires_exact_bytes": true,
+          "original_peer_certificate_verified": true,
+          "stored_floor_revision_literal_exported": false
+        },
+        "availability_observation_is_time_bound": true,
+        "permission_for_future_Consent2": "must be checked freshly"
+      },
+      "native": {
+        "generation": 88,
+        "hash": "e6e4abc55d1216a3514b40261005d6eb29e9fdecbc0312a78bddfc21fccccf1f",
+        "hash_scheme": "ordered_dialog_v1::hash(state::NATIVE_TAG, opaque Native bytes)",
+        "revalidated_by": "cold B0 before/after, exact fixed original generation/hash"
+      },
+      "logical": {
+        "mode": "L1",
+        "head_phase": 3,
+        "next": [
+          512,
+          18
+        ],
+        "counts": {
+          "debt": 0,
+          "pending": 0,
+          "queued": 0,
+          "receipts": [
+            511,
+            17
+          ],
+          "sources": 530
+        },
+        "Q": null,
+        "cuts": [
+          null,
+          null
+        ],
+        "transition_intents_controls_and_control_debt_absent": true,
+        "request_index_ready": true,
+        "own_text_requests_verified": 17,
+        "peer_request_indices_not_required": true,
+        "own_future_request": {
+          "id": "fa000000000000000000000000000259",
+          "local_request_absent": true,
+          "all_original_sources_exclude_both_future_ids": true
+        }
+      },
+      "witnesses": {
+        "B0_digest": "7d75b1856c6600f07b6cd20d0a7f6792be3471bac1e361f83f0a4fd52f7cb6fd",
+        "B0_before_equals_after": true,
+        "B1_digest": "5b5e77ae80e850f1e5310a141e25f629cef0bf6047d54751f6055713b1cf2de7",
+        "B1_repeat_digest_equal": true,
+        "history_digest": "6f10324a9708c4ed5eeaedcb638a6fefbc0fe54970851a5a575553631cac08d6",
+        "history_pages": 17,
+        "history_text_items": 528,
+        "signed_sources_including_genesis": 530,
+        "complete_history_including_first_page": true,
+        "all_source_auth_projection_Receipt1_checks": true,
+        "aggregate_digest_scheme": "BLAKE3, length-framed; exact Cold-B readers/history source pinned in evidence"
+      }
+    }
+  ],
+  "paths": {
+    "O": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-l1\\F-exhausted-origin-01",
+    "S": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-storage\\l1-exhausted-observed-NCjBHb",
+    "BKP": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preserved\\F-exhausted-preservation-01",
+    "R": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-admin\\P2-s53-exhausted-roots-01-attempt-01",
+    "R_proof": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-admin\\P2-s53-exhausted-roots-01-attempt-01\\proof",
+    "private_inventory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s5-preserved\\F-exhausted-preservation-01\\preservation-inventory.json",
+    "provenance": "literal public paths only; no new private enumeration/stat/open by M1 preparation"
+  },
+  "historical_preservation": {
+    "evidence": "historical_preservation",
+    "private_inventory_sha256": "c2a56327fd1462b471163956fbfb61c6b89a07e142f4828c76011c29cadf28b3",
+    "private_inventory_bytes": 6765525,
+    "preserved_files": 6956,
+    "original_copy_matches_observed": true,
+    "historical_source_unchanged": true,
+    "BKP_never_typed_opened": true,
+    "boundary03_whole_result": "FAIL",
+    "lost_parent_result_reconstructed": false,
+    "historical_receipt_hash": "338a74bcbee1249cb1655fa21962833d6d680394769861ca2df4ab98475a4760"
+  },
+  "current_physical": {
+    "evidence": "cold",
+    "historical_tuple_digest": "7099e5259d9ec98ba4fb0dff98c610259f2416e5dbae517c6ca507913754b3b5",
+    "BKP_before": "7099e5259d9ec98ba4fb0dff98c610259f2416e5dbae517c6ca507913754b3b5",
+    "BKP_after": "7099e5259d9ec98ba4fb0dff98c610259f2416e5dbae517c6ca507913754b3b5",
+    "raw_entry_S_tuple": "4b703f740c231964a549cb7742e6c2f5983aba3f51ce54a8927cd0959e177efe",
+    "raw_entry_repeat": "4b703f740c231964a549cb7742e6c2f5983aba3f51ce54a8927cd0959e177efe",
+    "final_S_tuple": "7fbde6c66b31572b0d658374320de04518df1e671288d826b1ba1445db13f8f1",
+    "final_S_repeat": "7fbde6c66b31572b0d658374320de04518df1e671288d826b1ba1445db13f8f1",
+    "final_equals_historical": false,
+    "final_differs_from_entry": true,
+    "original_raw_S_equality_claim": false,
+    "entry_admission": "exact two existing S DB bit2@9 clear-to-set, equal lengths, every other byte historical; other S/BKP strict",
+    "normalization_in_memory_only": true,
+    "normalization_read_bytes": 40181760,
+    "complete_final_audit": true,
+    "hash_passes": 8,
+    "changed_slot_count": 2,
+    "historical_rows_unchanged": true,
+    "private_comparison_receipt_sha256": "b9cab01da78e84354855ffe94fdc891a3520896cb24ce53bdfce70abfc679b67",
+    "private_entry_receipt_sha256": "5d6c0543e0765d33606389a2516bc5a4911dfd52dcfdf15994f8f9e09f38b843"
+  },
+  "single_active_copy_per_native_domain": {
+    "observation": "Two actual original S directory leases exclusively adopted during accepted Cold-B02, retained through final audit",
+    "evidence": "cold_acceptance",
+    "leases": 2,
+    "slots_released": 4,
+    "slots_recaptured": 4,
+    "frozen_origin_scope": "only exact named empty locks and ancestors; no Root/DB typed load",
+    "backup_scope": "inactive opaque held mirror; never a second typed Native owner",
+    "universal_absence_of_other_native_copies": "unverified; no global branch search",
+    "future_runtime_must_reestablish_one_active_owner_at_exact_S": true
+  },
+  "current_own_roots_available": {
+    "observation": "Both original R account copies loaded and signed revision1 snapshots during accepted RootCopies",
+    "evidence": "rootcopies_acceptance",
+    "compatibility_with_saved_S_floors_observed_in": "cold_acceptance",
+    "no_new_root_or_reenrollment": true,
+    "ongoing_availability_not_reprobed": true,
+    "future_current_authority_not_assumed_from_snapshot": true
+  },
+  "original_scope": {
+    "verified_original_accounts_devices_context_D_E_SID_and_Ready": true,
+    "evidence": "cold_acceptance",
+    "D_literal": null,
+    "E_literal": null,
+    "note": "D/E matched the verified original signed export and Head in actual B0; literals were not emitted by the bounded public aggregate"
+  },
+  "cleanup": {
+    "evidence": "cold",
+    "native_exit": 0,
+    "whole_seconds": 26.4292894,
+    "input_handles_released": true,
+    "remaining_owned_handles": 0,
+    "cleanup_unknown": false,
+    "owned_children_after": 0,
+    "actual_adopted_leases_released_before_public_success": true
+  },
+  "temporal_limits": {
+    "future_genuine_Consent2_requires_fresh_current_snapshot_and_stored_floor_checks": true,
+    "recheck": [
+      "original account/peer role",
+      "membership",
+      "certificate/permission/capability",
+      "revocation",
+      "expiry/current real time",
+      "authority rollback/equal-revision conflict"
+    ],
+    "locator_import_is_not_live_family2_admission": true,
+    "pre_Active_refusal_requires_actual_current_family2_and_generations": true,
+    "no_new_consent_or_live_family2_runtime_established_by_M1": true
+  },
+  "public_value_gaps": {
+    "D_E_literals": "verified by accepted Cold-B but not exported as raw public fields",
+    "profile_opaque_literals": "whole raw profile/config pins and stored binding checks exist; claim/source_id/migration_id/config_revision/quotas not separately emitted",
+    "future_live_authorization": "intentionally deferred to genuine current Consent2/admission; snapshots are not perpetual authority",
+    "universal_no_other_copy": "not established by named-path observations"
+  },
+  "evidence": {
+    "r32_contract": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-exhausted-prerequisites-proposal-r32.md",
+      "bytes": 32266,
+      "sha256": "32d7898eb51b08a55e096e20ab3038e9bf58676f7006702449cfd084d464faef"
+    },
+    "r33_clarifications": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-r32-acceptance-and-p1-source-task-r33.md",
+      "bytes": 9847,
+      "sha256": "bf015b056b3006d38a0115a005b5be822a089a693a756d639df545fe91ed7621"
+    },
+    "origin": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/F-exhausted-origin-01-result.json",
+      "bytes": 6535,
+      "sha256": "7c9d54afefbbaa025089e62141595cc752c0d3e546ae854885d7e20522aedbd5"
+    },
+    "checkpoint": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/F-exhausted-boundary-03-checkpoint-info.json",
+      "bytes": 1614,
+      "sha256": "2b359e4623b2e603977342df69f441e35e0276643ee420a751a3515e361771b3"
+    },
+    "historical_preservation": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-l1-evidence/F-exhausted-preservation-01-result.json",
+      "bytes": 14994,
+      "sha256": "bcd69f3c44940c269f38c3fc5fc463e30803d7f5c5e2887a9875305d62926ca8"
+    },
+    "p1": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/P1-s53-exhausted-feasibility-01-attempt-01.p1-observations.json",
+      "bytes": 4865,
+      "sha256": "8dd8efab5dfd18624294b54a77e78a70ee4b1f7c683c3b72c4c315a0caf6fdc0"
+    },
+    "p1_acceptance": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/P1-s53-exhausted-feasibility-01-attempt-01.root-closure.json",
+      "bytes": 1434,
+      "sha256": "6153fa623763fd685a55f959e776608f764c1edaecd0476161cf84d839ae8ea4"
+    },
+    "prior_D1": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/P2-s53-exhausted-roots-01-attempt-01.D1.json",
+      "bytes": 2940,
+      "sha256": "17cb30232565f8d59c7467c9512a519cbfeac4a49ee6759951f4f13f2af06f72"
+    },
+    "rootcopies": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/P2-s53-exhausted-roots-01-attempt-01.p2.json",
+      "bytes": 4416,
+      "sha256": "af94e87d1f383fd11db68a0ba6c197a960ad3ca50b6880d221a74d14c6fc161d"
+    },
+    "rootcopies_acceptance": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/S5.3-r41-rootcopies.root-review.json",
+      "bytes": 7566,
+      "sha256": "193436d3bd2ac5223ef4af74beaf18b66d32b59e50a303a52b137ff52d2c5780"
+    },
+    "rootcopies_readiness": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-rootcopies-private-readiness-r41.md",
+      "bytes": 7258,
+      "sha256": "04c88664b806610722c0c4da1cc2a1e6171d76043f5d3d7174ba017e5ec354ca"
+    },
+    "cold_activation": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/Cold-B-private-root-activation-02.md",
+      "bytes": 3754,
+      "sha256": "0cb091bd7df90394581c1e7b3b126d143867954e9be4560272fb373cef66a85f"
+    },
+    "cold": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/P2-s53-exhausted-cold-b-01-attempt-02.aggregate.json",
+      "bytes": 17077,
+      "sha256": "a0efc865407cf0202644b7fa8ce584d564f16b0747ba8b2a31290f15d4996b06"
+    },
+    "cold_acceptance": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/Cold-B-attempt02-root-accepted.md",
+      "bytes": 3034,
+      "sha256": "dbb91edefa499213ed5fb64c8f0b8e8fc57729a66a094f2a4e9239353e3791be"
+    },
+    "cold_native": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/P2-s53-exhausted-cold-b-01-attempt-02.native.result.json",
+      "bytes": 682,
+      "sha256": "860ac4b6ebbe209005f89c098d1fcfcd0d98f16fd01ea3ead82b6e2c7dd2ea9a"
+    },
+    "cold_source_manifest": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01.sources.json",
+      "bytes": 8592,
+      "sha256": "850b2af089604411a47fdefc95d32f36a1bbddd4375f45bded101081e1529ee6"
+    },
+    "cold_materialized_receipt": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/Cold-B-B2-materialized-artifact.json",
+      "bytes": 2451,
+      "sha256": "29198cd95c5525344c5b3fd00943b93992e7b2d45bcf5c2ea5c9549b3331e003"
+    },
+    "path_verifier": {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/fixed.rs",
+      "bytes": 8193,
+      "sha256": "505ab5634e6dc44ddcef23466a23009eba4c3e66121b0183aa638537ada7034e"
+    },
+    "logical_verifier": {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/readers.rs",
+      "bytes": 15958,
+      "sha256": "ca7c64a317e381e985169aea7b90310a1bf0ffd925722a38a37dc92c3e676011"
+    },
+    "history_verifier": {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/history.rs",
+      "bytes": 2818,
+      "sha256": "6f43a54189810047c829b3da065ee539d36dc0da087e476636b756d304c1faab"
+    }
+  },
+  "provenance": {
+    "evidence_publication_commit": "fa0867181de096458cbd9eb79c65b71a84fef4f5",
+    "cold_implementation_commit": "de16f0f7608a0d5d1d9d0f84ad38687a653343b5",
+    "origin_executable_sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1",
+    "source_only_M1_preparation": true,
+    "no_private_access_signing_runtime_or_source_edits": true
+  }
+}

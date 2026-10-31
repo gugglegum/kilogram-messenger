@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "parent": "fa0867181de096458cbd9eb79c65b71a84fef4f5",
+  "files": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/P2-s53-exhausted-M1.candidate.json",
+      "bytes": 23116,
+      "sha256": "788076595dbebdfc7157731609d4a1c1ce613e78821c4d866bded41f16e50c77",
+      "blob": "bfb2130613909a130e39c6ced90d9caf6ea94970"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/P2-s53-exhausted-M1.readiness.md",
+      "bytes": 6382,
+      "sha256": "05a62dea2313f6a4c366450b493feca403ec906a508b917d61bb9a11942ec48b",
+      "blob": "c8a85bad05af2c6b56cf534a309a3a2079fc80c4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/P2-s53-exhausted-M1.D2-root-accepted.md",
+      "bytes": 5661,
+      "sha256": "9ea318a5531dc9a5b5ff605eae2bcf4328772db9cea7e84fe383baf4bbcc33a9",
+      "blob": "149637165826742cb65bf27546a7c86de3222c0e"
+    }
+  ]
+}
