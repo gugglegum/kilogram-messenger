@@ -30,6 +30,7 @@ stellar-agent-windows-identity = "=0.1.0-alpha.6"
 winapi-util = { version = "=0.1.11", optional = true }
 
 [dev-dependencies]
+sha2.workspace = true
 tempfile.workspace = true
 
 [lints]

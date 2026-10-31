@@ -1,0 +1,44 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification' without executing them...
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+WARNING: Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 4 tests
+test verification_lock::worker_tests::binding_identity_and_protocol_refusals ... refusal_case=source-binding actual={"attempt":"C-s53-cold-b0b-source-binding","cleanup_ok":true,"closed_handles":0,"code":"binding","duplicates_created":0,"handles_after":0,"kind":"refused","native_error":0,"nonce":"8be5c2fba0c5c49d2ba3e94ba2144e67","parent_closed":true,"phase":"bind","read_attempts":0,"snapshot_closed":true,"source_sha256":"adc63fd4ad4532c5ad143fbe81a8dbba38ee85b487d1fe442bdd81970cf7a294","version":1}
+refusal_case=parent-binding actual={"attempt":"C-s53-cold-b0b-parent-binding","cleanup_ok":true,"closed_handles":0,"code":"parent_binding","duplicates_created":0,"handles_after":0,"kind":"refused","native_error":0,"nonce":"64957b70144e7d601271d24e497ef307","parent_closed":true,"phase":"bind","read_attempts":0,"snapshot_closed":true,"source_sha256":"adc63fd4ad4532c5ad143fbe81a8dbba38ee85b487d1fe442bdd81970cf7a294","version":1}
+refusal_case=identity actual={"attempt":"C-s53-cold-b0b-identity","cleanup_ok":true,"closed_handles":3,"code":"identity","duplicates_created":2,"handles_after":0,"kind":"refused","native_error":0,"nonce":"9b1a7e02b4e1b6553ad220b8d52ea33d","parent_closed":true,"phase":"duplicate","read_attempts":0,"snapshot_closed":true,"source_sha256":"adc63fd4ad4532c5ad143fbe81a8dbba38ee85b487d1fe442bdd81970cf7a294","version":1}
+refusal_case=protocol actual={"attempt":"C-s53-cold-b0b-protocol","cleanup_ok":true,"closed_handles":3,"code":"protocol_state","duplicates_created":2,"handles_after":0,"kind":"refused","native_error":0,"nonce":"926e41221df9ad08f351295a581f2f7f","parent_closed":true,"phase":"release","read_attempts":0,"snapshot_closed":true,"source_sha256":"adc63fd4ad4532c5ad143fbe81a8dbba38ee85b487d1fe442bdd81970cf7a294","version":1}
+ok
+test verification_lock::worker_tests::bounded_timeout_kills_only_owned_worker_and_releases_duplicates ... timeout_phase=await-release exact_deadline=true terminated_owned_exit=1 owned_child_reaped=true both_roots_released=true
+ok
+test verification_lock::worker_tests::early_child_eof_has_exact_exit_and_cleanup ... early_eof_exit=23 owned_child_reaped=true both_roots_released=true
+ok
+test verification_lock::worker_tests::happy_lifecycle ... duplicate_witness={"attempt":"C-s53-cold-b0b-happy","kind":"duplicated","locks":[{"bytes":0,"index":562949953810472,"links":1,"noninheritable":true,"path":"\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\C-s53-cold-b0b-synthetic\\b0b-n5RpRq\\a\\.kilogram-state.lock","volume":2181746041},{"bytes":0,"index":562949953810474,"links":1,"noninheritable":true,"path":"\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\C-s53-cold-b0b-synthetic\\b0b-n5RpRq\\b\\.kilogram-state.lock","volume":2181746041}],"nonce":"b7f19977cff527d37f8ef61d36e70b92","owned_handles":2,"parent_closed":true,"parent_pid":49456,"read_attempts":0,"snapshot_closed":true,"source_sha256":"adc63fd4ad4532c5ad143fbe81a8dbba38ee85b487d1fe442bdd81970cf7a294","version":1}
+after_checked_release={"attempt":"C-s53-cold-b0b-happy","kind":"read","nonce":"b7f19977cff527d37f8ef61d36e70b92","owned_handles":2,"read_attempts":2,"read_bytes":0,"source_sha256":"adc63fd4ad4532c5ad143fbe81a8dbba38ee85b487d1fe442bdd81970cf7a294","version":1,"write_attempts":2,"write_denied_native":5}
+cleanup_witness={"attempt":"C-s53-cold-b0b-happy","cleanup_ok":true,"closed_handles":3,"code":null,"duplicates_created":2,"handles_after":0,"kind":"done","native_error":0,"nonce":"b7f19977cff527d37f8ef61d36e70b92","parent_closed":true,"phase":"finish","read_attempts":2,"snapshot_closed":true,"source_sha256":"adc63fd4ad4532c5ad143fbe81a8dbba38ee85b487d1fe442bdd81970cf7a294","version":1}
+ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 107 filtered out; finished in 6.08s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 2 filtered out; finished in 0.00s
+
+cache_status=skipped_explicitly
+status=passed
+isolated_test_count=0
+owned_children_after=0

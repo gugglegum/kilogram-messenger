@@ -2,14 +2,17 @@
 //!
 //! Inputs originate from our no-create default-stream opener, never arbitrary
 //! imported Files. Same-process clones preserve that provenance. This module
-//! provides no raw-handle import or cross-process bridge.
+//! provides no raw-handle import. Borrowing is only for outbound duplication.
 use super::{
     ACTIVE_DIRECTORY, LOCK_FILE, StateDirectoryLock, StateError, TRANSACTION_DIRECTORY, io_at,
 };
 use std::{
     fs::{self, File, OpenOptions},
     io,
-    os::windows::fs::OpenOptionsExt,
+    os::windows::{
+        fs::OpenOptionsExt,
+        io::{AsHandle, BorrowedHandle},
+    },
     path::{Path, PathBuf},
     sync::{
         Arc,
@@ -137,6 +140,12 @@ pub struct ExistingStateLockInputs {
     lock: File,
 }
 impl ExistingStateLockInputs {
+    /// Borrow the actual default-stream handle for outbound duplication by an
+    /// owned worker. This grants no raw-handle import or new adoption attempt.
+    pub fn borrow_lock_handle(&self) -> BorrowedHandle<'_> {
+        self.lock.as_handle()
+    }
+
     /// Open only existing objects: read-only/share0 fixed LOCK_FILE, retained
     /// no-follow ancestry/default-stream metadata guards, no create or recovery.
     pub fn open_existing(
@@ -343,3 +352,6 @@ thread_local! {
 #[cfg(test)]
 #[path = "verification_lock_tests.rs"]
 mod tests;
+#[cfg(test)]
+#[path = "verification_worker_tests.rs"]
+mod worker_tests;

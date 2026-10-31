@@ -1,0 +1,299 @@
+{
+  "schema_version": 1,
+  "classification": "B0b-Rust-origin-CSharp-duplicate-synthetic-review",
+  "parent_commit": "8b1bcce90c428fc0bbea9180aea98df14cf858e6",
+  "source": [
+    {
+      "path": "Cargo.lock",
+      "bytes": 194176,
+      "sha256": "59a0c25cd46a9d3c854f935be35d721483210b572742edc3e4341893b4e9fa82",
+      "blob": "8107381109ff263ab75740f15d0c220335731352"
+    },
+    {
+      "path": "crates/kilogram-state/Cargo.toml",
+      "bytes": 928,
+      "sha256": "908eefc5551f261ba1ccf7e8435746c26fb264746003cf00b411f97ad5256839",
+      "blob": "021e2eb67603b55daaf64beb5719d03a4c2cb7b9"
+    },
+    {
+      "path": "crates/kilogram-state/src/verification_lock.rs",
+      "bytes": 13282,
+      "sha256": "ba15522ce8e409d1e628fbe4a668351e03521441b2b7e7a63bf7f0100840a873",
+      "blob": "f707e104f30b2de6d487d517484d239cbb64be2a"
+    },
+    {
+      "path": "crates/kilogram-state/src/verification_worker_tests.rs",
+      "bytes": 15353,
+      "sha256": "de0e762ee8c34ce920df6b66aaebdda48353f443cbee77e56053e3e017d2959e",
+      "blob": "3947c77aa6cfaa5e903d60e78c06de71a53bc93f"
+    },
+    {
+      "path": "scripts/migration-s53-typed-lock-worker.ps1",
+      "bytes": 12841,
+      "sha256": "adc63fd4ad4532c5ad143fbe81a8dbba38ee85b487d1fe442bdd81970cf7a294",
+      "blob": "ae6edd55e22364573ea7a781554d967bb1191125"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0b-01-attempt-01.invocation.ps1",
+      "bytes": 1182,
+      "sha256": "c1be529109e48b6e82fe11f8d24d05eec2451895dcebed7abe436777e08f8f27"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0b-01-attempt-01.stdout.log",
+      "bytes": 1164,
+      "sha256": "8d9943adfcb833f50a4798e96b5c4d0a4531e95a8e3b5e882fb260f23a810eb6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0b-01-attempt-01.stderr.log",
+      "bytes": 1126,
+      "sha256": "1a15112ef4edd92a9c7db7bd646edfa186fe0ce25b521bb3e54eac8bd2e03e7a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0b-01-attempt-01.result.json",
+      "bytes": 395,
+      "sha256": "9e7bd1ff0c781d6ec801e389ce880041dcbd34fedab0fa805f0facbabc63fdd4"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0b-01-attempt-02.invocation.ps1",
+      "bytes": 1182,
+      "sha256": "c1be529109e48b6e82fe11f8d24d05eec2451895dcebed7abe436777e08f8f27"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0b-01-attempt-02.stdout.log",
+      "bytes": 3090,
+      "sha256": "74a020b67a303937de3880c6d5f2d7293c792faa6acf6ddda6df93ab770b4ee0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0b-01-attempt-02.stderr.log",
+      "bytes": 569,
+      "sha256": "4ba377c701ea5d44146772472e99de3c094ec2dc9a6e805d392e120b534fac0c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0b-01-attempt-02.result.json",
+      "bytes": 394,
+      "sha256": "6b6ea28c6c2690d85653f9623cf640563cf3a5dca75d6e9487464967ed3cf61b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0b-01-attempt-03.invocation.ps1",
+      "bytes": 3865,
+      "sha256": "e1600d1255751c1572ac67c6ffd763e3ff1933a7f0f7ec196c8b1ea462392d0d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0b-01-attempt-03.stdout.log",
+      "bytes": 5249,
+      "sha256": "4e41770b4df986b4187c883074570cfef84fd90a97a4c35a3e6c0a2af2e657b8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0b-01-attempt-03.stderr.log",
+      "bytes": 1561,
+      "sha256": "e2bda060c7b783f64df7448ee75d7147bbaea31b81c0dbddc5ad2d9baeb52130"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0b-01-attempt-03.result.json",
+      "bytes": 394,
+      "sha256": "3ff335f30b148a909a228ede015e966968bb6156fe177d296e81287f2ac416fe"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0b-01-attempt-03.inputs.before.json",
+      "bytes": 1501,
+      "sha256": "5cedb7b6fc8808f0b177e1429537235915ef709c35a5f5915758877cfcdcf567"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0b-01-attempt-03.inputs.after.json",
+      "bytes": 1501,
+      "sha256": "5cedb7b6fc8808f0b177e1429537235915ef709c35a5f5915758877cfcdcf567"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b0b-01-attempt-03.images.json",
+      "bytes": 526,
+      "sha256": "6a7185d41def5f8492ec961308c91ae5b9aa2e3ac5e70b47fe45871a66364eeb"
+    }
+  ],
+  "input_pins": [
+    {
+      "path": "Cargo.toml",
+      "bytes": 3398,
+      "sha256": "28700ccee74b2a78f96e945b86087ce9dfac32a2236bf61067976c2ac1082aa0"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 194176,
+      "sha256": "59a0c25cd46a9d3c854f935be35d721483210b572742edc3e4341893b4e9fa82"
+    },
+    {
+      "path": "crates/kilogram-state/Cargo.toml",
+      "bytes": 928,
+      "sha256": "908eefc5551f261ba1ccf7e8435746c26fb264746003cf00b411f97ad5256839"
+    },
+    {
+      "path": "crates/kilogram-state/src/lib.rs",
+      "bytes": 68996,
+      "sha256": "12ac2f138b6a6f574b804d391d83d27e6120894fd81b776658082a73168819c6"
+    },
+    {
+      "path": "crates/kilogram-state/src/verification_lock.rs",
+      "bytes": 13282,
+      "sha256": "ba15522ce8e409d1e628fbe4a668351e03521441b2b7e7a63bf7f0100840a873"
+    },
+    {
+      "path": "crates/kilogram-state/src/verification_lock_tests.rs",
+      "bytes": 15126,
+      "sha256": "6e63e982483abe40bd35e87def49db751b197a275613e7c28b58add202f815b5"
+    },
+    {
+      "path": "crates/kilogram-state/src/verification_worker_tests.rs",
+      "bytes": 15353,
+      "sha256": "de0e762ee8c34ce920df6b66aaebdda48353f443cbee77e56053e3e017d2959e"
+    },
+    {
+      "path": "scripts/migration-s53-typed-lock-worker.ps1",
+      "bytes": 12841,
+      "sha256": "adc63fd4ad4532c5ad143fbe81a8dbba38ee85b487d1fe442bdd81970cf7a294"
+    },
+    {
+      "path": "scripts/run-cargo-tests-stable.ps1",
+      "bytes": 14665,
+      "sha256": "71a6a811330352e9279e06d66d2aba8e2061d937a5024bc0ae43cfbcd0d69d42"
+    },
+    {
+      "path": "scripts/cargo-resource-policy.ps1",
+      "bytes": 1168,
+      "sha256": "2485a0b0ae5b07d6625f218e4c02a8f6927b78c26f10b5506f157066abba676e"
+    },
+    {
+      "path": "scripts/migration-s5-l1-deadline.ps1",
+      "bytes": 6038,
+      "sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45"
+    }
+  ],
+  "actual_images": [
+    {
+      "path": "target/verification/deps/kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 11723264,
+      "sha256": "4c644d52115b7ebb8d7ef46abb0e5bfc87f4b5a18e5128a908ae8bed158de952"
+    },
+    {
+      "path": "target/verification/deps/kilogram-state-test-a3_s1_root_review-tests.exe",
+      "bytes": 7384576,
+      "sha256": "e441527b8d19c43220322deef1c52b9b8dac090018aaecf9d88f82075d7f2c0f"
+    },
+    {
+      "path": "target/verification/deps/kilogram-state-test-a3_s2_root_review-tests.exe",
+      "bytes": 7638016,
+      "sha256": "1f428761b5bdd80a6dbf2dfcc6910f94857fef1b24fc44f6b7791745b14561ed"
+    }
+  ],
+  "source_and_images_verified_current": true,
+  "results": [
+    {
+      "attempt": "C-s53-cold-b0b-01-attempt-01",
+      "whole_seconds": 26.9222787,
+      "exit_code": 1,
+      "timed_out": false,
+      "outer_limit_seconds": 180,
+      "inner_work_whole": [
+        165,
+        175
+      ]
+    },
+    {
+      "attempt": "C-s53-cold-b0b-01-attempt-02",
+      "whole_seconds": 20.945813,
+      "exit_code": 0,
+      "timed_out": false,
+      "outer_limit_seconds": 180,
+      "inner_work_whole": [
+        165,
+        175
+      ]
+    },
+    {
+      "attempt": "C-s53-cold-b0b-01-attempt-03",
+      "whole_seconds": 50.969156,
+      "exit_code": 0,
+      "timed_out": false,
+      "outer_limit_seconds": 180,
+      "inner_work_whole": [
+        165,
+        175
+      ]
+    }
+  ],
+  "actual_native": [
+    {
+      "attempt": 1,
+      "start_chunk": "cf5c62",
+      "session": 24273,
+      "final_chunk": "f90883",
+      "exit": 1,
+      "cause": "compile passed; PowerShell -File verbatim path AuthorizationManager refusal; Eof was failure"
+    },
+    {
+      "attempt": 2,
+      "start_chunk": "62d1c1",
+      "session": 30328,
+      "final_chunk": "8d488a",
+      "exit": 0,
+      "cause": "targeted happy lifecycle after verified ordinary -File path correction"
+    },
+    {
+      "attempt": 3,
+      "start_chunk": "d8cdae",
+      "session": 57005,
+      "final_chunk": "c506f7",
+      "exit": 0,
+      "cause": "4 focused tests, default/adoption compile-only, strict Clippy/rustfmt"
+    }
+  ],
+  "premises": {
+    "direction": "Rust typed default-stream origin to one owned C# worker; no Rust raw-handle import",
+    "accessor": "feature-gated borrow_lock_handle returns BorrowedHandle with origin lifetime",
+    "process_binding": "native current-worker parent lookup; actual live parent process handle; creation-time ordering; never opens frame-selected external PID",
+    "duplication": "DUPLICATE_SAME_ACCESS; noninheritable target handles; actual default-stream path/volume/file ID/type/single-link/zero size checked",
+    "protocol": "stdin/stdout anonymous pipes; <=16 total frames; <=4096 bytes including newline; version/attempt/nonce/actual script SHA256 binding",
+    "happy": "two actual leases held through duplicate ACK; read_attempts0 before parent release; fallible release then drop parent data handles while retain metadata guards; child reads EOF0, WriteFile denied5; actual share0 denial32 while only child data duplicates survive",
+    "normal_cleanup": "worker closed2 duplicates +1 parent process handle; snapshot closed; owned native handles0; actual child exit0/reap and stdout pump joined; both roots reopen/lock/unlock",
+    "refusals": "source binding -> binding, parent binding -> parent_binding, second identity -> identity, early finish -> protocol_state; exact exit40/closed counts/read_attempts0 and both roots released",
+    "early_eof": "explicit pre-acquisition synthetic fault; actual exit23/reap and both roots released",
+    "timeout": "after genuine duplicate ACK and no RELEASED command, exact150ms receive deadline plus still-live child; kill only owned Child handle, actual exit1/reap/stdout EOF; both roots reopen/lock/unlock",
+    "initial_launch_fix": "canonical script hash/identity retained; checked ordinary absolute -File path; no ExecutionPolicy modification"
+  },
+  "verification": {
+    "final_filter": "verification_lock::worker_tests::",
+    "final_passed": 4,
+    "final_failed": 0,
+    "strict_clippy": "--locked --offline --jobs 2 --profile verification --package kilogram-state --lib --tests --features verification-state-lock-adoption -- -D warnings",
+    "default_and_feature_compilation": "--locked --offline --no-run; execution only stable runner",
+    "scope_rustfmt": "verification_lock.rs, verification_lock_tests.rs (unchanged), verification_worker_tests.rs, lib.rs (unchanged), skip_children",
+    "jobs": 2,
+    "priority": "BelowNormal",
+    "owned_children_after": 0,
+    "old_B0a_tests_preserved_sha256": "6e63e982483abe40bd35e87def49db751b197a275613e7c28b58add202f815b5"
+  },
+  "budget": {
+    "scope": "C only",
+    "allowance_seconds": 240,
+    "bounded_invocation_envelope_seconds": "98.8372477",
+    "remaining_by_same_measure_seconds": "141.1627523",
+    "standalone_formatter_seconds_approx": 1.5,
+    "ledger_changed_by_executor": false
+  },
+  "boundaries": {
+    "private_S_O_BKP_R_E_access": false,
+    "preservation_Core_integration": false,
+    "mass_capture": false,
+    "B0_B1_readers": false,
+    "navigation_edits": false,
+    "unsafe_policy_changes": false,
+    "new_Rust_native_wrapper": false,
+    "commit_push": false
+  },
+  "limits": [
+    "Synthetic copies only; worker's denied-write rights probe is reached only after the parent's checked release",
+    "SyntheticEarlyEof is an explicit test fault before native acquisition; not a success fallback",
+    "Retained metadata guards do not claim continuous namespace absence or protection from nonconforming privileged actors",
+    "Private Cold-B ownership/preservation/reader integration still requires its separate scoped implementation review"
+  ]
+}

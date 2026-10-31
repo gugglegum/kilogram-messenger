@@ -1,0 +1,20 @@
+   Compiling crypto-common v0.1.7
+   Compiling digest v0.10.7
+   Compiling universal-hash v0.5.1
+   Compiling cipher v0.4.4
+   Compiling blake2 v0.10.6
+   Compiling chacha20 v0.9.1
+   Compiling poly1305 v0.8.0
+   Compiling aead v0.5.2
+   Compiling argon2 v0.5.3
+   Compiling chacha20poly1305 v0.10.1
+   Compiling sha2 v0.10.9
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 20.13s
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_state-3df3ab790e8ad016.exe)
+  Executable tests\a3_s1_root_review.rs (target\verification\deps\a3_s1_root_review-75db32f9200131ca.exe)
+  Executable tests\a3_s2_root_review.rs (target\verification\deps\a3_s2_root_review-6c55f8d8ec841b1c.exe)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 0.40s
+SecurityError: AuthorizationManager check failed.
+Error: Eof
+Exception: Stable test executable failed with exit code 101: E:\AI-Projects\kilogram-p2p-messenger\target\verification\deps\kilogram-state-lib-kilogram_state-tests.exe

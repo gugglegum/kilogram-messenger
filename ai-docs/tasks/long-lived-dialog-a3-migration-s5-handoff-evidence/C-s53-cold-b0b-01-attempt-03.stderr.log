@@ -1,0 +1,24 @@
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 17.91s
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_state-7621960831cf9dde.exe)
+  Executable tests\a3_s1_root_review.rs (target\verification\deps\a3_s1_root_review-40a925632bec392c.exe)
+  Executable tests\a3_s2_root_review.rs (target\verification\deps\a3_s2_root_review-0ff44c289a5bf29c.exe)
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 13.54s
+  Executable unittests src\lib.rs (target\verification\deps\kilogram_state-3df3ab790e8ad016.exe)
+  Executable tests\a3_s1_root_review.rs (target\verification\deps\a3_s1_root_review-75db32f9200131ca.exe)
+  Executable tests\a3_s2_root_review.rs (target\verification\deps\a3_s2_root_review-6c55f8d8ec841b1c.exe)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 0.43s
+    Checking crypto-common v0.1.7
+    Checking digest v0.10.7
+    Checking cipher v0.4.4
+    Checking universal-hash v0.5.1
+    Checking chacha20 v0.9.1
+    Checking poly1305 v0.8.0
+    Checking blake2 v0.10.6
+    Checking aead v0.5.2
+    Checking argon2 v0.5.3
+    Checking chacha20poly1305 v0.10.1
+    Checking sha2 v0.10.9
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification` profile [unoptimized + debuginfo] target(s) in 7.06s
