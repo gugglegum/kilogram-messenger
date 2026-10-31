@@ -51,7 +51,12 @@ fn public(path: &Path, cap: u64) -> Result<Vec<u8>> {
 }
 fn private(name: &str, value: &impl serde::Serialize, cap: usize) -> Result<()> {
     ensure!(
-        ["typed.private.json", "failure.private.json"].contains(&name),
+        [
+            "typed.private.json",
+            "failure.private.json",
+            "progress-failure.private.json"
+        ]
+        .contains(&name),
         "fixed private receipt name"
     );
     let raw = serde_json::to_vec(value)?;
@@ -304,7 +309,7 @@ fn identities(path: &Path, directory: bool) -> Result<FileIdentity> {
     Ok(FileIdentity::from_file(&file)?)
 }
 fn artifact() -> Result<(String, String)> {
-    let base = Path::new(fixed::WORKSPACE).join("target/verification/s53-cold-worker");
+    let base = Path::new(fixed::WORKSPACE).join("target/verification-scale/s53-cold-worker");
     let source = std::env::var("KILOGRAM_S53_COLD_SOURCE_SHA256")?;
     let assembly = std::env::var("KILOGRAM_S53_COLD_ASSEMBLY_SHA256")?;
     ensure!(
@@ -352,6 +357,8 @@ fn cold_b_private_one_session() -> Result<()> {
     );
     let until = Instant::now() + Duration::from_millis((absolute - now) as u64);
     let ticks = std::env::var("KILOGRAM_S53_COLD_DEADLINE_TICKS")?.parse::<u64>()?;
+    let mut progress = super::progress::Progress::fixed(until)?;
+    progress.record("entry", 0)?;
     let mut inputs = Vec::new();
     let mut held = Vec::new();
     let mut locks = Vec::new();
@@ -372,8 +379,10 @@ fn cold_b_private_one_session() -> Result<()> {
     let mut bind = worker.common("bind");
     bind["parent_pid"] = json!(std::process::id());
     bind["locks"] = json!(locks);
+    progress.record("baseline.start", 0)?;
     worker.send(&bind)?;
     let baseline = worker.receive("baseline")?;
+    progress.record("baseline.done", 0)?;
     ensure!(
         baseline["core"]["baseline_completed"] == true && baseline["core"]["slots_released"] == 0,
         "held pre-open equality ACK"
@@ -382,7 +391,7 @@ fn cold_b_private_one_session() -> Result<()> {
     let mut b0 = Vec::new();
     let mut b1 = Vec::new();
     let mut release_attempted = false;
-    let typed = (|| -> Result<()> {
+    let mut typed = (|| -> Result<()> {
         let prepared = [
             fixed::prepare(&Path::new(fixed::STATE).join("two"), 0)?,
             fixed::prepare(&Path::new(fixed::STATE).join("one"), 1)?,
@@ -400,19 +409,26 @@ fn cold_b_private_one_session() -> Result<()> {
                 "original R proof byte pin"
             );
         }
+        progress.record("slots.start", 0)?;
         release_attempted = true;
         worker.send(&worker.common("release-slots"))?;
         let released = worker.receive("slots")?;
+        progress.record("slots.done", 4)?;
         ensure!(
             released["core"]["slots_released"] == 4,
             "exact selective slot ACK"
         );
         for role in 0..2 {
             readers::check(until)?;
+            progress.context(role, 0);
+            progress.record("open.start", 0)?;
             let lease = held[role].take().context("actual adopted lease")?;
             repositories[role] = Some(fixed::open(&prepared[role], lease)?);
+            progress.record("open.done", 0)?;
         }
         for role in 0..2 {
+            progress.context(role, 0);
+            progress.record("b0.before.start", 0)?;
             b0.push(readers::b0(
                 repositories[role].as_mut().context("open repo")?,
                 &prepared[role].profile_raw,
@@ -421,12 +437,19 @@ fn cold_b_private_one_session() -> Result<()> {
                 &proofs,
                 until,
             )?);
+            progress.record("b0.before.done", 0)?;
         }
         for (role, repository) in repositories.iter_mut().enumerate() {
             let expected = fixed::Expected::production(role)?;
             let repo = repository.as_mut().context("open repo")?;
-            let first = readers::full(repo, &expected, &proofs, until)?;
-            let second = readers::full(repo, &expected, &proofs, until)?;
+            progress.context(role, 1);
+            progress.record("full.start", 0)?;
+            let first = readers::full(repo, &expected, &proofs, until, Some(&mut progress))?;
+            progress.record("full.done", first.text_count)?;
+            progress.context(role, 2);
+            progress.record("readback.start", 0)?;
+            let second = readers::full(repo, &expected, &proofs, until, Some(&mut progress))?;
+            progress.record("readback.done", second.text_count)?;
             ensure!(
                 first.digest == second.digest
                     && first.history_digest == second.history_digest
@@ -439,6 +462,8 @@ fn cold_b_private_one_session() -> Result<()> {
             let base = Path::new(fixed::STATE).join(if role == 0 { "two" } else { "one" });
             let profile_after = public(&base.join("indexed.profile"), 64 * 1024)?;
             let config_after = public(&base.join("migration.json"), 64 * 1024)?;
+            progress.context(role, 0);
+            progress.record("b0.after.start", 0)?;
             let after = readers::b0(
                 repositories[role].as_mut().context("open repo")?,
                 &profile_after,
@@ -448,6 +473,7 @@ fn cold_b_private_one_session() -> Result<()> {
                 until,
             )?;
             ensure!(after == b0[role], "B0 unchanged after B1");
+            progress.record("b0.after.done", 0)?;
         }
         private(
             "typed.private.json",
@@ -456,16 +482,27 @@ fn cold_b_private_one_session() -> Result<()> {
         )?;
         Ok(())
     })();
+    let mut close_progress_failure = None;
     for role in 0..2 {
         if let Some(repo) = repositories[role].take() {
+            progress.context(role, 0);
+            if let Err(error) = progress.record("close.start", 0) {
+                close_progress_failure.get_or_insert_with(|| error.to_string());
+            }
             held[role] = Some(repo.verification_close_to_held_lease());
+            if let Err(error) = progress.record("close.done", 0) {
+                close_progress_failure.get_or_insert_with(|| error.to_string());
+            }
         }
+    }
+    if close_progress_failure.is_some() && typed.is_ok() {
+        typed = Err(anyhow::anyhow!("protected close progress failed"));
     }
     let lease_count = held.iter().filter(|x| x.is_some()).count();
     if let Err(error) = &typed {
         private(
             "failure.private.json",
-            &json!({"phase":"typed","error":format!("{error:#}"),"actual_rust_leases_retained":lease_count,"no_restore":true}),
+            &json!({"phase":"typed","error":format!("{error:#}"),"close_progress_failure":close_progress_failure,"actual_rust_leases_retained":lease_count,"no_restore":true}),
             65536,
         )?;
     }
@@ -484,8 +521,16 @@ fn cold_b_private_one_session() -> Result<()> {
     complete["leases_held"] = json!(lease_count);
     complete["b0"] = json!(d0.finish());
     complete["b1"] = json!(d1.finish());
+    let mut final_progress_failure = None;
+    progress.pair();
+    if let Err(error) = progress.record("final.start", 0) {
+        final_progress_failure.get_or_insert_with(|| error.to_string());
+    }
     worker.send(&complete)?;
     let final_frame = worker.receive("final")?;
+    if let Err(error) = progress.record("final.done", 0) {
+        final_progress_failure.get_or_insert_with(|| error.to_string());
+    }
     worker.send(&worker.common("finish"))?;
     let done = worker.receive(if typed.is_ok() { "done" } else { "refused" })?;
     let exit = worker.reap()?;
@@ -500,6 +545,14 @@ fn cold_b_private_one_session() -> Result<()> {
         lease.release_adopted()?;
     }
     drop(inputs);
+    if let Some(error) = final_progress_failure {
+        private(
+            "progress-failure.private.json",
+            &json!({"phase":"final","error":error,"worker_reaped":true,"leases_released":true}),
+            65536,
+        )?;
+        anyhow::bail!("protected final progress failed after cleanup");
+    }
     // Public output contains only aggregate digests/pinned public identities.
     ensure!(
         typed.is_ok(),

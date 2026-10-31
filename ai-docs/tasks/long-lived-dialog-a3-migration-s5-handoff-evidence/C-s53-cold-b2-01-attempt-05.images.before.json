@@ -1,0 +1,27 @@
+[
+  {
+    "path": "target/verification-scale/deps/kilogram-cli-test-migration_s53_cold-tests.exe",
+    "bytes": 9669632,
+    "sha256": "9f8c09868ad985f0c35b5e742173d6eb6f9ba5be0771aeb3d6ea12f81390afd5"
+  },
+  {
+    "path": "target/verification-scale/deps/kilogram-state-lib-kilogram_state-tests.exe",
+    "bytes": 7294976,
+    "sha256": "6ceba0db4f7d181dbee095df1196ce6ac94d1e47bb6c4646e873b9949271a772"
+  },
+  {
+    "path": "target/verification-scale/s53-cold-worker/worker.cs",
+    "bytes": 139395,
+    "sha256": "d0e365a1991cd28d1a1c09f6fbe195293763084333771b9c77694d72f5b5f111"
+  },
+  {
+    "path": "target/verification-scale/s53-cold-worker/worker.dll",
+    "bytes": 169984,
+    "sha256": "d7e11523884ad32a060745ac048b59537e1f7232e5775621192424c97f685862"
+  },
+  {
+    "path": "target/verification-scale/s53-cold-worker/artifact.json",
+    "bytes": 2451,
+    "sha256": "88df1e68683d79aeb3fafd386986b70695342fb38dec64053caee0babcbf2673"
+  }
+]

@@ -1,8 +1,9 @@
 use super::worker_tests::{Pair, START, STEP, TestResult, Worker};
 use super::*;
+use redb::{ReadableDatabase, ReadableTableMetadata};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
-use std::io::Write;
+use std::io::{Read, Seek, SeekFrom, Write};
 
 const ACTUAL: &str = "actual file byte read";
 const DERIVED: &str = "held-lock length checked; empty-byte digest derived";
@@ -17,6 +18,9 @@ struct Fixture {
 }
 impl Fixture {
     fn new(fault: &str) -> TestResult<Self> {
+        Self::with_real_db(fault, false)
+    }
+    fn with_real_db(fault: &str, real: bool) -> TestResult<Self> {
         let base =
             Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.tmp/C-s53-cold-b0c-synthetic");
         fs::create_dir_all(&base)?;
@@ -29,7 +33,19 @@ impl Fixture {
             let state = root.join("state").join(role).join("state");
             fs::create_dir_all(&state)?;
             fs::write(state.join(LOCK_FILE), [])?;
-            fs::write(state.join("state-vault.redb"), format!("db-{role}"))?;
+            if real {
+                let db = redb::Database::create(state.join("state-vault.redb"))?;
+                let tx = db.begin_write()?;
+                {
+                    let mut table =
+                        tx.open_table(redb::TableDefinition::<&str, u64>::new("tiny"))?;
+                    table.insert("genuine", 1)?;
+                }
+                tx.commit()?;
+                drop(db);
+            } else {
+                fs::write(state.join("state-vault.redb"), format!("db-{role}"))?;
+            }
             fs::write(state.join("state-vault.key"), format!("key-{role}"))?;
             let origin = root.join("origin").join(format!("{role}.state"));
             fs::create_dir_all(&origin)?;
@@ -393,6 +409,177 @@ fn partial_release_recapture_and_eof_cleanup() -> TestResult {
         fixture.pair.release()?;
         fixture.pair.released()?;
         println!("held_partial_case={case} actual={refused}");
+    }
+    Ok(())
+}
+
+fn flip_fixture_byte(path: &Path, offset: u64, mask: u8) -> TestResult {
+    let mut file = OpenOptions::new().read(true).write(true).open(path)?;
+    file.seek(SeekFrom::Start(offset))?;
+    let mut byte = [0];
+    file.read_exact(&mut byte)?;
+    byte[0] ^= mask;
+    file.seek(SeekFrom::Start(offset))?;
+    file.write_all(&byte)?;
+    file.sync_all()?;
+    Ok(())
+}
+
+#[test]
+fn continuation_genuine_dirty_entry_clean_final_and_exact_negatives() -> TestResult {
+    for case in [
+        "positive",
+        "wrong-bit",
+        "other-byte",
+        "backup-change",
+        "strict-stays-strict",
+    ] {
+        // Genuine redb files, actual typed leases, tiny seven-file mirror. Only
+        // these newly owned synthetic headers are changed by the test setup.
+        let mut fixture = Fixture::with_real_db("none", true)?;
+        for side in ["one", "two"] {
+            flip_fixture_byte(
+                &fixture
+                    .root
+                    .join("state")
+                    .join(side)
+                    .join("state/state-vault.redb"),
+                9,
+                2,
+            )?;
+        }
+        if case == "wrong-bit" {
+            flip_fixture_byte(&fixture.root.join("state/one/state/state-vault.redb"), 9, 4)?;
+        }
+        if case == "other-byte" {
+            flip_fixture_byte(
+                &fixture.root.join("state/one/state/state-vault.redb"),
+                13,
+                8,
+            )?;
+        }
+        if case == "backup-change" {
+            flip_fixture_byte(
+                &fixture.root.join("backup/one/state/state-vault.redb"),
+                17,
+                1,
+            )?;
+        }
+        let mut worker = if case == "strict-stays-strict" {
+            Worker::spawn_held("continuation-strict")?
+        } else {
+            Worker::spawn_continuation(case)?
+        };
+        if case == "positive" {
+            let before = ready_to_mutate(&fixture, &mut worker)?;
+            assert_eq!(before["core"]["continuation"]["enabled"], true);
+            assert_eq!(
+                before["core"]["continuation"]["original_raw_equal_claim"],
+                false
+            );
+            assert_eq!(before["core"]["continuation"]["database_count"], 2);
+            assert_ne!(
+                before["core"]["continuation"]["entry_s_before"],
+                before["core"]["historical_tuple_digest"]
+            );
+            let mut final_equals_historical = true;
+            let mut final_differs_from_entry = false;
+            for side in ["one", "two"] {
+                let path = fixture
+                    .root
+                    .join("state")
+                    .join(side)
+                    .join("state/state-vault.redb");
+                // Actual redb open/repair/close under retained database guards.
+                let entry = fs::read(&path)?;
+                let entry_hash = Sha256::digest(&entry);
+                let db = redb::Database::open(&path)?;
+                {
+                    let tx = db.begin_read()?;
+                    assert_eq!(tx.list_tables()?.count(), 1);
+                    let table = tx.open_table(redb::TableDefinition::<&str, u64>::new("tiny"))?;
+                    assert_eq!(table.len()?, 1);
+                    assert_eq!(
+                        table.get("genuine")?.ok_or("genuine row missing")?.value(),
+                        1
+                    );
+                }
+                drop(db);
+                let historical = fixture
+                    .backup
+                    .iter()
+                    .find(|(p, _)| *p == format!("{side}/state/state-vault.redb"))
+                    .ok_or("genuine backup DB")?;
+                let actual = fs::read(path)?;
+                assert_eq!(
+                    actual[9] & 2,
+                    0,
+                    "real repair leaves RECOVERY_REQUIRED clear"
+                );
+                // Recovery may rewrite allocation/header slots. Measure both
+                // comparison axes rather than assuming physical history equality.
+                let final_hash = Sha256::digest(&actual);
+                let same_history = actual == historical.1;
+                let differs_entry = actual != entry;
+                assert_eq!(same_history, final_hash == Sha256::digest(&historical.1));
+                assert_eq!(differs_entry, final_hash != entry_hash);
+                assert!(differs_entry, "clean final differs from dirty entry");
+                final_equals_historical &= same_history;
+                final_differs_from_entry |= differs_entry;
+            }
+            worker.send(&worker.common("audit"))?;
+            let final_frame = worker.receive(START)?;
+            assert_eq!(final_frame["kind"], "final", "{final_frame}");
+            assert_eq!(final_frame["core"]["final_verified"], true);
+            assert_eq!(final_frame["core"]["hash_passes"], 8);
+            assert_eq!(
+                final_frame["core"]["continuation"]["final_equals_historical"],
+                final_equals_historical
+            );
+            assert_eq!(
+                final_frame["core"]["continuation"]["final_differs_from_entry"],
+                final_differs_from_entry
+            );
+            let observation = final_frame["continuation_observation_sha256"]
+                .as_str()
+                .ok_or("full continuation observation digest missing")?;
+            assert_eq!(observation.len(), 64);
+            let done = finish(&mut fixture, &mut worker)?;
+            assert_eq!(
+                done["continuation_observation_sha256"], observation,
+                "complete raw-hash observation survives Dispose"
+            );
+            assert_eq!(
+                done["core"]["continuation"], final_frame["core"]["continuation"],
+                "post-cleanup facts survive hash-buffer clearing"
+            );
+            println!("continuation_genuine final={final_frame} cleanup={done}");
+        } else {
+            worker.send(&fixture.bind(&worker))?;
+            let refused = worker.receive(START)?;
+            assert_eq!(refused["kind"], "refused", "{refused}");
+            let expected = if case == "backup-change" || case == "strict-stays-strict" {
+                "payload_digest"
+            } else {
+                "held_continuation_delta"
+            };
+            assert_eq!(refused["code"], expected, "{refused}");
+            assert_eq!(refused["core"]["failure_phase"], "held_baseline_hash");
+            assert_eq!(refused["core"]["baseline_completed"], false);
+            assert_eq!(refused["core"]["slots_released"], 0);
+            assert_eq!(refused["transport_cleanup_ok"], true);
+            assert_eq!(refused["core"]["input_handles_released"], true);
+            assert_eq!(refused["core"]["remaining_owned_handles"], 0);
+            assert_eq!(refused["core"]["cleanup_unknown"], false);
+            assert_eq!(worker.reap()?.code(), Some(40));
+            fixture.pair.excluded()?;
+            fixture.pair.release()?;
+            fixture.pair.released()?;
+            if case != "backup-change" {
+                fixture.bkp_unchanged()?;
+            }
+            println!("continuation_negative={case} actual={refused}");
+        }
     }
     Ok(())
 }

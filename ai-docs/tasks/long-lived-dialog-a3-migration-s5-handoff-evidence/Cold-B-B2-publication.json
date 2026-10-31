@@ -1,0 +1,507 @@
+{
+  "schema_version": 1,
+  "parent": "f6018d10820e7af0f0b3d2f64d66344d057deff1",
+  "classification": "root-source-accepted-B2-compact-publication-proposal",
+  "files": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-01.invocation.ps1",
+      "bytes": 3525,
+      "sha256": "909eedae4f01e8802b9da374b5409dc26d804acb6e545a35e944d406beb31ba0",
+      "blob": "4335cc7ec31113a4ec50fa5601bbea158add844f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-01.preserved.json",
+      "bytes": 1060,
+      "sha256": "76f70ae9d947f9ecf64c470aba4b5d83bea79da5220397fe3d1ec2a6747fc81f",
+      "blob": "37c17325c2e66f51be102be592050fefb8b94884"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-01.result.json",
+      "bytes": 395,
+      "sha256": "70850d591c21f028b43d63d8b7c91f3363561a990b9edd15298e1960d374e479",
+      "blob": "4ece61f4bc4a06b7188051cec31f81ae4caab971"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-01.stderr.log",
+      "bytes": 12870,
+      "sha256": "b462b869559c6f7e5bf2f48af531bc508fbc818a554e2258dd09f2b4dec8ae55",
+      "blob": "0bb25e95bd5d9da650d5182bcf65a8eed0758b62"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-01.stdout.log",
+      "bytes": 24,
+      "sha256": "f2f71f3390fa3c2b65763ffe145f7247352ebd9fba6b935d83e308de72cbea3e",
+      "blob": "69df15923d40d8c675d373ec3a26d692c1c6c187"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-02.invocation.ps1",
+      "bytes": 5047,
+      "sha256": "ec1f7fa109152409a37d12710c35cd952a97d2b0a7c5b34ad0e578ef3269974c",
+      "blob": "84ef24c329022630ce901203214e25513612e3c9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-02.result.json",
+      "bytes": 395,
+      "sha256": "5f34a5314bd4b9cc1f0593b3e0e973ebd09260e9c9ce00a38386278e882e2777",
+      "blob": "c6b4cc2d2e774589c49b1f4359adfaeee0df1d18"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-02.stderr.log",
+      "bytes": 1332,
+      "sha256": "5a238bab591f7acd0908c3ff360f47242887b502b1e2cf272964d4ec14d05c68",
+      "blob": "20d3bcd6cbc6dbcb4388dca8541e01c5629ae370"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-02.stdout.log",
+      "bytes": 195,
+      "sha256": "fc1ba7734b75c8b4c5acf59bfdd427b0c402987ec9b48a5305ae5ffe8d771161",
+      "blob": "2459052d841b462f5962ea626ee9d5420e1acc10"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-03.invocation.ps1",
+      "bytes": 5050,
+      "sha256": "e5bbeac8ae9a29b7b131135f3e9eb58addf4457428a06a46e4b8a51b64e48d9c",
+      "blob": "6dd7eeb9df815e029e5e50a17bc3875b0c665fcd"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-03.post-failure-preserved.json",
+      "bytes": 1098,
+      "sha256": "f08ad9c904b9f88b5397e78285f55d6e1eb392a2ec55193ae99ced2583de237e",
+      "blob": "11ddc5b49618fb491e3100f9dffd3363d62be27a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-03.result.json",
+      "bytes": 395,
+      "sha256": "a08d4b4b8ce378d3fbadcb65290e1fa7ad5e8473408c4dfa22cf47ca17519898",
+      "blob": "b3a068125685957dbaea4d2ca75bfbb19b4e7b95"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-03.stderr.log",
+      "bytes": 14678,
+      "sha256": "eb8df8a592e302cfa5bb45ff53d25b558510cd54f246058a392a0a81cf5df54b",
+      "blob": "a8fcb74d9336b6d762ec53a7079bfad44d846ce3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-03.stdout.log",
+      "bytes": 1815,
+      "sha256": "8e0d96d3d07506f303788c190c10c8b2827fc20db38d11e987f658fe5aec2b31",
+      "blob": "7df797024cc14b66e7eb01138ef0e01287bea86e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.invocation.ps1",
+      "bytes": 4788,
+      "sha256": "6d36e4854e73a3fd8f2a817864b750641e639005761a6ffd24e690758d521db5",
+      "blob": "522da7a1e23ae47047dd815ea124d24c60f745a5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.result.json",
+      "bytes": 394,
+      "sha256": "102375f7e87907d5af764f179896bbefe48afd655d71ff4b2798bf957029ee0e",
+      "blob": "325f0ec502320b8d7fefdb982591f96acdbefd4b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.stderr.log",
+      "bytes": 1042,
+      "sha256": "7a0c6d41ac0829206f977968553330f0b2a7bb5559afa9cf65adfb22be0a6ea5",
+      "blob": "d208c76260fb112e86936fe54d7e781b3952592d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.stdout.log",
+      "bytes": 1889,
+      "sha256": "f8bb1c97fe3d770861cdc3c8006c6b5b7b1f5c84ded7eca8ada37e05c4af1038",
+      "blob": "eb37ece8b31134c2469de4ec839d28dbc3b3cb05"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-05.images.before.json",
+      "bytes": 972,
+      "sha256": "9f2605217655cd5dc94115a2179d63d37462ddf969b55a2caf74126332737559",
+      "blob": "b6326da0b89928a72922c3f5fcaae7166762b7f2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-05.invocation.ps1",
+      "bytes": 3930,
+      "sha256": "c1ef1e5316b0cb5a7ff428509e057f73f326c6c6931d2f1d6022a6513d38a1fe",
+      "blob": "32c1d7daab41e1262f6052609affa53274caa4ac"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-05.result.json",
+      "bytes": 394,
+      "sha256": "f123cdcc5c5b1d3350f7c305b4a6690dc154adcaaa7f36756a82d34b0e8bffe6",
+      "blob": "11b52842b93c4b237f2d3571b546a3a01f4cef22"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-05.stdout.log",
+      "bytes": 5062,
+      "sha256": "26d5dc6329f55b66cefe699d5fd68b0283af79a641f605c28e4b275ca605793a",
+      "blob": "773983a4362a63f151bf083a22dbfb416286054d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-05.synthetic-delta.json",
+      "bytes": 4688,
+      "sha256": "577e5157ab30b1e5dc1a644d09a10a8c318847e7b68bc7fec3b5e3c4e5dd53b0",
+      "blob": "924c548678840fb1f924397cc27f18fd24319222"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-06.invocation.ps1",
+      "bytes": 4272,
+      "sha256": "41c93bfe0fe7b58ea7e9d567f5c4a1a597e18d6a7f034a0f6779cf74cec41b30",
+      "blob": "31b9ff0edc8979baa0871f966a3b8a294891d92e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-06.result.json",
+      "bytes": 392,
+      "sha256": "4de61cc724b00709a76c158547db5bb88511a3fa692f00bebf9e438d5481a12b",
+      "blob": "1a2773fab6b57c6b3ce9013482d897eb91477ee8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-06.stderr.log",
+      "bytes": 1121,
+      "sha256": "bc5080e1d1ed1fe4b183ac9e6288b98c379c855b0cc4a5282d1ef752aab94c88",
+      "blob": "1704b7bf941df68c417d603be6be21843b221625"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-06.stdout.log",
+      "bytes": 195,
+      "sha256": "fc1ba7734b75c8b4c5acf59bfdd427b0c402987ec9b48a5305ae5ffe8d771161",
+      "blob": "2459052d841b462f5962ea626ee9d5420e1acc10"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-07.invocation.ps1",
+      "bytes": 5605,
+      "sha256": "e9e3362b8631bed0b2efe56ab18f0090f5ea82b1b75202324b399f25f4de3ebf",
+      "blob": "af331e9f16a4481d6726312eb6995ad65a80d8e0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-07.preserved-workers.json",
+      "bytes": 1001,
+      "sha256": "e15b2d2bc3c2473bbee8e9b6ef267487a7eb12cfbc17ea85068979513419b1e4",
+      "blob": "082a15fd4f59018e6d66ea52ed6db1aa2a780466"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-07.result.json",
+      "bytes": 394,
+      "sha256": "674af4ae63313824d728f9103a545b124b2b3cca93777f4463f03f3ef31fec3e",
+      "blob": "1948087b514457f851d8fe74350d996b83baa0c8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-07.stderr.log",
+      "bytes": 1115,
+      "sha256": "b39b0ac23aa1b66de80702cd35eba428ed23bae5d8fbd801c6aa68e29f5a4457",
+      "blob": "c359de29710f50d93e21af76b460fb6a22a58bba"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-07.stdout.log",
+      "bytes": 786,
+      "sha256": "7888d069760a3c5c7c85ab674ed869a471f4ece025e74370d62ec30a0f06ef1a",
+      "blob": "18ee0b6748e29437544bcf04a2e41ddcac0cb8ee"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.invocation.ps1",
+      "bytes": 4272,
+      "sha256": "ce5faa3c3ea65456442161bbea6005ccb744da620aed1a2675e4dff3adb26c4e",
+      "blob": "cd3cf4a6b3ea8082867ec78503b551c48d01647e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.result.json",
+      "bytes": 394,
+      "sha256": "ded9fc8028fe3fec15f0f8cad2f4e96a4d0d777a04c8b9424fe295dbd2299c35",
+      "blob": "b5b174721a9799741ffc18c6d4b28164bfa38acd"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.stderr.log",
+      "bytes": 365,
+      "sha256": "bbd3db1acc315607ba83a224ee70f984120937cd4433e540740c471c7acee7a6",
+      "blob": "f6a6d03300bafff3d3aec03607b75a8d0ec0356e"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.stdout.log",
+      "bytes": 860,
+      "sha256": "436eb0a261fc7aa1428d7778368f18a06b3adb800c34c46564de1d7158775c1f",
+      "blob": "d40817609174415b3104a32c24375268543aa32b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.images.before.json",
+      "bytes": 972,
+      "sha256": "dad288000a126c08c3d6ec81e0f30e7720321a0c201f37b9ea52be33532edf70",
+      "blob": "fb47490734e52c9d24545beb8507a9ba9627cd69"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.images.json",
+      "bytes": 972,
+      "sha256": "dad288000a126c08c3d6ec81e0f30e7720321a0c201f37b9ea52be33532edf70",
+      "blob": "fb47490734e52c9d24545beb8507a9ba9627cd69"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.inputs.after.json",
+      "bytes": 118114,
+      "sha256": "3ce85def1fd0d10eef8802517182ce3667c10e732b64199a50f0c66dca1f8ca3",
+      "blob": "1e658f2e40f1f3e0064544f73630e3923cf38296"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "3ce85def1fd0d10eef8802517182ce3667c10e732b64199a50f0c66dca1f8ca3",
+      "blob": "1e658f2e40f1f3e0064544f73630e3923cf38296"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.invocation.ps1",
+      "bytes": 3636,
+      "sha256": "9fefd5a95a666df25c74d10c390d95052cd3d51cefe8aef622e28b4cfa5fff35",
+      "blob": "ecd3c7c2148cc3d90d04a3269eaae2fac1fda8da"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.result.json",
+      "bytes": 394,
+      "sha256": "d672b7d0d4fc806e4fb2359b6daaf346aab7bfbc95a99221fb6f53ba13dceea4",
+      "blob": "200bd7b5058335c1acae57fd7dbad3cb9e7ab2fa"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.stderr.log",
+      "bytes": 85,
+      "sha256": "6922f4ba03c0be5c93122fb1dd068420cd5e59a57e57e49116c64b25d8fe5a72",
+      "blob": "5fae4f1d571f34bc8a12f0e2cb2eae5776280c96"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.stdout.log",
+      "bytes": 11901,
+      "sha256": "f6f4f018f4b74a7c3faad741b57cb35c1552fb3b091b2f0e021adc19fcc4e312",
+      "blob": "248564a1036fe5a8d1fac857ecdce641c442287b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01.handoff.json",
+      "bytes": 44031,
+      "sha256": "53479aaa74409ddb6918ada760b82ed215aadc3aed8be38539ed08d4848ad2b6",
+      "blob": "89e94da5b8d099a9f557718193eb0095fcbb06fa"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01.introduced.diff",
+      "bytes": 67640,
+      "sha256": "dfe4f7e3dd93d1188264442ed1a896f7490e5cd262c1b1e0d3a441f27f74b89f",
+      "blob": "bcf214de1553c64851a94c0adb278d1032be4a98"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01.sources.json",
+      "bytes": 8592,
+      "sha256": "850b2af089604411a47fdefc95d32f36a1bbddd4375f45bded101081e1529ee6",
+      "blob": "17f2022afdccabcefed9aeaf54c364aa789c8bf3"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/Cold-B-B2-combined-private-invocation.json",
+      "bytes": 7748,
+      "sha256": "50126078ce99996382b18937a721d0a1214bb909dd26d1130fd11098fc02fe3e",
+      "blob": "67e6e3c13656384d66d1db2176fc139c09af8ecc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/Cold-B-B2-contract-note.md",
+      "bytes": 5322,
+      "sha256": "789e8bf095c10bcdf6ae2bbf0042e07dec6fe2e50a219b5a9f3fe5a7ca6db630",
+      "blob": "0042a00977a58e7c08e6f6d1df6a5815009486b8"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/Cold-B-B2-materialized-artifact.json",
+      "bytes": 2451,
+      "sha256": "29198cd95c5525344c5b3fd00943b93992e7b2d45bcf5c2ea5c9549b3331e003",
+      "blob": "0b3a9ca0cfe6d07f3b77cc944fc28e5d6f0ad433"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/Cold-B-B2-readiness.md",
+      "bytes": 4014,
+      "sha256": "828ed5d6d8afc2167c5f7d3e33b7c3a9dd7da1c506c8eb788794d64d953b1f3f",
+      "blob": "1109a4d0558126d49f134fc4db7d716ae2dd0849"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/Cold-B-B2-root-accepted.md",
+      "bytes": 2394,
+      "sha256": "8fb5b4ef3e652a5cb2788cd17b3a033c1908699ffbe3fb465b946154f08c1d9f",
+      "blob": "02da47c01f6acb588d33cc36cde1b3440342ef83"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/migration_s53_cold.rs",
+      "bytes": 837,
+      "sha256": "92ee60f226a9c95e65f3d2d02e66574a198da2df8eb97af84e3e9b87f43c3861",
+      "blob": "eb71825fed25bf42d42024b2b69fd61ac387dbaf"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/checks.rs",
+      "bytes": 6653,
+      "sha256": "0f4e2ce6d42e125095444aa2829482569a5b054b4e77d0455df8343a3d51108a",
+      "blob": "cf20b4609ade2df573e66aeeeabb877ff4e89e53"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/fixed.rs",
+      "bytes": 8193,
+      "sha256": "505ab5634e6dc44ddcef23466a23009eba4c3e66121b0183aa638537ada7034e",
+      "blob": "d0430f5712e35b5137a7c5158d962e9d5d79cf38"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/history.rs",
+      "bytes": 2818,
+      "sha256": "6f43a54189810047c829b3da065ee539d36dc0da087e476636b756d304c1faab",
+      "blob": "1026be09ba78a8764b8d58cb2ca2ef2df00123ac"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/progress.rs",
+      "bytes": 3594,
+      "sha256": "4d918591a741beaa698b56cb3b6424231a319c9dfd6ed63a330ffe2977887e05",
+      "blob": "ee09c4b1681c700a0cd88158325c0df34897839d"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/readers.rs",
+      "bytes": 15958,
+      "sha256": "ca7c64a317e381e985169aea7b90310a1bf0ffd925722a38a37dc92c3e676011",
+      "blob": "c71cd8164e116db53f50e3101c193b7cf36768a0"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/session.rs",
+      "bytes": 22304,
+      "sha256": "93617e8c1c9f1577af4a98b45af891d0d276dcf2fb5420d484b0fcbe37874020",
+      "blob": "fdc3f7c0dc02a6e0615c3b26dbd18ab1e846799d"
+    },
+    {
+      "path": "crates/kilogram-state/src/verification_held_tests.rs",
+      "bytes": 23850,
+      "sha256": "dea62618bae5ae62b78c4ce0c7ae4064937ff5c6e26c15698f09426cf5499fba",
+      "blob": "c478d5156b1bded53b6cd3856b91c81f538f4497"
+    },
+    {
+      "path": "crates/kilogram-state/src/verification_worker_tests.rs",
+      "bytes": 17236,
+      "sha256": "626605431cca218c86fba5f9b677832220f2eacc08766d32bf1d7c8353f39821",
+      "blob": "065a012824b1f3d8c0787c8cd0cab279ad1ae59b"
+    },
+    {
+      "path": "scripts/build-migration-s53-cold-b-worker.ps1",
+      "bytes": 4257,
+      "sha256": "45e7bb2b179f4c9f51a24d65e88bc65877430d2e2be677b93367d9ab694fbfd2",
+      "blob": "07b3838e0a9a0ac43ae909ada0964538a08a7719"
+    },
+    {
+      "path": "scripts/invoke-migration-s53-cold-b-worker.ps1",
+      "bytes": 2021,
+      "sha256": "ec6265674118dfbbc40c3629046d964ecfc228a96ea3e87d9e72cb475a7f3031",
+      "blob": "8eaba437403aecfc7ab68b6b0998ace223266ad7"
+    },
+    {
+      "path": "scripts/invoke-migration-s53-cold-b.ps1",
+      "bytes": 4548,
+      "sha256": "79fa8133aaefbbddf2508520fd8fc6cdd1c319a15fc1b210cbcba4d1f405d6bd",
+      "blob": "d2e5e58ce7657d13bd959885976b0f3efea9a33b"
+    },
+    {
+      "path": "scripts/invoke-migration-s53-held-preservation-synthetic.ps1",
+      "bytes": 3603,
+      "sha256": "69e194009c81b111e257379eb6ae5d6c672b5c1c44f619bf4c3a8a0eddf05200",
+      "blob": "bcd66054bd346009bd49ffb4c0ed07e861664b2e"
+    },
+    {
+      "path": "scripts/migration-s53-cold-b-private.cs",
+      "bytes": 10198,
+      "sha256": "1d8795244b9ecb5ff33571ca9400f70a9a81daa6428877549c5a7193c141d585",
+      "blob": "f079851f836cc1889d907ac547fcadfbda5edd27"
+    },
+    {
+      "path": "scripts/migration-s53-held-continuation.cs",
+      "bytes": 8018,
+      "sha256": "74c70ab12ea14a6b6c856fbb233f1a88a73d09fb39f977c682796e4cf5a3de2e",
+      "blob": "4733b73e90717e6059620e155545a4ce42d8d1f2"
+    },
+    {
+      "path": "scripts/migration-s53-held-preservation.cs",
+      "bytes": 22681,
+      "sha256": "6d1f919edacaf378863b1d63c310636be03e723b5eb2ca44f79c470b420d909e",
+      "blob": "50cb2d040113407bed2c36e2a43d7cdf95811a1d"
+    }
+  ],
+  "partial_index_patch": null,
+  "manifest_self_included_separately": true,
+  "expected_commit_file_count": 69,
+  "source_files": 16,
+  "selected_files_bytes": 644959,
+  "excluded_retained_local": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-05.stderr.log",
+      "bytes": 6485350,
+      "sha256": "5c29aa852e1322af224536646e9de1c7c216dd3acc391e397cee677f2fecbe48",
+      "reason": "immutable6.5MB synthetic assertion dump; hash is in handoff; retained locally, do not stage"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-01.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "6c28598684f0e2486818a9337b5a4cfb7f32b32d5c7a32e8292925ea2d15c9c4",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-02.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "6c28598684f0e2486818a9337b5a4cfb7f32b32d5c7a32e8292925ea2d15c9c4",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-03.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "6c28598684f0e2486818a9337b5a4cfb7f32b32d5c7a32e8292925ea2d15c9c4",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.images.json",
+      "bytes": 972,
+      "sha256": "9f2605217655cd5dc94115a2179d63d37462ddf969b55a2caf74126332737559",
+      "reason": "identical image tuple already published in adjacent focused before/after pins"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.inputs.after.json",
+      "bytes": 118114,
+      "sha256": "f4e97dc6486d4df04506430b63b61f775eb2f2fcebe72a084df0be7e5be48027",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "f4e97dc6486d4df04506430b63b61f775eb2f2fcebe72a084df0be7e5be48027",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-05.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "f4e97dc6486d4df04506430b63b61f775eb2f2fcebe72a084df0be7e5be48027",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-06.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "972358c868a44449afc01ee08ab19aadddd8d4ecb55edd9a16fbc79e61f24b6e",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-07.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "13dc1c7ee94e6c221769bf2d2e294d026ff14947453a6807f1571bc38241a38a",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.images.json",
+      "bytes": 972,
+      "sha256": "dad288000a126c08c3d6ec81e0f30e7720321a0c201f37b9ea52be33532edf70",
+      "reason": "identical image tuple already published in adjacent focused before/after pins"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.inputs.after.json",
+      "bytes": 118114,
+      "sha256": "3ce85def1fd0d10eef8802517182ce3667c10e732b64199a50f0c66dca1f8ca3",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "3ce85def1fd0d10eef8802517182ce3667c10e732b64199a50f0c66dca1f8ca3",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    }
+  ],
+  "exclusions": [
+    "foreign dirty files",
+    "private data/receipts",
+    "EXE/DLL/PDB",
+    "all .tmp binary/source snapshots",
+    "target build artifacts"
+  ]
+}

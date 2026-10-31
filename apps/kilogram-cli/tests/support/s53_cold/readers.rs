@@ -303,13 +303,21 @@ pub fn full(
     expected: &fixed::Expected,
     proofs: &[Vec<u8>; 2],
     until: Instant,
+    mut progress: Option<&mut super::progress::Progress>,
 ) -> Result<Full> {
+    if let Some(p) = progress.as_mut() {
+        p.record("full.scope.start", 0)?;
+    }
     let scope = scope(repo, 0, expected.local)?;
     expected.scope(&scope.verified)?;
+    if let Some(p) = progress.as_mut() {
+        p.record("full.scope.done", 0)?;
+    }
     let mut digest = Digest::new(b"kg:s53:cold:B1:1\0");
     digest.bytes(&scope.raw);
     let mut history = BTreeMap::new();
     let mut ids = BTreeSet::new();
+    let mut completed_sources = 0;
     for role in 0..2 {
         let mut previous = None;
         for n in 0..expected.next[role] {
@@ -338,6 +346,7 @@ pub fn full(
             digest.bytes(&raw);
             digest.bytes(&auth);
             if n == 0 {
+                completed_sources += 1;
                 continue;
             }
             let (request, text) = expected.text(role, n);
@@ -414,6 +423,12 @@ pub fn full(
                 digest.value(&local)?;
             }
             history.insert(state::hex(&id),json!({"format":1,"id":state::hex(&id),"role":role,"ordinal":n,"sequence":e.core.sequence,"request":state::hex(&request),"text":text,"proof_kind":if proof.is_some(){"FullL1"}else{"LegacySnapshot"},"delivered":true}));
+            completed_sources += 1;
+            if completed_sources % 64 == 0
+                && let Some(p) = progress.as_mut()
+            {
+                p.record("source", completed_sources)?;
+            }
         }
         ensure!(
             repo.event_at(0, role as u8, expected.next[role])?.is_none(),
@@ -422,7 +437,10 @@ pub fn full(
     }
     let future = fixed::future_ids()[expected.local];
     absent_request(repo.request(0, future)?.as_ref())?;
-    let pages = super::history::read(repo, &history, expected.next, until, &mut digest)?;
+    if let Some(p) = progress.as_mut() {
+        p.record("sources.done", completed_sources)?;
+    }
+    let pages = super::history::read(repo, &history, expected.next, until, &mut digest, progress)?;
     let mut hd = Digest::new(b"kg:s53:cold:history:1\0");
     hd.value(&history)?;
     Ok(Full {

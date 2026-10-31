@@ -18,8 +18,8 @@ fn cold_b1_small_readers_and_exact_negatives() -> Result<()> {
             &fixture.proofs,
             until,
         )?;
-        let first = readers::full(repo, expected, &fixture.proofs, until)?;
-        let second = readers::full(repo, expected, &fixture.proofs, until)?;
+        let first = readers::full(repo, expected, &fixture.proofs, until, None)?;
+        let second = readers::full(repo, expected, &fixture.proofs, until, None)?;
         ensure!(
             first.digest == second.digest
                 && first.history_digest == second.history_digest

@@ -1,0 +1,26 @@
+[
+  {
+    "path": "apps/kilogram-cli/tests/support/s53_cold/progress.rs",
+    "saved": ".tmp\\C-s53-cold-b2-lint-before\\progress.rs",
+    "bytes": 3599,
+    "sha256": "8bfcb50198966a0b52d63379bb1cf88b907e71a609f82f00056d41379b34a05b"
+  },
+  {
+    "path": "apps/kilogram-cli/tests/support/s53_cold/readers.rs",
+    "saved": ".tmp\\C-s53-cold-b2-lint-before\\readers.rs",
+    "bytes": 15970,
+    "sha256": "48864feac90fbf70f484b5eb5134f89c32acd33e6e609c53ee80ea2a16a3e2d0"
+  },
+  {
+    "path": "target/verification-scale/deps/kilogram-cli-test-migration_s53_cold-tests.exe",
+    "saved": ".tmp\\C-s53-cold-b2-lint-before\\kilogram-cli-test-migration_s53_cold-tests.exe",
+    "bytes": 9669632,
+    "sha256": "300eb2c051d5f7d4939ea2b849d38444c6eff33cc9a8785d062eea007a43ca70"
+  },
+  {
+    "path": "target/verification-scale/deps/kilogram-state-lib-kilogram_state-tests.exe",
+    "saved": ".tmp\\C-s53-cold-b2-lint-before\\kilogram-state-lib-kilogram_state-tests.exe",
+    "bytes": 7294976,
+    "sha256": "6ceba0db4f7d181dbee095df1196ce6ac94d1e47bb6c4646e873b9949271a772"
+  }
+]

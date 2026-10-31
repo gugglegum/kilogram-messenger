@@ -7,6 +7,7 @@ pub fn read(
     frontiers: [u64; 2],
     until: Instant,
     digest: &mut readers::Digest,
+    mut progress: Option<&mut super::progress::Progress>,
 ) -> Result<usize> {
     let mut cursor = None;
     let mut seen_cursors = BTreeSet::new();
@@ -15,6 +16,9 @@ pub fn read(
     let mut view = None;
     for page_no in 1..=32 {
         readers::check(until)?;
+        if let Some(p) = progress.as_mut() {
+            p.record("page.start", page_no)?;
+        }
         let raw = repo.history(0, cursor.as_ref(), 32)?;
         bytes = bytes
             .checked_add(raw.len())
@@ -57,6 +61,9 @@ pub fn read(
             "history repeated cursor"
         );
         digest.bytes(&raw);
+        if let Some(p) = progress.as_mut() {
+            p.record("page.done", page_no)?;
+        }
         if page["finished"] == true {
             ensure!(seen.len() == expected.len(), "history truncation");
             return Ok(page_no);

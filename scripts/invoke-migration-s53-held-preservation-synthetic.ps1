@@ -1,11 +1,12 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][ValidatePattern('\AC-s53-cold-b0c-[a-z0-9-]{1,64}\z')][string]$Attempt)
+param([Parameter(Mandatory)][ValidatePattern('\AC-s53-cold-b0c-[a-z0-9-]{1,64}\z')][string]$Attempt,[switch]$Continuation)
 $ErrorActionPreference='Stop'
 $ProgressPreference='SilentlyContinue'
 $workspace=Split-Path -Parent $PSScriptRoot
 $corePath=Join-Path $PSScriptRoot 'migration-s53-cold-preservation.ps1'
 $transportPath=Join-Path $PSScriptRoot 'migration-s53-typed-lock-worker.ps1'
 $partialPath=Join-Path $PSScriptRoot 'migration-s53-held-preservation.cs'
+$continuationPath=Join-Path $PSScriptRoot 'migration-s53-held-continuation.cs'
 $coreBytes=[IO.File]::ReadAllBytes($corePath)
 if($coreBytes.Length -ne 82999 -or [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($coreBytes)).ToLowerInvariant() -cne 'eb166bce9b53da51863b605a06041e7100aca0d053f21c2b2ece09cf191b259f'){throw 'Frozen Core pin mismatch'}
 $coreText=[Text.UTF8Encoding]::new($false,$true).GetString($coreBytes)
@@ -36,11 +37,11 @@ foreach($line in ($typed.Substring(0,$at) -split '\r?\n')){
  if([string]::IsNullOrWhiteSpace($line)){continue}
  if(-not $line.StartsWith('using ',[StringComparison]::Ordinal) -or -not $original.Contains($line)){throw 'Transport using not supplied by frozen Core'}
 }
-$definition=$composed+[Environment]::NewLine+$typed.Substring($at)+[Environment]::NewLine+[IO.File]::ReadAllText($partialPath)
+$definition=$composed+[Environment]::NewLine+$typed.Substring($at)+[Environment]::NewLine+[IO.File]::ReadAllText($partialPath)+[Environment]::NewLine+[IO.File]::ReadAllText($continuationPath)
 $composition=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($definition))).ToLowerInvariant()
 $hash=[Security.Cryptography.IncrementalHash]::CreateHash([Security.Cryptography.HashAlgorithmName]::SHA256)
 try{
- foreach($path in @($PSCommandPath,$transportPath,$corePath,$partialPath)){
+ foreach($path in @($PSCommandPath,$transportPath,$corePath,$partialPath,$continuationPath)){
   $bytes=[IO.File]::ReadAllBytes($path)
   if($bytes.Length -gt 256KB){throw 'Composition source cap'}
   $hash.AppendData([BitConverter]::GetBytes([long]$bytes.Length));$hash.AppendData($bytes)
@@ -48,4 +49,5 @@ try{
  $source=[Convert]::ToHexString($hash.GetHashAndReset()).ToLowerInvariant()
 }finally{$hash.Dispose()}
 Add-Type -Language CSharp -TypeDefinition $definition
+if($Continuation){exit ([S53TypedLockWorker]::RunHeldContinuation($source,$Attempt,$composition))}
 exit ([S53TypedLockWorker]::RunHeld($source,$Attempt,$composition))

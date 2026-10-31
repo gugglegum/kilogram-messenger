@@ -1,0 +1,79 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification-scale' without executing them...
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s53_cold-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-runtime2_process-tests.exe
+WARNING: Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 45 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 32 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s53_cold-tests.exe
+
+running 2 tests
+test checks::cold_b1_small_readers_and_exact_negatives ... account_id=dd5a7a840cf79172247f307c877c546be84375838277b48cc5b063d293f87d25
+device_id=4d384552a1ba2a83ccc5560d52db7500fe30b688326eebfc52a87d46fffc6c76
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+account_id=5f98f62c13c073c21fc676b5950e4a553f0d35df78fb1b1bc1fa87e264672a29
+device_id=f2be048d56a8d378f4339b4fd717b0bbebd83173b44d764e1e7362e1df05b947
+profile_mode=ordered-dialog-v1
+status=device-enrolled
+cold_b1_small local=0 texts=2 pages=1 b0=b9cfbba18040926f634d5dc76f54402013d85e9a919c0f727555f47568a19521 full=08715e73339f0969f4abee64798858f12431ce2d1c15c65d7f40db77dcecced8 receipt_signature_refused=true receipt_binding_refused=true wrong_auth_refused=true invalid_authority_refused=true wrong_account_refused=true peer_without_request=true future_request_refused=true
+cold_b1_small local=1 texts=2 pages=1 b0=1cd7381043a3593d3af5107796dffda4169929fb0a18b90e3e9c77ad85500106 full=a5334da4bba034cea06d34363067ef2248f12d945d1384ae06f24866851e2bd8 receipt_signature_refused=true receipt_binding_refused=true wrong_auth_refused=true invalid_authority_refused=true wrong_account_refused=true peer_without_request=true future_request_refused=true
+ok
+test progress::cold_b1_progress_is_bounded_create_new_and_durable ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 1.72s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s
+
+cache_status=skipped_explicitly
+status=passed
+isolated_test_count=0
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification-scale' without executing them...
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-state-lib-kilogram_state-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-state-test-a3_s1_root_review-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-state-test-a3_s2_root_review-tests.exe
+WARNING: Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-state-lib-kilogram_state-tests.exe
+
+running 1 test
+test verification_lock::held_tests::continuation_genuine_dirty_entry_clean_final_and_exact_negatives ... synthetic_fixture=\\?\E:\AI-Projects\kilogram-p2p-messenger\.tmp\C-s53-cold-b0c-synthetic\b0c-M4vIty fault=none
+FAILED
+
+failures:
+
+failures:
+    verification_lock::held_tests::continuation_genuine_dirty_entry_clean_final_and_exact_negatives
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 115 filtered out; finished in 1.23s
+
+owned_children_after=0

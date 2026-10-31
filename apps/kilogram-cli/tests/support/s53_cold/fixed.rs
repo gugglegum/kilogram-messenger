@@ -5,8 +5,8 @@ pub const WORKSPACE: &str = r"E:\AI-Projects\kilogram-p2p-messenger";
 pub const STATE: &str =
     r"E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-storage\l1-exhausted-observed-NCjBHb";
 pub const PROOF: &str = r"E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-admin\P2-s53-exhausted-roots-01-attempt-01\proof";
-pub const ATTEMPT: &str = "P2-s53-exhausted-cold-b-01-attempt-01";
-pub const EVIDENCE: &str = r"E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-preparation-evidence\P2-s53-exhausted-cold-b-01-attempt-01";
+pub const ATTEMPT: &str = "P2-s53-exhausted-cold-b-01-attempt-02";
+pub const EVIDENCE: &str = r"E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-preparation-evidence\P2-s53-exhausted-cold-b-01-attempt-02";
 pub const SHELL: &str = r"C:\Users\Paul\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe";
 pub const ACCOUNTS: [&str; 2] = [
     "7a87df0a69a322c4ec28fb94e175e26e77c428151a6e67336f6d0c8eb0abb2ce",

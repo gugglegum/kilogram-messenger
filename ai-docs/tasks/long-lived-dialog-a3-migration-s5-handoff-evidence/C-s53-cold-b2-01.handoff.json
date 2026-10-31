@@ -1,0 +1,1032 @@
+{
+  "schema_version": 1,
+  "classification": "B2-source-and-focused-synthetic-review-ready",
+  "head": "f6018d10820e7af0f0b3d2f64d66344d057deff1",
+  "private_attempt02_activated": false,
+  "commit_push_done": false,
+  "whole_S53_complete": false,
+  "source_manifest": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01.sources.json",
+    "bytes": 8592,
+    "sha256": "850b2af089604411a47fdefc95d32f36a1bbddd4375f45bded101081e1529ee6"
+  },
+  "introduced_diff": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01.introduced.diff",
+    "bytes": 67640,
+    "sha256": "dfe4f7e3dd93d1188264442ed1a896f7490e5cd262c1b1e0d3a441f27f74b89f"
+  },
+  "prospective_invocation": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/Cold-B-B2-combined-private-invocation.json",
+    "bytes": 7748,
+    "sha256": "50126078ce99996382b18937a721d0a1214bb909dd26d1130fd11098fc02fe3e"
+  },
+  "contract": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/Cold-B-B2-contract-note.md",
+    "bytes": 5322,
+    "sha256": "789e8bf095c10bcdf6ae2bbf0042e07dec6fe2e50a219b5a9f3fe5a7ca6db630"
+  },
+  "sources_count": 16,
+  "attempts": [
+    {
+      "number": 1,
+      "result": {
+        "attempt": "C-s53-cold-b2-01-attempt-01",
+        "start_utc": "2026-10-31T20:00:33.7058934+00:00",
+        "end_utc": "2026-10-31T20:10:04.8534541+00:00",
+        "whole_seconds": 571.1483655,
+        "outer_limit_seconds": 600,
+        "inner_work_whole": [
+          570,
+          590
+        ],
+        "timed_out": false,
+        "child_pid": 44288,
+        "exit_code": 1,
+        "offline": true,
+        "jobs": 2,
+        "priority": "BelowNormal"
+      },
+      "evidence": [
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-01.inputs.before.json",
+          "bytes": 118114,
+          "sha256": "6c28598684f0e2486818a9337b5a4cfb7f32b32d5c7a32e8292925ea2d15c9c4"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-01.invocation.ps1",
+          "bytes": 3525,
+          "sha256": "909eedae4f01e8802b9da374b5409dc26d804acb6e545a35e944d406beb31ba0"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-01.preserved.json",
+          "bytes": 1060,
+          "sha256": "76f70ae9d947f9ecf64c470aba4b5d83bea79da5220397fe3d1ec2a6747fc81f"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-01.result.json",
+          "bytes": 395,
+          "sha256": "70850d591c21f028b43d63d8b7c91f3363561a990b9edd15298e1960d374e479"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-01.stderr.log",
+          "bytes": 12870,
+          "sha256": "b462b869559c6f7e5bf2f48af531bc508fbc818a554e2258dd09f2b4dec8ae55"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-01.stdout.log",
+          "bytes": 24,
+          "sha256": "f2f71f3390fa3c2b65763ffe145f7247352ebd9fba6b935d83e308de72cbea3e"
+        }
+      ],
+      "passed_tests": 0,
+      "classification": "FAIL: cold scale dependency compilation internal570s cutoff; cargo124; no compiler error; no test execution"
+    },
+    {
+      "number": 2,
+      "result": {
+        "attempt": "C-s53-cold-b2-01-attempt-02",
+        "start_utc": "2026-10-31T20:10:22.6673565+00:00",
+        "end_utc": "2026-10-31T20:19:53.8186094+00:00",
+        "whole_seconds": 571.1526631,
+        "outer_limit_seconds": 600,
+        "inner_work_whole": [
+          570,
+          590
+        ],
+        "timed_out": false,
+        "child_pid": 39260,
+        "exit_code": 1,
+        "offline": true,
+        "jobs": 2,
+        "priority": "BelowNormal"
+      },
+      "evidence": [
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-02.inputs.before.json",
+          "bytes": 118114,
+          "sha256": "6c28598684f0e2486818a9337b5a4cfb7f32b32d5c7a32e8292925ea2d15c9c4"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-02.invocation.ps1",
+          "bytes": 5047,
+          "sha256": "ec1f7fa109152409a37d12710c35cd952a97d2b0a7c5b34ad0e578ef3269974c"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-02.result.json",
+          "bytes": 395,
+          "sha256": "5f34a5314bd4b9cc1f0593b3e0e973ebd09260e9c9ce00a38386278e882e2777"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-02.stderr.log",
+          "bytes": 1332,
+          "sha256": "5a238bab591f7acd0908c3ff360f47242887b502b1e2cf272964d4ec14d05c68"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-02.stdout.log",
+          "bytes": 195,
+          "sha256": "fc1ba7734b75c8b4c5acf59bfdd427b0c402987ec9b48a5305ae5ffe8d771161"
+        }
+      ],
+      "passed_tests": 0,
+      "classification": "FAIL: progressing optimized CLI staging internal570s cutoff; cargo124; no test execution"
+    },
+    {
+      "number": 3,
+      "result": {
+        "attempt": "C-s53-cold-b2-01-attempt-03",
+        "start_utc": "2026-10-31T20:20:09.7540888+00:00",
+        "end_utc": "2026-10-31T20:28:06.0100471+00:00",
+        "whole_seconds": 476.2568215,
+        "outer_limit_seconds": 900,
+        "inner_work_whole": [
+          870,
+          890
+        ],
+        "timed_out": false,
+        "child_pid": 53336,
+        "exit_code": 1,
+        "offline": true,
+        "jobs": 2,
+        "priority": "BelowNormal"
+      },
+      "evidence": [
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-03.inputs.before.json",
+          "bytes": 118114,
+          "sha256": "6c28598684f0e2486818a9337b5a4cfb7f32b32d5c7a32e8292925ea2d15c9c4"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-03.invocation.ps1",
+          "bytes": 5050,
+          "sha256": "e5bbeac8ae9a29b7b131135f3e9eb58addf4457428a06a46e4b8a51b64e48d9c"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-03.post-failure-preserved.json",
+          "bytes": 1098,
+          "sha256": "f08ad9c904b9f88b5397e78285f55d6e1eb392a2ec55193ae99ced2583de237e"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-03.result.json",
+          "bytes": 395,
+          "sha256": "a08d4b4b8ce378d3fbadcb65290e1fa7ad5e8473408c4dfa22cf47ca17519898"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-03.stderr.log",
+          "bytes": 14678,
+          "sha256": "eb8df8a592e302cfa5bb45ff53d25b558510cd54f246058a392a0a81cf5df54b"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-03.stdout.log",
+          "bytes": 1815,
+          "sha256": "8e0d96d3d07506f303788c190c10c8b2827fc20db38d11e987f658fe5aec2b31"
+        }
+      ],
+      "passed_tests": 0,
+      "classification": "FAIL: staging completed, strict CLI Clippy int_plus_one/collapsible_if in new code; repaired equivalently"
+    },
+    {
+      "number": 4,
+      "result": {
+        "attempt": "C-s53-cold-b2-01-attempt-04",
+        "start_utc": "2026-10-31T20:29:16.5410112+00:00",
+        "end_utc": "2026-10-31T20:29:42.4253929+00:00",
+        "whole_seconds": 25.8852673,
+        "outer_limit_seconds": 180,
+        "inner_work_whole": [
+          165,
+          175
+        ],
+        "timed_out": false,
+        "child_pid": 55832,
+        "exit_code": 0,
+        "offline": true,
+        "jobs": 2,
+        "priority": "BelowNormal"
+      },
+      "evidence": [
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.images.json",
+          "bytes": 972,
+          "sha256": "9f2605217655cd5dc94115a2179d63d37462ddf969b55a2caf74126332737559"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.inputs.after.json",
+          "bytes": 118114,
+          "sha256": "f4e97dc6486d4df04506430b63b61f775eb2f2fcebe72a084df0be7e5be48027"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.inputs.before.json",
+          "bytes": 118114,
+          "sha256": "f4e97dc6486d4df04506430b63b61f775eb2f2fcebe72a084df0be7e5be48027"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.invocation.ps1",
+          "bytes": 4788,
+          "sha256": "6d36e4854e73a3fd8f2a817864b750641e639005761a6ffd24e690758d521db5"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.result.json",
+          "bytes": 394,
+          "sha256": "102375f7e87907d5af764f179896bbefe48afd655d71ff4b2798bf957029ee0e"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.stderr.log",
+          "bytes": 1042,
+          "sha256": "7a0c6d41ac0829206f977968553330f0b2a7bb5559afa9cf65adfb22be0a6ea5"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.stdout.log",
+          "bytes": 1889,
+          "sha256": "f8bb1c97fe3d770861cdc3c8006c6b5b7b1f5c84ded7eca8ada37e05c4af1038"
+        }
+      ],
+      "passed_tests": 0,
+      "classification": "PASS: staging/strict CLI+state Clippy/scoped fmt/PS syntax/input identity/old artifacts"
+    },
+    {
+      "number": 5,
+      "result": {
+        "attempt": "C-s53-cold-b2-01-attempt-05",
+        "start_utc": "2026-10-31T20:30:16.0359573+00:00",
+        "end_utc": "2026-10-31T20:30:29.7994843+00:00",
+        "whole_seconds": 13.7648906,
+        "outer_limit_seconds": 180,
+        "inner_work_whole": [
+          165,
+          175
+        ],
+        "timed_out": false,
+        "child_pid": 49768,
+        "exit_code": 1,
+        "offline": true,
+        "jobs": 2,
+        "priority": "BelowNormal"
+      },
+      "evidence": [
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-05.images.before.json",
+          "bytes": 972,
+          "sha256": "9f2605217655cd5dc94115a2179d63d37462ddf969b55a2caf74126332737559"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-05.inputs.before.json",
+          "bytes": 118114,
+          "sha256": "f4e97dc6486d4df04506430b63b61f775eb2f2fcebe72a084df0be7e5be48027"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-05.invocation.ps1",
+          "bytes": 3930,
+          "sha256": "c1ef1e5316b0cb5a7ff428509e057f73f326c6c6931d2f1d6022a6513d38a1fe"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-05.result.json",
+          "bytes": 394,
+          "sha256": "f123cdcc5c5b1d3350f7c305b4a6690dc154adcaaa7f36756a82d34b0e8bffe6"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-05.stderr.log",
+          "bytes": 6485350,
+          "sha256": "5c29aa852e1322af224536646e9de1c7c216dd3acc391e397cee677f2fecbe48"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-05.stdout.log",
+          "bytes": 5062,
+          "sha256": "26d5dc6329f55b66cefe699d5fd68b0283af79a641f605c28e4b275ca605793a"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-05.synthetic-delta.json",
+          "bytes": 4688,
+          "sha256": "577e5157ab30b1e5dc1a644d09a10a8c318847e7b68bc7fec3b5e3c4e5dd53b0"
+        }
+      ],
+      "passed_tests": 2,
+      "classification": "FAIL envelope: genuine small L1+progress2 tests PASS; continuation positive oracle assumed raw-history equality after actual repair; retained synthetic delta and raw6.5MB stderr"
+    },
+    {
+      "number": 6,
+      "result": {
+        "attempt": "C-s53-cold-b2-01-attempt-06",
+        "start_utc": "2026-10-31T20:34:04.6865921+00:00",
+        "end_utc": "2026-10-31T20:34:12.1431071+00:00",
+        "whole_seconds": 7.457292,
+        "outer_limit_seconds": 180,
+        "inner_work_whole": [
+          165,
+          175
+        ],
+        "timed_out": false,
+        "child_pid": 32892,
+        "exit_code": 1,
+        "offline": true,
+        "jobs": 2,
+        "priority": "BelowNormal"
+      },
+      "evidence": [
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-06.inputs.before.json",
+          "bytes": 118114,
+          "sha256": "972358c868a44449afc01ee08ab19aadddd8d4ecb55edd9a16fbc79e61f24b6e"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-06.invocation.ps1",
+          "bytes": 4272,
+          "sha256": "41c93bfe0fe7b58ea7e9d567f5c4a1a597e18d6a7f034a0f6779cf74cec41b30"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-06.result.json",
+          "bytes": 392,
+          "sha256": "4de61cc724b00709a76c158547db5bb88511a3fa692f00bebf9e438d5481a12b"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-06.stderr.log",
+          "bytes": 1121,
+          "sha256": "bc5080e1d1ed1fe4b183ac9e6288b98c379c855b0cc4a5282d1ef752aab94c88"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-06.stdout.log",
+          "bytes": 195,
+          "sha256": "fc1ba7734b75c8b4c5acf59bfdd427b0c402987ec9b48a5305ae5ffe8d771161"
+        }
+      ],
+      "passed_tests": 0,
+      "classification": "FAIL: synthetic read verification compile missing ReadableDatabase import; no test execution"
+    },
+    {
+      "number": 7,
+      "result": {
+        "attempt": "C-s53-cold-b2-01-attempt-07",
+        "start_utc": "2026-10-31T20:35:56.4260821+00:00",
+        "end_utc": "2026-10-31T20:37:01.6279664+00:00",
+        "whole_seconds": 65.2032155,
+        "outer_limit_seconds": 180,
+        "inner_work_whole": [
+          165,
+          175
+        ],
+        "timed_out": false,
+        "child_pid": 20488,
+        "exit_code": 1,
+        "offline": true,
+        "jobs": 2,
+        "priority": "BelowNormal"
+      },
+      "evidence": [
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-07.inputs.before.json",
+          "bytes": 118114,
+          "sha256": "13dc1c7ee94e6c221769bf2d2e294d026ff14947453a6807f1571bc38241a38a"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-07.invocation.ps1",
+          "bytes": 5605,
+          "sha256": "e9e3362b8631bed0b2efe56ab18f0090f5ea82b1b75202324b399f25f4de3ebf"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-07.preserved-workers.json",
+          "bytes": 1001,
+          "sha256": "e15b2d2bc3c2473bbee8e9b6ef267487a7eb12cfbc17ea85068979513419b1e4"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-07.result.json",
+          "bytes": 394,
+          "sha256": "674af4ae63313824d728f9103a545b124b2b3cca93777f4463f03f3ef31fec3e"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-07.stderr.log",
+          "bytes": 1115,
+          "sha256": "b39b0ac23aa1b66de80702cd35eba428ed23bae5d8fbd801c6aa68e29f5a4457"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-07.stdout.log",
+          "bytes": 786,
+          "sha256": "7888d069760a3c5c7c85ab674ed869a471f4ece025e74370d62ec30a0f06ef1a"
+        }
+      ],
+      "passed_tests": 0,
+      "classification": "FAIL: updated C# materialized and state staging completed; strict Clippy unused ReadableTable import; no test execution"
+    },
+    {
+      "number": 8,
+      "result": {
+        "attempt": "C-s53-cold-b2-01-attempt-08",
+        "start_utc": "2026-10-31T20:37:26.7784531+00:00",
+        "end_utc": "2026-10-31T20:38:31.5414376+00:00",
+        "whole_seconds": 64.7643301,
+        "outer_limit_seconds": 180,
+        "inner_work_whole": [
+          165,
+          175
+        ],
+        "timed_out": false,
+        "child_pid": 35076,
+        "exit_code": 0,
+        "offline": true,
+        "jobs": 2,
+        "priority": "BelowNormal"
+      },
+      "evidence": [
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.images.json",
+          "bytes": 972,
+          "sha256": "dad288000a126c08c3d6ec81e0f30e7720321a0c201f37b9ea52be33532edf70"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.inputs.after.json",
+          "bytes": 118114,
+          "sha256": "3ce85def1fd0d10eef8802517182ce3667c10e732b64199a50f0c66dca1f8ca3"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.inputs.before.json",
+          "bytes": 118114,
+          "sha256": "3ce85def1fd0d10eef8802517182ce3667c10e732b64199a50f0c66dca1f8ca3"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.invocation.ps1",
+          "bytes": 4272,
+          "sha256": "ce5faa3c3ea65456442161bbea6005ccb744da620aed1a2675e4dff3adb26c4e"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.result.json",
+          "bytes": 394,
+          "sha256": "ded9fc8028fe3fec15f0f8cad2f4e96a4d0d777a04c8b9424fe295dbd2299c35"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.stderr.log",
+          "bytes": 365,
+          "sha256": "bbd3db1acc315607ba83a224ee70f984120937cd4433e540740c471c7acee7a6"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.stdout.log",
+          "bytes": 860,
+          "sha256": "436eb0a261fc7aa1428d7778368f18a06b3adb800c34c46564de1d7158775c1f"
+        }
+      ],
+      "passed_tests": 0,
+      "classification": "PASS: state staging/strict state Clippy/scoped fmt/PS syntax/input identity/current images/old artifacts"
+    },
+    {
+      "number": 9,
+      "result": {
+        "attempt": "C-s53-cold-b2-01-attempt-09",
+        "start_utc": "2026-10-31T20:38:58.0981873+00:00",
+        "end_utc": "2026-10-31T20:39:10.0421069+00:00",
+        "whole_seconds": 11.9446022,
+        "outer_limit_seconds": 180,
+        "inner_work_whole": [
+          165,
+          175
+        ],
+        "timed_out": false,
+        "child_pid": 52860,
+        "exit_code": 0,
+        "offline": true,
+        "jobs": 2,
+        "priority": "BelowNormal"
+      },
+      "evidence": [
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.images.before.json",
+          "bytes": 972,
+          "sha256": "dad288000a126c08c3d6ec81e0f30e7720321a0c201f37b9ea52be33532edf70"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.images.json",
+          "bytes": 972,
+          "sha256": "dad288000a126c08c3d6ec81e0f30e7720321a0c201f37b9ea52be33532edf70"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.inputs.after.json",
+          "bytes": 118114,
+          "sha256": "3ce85def1fd0d10eef8802517182ce3667c10e732b64199a50f0c66dca1f8ca3"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.inputs.before.json",
+          "bytes": 118114,
+          "sha256": "3ce85def1fd0d10eef8802517182ce3667c10e732b64199a50f0c66dca1f8ca3"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.invocation.ps1",
+          "bytes": 3636,
+          "sha256": "9fefd5a95a666df25c74d10c390d95052cd3d51cefe8aef622e28b4cfa5fff35"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.result.json",
+          "bytes": 394,
+          "sha256": "d672b7d0d4fc806e4fb2359b6daaf346aab7bfbc95a99221fb6f53ba13dceea4"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.stderr.log",
+          "bytes": 85,
+          "sha256": "6922f4ba03c0be5c93122fb1dd068420cd5e59a57e57e49116c64b25d8fe5a72"
+        },
+        {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.stdout.log",
+          "bytes": 11901,
+          "sha256": "f6f4f018f4b74a7c3faad741b57cb35c1552fb3b091b2f0e021adc19fcc4e312"
+        }
+      ],
+      "passed_tests": 1,
+      "classification": "PASS: only continuation test, genuine repair/read/clean-header/full observation digest +4 exact negatives; actual eight-pass final audit and cleanup"
+    }
+  ],
+  "actual_B2_C_seconds": "1807.5774478",
+  "allowance_C_seconds": 3000,
+  "remaining_C_seconds": "1192.4225522",
+  "root_start": {
+    "S53_C": "2641.1595406",
+    "S53_F": "1854.7357734",
+    "combined_C": "3228.6081515",
+    "combined_F": "6571.0559223"
+  },
+  "computed_proposed_ledger": {
+    "S53_C": "4448.7369884",
+    "S53_F": "1854.7357734",
+    "combined_C": "5036.1855993",
+    "combined_F": "6571.0559223",
+    "P": 0,
+    "root_is_ledger_owner": true
+  },
+  "limits": {
+    "root_C_ceiling": 6000,
+    "F_ceiling": 4000,
+    "focused_max_seconds": 180,
+    "jobs": 2,
+    "priority": "BelowNormal",
+    "offline": true
+  },
+  "checks": {
+    "CLI_strict_Clippy": "attempt04",
+    "state_strict_Clippy": "attempt08",
+    "scoped_fmt_PS_syntax": "attempt08",
+    "CLI_L1_reader_and_progress": "attempt05:2 PASS in1.72s",
+    "state_continuation": "attempt09:1 PASS with5 cases",
+    "no_full_corpus": true,
+    "no_new_private_reads": true,
+    "no_product_fix": true
+  },
+  "continuation_positive": {
+    "final": {
+      "attempt": "C-s53-cold-b0c-positive",
+      "composition_sha256": "dd76536016e3fb5d91831ae2c909d37c79280cc368a90a0e7f972ef52e8513b7",
+      "continuation_observation_sha256": "370581844f7fc83d3afded2292ab0ef080df531155008e2f091aa3431b510189",
+      "core": {
+        "baseline_completed": true,
+        "bkp_after": "e81f6d8fa46009937b9ec29275f05694e3ab92df1e2da7f573342250fe3e54bf",
+        "bkp_before": "e81f6d8fa46009937b9ec29275f05694e3ab92df1e2da7f573342250fe3e54bf",
+        "changed_slot_count": 2,
+        "cleanup_native_error": 0,
+        "cleanup_unknown": false,
+        "continuation": {
+          "allowed_mask": 2,
+          "allowed_offset": 9,
+          "database_count": 2,
+          "enabled": true,
+          "entry_baseline_verified": true,
+          "entry_s_after": "11fff1abe6a78446cb3bb2c5070e2492cc27549115ca631117c032da6fb492ef",
+          "entry_s_before": "11fff1abe6a78446cb3bb2c5070e2492cc27549115ca631117c032da6fb492ef",
+          "final_differs_from_entry": true,
+          "final_equals_historical": false,
+          "normalization_read_bytes": 2113536,
+          "original_raw_equal_claim": false
+        },
+        "delta_complete": true,
+        "delta_stamp_sha256": "92de68c5ea5fc288b90b1ebc6a478efa2c66c1ab183ffe2edc5115d2f88f8a7a",
+        "failure_cause": null,
+        "failure_code": null,
+        "failure_phase": null,
+        "final_s_after": "37e562cc2d4accdbc82af4af64fe02ec7c1e2021d90e3670425d0339cef363f1",
+        "final_s_before": "37e562cc2d4accdbc82af4af64fe02ec7c1e2021d90e3670425d0339cef363f1",
+        "final_verified": true,
+        "hash_passes": 8,
+        "historical_rows_unchanged_before_cleanup": true,
+        "historical_tuple_digest": "e81f6d8fa46009937b9ec29275f05694e3ab92df1e2da7f573342250fe3e54bf",
+        "input_handles_released": false,
+        "native_error": 0,
+        "remaining_owned_handles": 38,
+        "slots_recaptured": 4,
+        "slots_released": 4,
+        "typed_lock_read_bytes": 0,
+        "typed_metadata_checks": 14
+      },
+      "kind": "final",
+      "nonce": "0cd6ad6b48b3603791d866b83ca7e737",
+      "source_sha256": "2aa8607d165ea8363d50c8fdc8fdb7040a250245ed33de913e246c9fea79ef6c",
+      "version": 1
+    },
+    "post_cleanup": {
+      "attempt": "C-s53-cold-b0c-positive",
+      "code": null,
+      "continuation_observation_sha256": "370581844f7fc83d3afded2292ab0ef080df531155008e2f091aa3431b510189",
+      "core": {
+        "baseline_completed": true,
+        "bkp_after": "e81f6d8fa46009937b9ec29275f05694e3ab92df1e2da7f573342250fe3e54bf",
+        "bkp_before": "e81f6d8fa46009937b9ec29275f05694e3ab92df1e2da7f573342250fe3e54bf",
+        "changed_slot_count": 2,
+        "cleanup_native_error": 0,
+        "cleanup_unknown": false,
+        "continuation": {
+          "allowed_mask": 2,
+          "allowed_offset": 9,
+          "database_count": 2,
+          "enabled": true,
+          "entry_baseline_verified": true,
+          "entry_s_after": "11fff1abe6a78446cb3bb2c5070e2492cc27549115ca631117c032da6fb492ef",
+          "entry_s_before": "11fff1abe6a78446cb3bb2c5070e2492cc27549115ca631117c032da6fb492ef",
+          "final_differs_from_entry": true,
+          "final_equals_historical": false,
+          "normalization_read_bytes": 2113536,
+          "original_raw_equal_claim": false
+        },
+        "delta_complete": true,
+        "delta_stamp_sha256": "92de68c5ea5fc288b90b1ebc6a478efa2c66c1ab183ffe2edc5115d2f88f8a7a",
+        "failure_cause": null,
+        "failure_code": null,
+        "failure_phase": null,
+        "final_s_after": "37e562cc2d4accdbc82af4af64fe02ec7c1e2021d90e3670425d0339cef363f1",
+        "final_s_before": "37e562cc2d4accdbc82af4af64fe02ec7c1e2021d90e3670425d0339cef363f1",
+        "final_verified": true,
+        "hash_passes": 8,
+        "historical_rows_unchanged_before_cleanup": true,
+        "historical_tuple_digest": "e81f6d8fa46009937b9ec29275f05694e3ab92df1e2da7f573342250fe3e54bf",
+        "input_handles_released": true,
+        "native_error": 0,
+        "remaining_owned_handles": 0,
+        "slots_recaptured": 4,
+        "slots_released": 4,
+        "typed_lock_read_bytes": 0,
+        "typed_metadata_checks": 14
+      },
+      "kind": "done",
+      "native_error": 0,
+      "nonce": "0cd6ad6b48b3603791d866b83ca7e737",
+      "phase": "finish",
+      "snapshot_closed": true,
+      "source_sha256": "2aa8607d165ea8363d50c8fdc8fdb7040a250245ed33de913e246c9fea79ef6c",
+      "transport_cleanup_ok": true,
+      "transport_handles_after": 0,
+      "version": 1
+    },
+    "full_observation_digest": "370581844f7fc83d3afded2292ab0ef080df531155008e2f091aa3431b510189",
+    "complete_observation_stable_across_Dispose": true,
+    "logical_table_exactly_one_genuine_1": true,
+    "actual_final_history_equal": false,
+    "actual_final_differs_from_entry": true
+  },
+  "exact_negative_cases": [
+    "wrong-bit",
+    "other-byte",
+    "backup-change",
+    "strict-stays-strict"
+  ],
+  "current_images": [
+    {
+      "path": "target/verification-scale/deps/kilogram-cli-test-migration_s53_cold-tests.exe",
+      "bytes": 9669632,
+      "sha256": "9f8c09868ad985f0c35b5e742173d6eb6f9ba5be0771aeb3d6ea12f81390afd5"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 7306752,
+      "sha256": "0f3f93ae7f2fbb986f42340e19419069feb537c71d91a6b90d87b66ebaf89e8b"
+    },
+    {
+      "path": "target/verification-scale/s53-cold-worker/worker.cs",
+      "bytes": 139850,
+      "sha256": "fe2559027a747fd0496ebf88e968787d9b64df56a9fe3b7e9f09551a492869de"
+    },
+    {
+      "path": "target/verification-scale/s53-cold-worker/worker.dll",
+      "bytes": 172544,
+      "sha256": "46af21bee2fabca2c9ffa84b1c80afd57f4f1014d0833e0a8e10548398c9bb30"
+    },
+    {
+      "path": "target/verification-scale/s53-cold-worker/artifact.json",
+      "bytes": 2451,
+      "sha256": "29198cd95c5525344c5b3fd00943b93992e7b2d45bcf5c2ea5c9549b3331e003"
+    }
+  ],
+  "old_B1_artifacts": [
+    {
+      "original": "target/verification/deps/kilogram-cli-test-migration_s53_cold-tests.exe",
+      "saved": ".tmp\\C-s53-cold-b2-artifacts-before\\kilogram-cli-test-migration_s53_cold-tests.exe",
+      "bytes": 17871360,
+      "sha256": "e31573a26d60a745e503ba28cb9ff22c24d46bd79c796450445dfec277051dd6"
+    },
+    {
+      "original": "target/verification/s53-cold-worker/worker.cs",
+      "saved": ".tmp\\C-s53-cold-b2-artifacts-before\\worker.cs",
+      "bytes": 129239,
+      "sha256": "aac4840a7b948b3954faa247b0c6beac01a479385d62c40ff8023cf70c10b2a4"
+    },
+    {
+      "original": "target/verification/s53-cold-worker/worker.dll",
+      "saved": ".tmp\\C-s53-cold-b2-artifacts-before\\worker.dll",
+      "bytes": 142848,
+      "sha256": "8b0fcaa118472474597d6150436f7a76bc4847b333a94c440da104fcde305369"
+    },
+    {
+      "original": "target/verification/s53-cold-worker/artifact.json",
+      "saved": ".tmp\\C-s53-cold-b2-artifacts-before\\artifact.json",
+      "bytes": 2214,
+      "sha256": "c37340fb15ae2a78150df512ebf9c397bf399777942239487db919ae40aa5d93"
+    }
+  ],
+  "frozen_core": {
+    "path": "scripts/migration-s53-cold-preservation.ps1",
+    "bytes": 82999,
+    "sha256": "eb166bce9b53da51863b605a06041e7100aca0d053f21c2b2ece09cf191b259f"
+  },
+  "materialized_source_graph": "f0749a8ae81e72e041c6e5cddbbd72d680855eecf148a32a35526705ff3308d2",
+  "source_protection": {
+    "pinned_set_count": 743,
+    "successful_before_after": [
+      4,
+      8,
+      9
+    ],
+    "changed_since_first": [
+      "apps/kilogram-cli/tests/support/s53_cold/progress.rs",
+      "apps/kilogram-cli/tests/support/s53_cold/readers.rs",
+      "crates/kilogram-state/src/verification_held_tests.rs",
+      "scripts/migration-s53-held-continuation.cs",
+      "scripts/migration-s53-held-preservation.cs"
+    ],
+    "all_other_pinned_sources_unchanged": true,
+    "foreign_live1": {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs",
+      "bytes": 14569,
+      "sha256": "e3fce00592826546530546559981b047a817f9e45c35ab2dab25cf0bd01caea0"
+    },
+    "index_empty": true
+  },
+  "failure_evidence_rules": {
+    "failed_logs_immutable": true,
+    "missing_after_images_not_backfilled": true,
+    "failed05_stderr_retained_bytes": 6485350,
+    "two_completed_log_readers_terminated_after_large_panic": true,
+    "failed05_no_successful_physical_final_claim": true
+  },
+  "next_gate": "Root architectural review, then explicit exact publication dispatch; no private F02/G1/S5.4 before their separate gates",
+  "retained_local_snapshots": [
+    {
+      "path": ".tmp/C-s53-cold-b2-source-before/0.before",
+      "bytes": 782,
+      "sha256": "2132136dcd7f03088e47c53af0c127c8cff23a64f7448e547e6fa345842dc53e"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-source-before/1.before",
+      "bytes": 15323,
+      "sha256": "c9ed7db609eb11ce89ca4b1a420caefa7a0e8f21e24ccd281dbc89004cc3538e"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-source-before/10.before",
+      "bytes": 4530,
+      "sha256": "c90bd6a79f58772045b1e60ab12383721b1cf85ad2918b4c27dedcf6324521ae"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-source-before/11.before",
+      "bytes": 3320,
+      "sha256": "bf53893a6b8af127b5bb01646e76c7e77a40cb96721c9483ecb37e6360978d4f"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-source-before/12.before",
+      "bytes": 16929,
+      "sha256": "532da247e50dc115604d7a5ec65695c77f5777f8b415acf765f7ab9a9422e606"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-source-before/13.before",
+      "bytes": 15942,
+      "sha256": "830f9acee8f709196fba6484845fbb7b996ab172813ed59005f0e86a2c2ccb6d"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-source-before/2.before",
+      "bytes": 2559,
+      "sha256": "7194051eb9169b52eaa918b87793b9e5ce9817b12d2e57e693750c222b56871e"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-source-before/3.before",
+      "bytes": 19924,
+      "sha256": "1a5354491052617f43330ce8e7514898fe1f9fb3397c11c8a46627c7beadfe61"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-source-before/4.before",
+      "bytes": 6641,
+      "sha256": "4b691ae147ac98bff54d4b1d2a6f18a3ccb215d484331f0d6ef9934317f0bdab"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-source-before/5.before",
+      "bytes": 8193,
+      "sha256": "f797140af66148e9168d00bf4dfe5ed81c9293451a6e6e5b076d0a5d23d794f7"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-source-before/6.before",
+      "bytes": 20895,
+      "sha256": "b780c396e8971a70f132795959733161ffd8cd62bdb95b4e86f08df6ef76d618"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-source-before/7.before",
+      "bytes": 9393,
+      "sha256": "a88399a57110d3cdfe20193bb2f58068a51300aaa087ff7f99caaeb8f4904825"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-source-before/8.before",
+      "bytes": 4145,
+      "sha256": "3624233f0519cb5525d7ce1da7c68c0bcaf9468ab8610e5ed8fa1dd65fe33514"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-source-before/9.before",
+      "bytes": 1969,
+      "sha256": "8dac99689f31eb29821f2cc83a9a0fecf958e4a36374ef85de3dedba733ee975"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-source-before/manifest.json",
+      "bytes": 4129,
+      "sha256": "72a414199759068a2ded1b80e320d77f11db8b84ab8d380d70f257a57310efbb"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-artifacts-before/artifact.json",
+      "bytes": 2214,
+      "sha256": "c37340fb15ae2a78150df512ebf9c397bf399777942239487db919ae40aa5d93"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-artifacts-before/kilogram-cli-test-migration_s53_cold-tests.exe",
+      "bytes": 17871360,
+      "sha256": "e31573a26d60a745e503ba28cb9ff22c24d46bd79c796450445dfec277051dd6"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-artifacts-before/worker.cs",
+      "bytes": 129239,
+      "sha256": "aac4840a7b948b3954faa247b0c6beac01a479385d62c40ff8023cf70c10b2a4"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-artifacts-before/worker.dll",
+      "bytes": 142848,
+      "sha256": "8b0fcaa118472474597d6150436f7a76bc4847b333a94c440da104fcde305369"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-lint-before/kilogram-cli-test-migration_s53_cold-tests.exe",
+      "bytes": 9669632,
+      "sha256": "300eb2c051d5f7d4939ea2b849d38444c6eff33cc9a8785d062eea007a43ca70"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-lint-before/kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 7294976,
+      "sha256": "6ceba0db4f7d181dbee095df1196ce6ac94d1e47bb6c4646e873b9949271a772"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-lint-before/progress.rs",
+      "bytes": 3599,
+      "sha256": "8bfcb50198966a0b52d63379bb1cf88b907e71a609f82f00056d41379b34a05b"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-lint-before/readers.rs",
+      "bytes": 15970,
+      "sha256": "48864feac90fbf70f484b5eb5134f89c32acd33e6e609c53ee80ea2a16a3e2d0"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-fixture-before/verification_held_tests.attempt06.rs",
+      "bytes": 22657,
+      "sha256": "5b07b333446f189bfe8fdb9198baf1d612d3a5ff678383df9f590f78498e202f"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-fixture-before/verification_held_tests.rs",
+      "bytes": 21826,
+      "sha256": "1ff09648b205d8bb81beaad5858b7ce37a780a50441db465c3a1edafecab00ac"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-pre-observation-sources/migration-s53-held-continuation.cs",
+      "bytes": 7757,
+      "sha256": "3b5a934baf1861a21ad0a04bb48af39d9ea32ef71b11dd926ed89aa0d1f70e0b"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-pre-observation-sources/migration-s53-held-preservation.cs",
+      "bytes": 22487,
+      "sha256": "56a5bed6fe16e0830476527a78b4bcb2f071d327fc8e7d153fafd3d31df70e10"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-artifacts-pre-observation/artifact.json",
+      "bytes": 2451,
+      "sha256": "88df1e68683d79aeb3fafd386986b70695342fb38dec64053caee0babcbf2673"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-artifacts-pre-observation/worker.cs",
+      "bytes": 139395,
+      "sha256": "d0e365a1991cd28d1a1c09f6fbe195293763084333771b9c77694d72f5b5f111"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-artifacts-pre-observation/worker.dll",
+      "bytes": 169984,
+      "sha256": "d7e11523884ad32a060745ac048b59537e1f7232e5775621192424c97f685862"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-lint-import-before/kilogram-state-lib-kilogram_state-tests.exe",
+      "bytes": 7306752,
+      "sha256": "ed1d7ba4cc4e0d10f6fc1b06eac7a01461352c3a5f4bc2cfba10935a34f93c97"
+    },
+    {
+      "path": ".tmp/C-s53-cold-b2-lint-import-before/verification_held_tests.rs",
+      "bytes": 23865,
+      "sha256": "31a84e7f4afa3b2a5345c882e883b22f7eb0fd6bce506509d8252426e5630d23"
+    }
+  ],
+  "toolchain": {
+    "cargo --version": "cargo 1.98.0 (797e8a9bc 2026-08-05)",
+    "rustc -Vv": "rustc 1.98.0 (88d9e12ae 2026-08-18)\nbinary: rustc\ncommit-hash: 88d9e12ae178fab0fb5cc050a94da85685d449ea\ncommit-date: 2026-08-18\nhost: x86_64-pc-windows-msvc\nrelease: 1.98.0\nLLVM version: 22.1.8"
+  },
+  "materialized_receipt_copy": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/Cold-B-B2-materialized-artifact.json",
+    "bytes": 2451,
+    "sha256": "29198cd95c5525344c5b3fd00943b93992e7b2d45bcf5c2ea5c9549b3331e003"
+  },
+  "introduced_patch_reverse_check_exit_code": 0,
+  "publication_manifest": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/Cold-B-B2-publication.json",
+  "root_acceptance": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/Cold-B-B2-root-accepted.md",
+    "bytes": 2394,
+    "sha256": "8fb5b4ef3e652a5cb2788cd17b3a033c1908699ffbe3fb465b946154f08c1d9f"
+  },
+  "publication_exclusions": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-05.stderr.log",
+      "bytes": 6485350,
+      "sha256": "5c29aa852e1322af224536646e9de1c7c216dd3acc391e397cee677f2fecbe48",
+      "reason": "immutable6.5MB synthetic assertion dump; hash is in handoff; retained locally, do not stage"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-01.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "6c28598684f0e2486818a9337b5a4cfb7f32b32d5c7a32e8292925ea2d15c9c4",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-02.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "6c28598684f0e2486818a9337b5a4cfb7f32b32d5c7a32e8292925ea2d15c9c4",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-03.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "6c28598684f0e2486818a9337b5a4cfb7f32b32d5c7a32e8292925ea2d15c9c4",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.images.json",
+      "bytes": 972,
+      "sha256": "9f2605217655cd5dc94115a2179d63d37462ddf969b55a2caf74126332737559",
+      "reason": "identical image tuple already published in adjacent focused before/after pins"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.inputs.after.json",
+      "bytes": 118114,
+      "sha256": "f4e97dc6486d4df04506430b63b61f775eb2f2fcebe72a084df0be7e5be48027",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-04.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "f4e97dc6486d4df04506430b63b61f775eb2f2fcebe72a084df0be7e5be48027",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-05.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "f4e97dc6486d4df04506430b63b61f775eb2f2fcebe72a084df0be7e5be48027",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-06.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "972358c868a44449afc01ee08ab19aadddd8d4ecb55edd9a16fbc79e61f24b6e",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-07.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "13dc1c7ee94e6c221769bf2d2e294d026ff14947453a6807f1571bc38241a38a",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.images.json",
+      "bytes": 972,
+      "sha256": "dad288000a126c08c3d6ec81e0f30e7720321a0c201f37b9ea52be33532edf70",
+      "reason": "identical image tuple already published in adjacent focused before/after pins"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.inputs.after.json",
+      "bytes": 118114,
+      "sha256": "3ce85def1fd0d10eef8802517182ce3667c10e732b64199a50f0c66dca1f8ca3",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-08.inputs.before.json",
+      "bytes": 118114,
+      "sha256": "3ce85def1fd0d10eef8802517182ce3667c10e732b64199a50f0c66dca1f8ca3",
+      "reason": "full input rows retained locally; hash in handoff; publish only final current pair"
+    }
+  ],
+  "publication_input_pair": [
+    "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.inputs.before.json",
+    "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-cold-b2-01-attempt-09.inputs.after.json"
+  ]
+}

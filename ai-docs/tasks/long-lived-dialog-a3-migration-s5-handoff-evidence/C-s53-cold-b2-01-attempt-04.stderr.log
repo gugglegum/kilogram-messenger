@@ -1,0 +1,21 @@
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification-scale` profile [optimized + debuginfo] target(s) in 10.42s
+    Finished `verification-scale` profile [optimized + debuginfo] target(s) in 0.41s
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification-scale` profile [optimized + debuginfo] target(s) in 1.48s
+    Checking crypto-common v0.1.7
+    Checking windows-sys v0.52.0
+    Checking digest v0.10.7
+    Checking universal-hash v0.5.1
+    Checking cipher v0.4.4
+    Checking poly1305 v0.8.0
+    Checking chacha20 v0.9.1
+    Checking blake2 v0.10.6
+    Checking aead v0.5.2
+    Checking tempfile v3.27.0
+    Checking argon2 v0.5.3
+    Checking chacha20poly1305 v0.10.1
+    Checking winapi-util v0.1.11
+    Checking sha2 v0.10.9
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Finished `verification-scale` profile [optimized + debuginfo] target(s) in 7.80s

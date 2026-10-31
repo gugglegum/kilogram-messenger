@@ -1,0 +1,1134 @@
+diff --git a/apps/kilogram-cli/tests/migration_s53_cold.rs b/apps/kilogram-cli/tests/migration_s53_cold.rs
+--- a/apps/kilogram-cli/tests/migration_s53_cold.rs
++++ b/apps/kilogram-cli/tests/migration_s53_cold.rs
+@@ -20,6 +20,8 @@
+ mod fixed;
+ #[path = "support/s53_cold/history.rs"]
+ mod history;
++#[path = "support/s53_cold/progress.rs"]
++mod progress;
+ #[path = "support/s53_cold/readers.rs"]
+ mod readers;
+ #[path = "support/s53_cold/session.rs"]
+diff --git a/apps/kilogram-cli/tests/support/s53_cold/readers.rs b/apps/kilogram-cli/tests/support/s53_cold/readers.rs
+--- a/apps/kilogram-cli/tests/support/s53_cold/readers.rs
++++ b/apps/kilogram-cli/tests/support/s53_cold/readers.rs
+@@ -303,13 +303,21 @@
+     expected: &fixed::Expected,
+     proofs: &[Vec<u8>; 2],
+     until: Instant,
++    mut progress: Option<&mut super::progress::Progress>,
+ ) -> Result<Full> {
++    if let Some(p) = progress.as_mut() {
++        p.record("full.scope.start", 0)?;
++    }
+     let scope = scope(repo, 0, expected.local)?;
+     expected.scope(&scope.verified)?;
++    if let Some(p) = progress.as_mut() {
++        p.record("full.scope.done", 0)?;
++    }
+     let mut digest = Digest::new(b"kg:s53:cold:B1:1\0");
+     digest.bytes(&scope.raw);
+     let mut history = BTreeMap::new();
+     let mut ids = BTreeSet::new();
++    let mut completed_sources = 0;
+     for role in 0..2 {
+         let mut previous = None;
+         for n in 0..expected.next[role] {
+@@ -338,6 +346,7 @@
+             digest.bytes(&raw);
+             digest.bytes(&auth);
+             if n == 0 {
++                completed_sources += 1;
+                 continue;
+             }
+             let (request, text) = expected.text(role, n);
+@@ -414,6 +423,12 @@
+                 digest.value(&local)?;
+             }
+             history.insert(state::hex(&id),json!({"format":1,"id":state::hex(&id),"role":role,"ordinal":n,"sequence":e.core.sequence,"request":state::hex(&request),"text":text,"proof_kind":if proof.is_some(){"FullL1"}else{"LegacySnapshot"},"delivered":true}));
++            completed_sources += 1;
++            if completed_sources % 64 == 0
++                && let Some(p) = progress.as_mut()
++            {
++                p.record("source", completed_sources)?;
++            }
+         }
+         ensure!(
+             repo.event_at(0, role as u8, expected.next[role])?.is_none(),
+@@ -422,7 +437,10 @@
+     }
+     let future = fixed::future_ids()[expected.local];
+     absent_request(repo.request(0, future)?.as_ref())?;
+-    let pages = super::history::read(repo, &history, expected.next, until, &mut digest)?;
++    if let Some(p) = progress.as_mut() {
++        p.record("sources.done", completed_sources)?;
++    }
++    let pages = super::history::read(repo, &history, expected.next, until, &mut digest, progress)?;
+     let mut hd = Digest::new(b"kg:s53:cold:history:1\0");
+     hd.value(&history)?;
+     Ok(Full {
+diff --git a/apps/kilogram-cli/tests/support/s53_cold/history.rs b/apps/kilogram-cli/tests/support/s53_cold/history.rs
+--- a/apps/kilogram-cli/tests/support/s53_cold/history.rs
++++ b/apps/kilogram-cli/tests/support/s53_cold/history.rs
+@@ -7,6 +7,7 @@
+     frontiers: [u64; 2],
+     until: Instant,
+     digest: &mut readers::Digest,
++    mut progress: Option<&mut super::progress::Progress>,
+ ) -> Result<usize> {
+     let mut cursor = None;
+     let mut seen_cursors = BTreeSet::new();
+@@ -15,6 +16,9 @@
+     let mut view = None;
+     for page_no in 1..=32 {
+         readers::check(until)?;
++        if let Some(p) = progress.as_mut() {
++            p.record("page.start", page_no)?;
++        }
+         let raw = repo.history(0, cursor.as_ref(), 32)?;
+         bytes = bytes
+             .checked_add(raw.len())
+@@ -57,6 +61,9 @@
+             "history repeated cursor"
+         );
+         digest.bytes(&raw);
++        if let Some(p) = progress.as_mut() {
++            p.record("page.done", page_no)?;
++        }
+         if page["finished"] == true {
+             ensure!(seen.len() == expected.len(), "history truncation");
+             return Ok(page_no);
+diff --git a/apps/kilogram-cli/tests/support/s53_cold/session.rs b/apps/kilogram-cli/tests/support/s53_cold/session.rs
+--- a/apps/kilogram-cli/tests/support/s53_cold/session.rs
++++ b/apps/kilogram-cli/tests/support/s53_cold/session.rs
+@@ -51,7 +51,12 @@
+ }
+ fn private(name: &str, value: &impl serde::Serialize, cap: usize) -> Result<()> {
+     ensure!(
+-        ["typed.private.json", "failure.private.json"].contains(&name),
++        [
++            "typed.private.json",
++            "failure.private.json",
++            "progress-failure.private.json"
++        ]
++        .contains(&name),
+         "fixed private receipt name"
+     );
+     let raw = serde_json::to_vec(value)?;
+@@ -304,7 +309,7 @@
+     Ok(FileIdentity::from_file(&file)?)
+ }
+ fn artifact() -> Result<(String, String)> {
+-    let base = Path::new(fixed::WORKSPACE).join("target/verification/s53-cold-worker");
++    let base = Path::new(fixed::WORKSPACE).join("target/verification-scale/s53-cold-worker");
+     let source = std::env::var("KILOGRAM_S53_COLD_SOURCE_SHA256")?;
+     let assembly = std::env::var("KILOGRAM_S53_COLD_ASSEMBLY_SHA256")?;
+     ensure!(
+@@ -352,6 +357,8 @@
+     );
+     let until = Instant::now() + Duration::from_millis((absolute - now) as u64);
+     let ticks = std::env::var("KILOGRAM_S53_COLD_DEADLINE_TICKS")?.parse::<u64>()?;
++    let mut progress = super::progress::Progress::fixed(until)?;
++    progress.record("entry", 0)?;
+     let mut inputs = Vec::new();
+     let mut held = Vec::new();
+     let mut locks = Vec::new();
+@@ -372,8 +379,10 @@
+     let mut bind = worker.common("bind");
+     bind["parent_pid"] = json!(std::process::id());
+     bind["locks"] = json!(locks);
++    progress.record("baseline.start", 0)?;
+     worker.send(&bind)?;
+     let baseline = worker.receive("baseline")?;
++    progress.record("baseline.done", 0)?;
+     ensure!(
+         baseline["core"]["baseline_completed"] == true && baseline["core"]["slots_released"] == 0,
+         "held pre-open equality ACK"
+@@ -382,7 +391,7 @@
+     let mut b0 = Vec::new();
+     let mut b1 = Vec::new();
+     let mut release_attempted = false;
+-    let typed = (|| -> Result<()> {
++    let mut typed = (|| -> Result<()> {
+         let prepared = [
+             fixed::prepare(&Path::new(fixed::STATE).join("two"), 0)?,
+             fixed::prepare(&Path::new(fixed::STATE).join("one"), 1)?,
+@@ -400,19 +409,26 @@
+                 "original R proof byte pin"
+             );
+         }
++        progress.record("slots.start", 0)?;
+         release_attempted = true;
+         worker.send(&worker.common("release-slots"))?;
+         let released = worker.receive("slots")?;
++        progress.record("slots.done", 4)?;
+         ensure!(
+             released["core"]["slots_released"] == 4,
+             "exact selective slot ACK"
+         );
+         for role in 0..2 {
+             readers::check(until)?;
++            progress.context(role, 0);
++            progress.record("open.start", 0)?;
+             let lease = held[role].take().context("actual adopted lease")?;
+             repositories[role] = Some(fixed::open(&prepared[role], lease)?);
++            progress.record("open.done", 0)?;
+         }
+         for role in 0..2 {
++            progress.context(role, 0);
++            progress.record("b0.before.start", 0)?;
+             b0.push(readers::b0(
+                 repositories[role].as_mut().context("open repo")?,
+                 &prepared[role].profile_raw,
+@@ -421,12 +437,19 @@
+                 &proofs,
+                 until,
+             )?);
++            progress.record("b0.before.done", 0)?;
+         }
+         for (role, repository) in repositories.iter_mut().enumerate() {
+             let expected = fixed::Expected::production(role)?;
+             let repo = repository.as_mut().context("open repo")?;
+-            let first = readers::full(repo, &expected, &proofs, until)?;
+-            let second = readers::full(repo, &expected, &proofs, until)?;
++            progress.context(role, 1);
++            progress.record("full.start", 0)?;
++            let first = readers::full(repo, &expected, &proofs, until, Some(&mut progress))?;
++            progress.record("full.done", first.text_count)?;
++            progress.context(role, 2);
++            progress.record("readback.start", 0)?;
++            let second = readers::full(repo, &expected, &proofs, until, Some(&mut progress))?;
++            progress.record("readback.done", second.text_count)?;
+             ensure!(
+                 first.digest == second.digest
+                     && first.history_digest == second.history_digest
+@@ -439,6 +462,8 @@
+             let base = Path::new(fixed::STATE).join(if role == 0 { "two" } else { "one" });
+             let profile_after = public(&base.join("indexed.profile"), 64 * 1024)?;
+             let config_after = public(&base.join("migration.json"), 64 * 1024)?;
++            progress.context(role, 0);
++            progress.record("b0.after.start", 0)?;
+             let after = readers::b0(
+                 repositories[role].as_mut().context("open repo")?,
+                 &profile_after,
+@@ -448,6 +473,7 @@
+                 until,
+             )?;
+             ensure!(after == b0[role], "B0 unchanged after B1");
++            progress.record("b0.after.done", 0)?;
+         }
+         private(
+             "typed.private.json",
+@@ -456,16 +482,27 @@
+         )?;
+         Ok(())
+     })();
++    let mut close_progress_failure = None;
+     for role in 0..2 {
+         if let Some(repo) = repositories[role].take() {
++            progress.context(role, 0);
++            if let Err(error) = progress.record("close.start", 0) {
++                close_progress_failure.get_or_insert_with(|| error.to_string());
++            }
+             held[role] = Some(repo.verification_close_to_held_lease());
+-        }
++            if let Err(error) = progress.record("close.done", 0) {
++                close_progress_failure.get_or_insert_with(|| error.to_string());
++            }
++        }
++    }
++    if close_progress_failure.is_some() && typed.is_ok() {
++        typed = Err(anyhow::anyhow!("protected close progress failed"));
+     }
+     let lease_count = held.iter().filter(|x| x.is_some()).count();
+     if let Err(error) = &typed {
+         private(
+             "failure.private.json",
+-            &json!({"phase":"typed","error":format!("{error:#}"),"actual_rust_leases_retained":lease_count,"no_restore":true}),
++            &json!({"phase":"typed","error":format!("{error:#}"),"close_progress_failure":close_progress_failure,"actual_rust_leases_retained":lease_count,"no_restore":true}),
+             65536,
+         )?;
+     }
+@@ -484,8 +521,16 @@
+     complete["leases_held"] = json!(lease_count);
+     complete["b0"] = json!(d0.finish());
+     complete["b1"] = json!(d1.finish());
++    let mut final_progress_failure = None;
++    progress.pair();
++    if let Err(error) = progress.record("final.start", 0) {
++        final_progress_failure.get_or_insert_with(|| error.to_string());
++    }
+     worker.send(&complete)?;
+     let final_frame = worker.receive("final")?;
++    if let Err(error) = progress.record("final.done", 0) {
++        final_progress_failure.get_or_insert_with(|| error.to_string());
++    }
+     worker.send(&worker.common("finish"))?;
+     let done = worker.receive(if typed.is_ok() { "done" } else { "refused" })?;
+     let exit = worker.reap()?;
+@@ -500,6 +545,14 @@
+         lease.release_adopted()?;
+     }
+     drop(inputs);
++    if let Some(error) = final_progress_failure {
++        private(
++            "progress-failure.private.json",
++            &json!({"phase":"final","error":error,"worker_reaped":true,"leases_released":true}),
++            65536,
++        )?;
++        anyhow::bail!("protected final progress failed after cleanup");
++    }
+     // Public output contains only aggregate digests/pinned public identities.
+     ensure!(
+         typed.is_ok(),
+diff --git a/apps/kilogram-cli/tests/support/s53_cold/checks.rs b/apps/kilogram-cli/tests/support/s53_cold/checks.rs
+--- a/apps/kilogram-cli/tests/support/s53_cold/checks.rs
++++ b/apps/kilogram-cli/tests/support/s53_cold/checks.rs
+@@ -18,8 +18,8 @@
+             &fixture.proofs,
+             until,
+         )?;
+-        let first = readers::full(repo, expected, &fixture.proofs, until)?;
+-        let second = readers::full(repo, expected, &fixture.proofs, until)?;
++        let first = readers::full(repo, expected, &fixture.proofs, until, None)?;
++        let second = readers::full(repo, expected, &fixture.proofs, until, None)?;
+         ensure!(
+             first.digest == second.digest
+                 && first.history_digest == second.history_digest
+diff --git a/apps/kilogram-cli/tests/support/s53_cold/fixed.rs b/apps/kilogram-cli/tests/support/s53_cold/fixed.rs
+--- a/apps/kilogram-cli/tests/support/s53_cold/fixed.rs
++++ b/apps/kilogram-cli/tests/support/s53_cold/fixed.rs
+@@ -5,8 +5,8 @@
+ pub const STATE: &str =
+     r"E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-storage\l1-exhausted-observed-NCjBHb";
+ pub const PROOF: &str = r"E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-admin\P2-s53-exhausted-roots-01-attempt-01\proof";
+-pub const ATTEMPT: &str = "P2-s53-exhausted-cold-b-01-attempt-01";
+-pub const EVIDENCE: &str = r"E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-preparation-evidence\P2-s53-exhausted-cold-b-01-attempt-01";
++pub const ATTEMPT: &str = "P2-s53-exhausted-cold-b-01-attempt-02";
++pub const EVIDENCE: &str = r"E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-preparation-evidence\P2-s53-exhausted-cold-b-01-attempt-02";
+ pub const SHELL: &str = r"C:\Users\Paul\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe";
+ pub const ACCOUNTS: [&str; 2] = [
+     "7a87df0a69a322c4ec28fb94e175e26e77c428151a6e67336f6d0c8eb0abb2ce",
+diff --git a/scripts/migration-s53-held-preservation.cs b/scripts/migration-s53-held-preservation.cs
+--- a/scripts/migration-s53-held-preservation.cs
++++ b/scripts/migration-s53-held-preservation.cs
+@@ -80,7 +80,7 @@
+             Phase("held_capture");CaptureTree(s);CaptureTree(b);
+             facts.ExpectedSetCapturedBeforeHash=true;facts.CaptureCompleteTimestamp=Stopwatch.GetTimestamp();
+             Scan(s,false);Scan(b,false);
+-            Phase("held_baseline_hash");HashTree(s,false);HashTree(b,false);HashTree(s,true);HashTree(b,true);
++            Phase("held_baseline_hash");HeldBaselineHashes();
+             Scan(s,true);Scan(b,true);FinalInputs();facts.ObservedEntrySetsEqual=true;
+             foreach(string path in HeldSlotPaths()){
+                 string rel=path.Substring(spec.S.Length+1).Replace('\\','/');
+@@ -204,12 +204,18 @@
+             string rel=paths[n].Substring(spec.S.Length+1).Replace('\\','/');int i=expected[rel].Index;
+             Owned item=s.Files[i];Row final=heldFinalRows[i];bool metadataEqual=heldOldSlots[n].Initial.Same(item.Initial);
+             bool bytesEqual=final.Bytes==rows[i].Bytes&&CryptographicOperations.FixedTimeEquals(final.Hash,rows[i].Hash);
+-            if(metadataEqual&&bytesEqual)continue;
++            Row entry=HeldEntryRow(i);bool entryEqual=final.Bytes==entry.Bytes&&CryptographicOperations.FixedTimeEquals(final.Hash,entry.Hash);
++            if(metadataEqual&&bytesEqual&&entryEqual)continue;
+             heldExplainedParents.Add(rel.Substring(0,rel.LastIndexOf('/')));
+-            heldChanges.Add(new {path=rel,write_class=n%2==0?"database-same-id":"key-rewrap-or-replacement",metadata_equal=metadataEqual,
++            if(heldContinuation)heldChanges.Add(new {path=rel,write_class=n%2==0?"database-same-id":"key-rewrap-or-replacement",entry_metadata_equal=metadataEqual,
++                historical_bytes=rows[i].Bytes,historical_sha256=Hex(rows[i].Hash),entry_bytes=entry.Bytes,entry_raw_sha256=Hex(entry.Hash),
++                final_bytes=final.Bytes,final_raw_sha256=Hex(final.Hash),final_equals_historical=bytesEqual,final_differs_from_entry=!entryEqual,
++                entry_id=new ulong[]{heldOldSlots[n].Initial.Volume,heldOldSlots[n].Initial.Id.Index},final_id=new ulong[]{item.Initial.Volume,item.Initial.Id.Index}});
++            else heldChanges.Add(new {path=rel,write_class=n%2==0?"database-same-id":"key-rewrap-or-replacement",metadata_equal=metadataEqual,
+                 historical_bytes=rows[i].Bytes,historical_sha256=Hex(rows[i].Hash),final_bytes=final.Bytes,final_sha256=Hex(final.Hash),
+                 historical_id=new ulong[]{heldOldSlots[n].Initial.Volume,heldOldSlots[n].Initial.Id.Index},final_id=new ulong[]{item.Initial.Volume,item.Initial.Id.Index}});
+-            stamps.Add(new {path=rel,historical_stamp=HeldStamp(heldOldSlots[n].Initial),final_stamp=HeldStamp(item.Initial)});
++            if(heldContinuation)stamps.Add(new {path=rel,entry_stamp=HeldStamp(heldOldSlots[n].Initial),final_stamp=HeldStamp(item.Initial)});
++            else stamps.Add(new {path=rel,historical_stamp=HeldStamp(heldOldSlots[n].Initial),final_stamp=HeldStamp(item.Initial)});
+         }
+         heldDeltaStampDigest=Hex(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(stamps)));
+     }
+@@ -221,6 +227,7 @@
+             case "held_fixture_binding":case "held_lock_binding":case "held_lock_length":case "held_state":
+             case "held_slot_missing":case "held_slot_parent":case "held_database_identity":case "held_slot_ownership":
+             case "held_release_injected":case "held_recapture_injected":case "held_final_drift":case "held_historical_drift":
++            case "held_continuation_state":case "held_continuation_delta":
+                 facts.FailureCode=code;facts.CauseKind="bounded_refusal";break;
+         }
+         StopPhase();UpdateFacts();
+@@ -235,12 +242,15 @@
+             bkp_before=facts.BkpBeforeTupleDigest,bkp_after=facts.BkpAfterTupleDigest,hash_passes=facts.HashPasses,
+             typed_metadata_checks=heldTypedMetadata,typed_lock_read_bytes=0,typed_lock_hash_provenance="verified-empty-metadata; empty hash derived",
+             changed_slots=heldChanges.ToArray(),delta_complete=heldDeltaStampDigest!=null,delta_stamp_sha256=heldDeltaStampDigest,directory_deltas=heldDirectoryDeltas.ToArray(),
++            continuation=HeldContinuationSummary(),
+             input_handles_released=facts.InputHandlesReleased,remaining_owned_handles=budget.Handles,
+             cleanup_unknown=facts.CleanupUnknown,failure_code=facts.FailureCode,failure_phase=facts.FailurePhase,
+             native_error=facts.NativeError,cleanup_native_error=facts.CleanupNativeError,failure_cause=facts.CauseKind};
+     }
+     public void HeldDispose() {
+-        if(heldDisposed)return;heldDisposed=true;
++        if(heldDisposed)return;
++        try{heldContinuationSnapshot=HeldContinuationSummary();}catch{facts.CleanupUnknown=true;}
++        heldDisposed=true;
+         try{foreach(var handle in heldDbGuards)try{CloseFile(handle);}catch{facts.CleanupUnknown=true;}}
+         finally{heldDbGuards.Clear();Dispose();}
+     }
+@@ -249,7 +259,7 @@
+ }
+ public static partial class S53TypedLockWorker {
+     sealed partial class Session {
+-        internal int RunHeld(string composition) {
++        internal int RunHeld(string composition,bool continuation=false) {
+             Kilogram.S53.ColdA.Core core=null;string failure=null;int native=0;
+             try{
+                 BindInputs(true);
+@@ -259,7 +269,8 @@
+                 string root=boundPaths[0].Substring(0,boundPaths[0].Length-suffix.Length);
+                 Need(boundPaths[1]==root+@"\state\one\state\.kilogram-state.lock","held_fixture_binding");
+                 if(root.StartsWith(@"\\?\",StringComparison.Ordinal))root=root.Substring(4);
+-                core=Kilogram.S53.ColdA.Core.HeldFixture(root,preservation.GetProperty("inventory_bytes").GetInt64(),
++                Func<string,long,string,int,long,string,long,Kilogram.S53.ColdA.Core> factory=continuation?Kilogram.S53.ColdA.Core.HeldContinuationFixture:Kilogram.S53.ColdA.Core.HeldFixture;
++                core=factory(root,preservation.GetProperty("inventory_bytes").GetInt64(),
+                     preservation.GetProperty("inventory_sha256").GetString(),preservation.GetProperty("files").GetInt32(),
+                     preservation.GetProperty("bytes").GetInt64(),preservation.GetProperty("fault").GetString(),
+                     Stopwatch.GetTimestamp()+60L*Stopwatch.Frequency);
+@@ -268,21 +279,21 @@
+                     core.AttachTypedLock(root+(n==0?@"\state\two\state\.kilogram-state.lock":@"\state\one\state\.kilogram-state.lock"),raw);
+                 }
+                 phase="baseline";core.CaptureHeldBaseline();
+-                Send(new {kind="baseline",version=1,nonce,source_sha256=source,attempt,composition_sha256=composition,core=core.HeldReport()});
++                Send(new {kind="baseline",version=1,nonce,source_sha256=source,attempt,composition_sha256=composition,core=continuation?core.HeldPipeReport():core.HeldReport()});
+                 phase="release";
+                 using(var doc=Read()){
+                     Fields(doc.RootElement,"kind","version","nonce","source_sha256","attempt");
+                     CheckCommon(doc.RootElement,"release-slots");
+                 }
+                 core.ReleaseHeldSlots();
+-                Send(new {kind="slots",version=1,nonce,source_sha256=source,attempt,core=core.HeldReport()});
++                Send(new {kind="slots",version=1,nonce,source_sha256=source,attempt,core=continuation?core.HeldPipeReport():core.HeldReport()});
+                 phase="audit";
+                 using(var doc=Read()){
+                     Fields(doc.RootElement,"kind","version","nonce","source_sha256","attempt");
+                     CheckCommon(doc.RootElement,"audit");
+                 }
+                 core.AuditHeldFinal();
+-                Send(new {kind="final",version=1,nonce,source_sha256=source,attempt,composition_sha256=composition,core=core.HeldReport()});
++                Send(new {kind="final",version=1,nonce,source_sha256=source,attempt,composition_sha256=composition,continuation_observation_sha256=continuation?core.HeldContinuationObservationDigest():null,core=continuation?core.HeldPipeReport():core.HeldReport()});
+                 phase="finish";
+                 using(var doc=Read()){
+                     Fields(doc.RootElement,"kind","version","nonce","source_sha256","attempt");
+@@ -300,14 +311,15 @@
+             }
+             bool clean=cleanup&&snapshotClosed&&parent==IntPtr.Zero&&held[0]==IntPtr.Zero&&held[1]==IntPtr.Zero&&(core==null||core.HeldCleanupOk());
+             if(!clean)failure="cleanup";
+-            object report=core==null?null:core.HeldReport();
++            object report=core==null?null:continuation?core.HeldPipeReport():core.HeldReport();
+             // Core's actual cleanup counters are checked by the Rust controller.
+             try{Send(new {kind=failure==null?"done":"refused",version=1,nonce,source_sha256=source,attempt,
+                 phase,code=failure,native_error=native,transport_handles_after=(parent==IntPtr.Zero?0:1)+(held[0]==IntPtr.Zero?0:1)+(held[1]==IntPtr.Zero?0:1),
+-                transport_cleanup_ok=clean,snapshot_closed=snapshotClosed,core=report});}
++                transport_cleanup_ok=clean,snapshot_closed=snapshotClosed,continuation_observation_sha256=continuation&&core!=null?core.HeldContinuationObservationDigest():null,core=report});}
+             catch{return 42;}
+             return failure==null&&clean?0:40;
+         }
+     }
+     public static int RunHeld(string hash,string attempt,string composition){return new Session(hash,attempt).RunHeld(composition);}
++    public static int RunHeldContinuation(string hash,string attempt,string composition){return new Session(hash,attempt).RunHeld(composition,true);}
+ }
+diff --git a/scripts/migration-s53-cold-b-private.cs b/scripts/migration-s53-cold-b-private.cs
+--- a/scripts/migration-s53-cold-b-private.cs
++++ b/scripts/migration-s53-cold-b-private.cs
+@@ -4,14 +4,15 @@
+     public static Core HeldPrivate(long absoluteDeadline) {
+         if(absoluteDeadline<=Stopwatch.GetTimestamp())Refuse("deadline");
+         var spec=Spec.Production();
+-        spec.Attempt="P2-s53-exhausted-cold-b-01-attempt-01";
+-        spec.E=Spec.W+@"\.tmp\migration-s5-preparation-evidence\P2-s53-exhausted-cold-b-01-attempt-01";
++        spec.Attempt="P2-s53-exhausted-cold-b-01-attempt-02";
++        spec.E=Spec.W+@"\.tmp\migration-s5-preparation-evidence\P2-s53-exhausted-cold-b-01-attempt-02";
+         spec.Caps.Output=48L*1024*1024;
+         var core=new Core(spec,absoluteDeadline);
+         core.budget.Record(8192);
+         core.heldTyped=new HashSet<Owned>(2);core.heldDbGuards=new List<SafeFileHandle>(2);core.heldOldSlots=new Owned[4];
+         core.heldOldDirectories=new Dictionary<Owned,FileInfo>(2);core.heldExplainedParents=new HashSet<string>(2,StringComparer.Ordinal);
+         core.heldChanges=new List<object>(4);core.heldDirectoryDeltas=new List<object>(2);core.heldFault="none";
++        core.EnableHeldContinuation();
+         return core;
+     }
+     public void WriteHeldPrivateReport(bool typedOk,bool bothLeases,string b0,string b1) {
+@@ -25,18 +26,20 @@
+                 Work();int index=i;
+                 output.Record(w=>{var historical=rows[index];var current=heldFinalRows==null?null:heldFinalRows[index];
+                     w.WriteStartObject();w.WriteString("path",historical.Relative);w.WriteNumber("historical_bytes",historical.Bytes);w.WriteString("historical_sha256",Hex(historical.Hash));
+-                    w.WritePropertyName("historical_s_stamp");Owned old=s.Files[index];for(int n=0;n<4;n++)if(heldOldSlots[n]!=null&&rows[index].Relative==HeldSlotPaths()[n].Substring(spec.S.Length+1).Replace('\\','/'))old=heldOldSlots[n];
++                    w.WritePropertyName(heldContinuation?"entry_s_stamp":"historical_s_stamp");Owned old=s.Files[index];for(int n=0;n<4;n++)if(heldOldSlots[n]!=null&&rows[index].Relative==HeldSlotPaths()[n].Substring(spec.S.Length+1).Replace('\\','/'))old=heldOldSlots[n];
+                     if(old==null)w.WriteNullValue();else JsonSerializer.Serialize(w,HeldStamp(old.Initial));
+                     w.WritePropertyName("final_s_stamp");if(s.Files[index]==null||s.Files[index].CloseAttempted)w.WriteNullValue();else JsonSerializer.Serialize(w,HeldStamp(s.Files[index].Initial));
+                     if(current==null){w.WriteNull("final_s_sha256");w.WriteNull("final_s_bytes");}else{w.WriteString("final_s_sha256",Hex(current.Hash));w.WriteNumber("final_s_bytes",current.Bytes);}
++                    if(heldContinuation){Row entry=HeldEntryRow(index);w.WriteString("entry_s_raw_sha256",Hex(entry.Hash));w.WriteNumber("entry_s_bytes",entry.Bytes);
++                        if(current==null){w.WriteNull("final_equals_historical");w.WriteNull("final_differs_from_entry");}else{w.WriteBoolean("final_equals_historical",current.Bytes==historical.Bytes&&CryptographicOperations.FixedTimeEquals(current.Hash,historical.Hash));w.WriteBoolean("final_differs_from_entry",current.Bytes!=entry.Bytes||!CryptographicOperations.FixedTimeEquals(current.Hash,entry.Hash));}}
+                     w.WriteString("bkp_before_sha256",b.Files[index].BeforeHash==null?null:Hex(b.Files[index].BeforeHash));w.WriteString("bkp_after_sha256",b.Files[index].AfterHash==null?null:Hex(b.Files[index].AfterHash));w.WriteEndObject();});
+             }
+             // Persist full old/new slot stamps and directory stamps. The public
+             // delta_stamp_sha256 is not the only remaining representation.
+             for(int n=0;n<4;n++){int slot=n;output.Record(w=>{string path=HeldSlotPaths()[slot];string rel=path.Substring(spec.S.Length+1).Replace('\\','/');Row row;Owned final=null;if(expected.TryGetValue(rel,out row))final=s.Files[row.Index];
+-                w.WriteStartObject();w.WriteString("slot",rel);w.WritePropertyName("historical_stamp");if(heldOldSlots[slot]==null)w.WriteNullValue();else JsonSerializer.Serialize(w,HeldStamp(heldOldSlots[slot].Initial));
++                w.WriteStartObject();w.WriteString("slot",rel);w.WritePropertyName(heldContinuation?"entry_stamp":"historical_stamp");if(heldOldSlots[slot]==null)w.WriteNullValue();else JsonSerializer.Serialize(w,HeldStamp(heldOldSlots[slot].Initial));
+                 w.WritePropertyName("final_stamp");if(final==null||final.CloseAttempted)w.WriteNullValue();else JsonSerializer.Serialize(w,HeldStamp(final.Initial));w.WriteEndObject();});}
+-            foreach(var directory in heldOldDirectories)output.Record(w=>{w.WriteStartObject();w.WriteString("directory",directory.Key.Relative);w.WritePropertyName("historical_stamp");JsonSerializer.Serialize(w,HeldStamp(directory.Value));w.WritePropertyName("final_stamp");JsonSerializer.Serialize(w,HeldStamp(directory.Key.Initial));w.WriteEndObject();});
++            foreach(var directory in heldOldDirectories)output.Record(w=>{w.WriteStartObject();w.WriteString("directory",directory.Key.Relative);w.WritePropertyName(heldContinuation?"entry_stamp":"historical_stamp");JsonSerializer.Serialize(w,HeldStamp(directory.Value));w.WritePropertyName("final_stamp");JsonSerializer.Serialize(w,HeldStamp(directory.Key.Initial));w.WriteEndObject();});
+             output.Complete();
+         }
+     }
+@@ -48,23 +51,23 @@
+         internal int RunPrivate(long deadline,SafeFileHandle outputDirectory,Func<string,SafeFileHandle> creator,Action<string> verifier,string decision) {
+             Kilogram.S53.ColdA.Core core=null;string failure=null,b0=null,b1=null;int native=0;bool typedOk=false,both=false,reportAttempted=false;
+             try {
+-                Need(attempt=="P2-s53-exhausted-cold-b-01-attempt-01","binding");BindInputs(false);
++                Need(attempt=="P2-s53-exhausted-cold-b-01-attempt-02","binding");BindInputs(false);
+                 string root=@"E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s5-storage\l1-exhausted-observed-NCjBHb";
+                 for(int n=0;n<2;n++){string actual=boundPaths[n];if(actual.StartsWith(@"\\?\",StringComparison.Ordinal))actual=actual.Substring(4);
+                     Need(actual==root+(n==0?@"\two\state\.kilogram-state.lock":@"\one\state\.kilogram-state.lock"),"binding");}
+                 core=Kilogram.S53.ColdA.Core.HeldPrivate(deadline);
+                 var transferred=outputDirectory;outputDirectory=null;core.BindOwnedOutput(transferred,creator,verifier,decision,source);
+                 for(int n=0;n<2;n++){IntPtr raw=held[n];held[n]=IntPtr.Zero;core.AttachTypedLock(root+(n==0?@"\two\state\.kilogram-state.lock":@"\one\state\.kilogram-state.lock"),raw);}
+-                phase="baseline";core.CaptureHeldBaseline();Send(new{kind="baseline",version=1,nonce,source_sha256=source,attempt,core=core.HeldReport()});
++                phase="baseline";core.CaptureHeldBaseline();core.WriteContinuationBaseline();Send(new{kind="baseline",version=1,nonce,source_sha256=source,attempt,core=core.HeldPipeReport(),private_receipts=core.PrivateReceiptPins()});
+                 using(var d=Read()){Fields(d.RootElement,"kind","version","nonce","source_sha256","attempt");CheckCommon(d.RootElement,"release-slots");}
+-                phase="release";core.ReleaseHeldSlots();Send(new{kind="slots",version=1,nonce,source_sha256=source,attempt,core=core.HeldReport()});
++                phase="release";core.ReleaseHeldSlots();Send(new{kind="slots",version=1,nonce,source_sha256=source,attempt,core=core.HeldPipeReport()});
+                 using(var d=Read()){var r=d.RootElement;Fields(r,"kind","version","nonce","source_sha256","attempt","typed_ok","leases_held","b0","b1");CheckCommon(r,"typed-complete");
+                     typedOk=r.GetProperty("typed_ok").GetBoolean();both=r.GetProperty("leases_held").GetInt32()==2;b0=r.GetProperty("b0").GetString();b1=r.GetProperty("b1").GetString();
+                     Need(!typedOk||(both&&Hex(b0,64)&&Hex(b1,64)),"binding");}
+                 if(!typedOk)failure=both?"typed_reader_failed":"typed_open_lease_consumed";
+                 phase="final";if(both)core.AuditHeldFinal();
+                 reportAttempted=true;core.WriteHeldPrivateReport(typedOk,both,b0,b1);
+-                Send(new{kind="final",version=1,nonce,source_sha256=source,attempt,typed_ok=typedOk,both_actual_rust_leases_retained=both,core=core.HeldReport(),private_receipts=core.PrivateReceiptPins()});
++                Send(new{kind="final",version=1,nonce,source_sha256=source,attempt,typed_ok=typedOk,both_actual_rust_leases_retained=both,core=core.HeldPipeReport(),private_receipts=core.PrivateReceiptPins()});
+                 using(var d=Read()){Fields(d.RootElement,"kind","version","nonce","source_sha256","attempt");CheckCommon(d.RootElement,"finish");}
+             }catch(Refusal error){failure=error.Code;native=error.Native;}
+              catch(Exception error){failure=error.Data["colda_code"] as string??"internal";if(core!=null){core.HeldFailure(error);native=core.HeldNativeError();}}
+@@ -78,7 +81,7 @@
+             }
+             bool clean=cleanup&&snapshotClosed&&parent==IntPtr.Zero&&held[0]==IntPtr.Zero&&held[1]==IntPtr.Zero&&(core==null||core.HeldCleanupOk());
+             if(!clean)failure="cleanup";
+-            try{Send(new{kind=failure==null?"done":"refused",version=1,nonce,source_sha256=source,attempt,phase,code=failure,native_error=native,typed_ok=typedOk,both_actual_rust_leases_retained=both,transport_cleanup_ok=clean,transport_handles_after=(parent==IntPtr.Zero?0:1)+(held[0]==IntPtr.Zero?0:1)+(held[1]==IntPtr.Zero?0:1),core=core==null?null:core.HeldReport()});}catch{return 42;}
++            try{Send(new{kind=failure==null?"done":"refused",version=1,nonce,source_sha256=source,attempt,phase,code=failure,native_error=native,typed_ok=typedOk,both_actual_rust_leases_retained=both,transport_cleanup_ok=clean,transport_handles_after=(parent==IntPtr.Zero?0:1)+(held[0]==IntPtr.Zero?0:1)+(held[1]==IntPtr.Zero?0:1),core=core==null?null:core.HeldPipeReport()});}catch{return 42;}
+             return failure==null&&typedOk&&both&&clean?0:40;
+         }
+     }
+diff --git a/scripts/build-migration-s53-cold-b-worker.ps1 b/scripts/build-migration-s53-cold-b-worker.ps1
+--- a/scripts/build-migration-s53-cold-b-worker.ps1
++++ b/scripts/build-migration-s53-cold-b-worker.ps1
+@@ -2,9 +2,10 @@
+ param()
+ $ErrorActionPreference='Stop'
+ $w=Split-Path -Parent $PSScriptRoot
+-$out=Join-Path $w 'target/verification/s53-cold-worker'
++$out=Join-Path $w 'target/verification-scale/s53-cold-worker'
+ if(Test-Path -LiteralPath $out){throw 'Materialized artifact collision; preserve previous build before a new explicit attempt'}
+ $paths=@($PSCommandPath,(Join-Path $PSScriptRoot 'migration-s53-cold-preservation.ps1'),(Join-Path $PSScriptRoot 'migration-s53-typed-lock-worker.ps1'),(Join-Path $PSScriptRoot 'migration-s53-held-preservation.cs'),(Join-Path $PSScriptRoot 'migration-s53-cold-b-private.cs'),(Join-Path $PSScriptRoot 'migration-s53-root-copy.ps1'),(Join-Path $PSScriptRoot 'invoke-migration-s53-cold-b-worker.ps1'))
++$paths+=@(Join-Path $PSScriptRoot 'migration-s53-held-continuation.cs')
+ $core=[IO.File]::ReadAllBytes($paths[1])
+ if($core.Length -ne 82999 -or (Get-FileHash -LiteralPath $paths[1] -Algorithm SHA256).Hash.ToLowerInvariant() -cne 'eb166bce9b53da51863b605a06041e7100aca0d053f21c2b2ece09cf191b259f'){throw 'Frozen Core pin'}
+ $m=[regex]::Match([Text.UTF8Encoding]::new($false,$true).GetString($core),'(?s)\$source = @\x27\r?\n(?<cs>.*?)\r?\n\x27@')
+@@ -25,7 +26,7 @@
+  foreach($line in ($cs.Substring(0,$at) -split '\r?\n')){if([string]::IsNullOrWhiteSpace($line)){continue};if($line -cnotmatch '\Ausing [A-Za-z0-9_.]+;\z'){throw 'Helper header'};if(-not $original.Contains($line)){$null=$headers.Add($line)}}
+  $bodies+=@($cs.Substring($at))
+ }
+-$definition=(@($headers|Sort-Object)+@($composed)+@($bodies)+@([IO.File]::ReadAllText($paths[3]),[IO.File]::ReadAllText($paths[4]))) -join [Environment]::NewLine
++$definition=(@($headers|Sort-Object)+@($composed)+@($bodies)+@([IO.File]::ReadAllText($paths[3]),[IO.File]::ReadAllText($paths[4]),[IO.File]::ReadAllText($paths[7]))) -join [Environment]::NewLine
+ $hash=[Security.Cryptography.IncrementalHash]::CreateHash([Security.Cryptography.HashAlgorithmName]::SHA256)
+ try{foreach($path in $paths){$bytes=[IO.File]::ReadAllBytes($path);if($bytes.Length -gt 256KB){throw 'Source cap'};$hash.AppendData([BitConverter]::GetBytes([long]$bytes.Length));$hash.AppendData($bytes)};$graph=[Convert]::ToHexString($hash.GetHashAndReset()).ToLowerInvariant()}finally{$hash.Dispose()}
+ $null=New-Item -ItemType Directory -Path $out
+diff --git a/scripts/invoke-migration-s53-cold-b-worker.ps1 b/scripts/invoke-migration-s53-cold-b-worker.ps1
+--- a/scripts/invoke-migration-s53-cold-b-worker.ps1
++++ b/scripts/invoke-migration-s53-cold-b-worker.ps1
+@@ -5,8 +5,8 @@
+  [Parameter(Mandatory)][long]$WorkDeadlineTimestamp)
+ $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
+ $w='E:\AI-Projects\kilogram-p2p-messenger'
+-$artifact="$w\target\verification\s53-cold-worker"
+-$e="$w\.tmp\migration-s5-preparation-evidence\P2-s53-exhausted-cold-b-01-attempt-01"
++$artifact="$w\target\verification-scale\s53-cold-worker"
++$e="$w\.tmp\migration-s5-preparation-evidence\P2-s53-exhausted-cold-b-01-attempt-02"
+ if([Environment]::ProcessPath -cne 'C:\Users\Paul\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe' -or $WorkDeadlineTimestamp -le [Diagnostics.Stopwatch]::GetTimestamp()){throw 'Fixed shell/deadline'}
+ if((Get-FileHash -LiteralPath "$artifact\worker.dll" -Algorithm SHA256).Hash.ToLowerInvariant() -cne $AssemblySha256 -or (Get-FileHash -LiteralPath "$artifact\worker.cs" -Algorithm SHA256).Hash.ToLowerInvariant() -cne $SourceSha256){throw 'Reviewed assembly/source mismatch'}
+ # Loads only the previously materialized assembly. No activation-time Add-Type.
+@@ -16,9 +16,9 @@
+ $directory=[S53RootNativeR38]::DirectoryHandle($e)
+ $creator=[Func[string,Microsoft.Win32.SafeHandles.SafeFileHandle]]{
+  param($path)
+- if($path -cne "$e\comparison.private.jsonl"){throw 'Exact private report path'}
++ if($path -cnotin @("$e\comparison.private.jsonl","$e\continuation-baseline.private.json")){throw 'Exact private report path'}
+  $stream=[S53RootNativeR38]::NewFile($path)
+  try{$handle=[S53TypedLockWorker]::DuplicateOutput($stream.SafeFileHandle);Assert-S53RootPrivateAcl $path $false;return $handle}finally{$stream.Dispose()}
+ }
+ $acl=[Action[string]]{param($path) Assert-S53RootPrivateAcl $path ($path -ceq $e)}
+-exit ([S53TypedLockWorker]::RunPrivate($SourceSha256,'P2-s53-exhausted-cold-b-01-attempt-01',$WorkDeadlineTimestamp,$directory,$creator,$acl,$DecisionSha256))
++exit ([S53TypedLockWorker]::RunPrivate($SourceSha256,'P2-s53-exhausted-cold-b-01-attempt-02',$WorkDeadlineTimestamp,$directory,$creator,$acl,$DecisionSha256))
+diff --git a/scripts/invoke-migration-s53-cold-b.ps1 b/scripts/invoke-migration-s53-cold-b.ps1
+--- a/scripts/invoke-migration-s53-cold-b.ps1
++++ b/scripts/invoke-migration-s53-cold-b.ps1
+@@ -5,10 +5,10 @@
+  [Parameter(Mandatory)][ValidatePattern('\A[a-f0-9]{64}\z')][string]$DecisionSha256)
+ $ErrorActionPreference='Stop'
+ $w='E:\AI-Projects\kilogram-p2p-messenger'
+-$e="$w\.tmp\migration-s5-preparation-evidence\P2-s53-exhausted-cold-b-01-attempt-01"
+-$exe="$w\target\verification\deps\kilogram-cli-test-migration_s53_cold-tests.exe"
+-$dll="$w\target\verification\s53-cold-worker\worker.dll"
+-$cs="$w\target\verification\s53-cold-worker\worker.cs"
++$e="$w\.tmp\migration-s5-preparation-evidence\P2-s53-exhausted-cold-b-01-attempt-02"
++$exe="$w\target\verification-scale\deps\kilogram-cli-test-migration_s53_cold-tests.exe"
++$dll="$w\target\verification-scale\s53-cold-worker\worker.dll"
++$cs="$w\target\verification-scale\s53-cold-worker\worker.cs"
+ if([Environment]::ProcessPath -cne 'C:\Users\Paul\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe'){throw 'Fixed shell'}
+ foreach($p in @(@($exe,$HarnessSha256),@($dll,$AssemblySha256),@($cs,$ComposedSha256))){if((Get-FileHash -LiteralPath $p[0] -Algorithm SHA256).Hash.ToLowerInvariant() -cne $p[1]){throw 'Reviewed image mismatch'}}
+ # This source is submitted now; root separately activates its future F run.
+@@ -25,7 +25,7 @@
+  $phase='new-e';$parent=[S53RootNativeR38]::DirectoryHandle([IO.Path]::GetDirectoryName($e))
+  try{New-S53RootDirectory $e {$script:created=$true}}finally{$parent.Dispose()}
+  Assert-S53RootPrivateAcl $e $true
+- $env:KILOGRAM_S53_COLD_ATTEMPT='P2-s53-exhausted-cold-b-01-attempt-01'
++ $env:KILOGRAM_S53_COLD_ATTEMPT='P2-s53-exhausted-cold-b-01-attempt-02'
+  $env:KILOGRAM_S53_COLD_SOURCE_SHA256=$ComposedSha256;$env:KILOGRAM_S53_COLD_ASSEMBLY_SHA256=$AssemblySha256
+  $env:KILOGRAM_S53_COLD_DECISION_SHA256=$DecisionSha256;$env:KILOGRAM_S53_COLD_DEADLINE_TICKS=[string]$ticks;$env:KILOGRAM_S53_COLD_UNTIL_UNIX_MS=[string]$utc
+  $start=[Diagnostics.ProcessStartInfo]::new($exe);$start.UseShellExecute=$false;$start.CreateNoWindow=$true;$start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
+diff --git a/scripts/invoke-migration-s53-held-preservation-synthetic.ps1 b/scripts/invoke-migration-s53-held-preservation-synthetic.ps1
+--- a/scripts/invoke-migration-s53-held-preservation-synthetic.ps1
++++ b/scripts/invoke-migration-s53-held-preservation-synthetic.ps1
+@@ -1,11 +1,12 @@
+ [CmdletBinding()]
+-param([Parameter(Mandatory)][ValidatePattern('\AC-s53-cold-b0c-[a-z0-9-]{1,64}\z')][string]$Attempt)
++param([Parameter(Mandatory)][ValidatePattern('\AC-s53-cold-b0c-[a-z0-9-]{1,64}\z')][string]$Attempt,[switch]$Continuation)
+ $ErrorActionPreference='Stop'
+ $ProgressPreference='SilentlyContinue'
+ $workspace=Split-Path -Parent $PSScriptRoot
+ $corePath=Join-Path $PSScriptRoot 'migration-s53-cold-preservation.ps1'
+ $transportPath=Join-Path $PSScriptRoot 'migration-s53-typed-lock-worker.ps1'
+ $partialPath=Join-Path $PSScriptRoot 'migration-s53-held-preservation.cs'
++$continuationPath=Join-Path $PSScriptRoot 'migration-s53-held-continuation.cs'
+ $coreBytes=[IO.File]::ReadAllBytes($corePath)
+ if($coreBytes.Length -ne 82999 -or [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($coreBytes)).ToLowerInvariant() -cne 'eb166bce9b53da51863b605a06041e7100aca0d053f21c2b2ece09cf191b259f'){throw 'Frozen Core pin mismatch'}
+ $coreText=[Text.UTF8Encoding]::new($false,$true).GetString($coreBytes)
+@@ -36,11 +37,11 @@
+  if([string]::IsNullOrWhiteSpace($line)){continue}
+  if(-not $line.StartsWith('using ',[StringComparison]::Ordinal) -or -not $original.Contains($line)){throw 'Transport using not supplied by frozen Core'}
+ }
+-$definition=$composed+[Environment]::NewLine+$typed.Substring($at)+[Environment]::NewLine+[IO.File]::ReadAllText($partialPath)
++$definition=$composed+[Environment]::NewLine+$typed.Substring($at)+[Environment]::NewLine+[IO.File]::ReadAllText($partialPath)+[Environment]::NewLine+[IO.File]::ReadAllText($continuationPath)
+ $composition=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($definition))).ToLowerInvariant()
+ $hash=[Security.Cryptography.IncrementalHash]::CreateHash([Security.Cryptography.HashAlgorithmName]::SHA256)
+ try{
+- foreach($path in @($PSCommandPath,$transportPath,$corePath,$partialPath)){
++ foreach($path in @($PSCommandPath,$transportPath,$corePath,$partialPath,$continuationPath)){
+   $bytes=[IO.File]::ReadAllBytes($path)
+   if($bytes.Length -gt 256KB){throw 'Composition source cap'}
+   $hash.AppendData([BitConverter]::GetBytes([long]$bytes.Length));$hash.AppendData($bytes)
+@@ -48,4 +49,5 @@
+  $source=[Convert]::ToHexString($hash.GetHashAndReset()).ToLowerInvariant()
+ }finally{$hash.Dispose()}
+ Add-Type -Language CSharp -TypeDefinition $definition
++if($Continuation){exit ([S53TypedLockWorker]::RunHeldContinuation($source,$Attempt,$composition))}
+ exit ([S53TypedLockWorker]::RunHeld($source,$Attempt,$composition))
+diff --git a/crates/kilogram-state/src/verification_worker_tests.rs b/crates/kilogram-state/src/verification_worker_tests.rs
+--- a/crates/kilogram-state/src/verification_worker_tests.rs
++++ b/crates/kilogram-state/src/verification_worker_tests.rs
+@@ -136,12 +136,15 @@
+ }
+ impl Worker {
+     pub(super) fn spawn(case: &str, early_eof: bool) -> TestResult<Self> {
+-        Self::spawn_mode(case, early_eof, false)
++        Self::spawn_mode(case, early_eof, false, false)
+     }
+     pub(super) fn spawn_held(case: &str) -> TestResult<Self> {
+-        Self::spawn_mode(case, false, true)
+-    }
+-    fn spawn_mode(case: &str, early_eof: bool, held: bool) -> TestResult<Self> {
++        Self::spawn_mode(case, false, true, false)
++    }
++    pub(super) fn spawn_continuation(case: &str) -> TestResult<Self> {
++        Self::spawn_mode(case, false, true, true)
++    }
++    fn spawn_mode(case: &str, early_eof: bool, held: bool, continuation: bool) -> TestResult<Self> {
+         let sources = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts");
+         let script = fs::canonicalize(sources.join(if held {
+             "invoke-migration-s53-held-preservation-synthetic.ps1"
+@@ -155,6 +158,7 @@
+                 sources.join("migration-s53-typed-lock-worker.ps1"),
+                 sources.join("migration-s53-cold-preservation.ps1"),
+                 sources.join("migration-s53-held-preservation.cs"),
++                sources.join("migration-s53-held-continuation.cs"),
+             ] {
+                 let bytes = fs::read(path)?;
+                 if bytes.len() > 256 * 1024 {
+@@ -195,6 +199,9 @@
+             .stderr(Stdio::inherit());
+         if early_eof {
+             command.arg("-SyntheticEarlyEof");
++        }
++        if continuation {
++            command.arg("-Continuation");
+         }
+         let mut child = command.spawn()?;
+         let input = child.stdin.take().ok_or("child stdin")?;
+diff --git a/crates/kilogram-state/src/verification_held_tests.rs b/crates/kilogram-state/src/verification_held_tests.rs
+--- a/crates/kilogram-state/src/verification_held_tests.rs
++++ b/crates/kilogram-state/src/verification_held_tests.rs
+@@ -1,8 +1,9 @@
+ use super::worker_tests::{Pair, START, STEP, TestResult, Worker};
+ use super::*;
++use redb::{ReadableDatabase, ReadableTableMetadata};
+ use serde_json::{Value, json};
+ use sha2::{Digest, Sha256};
+-use std::io::Write;
++use std::io::{Read, Seek, SeekFrom, Write};
+ 
+ const ACTUAL: &str = "actual file byte read";
+ const DERIVED: &str = "held-lock length checked; empty-byte digest derived";
+@@ -17,6 +18,9 @@
+ }
+ impl Fixture {
+     fn new(fault: &str) -> TestResult<Self> {
++        Self::with_real_db(fault, false)
++    }
++    fn with_real_db(fault: &str, real: bool) -> TestResult<Self> {
+         let base =
+             Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.tmp/C-s53-cold-b0c-synthetic");
+         fs::create_dir_all(&base)?;
+@@ -29,7 +33,19 @@
+             let state = root.join("state").join(role).join("state");
+             fs::create_dir_all(&state)?;
+             fs::write(state.join(LOCK_FILE), [])?;
+-            fs::write(state.join("state-vault.redb"), format!("db-{role}"))?;
++            if real {
++                let db = redb::Database::create(state.join("state-vault.redb"))?;
++                let tx = db.begin_write()?;
++                {
++                    let mut table =
++                        tx.open_table(redb::TableDefinition::<&str, u64>::new("tiny"))?;
++                    table.insert("genuine", 1)?;
++                }
++                tx.commit()?;
++                drop(db);
++            } else {
++                fs::write(state.join("state-vault.redb"), format!("db-{role}"))?;
++            }
+             fs::write(state.join("state-vault.key"), format!("key-{role}"))?;
+             let origin = root.join("origin").join(format!("{role}.state"));
+             fs::create_dir_all(&origin)?;
+@@ -396,3 +412,174 @@
+     }
+     Ok(())
+ }
++
++fn flip_fixture_byte(path: &Path, offset: u64, mask: u8) -> TestResult {
++    let mut file = OpenOptions::new().read(true).write(true).open(path)?;
++    file.seek(SeekFrom::Start(offset))?;
++    let mut byte = [0];
++    file.read_exact(&mut byte)?;
++    byte[0] ^= mask;
++    file.seek(SeekFrom::Start(offset))?;
++    file.write_all(&byte)?;
++    file.sync_all()?;
++    Ok(())
++}
++
++#[test]
++fn continuation_genuine_dirty_entry_clean_final_and_exact_negatives() -> TestResult {
++    for case in [
++        "positive",
++        "wrong-bit",
++        "other-byte",
++        "backup-change",
++        "strict-stays-strict",
++    ] {
++        // Genuine redb files, actual typed leases, tiny seven-file mirror. Only
++        // these newly owned synthetic headers are changed by the test setup.
++        let mut fixture = Fixture::with_real_db("none", true)?;
++        for side in ["one", "two"] {
++            flip_fixture_byte(
++                &fixture
++                    .root
++                    .join("state")
++                    .join(side)
++                    .join("state/state-vault.redb"),
++                9,
++                2,
++            )?;
++        }
++        if case == "wrong-bit" {
++            flip_fixture_byte(&fixture.root.join("state/one/state/state-vault.redb"), 9, 4)?;
++        }
++        if case == "other-byte" {
++            flip_fixture_byte(
++                &fixture.root.join("state/one/state/state-vault.redb"),
++                13,
++                8,
++            )?;
++        }
++        if case == "backup-change" {
++            flip_fixture_byte(
++                &fixture.root.join("backup/one/state/state-vault.redb"),
++                17,
++                1,
++            )?;
++        }
++        let mut worker = if case == "strict-stays-strict" {
++            Worker::spawn_held("continuation-strict")?
++        } else {
++            Worker::spawn_continuation(case)?
++        };
++        if case == "positive" {
++            let before = ready_to_mutate(&fixture, &mut worker)?;
++            assert_eq!(before["core"]["continuation"]["enabled"], true);
++            assert_eq!(
++                before["core"]["continuation"]["original_raw_equal_claim"],
++                false
++            );
++            assert_eq!(before["core"]["continuation"]["database_count"], 2);
++            assert_ne!(
++                before["core"]["continuation"]["entry_s_before"],
++                before["core"]["historical_tuple_digest"]
++            );
++            let mut final_equals_historical = true;
++            let mut final_differs_from_entry = false;
++            for side in ["one", "two"] {
++                let path = fixture
++                    .root
++                    .join("state")
++                    .join(side)
++                    .join("state/state-vault.redb");
++                // Actual redb open/repair/close under retained database guards.
++                let entry = fs::read(&path)?;
++                let entry_hash = Sha256::digest(&entry);
++                let db = redb::Database::open(&path)?;
++                {
++                    let tx = db.begin_read()?;
++                    assert_eq!(tx.list_tables()?.count(), 1);
++                    let table = tx.open_table(redb::TableDefinition::<&str, u64>::new("tiny"))?;
++                    assert_eq!(table.len()?, 1);
++                    assert_eq!(
++                        table.get("genuine")?.ok_or("genuine row missing")?.value(),
++                        1
++                    );
++                }
++                drop(db);
++                let historical = fixture
++                    .backup
++                    .iter()
++                    .find(|(p, _)| *p == format!("{side}/state/state-vault.redb"))
++                    .ok_or("genuine backup DB")?;
++                let actual = fs::read(path)?;
++                assert_eq!(
++                    actual[9] & 2,
++                    0,
++                    "real repair leaves RECOVERY_REQUIRED clear"
++                );
++                // Recovery may rewrite allocation/header slots. Measure both
++                // comparison axes rather than assuming physical history equality.
++                let final_hash = Sha256::digest(&actual);
++                let same_history = actual == historical.1;
++                let differs_entry = actual != entry;
++                assert_eq!(same_history, final_hash == Sha256::digest(&historical.1));
++                assert_eq!(differs_entry, final_hash != entry_hash);
++                assert!(differs_entry, "clean final differs from dirty entry");
++                final_equals_historical &= same_history;
++                final_differs_from_entry |= differs_entry;
++            }
++            worker.send(&worker.common("audit"))?;
++            let final_frame = worker.receive(START)?;
++            assert_eq!(final_frame["kind"], "final", "{final_frame}");
++            assert_eq!(final_frame["core"]["final_verified"], true);
++            assert_eq!(final_frame["core"]["hash_passes"], 8);
++            assert_eq!(
++                final_frame["core"]["continuation"]["final_equals_historical"],
++                final_equals_historical
++            );
++            assert_eq!(
++                final_frame["core"]["continuation"]["final_differs_from_entry"],
++                final_differs_from_entry
++            );
++            let observation = final_frame["continuation_observation_sha256"]
++                .as_str()
++                .ok_or("full continuation observation digest missing")?;
++            assert_eq!(observation.len(), 64);
++            let done = finish(&mut fixture, &mut worker)?;
++            assert_eq!(
++                done["continuation_observation_sha256"], observation,
++                "complete raw-hash observation survives Dispose"
++            );
++            assert_eq!(
++                done["core"]["continuation"], final_frame["core"]["continuation"],
++                "post-cleanup facts survive hash-buffer clearing"
++            );
++            println!("continuation_genuine final={final_frame} cleanup={done}");
++        } else {
++            worker.send(&fixture.bind(&worker))?;
++            let refused = worker.receive(START)?;
++            assert_eq!(refused["kind"], "refused", "{refused}");
++            let expected = if case == "backup-change" || case == "strict-stays-strict" {
++                "payload_digest"
++            } else {
++                "held_continuation_delta"
++            };
++            assert_eq!(refused["code"], expected, "{refused}");
++            assert_eq!(refused["core"]["failure_phase"], "held_baseline_hash");
++            assert_eq!(refused["core"]["baseline_completed"], false);
++            assert_eq!(refused["core"]["slots_released"], 0);
++            assert_eq!(refused["transport_cleanup_ok"], true);
++            assert_eq!(refused["core"]["input_handles_released"], true);
++            assert_eq!(refused["core"]["remaining_owned_handles"], 0);
++            assert_eq!(refused["core"]["cleanup_unknown"], false);
++            assert_eq!(worker.reap()?.code(), Some(40));
++            fixture.pair.excluded()?;
++            fixture.pair.release()?;
++            fixture.pair.released()?;
++            if case != "backup-change" {
++                fixture.bkp_unchanged()?;
++            }
++            println!("continuation_negative={case} actual={refused}");
++        }
++    }
++    Ok(())
++}
+diff --git a/apps/kilogram-cli/tests/support/s53_cold/progress.rs b/apps/kilogram-cli/tests/support/s53_cold/progress.rs
+new file mode 100644
+--- /dev/null
++++ b/apps/kilogram-cli/tests/support/s53_cold/progress.rs
+@@ -0,0 +1,119 @@
++//! Fixed protected progress for the Cold-B diagnostic controller only.
++use super::*;
++use std::{
++    fs::{File, OpenOptions},
++    io::Write,
++    os::windows::fs::OpenOptionsExt,
++};
++pub struct Progress {
++    file: File,
++    started: Instant,
++    until: Instant,
++    records: usize,
++    bytes: usize,
++    side: Option<usize>,
++    pass: u8,
++}
++impl Progress {
++    pub fn fixed(until: Instant) -> Result<Self> {
++        Self::create(
++            &Path::new(fixed::EVIDENCE).join("progress.private.jsonl"),
++            until,
++        )
++    }
++    fn create(path: &Path, until: Instant) -> Result<Self> {
++        let file = OpenOptions::new()
++            .write(true)
++            .create_new(true)
++            .share_mode(0)
++            .open(path)?;
++        Ok(Self {
++            file,
++            started: Instant::now(),
++            until,
++            records: 0,
++            bytes: 0,
++            side: None,
++            pass: 0,
++        })
++    }
++    pub fn context(&mut self, side: usize, pass: u8) {
++        self.side = Some(side);
++        self.pass = pass;
++    }
++    pub fn record(&mut self, phase: &'static str, completed: usize) -> Result<()> {
++        readers::check(self.until)?;
++        let raw = serde_json::to_vec(
++            &json!({"phase":phase,"elapsed_ms":self.started.elapsed().as_millis(),
++            "side":self.side,"pass":self.pass,"completed":completed}),
++        )?;
++        ensure!(
++            raw.len() <= 512 && self.records < 256 && self.bytes + raw.len() < 65536,
++            "protected progress cap"
++        );
++        self.file.write_all(&raw)?;
++        self.file.write_all(b"\n")?;
++        self.file.sync_all()?;
++        self.records += 1;
++        self.bytes += raw.len() + 1;
++        Ok(())
++    }
++    pub fn pair(&mut self) {
++        self.side = None;
++        self.pass = 0;
++    }
++}
++#[test]
++fn cold_b1_progress_is_bounded_create_new_and_durable() -> Result<()> {
++    let base = Path::new(fixed::WORKSPACE).join(".tmp/C-s53-cold-b1-synthetic");
++    std::fs::create_dir_all(&base)?;
++    let dir = tempfile::Builder::new()
++        .prefix("progress-")
++        .tempdir_in(base)?
++        .keep();
++    let path = dir.join("progress.jsonl");
++    let until = Instant::now() + Duration::from_secs(60);
++    let mut progress = Progress::create(&path, until)?;
++    progress.context(1, 2);
++    progress.record("source", 64)?;
++    ensure!(
++        progress.file.metadata()?.len() > 0,
++        "progress persists before close"
++    );
++    ensure!(
++        Progress::create(&path, until).is_err(),
++        "progress collision refuses"
++    );
++    for n in 1..256 {
++        progress.record("source", n)?;
++    }
++    let error = progress
++        .record("source", 257)
++        .err()
++        .context("progress cap not enforced")?;
++    ensure!(
++        error.to_string() == "protected progress cap",
++        "exact progress cap"
++    );
++    drop(progress);
++    let raw = std::fs::read(&path)?;
++    ensure!(raw.len() <= 65536, "progress byte cap");
++    let text = std::str::from_utf8(&raw)?;
++    ensure!(
++        text.lines().count() == 256,
++        "complete persisted progress records"
++    );
++    for line in text.lines() {
++        let row: Value = serde_json::from_str(line)?;
++        ensure!(row["side"] == 1 && row["pass"] == 2, "progress context");
++        ensure!(
++            row.as_object()
++                .context("progress object")?
++                .keys()
++                .all(|key| ["phase", "elapsed_ms", "side", "pass", "completed"]
++                    .contains(&key.as_str())),
++            "progress contains only fixed aggregate fields"
++        );
++    }
++    Ok(())
++}
+diff --git a/scripts/migration-s53-held-continuation.cs b/scripts/migration-s53-held-continuation.cs
+new file mode 100644
+--- /dev/null
++++ b/scripts/migration-s53-held-continuation.cs
+@@ -0,0 +1,115 @@
++// Explicit two-DB dirty-header continuation. Historical rows are immutable.
++namespace Kilogram.S53.ColdA {
++public sealed partial class Core {
++    bool heldContinuation;
++    Row[] heldEntryDbs;
++    string heldEntryBefore,heldEntryAfter;
++    long heldNormalizationBytes;
++    object heldContinuationSnapshot;
++    void EnableHeldContinuation() {
++        if(captureStarted||heldContinuation)Fail("held_continuation_state");
++        budget.Record(spec.IsFixture?8192:4096);heldEntryDbs=new Row[2];heldContinuation=true;
++    }
++    public static Core HeldContinuationFixture(string root,long inventoryBytes,string inventoryHash,int files,long bytes,string fault,long deadline) {
++        var core=HeldFixture(root,inventoryBytes,inventoryHash,files,bytes,fault,deadline);
++        core.EnableHeldContinuation();return core;
++    }
++    static bool ContinuationDb(string path) {return path=="one/state/state-vault.redb"||path=="two/state/state-vault.redb";}
++    // Only this normalization differs from a raw hash, and only in memory.
++    // Seek/Read/metadata/EOF/hash primitives and the fixed readBuffer are reused.
++    byte[] DirtyHeaderHistoricalHash(Owned item,long length) {
++        if(!ContinuationDb(item.Relative)||length<=9)Fail("held_continuation_delta");
++        FileInfo before=Info(item.Handle,Absolute(item),0);
++        if(before.Length!=length||!before.Same(item.Initial))Fail("object_changed");
++        Seek(item.Handle);long bytes=0;bool normalized=false;
++        while(bytes<length) {
++            uint count=Read(item.Handle,(uint)Math.Min(readBuffer.Length,length-bytes));
++            if(count==0)Fail("payload_length");
++            if(bytes<=9&&bytes+count>9) {
++                int offset=(int)(9-bytes);
++                if((readBuffer[offset]&2)==0)Fail("held_continuation_delta");
++                readBuffer[offset]=(byte)(readBuffer[offset]&~2);normalized=true;
++            }
++            payloadHash.AppendData(readBuffer,0,(int)count);bytes+=count;
++            heldNormalizationBytes=checked(heldNormalizationBytes+count);
++        }
++        if(!normalized||Read(item.Handle,1)!=0)Fail("payload_length");
++        if(!before.Same(Info(item.Handle,Absolute(item),0)))Fail("object_changed");
++        return payloadHash.GetHashAndReset();
++    }
++    void HeldBaselineHashes() {
++        if(!heldContinuation){HashTree(s,false);HashTree(b,false);HashTree(s,true);HashTree(b,true);return;}
++        budget.Record(checked((long)rowCount*160));heldFinalRows=new Row[rowCount];
++        HeldFinalHash(false);HashTree(b,false);
++        int databases=0;
++        for(int i=0;i<rowCount;i++) {
++            Row actual=heldFinalRows[i],historical=rows[i];
++            if(ContinuationDb(historical.Relative)) {
++                if(databases>=2||actual.Bytes!=historical.Bytes||CryptographicOperations.FixedTimeEquals(actual.Hash,historical.Hash))Fail("held_continuation_delta");
++                if(!CryptographicOperations.FixedTimeEquals(DirtyHeaderHistoricalHash(s.Files[i],historical.Bytes),historical.Hash))Fail("held_continuation_delta");
++                heldEntryDbs[databases++]=actual;
++            } else if(actual.Bytes!=historical.Bytes||!CryptographicOperations.FixedTimeEquals(actual.Hash,historical.Hash))Fail("payload_digest");
++        }
++        if(databases!=2)Fail("held_continuation_delta");
++        HeldFinalHash(true);HashTree(b,true);
++        heldEntryBefore=heldFinalBefore;heldEntryAfter=heldFinalAfter;
++        if(heldEntryBefore!=heldEntryAfter)Fail("held_final_drift");
++        // Retain only the separately identified two entry DB rows. The later
++        // final audit allocates its own rows; it never overwrites historical rows.
++        heldFinalRows=null;heldFinalBefore=null;heldFinalAfter=null;
++    }
++    Row HeldEntryRow(int index) {
++        if(heldContinuation)foreach(Row row in heldEntryDbs)if(row!=null&&row.Relative==rows[index].Relative)return row;
++        return rows[index];
++    }
++    object HeldContinuationSummary() {
++        if(heldContinuationSnapshot!=null)return heldContinuationSnapshot;
++        if(!heldContinuation)return null;
++        var dbs=new List<object>(2);
++        foreach(Row entry in heldEntryDbs)if(entry!=null){int i=entry.Index;Row final=heldFinal&&heldFinalRows!=null?heldFinalRows[i]:null;
++            dbs.Add(new {path=entry.Relative,historical_sha256=Hex(rows[i].Hash),entry_raw_sha256=Hex(entry.Hash),
++                final_raw_sha256=final==null?null:Hex(final.Hash),
++                final_equals_historical=final==null?(bool?)null:CryptographicOperations.FixedTimeEquals(final.Hash,rows[i].Hash),
++                final_differs_from_entry=final==null?(bool?)null:!CryptographicOperations.FixedTimeEquals(final.Hash,entry.Hash)});
++        }
++        return new {enabled=true,entry_baseline_verified=heldBaseline,original_raw_equal_claim=false,
++            allowed_offset=9,allowed_mask=2,entry_s_before=heldEntryBefore,entry_s_after=heldEntryAfter,
++            normalization_read_bytes=heldNormalizationBytes,databases=dbs.ToArray()};
++    }
++    public string HeldContinuationObservationDigest() {
++        if(!heldContinuation||!spec.IsFixture)Refuse("held_fixture_binding");
++        return Hex(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(HeldContinuationSummary())));
++    }
++    object HeldContinuationPipeSummary() {
++        if(!heldContinuation)return null;
++        int count=0;foreach(Row entry in heldEntryDbs)if(entry!=null)count++;
++        return new {enabled=true,entry_baseline_verified=heldBaseline,original_raw_equal_claim=false,
++            allowed_offset=9,allowed_mask=2,database_count=count,entry_s_before=heldEntryBefore,entry_s_after=heldEntryAfter,
++            normalization_read_bytes=heldNormalizationBytes,
++            final_equals_historical=heldFinal?(bool?)(heldFinalBefore==heldHistorical):null,
++            final_differs_from_entry=heldFinal?(bool?)(heldFinalBefore!=heldEntryBefore):null};
++    }
++    public object HeldPipeReport() {
++        UpdateFacts();
++        return new {baseline_completed=heldBaseline,final_verified=heldFinal,slots_released=heldReleaseCount,slots_recaptured=heldRecaptureCount,
++            historical_tuple_digest=heldHistorical,historical_rows_unchanged_before_cleanup=heldHistoricalStable,
++            final_s_before=heldFinalBefore,final_s_after=heldFinalAfter,bkp_before=facts.BkpBeforeTupleDigest,bkp_after=facts.BkpAfterTupleDigest,
++            hash_passes=facts.HashPasses,typed_lock_read_bytes=0,typed_metadata_checks=heldTypedMetadata,
++            changed_slot_count=heldChanges.Count,delta_complete=heldDeltaStampDigest!=null,delta_stamp_sha256=heldDeltaStampDigest,
++            continuation=HeldContinuationPipeSummary(),input_handles_released=facts.InputHandlesReleased,remaining_owned_handles=budget.Handles,
++            cleanup_unknown=facts.CleanupUnknown,failure_code=facts.FailureCode,failure_phase=facts.FailurePhase,
++            native_error=facts.NativeError,cleanup_native_error=facts.CleanupNativeError,failure_cause=facts.CauseKind};
++    }
++    public void WriteContinuationBaseline() {
++        if(!heldContinuation||!heldBaseline||outputDirectory==null||createRestricted==null)Fail("output_boundary");
++        using(var output=new Receipt(this,"continuation-baseline.private.json",65536)) {
++            output.Record(w=>{w.WriteStartObject();w.WriteString("classification","explicit-two-db-dirty-header-entry");
++                w.WriteString("attempt",spec.Attempt);w.WriteString("historical_tuple_digest",heldHistorical);
++                w.WritePropertyName("continuation");JsonSerializer.Serialize(w,HeldContinuationSummary());
++                w.WriteStartArray("entry_stamps");foreach(Row entry in heldEntryDbs){w.WriteStartObject();w.WriteString("path",entry.Relative);w.WritePropertyName("entry_stamp");JsonSerializer.Serialize(w,HeldStamp(s.Files[entry.Index].Initial));w.WriteEndObject();}w.WriteEndArray();
++                w.WriteBoolean("historical_rows_unchanged",ExpectedDigest()==heldHistorical);w.WriteEndObject();});
++            output.Complete();
++        }
++    }
++}
++}

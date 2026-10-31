@@ -1,0 +1,21 @@
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+error[E0599]: no method named `begin_read` found for struct `redb::Database` in the current scope
+   --> crates\kilogram-state\src\verification_held_tests.rs:494:33
+    |
+494 |                     let tx = db.begin_read()?;
+    |                                 ^^^^^^^^^^ method not found in `redb::Database`
+    |
+   ::: C:\Users\Paul\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\redb-4.2.0\src\db.rs:376:8
+    |
+376 |     fn begin_read(&self) -> Result<ReadTransaction, TransactionError>;
+    |        ---------- the method is available for `redb::Database` here
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: trait `ReadableDatabase` which provides `begin_read` is implemented but not in scope; perhaps you want to import it
+    |
+  1 + use redb::ReadableDatabase;
+    |
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `kilogram-state` (lib test) due to 1 previous error
+Exception: cargo test --no-run failed with exit code 101

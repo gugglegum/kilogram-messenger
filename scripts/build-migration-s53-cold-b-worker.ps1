@@ -2,9 +2,10 @@
 param()
 $ErrorActionPreference='Stop'
 $w=Split-Path -Parent $PSScriptRoot
-$out=Join-Path $w 'target/verification/s53-cold-worker'
+$out=Join-Path $w 'target/verification-scale/s53-cold-worker'
 if(Test-Path -LiteralPath $out){throw 'Materialized artifact collision; preserve previous build before a new explicit attempt'}
 $paths=@($PSCommandPath,(Join-Path $PSScriptRoot 'migration-s53-cold-preservation.ps1'),(Join-Path $PSScriptRoot 'migration-s53-typed-lock-worker.ps1'),(Join-Path $PSScriptRoot 'migration-s53-held-preservation.cs'),(Join-Path $PSScriptRoot 'migration-s53-cold-b-private.cs'),(Join-Path $PSScriptRoot 'migration-s53-root-copy.ps1'),(Join-Path $PSScriptRoot 'invoke-migration-s53-cold-b-worker.ps1'))
+$paths+=@(Join-Path $PSScriptRoot 'migration-s53-held-continuation.cs')
 $core=[IO.File]::ReadAllBytes($paths[1])
 if($core.Length -ne 82999 -or (Get-FileHash -LiteralPath $paths[1] -Algorithm SHA256).Hash.ToLowerInvariant() -cne 'eb166bce9b53da51863b605a06041e7100aca0d053f21c2b2ece09cf191b259f'){throw 'Frozen Core pin'}
 $m=[regex]::Match([Text.UTF8Encoding]::new($false,$true).GetString($core),'(?s)\$source = @\x27\r?\n(?<cs>.*?)\r?\n\x27@')
@@ -25,7 +26,7 @@ foreach($pair in @(@($paths[2],'public static partial class S53TypedLockWorker {
  foreach($line in ($cs.Substring(0,$at) -split '\r?\n')){if([string]::IsNullOrWhiteSpace($line)){continue};if($line -cnotmatch '\Ausing [A-Za-z0-9_.]+;\z'){throw 'Helper header'};if(-not $original.Contains($line)){$null=$headers.Add($line)}}
  $bodies+=@($cs.Substring($at))
 }
-$definition=(@($headers|Sort-Object)+@($composed)+@($bodies)+@([IO.File]::ReadAllText($paths[3]),[IO.File]::ReadAllText($paths[4]))) -join [Environment]::NewLine
+$definition=(@($headers|Sort-Object)+@($composed)+@($bodies)+@([IO.File]::ReadAllText($paths[3]),[IO.File]::ReadAllText($paths[4]),[IO.File]::ReadAllText($paths[7]))) -join [Environment]::NewLine
 $hash=[Security.Cryptography.IncrementalHash]::CreateHash([Security.Cryptography.HashAlgorithmName]::SHA256)
 try{foreach($path in $paths){$bytes=[IO.File]::ReadAllBytes($path);if($bytes.Length -gt 256KB){throw 'Source cap'};$hash.AppendData([BitConverter]::GetBytes([long]$bytes.Length));$hash.AppendData($bytes)};$graph=[Convert]::ToHexString($hash.GetHashAndReset()).ToLowerInvariant()}finally{$hash.Dispose()}
 $null=New-Item -ItemType Directory -Path $out

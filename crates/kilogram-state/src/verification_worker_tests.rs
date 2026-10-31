@@ -136,12 +136,15 @@ pub(super) struct Worker {
 }
 impl Worker {
     pub(super) fn spawn(case: &str, early_eof: bool) -> TestResult<Self> {
-        Self::spawn_mode(case, early_eof, false)
+        Self::spawn_mode(case, early_eof, false, false)
     }
     pub(super) fn spawn_held(case: &str) -> TestResult<Self> {
-        Self::spawn_mode(case, false, true)
+        Self::spawn_mode(case, false, true, false)
     }
-    fn spawn_mode(case: &str, early_eof: bool, held: bool) -> TestResult<Self> {
+    pub(super) fn spawn_continuation(case: &str) -> TestResult<Self> {
+        Self::spawn_mode(case, false, true, true)
+    }
+    fn spawn_mode(case: &str, early_eof: bool, held: bool, continuation: bool) -> TestResult<Self> {
         let sources = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../scripts");
         let script = fs::canonicalize(sources.join(if held {
             "invoke-migration-s53-held-preservation-synthetic.ps1"
@@ -155,6 +158,7 @@ impl Worker {
                 sources.join("migration-s53-typed-lock-worker.ps1"),
                 sources.join("migration-s53-cold-preservation.ps1"),
                 sources.join("migration-s53-held-preservation.cs"),
+                sources.join("migration-s53-held-continuation.cs"),
             ] {
                 let bytes = fs::read(path)?;
                 if bytes.len() > 256 * 1024 {
@@ -195,6 +199,9 @@ impl Worker {
             .stderr(Stdio::inherit());
         if early_eof {
             command.arg("-SyntheticEarlyEof");
+        }
+        if continuation {
+            command.arg("-Continuation");
         }
         let mut child = command.spawn()?;
         let input = child.stdin.take().ok_or("child stdin")?;

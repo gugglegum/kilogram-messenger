@@ -80,7 +80,7 @@ public sealed partial class Core {
             Phase("held_capture");CaptureTree(s);CaptureTree(b);
             facts.ExpectedSetCapturedBeforeHash=true;facts.CaptureCompleteTimestamp=Stopwatch.GetTimestamp();
             Scan(s,false);Scan(b,false);
-            Phase("held_baseline_hash");HashTree(s,false);HashTree(b,false);HashTree(s,true);HashTree(b,true);
+            Phase("held_baseline_hash");HeldBaselineHashes();
             Scan(s,true);Scan(b,true);FinalInputs();facts.ObservedEntrySetsEqual=true;
             foreach(string path in HeldSlotPaths()){
                 string rel=path.Substring(spec.S.Length+1).Replace('\\','/');
@@ -204,12 +204,18 @@ public sealed partial class Core {
             string rel=paths[n].Substring(spec.S.Length+1).Replace('\\','/');int i=expected[rel].Index;
             Owned item=s.Files[i];Row final=heldFinalRows[i];bool metadataEqual=heldOldSlots[n].Initial.Same(item.Initial);
             bool bytesEqual=final.Bytes==rows[i].Bytes&&CryptographicOperations.FixedTimeEquals(final.Hash,rows[i].Hash);
-            if(metadataEqual&&bytesEqual)continue;
+            Row entry=HeldEntryRow(i);bool entryEqual=final.Bytes==entry.Bytes&&CryptographicOperations.FixedTimeEquals(final.Hash,entry.Hash);
+            if(metadataEqual&&bytesEqual&&entryEqual)continue;
             heldExplainedParents.Add(rel.Substring(0,rel.LastIndexOf('/')));
-            heldChanges.Add(new {path=rel,write_class=n%2==0?"database-same-id":"key-rewrap-or-replacement",metadata_equal=metadataEqual,
+            if(heldContinuation)heldChanges.Add(new {path=rel,write_class=n%2==0?"database-same-id":"key-rewrap-or-replacement",entry_metadata_equal=metadataEqual,
+                historical_bytes=rows[i].Bytes,historical_sha256=Hex(rows[i].Hash),entry_bytes=entry.Bytes,entry_raw_sha256=Hex(entry.Hash),
+                final_bytes=final.Bytes,final_raw_sha256=Hex(final.Hash),final_equals_historical=bytesEqual,final_differs_from_entry=!entryEqual,
+                entry_id=new ulong[]{heldOldSlots[n].Initial.Volume,heldOldSlots[n].Initial.Id.Index},final_id=new ulong[]{item.Initial.Volume,item.Initial.Id.Index}});
+            else heldChanges.Add(new {path=rel,write_class=n%2==0?"database-same-id":"key-rewrap-or-replacement",metadata_equal=metadataEqual,
                 historical_bytes=rows[i].Bytes,historical_sha256=Hex(rows[i].Hash),final_bytes=final.Bytes,final_sha256=Hex(final.Hash),
                 historical_id=new ulong[]{heldOldSlots[n].Initial.Volume,heldOldSlots[n].Initial.Id.Index},final_id=new ulong[]{item.Initial.Volume,item.Initial.Id.Index}});
-            stamps.Add(new {path=rel,historical_stamp=HeldStamp(heldOldSlots[n].Initial),final_stamp=HeldStamp(item.Initial)});
+            if(heldContinuation)stamps.Add(new {path=rel,entry_stamp=HeldStamp(heldOldSlots[n].Initial),final_stamp=HeldStamp(item.Initial)});
+            else stamps.Add(new {path=rel,historical_stamp=HeldStamp(heldOldSlots[n].Initial),final_stamp=HeldStamp(item.Initial)});
         }
         heldDeltaStampDigest=Hex(SHA256.HashData(JsonSerializer.SerializeToUtf8Bytes(stamps)));
     }
@@ -221,6 +227,7 @@ public sealed partial class Core {
             case "held_fixture_binding":case "held_lock_binding":case "held_lock_length":case "held_state":
             case "held_slot_missing":case "held_slot_parent":case "held_database_identity":case "held_slot_ownership":
             case "held_release_injected":case "held_recapture_injected":case "held_final_drift":case "held_historical_drift":
+            case "held_continuation_state":case "held_continuation_delta":
                 facts.FailureCode=code;facts.CauseKind="bounded_refusal";break;
         }
         StopPhase();UpdateFacts();
@@ -235,12 +242,15 @@ public sealed partial class Core {
             bkp_before=facts.BkpBeforeTupleDigest,bkp_after=facts.BkpAfterTupleDigest,hash_passes=facts.HashPasses,
             typed_metadata_checks=heldTypedMetadata,typed_lock_read_bytes=0,typed_lock_hash_provenance="verified-empty-metadata; empty hash derived",
             changed_slots=heldChanges.ToArray(),delta_complete=heldDeltaStampDigest!=null,delta_stamp_sha256=heldDeltaStampDigest,directory_deltas=heldDirectoryDeltas.ToArray(),
+            continuation=HeldContinuationSummary(),
             input_handles_released=facts.InputHandlesReleased,remaining_owned_handles=budget.Handles,
             cleanup_unknown=facts.CleanupUnknown,failure_code=facts.FailureCode,failure_phase=facts.FailurePhase,
             native_error=facts.NativeError,cleanup_native_error=facts.CleanupNativeError,failure_cause=facts.CauseKind};
     }
     public void HeldDispose() {
-        if(heldDisposed)return;heldDisposed=true;
+        if(heldDisposed)return;
+        try{heldContinuationSnapshot=HeldContinuationSummary();}catch{facts.CleanupUnknown=true;}
+        heldDisposed=true;
         try{foreach(var handle in heldDbGuards)try{CloseFile(handle);}catch{facts.CleanupUnknown=true;}}
         finally{heldDbGuards.Clear();Dispose();}
     }
@@ -249,7 +259,7 @@ public sealed partial class Core {
 }
 public static partial class S53TypedLockWorker {
     sealed partial class Session {
-        internal int RunHeld(string composition) {
+        internal int RunHeld(string composition,bool continuation=false) {
             Kilogram.S53.ColdA.Core core=null;string failure=null;int native=0;
             try{
                 BindInputs(true);
@@ -259,7 +269,8 @@ public static partial class S53TypedLockWorker {
                 string root=boundPaths[0].Substring(0,boundPaths[0].Length-suffix.Length);
                 Need(boundPaths[1]==root+@"\state\one\state\.kilogram-state.lock","held_fixture_binding");
                 if(root.StartsWith(@"\\?\",StringComparison.Ordinal))root=root.Substring(4);
-                core=Kilogram.S53.ColdA.Core.HeldFixture(root,preservation.GetProperty("inventory_bytes").GetInt64(),
+                Func<string,long,string,int,long,string,long,Kilogram.S53.ColdA.Core> factory=continuation?Kilogram.S53.ColdA.Core.HeldContinuationFixture:Kilogram.S53.ColdA.Core.HeldFixture;
+                core=factory(root,preservation.GetProperty("inventory_bytes").GetInt64(),
                     preservation.GetProperty("inventory_sha256").GetString(),preservation.GetProperty("files").GetInt32(),
                     preservation.GetProperty("bytes").GetInt64(),preservation.GetProperty("fault").GetString(),
                     Stopwatch.GetTimestamp()+60L*Stopwatch.Frequency);
@@ -268,21 +279,21 @@ public static partial class S53TypedLockWorker {
                     core.AttachTypedLock(root+(n==0?@"\state\two\state\.kilogram-state.lock":@"\state\one\state\.kilogram-state.lock"),raw);
                 }
                 phase="baseline";core.CaptureHeldBaseline();
-                Send(new {kind="baseline",version=1,nonce,source_sha256=source,attempt,composition_sha256=composition,core=core.HeldReport()});
+                Send(new {kind="baseline",version=1,nonce,source_sha256=source,attempt,composition_sha256=composition,core=continuation?core.HeldPipeReport():core.HeldReport()});
                 phase="release";
                 using(var doc=Read()){
                     Fields(doc.RootElement,"kind","version","nonce","source_sha256","attempt");
                     CheckCommon(doc.RootElement,"release-slots");
                 }
                 core.ReleaseHeldSlots();
-                Send(new {kind="slots",version=1,nonce,source_sha256=source,attempt,core=core.HeldReport()});
+                Send(new {kind="slots",version=1,nonce,source_sha256=source,attempt,core=continuation?core.HeldPipeReport():core.HeldReport()});
                 phase="audit";
                 using(var doc=Read()){
                     Fields(doc.RootElement,"kind","version","nonce","source_sha256","attempt");
                     CheckCommon(doc.RootElement,"audit");
                 }
                 core.AuditHeldFinal();
-                Send(new {kind="final",version=1,nonce,source_sha256=source,attempt,composition_sha256=composition,core=core.HeldReport()});
+                Send(new {kind="final",version=1,nonce,source_sha256=source,attempt,composition_sha256=composition,continuation_observation_sha256=continuation?core.HeldContinuationObservationDigest():null,core=continuation?core.HeldPipeReport():core.HeldReport()});
                 phase="finish";
                 using(var doc=Read()){
                     Fields(doc.RootElement,"kind","version","nonce","source_sha256","attempt");
@@ -300,14 +311,15 @@ public static partial class S53TypedLockWorker {
             }
             bool clean=cleanup&&snapshotClosed&&parent==IntPtr.Zero&&held[0]==IntPtr.Zero&&held[1]==IntPtr.Zero&&(core==null||core.HeldCleanupOk());
             if(!clean)failure="cleanup";
-            object report=core==null?null:core.HeldReport();
+            object report=core==null?null:continuation?core.HeldPipeReport():core.HeldReport();
             // Core's actual cleanup counters are checked by the Rust controller.
             try{Send(new {kind=failure==null?"done":"refused",version=1,nonce,source_sha256=source,attempt,
                 phase,code=failure,native_error=native,transport_handles_after=(parent==IntPtr.Zero?0:1)+(held[0]==IntPtr.Zero?0:1)+(held[1]==IntPtr.Zero?0:1),
-                transport_cleanup_ok=clean,snapshot_closed=snapshotClosed,core=report});}
+                transport_cleanup_ok=clean,snapshot_closed=snapshotClosed,continuation_observation_sha256=continuation&&core!=null?core.HeldContinuationObservationDigest():null,core=report});}
             catch{return 42;}
             return failure==null&&clean?0:40;
         }
     }
     public static int RunHeld(string hash,string attempt,string composition){return new Session(hash,attempt).RunHeld(composition);}
+    public static int RunHeldContinuation(string hash,string attempt,string composition){return new Session(hash,attempt).RunHeld(composition,true);}
 }

@@ -1,0 +1,203 @@
+{
+  "head": "f6018d10820e7af0f0b3d2f64d66344d057deff1",
+  "source_count": 16,
+  "diff_check_exit_code": 0,
+  "sources": [
+    {
+      "path": "apps/kilogram-cli/tests/migration_s53_cold.rs",
+      "bytes": 837,
+      "sha256": "92ee60f226a9c95e65f3d2d02e66574a198da2df8eb97af84e3e9b87f43c3861",
+      "blob": "eb71825fed25bf42d42024b2b69fd61ac387dbaf",
+      "before": {
+        "path": "apps/kilogram-cli/tests/migration_s53_cold.rs",
+        "bytes": 782,
+        "blob": "0fccea00199e5e91702e95ec576999c6052ae5eb",
+        "saved": ".tmp/C-s53-cold-b2-source-before/0.before",
+        "sha256": "2132136dcd7f03088e47c53af0c127c8cff23a64f7448e547e6fa345842dc53e"
+      }
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/readers.rs",
+      "bytes": 15958,
+      "sha256": "ca7c64a317e381e985169aea7b90310a1bf0ffd925722a38a37dc92c3e676011",
+      "blob": "c71cd8164e116db53f50e3101c193b7cf36768a0",
+      "before": {
+        "path": "apps/kilogram-cli/tests/support/s53_cold/readers.rs",
+        "bytes": 15323,
+        "blob": "392412648bd0396599839556e08e5f5081b1d9f6",
+        "saved": ".tmp/C-s53-cold-b2-source-before/1.before",
+        "sha256": "c9ed7db609eb11ce89ca4b1a420caefa7a0e8f21e24ccd281dbc89004cc3538e"
+      }
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/history.rs",
+      "bytes": 2818,
+      "sha256": "6f43a54189810047c829b3da065ee539d36dc0da087e476636b756d304c1faab",
+      "blob": "1026be09ba78a8764b8d58cb2ca2ef2df00123ac",
+      "before": {
+        "path": "apps/kilogram-cli/tests/support/s53_cold/history.rs",
+        "bytes": 2559,
+        "blob": "52298f94fa2e769a68d827a48387d0d972e4eafe",
+        "saved": ".tmp/C-s53-cold-b2-source-before/2.before",
+        "sha256": "7194051eb9169b52eaa918b87793b9e5ce9817b12d2e57e693750c222b56871e"
+      }
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/session.rs",
+      "bytes": 22304,
+      "sha256": "93617e8c1c9f1577af4a98b45af891d0d276dcf2fb5420d484b0fcbe37874020",
+      "blob": "fdc3f7c0dc02a6e0615c3b26dbd18ab1e846799d",
+      "before": {
+        "path": "apps/kilogram-cli/tests/support/s53_cold/session.rs",
+        "bytes": 19924,
+        "blob": "c0f2750db3160e8b4ddd7bc5b00b0db00f4920a5",
+        "saved": ".tmp/C-s53-cold-b2-source-before/3.before",
+        "sha256": "1a5354491052617f43330ce8e7514898fe1f9fb3397c11c8a46627c7beadfe61"
+      }
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/checks.rs",
+      "bytes": 6653,
+      "sha256": "0f4e2ce6d42e125095444aa2829482569a5b054b4e77d0455df8343a3d51108a",
+      "blob": "cf20b4609ade2df573e66aeeeabb877ff4e89e53",
+      "before": {
+        "path": "apps/kilogram-cli/tests/support/s53_cold/checks.rs",
+        "bytes": 6641,
+        "blob": "be3c0624a824e779b17af6a4e60627968116d4d1",
+        "saved": ".tmp/C-s53-cold-b2-source-before/4.before",
+        "sha256": "4b691ae147ac98bff54d4b1d2a6f18a3ccb215d484331f0d6ef9934317f0bdab"
+      }
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/fixed.rs",
+      "bytes": 8193,
+      "sha256": "505ab5634e6dc44ddcef23466a23009eba4c3e66121b0183aa638537ada7034e",
+      "blob": "d0430f5712e35b5137a7c5158d962e9d5d79cf38",
+      "before": {
+        "path": "apps/kilogram-cli/tests/support/s53_cold/fixed.rs",
+        "bytes": 8193,
+        "blob": "1d8084909f9c32668376e4da5323e098a4541db7",
+        "saved": ".tmp/C-s53-cold-b2-source-before/5.before",
+        "sha256": "f797140af66148e9168d00bf4dfe5ed81c9293451a6e6e5b076d0a5d23d794f7"
+      }
+    },
+    {
+      "path": "scripts/migration-s53-held-preservation.cs",
+      "bytes": 22681,
+      "sha256": "6d1f919edacaf378863b1d63c310636be03e723b5eb2ca44f79c470b420d909e",
+      "blob": "50cb2d040113407bed2c36e2a43d7cdf95811a1d",
+      "before": {
+        "path": "scripts/migration-s53-held-preservation.cs",
+        "bytes": 20895,
+        "blob": "1bb26f4f5e4fa7ed440f94460c5dbe8082b24b63",
+        "saved": ".tmp/C-s53-cold-b2-source-before/6.before",
+        "sha256": "b780c396e8971a70f132795959733161ffd8cd62bdb95b4e86f08df6ef76d618"
+      }
+    },
+    {
+      "path": "scripts/migration-s53-cold-b-private.cs",
+      "bytes": 10198,
+      "sha256": "1d8795244b9ecb5ff33571ca9400f70a9a81daa6428877549c5a7193c141d585",
+      "blob": "f079851f836cc1889d907ac547fcadfbda5edd27",
+      "before": {
+        "path": "scripts/migration-s53-cold-b-private.cs",
+        "bytes": 9393,
+        "blob": "4045b861b6c387cc988ddbecee9a4608bab51e20",
+        "saved": ".tmp/C-s53-cold-b2-source-before/7.before",
+        "sha256": "a88399a57110d3cdfe20193bb2f58068a51300aaa087ff7f99caaeb8f4904825"
+      }
+    },
+    {
+      "path": "scripts/build-migration-s53-cold-b-worker.ps1",
+      "bytes": 4257,
+      "sha256": "45e7bb2b179f4c9f51a24d65e88bc65877430d2e2be677b93367d9ab694fbfd2",
+      "blob": "07b3838e0a9a0ac43ae909ada0964538a08a7719",
+      "before": {
+        "path": "scripts/build-migration-s53-cold-b-worker.ps1",
+        "bytes": 4145,
+        "blob": "52d1b789ebedf6e5c4f2b6ac3e1df9d4b72c0ad6",
+        "saved": ".tmp/C-s53-cold-b2-source-before/8.before",
+        "sha256": "3624233f0519cb5525d7ce1da7c68c0bcaf9468ab8610e5ed8fa1dd65fe33514"
+      }
+    },
+    {
+      "path": "scripts/invoke-migration-s53-cold-b-worker.ps1",
+      "bytes": 2021,
+      "sha256": "ec6265674118dfbbc40c3629046d964ecfc228a96ea3e87d9e72cb475a7f3031",
+      "blob": "8eaba437403aecfc7ab68b6b0998ace223266ad7",
+      "before": {
+        "path": "scripts/invoke-migration-s53-cold-b-worker.ps1",
+        "bytes": 1969,
+        "blob": "6456f154efefde3680286ea576d951bbbb41afe6",
+        "saved": ".tmp/C-s53-cold-b2-source-before/9.before",
+        "sha256": "8dac99689f31eb29821f2cc83a9a0fecf958e4a36374ef85de3dedba733ee975"
+      }
+    },
+    {
+      "path": "scripts/invoke-migration-s53-cold-b.ps1",
+      "bytes": 4548,
+      "sha256": "79fa8133aaefbbddf2508520fd8fc6cdd1c319a15fc1b210cbcba4d1f405d6bd",
+      "blob": "d2e5e58ce7657d13bd959885976b0f3efea9a33b",
+      "before": {
+        "path": "scripts/invoke-migration-s53-cold-b.ps1",
+        "bytes": 4530,
+        "blob": "8f13503ba4818d910fc92028cf5e537fa93473ea",
+        "saved": ".tmp/C-s53-cold-b2-source-before/10.before",
+        "sha256": "c90bd6a79f58772045b1e60ab12383721b1cf85ad2918b4c27dedcf6324521ae"
+      }
+    },
+    {
+      "path": "scripts/invoke-migration-s53-held-preservation-synthetic.ps1",
+      "bytes": 3603,
+      "sha256": "69e194009c81b111e257379eb6ae5d6c672b5c1c44f619bf4c3a8a0eddf05200",
+      "blob": "bcd66054bd346009bd49ffb4c0ed07e861664b2e",
+      "before": {
+        "path": "scripts/invoke-migration-s53-held-preservation-synthetic.ps1",
+        "bytes": 3320,
+        "blob": "8092175b9732fa606d6711b96360a836fda7b5d6",
+        "saved": ".tmp/C-s53-cold-b2-source-before/11.before",
+        "sha256": "bf53893a6b8af127b5bb01646e76c7e77a40cb96721c9483ecb37e6360978d4f"
+      }
+    },
+    {
+      "path": "crates/kilogram-state/src/verification_worker_tests.rs",
+      "bytes": 17236,
+      "sha256": "626605431cca218c86fba5f9b677832220f2eacc08766d32bf1d7c8353f39821",
+      "blob": "065a012824b1f3d8c0787c8cd0cab279ad1ae59b",
+      "before": {
+        "path": "crates/kilogram-state/src/verification_worker_tests.rs",
+        "bytes": 16929,
+        "blob": "23457219681a7ebcc59b4dc044a64c419de3cd33",
+        "saved": ".tmp/C-s53-cold-b2-source-before/12.before",
+        "sha256": "532da247e50dc115604d7a5ec65695c77f5777f8b415acf765f7ab9a9422e606"
+      }
+    },
+    {
+      "path": "crates/kilogram-state/src/verification_held_tests.rs",
+      "bytes": 23850,
+      "sha256": "dea62618bae5ae62b78c4ce0c7ae4064937ff5c6e26c15698f09426cf5499fba",
+      "blob": "c478d5156b1bded53b6cd3856b91c81f538f4497",
+      "before": {
+        "path": "crates/kilogram-state/src/verification_held_tests.rs",
+        "bytes": 15942,
+        "blob": "7960e1c519eb66208488c4bab837c02c792f9b87",
+        "saved": ".tmp/C-s53-cold-b2-source-before/13.before",
+        "sha256": "830f9acee8f709196fba6484845fbb7b996ab172813ed59005f0e86a2c2ccb6d"
+      }
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/s53_cold/progress.rs",
+      "bytes": 3594,
+      "sha256": "4d918591a741beaa698b56cb3b6424231a319c9dfd6ed63a330ffe2977887e05",
+      "blob": "ee09c4b1681c700a0cd88158325c0df34897839d",
+      "before": null
+    },
+    {
+      "path": "scripts/migration-s53-held-continuation.cs",
+      "bytes": 8018,
+      "sha256": "74c70ab12ea14a6b6c856fbb233f1a88a73d09fb39f977c682796e4cf5a3de2e",
+      "blob": "4733b73e90717e6059620e155545a4ce42d8d1f2",
+      "before": null
+    }
+  ]
+}

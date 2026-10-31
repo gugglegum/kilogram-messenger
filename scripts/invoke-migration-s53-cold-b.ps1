@@ -5,10 +5,10 @@ param([Parameter(Mandatory)][ValidatePattern('\A[a-f0-9]{64}\z')][string]$Harnes
  [Parameter(Mandatory)][ValidatePattern('\A[a-f0-9]{64}\z')][string]$DecisionSha256)
 $ErrorActionPreference='Stop'
 $w='E:\AI-Projects\kilogram-p2p-messenger'
-$e="$w\.tmp\migration-s5-preparation-evidence\P2-s53-exhausted-cold-b-01-attempt-01"
-$exe="$w\target\verification\deps\kilogram-cli-test-migration_s53_cold-tests.exe"
-$dll="$w\target\verification\s53-cold-worker\worker.dll"
-$cs="$w\target\verification\s53-cold-worker\worker.cs"
+$e="$w\.tmp\migration-s5-preparation-evidence\P2-s53-exhausted-cold-b-01-attempt-02"
+$exe="$w\target\verification-scale\deps\kilogram-cli-test-migration_s53_cold-tests.exe"
+$dll="$w\target\verification-scale\s53-cold-worker\worker.dll"
+$cs="$w\target\verification-scale\s53-cold-worker\worker.cs"
 if([Environment]::ProcessPath -cne 'C:\Users\Paul\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe'){throw 'Fixed shell'}
 foreach($p in @(@($exe,$HarnessSha256),@($dll,$AssemblySha256),@($cs,$ComposedSha256))){if((Get-FileHash -LiteralPath $p[0] -Algorithm SHA256).Hash.ToLowerInvariant() -cne $p[1]){throw 'Reviewed image mismatch'}}
 # This source is submitted now; root separately activates its future F run.
@@ -25,7 +25,7 @@ try {
  $phase='new-e';$parent=[S53RootNativeR38]::DirectoryHandle([IO.Path]::GetDirectoryName($e))
  try{New-S53RootDirectory $e {$script:created=$true}}finally{$parent.Dispose()}
  Assert-S53RootPrivateAcl $e $true
- $env:KILOGRAM_S53_COLD_ATTEMPT='P2-s53-exhausted-cold-b-01-attempt-01'
+ $env:KILOGRAM_S53_COLD_ATTEMPT='P2-s53-exhausted-cold-b-01-attempt-02'
  $env:KILOGRAM_S53_COLD_SOURCE_SHA256=$ComposedSha256;$env:KILOGRAM_S53_COLD_ASSEMBLY_SHA256=$AssemblySha256
  $env:KILOGRAM_S53_COLD_DECISION_SHA256=$DecisionSha256;$env:KILOGRAM_S53_COLD_DEADLINE_TICKS=[string]$ticks;$env:KILOGRAM_S53_COLD_UNTIL_UNIX_MS=[string]$utc
  $start=[Diagnostics.ProcessStartInfo]::new($exe);$start.UseShellExecute=$false;$start.CreateNoWindow=$true;$start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true

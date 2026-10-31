@@ -20,6 +20,8 @@ mod checks;
 mod fixed;
 #[path = "support/s53_cold/history.rs"]
 mod history;
+#[path = "support/s53_cold/progress.rs"]
+mod progress;
 #[path = "support/s53_cold/readers.rs"]
 mod readers;
 #[path = "support/s53_cold/session.rs"]

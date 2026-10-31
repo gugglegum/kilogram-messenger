@@ -1,0 +1,57 @@
+{
+  "source_graph_sha256": "f0749a8ae81e72e041c6e5cddbbd72d680855eecf148a32a35526705ff3308d2",
+  "sources": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\build-migration-s53-cold-b-worker.ps1",
+      "bytes": 4257,
+      "sha256": "45e7bb2b179f4c9f51a24d65e88bc65877430d2e2be677b93367d9ab694fbfd2"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-cold-preservation.ps1",
+      "bytes": 82999,
+      "sha256": "eb166bce9b53da51863b605a06041e7100aca0d053f21c2b2ece09cf191b259f"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-typed-lock-worker.ps1",
+      "bytes": 13379,
+      "sha256": "45f76ed97aa350cf3b06297d0e42be928c9e3326e96e8966c3cef0f9bc506646"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-held-preservation.cs",
+      "bytes": 22681,
+      "sha256": "6d1f919edacaf378863b1d63c310636be03e723b5eb2ca44f79c470b420d909e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-cold-b-private.cs",
+      "bytes": 10198,
+      "sha256": "1d8795244b9ecb5ff33571ca9400f70a9a81daa6428877549c5a7193c141d585"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-root-copy.ps1",
+      "bytes": 25596,
+      "sha256": "a3eefcc9dd4da8bdd9141d8731fc60feaf496d5d357047c0283b53dd8e6c3382"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s53-cold-b-worker.ps1",
+      "bytes": 2021,
+      "sha256": "ec6265674118dfbbc40c3629046d964ecfc228a96ea3e87d9e72cb475a7f3031"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s53-held-continuation.cs",
+      "bytes": 8018,
+      "sha256": "74c70ab12ea14a6b6c856fbb233f1a88a73d09fb39f977c682796e4cf5a3de2e"
+    }
+  ],
+  "composed": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\s53-cold-worker\\worker.cs",
+    "bytes": 139850,
+    "sha256": "fe2559027a747fd0496ebf88e968787d9b64df56a9fe3b7e9f09551a492869de"
+  },
+  "assembly": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\s53-cold-worker\\worker.dll",
+    "bytes": 172544,
+    "sha256": "46af21bee2fabca2c9ffa84b1c80afd57f4f1014d0833e0a8e10548398c9bb30"
+  },
+  "frozen_core_edits": 3,
+  "private_activated": false
+}
