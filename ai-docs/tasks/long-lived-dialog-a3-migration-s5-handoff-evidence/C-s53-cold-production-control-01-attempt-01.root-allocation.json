@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "classification": "root-approved-cold-production-control-c2-t01",
+  "root_thread_id": "01a164ec-589c-7b41-bc34-3ba158d1f22b",
+  "activated": true,
+  "attempt": "C-s53-cold-production-control-01-attempt-01",
+  "operation_set": "cold-production-control-two-parent-two-protocol-r01",
+  "workspace": "E:\\AI-Projects\\kilogram-p2p-messenger",
+  "fixture_parent": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\C-s53-cold-production-control-01-attempt-01",
+  "fixture_cases": [
+    "parent-create",
+    "parent-existing",
+    "protocol-match",
+    "protocol-wrong-pid"
+  ],
+  "preflight_sha256": "13f9408a537f04895c5ad14d598ba04ac62a9103e258fe49fab10d8b4b70450b",
+  "watchdog_sha256": "1c8c5c617fd379965041eb4d4d54f0bdb1eee0287d2b05e797ed2e612a283166",
+  "production_sha256": "12661c746bfad302d5dabf0acdb5ea621005f5650120300a5e971d7507e6d976",
+  "output_sha256": "331bfdde271d6386f78e2198da2ef9480b3c16f5e45dc3180747601d8cac9b98",
+  "deadline_sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45",
+  "root_native_sha256": "a3eefcc9dd4da8bdd9141d8731fc60feaf496d5d357047c0283b53dd8e6c3382",
+  "shell_sha256": "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139",
+  "work_seconds": 20,
+  "whole_seconds": 30,
+  "retry_count": 0,
+  "lane_count": 1,
+  "outputs": [
+    "started.json",
+    "cases.json",
+    "watchdog.json",
+    "protocol-match.started.json",
+    "protocol-wrong-pid.started.json"
+  ],
+  "public_report_bytes": 65536,
+  "protocol_report_bytes": 4096,
+  "public_total_bytes": 204800
+}

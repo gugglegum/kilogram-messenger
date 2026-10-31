@@ -1,0 +1,11 @@
+# C2-T focused control source accepted; one public activation
+
+2026-10-31. Root reviewed worker, Supervisor and actual selected production definitions. Source-review a3440cce1cd8c6851f72e7a4ac20afdd20ee3113548a685961a0517d64915193 accepted within its explicit function-test scope.
+
+Root 4ecec5 verified all current source/review pins, fifteen fixed dependencies, unchanged Core/output inverses, inert production D1, exact one-predicate PID inverse to previously accepted launcher, HEAD 694bdcb and empty index. Root 75feaa reached all five successful AST parses, four shared function and seven completion-function comparisons; its final hash assertion used the wrong CRLF join in the review calculation. Root d29a8e inspected the actual LF separator, and 307cfe independently confirmed the exact 21095-byte/26-function digest. Earlier 9d2cad used the wrong prior refusal-function name in review normalization; actual Stop-C2S normalization passed. These were static reviewer calculations, not runtime attempts or source defects. Manual source review 0e27d2/d29d88/0c9305 confirms fixed synthetic paths, bounded record writers, actual protocol reader, normal retained-process reap/EOF, no production bootstrap or private-data call path.
+
+The PID amendment is now incorporated: launcher 71277 bytes / 12661c746bfad302d5dabf0acdb5ea621005f5650120300a5e971d7507e6d976 supersedes the prior launcher pin only as documented. No private activation follows from this acceptance.
+
+Authorize exactly one invocation of the pinned attempt01 watchdog using the adjacent root-allocation JSON hash. C work20/whole30, lane1/retry0. Five fixed public reports <=204800 bytes; three synthetic directories, no payload files. Preserve all outcomes; no repair/retry. This is not concurrent publication, full Parent/job/claim integration, private comparison or whole S5.3 acceptance.
+
+Reserve C30 within existing ceiling2630: spent S5.3 C1930.7534909/F1562.2882567/P0; combined C2518.2021018/F6278.6084056/P0; active C30, inactive C669.2465091/F79.7117433/P0. Charge actual request-to-final return after review, release remainder. No private grants. Executor must preserve request/final UTC, native app result, chunks, five report pins, source after pins and stop for root actual-return review. No commit/push before explicit acceptance.

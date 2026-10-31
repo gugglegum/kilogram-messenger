@@ -44,7 +44,8 @@ public sealed class Observation {
 internal sealed class Limits {
     internal const int Inventory = 16*1024*1024, PathArena = 96*1024*1024;
     internal const int RecordArena = 32*1024*1024, Scratch = 512*1024;
-    internal int Rows=8000, Entries=20000, Handles=40126;
+    internal const int CombinedHandles=40126, ProductionExternalReserve=64;
+    internal int Rows=8000, Entries=20000, Handles=CombinedHandles;
     internal const long Payload = 64L*1024*1024;
     internal long Output=64L*1024*1024;
     internal static Limits Fixture(string id) {
@@ -77,7 +78,8 @@ internal sealed class Spec {
             B=W+@"\.tmp\migration-s5-preserved\F-exhausted-preservation-01",
             E=W+@"\.tmp\migration-s5-preparation-evidence\"+ProductionAttempt,
             Attempt=ProductionAttempt,InventoryBytes=6765525,ExpectedFiles=6956,ExpectedBytes=45597399,
-            InventoryHash="c2a56327fd1462b471163956fbfb61c6b89a07e142f4828c76011c29cadf28b3",Caps=new Limits()
+            InventoryHash="c2a56327fd1462b471163956fbfb61c6b89a07e142f4828c76011c29cadf28b3",
+            Caps=new Limits {Handles=Limits.CombinedHandles-Limits.ProductionExternalReserve}
         };
     }
     internal static Spec Fixture(string id,long bytes,string hash,int files,long payload) {
