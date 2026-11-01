@@ -1,0 +1,33 @@
+Diff in \\?\E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\tests\support\migration_s54_graph.rs:7:
+ mod tests;
+ const TEXTS: usize = 1344;
+ fn limit(context: usize) -> u16 {
+-    if context == 0 {
+-        640
+-    } else {
+-        32
+-    }
++    if context == 0 { 640 } else { 32 }
+ }
+ fn digest(raw: &[u8]) -> old::Id {
+     *blake3::hash(raw).as_bytes()
+Diff in \\?\E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\tests\support\migration_s54_records_fixture.rs:3:
+ use kilogram_identity::DeviceIdentity;
+ use kilogram_protocol::ordered_dialog_v2 as wire;
+ use kilogram_ratchet::ordered::Packet;
+-use records::{verify, Credentials, Expected, Projection, Record};
++use records::{Credentials, Expected, Projection, Record, verify};
+ #[allow(dead_code)]
+ mod support {
+     include!(concat!(
+Diff in \\?\E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:145:
+     Ok(())
+ }
+ #[test]
+-fn s54_p11a3_actual_protocol_rejects_foreign_source_scope_author_selection_and_signature(
+-) -> TestResult {
++fn s54_p11a3_actual_protocol_rejects_foreign_source_scope_author_selection_and_signature()
++-> TestResult {
+     let f = Fixture::new(0)?;
+     for n in [24, 25] {
+         let format = if n == 24 { 1 } else { 2 };

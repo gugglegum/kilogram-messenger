@@ -1,0 +1,6 @@
+Get-Content: E:\AI-Projects\kilogram-p2p-messenger\.tmp\s54-block3e-p11a4-01\pure.ps1:11
+Line |
+  11 |  $capture=Get-Content -LiteralPath $capturePath -Raw|ConvertFrom-Json  :
+     |           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Cannot find path 'E:\AI-Projects\kilogram-p2p-messenger\.tmp\s54-block3e-p11a4-01\compile-01.capture.json'
+     | because it does not exist.

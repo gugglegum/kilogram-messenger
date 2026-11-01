@@ -1,0 +1,142 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: file is loaded as a module multiple times: `apps\kilogram-cli\tests\support\migration_s54_records_fixture.rs`
+  |
+  = help: replace all but one `mod` item with `use` items
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#duplicate_mod
+  = note: `-D clippy::duplicate-mod` implied by `-D warnings`
+  = help: to override `-D warnings` add `#[allow(clippy::duplicate_mod)]`
+
+error[E0599]: no method named `context` found for enum `std::option::Option<T>` in the current scope
+  --> apps\kilogram-cli\tests\support\migration_s54_graph_tests.rs:84:10
+   |
+81 |       let row = rows
+   |  _______________-
+82 | |         .iter_mut()
+83 | |         .find(|r| r.event == id(c, role, n))
+84 | |         .context("synthetic row")?;
+   | |_________-^^^^^^^
+   |
+   = help: items from traits can only be used if the trait is in scope
+help: the following traits which provide `context` are implemented but not in scope; perhaps you want to import one of them
+   |
+ 3 + use anyhow::Context;
+   |
+ 3 + use n0_error::ext::StackResultExt;
+   |
+help: there is a method `std_context` with a similar name
+   |
+84 |         .std_context("synthetic row")?;
+   |          ++++
+
+error[E0599]: no method named `context` found for enum `std::option::Option<T>` in the current scope
+   --> apps\kilogram-cli\tests\support\migration_s54_graph.rs:101:14
+    |
+ 98 |           let actual = self
+    |  ______________________-
+ 99 | |             .contexts
+100 | |             .get(context)
+101 | |             .context("bounded original stored context")?;
+    | |_____________-^^^^^^^
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: the following traits which provide `context` are implemented but not in scope; perhaps you want to import one of them
+    |
+  2 + use anyhow::Context;
+    |
+  2 + use n0_error::ext::StackResultExt;
+    |
+help: there is a method `std_context` with a similar name
+    |
+101 |             .std_context("bounded original stored context")?;
+    |              ++++
+
+error[E0599]: no method named `context` found for enum `std::option::Option<T>` in the current scope
+   --> apps\kilogram-cli\tests\support\migration_s54_graph.rs:191:14
+    |
+187 |           let context = self
+    |  _______________________-
+188 | |             .scopes
+189 | |             .iter()
+190 | |             .position(|s| s.context == row.context)
+191 | |             .context("original record context")?;
+    | |_____________-^^^^^^^
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: the following traits which provide `context` are implemented but not in scope; perhaps you want to import one of them
+    |
+  2 + use anyhow::Context;
+    |
+  2 + use n0_error::ext::StackResultExt;
+    |
+help: there is a method `std_context` with a similar name
+    |
+191 |             .std_context("original record context")?;
+    |              ++++
+
+error[E0599]: no method named `context` found for enum `std::option::Option<T>` in the current scope
+   --> apps\kilogram-cli\tests\support\migration_s54_graph.rs:251:26
+    |
+248 |                       let row = self
+    |  _______________________________-
+249 | |                         .rows
+250 | |                         .get(&(context, role, n))
+251 | |                         .context("complete contiguous original lane")?;
+    | |_________________________-^^^^^^^
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: the following traits which provide `context` are implemented but not in scope; perhaps you want to import one of them
+    |
+  2 + use anyhow::Context;
+    |
+  2 + use n0_error::ext::StackResultExt;
+    |
+help: there is a method `std_context` with a similar name
+    |
+251 |                         .std_context("complete contiguous original lane")?;
+    |                          ++++
+
+error[E0599]: no method named `context` found for enum `std::option::Option<T>` in the current scope
+   --> apps\kilogram-cli\tests\support\migration_s54_graph.rs:257:61
+    |
+257 |                         let position = self.ids.get(parent).context(
+    |                                        ---------------------^^^^^^^
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: the following traits which provide `context` are implemented but not in scope; perhaps you want to import one of them
+    |
+  2 + use anyhow::Context;
+    |
+  2 + use n0_error::ext::StackResultExt;
+    |
+help: there is a method `std_context` with a similar name
+    |
+257 |                         let position = self.ids.get(parent).std_context(
+    |                                                             ++++
+
+error[E0599]: no method named `context` found for enum `std::option::Option<T>` in the current scope
+   --> apps\kilogram-cli\tests\support\migration_s54_graph.rs:287:22
+    |
+274 |                   let candidate = (0..2u8)
+    |  _________________________________-
+275 | |                     .filter_map(|role| {
+276 | |                         self.rows
+277 | |                             .get(&(context, role, u16::try_from(next[role as usize]).ok()?))
+...   |
+286 | |                     .min_by_key(|row| row.event)
+287 | |                     .context("history causal frontier blocked/cyclic supplied graph")?;
+    | |_____________________-^^^^^^^
+    |
+    = help: items from traits can only be used if the trait is in scope
+help: the following traits which provide `context` are implemented but not in scope; perhaps you want to import one of them
+    |
+  2 + use anyhow::Context;
+    |
+  2 + use n0_error::ext::StackResultExt;
+    |
+help: there is a method `std_context` with a similar name
+    |
+287 |                     .std_context("history causal frontier blocked/cyclic supplied graph")?;
+    |                      ++++
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 7 previous errors

@@ -13,6 +13,8 @@ mod catchup;
 mod control;
 #[path = "migration_s54_early.rs"]
 mod early;
+#[path = "migration_s54_graph.rs"]
+mod graph;
 #[path = "migration_s54_handoff.rs"]
 mod handoff;
 #[path = "migration_s54_observations.rs"]
@@ -28,6 +30,9 @@ mod p9a_tests;
 mod pressure;
 #[path = "migration_s54_records.rs"]
 mod records;
+#[cfg(test)]
+#[path = "migration_s54_records_fixture.rs"]
+mod records_fixture;
 #[path = "migration_s54_relay.rs"]
 mod relay;
 #[path = "migration_s54_relay_owner.rs"]

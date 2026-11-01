@@ -3,6 +3,7 @@ use super::*;
 use kilogram_identity::DeviceIdentity;
 use kilogram_protocol::ordered_dialog_v2 as wire;
 use kilogram_ratchet::ordered::Packet;
+use records::{Credentials, Expected, Projection, Record, verify};
 #[allow(dead_code)]
 mod support {
     include!(concat!(

@@ -1,0 +1,114 @@
+{
+  "archived_files": [
+    {
+      "path": ".tmp/s54-block3e-p11a4-01/failed-clippy-01/migration_s54_graph.rs",
+      "bytes": 11338,
+      "sha256": "26db88e0b8060639e3b1b93876fd97b9ff439d0f141d3d087cd5c4e25e57e62e"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a4-01/failed-clippy-01/migration_s54_graph_tests.rs",
+      "bytes": 13437,
+      "sha256": "8347ee19d42be9c6e2fcd25b3884d2ac2682fe02a12a0636140a7a0fab8d12d3"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a4-01/failed-clippy-02/migration_s54_graph.rs",
+      "bytes": 11364,
+      "sha256": "ca7674ca57e4e7bf21e017083d4b599dff64ab293b9a2505e9113f22a8a271f9"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a4-01/failed-clippy-02/migration_s54_graph_tests.rs",
+      "bytes": 13437,
+      "sha256": "8347ee19d42be9c6e2fcd25b3884d2ac2682fe02a12a0636140a7a0fab8d12d3"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a4-01/failed-fmt-01/migration_s54_graph.rs",
+      "bytes": 11364,
+      "sha256": "ca7674ca57e4e7bf21e017083d4b599dff64ab293b9a2505e9113f22a8a271f9"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a4-01/failed-fmt-01/migration_s54_graph_tests.rs",
+      "bytes": 13380,
+      "sha256": "7a47159ceab0f8e8012a4aebba8c975f401b512f1677f8e81ae1759885c243d3"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a4-01/failed-fmt-01/migration_s54_p5.rs",
+      "bytes": 4963,
+      "sha256": "f33fe550b6329b494392c38b33979096d085660b4de817b35526663e6a7bc3e2"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a4-01/failed-fmt-01/migration_s54_records_fixture.rs",
+      "bytes": 9537,
+      "sha256": "62914a81713a32cec9f6c02e0149609f4ef71904a0549a44da3850c852138014"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a4-01/failed-fmt-01/migration_s54_records_tests.rs",
+      "bytes": 12842,
+      "sha256": "61b866e48c360ca6a3e65fc5e5c51f13957e13f6bba43ed80e525ac4ef1895b3"
+    }
+  ],
+  "preimages": [
+    {
+      "path": "E:/AI-Projects/kilogram-p2p-messenger/target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe",
+      "bytes": 50473984,
+      "sha256": "f5322cfc26b93ab7a431a474d7f33e9ff805a3e1a3df98fb1d0f84185794dcb9",
+      "archive": ".tmp/s54-block3e-p11a4-01/preimages/target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe"
+    },
+    {
+      "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 50781696,
+      "sha256": "1992cef4b4b6b2b18bb67ce80c94fb4c751ea3715626146936c44bdb619c4d57",
+      "archive": ".tmp/s54-block3e-p11a4-01/preimages/target/verification-scale/deps/kilogram-cli-bin-kilogram-cli-tests.exe"
+    },
+    {
+      "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 32656384,
+      "sha256": "2fcbfb6529fad0f156cbed869ea0455e864119dcecef94eba508aa06e588762f",
+      "archive": ".tmp/s54-block3e-p11a4-01/preimages/target/verification-scale/deps/kilogram-cli-lib-kilogram_cli-tests.exe"
+    },
+    {
+      "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 17239552,
+      "sha256": "a4479715fbccdba4adc836645e699148642d3fc8e60bd5b527bdaedda73fe809",
+      "archive": ".tmp/s54-block3e-p11a4-01/preimages/target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe"
+    },
+    {
+      "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 23695360,
+      "sha256": "4a08ce3de743241c720ec3bf25425c75b8efa695a03780fe1f74e1e7109f2a98",
+      "archive": ".tmp/s54-block3e-p11a4-01/preimages/target/verification-scale/deps/kilogram-cli-test-runtime2_process-tests.exe"
+    },
+    {
+      "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+      "bytes": 19419648,
+      "sha256": "f5822cd40225a7ac12dbc2c58264439b8e3c5d4b4d20cf87309b9aa28f2023ad",
+      "archive": ".tmp/s54-block3e-p11a4-01/preimages/target/verification-scale/deps/kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe"
+    },
+    {
+      "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+      "bytes": 22317056,
+      "sha256": "552cc6c23452ad50c94b65391e33df462b89e14551c7eac51304e55872788cf0",
+      "archive": ".tmp/s54-block3e-p11a4-01/preimages/target/verification-scale/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_p5.rs",
+      "bytes": 4838,
+      "sha256": "9fda96f9a9c9c51366e53b732d7245089fa65749fd8f838c875563ec8cbab7db",
+      "archive": ".tmp/s54-block3e-p11a4-01/preimages/apps/kilogram-cli/tests/support/migration_s54_p5.rs"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_records_fixture.rs",
+      "bytes": 9755,
+      "sha256": "c10fa112a1574137d3797521c312b47739d52b0597100864d8523cf92f22014a",
+      "git_blob": "27ca5aa251969f12ed11416f44a18eff0a41756f",
+      "archive": ".tmp/s54-block3e-p11a4-01/preimages/migration_s54_records_fixture.rs"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_records_tests.rs",
+      "bytes": 12853,
+      "sha256": "043e7bd93c877f2bbc71d942087c56ef4e7cf80a0a29d439ac3df2ce27fa5e7c",
+      "git_blob": "886701be158612055ba284fb7f4497fc38d8b9b4",
+      "archive": ".tmp/s54-block3e-p11a4-01/preimages/migration_s54_records_tests.rs"
+    }
+  ],
+  "note": "Failed Clippy01/02 graph source snapshots plus original p5/A3 preimages suffice to reconstruct those module revisions. Failed fmt01 contains all five pre-format source files. pure01 never started a harness; initial helper retained."
+}

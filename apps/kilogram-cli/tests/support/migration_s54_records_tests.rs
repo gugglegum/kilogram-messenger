@@ -1,7 +1,6 @@
 //! Real signed synthetic records through the terminal helper, no state/process fixture.
+use super::super::records_fixture as fixture;
 use super::*;
-#[path = "migration_s54_records_fixture.rs"]
-mod fixture;
 use fixture::{Fixture, TestResult};
 
 #[test]
