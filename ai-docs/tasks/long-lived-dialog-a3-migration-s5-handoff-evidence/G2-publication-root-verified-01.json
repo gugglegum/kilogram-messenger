@@ -1,0 +1,13 @@
+{
+  "classification": "root verified exact accepted G2 commit and fast-forward push",
+  "commit": "9aa47d938af990c2cb61ea6c2ffe8dc1db02a9fa",
+  "parent": "2f7e44f756ea2ae13cf270be33889bada356f8f6",
+  "tree": "c81d2a73e8c6082c137c4c2d29e63791f14bae4f",
+  "paths": 47,
+  "raw_bytes": 545491,
+  "root_exact_verification": "88903f",
+  "actual_commit": "exec-f410fca2-64a3-4231-b07b-6c8923879098 exit0",
+  "actual_push": "exec-068becf6-d01b-4177-af2e-c6cb6a2cb764 exit0",
+  "actual_remote": "exec-0612a9a8-491e-4072-b7be-6e4c3f3e96ea exit0 refs/heads/master equals commit",
+  "next": "G3 contract review; G4 after G3; whole S5.3 not complete"
+}

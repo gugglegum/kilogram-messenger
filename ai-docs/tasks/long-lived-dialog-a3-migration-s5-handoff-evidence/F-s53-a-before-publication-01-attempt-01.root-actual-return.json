@@ -1,0 +1,217 @@
+{
+  "observed_after_final_return": true,
+  "actual_outer_seconds": 86.1504473,
+  "activation_sha256": "55e68d3794ea4b5b9406b87146af77fbded0e6e3d2211e80c1d8bc5bf4a14086",
+  "producer_thread_id": "01a164ec-589c-7b41-bc34-3ba158d1f22b",
+  "actual_final_chunk": "52d4f0",
+  "case": "F-s53-a-before-publication-01",
+  "binding_sha256": "0b0bf64ff71344a41f0cab1a179195d96d462ef8165681b7adf5a2289fb88d79",
+  "classification": "root-owned-actual-predecessor-proof-r2",
+  "artifacts": {
+    "raw_final_return": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-a-before-publication-01-attempt-01.final-tool-return.json",
+      "bytes": 332,
+      "sha256": "4db23494d0d948f6bab63fa205b69381c777e1fa5d9065b687589d56aa916d45"
+    },
+    "binding": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/S5.3-integration-binding-r25.json",
+      "bytes": 508425,
+      "sha256": "0b0bf64ff71344a41f0cab1a179195d96d462ef8165681b7adf5a2289fb88d79"
+    },
+    "actual_invocation": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-a-before-publication-01-attempt-01.actual-invocation.json",
+      "bytes": 1294,
+      "sha256": "c1442b2c5eed9978193c687f717306d3de82f4694409d1ae04b37f71a882ac1a"
+    },
+    "case_record": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-a-before-publication-01-attempt-01.json",
+      "bytes": 3004,
+      "sha256": "03ea6307e85ad2426c3e52f8d85a0e5eb5e5d0fcac9a69cda7f7643723543ce6"
+    },
+    "public_traces": [
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-2e3ce2c8/live-0-2.stderr.log",
+        "bytes": 175935,
+        "sha256": "a47f9394949b418199571908fb086fd66e37599eca40b121101c42edf4a4f4cd"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-a060a3d0/live-1-2.stderr.log",
+        "bytes": 181372,
+        "sha256": "00b652ea42aa4eb090f58145aced66fdda24b5fb3ba04fae982e1adfef8168a7"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/loss.b.trace.schedule.hit",
+        "bytes": 24,
+        "sha256": "6340f67c210a49c7e27cbabd8d895ed03606d6fcfbd9f13381b1a8c395a65f9e"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/loss.b.trace.schedule.s53-A-before-publication.facts.json",
+        "bytes": 187,
+        "sha256": "4283fd4a59b87651497d4f6644c452cf1ff685801508d92e702af480aae72863"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-2e3ce2c8/indexed.profile",
+        "bytes": 1235,
+        "sha256": "4caccd36c28eb177c76bc93f57914890b98c6ee6c8ddb741ad89f53a0d4ddb0a"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-a060a3d0/indexed.profile",
+        "bytes": 1235,
+        "sha256": "42d8d638c8d04a3e1367fc42b2a34e6da218dd1af1697a74c9a760ad6a9f5c4c"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/loss.schedule.json",
+        "bytes": 95,
+        "sha256": "3cd9623115bb794f4c93aa2aa9e8d32d2eb551c3ee1f57f95dbe363ac38644f3"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/loss.b.trace.schedule.json",
+        "bytes": 2,
+        "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-2e3ce2c8/live-0-1.stdout.log",
+        "bytes": 291,
+        "sha256": "b48c189b3d76acc6ffd5e3f5d9a42ba67c5342df368dcde24e857dd30b11ed62"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-2e3ce2c8/live-0-1.stderr.log",
+        "bytes": 64,
+        "sha256": "b4a8b0da9d4cca89e3fe690e3a41d394628ca5c6cc5784ca4a7a9607eed73946"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-a060a3d0/live-1-1.stdout.log",
+        "bytes": 291,
+        "sha256": "26b46006e3afef02dd3197c852cefc6cc24bb8bbf60f4f0da42afa69f0b10ee9"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-a060a3d0/live-1-1.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-2e3ce2c8/live-0-2.stdout.log",
+        "bytes": 291,
+        "sha256": "7a901fcefea787fb18b3feb4ad054fcb1e015aa33ef870bac4e00133ae3aa7d9"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-2e3ce2c8/live-0-2.stderr.log",
+        "bytes": 175935,
+        "sha256": "a47f9394949b418199571908fb086fd66e37599eca40b121101c42edf4a4f4cd"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-a060a3d0/live-1-2.stdout.log",
+        "bytes": 291,
+        "sha256": "e261a01e48d7a8cda58fe010c94c5abf6df15604818dcf0dddeb2951a7567551"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-a060a3d0/live-1-2.stderr.log",
+        "bytes": 181372,
+        "sha256": "00b652ea42aa4eb090f58145aced66fdda24b5fb3ba04fae982e1adfef8168a7"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-a060a3d0/live-1-3.stdout.log",
+        "bytes": 291,
+        "sha256": "78413ac563a99ee95f03dd13bf7a353248b735feedb91bf4412ec226343f9b82"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-a060a3d0/live-1-3.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-2e3ce2c8/live-0-3.stdout.log",
+        "bytes": 291,
+        "sha256": "997a79ab2f549b53e3a0cd05953b86d70b85b48a034ceab9190bcdb13c8c52f0"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-2e3ce2c8/live-0-3.stderr.log",
+        "bytes": 69,
+        "sha256": "778f14d661d2b4f167f035afaa1baeed7c13182bc26c5066307c5c0fc25ae06b"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-a060a3d0/live-1-4.stdout.log",
+        "bytes": 291,
+        "sha256": "172fe17df36068333ac4c343f4aa4343a460bc7d0fe4990857902f89e87a1ede"
+      },
+      {
+        "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/loss/live-a060a3d0/live-1-4.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ],
+    "input_inventory": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-a-before-publication-01-attempt-01.inputs.json",
+      "bytes": 482141,
+      "sha256": "c1bbf3ef68b0e57efe4c563bda9f3f6bafd9a99077bea4505ec1a0027faaffef"
+    },
+    "activation": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/S5.3-integrated-r25-a-before-publication-01.activation.json",
+      "bytes": 2271,
+      "sha256": "55e68d3794ea4b5b9406b87146af77fbded0e6e3d2211e80c1d8bc5bf4a14086"
+    },
+    "outer_record": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-a-before-publication-01-attempt-01.outer.json",
+      "bytes": 1091,
+      "sha256": "c020ae5f6c6913f464e8430c7124139046ac0bf9643354561fb03ed820b47c8a"
+    },
+    "root_charge": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-a-before-publication-01-attempt-01.root-actual-charge.json",
+      "bytes": 1338,
+      "sha256": "93bf8f3922557a6e3323be9d7a266bafc2d13bbda2d9a520c2276f129e909bf9"
+    },
+    "raw_history": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-a-before-publication-01-attempt-01.tool-history.json",
+      "bytes": 3930,
+      "sha256": "217262ea2822dc665068172dead1916422b28eb14071429d67a7efbc5655abb2"
+    },
+    "compiler_guards": [
+      {
+        "host": 115,
+        "fresh_units": 501,
+        "runtime": 386,
+        "record": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-a-before-publication-01-attempt-01.compile-artifacts.json",
+          "bytes": 2680627,
+          "sha256": "013fd2ce55e5a0ded236f074290f5054fb0261c407d22055e0977871fc263cac"
+        },
+        "stable_artifacts": 6,
+        "units": 501,
+        "frozen_verified": true
+      },
+      {
+        "host": 115,
+        "fresh_units": 501,
+        "runtime": 386,
+        "record": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-a-before-publication-01-attempt-01.run-artifacts.json",
+          "bytes": 2680627,
+          "sha256": "d737de41aef276a41509f0a881356402fc0bbab4683487f2d2778d516d1ff747"
+        },
+        "stable_artifacts": 6,
+        "units": 501,
+        "frozen_verified": true
+      }
+    ],
+    "root_verification": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-a-before-publication-01-attempt-01.root-success-verification.json",
+      "bytes": 9378,
+      "sha256": "ee07273e45ecdaca0daa27c52a84ea4bd073b27d83df69aab1a85e1ac9c99f1a"
+    },
+    "log": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-a-before-publication-01-attempt-01.log",
+      "bytes": 3028,
+      "sha256": "75696bfc9bc75882a575853f858032345c55ee341def75e9d22c28fbcc3c9f6c"
+    },
+    "assertions": {
+      "path": ".tmp/migration-s53-integrated/F-s53-a-before-publication-01-attempt-01/assertions.json",
+      "bytes": 168867,
+      "sha256": "a987a15586c50390414b04f10c62536a87e503fbbb5ad92edaa038314220a1d7"
+    }
+  },
+  "whole_exit_code": 0,
+  "actual_outer_exit_code": 0,
+  "attempt": "F-s53-a-before-publication-01-attempt-01",
+  "inspection_source": "Root exec600045/session67204, pollsad1964/5ac4d0, final52d4f0; distinct post-final verification of2093 bound rows/both compiler guards/named1/0, real setup/first probe/transaction, exact marker/facts, isolated durable witness, histories/receipts/cleanup and actual duration; charged once.",
+  "producer_contract_sha256": "a27c857d21fc62d4900509a76f3b9bf0c0cc5d92e100e95905cb158cd750c232"
+}

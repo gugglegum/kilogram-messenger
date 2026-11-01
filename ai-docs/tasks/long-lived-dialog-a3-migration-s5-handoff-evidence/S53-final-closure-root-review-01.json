@@ -1,0 +1,189 @@
+{
+  "classification": "Root accepts final S5.3 scope reconciliation; documentation publication pending",
+  "baseline": "1f404b54ebce47ae3b52eaeb6855e30f3b8f3309",
+  "draft_sha256": "289c20d8864af6629ff7f268a917d238bea2a247717b664a33d4d08903fa26b1",
+  "rows": 16,
+  "historical_accepted_returns_checked": 19,
+  "proposal_paths_checked": 29,
+  "direct_links_checked": 23,
+  "source_review": "Original task/revision1 acceptance and r31 obligations compared against G1/G2/G3/B-start/G4 accepted public scope; historical source preservation reused with stated boundaries, no repeat runtime.",
+  "functional_remaining": [],
+  "external_stage": "Whole resumed-L1/P5 remains agreed S5.4",
+  "new_test_or_private_access": false,
+  "proposal": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-final-closure-01.md",
+      "bytes": 23863,
+      "sha256": "289c20d8864af6629ff7f268a917d238bea2a247717b664a33d4d08903fa26b1",
+      "git_blob": "4d2c61fc0f6cc17ff2c385a8ca54268dd854b290"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-task.md",
+      "bytes": 10349,
+      "sha256": "75cbc0f9950971820beffb08edbd7c6ccb4465d8be44aea331c51687f1807f7c",
+      "git_blob": "a85bd4ac32f1446806520943100b89f5ecd9f28c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-plan.md",
+      "bytes": 34046,
+      "sha256": "d7b4faf56b11ad320311348714b286a9b1da77d8c17cc5401604a3f6f57c4216",
+      "git_blob": "1d9a2a97b86e0d6ee7de43f268034ec8b062cfb9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-plan-revision-1.md",
+      "bytes": 16032,
+      "sha256": "b7764e3c62cbd60bfff61cfdeca0dace0aea865b42be6d8f51579ea4650e78a3",
+      "git_blob": "f7735b095729f195e0b5b9d6b0accaaff56cfae7"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-plan-review-2.md",
+      "bytes": 7045,
+      "sha256": "760be9c25095fed4cbae46bb1a93635726acab842fb9d8fbe267c788dbaa39e5",
+      "git_blob": "1936ac410e2c8b7e188e189a53db65819431c687"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-completion-matrix-r31.md",
+      "bytes": 28534,
+      "sha256": "5be175fd80d8c6863d49e2cfff4e3edd96c8f24090bee52487e70f0e7d4851ae",
+      "git_blob": "cdffb8ba985aae806d9302f615da1eb83983c536"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-static-acceptance-and-compile-task-r30.md",
+      "bytes": 13438,
+      "sha256": "a49b7219bb1fd5dd49b7fa2832b196841ccdec1a549ec7bc1a866bac8b2883a9",
+      "git_blob": "64662b2f7fb05947e4fc56913b2c14969c02578d"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-compile-acceptance-and-finalization-source-task-r30.md",
+      "bytes": 18291,
+      "sha256": "e24e5ebe9c8d4dc41fd6f5bed2c2d02e240c49d6c0c358d20764d7889136434c",
+      "git_blob": "55a9b5e662bcb0e0b79aeb8b46354d15ac3b2086"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-admission-r6-01-attempt-03.root-actual-return.json",
+      "bytes": 5150,
+      "sha256": "ccce1293cd68e799efff4f043230c7951204227f3a592bd1bf970ba9d2e1f3ef",
+      "git_blob": "e999a4aca0e45cfa4cca891f5b368311021e715a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-seen-batch-r1-01-attempt-01.root-actual-return-r2.json",
+      "bytes": 5650,
+      "sha256": "9ca2d83cd43efdc497120e4d2881ff563a6ff2983715f5fb2961360f7480378e",
+      "git_blob": "eaff8de996c2c3c08f213e33f8f77749f77ebe1c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-policy-integrated-01-attempt-01.root-actual-return.json",
+      "bytes": 5468,
+      "sha256": "08e16b0ce4411efef007a0230c10754773f67f790d103858015898e5f0b99bd1",
+      "git_blob": "1549abbcfcba10764a621859969e9d97dbb6ce83"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-discovery-integrated-01-attempt-01.root-actual-return.json",
+      "bytes": 5848,
+      "sha256": "da90bbeb1e51aadee3752ce7a248dc829cc648a8e2601ef61770987fb9f49e14",
+      "git_blob": "95c831676008873ce3b67191f4ac238d7c3eca17"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-preq-integrated-01-attempt-01.root-actual-return.json",
+      "bytes": 6785,
+      "sha256": "c5aa2bee55b56c869f2308d0ab3fe76b53cbfb26848620fe416c589565fdc731",
+      "git_blob": "8633c242d27c98dc0674d5925c92895fa014e949"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G1-publication-root-verified-01.json",
+      "bytes": 1284,
+      "sha256": "19e9605265f3bb012e79521e7676fecfce68001f84614e6ceb59c36c84fd8309",
+      "git_blob": "46699068c2e2c76c9a6f5a59f6944465e5df7530"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-root-verified-01.json",
+      "bytes": 653,
+      "sha256": "6218a6f6c02dee38f8f6afb12af5ad4f54c6860e7432851008bfa76ddb19743c",
+      "git_blob": "ca61406c36071dfe05a791cc76c801e71cda42fc"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03.root-verified.json",
+      "bytes": 915,
+      "sha256": "6572f7dfa5f5addd3847eccfad75ee9019be6dd54be8e804ddcffea7d22b0725",
+      "git_blob": "fec01328c014d2a0ad65f8566114c31264932589"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/B-start-publication-02.root-verified.json",
+      "bytes": 808,
+      "sha256": "46712e1bcd481576916e2cf921158d04b44fd4ef7722b03c9d2e234e7c55ac07",
+      "git_blob": "05d3508627c480ef6dd263dcf7d7daacc991367c"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01.executor-publication.json",
+      "bytes": 69558,
+      "sha256": "56f36b7acbde68baf209565d6ad8af4dfd905355027720aa1a2aa2f28364d90b",
+      "git_blob": "d35040a40b019103f089190fb40a54c56fdbfcd6"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-a-after-commit-01-attempt-01.root-actual-return.json",
+      "bytes": 10756,
+      "sha256": "394e3cf799074403f1c5f85bbe920e282b4b7e674d5b484ebf752d45ad6502f0",
+      "git_blob": "d3a89852b3b3da23173afeb7cb1ed7b07e7b4d95"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-a-before-commit-01-attempt-01.root-actual-return.json",
+      "bytes": 10803,
+      "sha256": "7eb9ff1e72bcf5eb78642c62f99ce8f60a3170e5df8f253e9424aa82963b95c3",
+      "git_blob": "59eb5c945fbb812523a1b89f78b8dfd82e99ef26"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-a-before-publication-01-attempt-01.root-actual-return.json",
+      "bytes": 10992,
+      "sha256": "bca91688c46eec685b4fcd6db1ca8c0e4360c0693178cb5afda78ee62805ab0f",
+      "git_blob": "5f027f9fb68074e5197215a251261f0d25cd1107"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-committed-after-commit-01-attempt-01.root-actual-return.json",
+      "bytes": 11068,
+      "sha256": "9554573e5489ce8e08eda5eca53fe8178195d6e13ab60f9867ca0fb1431be3bf",
+      "git_blob": "9980dac014241ecf3343435746250e1409b7efc5"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-committed-before-commit-01-attempt-02.root-actual-return.json",
+      "bytes": 11773,
+      "sha256": "78b1dcd609219338033e7cfa5cfea3f9a397c932b050df6a28dcaf4f23715ce9",
+      "git_blob": "e2586b32425f6668a7da53ddfa98b9650c379477"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-k-after-commit-01-attempt-01.root-actual-return.json",
+      "bytes": 10740,
+      "sha256": "6a0da144954c3808ca4d46feb10948b6288da314266ef93c1f8f1f50f28f2a74",
+      "git_blob": "fcbe727281166b2286e582f3074ce59f04118beb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-k-before-commit-01-attempt-01.root-actual-return.json",
+      "bytes": 10778,
+      "sha256": "5ae5026c883863f7dc0557f855d9a7b705dd6586faf22ef94c7211d224e37499",
+      "git_blob": "f82a806e1ddf053f7382b1ab26849901d62af0f9"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-k-before-publication-01-attempt-01.root-actual-return.json",
+      "bytes": 10976,
+      "sha256": "e342a5bfff8824bb8dd185e4436b94c8eb4a2c33c1dab3f1793433bd40bb69bd",
+      "git_blob": "11f131e62b45831e251717907fb7b732393969bb"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-p-after-commit-01-attempt-03.root-actual-return.json",
+      "bytes": 9265,
+      "sha256": "4d278228534fe08588bb5f065194e5010da606bd9d9c6103cb23a4f6346406e7",
+      "git_blob": "71e653598a654ffeaead62441c2eb700816c894a"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-p-before-commit-01-attempt-01.root-actual-return.json",
+      "bytes": 9827,
+      "sha256": "4a61c94dc0b723d21c35887bad224531adfe3676cf2ce577c787f473f93d3556",
+      "git_blob": "50a7bef3407269a4040c6305df8e154a3e865363"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-p-before-publication-01-attempt-01.root-actual-return.json",
+      "bytes": 10197,
+      "sha256": "955fb470bab847a66e1f91c50c520ae246a4d304816a268c989108c49236f88d",
+      "git_blob": "fd5ff227c78baf74dfd5759c976284346a997be3"
+    }
+  ]
+}

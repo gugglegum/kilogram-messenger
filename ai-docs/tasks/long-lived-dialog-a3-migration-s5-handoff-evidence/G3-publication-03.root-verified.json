@@ -1,0 +1,26 @@
+{
+  "classification": "Root verified exact accepted G3 publication",
+  "commit": "5f31239ecc3be0eace190db8362c310a99d7e53f",
+  "parent": "9aa47d938af990c2cb61ea6c2ffe8dc1db02a9fa",
+  "tree": "8cafb0857ad22805cce30883378dc27975e6ff9b",
+  "exact_paths_and_blobs": 101,
+  "raw_evidence_unchanged": true,
+  "index_empty": true,
+  "root_local_verification_tool": "606406",
+  "root_actual_remote_verification_tool": "f0d5bb",
+  "actual_remote_sha": "5f31239ecc3be0eace190db8362c310a99d7e53f",
+  "executor_native_tools": [
+    "exec-21262c34-c69e-4427-ba77-9eeaee48aa96",
+    "exec-8e5f3ddf-ec28-4151-9591-b5cdae34ff8d",
+    "exec-e0812f3d-eb0a-4f97-851f-35c270af0c37"
+  ],
+  "remaining_tracked_dirty": [
+    "ai-docs/README.md",
+    "ai-docs/chat-coordination.md",
+    "ai-docs/next-stage-plan.md"
+  ],
+  "remaining_S53": [
+    "B-only before ALPN2 startup contract and process check",
+    "G4 focused regressions"
+  ]
+}

@@ -1,0 +1,1828 @@
+{
+  "commands": [
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exit_code": 0,
+      "stdout": "8b3237a593c529d55af9a556fa44ad3f7a704a7c\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "branch",
+        "--show-current"
+      ],
+      "exit_code": 0,
+      "stdout": "master\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--cached",
+        "--name-only"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=scripts/migration-s53-metadata.ps1",
+        "scripts/migration-s53-metadata.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "19a7de8fecdb29758cb92fdaba8148c343842318\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=scripts/migration-s53-runtime-dependencies.ps1",
+        "scripts/migration-s53-runtime-dependencies.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "87c4905d7c7b5028cc474d580d03a5eb09d9def6\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=scripts/invoke-migration-s53-integration-case.ps1",
+        "scripts/invoke-migration-s53-integration-case.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "6aec2f3897c0bd16c63ffc4e699739b65c1a5833\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=scripts/invoke-migration-s53-integration-outer.ps1",
+        "scripts/invoke-migration-s53-integration-outer.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "f59d45aff333266889bc0ce63dacf802ffa4ce61\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=scripts/prepare-migration-s53-g4.ps1",
+        "scripts/prepare-migration-s53-g4.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "bee42d4a8cea890c180c56336fbf8c37e99cf46f\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=scripts/probe-migration-s53-g4-memory-shell.ps1",
+        "scripts/probe-migration-s53-g4-memory-shell.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "0fc864a99afe0930953ff45840eb7459ec3eaaea\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=scripts/test-migration-s53-g4-policy.ps1",
+        "scripts/test-migration-s53-g4-policy.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "0dd296e539a16b351543f8c4befcef92b009ee40\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/compile-only.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/compile-only.log"
+      ],
+      "exit_code": 0,
+      "stdout": "58cd2acd29ae90bb21caa88733ee5e45dcdab3b9\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/g4-policy.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/g4-policy.log"
+      ],
+      "exit_code": 0,
+      "stdout": "d1072854ca97c53711967648e20883d3db8d226a\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.inventory-admission.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.inventory-admission.json"
+      ],
+      "exit_code": 0,
+      "stdout": "0ad3ff618ca4957887a00cc7f31af546d96b2b0d\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.json"
+      ],
+      "exit_code": 0,
+      "stdout": "eef802202094247de3bd2703aac1d7de1c2cb365\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.log"
+      ],
+      "exit_code": 0,
+      "stdout": "d8872927b8bfb18f69670edcce8d65ec2d112ef6\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.outer.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.outer.json"
+      ],
+      "exit_code": 0,
+      "stdout": "e4967ffdabc61ebe35e34a3b805ca25b18f138ae\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.root-activation.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.root-activation.json"
+      ],
+      "exit_code": 0,
+      "stdout": "7ffd34cbac2e4639bea0c42a886869730251253b\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/inventory-roundtrip.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/inventory-roundtrip.json"
+      ],
+      "exit_code": 0,
+      "stdout": "aa92c56f0357b82f4851028389bfcf40e9aea3f3\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/legacy-policy.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/legacy-policy.log"
+      ],
+      "exit_code": 0,
+      "stdout": "4dbc87f0ba8c3e9de6bc3e607916a6278535fa7a\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/memory-shell-probe.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/memory-shell-probe.json"
+      ],
+      "exit_code": 0,
+      "stdout": "be971025578c4b0cb3a2c54b8859edc1122babc6\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/pid-cleanup.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/pid-cleanup.json"
+      ],
+      "exit_code": 0,
+      "stdout": "5e490fa41d2c709d048414cd78a5283fb997de7f\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/preparation-root-review.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/preparation-root-review.json"
+      ],
+      "exit_code": 0,
+      "stdout": "4ef9ff6668f3ffecbc6f4441793fe4fa6aa1502d\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/README.md",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/README.md"
+      ],
+      "exit_code": 0,
+      "stdout": "306d2a7b3e6c5a97390e71f539f206b4bc344a9e\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/runtime-root-review.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/runtime-root-review.json"
+      ],
+      "exit_code": 0,
+      "stdout": "7b020498fbee76079d5c7558c7c2a7f66ec8f7a4\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.inventory-admission.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.inventory-admission.json"
+      ],
+      "exit_code": 0,
+      "stdout": "256be26a5b5cb52e8bbc1927051918844733cd74\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.json"
+      ],
+      "exit_code": 0,
+      "stdout": "7a2946367156cf2923ac5a703498efedfb7dda8f\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.log"
+      ],
+      "exit_code": 0,
+      "stdout": "b8650fbf0a3808343d6ab9f9e8550dc5cba025b5\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.outer.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.outer.json"
+      ],
+      "exit_code": 0,
+      "stdout": "bf9bff169f72ec311389d0449a9bc338e09c0856\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.root-activation.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.root-activation.json"
+      ],
+      "exit_code": 0,
+      "stdout": "62b71a66fac15ea892da7e5fbe0fb32a290a45bf\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/source-and-evidence.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/source-and-evidence.json"
+      ],
+      "exit_code": 0,
+      "stdout": "916fb03848784b7225329d7dcccffa0dd4a6b6fe\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/successor-gate.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/successor-gate.json"
+      ],
+      "exit_code": 0,
+      "stdout": "00fc30908b3fea5188e430d67a21212710b15549\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--name-only",
+        "-z"
+      ],
+      "exit_code": 0,
+      "stdout": "ai-docs/README.md\u0000ai-docs/chat-coordination.md\u0000ai-docs/next-stage-plan.md\u0000scripts/invoke-migration-s53-integration-case.ps1\u0000scripts/invoke-migration-s53-integration-outer.ps1\u0000scripts/migration-s53-metadata.ps1\u0000scripts/migration-s53-runtime-dependencies.ps1\u0000",
+      "stderr": "warning: in the working copy of 'ai-docs/chat-coordination.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'scripts/invoke-migration-s53-integration-case.ps1', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'scripts/invoke-migration-s53-integration-outer.ps1', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'scripts/migration-s53-metadata.ps1', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'scripts/migration-s53-runtime-dependencies.ps1', LF will be replaced by CRLF the next time Git touches it\n"
+    },
+    {
+      "argv": [
+        "git",
+        "ls-files",
+        "--others",
+        "--exclude-standard",
+        "-z"
+      ],
+      "exit_code": 0,
+      "stdout": {
+        "utf8_bytes": 438897,
+        "sha256": "10c17d6fd117b3292a4db8c26d096715a60c703402c905006dad109f7e050d8c",
+        "raw_content": "detailed_command_archive, same argv and channel"
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "ls-remote",
+        "--exit-code",
+        "origin",
+        "refs/heads/master"
+      ],
+      "exit_code": 0,
+      "stdout": "8b3237a593c529d55af9a556fa44ad3f7a704a7c\trefs/heads/master\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exit_code": 0,
+      "stdout": "8b3237a593c529d55af9a556fa44ad3f7a704a7c\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--cached",
+        "--name-only"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=scripts/migration-s53-metadata.ps1",
+        "scripts/migration-s53-metadata.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "19a7de8fecdb29758cb92fdaba8148c343842318\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=scripts/migration-s53-runtime-dependencies.ps1",
+        "scripts/migration-s53-runtime-dependencies.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "87c4905d7c7b5028cc474d580d03a5eb09d9def6\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=scripts/invoke-migration-s53-integration-case.ps1",
+        "scripts/invoke-migration-s53-integration-case.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "6aec2f3897c0bd16c63ffc4e699739b65c1a5833\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=scripts/invoke-migration-s53-integration-outer.ps1",
+        "scripts/invoke-migration-s53-integration-outer.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "f59d45aff333266889bc0ce63dacf802ffa4ce61\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=scripts/prepare-migration-s53-g4.ps1",
+        "scripts/prepare-migration-s53-g4.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "bee42d4a8cea890c180c56336fbf8c37e99cf46f\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=scripts/probe-migration-s53-g4-memory-shell.ps1",
+        "scripts/probe-migration-s53-g4-memory-shell.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "0fc864a99afe0930953ff45840eb7459ec3eaaea\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=scripts/test-migration-s53-g4-policy.ps1",
+        "scripts/test-migration-s53-g4-policy.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "0dd296e539a16b351543f8c4befcef92b009ee40\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/compile-only.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/compile-only.log"
+      ],
+      "exit_code": 0,
+      "stdout": "58cd2acd29ae90bb21caa88733ee5e45dcdab3b9\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/g4-policy.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/g4-policy.log"
+      ],
+      "exit_code": 0,
+      "stdout": "d1072854ca97c53711967648e20883d3db8d226a\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.inventory-admission.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.inventory-admission.json"
+      ],
+      "exit_code": 0,
+      "stdout": "0ad3ff618ca4957887a00cc7f31af546d96b2b0d\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.json"
+      ],
+      "exit_code": 0,
+      "stdout": "eef802202094247de3bd2703aac1d7de1c2cb365\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.log"
+      ],
+      "exit_code": 0,
+      "stdout": "d8872927b8bfb18f69670edcce8d65ec2d112ef6\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.outer.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.outer.json"
+      ],
+      "exit_code": 0,
+      "stdout": "e4967ffdabc61ebe35e34a3b805ca25b18f138ae\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.root-activation.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.root-activation.json"
+      ],
+      "exit_code": 0,
+      "stdout": "7ffd34cbac2e4639bea0c42a886869730251253b\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/inventory-roundtrip.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/inventory-roundtrip.json"
+      ],
+      "exit_code": 0,
+      "stdout": "aa92c56f0357b82f4851028389bfcf40e9aea3f3\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/legacy-policy.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/legacy-policy.log"
+      ],
+      "exit_code": 0,
+      "stdout": "4dbc87f0ba8c3e9de6bc3e607916a6278535fa7a\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/memory-shell-probe.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/memory-shell-probe.json"
+      ],
+      "exit_code": 0,
+      "stdout": "be971025578c4b0cb3a2c54b8859edc1122babc6\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/pid-cleanup.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/pid-cleanup.json"
+      ],
+      "exit_code": 0,
+      "stdout": "5e490fa41d2c709d048414cd78a5283fb997de7f\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/preparation-root-review.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/preparation-root-review.json"
+      ],
+      "exit_code": 0,
+      "stdout": "4ef9ff6668f3ffecbc6f4441793fe4fa6aa1502d\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/README.md",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/README.md"
+      ],
+      "exit_code": 0,
+      "stdout": "306d2a7b3e6c5a97390e71f539f206b4bc344a9e\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/runtime-root-review.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/runtime-root-review.json"
+      ],
+      "exit_code": 0,
+      "stdout": "7b020498fbee76079d5c7558c7c2a7f66ec8f7a4\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.inventory-admission.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.inventory-admission.json"
+      ],
+      "exit_code": 0,
+      "stdout": "256be26a5b5cb52e8bbc1927051918844733cd74\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.json"
+      ],
+      "exit_code": 0,
+      "stdout": "7a2946367156cf2923ac5a703498efedfb7dda8f\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.log"
+      ],
+      "exit_code": 0,
+      "stdout": "b8650fbf0a3808343d6ab9f9e8550dc5cba025b5\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.outer.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.outer.json"
+      ],
+      "exit_code": 0,
+      "stdout": "bf9bff169f72ec311389d0449a9bc338e09c0856\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.root-activation.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.root-activation.json"
+      ],
+      "exit_code": 0,
+      "stdout": "62b71a66fac15ea892da7e5fbe0fb32a290a45bf\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/source-and-evidence.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/source-and-evidence.json"
+      ],
+      "exit_code": 0,
+      "stdout": "916fb03848784b7225329d7dcccffa0dd4a6b6fe\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "hash-object",
+        "--path=ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/successor-gate.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/successor-gate.json"
+      ],
+      "exit_code": 0,
+      "stdout": "00fc30908b3fea5188e430d67a21212710b15549\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "add",
+        "--",
+        "scripts/migration-s53-metadata.ps1",
+        "scripts/migration-s53-runtime-dependencies.ps1",
+        "scripts/invoke-migration-s53-integration-case.ps1",
+        "scripts/invoke-migration-s53-integration-outer.ps1",
+        "scripts/prepare-migration-s53-g4.ps1",
+        "scripts/probe-migration-s53-g4-memory-shell.ps1",
+        "scripts/test-migration-s53-g4-policy.ps1",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/compile-only.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/g4-policy.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.inventory-admission.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.outer.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.root-activation.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/inventory-roundtrip.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/legacy-policy.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/memory-shell-probe.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/pid-cleanup.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/preparation-root-review.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/README.md",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/runtime-root-review.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.inventory-admission.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.outer.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.root-activation.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/source-and-evidence.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/successor-gate.json"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "warning: in the working copy of 'scripts/invoke-migration-s53-integration-case.ps1', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'scripts/invoke-migration-s53-integration-outer.ps1', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'scripts/migration-s53-metadata.ps1', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'scripts/migration-s53-runtime-dependencies.ps1', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/README.md', CRLF will be replaced by LF the next time Git touches it\nwarning: in the working copy of 'scripts/prepare-migration-s53-g4.ps1', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'scripts/probe-migration-s53-g4-memory-shell.ps1', LF will be replaced by CRLF the next time Git touches it\nwarning: in the working copy of 'scripts/test-migration-s53-g4-policy.ps1', LF will be replaced by CRLF the next time Git touches it\n"
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--cached",
+        "--name-only",
+        "-z"
+      ],
+      "exit_code": 0,
+      "stdout": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/README.md\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/compile-only.log\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/g4-policy.log\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.inventory-admission.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.log\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.outer.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.root-activation.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/inventory-roundtrip.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/legacy-policy.log\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/memory-shell-probe.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/pid-cleanup.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/preparation-root-review.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/runtime-root-review.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.inventory-admission.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.log\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.outer.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.root-activation.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/source-and-evidence.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/successor-gate.json\u0000scripts/invoke-migration-s53-integration-case.ps1\u0000scripts/invoke-migration-s53-integration-outer.ps1\u0000scripts/migration-s53-metadata.ps1\u0000scripts/migration-s53-runtime-dependencies.ps1\u0000scripts/prepare-migration-s53-g4.ps1\u0000scripts/probe-migration-s53-g4-memory-shell.ps1\u0000scripts/test-migration-s53-g4-policy.ps1\u0000",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":scripts/migration-s53-metadata.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "19a7de8fecdb29758cb92fdaba8148c343842318\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":scripts/migration-s53-runtime-dependencies.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "87c4905d7c7b5028cc474d580d03a5eb09d9def6\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":scripts/invoke-migration-s53-integration-case.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "6aec2f3897c0bd16c63ffc4e699739b65c1a5833\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":scripts/invoke-migration-s53-integration-outer.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "f59d45aff333266889bc0ce63dacf802ffa4ce61\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":scripts/prepare-migration-s53-g4.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "bee42d4a8cea890c180c56336fbf8c37e99cf46f\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":scripts/probe-migration-s53-g4-memory-shell.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "0fc864a99afe0930953ff45840eb7459ec3eaaea\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":scripts/test-migration-s53-g4-policy.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "0dd296e539a16b351543f8c4befcef92b009ee40\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/compile-only.log"
+      ],
+      "exit_code": 0,
+      "stdout": "58cd2acd29ae90bb21caa88733ee5e45dcdab3b9\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/g4-policy.log"
+      ],
+      "exit_code": 0,
+      "stdout": "d1072854ca97c53711967648e20883d3db8d226a\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.inventory-admission.json"
+      ],
+      "exit_code": 0,
+      "stdout": "0ad3ff618ca4957887a00cc7f31af546d96b2b0d\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.json"
+      ],
+      "exit_code": 0,
+      "stdout": "eef802202094247de3bd2703aac1d7de1c2cb365\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.log"
+      ],
+      "exit_code": 0,
+      "stdout": "d8872927b8bfb18f69670edcce8d65ec2d112ef6\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.outer.json"
+      ],
+      "exit_code": 0,
+      "stdout": "e4967ffdabc61ebe35e34a3b805ca25b18f138ae\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.root-activation.json"
+      ],
+      "exit_code": 0,
+      "stdout": "7ffd34cbac2e4639bea0c42a886869730251253b\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/inventory-roundtrip.json"
+      ],
+      "exit_code": 0,
+      "stdout": "aa92c56f0357b82f4851028389bfcf40e9aea3f3\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/legacy-policy.log"
+      ],
+      "exit_code": 0,
+      "stdout": "4dbc87f0ba8c3e9de6bc3e607916a6278535fa7a\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/memory-shell-probe.json"
+      ],
+      "exit_code": 0,
+      "stdout": "be971025578c4b0cb3a2c54b8859edc1122babc6\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/pid-cleanup.json"
+      ],
+      "exit_code": 0,
+      "stdout": "5e490fa41d2c709d048414cd78a5283fb997de7f\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/preparation-root-review.json"
+      ],
+      "exit_code": 0,
+      "stdout": "4ef9ff6668f3ffecbc6f4441793fe4fa6aa1502d\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/README.md"
+      ],
+      "exit_code": 0,
+      "stdout": "306d2a7b3e6c5a97390e71f539f206b4bc344a9e\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/runtime-root-review.json"
+      ],
+      "exit_code": 0,
+      "stdout": "7b020498fbee76079d5c7558c7c2a7f66ec8f7a4\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.inventory-admission.json"
+      ],
+      "exit_code": 0,
+      "stdout": "256be26a5b5cb52e8bbc1927051918844733cd74\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.json"
+      ],
+      "exit_code": 0,
+      "stdout": "7a2946367156cf2923ac5a703498efedfb7dda8f\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.log"
+      ],
+      "exit_code": 0,
+      "stdout": "b8650fbf0a3808343d6ab9f9e8550dc5cba025b5\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.outer.json"
+      ],
+      "exit_code": 0,
+      "stdout": "bf9bff169f72ec311389d0449a9bc338e09c0856\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.root-activation.json"
+      ],
+      "exit_code": 0,
+      "stdout": "62b71a66fac15ea892da7e5fbe0fb32a290a45bf\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/source-and-evidence.json"
+      ],
+      "exit_code": 0,
+      "stdout": "916fb03848784b7225329d7dcccffa0dd4a6b6fe\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        ":ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/successor-gate.json"
+      ],
+      "exit_code": 0,
+      "stdout": "00fc30908b3fea5188e430d67a21212710b15549\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--cached",
+        "--check"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "commit",
+        "-m",
+        "test: verify S5.3 fresh offline restart and history regressions"
+      ],
+      "exit_code": 0,
+      "stdout": "[master 1f404b5] test: verify S5.3 fresh offline restart and history regressions\n 28 files changed, 4594 insertions(+), 15 deletions(-)\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/README.md\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/compile-only.log\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/g4-policy.log\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.inventory-admission.json\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.json\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.log\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.outer.json\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.root-activation.json\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/inventory-roundtrip.json\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/legacy-policy.log\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/memory-shell-probe.json\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/pid-cleanup.json\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/preparation-root-review.json\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/runtime-root-review.json\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.inventory-admission.json\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.json\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.log\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.outer.json\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.root-activation.json\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/source-and-evidence.json\n create mode 100644 ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/successor-gate.json\n create mode 100644 scripts/prepare-migration-s53-g4.ps1\n create mode 100644 scripts/probe-migration-s53-g4-memory-shell.ps1\n create mode 100644 scripts/test-migration-s53-g4-policy.ps1\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exit_code": 0,
+      "stdout": "1f404b54ebce47ae3b52eaeb6855e30f3b8f3309\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD^"
+      ],
+      "exit_code": 0,
+      "stdout": "8b3237a593c529d55af9a556fa44ad3f7a704a7c\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff-tree",
+        "--no-commit-id",
+        "--name-only",
+        "-r",
+        "-z",
+        "HEAD"
+      ],
+      "exit_code": 0,
+      "stdout": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/README.md\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/compile-only.log\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/g4-policy.log\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.inventory-admission.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.log\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.outer.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.root-activation.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/inventory-roundtrip.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/legacy-policy.log\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/memory-shell-probe.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/pid-cleanup.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/preparation-root-review.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/runtime-root-review.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.inventory-admission.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.log\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.outer.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.root-activation.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/source-and-evidence.json\u0000ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/successor-gate.json\u0000scripts/invoke-migration-s53-integration-case.ps1\u0000scripts/invoke-migration-s53-integration-outer.ps1\u0000scripts/migration-s53-metadata.ps1\u0000scripts/migration-s53-runtime-dependencies.ps1\u0000scripts/prepare-migration-s53-g4.ps1\u0000scripts/probe-migration-s53-g4-memory-shell.ps1\u0000scripts/test-migration-s53-g4-policy.ps1\u0000",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:scripts/migration-s53-metadata.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "19a7de8fecdb29758cb92fdaba8148c343842318\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:scripts/migration-s53-runtime-dependencies.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "87c4905d7c7b5028cc474d580d03a5eb09d9def6\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:scripts/invoke-migration-s53-integration-case.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "6aec2f3897c0bd16c63ffc4e699739b65c1a5833\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:scripts/invoke-migration-s53-integration-outer.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "f59d45aff333266889bc0ce63dacf802ffa4ce61\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:scripts/prepare-migration-s53-g4.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "bee42d4a8cea890c180c56336fbf8c37e99cf46f\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:scripts/probe-migration-s53-g4-memory-shell.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "0fc864a99afe0930953ff45840eb7459ec3eaaea\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:scripts/test-migration-s53-g4-policy.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "0dd296e539a16b351543f8c4befcef92b009ee40\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/compile-only.log"
+      ],
+      "exit_code": 0,
+      "stdout": "58cd2acd29ae90bb21caa88733ee5e45dcdab3b9\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/g4-policy.log"
+      ],
+      "exit_code": 0,
+      "stdout": "d1072854ca97c53711967648e20883d3db8d226a\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.inventory-admission.json"
+      ],
+      "exit_code": 0,
+      "stdout": "0ad3ff618ca4957887a00cc7f31af546d96b2b0d\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.json"
+      ],
+      "exit_code": 0,
+      "stdout": "eef802202094247de3bd2703aac1d7de1c2cb365\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.log"
+      ],
+      "exit_code": 0,
+      "stdout": "d8872927b8bfb18f69670edcce8d65ec2d112ef6\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.outer.json"
+      ],
+      "exit_code": 0,
+      "stdout": "e4967ffdabc61ebe35e34a3b805ca25b18f138ae\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.root-activation.json"
+      ],
+      "exit_code": 0,
+      "stdout": "7ffd34cbac2e4639bea0c42a886869730251253b\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/inventory-roundtrip.json"
+      ],
+      "exit_code": 0,
+      "stdout": "aa92c56f0357b82f4851028389bfcf40e9aea3f3\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/legacy-policy.log"
+      ],
+      "exit_code": 0,
+      "stdout": "4dbc87f0ba8c3e9de6bc3e607916a6278535fa7a\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/memory-shell-probe.json"
+      ],
+      "exit_code": 0,
+      "stdout": "be971025578c4b0cb3a2c54b8859edc1122babc6\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/pid-cleanup.json"
+      ],
+      "exit_code": 0,
+      "stdout": "5e490fa41d2c709d048414cd78a5283fb997de7f\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/preparation-root-review.json"
+      ],
+      "exit_code": 0,
+      "stdout": "4ef9ff6668f3ffecbc6f4441793fe4fa6aa1502d\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/README.md"
+      ],
+      "exit_code": 0,
+      "stdout": "306d2a7b3e6c5a97390e71f539f206b4bc344a9e\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/runtime-root-review.json"
+      ],
+      "exit_code": 0,
+      "stdout": "7b020498fbee76079d5c7558c7c2a7f66ec8f7a4\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.inventory-admission.json"
+      ],
+      "exit_code": 0,
+      "stdout": "256be26a5b5cb52e8bbc1927051918844733cd74\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.json"
+      ],
+      "exit_code": 0,
+      "stdout": "7a2946367156cf2923ac5a703498efedfb7dda8f\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.log"
+      ],
+      "exit_code": 0,
+      "stdout": "b8650fbf0a3808343d6ab9f9e8550dc5cba025b5\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.outer.json"
+      ],
+      "exit_code": 0,
+      "stdout": "bf9bff169f72ec311389d0449a9bc338e09c0856\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.root-activation.json"
+      ],
+      "exit_code": 0,
+      "stdout": "62b71a66fac15ea892da7e5fbe0fb32a290a45bf\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/source-and-evidence.json"
+      ],
+      "exit_code": 0,
+      "stdout": "916fb03848784b7225329d7dcccffa0dd4a6b6fe\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/successor-gate.json"
+      ],
+      "exit_code": 0,
+      "stdout": "00fc30908b3fea5188e430d67a21212710b15549\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD^{tree}"
+      ],
+      "exit_code": 0,
+      "stdout": "2e6e90a62bd1c21dfe53a2f8d15c8ccb953e8c4c\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--cached",
+        "--name-only"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD"
+      ],
+      "exit_code": 0,
+      "stdout": "1f404b54ebce47ae3b52eaeb6855e30f3b8f3309\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "push",
+        "origin",
+        "HEAD:refs/heads/master"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": "To github.com:gugglegum/kilogram-messenger.git\n   8b3237a..1f404b5  HEAD -> master\n"
+    },
+    {
+      "argv": [
+        "git",
+        "ls-remote",
+        "--exit-code",
+        "origin",
+        "refs/heads/master"
+      ],
+      "exit_code": 0,
+      "stdout": "1f404b54ebce47ae3b52eaeb6855e30f3b8f3309\trefs/heads/master\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:scripts/migration-s53-metadata.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "19a7de8fecdb29758cb92fdaba8148c343842318\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:scripts/migration-s53-runtime-dependencies.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "87c4905d7c7b5028cc474d580d03a5eb09d9def6\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:scripts/invoke-migration-s53-integration-case.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "6aec2f3897c0bd16c63ffc4e699739b65c1a5833\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:scripts/invoke-migration-s53-integration-outer.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "f59d45aff333266889bc0ce63dacf802ffa4ce61\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:scripts/prepare-migration-s53-g4.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "bee42d4a8cea890c180c56336fbf8c37e99cf46f\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:scripts/probe-migration-s53-g4-memory-shell.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "0fc864a99afe0930953ff45840eb7459ec3eaaea\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:scripts/test-migration-s53-g4-policy.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "0dd296e539a16b351543f8c4befcef92b009ee40\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/compile-only.log"
+      ],
+      "exit_code": 0,
+      "stdout": "58cd2acd29ae90bb21caa88733ee5e45dcdab3b9\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/g4-policy.log"
+      ],
+      "exit_code": 0,
+      "stdout": "d1072854ca97c53711967648e20883d3db8d226a\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.inventory-admission.json"
+      ],
+      "exit_code": 0,
+      "stdout": "0ad3ff618ca4957887a00cc7f31af546d96b2b0d\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.json"
+      ],
+      "exit_code": 0,
+      "stdout": "eef802202094247de3bd2703aac1d7de1c2cb365\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.log"
+      ],
+      "exit_code": 0,
+      "stdout": "d8872927b8bfb18f69670edcce8d65ec2d112ef6\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.outer.json"
+      ],
+      "exit_code": 0,
+      "stdout": "e4967ffdabc61ebe35e34a3b805ca25b18f138ae\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.root-activation.json"
+      ],
+      "exit_code": 0,
+      "stdout": "7ffd34cbac2e4639bea0c42a886869730251253b\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/inventory-roundtrip.json"
+      ],
+      "exit_code": 0,
+      "stdout": "aa92c56f0357b82f4851028389bfcf40e9aea3f3\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/legacy-policy.log"
+      ],
+      "exit_code": 0,
+      "stdout": "4dbc87f0ba8c3e9de6bc3e607916a6278535fa7a\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/memory-shell-probe.json"
+      ],
+      "exit_code": 0,
+      "stdout": "be971025578c4b0cb3a2c54b8859edc1122babc6\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/pid-cleanup.json"
+      ],
+      "exit_code": 0,
+      "stdout": "5e490fa41d2c709d048414cd78a5283fb997de7f\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/preparation-root-review.json"
+      ],
+      "exit_code": 0,
+      "stdout": "4ef9ff6668f3ffecbc6f4441793fe4fa6aa1502d\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/README.md"
+      ],
+      "exit_code": 0,
+      "stdout": "306d2a7b3e6c5a97390e71f539f206b4bc344a9e\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/runtime-root-review.json"
+      ],
+      "exit_code": 0,
+      "stdout": "7b020498fbee76079d5c7558c7c2a7f66ec8f7a4\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.inventory-admission.json"
+      ],
+      "exit_code": 0,
+      "stdout": "256be26a5b5cb52e8bbc1927051918844733cd74\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.json"
+      ],
+      "exit_code": 0,
+      "stdout": "7a2946367156cf2923ac5a703498efedfb7dda8f\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.log"
+      ],
+      "exit_code": 0,
+      "stdout": "b8650fbf0a3808343d6ab9f9e8550dc5cba025b5\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.outer.json"
+      ],
+      "exit_code": 0,
+      "stdout": "bf9bff169f72ec311389d0449a9bc338e09c0856\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.root-activation.json"
+      ],
+      "exit_code": 0,
+      "stdout": "62b71a66fac15ea892da7e5fbe0fb32a290a45bf\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/source-and-evidence.json"
+      ],
+      "exit_code": 0,
+      "stdout": "916fb03848784b7225329d7dcccffa0dd4a6b6fe\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "rev-parse",
+        "HEAD:ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/successor-gate.json"
+      ],
+      "exit_code": 0,
+      "stdout": "00fc30908b3fea5188e430d67a21212710b15549\n",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--name-only",
+        "-z"
+      ],
+      "exit_code": 0,
+      "stdout": "ai-docs/README.md\u0000ai-docs/chat-coordination.md\u0000ai-docs/next-stage-plan.md\u0000",
+      "stderr": "warning: in the working copy of 'ai-docs/chat-coordination.md', CRLF will be replaced by LF the next time Git touches it\n"
+    },
+    {
+      "argv": [
+        "git",
+        "ls-files",
+        "--others",
+        "--exclude-standard",
+        "-z"
+      ],
+      "exit_code": 0,
+      "stdout": {
+        "utf8_bytes": 436602,
+        "sha256": "0a9169833b6da8916728c41da71fefffe69f7d3151852a3ea3a8667baa8ed417",
+        "raw_content": "detailed_command_archive, same argv and channel"
+      },
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--cached",
+        "--name-only"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "git",
+        "diff",
+        "--name-only",
+        "--",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/legacy-policy.log",
+        "scripts/test-migration-s53-g4-policy.ps1",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/preparation-root-review.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/pid-cleanup.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.root-activation.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/g4-policy.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/memory-shell-probe.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.root-activation.json",
+        "scripts/invoke-migration-s53-integration-outer.ps1",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.log",
+        "scripts/migration-s53-runtime-dependencies.ps1",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/runtime-root-review.json",
+        "scripts/invoke-migration-s53-integration-case.ps1",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/compile-only.log",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.outer.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.inventory-admission.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/inventory-roundtrip.json",
+        "scripts/prepare-migration-s53-g4.ps1",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/smoke.outer.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/source-and-evidence.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/history.inventory-admission.json",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/successor-gate.json",
+        "scripts/probe-migration-s53-g4-memory-shell.ps1",
+        "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-publication-01/README.md",
+        "scripts/migration-s53-metadata.ps1"
+      ],
+      "exit_code": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  ],
+  "steps": [
+    "preflight",
+    "remote-before",
+    "stage",
+    "commit",
+    "push",
+    "final"
+  ],
+  "protected_tracked": {
+    "ai-docs/README.md": "ae9bebb51c93508b583b0d60082dba9fb045048abe94872110dfc7841554ab9e",
+    "ai-docs/chat-coordination.md": "c195b1eda85232928bdb366331b35b0beeca7f3eaa1995575f57261026adceb2",
+    "ai-docs/next-stage-plan.md": "52e158dd72339b23ef93de531300a57f60345dfb3b46cd7b41c044978c2906c1"
+  },
+  "manifest_sha256": "daf61d7fbed95f68cc3544e89e6cf9bdb5f274d7044ba750e7b81164e6fdb131",
+  "parent": "8b3237a593c529d55af9a556fa44ad3f7a704a7c",
+  "remote_before": "8b3237a593c529d55af9a556fa44ad3f7a704a7c",
+  "commit": "1f404b54ebce47ae3b52eaeb6855e30f3b8f3309",
+  "tree": "2e6e90a62bd1c21dfe53a2f8d15c8ccb953e8c4c",
+  "remote_after": "1f404b54ebce47ae3b52eaeb6855e30f3b8f3309",
+  "path_count": 28,
+  "allowlist_exact": true,
+  "normalized_blobs_exact": true,
+  "unrelated_tracked_preserved": true,
+  "unrelated_untracked_paths_preserved": 4061,
+  "index_empty": true,
+  "finished_utc": "2026-11-01T12:27:43.695031+00:00",
+  "protected_untracked_paths_sha256": "e57d0856f83abb612fb4140a18a93b3b12b9f96a691983de0e7b13a7edacf72f",
+  "detailed_command_archive": {
+    "path": ".tmp/g4-publish-01/steps.json",
+    "bytes": 1453909,
+    "sha256": "d66f338579f3d877f553371b75e0a8bc0730a17b0188dfe56df3c13fb9061229"
+  },
+  "actual_executor_tools": {
+    "preflight": "4c97e2 exit0",
+    "remote_before": "146f94 session45606 -> e2e244 exit0",
+    "stage": "e5f12c exit0",
+    "commit": "19d9a5 exit0",
+    "push_and_actual_remote": "b8a855 session26495 -> 9204e5 exit0",
+    "final_verification": "df1dc8 exit0"
+  }
+}

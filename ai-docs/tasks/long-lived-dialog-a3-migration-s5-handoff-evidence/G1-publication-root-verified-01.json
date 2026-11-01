@@ -1,0 +1,26 @@
+{
+  "classification": "root independently verified exact G1 publication",
+  "commit": "2f7e44f756ea2ae13cf270be33889bada356f8f6",
+  "parent": "df242b08c2958c2c9fc0553bdc002e67a7df2514",
+  "tree": "63b32392488ca414353c390a83bc540f54bf7247",
+  "paths": 87,
+  "root_local_verification": "024c20 exit0: actual HEAD parent/tree/status/modes/blobs/raw pins and empty index match approved candidate",
+  "actual_commit_command": "exec-5361be99-016d-4ae6-b993-7978c8cf5c09 exit0",
+  "actual_push_and_remote_command": "exec-259da5ad-8f38-489d-a8e7-eb486da3d0d2 exit0/6806ms",
+  "remote_master": "2f7e44f756ea2ae13cf270be33889bada356f8f6",
+  "remote_evidence": "Actual successful ordinary push and ls-remote in reviewed push_verify.py; root inspected native result, script, saved stderr and remote-master.log; origin/master matches. No additional remote query needed.",
+  "scope": "Accepted source dependencies and G1 evidence published. G2/G3/G4 and whole S5.3 acceptance remain pending.",
+  "ledger_unchanged": {
+    "S53": {
+      "C": 6402.2470595,
+      "F": 2111.2942666,
+      "P": 0
+    },
+    "combined": {
+      "C": 6989.6956704,
+      "F": 6827.6144155,
+      "P": 0
+    }
+  },
+  "next": "G2 small read-only contract/preconditions proposal, then root review before implementation."
+}

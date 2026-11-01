@@ -1,0 +1,18 @@
+{
+  "classification": "root verified exact accepted B-start publication and actual remote",
+  "commit": "8b3237a593c529d55af9a556fa44ad3f7a704a7c",
+  "parent": "5f31239ecc3be0eace190db8362c310a99d7e53f",
+  "tree": "0be719019c35eca68d1ca6e98112b49d861ec590",
+  "manifest_sha256": "a621692d92aa1cdd62c60740eb9644ad60b9f1825f4804a05cca5f796d4a366f",
+  "exact_paths": 45,
+  "source_paths": 10,
+  "public_paths": 35,
+  "raw_bytes_and_normalized_blobs_verified": true,
+  "index_empty": true,
+  "protected_navigation_unchanged": true,
+  "local_verification_tool": "fdc518",
+  "actual_remote_tool": "6ae166",
+  "actual_remote_exit_code": 0,
+  "actual_remote_master": "8b3237a593c529d55af9a556fa44ad3f7a704a7c",
+  "next": "G4 two existing fresh regressions preparation; whole S5.3 not yet accepted"
+}

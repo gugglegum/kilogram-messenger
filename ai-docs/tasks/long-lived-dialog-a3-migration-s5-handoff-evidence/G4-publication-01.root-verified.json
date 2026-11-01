@@ -1,0 +1,19 @@
+{
+  "classification": "root independently verified G4 exact accepted publication",
+  "commit": "1f404b54ebce47ae3b52eaeb6855e30f3b8f3309",
+  "parent": "8b3237a593c529d55af9a556fa44ad3f7a704a7c",
+  "tree": "2e6e90a62bd1c21dfe53a2f8d15c8ccb953e8c4c",
+  "remote_master": "1f404b54ebce47ae3b52eaeb6855e30f3b8f3309",
+  "actual_root_remote_tool": "dc7671",
+  "actual_executor_commit_tool": "exec-1887c35d-1600-4ca1-8b4f-e39f2014d304",
+  "actual_executor_push_tool": "exec-8caf98c4-0b16-492e-b584-39e4ebecf8e6",
+  "path_count": 28,
+  "source_count": 7,
+  "public_count": 21,
+  "raw_and_git_blobs_exact": true,
+  "empty_index": true,
+  "protected_navigation_preserved": true,
+  "apps_crates_diff_empty": true,
+  "allowlist_sha256": "daf61d7fbed95f68cc3544e89e6cf9bdb5f274d7044ba750e7b81164e6fdb131",
+  "executor_receipt_sha256": "56f36b7acbde68baf209565d6ad8af4dfd905355027720aa1a2aa2f28364d90b"
+}

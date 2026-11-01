@@ -1,0 +1,110 @@
+{
+  "inspection_source": "Root actual single exece9d8e2 exit0; exact invocation/final return retained; distinct post-final inspection independently rehashed1191 bound rows and both compiler guards, named1/0, all policy assertions, restored own clock0, baseline, cleanup and actual whole duration; charged once.",
+  "whole_exit_code": 0,
+  "case": "C-s53-policy-integrated-01",
+  "actual_final_chunk": "e9d8e2",
+  "binding_sha256": "e4258b3943c4928059f2e8234603abf0a75bf28430f1d95f3e662803de672e15",
+  "activation_sha256": "46b75e935ebc2102402f337df413f53d30552b70b041b9443a3e5b03b43f4cb3",
+  "attempt": "C-s53-policy-integrated-01-attempt-01",
+  "classification": "root-owned-actual-predecessor-proof-r2",
+  "producer_thread_id": "01a164ec-589c-7b41-bc34-3ba158d1f22b",
+  "artifacts": {
+    "raw_final_return": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-policy-integrated-01-attempt-01.final-tool-return.json",
+      "bytes": 321,
+      "sha256": "62949cba44f563d44fa5e7417f7043fc5ee771508f2dd363079be98abcbda5c5"
+    },
+    "root_charge": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-policy-integrated-01-attempt-01.root-actual-charge.json",
+      "bytes": 1315,
+      "sha256": "3dddbfbf787fb35ce50009f9c0c13b286f515dc9db08598dffd01d138079dea7"
+    },
+    "log": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-policy-integrated-01-attempt-01.log",
+      "bytes": 3494,
+      "sha256": "f89ee0a409d86b905871a4c8e81342a0f0425cb9dd6216c661304db4f2b1a782"
+    },
+    "root_verification": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-policy-integrated-01-attempt-01.root-success-verification.json",
+      "bytes": 3163,
+      "sha256": "9836268ce6f546c37736cd15c4e046af8b9692b056cdda0dcfc96ed3a86ccf0e"
+    },
+    "activation": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/S5.3-integrated-r14-policy-01.activation.json",
+      "bytes": 2051,
+      "sha256": "46b75e935ebc2102402f337df413f53d30552b70b041b9443a3e5b03b43f4cb3"
+    },
+    "case_record": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-policy-integrated-01-attempt-01.json",
+      "bytes": 3045,
+      "sha256": "6560a5b564e091072b6c1ba2978d9f53d5b9ff16ca0d8e10f57ed2719d9a872e"
+    },
+    "assertions": {
+      "path": ".tmp/migration-s53-integrated/C-s53-policy-integrated-01-attempt-01/assertions.json",
+      "bytes": 1506,
+      "sha256": "24579434e553cfc382e77d9ede31f36591e34ec466c530216e1c100eb4af56a6"
+    },
+    "raw_history": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-policy-integrated-01-attempt-01.tool-history.json",
+      "bytes": 2241,
+      "sha256": "2144dc220fbbe35512f1f4a81628c048880eb23e218878eea9c75108e516c931"
+    },
+    "actual_invocation": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-policy-integrated-01-attempt-01.actual-invocation.json",
+      "bytes": 1270,
+      "sha256": "eeff42eeae60cd9a5c4c40322fe5f2c8c135a02ed2a897259bdf4654826507bf"
+    },
+    "compiler_guards": [
+      {
+        "stable_artifacts": 6,
+        "fresh_units": 501,
+        "units": 501,
+        "host": 115,
+        "record": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-policy-integrated-01-attempt-01.compile-artifacts.json",
+          "bytes": 2680627,
+          "sha256": "0fb61e60eba569e718fc9a44ba3d67423df60ecd3e9a640333977a8bd368e96e"
+        },
+        "runtime": 386,
+        "frozen_verified": true
+      },
+      {
+        "stable_artifacts": 6,
+        "fresh_units": 501,
+        "units": 501,
+        "host": 115,
+        "record": {
+          "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-policy-integrated-01-attempt-01.run-artifacts.json",
+          "bytes": 2680627,
+          "sha256": "15546542550051e785c21b78fcf9d7a963a0fbc6f9a6366f426519894fb8d47c"
+        },
+        "runtime": 386,
+        "frozen_verified": true
+      }
+    ],
+    "policy_clock": {
+      "path": ".tmp/migration-s53-integrated/C-s53-policy-integrated-01-attempt-01/policy.clock",
+      "bytes": 1,
+      "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+    },
+    "outer_record": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-policy-integrated-01-attempt-01.outer.json",
+      "bytes": 1085,
+      "sha256": "0e3b7bdad780cc68b18e131bdf6e063af8db4dbfca4e1d9e70ee90f982511b5a"
+    },
+    "input_inventory": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/C-s53-policy-integrated-01-attempt-01.inputs.json",
+      "bytes": 261870,
+      "sha256": "ba19317a438274e471a5c857cb90c62df24ad3f3f9ab709c9b6cc1f66a6aba3e"
+    },
+    "binding": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/S5.3-integration-binding-r14.json",
+      "bytes": 287806,
+      "sha256": "e4258b3943c4928059f2e8234603abf0a75bf28430f1d95f3e662803de672e15"
+    }
+  },
+  "actual_outer_exit_code": 0,
+  "observed_after_final_return": true,
+  "producer_contract_sha256": "a27c857d21fc62d4900509a76f3b9bf0c0cc5d92e100e95905cb158cd750c232",
+  "actual_outer_seconds": 26.9578019
+}
