@@ -36,6 +36,7 @@ pub(crate) struct Schedule {
     #[serde(default)]
     pub hold_ack: bool,
     pub max_pause_ms: u64,
+    pub retry_live: Option<super::retry::Request>,
 }
 impl Schedule {
     pub(super) fn parse(raw: &[u8], debug: bool) -> Result<Self> {
@@ -44,6 +45,16 @@ impl Schedule {
             "S54 debug control bound/release"
         );
         let s: Self = serde_json::from_slice(raw)?;
+        if let Some(request) = &s.retry_live {
+            request.validate()?;
+            ensure!(
+                s.phase == Phase::Mixed
+                    && s.lane == 1
+                    && !s.suspend_live
+                    && !s.hold_ordinals.contains(&request.from),
+                "S54 retry Mixed/B/unheld source only"
+            );
+        }
         ensure!(
             state::hex(&state::parse_id(&s.context)?) == s.context,
             "S54 canonical context"

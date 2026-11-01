@@ -10,6 +10,7 @@ use std::{
 };
 mod control;
 use control::{Location, Phase, Schedule};
+pub(super) mod retry;
 #[cfg(test)]
 mod tests;
 
@@ -53,6 +54,18 @@ impl Observer {
     pub fn enabled(&self) -> bool {
         self.location.is_some()
     }
+    pub fn retry_nonce(&self) -> Id {
+        self.incarnation
+    }
+    pub fn retry_completed(&self, ticket: &retry::Ticket, ids: &[Id], next: u64) -> Result<()> {
+        ensure!(
+            self.enabled() && state::parse_id(&ticket.request.incarnation)? == self.incarnation,
+            "S54 completion observer incarnation"
+        );
+        retry::completed_ids(ticket, ids, next)?;
+        eprintln!("s54_observation {}",self.envelope("live_retry_complete",json!({"context":state::hex(&ticket.context),"binding":state::hex(&ticket.binding),"lease_generation":ticket.request.lease_generation,"from":ticket.request.from,"normal_first":ticket.normal_first,"first_id":state::hex(&ticket.first_id),"ids":ids.iter().map(|id|state::hex(id)).collect::<Vec<_>>(),"next":next})));
+        Ok(())
+    }
     fn envelope(&self, kind: &str, facts: Json) -> Json {
         json!({"kind":kind,"pid":std::process::id(),"incarnation":state::hex(&self.incarnation),"owner":state::hex(&self.owner),"sequence":self.sequence,"facts":facts})
     }
@@ -83,6 +96,16 @@ impl Observer {
                     json!({"counters":counters(stats),"resolved":resolved})
                 )
             );
+        }
+    }
+    pub fn head(&self, context: Id, binding: Id, generation: u64, pre_q: bool) {
+        if self.enabled() {
+            eprintln!("s54_observation {}", self.envelope("validated_head", json!({"context":state::hex(&context),"binding":state::hex(&binding),"lease_generation":generation,"pre_q":pre_q})));
+        }
+    }
+    pub fn pending(&self, context: Id, role: u8, n: u64, id: Id, report: db::CommitReport) {
+        if self.enabled() {
+            eprintln!("s54_observation {}", self.envelope("saved_pending", json!({"context":state::hex(&context),"role":role,"ordinal":n,"event":state::hex(&id),"generation":report.generation,"operation":state::hex(&report.commit_id)})));
         }
     }
     fn pause(&self, c: Id, role: u8, gate: PauseKind, facts: Json) -> Result<Option<Pause>> {

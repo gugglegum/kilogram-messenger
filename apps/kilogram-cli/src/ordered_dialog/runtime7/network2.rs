@@ -456,6 +456,7 @@ pub(super) async fn worker(
 ) -> Result<()> {
     let role = handle.call(move |o| o.role(c)).await?;
     let mut direct_next = None;
+    let mut live_retry = verification::retry::Once::default();
     let mut notified = std::collections::BTreeSet::new();
     loop {
         let state = handle
@@ -616,17 +617,42 @@ pub(super) async fn worker(
             }
         }
         let first = direct_next.unwrap_or(received).max(received);
-        if let Some(delivery) = handle
-            .call(move |o| o.outgoing2(c, binding, first, credit))
-            .await?
-        {
+        let retry_state = handle.verification_enabled.then(|| live_retry.clone());
+        let (delivery, ticket) = handle
+            .call(move |o| match retry_state {
+                Some(state) => o.retry_outgoing2(c, binding, first, received, credit, &state),
+                None => Ok((o.outgoing2(c, binding, first, credit)?, None)),
+            })
+            .await?;
+        if let Some(delivery) = delivery {
+            if let Some(ticket) = &ticket {
+                live_retry.begin(ticket.clone())?;
+            }
             let reply = rpc(handle, connection, c, &delivery.dispatch).await?;
             let request = delivery.dispatch.frame.request();
             let ids = delivery.ids;
+            let next = delivery.next;
+            let completion = ticket.clone();
+            let completed_ids = ticket.as_ref().map(|_| ids.clone());
             handle
-                .call(move |o| o.check_complete2(c, binding, reply, request, &ids))
+                .call(move |o| {
+                    o.check_complete2(c, binding, reply, request, &ids)?;
+                    if let Some(ticket) = completion {
+                        o.retry_complete2(c, binding, &ticket, &ids, next)?;
+                    }
+                    Ok(())
+                })
                 .await?;
-            direct_next = Some(delivery.next);
+            if let Some(ticket) = ticket {
+                live_retry.finish(
+                    &ticket,
+                    completed_ids
+                        .as_deref()
+                        .context("S54 captured delivery IDs")?,
+                    next,
+                )?;
+            }
+            direct_next = Some(next);
         }
         if let Some(ack) = handle.call(move |o| o.ack_push2(c, binding)).await? {
             let reply = rpc(handle, connection, c, &ack.dispatch).await?;

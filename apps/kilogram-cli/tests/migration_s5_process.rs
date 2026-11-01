@@ -64,6 +64,7 @@ fn command(exe: &Path) -> Command {
         "KILOGRAM_TEST_OD1_CLOCK_FILE",
         "KILOGRAM_TEST_OD1_PRIMARY_PAUSE_FILE",
         "KILOGRAM_TEST_MIGRATION_PAUSE_FILE",
+        "KILOGRAM_TEST_S54_SCHEDULE",
     ] {
         command.env_remove(name);
     }

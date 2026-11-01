@@ -46,6 +46,94 @@ fn tagged(items: &[v2::TaggedItem]) -> Value {
 }
 
 impl Owner7 {
+    pub(super) fn retry_outgoing2(
+        &mut self,
+        c: u8,
+        binding: Id,
+        normal_first: u64,
+        received: u64,
+        credit: Value,
+        once: &verification::retry::Once,
+    ) -> Result<(Option<Outgoing7>, Option<verification::retry::Ticket>)> {
+        let plan = self.verification_plan(c)?;
+        let request = plan.as_ref().and_then(|p| p.retry_live.as_ref());
+        let ticket = once.choose(request, binding, |request| {
+            let lease = self.check_existing_lease(c, binding)?;
+            let context = self.spec(c)?.c;
+            let role = self.role(c)? as u8;
+            let active = self.repo()?.existing_state(c)?.mode == store::ExistingMode::Active;
+            let debt = self.repo()?.debt_page(c, None, 1)?.into_iter().next();
+            let old = super::super::test_support::load()?;
+            let held = old.held(context, u64::from(role), request.from)
+                || plan
+                    .as_ref()
+                    .is_some_and(|p| p.suspend_live || p.hold_ordinals.contains(&request.from));
+            let gate = verification::retry::Gate {
+                nonce: self.verification.retry_nonce(),
+                binding,
+                context,
+                generation: lease.generation,
+                role,
+                active,
+                received,
+                normal_first,
+                debt,
+                held,
+            };
+            gate.ticket(request)
+        })?;
+        let first = ticket.as_ref().map_or(normal_first, |t| t.request.from);
+        let delivery = self.outgoing2(c, binding, first, credit)?;
+        if let Some(ticket) = &ticket {
+            let sent = delivery
+                .as_ref()
+                .context("S54 retry cannot skip actual lowest debt")
+                .with_context(|| "S54 retry ordinary credit/source unavailable")?;
+            verification::retry::completed_ids(ticket, &sent.ids, sent.next)?;
+            // outgoing2 already owns its ordinary reserve32 and verified these
+            // immutable sources. Bind the actual first encoded item, without
+            // retaining an unaccounted payload before that reservation.
+            let first = sent.dispatch.frame.body().value().fields(7)?[6]
+                .list()?
+                .first()
+                .context("S54 first actual Deliver item")?
+                .fields(2)?;
+            ensure!(first[0].uint()? == 1, "S54 retry original old source only");
+            let item = v2::TaggedItem {
+                format: 1,
+                raw: first[1].bytes()?.to_vec(),
+            };
+            let source = self.verify_source2(c, &item, &BTreeMap::new())?;
+            let facts = data2::facts(&source)?;
+            ensure!(
+                facts.id == ticket.first_id
+                    && facts.meta.role == 1
+                    && facts.meta.n == ticket.request.from
+                    && facts.meta.kind == 3,
+                "S54 retry actual immutable first old debt source"
+            );
+        }
+        Ok((delivery, ticket))
+    }
+    pub(super) fn retry_complete2(
+        &mut self,
+        c: u8,
+        binding: Id,
+        ticket: &verification::retry::Ticket,
+        ids: &[Id],
+        next: u64,
+    ) -> Result<()> {
+        let lease = self.check_existing_lease(c, binding)?;
+        ensure!(
+            binding == ticket.binding
+                && lease.generation == ticket.request.lease_generation
+                && self.spec(c)?.c == ticket.context
+                && self.role(c)? == 1
+                && self.repo()?.existing_state(c)?.mode == store::ExistingMode::Active,
+            "S54 Complete retains captured current lease/source scope"
+        );
+        self.verification.retry_completed(ticket, ids, next)
+    }
     fn scope_values2(&mut self, c: u8) -> Result<Vec<Value>> {
         let s = self.scope2(c)?;
         Ok(vec![b(s.c()), b(s.d()), b(s.e()), b(s.sid().as_bytes())])
@@ -219,6 +307,13 @@ impl Owner7 {
                 Some(binding),
                 store::ExistingData7::ObserveHead { next, last },
             )?;
+        }
+        if self.verification.enabled() {
+            let lease = self.check_existing_lease(c, binding)?;
+            let context = self.spec(c)?.c;
+            let pre_q = self.repo()?.existing_state(c)?.q.is_none() && view.q.is_none();
+            self.verification
+                .head(context, binding, lease.generation, pre_q);
         }
         Ok(())
     }

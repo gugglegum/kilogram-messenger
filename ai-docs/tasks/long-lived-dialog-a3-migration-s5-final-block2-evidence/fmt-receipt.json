@@ -1,0 +1,8 @@
+{
+  "command": ["cargo", "fmt", "--all", "--", "--check"],
+  "actual_exit_code": 0,
+  "output": "",
+  "exec_chunk_id": "33d2cf",
+  "elapsed_seconds": 4.9769126,
+  "source_changed": false
+}

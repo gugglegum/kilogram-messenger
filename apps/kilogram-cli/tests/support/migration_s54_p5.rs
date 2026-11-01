@@ -1,7 +1,24 @@
-//! S54 foundation only. No whole-P5 test/activation is defined in block1.
+//! Inactive continuous P5 controller. P0-P6 returns ownership, never whole PASS.
 use super::*;
+use kilogram_cli::ordered_dialog::{runtime7::Profile3, state};
+use kilogram_protocol::ordered_dialog_v1 as old;
+use kilogram_state::indexed_dialog as db;
+use std::collections::{BTreeMap, BTreeSet};
+#[cfg(test)]
+#[path = "migration_s54_block2_tests.rs"]
+mod block2_tests;
+#[path = "migration_s54_control.rs"]
+mod control;
+#[path = "migration_s54_early.rs"]
+mod early;
+#[path = "migration_s54_observations.rs"]
+mod observations;
 #[path = "migration_s54_oracle.rs"]
 mod oracle;
+#[path = "migration_s54_source.rs"]
+mod source;
+#[path = "migration_s54_transition.rs"]
+mod transition;
 
 struct OldOrigin {
     pair: Pair,

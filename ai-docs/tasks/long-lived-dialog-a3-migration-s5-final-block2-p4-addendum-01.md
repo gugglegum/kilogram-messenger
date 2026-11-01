@@ -1,0 +1,44 @@
+# S5.4 block2 P4 — addendum к R1/R2 до реализации
+
+2026-11-01. Ответ на [root review01](long-lived-dialog-a3-migration-s5-final-block2-root-review-01.md). Предлагается один узкий debug scheduling hook; реализация и runtime activation **не выполнялись**. Прежние Rust sources, [implementation report](long-lived-dialog-a3-migration-s5-final-block2-implementation.md) и evidence35PASS сохранены. Whole P5, commit/push и block3 по-прежнему не активированы.
+
+## Проверка существующего пути
+
+В `runtime7/network2.rs::worker` A Selected ждёт `saved_select_frame2 → rpc(K)` (537–554) и не достигает `prefix2` (607). Incoming task A независим от этого worker (`established`,653–675); Owner7 также остаётся доступен (`runtime.rs`,52–81).
+
+B worker после успешного B25 хранит `direct_next>=26`. В строке618 `first = direct_next.unwrap_or(received).max(received)`; фактический Head A сообщает received16. `outgoing2` пропустил held16 (protocol2.rs,663–669) и вернул следующий cursor после последнего включённого source (691/629). Clear hold/suspend, direct_batch, ACK flags и новый Head этот локальный cursor не уменьшают. Prefix B адресован A lane. Retry `send3(B25)` возвращает прежнее request/source association, не сбрасывает worker cursor. В просмотренном public CLI нет команды replay/prefix/rewind; reconnect сбрасывает cursor, но меняет требуемый lease bracket. Следовательно, только существующими controls исходный порядок pending9→repair при том же lease не обеспечивается.
+
+R2 также подтверждён: `rpc` вызывает `before_publication` **до** `raw_rpc` (network2.rs,154/172); внутри raw_rpc остаётся штатный timeout15 (97). Incoming Committed publication уже находится внутри своего timeout15 (394–400). Поэтому новое окно10 после Committed marker не задаёт корректного общего bound.
+
+## Предлагаемый hook: однократный retry существующего lowest debt
+
+Добавить только в debug S54 `Schedule` nullable `retry_live`:
+
+```json
+{"context":"<actual C1>","lane":1,"phase":"mixed","max_pause_ms":120000,
+ "retry_live":{"incarnation":"<actual B start nonce>","lease_generation":123,"from":16}}
+```
+
+`incarnation` берётся из реального start observation B, generation — из текущего status/Head, не из constructed identity. Existing outside-state pinned file и atomic updates сохраняются. Nested schema deny_unknown_fields; поле допустимо только в Mixed, lane1/actual local B Active, nonzero canonical incarnation, generation>0, `from`1..511 и только настоящего format1 Text. Отсутствующее поле сохраняет прежний default path. Frozen OD1 schema не меняется.
+
+Точный proposed call-site: `network2::worker` около618, **после** успешного Head RPC/accept_head2 и до обычного `outgoing2`. При S54 opt-in — короткий Owner callback, без ожидания или нового pending RPC. Проверить current family2 lease/binding/generation, совпадение собственного observer incarnation, actual B Active; требуемый ordinal равен **реальному received Head frontier**, меньше обычного first и равен первому actual `debt_page(c,None,1)`. Его source format1/context/role/ordinal проверяется существующим immutable verifier. Existing OD1/S54 holds для этого ordinal должны быть сняты; `suspend_live` несовместим с replay.
+
+Hook один раз выбирает `first=16` вместо обычного first26. Затем используются **тот же `outgoing2`**, source_item2/verify_source2, credit/byte cap16, reserve32, fresh dispatch и штатные pre-write/current permission gates. Нельзя менять queue/Head/pending/receipt, создавать Text/Native packet, выделять дополнительную quota или возвращать artificial Complete. Кандидат, не включивший исходный lowest-debt ID первым элементом, отказывает; нельзя считать запрос выполненным по пустому/пропустившему16 batch.
+
+После настоящего `rpc(Deliver)` и успешного `check_complete2` (938–961) worker помечает запрос consumed и публикует safe `live_retry_complete` observation через Owner с actual PID/incarnation/context/binding/generation, normal-first/retry-first, фактическими ID/count или digest. Повторное чтение того же файла не запускает новый retry; допускается только один такой retry на lease. До успеха token не считается consumed; ошибка RPC/смена lease завершает эту P4 проверку, а не разрешает reconnect как успех. После completion контроллер очищает поле. Decoder хранит только bounded факт этого одного запроса; это не новый operation journal и не Native effect.
+
+Затрагиваемые места после архитектурного согласования: `verification/control.rs` (typed optional field/validation), `verification.rs` (short guard/observation), `protocol2.rs` (при необходимости узкий вызов существующего private source verifier), `network2.rs` (локальный one-shot cursor choice/Complete acknowledgment), S54 decoder/controller и targeted tests. Обычный протокол и persisted cursor не меняются. Это явное дополнение проверочной scheduling capability, не найденное свойство прежней реализации.
+
+## Связная последовательность и timing
+
+1. **Первый lost Committed.** Отдельный absolute interval `min(whole_until, now+10s)` начинается **перед** первым снятием K pause. Release K → actual Committed marker/fingerprint/status → kill/wait обоих выполняются внутри него. Private stopped reads/R1 byte equality переносятся после обоих waits и не расходуют время outstanding RPC. Это намеренная потеря первого ответа, не early-readable window.
+2. До post-restart reopen выставить B `Committed-before-publication` и A **существующий** `K-before-publication`. Запустить те же owners, дождаться свежих locators/import и настоящего K marker/Selected↔Active admission. Проверить те же saved Q/K/Committed facts и получить новые local generation brackets. Пока K pause удержан, outgoing K RPC ещё **не начат**; A incoming и B worker работают независимо. Setup ограничен существующим whole/local deadline и current lease, без продления protocol timers.
+3. Зафиксировать **один** `early_until=min(whole_until, T0+10s)` непосредственно **до** снятия post-restart K pause. Этот interval включает сам atomic release, actual Committed retry marker, status/facts, B25 send, pending9/actual B25 ID proof, снятие B16 hold, постановку/подтверждение retry, early readability, очистку hook и prompt release того же Committed. Маркер, pending и repair не создают новых окон10.
+4. После pending9 снять **только B hold16**, затем atomically выставить S54 retry request для текущих B incarnation/generation/from16. Порядок безопасен: между этими обновлениями обычный cursor всё ещё>=26. **A prefix остаётся suspended** во время early proof: предлагаемый путь не зависит от недоступного prefix worker.
+5. На следующем обычном Head/worker turn B реально увидит A frontier16/ordinary capacity55 (pending9 при cap64). One-shot вызывает обычную отправку от16. При стандартном batch16 и этих десяти sources selected Deliver содержит оригинальные16..25; при меньшем допустимом payload первые frames начинаются с16, дальнейший normal cursor остаётся рядом с недоставленным хвостом. Во всех случаях первый frame обязан содержать реальный16; бюджет/credit недостаточны — это измеряемый FAIL, не padded PASS.
+6. A incoming принимает тот же исходный B16 через `dispatch2 → receive2`; прежние17..25 уже pending и проходят обычную duplicate проверку. Owner thread обычным `drain2` последовательно делает16..24 и затем25 readable, независимо от ожидающего Committed worker A. Проверяются настоящий retry Complete/IDs, B25 pending→readable, A Selected/own_next25, тот же Q/K и те же обе current family2 generations до/после history observations. Нового A Text нет.
+7. Очистить retry, снять exact Committed, завершить K/Active observations в том же absolute early interval; A prefix можно разблокировать после early proof. Истечение bound, RPC15, reconnect или изменение generation — FAIL. Штатные incoming/outgoing RPC15, permissions, source/receipt validation и quotas остаются прежними. Обещание уложиться в10 по исходникам не делается: это остаётся предметом отдельного разрешённого measurement после source review.
+
+Таким образом, наличие пути выводится из независимых B worker/A incoming/Owner drain и возврата **только локального debug send cursor** к реально существующему lowest source. Оно не выводится из арифметики pending или из успеха прежнего PREQ. Сохраняются pending9 до B16, early-readable B25 при Selected A, original IDs/body/ciphertext/receipts, same-generation bracket и exact saved controls; изменяется только явно описанная debug capability и организация двух bounded intervals.
+
+После согласования: новые evidence в `.tmp/s54-block2-02/`, focused parser/one-shot/stale-incarnation/lease/debt/held-source/default-off negatives, compile-only и strict lint изменённых targets; existing35PASS не пересчитываются как liveness proof. Реальные enrollment/product/P0–P6/F/P этой поправкой не активируются. До согласования изменён только этот addendum, Rust implementation и старые evidence остаются прежними.

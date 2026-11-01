@@ -332,7 +332,7 @@ impl Owner7 {
                 f.meta.n == meta.next[peer as usize] && ledger.head.is_none()
             };
             ensure!(head || ledger.pending < 64, "StorageBlocked: pending/head");
-            self.commit_data2(
+            let report = self.commit_data2(
                 c,
                 Some(binding),
                 store::ExistingData7::Pending {
@@ -344,6 +344,11 @@ impl Owner7 {
                     grant,
                 },
             )?;
+            if self.verification.enabled() {
+                let context = self.spec(c)?.c;
+                self.verification
+                    .pending(context, peer as u8, f.meta.n, f.id, report);
+            }
             ids.push(f.id);
         }
         self.wake.notify_waiters();

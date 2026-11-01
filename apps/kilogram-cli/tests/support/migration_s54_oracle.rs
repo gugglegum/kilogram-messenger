@@ -3,7 +3,7 @@ use super::*;
 use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-enum Phase {
+pub(super) enum Phase {
     OldReady,
     Queued,
     Interop,
@@ -17,8 +17,8 @@ enum Phase {
     Relay,
     Final,
 }
-struct Phases {
-    next: usize,
+pub(super) struct Phases {
+    pub(super) next: usize,
 }
 const ORDER: [Phase; 12] = [
     Phase::OldReady,
@@ -35,7 +35,7 @@ const ORDER: [Phase; 12] = [
     Phase::Final,
 ];
 impl Phases {
-    fn accept(&mut self, phase: Phase) -> Result<()> {
+    pub(super) fn accept(&mut self, phase: Phase) -> Result<()> {
         ensure!(
             ORDER.get(self.next) == Some(&phase),
             "S54 continuous phase order"
@@ -43,7 +43,7 @@ impl Phases {
         self.next += 1;
         Ok(())
     }
-    fn complete(&self) -> bool {
+    pub(super) fn complete(&self) -> bool {
         self.next == ORDER.len()
     }
 }
@@ -75,13 +75,13 @@ pub(super) fn ready_slot(ready: &Value, context: &str) -> Result<u8> {
     Ok(found[0] as u8)
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-struct Request {
-    context: u8,
-    role: u8,
-    number: u16,
+pub(super) struct Request {
+    pub(super) context: u8,
+    pub(super) role: u8,
+    pub(super) number: u16,
 }
 impl Request {
-    fn new(context: u8, role: u8, number: u16) -> Result<Self> {
+    pub(super) fn new(context: u8, role: u8, number: u16) -> Result<Self> {
         ensure!(
             context < 2 && role < 2 && number > 0 && number <= if context == 0 { 640 } else { 32 },
             "S54 request scope"
@@ -92,10 +92,10 @@ impl Request {
             number,
         })
     }
-    fn numeric(self) -> u64 {
+    pub(super) fn numeric(self) -> u64 {
         (u64::from(self.context) << 32) | (u64::from(self.role) << 24) | u64::from(self.number)
     }
-    fn body(self) -> String {
+    pub(super) fn body(self) -> String {
         format!(
             "P5 C{} role{} #{} / Привет \"\\\n",
             self.context + 1,
@@ -104,7 +104,7 @@ impl Request {
         )
     }
 }
-fn expected_turn(
+pub(super) fn expected_turn(
     round: u16,
 ) -> Result<(std::ops::RangeInclusive<u16>, std::ops::RangeInclusive<u16>)> {
     ensure!((0..16).contains(&round), "S54 round");
@@ -177,18 +177,18 @@ fn retained_rows(before: &[TextRow], after: &[TextRow], context: u8) -> Result<(
     Ok(())
 }
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-struct Counts {
-    encrypt: u64,
-    decrypt: u64,
-    attempts: u64,
-    aborted: u64,
-    ambiguous: u64,
-    accounts: u64,
-    outbound: u64,
-    inbound: u64,
+pub(super) struct Counts {
+    pub(super) encrypt: u64,
+    pub(super) decrypt: u64,
+    pub(super) attempts: u64,
+    pub(super) aborted: u64,
+    pub(super) ambiguous: u64,
+    pub(super) accounts: u64,
+    pub(super) outbound: u64,
+    pub(super) inbound: u64,
 }
 impl Counts {
-    fn read(value: &Value) -> Result<Self> {
+    pub(super) fn read(value: &Value) -> Result<Self> {
         let row = value.as_object().context("counter object")?;
         ensure!(row.len() == 8, "exact counter fields");
         let n = |key: &str| -> Result<u64> {
@@ -207,7 +207,7 @@ impl Counts {
             inbound: n("inbound")?,
         })
     }
-    fn delta(self, previous: Self) -> Result<Self> {
+    pub(super) fn delta(self, previous: Self) -> Result<Self> {
         Ok(Self {
             encrypt: self
                 .encrypt
@@ -243,7 +243,7 @@ impl Counts {
                 .context("inbound counter regression")?,
         })
     }
-    fn resolved(self) -> bool {
+    pub(super) fn resolved(self) -> bool {
         self.ambiguous == 0
             && self
                 .encrypt
@@ -253,10 +253,10 @@ impl Counts {
     }
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
-struct Incarnation {
-    owner: [u8; 32],
-    pid: u32,
-    nonce: [u8; 32],
+pub(super) struct Incarnation {
+    pub(super) owner: [u8; 32],
+    pub(super) pid: u32,
+    pub(super) nonce: [u8; 32],
 }
 struct Stream {
     sequence: u64,
@@ -264,13 +264,13 @@ struct Stream {
     closed: bool,
 }
 #[derive(Default)]
-struct Operations {
+pub(super) struct Operations {
     streams: BTreeMap<Incarnation, Stream>,
     operations: BTreeSet<([u8; 32], [u8; 32])>,
     generations: BTreeMap<[u8; 32], u64>,
 }
 impl Operations {
-    fn start(&mut self, key: Incarnation) -> Result<()> {
+    pub(super) fn start(&mut self, key: Incarnation) -> Result<()> {
         ensure!(
             self.streams.len() < 32
                 && key.pid > 0
@@ -299,7 +299,7 @@ impl Operations {
         );
         Ok(())
     }
-    fn commit(
+    pub(super) fn commit(
         &mut self,
         key: Incarnation,
         sequence: u64,
@@ -341,7 +341,7 @@ impl Operations {
         self.generations.insert(key.owner, generation);
         Ok(())
     }
-    fn finish(&mut self, key: Incarnation, observed: Counts) -> Result<()> {
+    pub(super) fn finish(&mut self, key: Incarnation, observed: Counts) -> Result<()> {
         let s = self
             .streams
             .get_mut(&key)
@@ -362,7 +362,7 @@ impl Operations {
         s.closed = true;
         Ok(())
     }
-    fn reconcile_final(
+    pub(super) fn reconcile_final(
         &mut self,
         key: Incarnation,
         generation: u64,
@@ -384,7 +384,7 @@ impl Operations {
         }
         self.finish(key, final_counts)
     }
-    fn complete(&self) -> Result<(u64, u64)> {
+    pub(super) fn complete(&self) -> Result<(u64, u64)> {
         ensure!(
             !self.streams.is_empty() && self.streams.values().all(|s| s.closed),
             "missing final process outcomes"
@@ -434,13 +434,13 @@ fn whole_packet_total(
         .context("invalid old/current overlap or packet total overflow")
 }
 #[derive(Default)]
-struct Pages {
+pub(super) struct Pages {
     total: u64,
     last_local: BTreeMap<Incarnation, u64>,
     operations: BTreeSet<([u8; 32], [u8; 32])>,
 }
 impl Pages {
-    fn accepted(
+    pub(super) fn accepted(
         &mut self,
         key: Incarnation,
         local: u64,
@@ -465,7 +465,7 @@ impl Pages {
         self.total += 1;
         Ok(())
     }
-    fn local_target(&self, key: Incarnation, target: u64) -> Result<u64> {
+    pub(super) fn local_target(&self, key: Incarnation, target: u64) -> Result<u64> {
         ensure!(
             target > self.total && target <= 256,
             "interruption target already passed"
