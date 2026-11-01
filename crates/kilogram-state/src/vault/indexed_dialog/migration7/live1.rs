@@ -8,6 +8,9 @@ use serde::{Deserialize, Serialize};
 #[path = "live1/types.rs"]
 mod types;
 pub use types::*;
+#[path = "live1/accounting.rs"]
+mod accounting;
+pub use accounting::{L1Accounting, L1AccountingGroup};
 #[path = "existing.rs"]
 mod existing;
 pub use existing::*;
@@ -164,6 +167,13 @@ impl L1Repository {
     }
     pub fn backend_stats(&self) -> Result<BackendStats> {
         self.core.backend_stats()
+    }
+    pub fn credits(&self) -> Result<CreditReport> {
+        self.core.credits()
+    }
+    /// Bounded numeric facts from the authenticated root; no value reads or writes.
+    pub fn accounting(&self) -> Result<L1Accounting> {
+        accounting::snapshot(&self.core.root.roots)
     }
     pub fn reopen(self) -> std::result::Result<Self, L1ReopenFailure> {
         let device = self.profile.device;

@@ -78,6 +78,63 @@ function Read-KilogramS53Baseline([string]$Workspace,[string]$Expected) {
     return $result
 }
 
+function Get-KilogramS53BindingName([string]$Case) {
+    if($Case -ceq 'F-s53-capacity-recovery-r2-01'){return 'G2-capacity-route-02.binding.candidate.json'}
+    if($Case -ceq 'F-s53-exhausted-integrated-01'){return 'C-s53-g1-continuation-C2-01.binding.candidate.json'}
+    return 'S5.3-integration-binding-r30.json'
+}
+function Assert-KilogramS53G2Policy([string]$Case,$Binding) {
+    $g2='F-s53-capacity-recovery-r2-01'
+    $kind='g2-only-current-capacity-route-candidate'
+    if($Case -cne $g2){
+        if($Binding.classification -ceq $kind){throw 'G2 binding cannot authorize another case.'}
+        return
+    }
+    if($Binding.classification -cne $kind -or $Binding.baseline -cne '64c2359788ead360314793e47741adacb83b8d4f' -or
+        $Binding.source_head -isnot [string] -or $Binding.source_head -cnotmatch '^[0-9a-f]{40}$' -or
+        $Binding.cases -isnot [Array] -or $Binding.cases.Count -ne 1){throw 'Exact G2 current source and single-case binding required.'}
+    $policy=$Binding.cases[0]
+    if($policy.case -cne $g2 -or $policy.selector -cne 'live_l1::handoff::capacity_review2::s53_capacity_recovery_preserves_validated_route_public' -or
+        $policy.expected_count -ne 1 -or $policy.build_profile -cne 'verification-scale' -or
+        $policy.image -cne 'target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe' -or
+        $policy.controller_seconds -ne 240 -or $policy.work_seconds -ne 275 -or $policy.whole_seconds -ne 300 -or
+        $Binding.expected_artifacts.sha256 -isnot [string] -or $Binding.expected_artifacts.sha256 -cnotmatch '^[0-9a-f]{64}$'){
+        throw 'Exact G2 selector, frozen scale artifacts and finite case policy required.'
+    }
+}
+function Read-KilogramS53CaseBaseline([string]$Workspace,[string]$Case,$Binding) {
+    Assert-KilogramS53G2Policy $Case $Binding
+    $expected='64c2359788ead360314793e47741adacb83b8d4f'
+    if($Case -cin @('F-s53-exhausted-integrated-01','F-s53-capacity-recovery-r2-01')){
+        if($Binding.source_head -isnot [string] -or $Binding.source_head -cnotmatch '^[0-9a-f]{40}$'){throw 'Exact current case source HEAD required.'}
+        $expected=$Binding.source_head
+    }
+    Read-KilogramS53Baseline -Workspace $Workspace -Expected $expected
+}
+function Get-KilogramS53ImageRoles([string]$Case) {
+    @(
+        'target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe',
+        'target/compatibility/long-lived-dialog-migration/kilogram-cli.exe',
+        'target/verification-scale/deps/kilogram-cli-bin-kilogram-cli-tests.exe',
+        'target/verification-scale/deps/kilogram-cli-lib-kilogram_cli-tests.exe',
+        'target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe',
+        'target/verification-scale/deps/kilogram-cli-test-runtime2_process-tests.exe',
+        'target/verification-scale/deps/kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe',
+        'target/verification-scale/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe',
+        'target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe'
+    )
+    if($Case -ceq 'F-s53-capacity-recovery-r2-01'){'target/compatibility/long-lived-dialog-runtime/kilogram-relay.exe'}
+}
+function Assert-KilogramS53ImageRoles([string]$Case,$Images) {
+    $roles=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    foreach($path in @(Get-KilogramS53ImageRoles $Case)){[void]$roles.Add($path)}
+    if($Images -isnot [Array] -or $Images.Count -ne $roles.Count){throw 'Exact case image role count required.'}
+    foreach($row in $Images){
+        if($row.path -isnot [string] -or -not $roles.Remove($row.path)){throw 'Unknown or duplicate case image role.'}
+    }
+    if($roles.Count -ne 0){throw 'Missing case image role.'}
+}
+
 # r29a inventory-envelope helpers BEGIN
 function Get-KilogramS53InventoryByteLimit {
     [CmdletBinding()]
@@ -137,6 +194,9 @@ function New-KilogramS53InventoryEnvelope {
         $workspaceFull -ceq [IO.Path]::GetPathRoot($Workspace).TrimEnd([char[]]@('\', '/'))) { throw 'Inventory workspace is not a normalized owned directory.' }
     $workspacePrefix = $workspaceFull + [IO.Path]::DirectorySeparatorChar
     $bound = & $members $Binding 'Binding' $null
+    if($Case -ceq 'F-s53-capacity-recovery-r2-01' -or ($bound.ContainsKey('classification') -and $bound['classification'] -ceq 'g2-only-current-capacity-route-candidate')){
+        Assert-KilogramS53G2Policy $Case $Binding
+    }
     foreach ($field in @('baseline', 'inputs', 'images', 'runtime_dependencies', 'cases', 'code_source_count')) {
         if (-not $bound.ContainsKey($field)) { throw "Binding lacks $field." }
     }
@@ -203,18 +263,8 @@ function New-KilogramS53InventoryEnvelope {
     $sourceRows = [Collections.Generic.List[object]]::new()
     foreach ($path in $sourcePaths) { $sourceRows.Add($sources[$path]) }
     $requiredImages = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
-    foreach ($path in @(
-        'target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe',
-        'target/compatibility/long-lived-dialog-migration/kilogram-cli.exe',
-        'target/verification-scale/deps/kilogram-cli-bin-kilogram-cli-tests.exe',
-        'target/verification-scale/deps/kilogram-cli-lib-kilogram_cli-tests.exe',
-        'target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe',
-        'target/verification-scale/deps/kilogram-cli-test-runtime2_process-tests.exe',
-        'target/verification-scale/deps/kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe',
-        'target/verification-scale/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe',
-        'target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe'
-    )) { [void]$requiredImages.Add($path) }
-    if ($bound['images'].Count -ne $requiredImages.Count) { throw 'Nine required image roles must be present.' }
+    foreach ($path in @(Get-KilogramS53ImageRoles $Case)) { [void]$requiredImages.Add($path) }
+    if ($bound['images'].Count -ne $requiredImages.Count) { throw 'Exact case image roles must be present.' }
     $imageRows = [Collections.Generic.List[object]]::new()
     foreach ($entry in $bound['images']) {
         $checked = & $rowValue $entry 'image'
@@ -297,13 +347,15 @@ function Assert-KilogramS53WrittenInventory {
         if ($value[$name] -isnot [string]) { throw 'Prepared inventory context must retain string types.' }
     }
     if ($value['sources'] -isnot [Array] -or $value['sources'].Count -eq 0 -or
-        $value['images'] -isnot [Array] -or $value['images'].Count -ne 9 -or
+        $value['images'] -isnot [Array] -or
         $value['runtime_dependencies'] -isnot [Array] -or $value['runtime_dependencies'].Count -ne 1 -or
         $value['prerequisites'] -isnot [Array]) { throw 'Prepared inventory arrays differ.' }
     if ($value['case'] -isnot [string] -or $value['case'] -cnotmatch '\A[CF]-s53-[a-z0-9-]+-01\z' -or
         $value['attempt'] -isnot [string] -or $value['attempt'] -cnotmatch ('\A' + [regex]::Escape($value['case']) + '-attempt-[0-9]{2}\z') -or
         $value['binding_sha256'] -isnot [string] -or $value['binding_sha256'] -cnotmatch '\A[0-9a-f]{64}\z' -or
         $value['activation_sha256'] -isnot [string] -or $value['activation_sha256'] -cnotmatch '\A[0-9a-f]{64}\z') { throw 'Invalid prepared inventory context.' }
+    Assert-KilogramS53ImageRoles $value['case'] $value['images']
+    if($value['case'] -ceq 'F-s53-capacity-recovery-r2-01' -and $value['prerequisites'].Count -ne 0){throw 'G2 requires zero prerequisites.'}
     $run = [IO.Path]::Combine($Envelope.Workspace, '.tmp', 'migration-s53-integrated', $value['attempt'])
     $ownedPath = [IO.Path]::Combine($Envelope.Workspace, 'ai-docs', 'tasks', 'long-lived-dialog-a3-migration-s5-handoff-evidence', $value['attempt'] + '.inputs.json')
     if ($Envelope.InventoryPath -isnot [string] -or $Envelope.InventoryPath -cne $ownedPath -or

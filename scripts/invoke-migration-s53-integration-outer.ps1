@@ -7,12 +7,18 @@ $workspace=Split-Path -Parent $PSScriptRoot
 $evidence=Join-Path $workspace 'ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence'
 function Hash([string]$Path){(Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()}
 if((Hash $ActivationFile) -cne $ActivationSha256){throw 'Exact root activation required.'}
-$bindingName=if($Case -ceq 'F-s53-exhausted-integrated-01'){'C-s53-g1-continuation-C2-01.binding.candidate.json'}else{'S5.3-integration-binding-r30.json'}
+. (Join-Path $PSScriptRoot 'migration-s53-metadata.ps1')
+$bindingName=Get-KilogramS53BindingName $Case
 $bindingPath=Join-Path $evidence $bindingName;$bindingHash=Hash $bindingPath
 $binding=Get-Content -LiteralPath $bindingPath -Raw|ConvertFrom-Json
 $activation=Get-Content -LiteralPath $ActivationFile -Raw|ConvertFrom-Json
 $allocation=@($activation.cases|Where-Object {$_.case -ceq $Case -and $_.attempt -ceq $Attempt})
 if($activation.activated -ne $true -or $activation.binding_sha256 -cne $bindingHash -or $allocation.Count -ne 1){throw 'Inactive exact outer allocation.'}
+Assert-KilogramS53G2Policy $Case $binding
+if($Case -ceq 'F-s53-capacity-recovery-r2-01'){
+    $head=Read-KilogramS53CaseBaseline -Workspace $workspace -Case $Case -Binding $binding
+    if($head.status -cne 'verified_match' -or $allocation[0].build_profile -cne 'verification-scale' -or $activation.expected_artifacts_sha256 -cne $binding.expected_artifacts.sha256){throw 'Current G2 HEAD and frozen scale outer allocation required.'}
+}
 . (Join-Path $PSScriptRoot 'migration-s53-runtime-dependencies.ps1')
 if(@($binding.runtime_dependencies).Count -ne 1 -or @($activation.runtime_dependencies).Count -ne 1){throw 'Exactly one reviewed shell dependency required.'}
 $shell=Get-KilogramS53ShellDependency -Executable $ShellExecutable -Expected $binding.runtime_dependencies[0] -RequireCurrentHost

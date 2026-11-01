@@ -1,0 +1,164 @@
+{
+  "case": "F-s53-capacity-recovery-r2-01",
+  "classification": "functional_assertions_completed",
+  "observations": {
+    "classification": "G2 two actual cuts, exact two deliveries and final persistence",
+    "owned_children_cleaned": true,
+    "phases": [
+      {
+        "blake3": "62efcd07b76289ad702c2eec05051091215e8a1741669d9ccf077b77c405085c",
+        "bytes": 7143,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-fixture-observed.json"
+      },
+      {
+        "blake3": "4f798da1779f4c881bd75ab99ee654819d8b9bf8cc8ae07b42d8d9df873bb02b",
+        "bytes": 15940,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-fixture.json"
+      },
+      {
+        "blake3": "1d8130499de4ca235d9d6304384d1fc1c485cbeb043d61264bd8f63660255f29",
+        "bytes": 7514,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-routed.json"
+      },
+      {
+        "blake3": "a0f46600afc79f510912c4320a0016970cf96c056844b3675d15522befb9e027",
+        "bytes": 7165,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-capacity-committed-before-cut-observed.json"
+      },
+      {
+        "blake3": "9f3ef5b249256df4806a21cf30fb207984958d3ad8023ff70c9e53ec9ad7564c",
+        "bytes": 12282,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-capacity-committed-before-cut.json"
+      },
+      {
+        "blake3": "140166828d581a41856477aa696f7f2a00e16a4e2a65e3dff9696e812dd60dba",
+        "bytes": 503,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-capacity-committed-hit.json"
+      },
+      {
+        "blake3": "b07a1a199c341271982b88f3dd77e6ef7a257dfa45f6582386b014b2a67e3c42",
+        "bytes": 7164,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-capacity-committed-committed-observed.json"
+      },
+      {
+        "blake3": "3c80f4b0ecb6c7232f7efda3df926472f011f702e6fa0553b73f13a421c31d3e",
+        "bytes": 7163,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-capacity-committed-committed.json"
+      },
+      {
+        "blake3": "8adfd68159fbf02e23ed8b7ed4bd0348df84bc8de10d818d723e19c90ab46899",
+        "bytes": 7162,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-capacity-committed-resumed-observed.json"
+      },
+      {
+        "blake3": "9b1fda0f5d77e303951f364b8ec918ed84ab5767f5003d3254961f89931c2f12",
+        "bytes": 8084,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-capacity-committed-resumed.json"
+      },
+      {
+        "blake3": "cc69fad7bdb6c36b7cd9ffa6f8ae3ecaadede91f5b58c3d4107c60aca7579fa4",
+        "bytes": 8583,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-capacity-committed-admitted.json"
+      },
+      {
+        "blake3": "471710bb3c878143a99f96a67969d366e2ec0e44acf99d1bb72ca45ef9c69848",
+        "bytes": 10666,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-capacity-committed-delivered.json"
+      },
+      {
+        "blake3": "cb49874b1fa23d2b64f8b6e6138fe258e944328dcef71e1783f003aedbf71293",
+        "bytes": 10157,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-capacity-committed-stopped-observed.json"
+      },
+      {
+        "blake3": "c3850d2f2fd0204dfb9320e3d7ce4bec079b88cbef6e1bf8d42f659f7b295206",
+        "bytes": 12297,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-capacity-committed-stopped.json"
+      },
+      {
+        "blake3": "8d49754312336040e7adc5c55c26d0d3c606560c9f5bd2b0ab3de16b2104db5b",
+        "bytes": 10156,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-profile-staged-before-cut-observed.json"
+      },
+      {
+        "blake3": "2bdc62913d0984daacb3ee6a3680b055dec20306f533af1dab0d0b67a1f61808",
+        "bytes": 15273,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-profile-staged-before-cut.json"
+      },
+      {
+        "blake3": "08a2ba44ae52d40f8acf0adc7d45536a9e7203aa5e91d00cafb1b07aa6d4971a",
+        "bytes": 557,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-profile-staged-hit.json"
+      },
+      {
+        "blake3": "3e58e8f4c483d3c11af854c99557b747e8588480da4ffb305175a43eae9d9215",
+        "bytes": 10155,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-profile-staged-committed-observed.json"
+      },
+      {
+        "blake3": "3de42a32a9e02e39c98c02cced82cd70512702c950346c7a9fa0c8a1364d7ddb",
+        "bytes": 10154,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-profile-staged-committed.json"
+      },
+      {
+        "blake3": "0a33ea7110250734b503e0e7d6bd99f03b130ec4e4d4f9a01fe2c1f032bb05cf",
+        "bytes": 10153,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-profile-staged-resumed-observed.json"
+      },
+      {
+        "blake3": "d432119e1e95120eee6bf7e911e1db6f3ce417c62fa2cfdc7b59b8a960ce3d7c",
+        "bytes": 11076,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-profile-staged-resumed.json"
+      },
+      {
+        "blake3": "ee1f12d1592b18094027b36f4337dadc37e843cba511ca43718c84c6a9f87f21",
+        "bytes": 9309,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-profile-staged-admitted.json"
+      },
+      {
+        "blake3": "cd5ac8008a12288faffe5137e9d0a3fd5a8e1c4006b7d3ef01f9f202864d1d8e",
+        "bytes": 12003,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-profile-staged-delivered.json"
+      },
+      {
+        "blake3": "c160b6ef709d7e852c382cb591666ed0ece07b020779d4843384a757df88e925",
+        "bytes": 13181,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-profile-staged-stopped-observed.json"
+      },
+      {
+        "blake3": "278a4632a7c492a551b4bec6a106e1a8a8f4fc37b19ddaf202a444abb3e823be",
+        "bytes": 16044,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-profile-staged-stopped.json"
+      },
+      {
+        "blake3": "41e01253a87f5a762c4262159d60dbe0ed4d6a428da1133618c77b286210e7f4",
+        "bytes": 13179,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-before-final-restart-observed.json"
+      },
+      {
+        "blake3": "eb2504a32d03246e88f63f360fda796759709ca6087e98a5eb6bc8a863f69c97",
+        "bytes": 13370,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-before-final-restart.json"
+      },
+      {
+        "blake3": "79bfcbe287f79571d6368469503b54b7be26253a10a7eb40264ae4742a463368",
+        "bytes": 13173,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-final-reopened-observed.json"
+      },
+      {
+        "blake3": "af91da7f65f436fe141db9fee74cf2e4f7c0d8934ddf726dbde068ac701f0d9f",
+        "bytes": 29019,
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\capacity-final-restarted.json"
+      }
+    ]
+  },
+  "output": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02\\assertions.json",
+  "provenance": {
+    "blake3": "859656790f99746172b972b8d97ba1db444cc284de6f17ca6824a6715070940b",
+    "identity": "S5.3/integrated/F-s53-capacity-recovery-r2-01-attempt-02/3ec9d7e0177902facbb66a58c1bd34e4ffdff667086aac2eb3b59c2245bc8363",
+    "kind": "bound_pre_run_inventory",
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-capacity-recovery-r2-01-attempt-02.inputs.json"
+  },
+  "run": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-capacity-recovery-r2-01-attempt-02",
+  "whole_attempt_verdict": "not_established"
+}

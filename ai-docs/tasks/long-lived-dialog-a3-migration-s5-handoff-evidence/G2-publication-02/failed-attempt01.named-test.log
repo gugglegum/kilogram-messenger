@@ -1,0 +1,39 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification-scale' without executing them...
+    Finished `verification-scale` profile [optimized + debuginfo] target(s) in 0.89s
+frozen_artifacts_verified=True
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-runtime2_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 45 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+running 1 test
+Error: G2 stopped persistence mismatch
+test live_l1::handoff::capacity_review2::s53_capacity_recovery_preserves_validated_route_public ... FAILED
+
+failures:
+
+failures:
+    live_l1::handoff::capacity_review2::s53_capacity_recovery_preserves_validated_route_public
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 51 filtered out; finished in 15.34s
+

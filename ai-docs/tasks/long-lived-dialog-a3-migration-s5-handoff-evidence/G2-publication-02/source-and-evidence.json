@@ -1,0 +1,569 @@
+{
+  "classification": "portable historical G2 evidence and exact reviewed source; local replay inputs are not distributed",
+  "source": [
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_capacity_review2.rs",
+      "bytes": 24215,
+      "sha256": "e7d373ee446d1a8b7897b486fb8e6d893fa203cf782d645c0affe13d0f525ca2",
+      "git_blob": "53a7534e5261908bf9bef6117b1bbcfbc2e10715"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_capacity_oracle.rs",
+      "bytes": 27822,
+      "sha256": "dafc6d484279a6c134c09e373a937adba308cce52a7577a36c67252414a14168",
+      "git_blob": "32e6c2d56e533aa6c88c2dd52f8376526fc19bf6"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_capacity_witness.rs",
+      "bytes": 14472,
+      "sha256": "1d10d14d21cfbba1a96ae976c21d94c39afb79558337bf1d3ddd7285218d83a3",
+      "git_blob": "4d93de566e70795a2e3b9f1f41d137bfb191cce2"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs",
+      "bytes": 14956,
+      "sha256": "77af5476888d359abf75eb261e184a50a283689a9ae03df66b2184ee4e0f19c7",
+      "git_blob": "e8b8e7a2c345e40d0167d6835fe76287a9a56361"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/accounting.rs",
+      "bytes": 5845,
+      "sha256": "b2041ceb2d99434429c433177ed26baa1fc3a28f019b0bb6b48503e5f672218e",
+      "git_blob": "f180e3165d32c8d28a0fb935b45a0aeae20807ae"
+    },
+    {
+      "path": "scripts/invoke-migration-s53-integration-case.ps1",
+      "bytes": 41806,
+      "sha256": "09a40d4a167fec98d3911d0080e95665e907b638cc41a7cb222dd3784dd98f75",
+      "git_blob": "92e2e4159caf40a921b99eb922037b71d2affaee"
+    },
+    {
+      "path": "scripts/invoke-migration-s53-integration-outer.ps1",
+      "bytes": 5342,
+      "sha256": "12a1947ed53ccc4a69522ed1c4004e612ea927efe1ac036c9e4506eea0d3d90b",
+      "git_blob": "74795e6b2fa334c82cbedda06d1358fb8abe9615"
+    },
+    {
+      "path": "scripts/migration-s53-metadata.ps1",
+      "bytes": 30345,
+      "sha256": "0822a2e5e573c78604cd458eb8c1e4615d3982aaa40da263ac65de1a0805b5c4",
+      "git_blob": "e2a3593dd53d00458b4df73bf1588a48b73f2106"
+    },
+    {
+      "path": "scripts/prepare-migration-s53-g2.ps1",
+      "bytes": 19310,
+      "sha256": "2c073b724af98a932b55c71cac18fa48e53ca2e34dfaa83213a61077b124a35e",
+      "git_blob": "f1d171466ae4c5d3327f7c8ffaff20db37f12724"
+    }
+  ],
+  "evidence_copies": [
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-fixture-observed.json",
+        "bytes": 7143,
+        "sha256": "1687ba5c1f40d0cf162129e23914d8282090b640cefa8accc4d37e1407e7e28a"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-fixture-observed.json",
+        "bytes": 7143,
+        "sha256": "1687ba5c1f40d0cf162129e23914d8282090b640cefa8accc4d37e1407e7e28a"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-fixture.json",
+        "bytes": 15940,
+        "sha256": "e870339b5ff90a28a7ad57f7377ffcf47008beeafdf2288ed84658f922b88feb"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-fixture.json",
+        "bytes": 15940,
+        "sha256": "e870339b5ff90a28a7ad57f7377ffcf47008beeafdf2288ed84658f922b88feb"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-routed.json",
+        "bytes": 7514,
+        "sha256": "f5519fcfd3c71f9bfa5d496bcabe012ccf2491649952ec67ba00a3af669a57d3"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-routed.json",
+        "bytes": 7514,
+        "sha256": "f5519fcfd3c71f9bfa5d496bcabe012ccf2491649952ec67ba00a3af669a57d3"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-capacity-committed-before-cut-observed.json",
+        "bytes": 7165,
+        "sha256": "56cbe10259a79e46952fc642927fe4c29a282c385b751b8ed00172c759375df8"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-capacity-committed-before-cut-observed.json",
+        "bytes": 7165,
+        "sha256": "56cbe10259a79e46952fc642927fe4c29a282c385b751b8ed00172c759375df8"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-capacity-committed-before-cut.json",
+        "bytes": 12282,
+        "sha256": "7c0f96b6971d4dedf07ebf28c5a91877f0d64ac95fb5a904104bf51f3acd6407"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-capacity-committed-before-cut.json",
+        "bytes": 12282,
+        "sha256": "7c0f96b6971d4dedf07ebf28c5a91877f0d64ac95fb5a904104bf51f3acd6407"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-capacity-committed-hit.json",
+        "bytes": 503,
+        "sha256": "40ed9a313054f55629dfa16142dc0c51578d4b7349202f9dc516df2f1aa52a5b"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-capacity-committed-hit.json",
+        "bytes": 503,
+        "sha256": "40ed9a313054f55629dfa16142dc0c51578d4b7349202f9dc516df2f1aa52a5b"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-capacity-committed-committed-observed.json",
+        "bytes": 7164,
+        "sha256": "ce01cfd59b6e511a617ae1374c325869d0a32ab8cf2a55e45a2018802db181f3"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-capacity-committed-committed-observed.json",
+        "bytes": 7164,
+        "sha256": "ce01cfd59b6e511a617ae1374c325869d0a32ab8cf2a55e45a2018802db181f3"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-capacity-committed-committed.json",
+        "bytes": 7163,
+        "sha256": "0dbcdae6740e65539de54272f4ec759a94627e6a11f6d38b33356f0c547bc884"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-capacity-committed-committed.json",
+        "bytes": 7163,
+        "sha256": "0dbcdae6740e65539de54272f4ec759a94627e6a11f6d38b33356f0c547bc884"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-capacity-committed-resumed-observed.json",
+        "bytes": 7162,
+        "sha256": "108f82ff8f6f679b1f510c3a46198d9dc563c165551f593e0a3047aa666cdb70"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-capacity-committed-resumed-observed.json",
+        "bytes": 7162,
+        "sha256": "108f82ff8f6f679b1f510c3a46198d9dc563c165551f593e0a3047aa666cdb70"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-capacity-committed-resumed.json",
+        "bytes": 8084,
+        "sha256": "a076a78bba41c3069d57cdc663f87df3bf16324117d4008771209548a33b1894"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-capacity-committed-resumed.json",
+        "bytes": 8084,
+        "sha256": "a076a78bba41c3069d57cdc663f87df3bf16324117d4008771209548a33b1894"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-capacity-committed-admitted.json",
+        "bytes": 8583,
+        "sha256": "2a7560393eb669f1f8b1cc512f997f39ae859daa639598d73da7d18ae7598b97"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-capacity-committed-admitted.json",
+        "bytes": 8583,
+        "sha256": "2a7560393eb669f1f8b1cc512f997f39ae859daa639598d73da7d18ae7598b97"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-capacity-committed-delivered.json",
+        "bytes": 10666,
+        "sha256": "a1df77ab128f57777387343d556197f87cc3dd3ca2df76fb2493adb4bde102fd"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-capacity-committed-delivered.json",
+        "bytes": 10666,
+        "sha256": "a1df77ab128f57777387343d556197f87cc3dd3ca2df76fb2493adb4bde102fd"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-capacity-committed-stopped-observed.json",
+        "bytes": 10157,
+        "sha256": "e4836e60bab8a5fa73a79dbced0148def81f810b59bd6b206e33ae45a53458af"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-capacity-committed-stopped-observed.json",
+        "bytes": 10157,
+        "sha256": "e4836e60bab8a5fa73a79dbced0148def81f810b59bd6b206e33ae45a53458af"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-capacity-committed-stopped.json",
+        "bytes": 12297,
+        "sha256": "93adc593f9cf8fe61e139740556aff2f7b6f143d125ad7f82364e23704d435a7"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-capacity-committed-stopped.json",
+        "bytes": 12297,
+        "sha256": "93adc593f9cf8fe61e139740556aff2f7b6f143d125ad7f82364e23704d435a7"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-profile-staged-before-cut-observed.json",
+        "bytes": 10156,
+        "sha256": "89daf59e1c21916c805613849b04ddcfa8ee3a9154d3ddd8e3f1915473ab9fd6"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-profile-staged-before-cut-observed.json",
+        "bytes": 10156,
+        "sha256": "89daf59e1c21916c805613849b04ddcfa8ee3a9154d3ddd8e3f1915473ab9fd6"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-profile-staged-before-cut.json",
+        "bytes": 15273,
+        "sha256": "3b6abaa1f4f2a82fac78aa6b090d96d0df201db99ed1e122f58f2e84e7f752e1"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-profile-staged-before-cut.json",
+        "bytes": 15273,
+        "sha256": "3b6abaa1f4f2a82fac78aa6b090d96d0df201db99ed1e122f58f2e84e7f752e1"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-profile-staged-hit.json",
+        "bytes": 557,
+        "sha256": "390f7f3ed490bc184f7494f6842ffe61ff416b5b8965a6d03c57743aac6e4d1e"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-profile-staged-hit.json",
+        "bytes": 557,
+        "sha256": "390f7f3ed490bc184f7494f6842ffe61ff416b5b8965a6d03c57743aac6e4d1e"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-profile-staged-committed-observed.json",
+        "bytes": 10155,
+        "sha256": "c69217e2192295670b7ce4cea03742e096983e85d45f674defbe5ba60442e994"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-profile-staged-committed-observed.json",
+        "bytes": 10155,
+        "sha256": "c69217e2192295670b7ce4cea03742e096983e85d45f674defbe5ba60442e994"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-profile-staged-committed.json",
+        "bytes": 10154,
+        "sha256": "2017b76ac1a5200694f9fef3d9af08cb3f60542b4a5b6aa5985634055858639c"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-profile-staged-committed.json",
+        "bytes": 10154,
+        "sha256": "2017b76ac1a5200694f9fef3d9af08cb3f60542b4a5b6aa5985634055858639c"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-profile-staged-resumed-observed.json",
+        "bytes": 10153,
+        "sha256": "cad3bebe46b2c198dd4ce105878b3dddb6de463c4cc752e2a534fb427211749e"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-profile-staged-resumed-observed.json",
+        "bytes": 10153,
+        "sha256": "cad3bebe46b2c198dd4ce105878b3dddb6de463c4cc752e2a534fb427211749e"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-profile-staged-resumed.json",
+        "bytes": 11076,
+        "sha256": "3a851b545bee962b24ca444c6b8c7143b69b92319aa5b0c921d362bb93ff947c"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-profile-staged-resumed.json",
+        "bytes": 11076,
+        "sha256": "3a851b545bee962b24ca444c6b8c7143b69b92319aa5b0c921d362bb93ff947c"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-profile-staged-admitted.json",
+        "bytes": 9309,
+        "sha256": "db5f895333576ba5a65a75fe64c8ec5d85be87d9d156af09eb8b0f50ec9721a7"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-profile-staged-admitted.json",
+        "bytes": 9309,
+        "sha256": "db5f895333576ba5a65a75fe64c8ec5d85be87d9d156af09eb8b0f50ec9721a7"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-profile-staged-delivered.json",
+        "bytes": 12003,
+        "sha256": "dfb2d41668c5a796cfec787ce6fd32e9059bff97faad1080012843b3f036f931"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-profile-staged-delivered.json",
+        "bytes": 12003,
+        "sha256": "dfb2d41668c5a796cfec787ce6fd32e9059bff97faad1080012843b3f036f931"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-profile-staged-stopped-observed.json",
+        "bytes": 13181,
+        "sha256": "3595cd38601f9cd983cedce6fa4017179b855ec2f304037a001fad851300404b"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-profile-staged-stopped-observed.json",
+        "bytes": 13181,
+        "sha256": "3595cd38601f9cd983cedce6fa4017179b855ec2f304037a001fad851300404b"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-profile-staged-stopped.json",
+        "bytes": 16044,
+        "sha256": "506f1e74e9448f8aabd8329ea1c1331c1738ce634c839c130122e08803db429c"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-profile-staged-stopped.json",
+        "bytes": 16044,
+        "sha256": "506f1e74e9448f8aabd8329ea1c1331c1738ce634c839c130122e08803db429c"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-before-final-restart-observed.json",
+        "bytes": 13179,
+        "sha256": "688b415ae3f6bda931fee850be3c3bfb0bf361afc7ed128060eb6c5af504bf8e"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-before-final-restart-observed.json",
+        "bytes": 13179,
+        "sha256": "688b415ae3f6bda931fee850be3c3bfb0bf361afc7ed128060eb6c5af504bf8e"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-before-final-restart.json",
+        "bytes": 13370,
+        "sha256": "4f1c3b8f53b712df398df19042ae38dd6b8ed5cbdef7318b5196f9814fc723de"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-before-final-restart.json",
+        "bytes": 13370,
+        "sha256": "4f1c3b8f53b712df398df19042ae38dd6b8ed5cbdef7318b5196f9814fc723de"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-final-reopened-observed.json",
+        "bytes": 13173,
+        "sha256": "efebc2a97a4efb74b7fd22234791e9b57bc73453a5156d2df506ed3d17731fd4"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-final-reopened-observed.json",
+        "bytes": 13173,
+        "sha256": "efebc2a97a4efb74b7fd22234791e9b57bc73453a5156d2df506ed3d17731fd4"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/capacity-final-restarted.json",
+        "bytes": 29019,
+        "sha256": "321c3e50fffd9011aa13c966b152786063e8bf59f5b6ba8b67612783eb94c6a0"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/phases/capacity-final-restarted.json",
+        "bytes": 29019,
+        "sha256": "321c3e50fffd9011aa13c966b152786063e8bf59f5b6ba8b67612783eb94c6a0"
+      }
+    },
+    {
+      "origin": {
+        "path": ".tmp/migration-s53-integrated/F-s53-capacity-recovery-r2-01-attempt-02/assertions.json",
+        "bytes": 9745,
+        "sha256": "c660509ae2670c3ad9918c066b3743a72eecc7292a239334978f981eadd912f2"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/assertions.json",
+        "bytes": 9745,
+        "sha256": "c660509ae2670c3ad9918c066b3743a72eecc7292a239334978f981eadd912f2"
+      }
+    },
+    {
+      "origin": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-capacity-recovery-r2-01-attempt-02.outer.json",
+        "bytes": 1092,
+        "sha256": "1107fb59261abc23aadfec5001c903d5c0cea0382c9100710fd71dc8bc61ca2d"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/outer.json",
+        "bytes": 1092,
+        "sha256": "1107fb59261abc23aadfec5001c903d5c0cea0382c9100710fd71dc8bc61ca2d"
+      }
+    },
+    {
+      "origin": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-capacity-recovery-r2-01-attempt-02.json",
+        "bytes": 4173,
+        "sha256": "96e3f200090a0e7eee55cc757dbc95e89e6186024db2e6b59e61d2c27c5ccedc"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/case.json",
+        "bytes": 4173,
+        "sha256": "96e3f200090a0e7eee55cc757dbc95e89e6186024db2e6b59e61d2c27c5ccedc"
+      }
+    },
+    {
+      "origin": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-capacity-recovery-r2-01-attempt-02.log",
+        "bytes": 3069,
+        "sha256": "2a31091be6fd54cd27c32c130c732b282fc89ef8d4ee814ed842545bf17c8322"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/named-test.log",
+        "bytes": 3069,
+        "sha256": "2a31091be6fd54cd27c32c130c732b282fc89ef8d4ee814ed842545bf17c8322"
+      }
+    },
+    {
+      "origin": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-capacity-recovery-r2-01-attempt-01.outer.json",
+        "bytes": 1107,
+        "sha256": "9a336e7678ddb48bdd410c1c7ecd74339b040c12d5e5be51312d9c1c6bd0b901"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/failed-attempt01.outer.json",
+        "bytes": 1107,
+        "sha256": "9a336e7678ddb48bdd410c1c7ecd74339b040c12d5e5be51312d9c1c6bd0b901"
+      }
+    },
+    {
+      "origin": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-capacity-recovery-r2-01-attempt-01.log",
+        "bytes": 2362,
+        "sha256": "83fea75be2387c668ff58cdb6249e4a35bf8e718daf1d9ea504c15e5b09593f8"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-publication-02/failed-attempt01.named-test.log",
+        "bytes": 2362,
+        "sha256": "83fea75be2387c668ff58cdb6249e4a35bf8e718daf1d9ea504c15e5b09593f8"
+      }
+    }
+  ],
+  "local_binding": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-capacity-route-02.binding.candidate.json",
+    "bytes": 114444,
+    "sha256": "3ec9d7e0177902facbb66a58c1bd34e4ffdff667086aac2eb3b59c2245bc8363"
+  },
+  "local_expected": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G2-capacity-route-02.expected-artifacts.candidate.json",
+    "bytes": 1283833,
+    "sha256": "af1b65a99e187bc212eb61eee4c4dd019008755b3d5a11dc86b5008e8d33af4a"
+  },
+  "local_compile_capture": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-capacity-recovery-r2-01-attempt-02.compile-artifacts.json",
+    "bytes": 2690204,
+    "sha256": "02b5820dfc0b8e5133014bccdbbfb37df5eda92f67bc1add8e26181aa11afd62"
+  },
+  "local_run_capture": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-capacity-recovery-r2-01-attempt-02.run-artifacts.json",
+    "bytes": 2690202,
+    "sha256": "8c8e846828fb0299eb54531902dcf825d66ede1513ccc106a30857ed091d55cb"
+  },
+  "local_inventory": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-capacity-recovery-r2-01-attempt-02.inputs.json",
+    "bytes": 113213,
+    "sha256": "526271020abfd1679fc0da9453db2465f112ffa65a651b0bddb4c73bb4c18cef"
+  },
+  "local_handoff": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-capacity-recovery-r2-01-attempt-02.executor-handoff.json",
+    "bytes": 26277,
+    "sha256": "53c9e250566e964dacf7d2ce2a1a2f04c8b6d152326a46bef40f0a7d094e71d2"
+  },
+  "old_failed_code_image_archive": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-capacity-recovery-r2-01-attempt-01.public-code-image-archive.json",
+    "bytes": 6180,
+    "sha256": "b9daeeaa62ad22fd395a43a89a40d5ce0fda720fcd9c52c8aab25ec239dd55bb"
+  },
+  "fixed_runtime_images": [
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "bytes": 61531648,
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+      "bytes": 50019328,
+      "sha256": "866e6076bf11412bf4e28d23a9294e3af8284ce9a0133f32667c88f8ac7b969d"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 50411008,
+      "sha256": "7bc5aea799e3a4aa0278ea09ff6d3f278153bac50b64fd0849c581bb72be4c85"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 32164864,
+      "sha256": "79783105f5728ad441faf432c4740c9826e4a740e5fc9cd3557967515c74f109"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 14686208,
+      "sha256": "4be14f7d8eeedc0bf2d7528aa0c9d33e132a2396275c7d7bbc155d79c8f3ed4e"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 23695872,
+      "sha256": "594906d438bddc0292c45bcdb4ff2accdccebc962ab65ba2066e03f71ba9d159"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+      "bytes": 19419648,
+      "sha256": "f5822cd40225a7ac12dbc2c58264439b8e3c5d4b4d20cf87309b9aa28f2023ad"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+      "bytes": 22317056,
+      "sha256": "552cc6c23452ad50c94b65391e33df462b89e14551c7eac51304e55872788cf0"
+    },
+    {
+      "path": "target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe",
+      "bytes": 50019328,
+      "sha256": "866e6076bf11412bf4e28d23a9294e3af8284ce9a0133f32667c88f8ac7b969d"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-relay.exe",
+      "bytes": 10460160,
+      "sha256": "8d216e98ddca68c0a6f8a27b98f66b8f48cb9ba2a9ed9051c9d4f8f2a7018214"
+    }
+  ],
+  "note": "Original evidence bytes retained, including historical absolute paths and whole_attempt_verdict=not_established in functional assertions. The separate root acceptance establishes G2. EXEs, keys, databases, raw compiler captures, runtime binding/expected and full inputs remain local. Normal-graph relay example rebuilt during staging differs from independently bound fixed runtime relay; do not conflate their provenance."
+}

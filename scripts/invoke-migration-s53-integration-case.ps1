@@ -45,12 +45,7 @@ function Assert-KilogramS53CasePrerequisites {
         $row.classification -cne 'root-allocated public replica manifest; no preparation performed by adapter'){throw 'G1a prerequisite tuple binding.'}
 }
 function Baseline {
-    $expectedHead=$baseline
-    if($Case -ceq 'F-s53-exhausted-integrated-01'){
-        if($binding.source_head -isnot [string] -or $binding.source_head -cnotmatch '^[0-9a-f]{40}$'){throw 'Exact current G1 source HEAD required'}
-        $expectedHead=$binding.source_head
-    }
-    Read-KilogramS53Baseline -Workspace $workspace -Expected $expectedHead
+    Read-KilogramS53CaseBaseline -Workspace $workspace -Case $Case -Binding $binding
 }
 . (Join-Path $PSScriptRoot 'migration-s53-metadata.ps1')
 . (Join-Path $PSScriptRoot 'migration-s53-predecessor-proof.ps1')
@@ -232,10 +227,11 @@ function Read-KilogramS53InventoryAdmission {
 if(-not $Attempt.StartsWith($Case+'-attempt-',[StringComparison]::Ordinal)){throw 'Case/attempt mismatch.'}
 if(-not [IO.Path]::IsPathRooted($ActivationFile) -or (Get-Item -LiteralPath $ActivationFile).Length -gt 64*1024 -or (Hash $ActivationFile) -cne $ActivationSha256){throw 'Exact bounded root activation required.'}
 $activation=Get-Content -LiteralPath $ActivationFile -Raw|ConvertFrom-Json
-$bindingName=if($Case -ceq 'F-s53-exhausted-integrated-01'){'C-s53-g1-continuation-C2-01.binding.candidate.json'}else{'S5.3-integration-binding-r30.json'}
+$bindingName=Get-KilogramS53BindingName $Case
 $bindingPath=Join-Path $evidence $bindingName
 $bindingHash=Hash $bindingPath
 $binding=Get-Content -LiteralPath $bindingPath -Raw|ConvertFrom-Json
+Assert-KilogramS53G2Policy $Case $binding
 if($activation.classification -cne 'root-approved-integration-allocation' -or $activation.activated -ne $true -or $activation.binding_sha256 -cne $bindingHash -or $activation.baseline -cne $baseline -or $activation.execution_mode -cne 'NativeToken' -or $activation.stop_on_first_failure -ne $true -or $activation.require_actual_outer_return_before_successor -ne $true){throw 'Inactive/unbound root allocation.'}
 if($activation.allocation_id -cnotmatch '^s53-integrated-[a-z0-9-]+$'){throw 'Allocation identity.'}
 if(@($binding.runtime_dependencies).Count -ne 1 -or @($activation.runtime_dependencies).Count -ne 1){throw 'Exactly one reviewed shell dependency required.'}
@@ -252,6 +248,11 @@ $allocated=@($activation.cases|Where-Object case -CEQ $Case|Where-Object attempt
 if($policy.Count -ne 1 -or $allocated.Count -ne 1){throw 'Case not uniquely activated.'}
 $policy=$policy[0];$allocated=$allocated[0]
 $buildProfile='verification';$frozenArguments=@{}
+if($Case -ceq 'F-s53-capacity-recovery-r2-01'){
+    if($policy.build_profile -cne 'verification-scale' -or $allocated.build_profile -cne 'verification-scale' -or $activation.expected_artifacts_sha256 -cne $binding.expected_artifacts.sha256){throw 'Frozen G2 scale allocation/profile identity required.'}
+    $buildProfile='verification-scale'
+    $frozenArguments=@{ExpectedArtifactsManifest=(Join-Path $workspace $binding.expected_artifacts.path);ExpectedArtifactsSha256=$binding.expected_artifacts.sha256;CargoTarget='x86_64-pc-windows-msvc';StableArtifactsDirectory=(Join-Path $workspace 'target/verification-scale/deps')}
+}
 if($Case -cin @('F-s53-exhausted-integrated-01','C-s53-admission-r6-01','C-s53-regressions-r2-01','C-s53-seen-batch-r1-01','C-s53-mixed-integrated-01','C-s53-policy-integrated-01','F-s53-discovery-integrated-01','F-s53-preq-integrated-01','F-s53-p-after-commit-01','F-s53-p-before-commit-01','F-s53-p-before-publication-01','F-s53-a-after-commit-01','F-s53-k-after-commit-01','F-s53-committed-after-commit-01','F-s53-a-before-commit-01','F-s53-a-before-publication-01','F-s53-k-before-commit-01','F-s53-k-before-publication-01','F-s53-committed-before-commit-01','F-s53-committed-before-publication-01')){
     if($policy.build_profile -cne 'verification-scale' -or $allocated.build_profile -cne 'verification-scale' -or $activation.expected_artifacts_sha256 -cne $binding.expected_artifacts.sha256){throw 'Frozen scale activation/profile identity required.'}
     $buildProfile='verification-scale'

@@ -1,0 +1,11 @@
+# G2 accepted: capacity recovery preserves the validated route and messages
+
+Two controlled owner interruptions, at `capacity-committed` and `profile-staged`, recovered through the public Ready resume path. Each recovery retained the relay-only route and delivered a distinct FullMixed message. A final restart of both owners preserved both original messages, both new messages, request associations, Native state and storage accounting.
+
+The successful Windows run selected exactly one test (92.01 seconds); independent outer execution returned zero in 135.4713905 seconds with verified cleanup. Root independently checked the actual native return, all 29 phase references, source/image identities, accounting and final persistence. See [root acceptance](root-accepted.json), [test log](named-test.log), [outer result](outer.json), [case result](case.json) and [functional assertions](assertions.json). The [source and evidence manifest](source-and-evidence.json) maps every copied phase to its original bytes and records source hashes and local provenance.
+
+The first attempt remains failed. Its test compared aggregate reserved bytes as immutable, although prepaid metadata grows within an unchanged funded capacity. The fix keeps runtime reservations and ledger obligations exact, separately reconciles prepaid metadata, and saves stopped observations before comparisons. Eight CLI tests and one state encoding/accounting fixture passed with strict Clippy and a normal compile. No writer/storage-format or cryptographic behavior changed; the product addition is read-only accounting access.
+
+Eleven observed-state phases are explicitly not PASS. Functional assertions retain their original `whole_attempt_verdict=not_established`; the independent root acceptance is a separate record. Historical absolute paths are preserved in copied evidence. Executables, test keys/databases and bulky local compiler/input manifests are excluded, so these artifacts document the accepted run rather than promise replay of this exact historical attempt from a fresh clone.
+
+This proves controlled process-stop recovery on one host. It does not prove physical power-loss or disk-exhaustion recovery. G3 cross-context isolation and G4 regressions remain before whole-S5.3 acceptance; S5.4 has not started.

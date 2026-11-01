@@ -1,0 +1,58 @@
+{
+  "classification": "root-accepted G2 capacity/route controlled process recovery; not whole S5.3",
+  "case": "F-s53-capacity-recovery-r2-01",
+  "attempt": "F-s53-capacity-recovery-r2-01-attempt-02",
+  "implementation_parent": "2f7e44f756ea2ae13cf270be33889bada356f8f6",
+  "actual_native_tool": {
+    "id": "exec-3c95d589-a7e4-4aa1-91d7-ae2ab225579b",
+    "exit_code": 0,
+    "wall_ms": 135947
+  },
+  "root_independent_verification": "50e2d2:577 raw pins; all29 phase references; complete inventories/captures; both cuts/accounting/resumes/deliveries/final restart/cleanup",
+  "phase_count": 29,
+  "observed_not_PASS_count": 11,
+  "independent_hash": "SHA256 and raw bytes; BLAKE3 pins are runtime assertions, not separately recomputed by root",
+  "checks": [
+    "two actual checkpoint hits and stopped owners before read",
+    "exact runtime accounting and prepaid metadata funding at capacity change",
+    "full accounting and credits exact across Ready resume",
+    "two original LegacySnapshot messages preserved plus exact c200/c201 FullMixed delivery on both owners",
+    "same final history/request/Native/selection/accounting/credits/capacity/profile after normal restart",
+    "fresh-process work counters zero",
+    "actual owned relay-only routes at admission and final restart",
+    "actual final native outer/case/test success and owned cleanup0"
+  ],
+  "deliveries": [
+    {
+      "delivered": true,
+      "event": "61f477bb24374dc74760a802c02fd5060f2610411eda75807bf24b6f07419090",
+      "queue": 15
+    },
+    {
+      "delivered": true,
+      "event": "5a469ceaeef71754aeab3e85ecda3bc61ef1e01bcc19bd8f779e1acafbb85926",
+      "queue": 16
+    }
+  ],
+  "failed_attempt01": "FAILED and immutable; aggregate reserved was an invalid equality premise; missing after-state was not recovered",
+  "time": {
+    "F_charged_once": 135.4713905,
+    "S53": {
+      "C": 8381.5344366,
+      "F": 2302.6012904,
+      "P": 0
+    },
+    "combined": {
+      "C": 8968.9830475,
+      "F": 7018.9214393,
+      "P": 0
+    }
+  },
+  "remaining": [
+    "publish accepted G2 exact allowlist",
+    "G3 cross-context isolation",
+    "G4 regressions",
+    "whole S5.3 acceptance"
+  ],
+  "limits": "Controlled process interruption on one Windows host and fresh local test pair; not physical power-loss/disk-exhaustion/multi-device field proof; no full S5.3/MVP claim"
+}
