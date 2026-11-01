@@ -1,0 +1,167 @@
+{
+  "scope": "P7 source/static/pure acceptance; P8 premise map unimplemented; runtime unexecuted",
+  "baseline": "f4a61c687f39e67da474d3fc0dd5517a0644996f",
+  "root_verification": "4fcd84",
+  "verified_counts": {
+    "pins_and_preimages": 59,
+    "compiler_source_inputs": 540,
+    "units_compile": 501,
+    "units_run": 501,
+    "units_run_fresh": 501,
+    "exact_pure_tests": 8
+  },
+  "equal_final_compile_run_before_after_inputs": true,
+  "frozen_guard_verified": true,
+  "normal_cli_unit": {
+    "package_id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/apps/kilogram-cli#0.1.0",
+    "package": "kilogram-cli",
+    "kind": [
+      "bin"
+    ],
+    "target": "kilogram-cli",
+    "features": [
+      "default"
+    ],
+    "profile": {
+      "opt_level": "3",
+      "debuginfo": "line-tables-only",
+      "debug_assertions": true,
+      "overflow_checks": true,
+      "test": false
+    },
+    "filenames": [
+      "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\x86_64-pc-windows-msvc\\verification-scale\\kilogram_cli.pdb",
+      "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\x86_64-pc-windows-msvc\\verification-scale\\kilogram-cli.exe"
+    ],
+    "executable": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\x86_64-pc-windows-msvc\\verification-scale\\kilogram-cli.exe",
+    "class": "runtime-target",
+    "fresh": true
+  },
+  "artifacts": [
+    {
+      "path": "target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe",
+      "bytes": 50400256,
+      "sha256": "db66bf93923d4666eea7cc968b9ccd24116e57ebc01c788d866707a004cb6cd0"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 50709504,
+      "sha256": "bb29a5499c93a5e6e7b8632d2323d7cc2d3878ec8531255a2f814fd13214c604"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 32656896,
+      "sha256": "e94f2b5fc99112b6f8c03e24aee039aa41fbc7dd19be35cb8c921a78c60b6d7e"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 16247808,
+      "sha256": "db4a3420d1538c052b648e2a425a607130229a3b5d5a3278a660176e6982c776"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 23690752,
+      "sha256": "3116f69f62100c0f111ce8b5ba2a82511c4a1ae14fa991dd2ed04cf874affbc9"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+      "bytes": 19419648,
+      "sha256": "f5822cd40225a7ac12dbc2c58264439b8e3c5d4b4d20cf87309b9aa28f2023ad"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+      "bytes": 22317056,
+      "sha256": "552cc6c23452ad50c94b65391e33df462b89e14551c7eac51304e55872788cf0"
+    }
+  ],
+  "source": [
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_p5.rs",
+      "bytes": 4465,
+      "sha256": "c0daf2d5acaf11932c6ee0ebf9585e8a04bb4d420d07c42df21a38fdf3b97b4b",
+      "git_blob": "908a1b88bc49fecd7c362052564dadfb94bbc87d"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_offline.rs",
+      "bytes": 9719,
+      "sha256": "4e33f2ac5479f1502535604ca16b40f6f19b66f7565fdbd40c9fdfefcdf1c329",
+      "git_blob": "ab666d7545c1fb0ad720c4777999b85af921b32e"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_offline_witness.rs",
+      "bytes": 10652,
+      "sha256": "0bec3e2b4ac23a58944d5a2a941b957ad516a19dab3a091e41a88dd7d187aadf",
+      "git_blob": "b8e5c56d773b839c0d8848641469629b267588d5"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_offline_tests.rs",
+      "bytes": 7246,
+      "sha256": "d53df8af4e2f482391983d1d716fcb2e288072de9d0b4844d5e583a2bea337e5",
+      "git_blob": "97db856fac4f2e633ff5deedb034676b8c2aa62c"
+    }
+  ],
+  "report": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3a-implementation.md",
+    "bytes": 20037,
+    "sha256": "cac0e94909d0a780f362fdc1e2fe4ba686b05c9c0470515612d14969ef273225"
+  },
+  "actual_app_checks": {
+    "clippy": "exec-c92a4cfb-6b23-49f0-94cc-7c3cf90e0328",
+    "compile": "exec-bc661e4e-3d91-409d-ab31-1031d73894f2",
+    "pure": "exec-b34bb5e5-2c91-4298-bf73-d424ed3e3286",
+    "fmt": "exec-827e536c-5728-40ac-b5ca-2396aff4ba00"
+  },
+  "large_local_evidence_pins": [
+    {
+      "path": ".tmp/s54-block3a-02/compile-01.capture.json",
+      "bytes": 2701563,
+      "sha256": "db1452e1284f6eace40f135de27182ec31ee51ce94796dc0dd72ffac6268a9e5"
+    },
+    {
+      "path": ".tmp/s54-block3a-02/pure-01.capture.json",
+      "bytes": 2701622,
+      "sha256": "5ac4ef22b8d12ce097220ad98b1eada3e18f1b6343e94cfd809dd409bf293c39"
+    },
+    {
+      "path": ".tmp/s54-block3a-02/pure-01.expected.json",
+      "bytes": 1289543,
+      "sha256": "53e39a285444987e6372884411fa96dd27aa24ff119a8b6b8edc5a4966cfaf3e"
+    },
+    {
+      "path": ".tmp/s54-block3a-02/preimages.json",
+      "bytes": 3682,
+      "sha256": "a123231c77442a3e052fe7c12a7815171f80d940a61b2d533e4b2662f12c30b5"
+    },
+    {
+      "path": ".tmp/s54-block3a-02/compile.ps1",
+      "bytes": 495,
+      "sha256": "455b0b89f2ddf1ef770eb1154a254cdb706aa4715f35026a5ac9a93075b63f1e"
+    },
+    {
+      "path": ".tmp/s54-block3a-02/clippy.ps1",
+      "bytes": 452,
+      "sha256": "d733c593562844918a0409934a7a7e57307dedcefb661057e4a9e0e139de5c70"
+    },
+    {
+      "path": ".tmp/s54-block3a-02/pure.ps1",
+      "bytes": 1757,
+      "sha256": "4b599db474e71dd4cb7be54a16b723a677aa993169e24dfb0ddc7c1d7c90a846"
+    },
+    {
+      "path": ".tmp/s54-block3a-02/check.ps1",
+      "bytes": 2621,
+      "sha256": "fd003b768b100fcc4f6bf5ff07d6f58ee6a981cde5b9bb5fade99b5ac8dc048f"
+    },
+    {
+      "path": ".tmp/s54-block3a-02/fmt-check.ps1",
+      "bytes": 2711,
+      "sha256": "9a0b681c321decd8f8c836c564fd1b2fb7e9d9aeb09d9ce79feffc98fa01b3b1"
+    },
+    {
+      "path": ".tmp/s54-block3a-02/fmt.ps1",
+      "bytes": 78,
+      "sha256": "47462a1afb9438e43a9c94a0f3b478371f77d4e604978504aed00affb9602869"
+    }
+  ],
+  "product_runtime_executed": false
+}

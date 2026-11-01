@@ -13,6 +13,8 @@ mod control;
 mod early;
 #[path = "migration_s54_observations.rs"]
 mod observations;
+#[path = "migration_s54_offline.rs"]
+mod offline;
 #[path = "migration_s54_oracle.rs"]
 mod oracle;
 #[path = "migration_s54_source.rs"]
