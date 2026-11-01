@@ -96,6 +96,13 @@ pub(super) fn waited_pair(running: [bool; 2], stopped: [bool; 2]) -> Result<()> 
     );
     Ok(())
 }
+pub(super) fn reconciled_pair(running: [bool; 2], pending: [bool; 2]) -> Result<()> {
+    ensure!(
+        running == [false; 2] && pending == [false; 2],
+        "both owners stopped and reconciled before profile edit/relay start"
+    );
+    Ok(())
+}
 pub(super) fn interval10(start: Instant, whole: Instant) -> Instant {
     (start + Duration::from_secs(10)).min(whole)
 }
@@ -106,6 +113,7 @@ pub(super) struct Controller {
     pub origin: OldOrigin,
     pub controls: [Controls; 2],
     pub running: [Option<Running>; 2],
+    pub relay: Option<relay_owner::Relay>,
     pending_stops: [Option<Stopped>; 2],
     pub operations: oracle::Operations,
     pub pages: oracle::Pages,
@@ -179,6 +187,7 @@ impl Controller {
             origin,
             controls,
             running: [None, None],
+            relay: None,
             pending_stops: [None, None],
             operations: Default::default(),
             pages: Default::default(),
@@ -198,6 +207,9 @@ impl Controller {
     pub fn check(&mut self) -> Result<()> {
         s53_deadline::check()?;
         ensure!(Instant::now() < self.until, "S54 same absolute deadline");
+        if let Some(relay) = self.relay.as_mut() {
+            relay.child.alive()?;
+        }
         for owner in 0..2 {
             if let Some(run) = self.running[owner].as_mut() {
                 run.child.alive()?;
@@ -236,6 +248,15 @@ impl Controller {
             "exclusive owned state directory"
         );
         Ok(())
+    }
+    pub fn stopped_reconciled(&self) -> Result<()> {
+        for owner in 0..2 {
+            self.stopped(owner)?;
+        }
+        reconciled_pair(
+            self.running.each_ref().map(Option::is_some),
+            self.pending_stops.each_ref().map(Option::is_some),
+        )
     }
     pub fn view(&self, owner: usize, context: usize) -> Result<Node> {
         let n = &self.origin.pair.nodes[owner];

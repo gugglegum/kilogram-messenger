@@ -1,0 +1,55 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: the loop variable `owner` is used to index `keys`
+   --> apps\kilogram-cli\tests\support\migration_s54_relay_live.rs:111:18
+    |
+111 |     for owner in 0..2 {
+    |                  ^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+    = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator and enumerate()
+    |
+111 -     for owner in 0..2 {
+111 +     for (owner, <item>) in keys.iter().enumerate() {
+    |
+
+error: this `if` has identical blocks
+  --> apps\kilogram-cli\tests\support\migration_s54_relay_tests.rs:15:679
+   |
+15 | ...receipts":if context==1{json!([32,32])}else if owner==0{json!([640,639])}else{json!([640,639])}}})
+   |                                                           ^^^^^^^^^^^^^^^^^^
+   |
+note: same as this
+  --> apps\kilogram-cli\tests\support\migration_s54_relay_tests.rs:15:701
+   |
+15 | ...1{json!([32,32])}else if owner==0{json!([640,639])}else{json!([640,639])}}})
+   |                                                           ^^^^^^^^^^^^^^^^^^
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#if_same_then_else
+   = note: `-D clippy::if-same-then-else` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::if_same_then_else)]`
+
+error: unnecessary use of `clone` to create a slice from a reference
+   --> apps\kilogram-cli\tests\support\migration_s54_relay.rs:189:29
+    |
+189 |         source::history_map(&[materialized.clone()])?.get(&state::hex(&event))
+    |                             ^^^^^^^^^^^^^^^^^^^^^^^ help: try: `std::slice::from_ref(&materialized)`
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#cloned_ref_to_slice_refs
+    = note: `-D clippy::cloned-ref-to-slice-refs` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::cloned_ref_to_slice_refs)]`
+
+error: the loop variable `owner` is used to index `packets`
+   --> apps\kilogram-cli\tests\support\migration_s54_relay.rs:204:18
+    |
+204 |     for owner in 0..2 {
+    |                  ^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+help: consider using an iterator and enumerate()
+    |
+204 -     for owner in 0..2 {
+204 +     for (owner, <item>) in packets.iter().enumerate() {
+    |
+
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 4 previous errors

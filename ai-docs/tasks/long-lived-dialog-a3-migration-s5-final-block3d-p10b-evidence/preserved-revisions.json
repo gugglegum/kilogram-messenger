@@ -1,0 +1,82 @@
+[
+  {
+    "path": ".tmp/s54-block3d-p10b-01/clippy-02-sources/migration_s54_relay.rs",
+    "bytes": 10604,
+    "sha256": "fabd47d289862ae6ba0ff15317bd9380d2bbf4a5ced7b062035cdde8ea160cc0"
+  },
+  {
+    "path": ".tmp/s54-block3d-p10b-01/clippy-02-sources/migration_s54_relay_live.rs",
+    "bytes": 10561,
+    "sha256": "3b9a8a11934b2d4bf47e2ec5eff7e13f9331bd6980679cf80b7bab83eeb76c65"
+  },
+  {
+    "path": ".tmp/s54-block3d-p10b-01/clippy-02-sources/migration_s54_relay_locator_tests.rs",
+    "bytes": 9568,
+    "sha256": "abd649f8ffff62a1a05b8592ac6be3333ab9a9f8823146e57161f089283d107d"
+  },
+  {
+    "path": ".tmp/s54-block3d-p10b-01/clippy-02-sources/migration_s54_relay_locators.rs",
+    "bytes": 5506,
+    "sha256": "5133bcb7447262c9d6cad0b4e8895392a3d792dbae76ce58eafaa7a18f945cc1"
+  },
+  {
+    "path": ".tmp/s54-block3d-p10b-01/clippy-02-sources/migration_s54_relay_owner.rs",
+    "bytes": 5357,
+    "sha256": "b66ecd4393b552bf92c8e09eb04a3e40e4db6a43b3aa13d2a8da9b581f30eb67"
+  },
+  {
+    "path": ".tmp/s54-block3d-p10b-01/clippy-02-sources/migration_s54_relay_proofs.rs",
+    "bytes": 9494,
+    "sha256": "67edf8425cb23735a45797f45b3712638df855febcf593695cb0516779e474fd"
+  },
+  {
+    "path": ".tmp/s54-block3d-p10b-01/clippy-02-sources/migration_s54_relay_tests.rs",
+    "bytes": 13024,
+    "sha256": "7521961a2b84102419314239fb24ae6f8c385a3cb86c70e1b15dd8142e6900b1"
+  },
+  {
+    "path": ".tmp/s54-block3d-p10b-01/compile-01-pre-repair/artifact-pin.json",
+    "bytes": 368,
+    "sha256": "66da03619b03c5c10a621e793b2d8aff6986716e869d1abd3169550e98306bcd"
+  },
+  {
+    "path": ".tmp/s54-block3d-p10b-01/compile-01-pre-repair/kilogram-cli-test-migration_s5_process-tests.exe",
+    "bytes": 17090560,
+    "sha256": "e1a1262713dc2513df6267a159f391b874c526a6cfac43a20c60d48fea7820c2"
+  },
+  {
+    "path": ".tmp/s54-block3d-p10b-01/compile-01-pre-repair/migration_s54_relay.rs",
+    "bytes": 10893,
+    "sha256": "d520d023e6cd7941cdef9a75cd38ac6ec6a12f5d76993062f90c1b4de759ac7f"
+  },
+  {
+    "path": ".tmp/s54-block3d-p10b-01/compile-01-pre-repair/migration_s54_relay_live.rs",
+    "bytes": 10883,
+    "sha256": "eb71aef31a053ad05f5e6afba88f4d8c9fb955a6e8a3962eb7e1338a855d7f4d"
+  },
+  {
+    "path": ".tmp/s54-block3d-p10b-01/compile-01-pre-repair/migration_s54_relay_locator_tests.rs",
+    "bytes": 9568,
+    "sha256": "abd649f8ffff62a1a05b8592ac6be3333ab9a9f8823146e57161f089283d107d"
+  },
+  {
+    "path": ".tmp/s54-block3d-p10b-01/compile-01-pre-repair/migration_s54_relay_locators.rs",
+    "bytes": 5506,
+    "sha256": "5133bcb7447262c9d6cad0b4e8895392a3d792dbae76ce58eafaa7a18f945cc1"
+  },
+  {
+    "path": ".tmp/s54-block3d-p10b-01/compile-01-pre-repair/migration_s54_relay_owner.rs",
+    "bytes": 5357,
+    "sha256": "b66ecd4393b552bf92c8e09eb04a3e40e4db6a43b3aa13d2a8da9b581f30eb67"
+  },
+  {
+    "path": ".tmp/s54-block3d-p10b-01/compile-01-pre-repair/migration_s54_relay_proofs.rs",
+    "bytes": 9494,
+    "sha256": "67edf8425cb23735a45797f45b3712638df855febcf593695cb0516779e474fd"
+  },
+  {
+    "path": ".tmp/s54-block3d-p10b-01/compile-01-pre-repair/migration_s54_relay_tests.rs",
+    "bytes": 13326,
+    "sha256": "4f6095dc31ebeb6e1b19a9e0bf0168f3c192ab40d182c22887b54e2c0a84b4a4"
+  }
+]

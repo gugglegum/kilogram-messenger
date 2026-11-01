@@ -1,0 +1,269 @@
+//! Real protocol builders over signed synthetic public data; no enrollment or process.
+use super::*;
+use kilogram_identity::{
+    AccountAuthoritySnapshot, AccountId, DeviceCapability, DeviceCertificate,
+    DeviceEncryptionIdentity, DeviceIdentity, EncryptionPublicKey,
+};
+use kilogram_protocol::ordered_dialog_v2 as v2;
+use serde::Serialize;
+
+#[derive(Serialize)]
+struct Signed<T> {
+    content: T,
+    signature: Vec<u8>,
+}
+#[derive(Serialize)]
+struct Certificate {
+    version: u8,
+    account_id: AccountId,
+    device_id: kilogram_identity::DeviceId,
+    encryption_public_key: EncryptionPublicKey,
+    authority_sequence: u64,
+    capabilities: Vec<DeviceCapability>,
+}
+#[derive(Serialize)]
+struct Authority {
+    version: u8,
+    account_id: AccountId,
+    revision: u64,
+    revocations: Vec<kilogram_identity::DeviceRevocation>,
+}
+fn signed<T: Serialize>(content: T, root: &DeviceIdentity, tag: &[u8]) -> Result<Vec<u8>> {
+    let mut message = tag.to_vec();
+    message.extend(postcard::to_allocvec(&content)?);
+    let signature = root.sign(&message).to_vec();
+    Ok(postcard::to_allocvec(&Signed { content, signature })?)
+}
+fn peers() -> Result<([DeviceIdentity; 2], [v2::RootVerifiedCredential; 2])> {
+    let devices = [
+        DeviceIdentity::from_secret_bytes([31; 32]),
+        DeviceIdentity::from_secret_bytes([52; 32]),
+    ];
+    let mut credentials = Vec::new();
+    for (role, device) in devices.iter().enumerate() {
+        let root = DeviceIdentity::from_secret_bytes([91 + role as u8; 32]);
+        let account = AccountId::from_bytes(*root.device_id().as_bytes());
+        let raw = signed(
+            Certificate {
+                version: 2,
+                account_id: account,
+                device_id: device.device_id(),
+                encryption_public_key: DeviceEncryptionIdentity::from_secret_bytes(
+                    [61 + role as u8; 32],
+                )
+                .public_key(),
+                authority_sequence: 1,
+                capabilities: DeviceCapability::MESSAGING.to_vec(),
+            },
+            &root,
+            b"kilogram:device-certificate-signature:v2\0",
+        )?;
+        let cert = DeviceCertificate::decode_and_verify(&raw)?;
+        let raw = signed(
+            Authority {
+                version: 1,
+                account_id: account,
+                revision: 2,
+                revocations: vec![],
+            },
+            &root,
+            b"kilogram:account-authority-snapshot-signature:v1\0",
+        )?;
+        credentials.push(v2::RootVerifiedCredential::from_parts(
+            cert,
+            AccountAuthoritySnapshot::decode_and_verify(&raw)?,
+        )?);
+    }
+    Ok((
+        devices,
+        credentials
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("G3 test credential pair"))?,
+    ))
+}
+const URL: &str = "http://127.0.0.1:40123/";
+fn fields(peers: &[v2::RootVerifiedCredential; 2], role: usize) -> v2::RuntimeLocatorFields2 {
+    v2::RuntimeLocatorFields2 {
+        c: [17; 32],
+        cert: peers[role].cert_ref(),
+        peer_cert: peers[1 - role].cert_ref(),
+        endpoint: [7 + role as u8; 32],
+        ips: vec![],
+        relay: Some(URL.into()),
+        revision: 2,
+        not_before: 100,
+        expires: 200,
+    }
+}
+#[test]
+fn s54_p10b_signed_two_context_locators_require_current_scope_role_and_signature() -> Result<()> {
+    let (devices, peers) = peers()?;
+    for context in [[17; 32], [18; 32]] {
+        for (owner, device) in devices.iter().enumerate() {
+            let mut f = fields(&peers, owner);
+            f.c = context;
+            let signed = v2::ParsedRuntimeLocator2::sign(f, device)?;
+            locators::verify(signed.raw(), context, &peers, owner, 150, Some(URL), None)?;
+            ensure!(
+                locators::verify(signed.raw(), [99; 32], &peers, owner, 150, Some(URL), None)
+                    .is_err()
+                    && locators::verify(
+                        signed.raw(),
+                        context,
+                        &peers,
+                        1 - owner,
+                        150,
+                        Some(URL),
+                        None
+                    )
+                    .is_err(),
+                "wrong actual context/role cannot import"
+            );
+            let mut bad = signed.raw().to_vec();
+            let last = bad.last_mut().context("signed bytes")?;
+            *last ^= 1;
+            ensure!(
+                locators::verify(&bad, context, &peers, owner, 150, Some(URL), None).is_err(),
+                "invalid signature"
+            );
+        }
+    }
+    Ok(())
+}
+#[test]
+fn s54_p10b_signed_url_only_locators_reject_ip_other_url_expiry_and_cert_substitution() -> Result<()>
+{
+    let (devices, peers) = peers()?;
+    for mutation in 0..5 {
+        let mut f = fields(&peers, 0);
+        match mutation {
+            0 => f.ips.push("127.0.0.1:12345".parse()?),
+            1 => f.relay = Some("http://127.0.0.1:40124/".into()),
+            2 => f.cert = [99; 32],
+            3 => f.peer_cert = [99; 32],
+            _ => {
+                f.relay = None;
+                f.ips.push("127.0.0.1:12345".parse()?);
+            }
+        }
+        let signed = v2::ParsedRuntimeLocator2::sign(f, &devices[0])?;
+        ensure!(
+            locators::verify(signed.raw(), [17; 32], &peers, 0, 150, Some(URL), None).is_err(),
+            "signed but wrong relay publication {mutation}"
+        );
+    }
+    let signed = v2::ParsedRuntimeLocator2::sign(fields(&peers, 0), &devices[0])?;
+    for now in [99, 200] {
+        ensure!(
+            locators::verify(signed.raw(), [17; 32], &peers, 0, now, Some(URL), None).is_err(),
+            "not current interval"
+        );
+    }
+    Ok(())
+}
+#[test]
+fn s54_p10b_route_flip_requires_strict_signed_revision_not_endpoint_rotation() -> Result<()> {
+    let (devices, peers) = peers()?;
+    let mut before = fields(&peers, 0);
+    before.revision = 1;
+    before.relay = None;
+    before.ips = vec!["127.0.0.1:12345".parse()?];
+    let before = v2::ParsedRuntimeLocator2::sign(before, &devices[0])?;
+    let prior = locators::verify(before.raw(), [17; 32], &peers, 0, 150, None, None)?;
+    let after = v2::ParsedRuntimeLocator2::sign(fields(&peers, 0), &devices[0])?;
+    let actual = locators::verify(
+        after.raw(),
+        [17; 32],
+        &peers,
+        0,
+        150,
+        Some(URL),
+        Some(&prior),
+    )?;
+    ensure!(
+        actual.endpoint == prior.endpoint && actual.revision == 2,
+        "same endpoint is valid after actual route content/revision change"
+    );
+    let mut stale = fields(&peers, 0);
+    stale.revision = 1;
+    let stale = v2::ParsedRuntimeLocator2::sign(stale, &devices[0])?;
+    ensure!(
+        locators::verify(
+            stale.raw(),
+            [17; 32],
+            &peers,
+            0,
+            150,
+            Some(URL),
+            Some(&prior)
+        )
+        .is_err()
+            && locators::verify(
+                before.raw(),
+                [17; 32],
+                &peers,
+                0,
+                150,
+                Some(URL),
+                Some(&prior)
+            )
+            .is_err(),
+        "stale revision/direct substitute"
+    );
+    Ok(())
+}
+fn admitted_row() -> Value {
+    json!({"slot":0,"mode":"Active","policy_error":null,"handoff_policy_error":null,"lease_current":true,"lease_family":2,"lease_generation":7,"publication_ready":true,"publication_error":null,"existing_origin_ready":true,"origin_publication_error":null,"own_locator_revision":2,"peer_locator_revision":2})
+}
+#[test]
+fn s54_p10b_actual_relay_admission_rejects_config_only_stale_head_revision_and_ready_slot()
+-> Result<()> {
+    let (devices, peers) = peers()?;
+    let own = v2::ParsedRuntimeLocator2::sign(fields(&peers, 0), &devices[0])?;
+    let peer = v2::ParsedRuntimeLocator2::sign(fields(&peers, 1), &devices[1])?;
+    let own = locators::verify(own.raw(), [17; 32], &peers, 0, 150, Some(URL), None)?;
+    let peer = locators::verify(peer.raw(), [17; 32], &peers, 1, 150, Some(URL), None)?;
+    let row = admitted_row();
+    let route = json!({"slot":0,"policy":"relay-only","selected_path":"relay"});
+    let head = Some(([20; 32], 7, 640));
+    ensure!(
+        locators::admitted(&row, &route, &own, &peer, head, true)?,
+        "actual current admission joined to signed publications"
+    );
+    let mut config_only = route.clone();
+    config_only["selected_path"] = Value::Null;
+    ensure!(
+        !locators::admitted(&row, &config_only, &own, &peer, head, true)?,
+        "configured relay alone cannot authorize release"
+    );
+    for mutation in 0..4 {
+        let mut bad = row.clone();
+        match mutation {
+            0 => bad["lease_current"] = false.into(),
+            1 => bad["own_locator_revision"] = 1.into(),
+            2 => bad["peer_locator_revision"] = 1.into(),
+            _ => bad["publication_ready"] = false.into(),
+        }
+        ensure!(
+            !locators::admitted(&bad, &route, &own, &peer, head, true)?,
+            "incomplete/stale admission {mutation}"
+        );
+    }
+    ensure!(
+        !locators::admitted(&row, &route, &own, &peer, Some(([20; 32], 8, 640)), true)?,
+        "stale Head"
+    );
+    let mut wrong = route.clone();
+    wrong["selected_path"] = "direct".into();
+    ensure!(
+        locators::admitted(&row, &wrong, &own, &peer, head, true).is_err(),
+        "wrong actual selected path"
+    );
+    let mut wrong = route;
+    wrong["slot"] = 1.into();
+    ensure!(
+        locators::admitted(&row, &wrong, &own, &peer, head, true).is_err(),
+        "wrong Ready physical slot"
+    );
+    Ok(())
+}

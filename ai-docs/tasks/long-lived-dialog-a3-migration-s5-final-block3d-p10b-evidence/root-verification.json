@@ -1,0 +1,37 @@
+{
+  "classification": "root independent P10B source/static/pure verification; no actual scenario",
+  "baseline": "2dce753d8ecf5cc9455ef25679c5338fb0aa81b9",
+  "pin_checks": 681,
+  "source_paths": 10,
+  "source_inputs": 567,
+  "fresh_units": 501,
+  "exact_passed_tests": [
+    "live_l1::handoff::final_p5::block2_tests::s54_b2_actual_envelope_start_commit_pending_head_and_final_decode",
+    "live_l1::handoff::final_p5::block2_tests::s54_b2_decoder_rejects_missing_start_sequence_and_counter_regression",
+    "live_l1::handoff::final_p5::block2_tests::s54_b2_decoder_rejects_pid_owner_nonce_context_and_unknown_kind",
+    "live_l1::handoff::final_p5::handoff::tests::s54_p10a_live_commit_counts_are_actual_decoder_records_not_expected_totals",
+    "live_l1::handoff::final_p5::pressure::tests::s54_p8_native_batch_observation_uses_actual_per_commit_deltas",
+    "live_l1::handoff::final_p5::relay::locator_tests::s54_p10b_actual_relay_admission_rejects_config_only_stale_head_revision_and_ready_slot",
+    "live_l1::handoff::final_p5::relay::locator_tests::s54_p10b_route_flip_requires_strict_signed_revision_not_endpoint_rotation",
+    "live_l1::handoff::final_p5::relay::locator_tests::s54_p10b_signed_two_context_locators_require_current_scope_role_and_signature",
+    "live_l1::handoff::final_p5::relay::locator_tests::s54_p10b_signed_url_only_locators_reject_ip_other_url_expiry_and_cert_substitution",
+    "live_l1::handoff::final_p5::relay::tests::s54_p10b_actual_work_and_packet_scope_never_substitute_expected_one_decrypt",
+    "live_l1::handoff::final_p5::relay::tests::s54_p10b_controls_keep_a_prefix_and_b_hold_until_ordered_release",
+    "live_l1::handoff::final_p5::relay::tests::s54_p10b_decoder_packet_metadata_is_from_accepted_real_context_commit_records",
+    "live_l1::handoff::final_p5::relay::tests::s54_p10b_history_maps_reject_body_id_request_format_or_order_substitution",
+    "live_l1::handoff::final_p5::relay::tests::s54_p10b_original_request_receipt_status_rejects_new_event_queue_or_fake_delivery",
+    "live_l1::handoff::final_p5::relay::tests::s54_p10b_profile_overlay_rejects_any_nonroute_mutation",
+    "live_l1::handoff::final_p5::relay::tests::s54_p10b_relay_unique_url_and_original_deadline_predicates",
+    "live_l1::handoff::final_p5::relay::tests::s54_p10b_route_requires_both_stopped_and_reconciled_outcomes",
+    "live_l1::handoff::final_p5::relay::tests::s54_p10b_source_frontiers_allow_only_original_b640_then_require_complete_receipts"
+  ],
+  "source_blob_checks": 10,
+  "actual_app_check_ids": {
+    "clippy": "exec-b82fb956-736f-4c7e-aacf-07dad19319c1",
+    "compile": "exec-080c06a3-001c-46cb-bfc9-c256628e305c",
+    "pure": "exec-1298e793-3ac4-4598-bbd4-77d6980a1169",
+    "fmt": "exec-973b5ffc-8893-46ed-a4d8-985ee39c9511"
+  },
+  "index_empty": true,
+  "runtime_unexecuted": true
+}

@@ -1,0 +1,10 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: mismatched closing delimiter: `)`
+ --> apps\kilogram-cli\tests\support\migration_s54_relay_tests.rs:6:11
+  |
+6 | ...on!({"context":id(1+context as u8),"slot":context,"role":owner,"d":id(3),"e":id(4),"sid":"original","q":id(5),"cuts":if context==0{json!([25,25])}else{json!([33,33])},"controls":{"p":id(6),"a":id(7),"k":id(8),"committed":id(9)},"current_consent":id(10),"current_consent2":id(10),"native":{"keys":[id(11)]},"mode":"Active","policy_error":null,"handoff_policy_error":null,"control_debt":false,"head_pending":null,"next":if context==1{json!([33,33])}else if owner==0{json!([641,640])}else{json!([641,641])},"counts":{"sources":if context==1{66}else{1281+owner},"queued":0,"pending":0,"debt":if context==0{owner}else{0},"receipts":if context==1{json!([32,32])}else if owner==0{json!([640,639])}else{json!([640,639])}})
+  |       -^ unclosed delimiter                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 ^ mismatched closing delimiter
+  |       |
+  |       closing delimiter possibly meant for this
+
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 1 previous error

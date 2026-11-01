@@ -26,6 +26,10 @@ mod oracle;
 mod p9a_tests;
 #[path = "migration_s54_pressure.rs"]
 mod pressure;
+#[path = "migration_s54_relay.rs"]
+mod relay;
+#[path = "migration_s54_relay_owner.rs"]
+mod relay_owner;
 #[path = "migration_s54_source.rs"]
 mod source;
 #[path = "migration_s54_transition.rs"]

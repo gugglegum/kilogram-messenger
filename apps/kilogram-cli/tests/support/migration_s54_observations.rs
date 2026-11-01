@@ -25,6 +25,14 @@ pub(super) fn stats(raw: &Value) -> Result<oracle::Counts> {
         inbound: get("inbound_constructors")?,
     })
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct PacketObservation {
+    pub context: u8,
+    pub counts: oracle::Counts,
+    pub operation: old::Id,
+    pub generation: u64,
+    pub sequence: u64,
+}
 pub(super) struct Decoder {
     pid: u32,
     role: u8,
@@ -35,6 +43,7 @@ pub(super) struct Decoder {
     key: Option<oracle::Incarnation>,
     sequence: u64,
     counts: oracle::Counts,
+    last_packet: Option<PacketObservation>,
     final_seen: bool,
     lines: u64,
     pub pre_q_bindings: BTreeSet<(old::Id, u64)>,
@@ -56,6 +65,10 @@ pub(super) struct Decoder {
     pub live_retry_complete: Option<Value>,
 }
 impl Decoder {
+    pub fn packet(&self) -> Result<Option<PacketObservation>> {
+        self.incarnation()?;
+        Ok(self.last_packet)
+    }
     pub fn observed_counts(&self) -> Result<oracle::Counts> {
         self.incarnation()?;
         Ok(self.counts)
@@ -71,6 +84,7 @@ impl Decoder {
             key: None,
             sequence: 0,
             counts: Default::default(),
+            last_packet: None,
             final_seen: false,
             lines: 0,
             pre_q_bindings: BTreeSet::new(),
@@ -185,6 +199,13 @@ impl Decoder {
                 state::parse_id(facts["operation"].as_str().context("commit operation")?)?;
             let delta = counts.delta(self.counts)?;
             ops.commit(key, sequence, generation, operation, counts)?;
+            self.last_packet = Some(PacketObservation {
+                context: self.context_index(facts)?,
+                counts: delta,
+                operation,
+                generation,
+                sequence,
+            });
             self.max_packet_delta = self.max_packet_delta.max(
                 delta
                     .encrypt
