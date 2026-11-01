@@ -11,6 +11,9 @@ pub use types::*;
 #[path = "live1/accounting.rs"]
 mod accounting;
 pub use accounting::{L1Accounting, L1AccountingGroup};
+#[path = "live1/fixed_records.rs"]
+mod fixed_records;
+pub use fixed_records::{L1FixedRecords7, L1RecordFingerprint7};
 #[path = "existing.rs"]
 mod existing;
 pub use existing::*;

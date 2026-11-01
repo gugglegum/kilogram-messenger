@@ -1,0 +1,85 @@
+{
+  "classification": "root accepted integrated G3 attempt03; not whole-S5.3 acceptance",
+  "attempt": "F-s53-two-c-routes-integrated-01-attempt-03",
+  "source_head": "9aa47d938af990c2cb61ea6c2ffe8dc1db02a9fa",
+  "executor_review": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-attempt03-success-review-01.json",
+    "bytes": 528301,
+    "sha256": "dd342f5c1c08ea98720c6304cc444bbb1a30142a1722a563f9ee544272fcba62"
+  },
+  "verified_unique_files": 2704,
+  "native_command_id": "exec-206c5689-bcfc-4b33-a566-74987305acf9",
+  "native_exit_code": 0,
+  "native_duration_ms": 147002,
+  "cleanup_command_id": "exec-2e0ea64e-8a4d-4902-abde-05dcbaa7dc66",
+  "cleanup_exit_code": 0,
+  "outer": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-two-c-routes-integrated-01-attempt-03.outer.json",
+    "bytes": 1098,
+    "sha256": "1c6d84bf8d49ab118da592755799c101114cd4ab0bf838adba7c5b6e3d47008f"
+  },
+  "case": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-two-c-routes-integrated-01-attempt-03.json",
+    "bytes": 4150,
+    "sha256": "6abc5bd50f8cf31abf4585276f4d60dab2f29d2bcb1bc54b7b40e0573ca200b9"
+  },
+  "assertions": {
+    "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/assertions.json",
+    "bytes": 147900,
+    "sha256": "93aa08855f7fae37e119b584189e32b1c3377035e6c5d159659321792b9f8f38"
+  },
+  "named_test_passed": 1,
+  "public_phase_count": 68,
+  "observed_owned_pids": [
+    1880,
+    11916,
+    15416,
+    25796,
+    26816,
+    29888,
+    41008,
+    45956,
+    46464,
+    47812,
+    50392,
+    51052,
+    51792,
+    54012,
+    54712,
+    58276,
+    59404
+  ],
+  "inventory_counts": {
+    "sources": 535,
+    "images": 10,
+    "runtime_dependencies": 1,
+    "prerequisites": 0
+  },
+  "source_and_image_identity_verified": true,
+  "raw_normalized_captures_verified": true,
+  "C1_and_Y_preservation_verified": true,
+  "complete_history_and_own_request_joins_verified": true,
+  "relay_auto_capacity_public_observations_verified": true,
+  "pre_final_and_final_stopped_ack_source_verified": true,
+  "zero_replay_counters_verified": true,
+  "crypto_and_private_repair_verification": "Attributed to pinned executed Rust verifier; no independent private reader or second crypto verification",
+  "phase_blake3_independently_recomputed": false,
+  "pre_CAS_bridge": "Source-derived expected state, checked against actual later stopped snapshot",
+  "F_charge_once": 146.5227752,
+  "S53_actual": {
+    "C": 10097.0614366,
+    "F": 2621.7365176,
+    "P": 0
+  },
+  "combined_actual": {
+    "C": 10684.5100475,
+    "F": 7338.0566665,
+    "P": 0
+  },
+  "active_runtime_allocation": 0,
+  "remaining_before_whole_S53": [
+    "B-only before current ALPN2 startup check, contract first",
+    "G4 focused regressions"
+  ],
+  "publication": "Authorized next for exact accepted source/public evidence allowlist; not yet committed or pushed"
+}

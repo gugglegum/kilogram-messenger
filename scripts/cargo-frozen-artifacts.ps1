@@ -56,9 +56,17 @@ function Write-KilogramFrozenJson([string]$Path,$Value) {
     $file=[IO.File]::Open($Path,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read)
     try{$file.Write($raw,0,$raw.Length);$file.Flush($true)}finally{$file.Dispose()}
 }
+function Get-KilogramFrozenArtifactCount([string[]]$Package) {
+    switch -CaseSensitive (@($Package|Sort-Object)-join ',') {
+        'kilogram-cli,kilogram-transport-iroh' { return 6 }
+        'kilogram-cli,kilogram-state,kilogram-transport-iroh' { return 9 }
+        default { throw 'Frozen scale build selection differs.' }
+    }
+}
 function Get-KilogramFrozenBuildInputs {
     param([string]$Workspace,[string]$Profile,[string]$Target,[string[]]$Package,[string[]]$CargoFeatures)
-    if($Profile -cne 'verification-scale' -or $Target -cne 'x86_64-pc-windows-msvc' -or (@($Package|Sort-Object)-join ',') -cne 'kilogram-cli,kilogram-transport-iroh' -or $CargoFeatures.Count){throw 'Frozen scale build selection differs.'}
+    $null=Get-KilogramFrozenArtifactCount $Package
+    if($Profile -cne 'verification-scale' -or $Target -cne 'x86_64-pc-windows-msvc' -or $CargoFeatures.Count){throw 'Frozen scale build selection differs.'}
     $environment=@(Get-KilogramFrozenEnvironment -Entries @(Get-ChildItem Env:))
     if($env:CARGO_NET_OFFLINE -cne 'true'){throw 'Frozen compile must be offline.'}
     $configs=@();$directory=[IO.DirectoryInfo]::new($Workspace)
@@ -89,10 +97,10 @@ function Get-KilogramFrozenBuildInputs {
     $sourceRows=@($sourcePaths|Sort-Object -Unique|ForEach-Object {[ordered]@{path=$_;sha256=(Get-KilogramFrozenHash (Join-Path $Workspace $_))}})
     [ordered]@{format_version=1;profile=$Profile;target=$Target;packages=@($Package|Sort-Object);cargo_features=@($CargoFeatures|Sort-Object);tools=$tools;rustc=$rustc;cargo=$cargo;environment=$environment;configs=$configRows;source_inputs=$sourceRows;package_names=$packageNames;resolved_graph=$graph}
 }
-function Read-KilogramFrozenManifest([string]$Path,[string]$Sha256) {
+function Read-KilogramFrozenManifest([string]$Path,[string]$Sha256,[int]$ExpectedCount=6) {
     if(-not [IO.Path]::IsPathRooted($Path) -or $Sha256 -cnotmatch '^[a-f0-9]{64}$' -or (Get-Item -LiteralPath $Path).Length -gt 4MB -or (Get-KilogramFrozenHash $Path) -cne $Sha256){throw 'Exact frozen artifact manifest required.'}
     $manifest=Get-Content -LiteralPath $Path -Raw|ConvertFrom-Json -AsHashtable
-    if($manifest.format_version -ne 1 -or $manifest.classification -cne 'frozen-scale-test-artifacts' -or $manifest.artifacts.Count -ne 6){throw 'Frozen artifact manifest schema/set.'}
+    if($manifest.format_version -ne 1 -or $manifest.classification -cne 'frozen-scale-test-artifacts' -or $manifest.artifacts.Count -ne $ExpectedCount){throw 'Frozen artifact manifest schema/set.'}
     $manifest
 }
 function Assert-KilogramFrozenInputs($Expected,$Actual) {
@@ -125,8 +133,8 @@ function Get-KilogramFrozenStableRows($Artifacts,[string]$Profile) {
         [ordered]@{package=$_.Package;kind=$_.Kind;target=$_.Target;path=[IO.Path]::GetFullPath($_.Path);bytes=(Get-Item -LiteralPath $_.Path).Length;sha256=(Get-KilogramFrozenHash $_.Path);profile=$Profile}
     })
 }
-function Assert-KilogramFrozenArtifacts($Manifest,$Actual,[string]$Profile,[string]$Target,[string]$StableDirectory) {
-    if($Profile -cne $Manifest.profile -or $Target -cne $Manifest.target -or [IO.Path]::GetFullPath($StableDirectory) -cne $Manifest.stable_directory -or @($Actual).Count -ne 6){throw 'Frozen profile/directory/artifact count mismatch.'}
+function Assert-KilogramFrozenArtifacts($Manifest,$Actual,[string]$Profile,[string]$Target,[string]$StableDirectory,[int]$ExpectedCount=6) {
+    if($Profile -cne $Manifest.profile -or $Target -cne $Manifest.target -or [IO.Path]::GetFullPath($StableDirectory) -cne $Manifest.stable_directory -or @($Actual).Count -ne $ExpectedCount){throw 'Frozen profile/directory/artifact count mismatch.'}
     $expected=@($Manifest.artifacts|Sort-Object package,kind,target,path)
     $actualRows=@($Actual|Sort-Object package,kind,target,path)
     if((ConvertTo-KilogramFrozenJson $expected) -cne (ConvertTo-KilogramFrozenJson $actualRows)){throw 'Frozen staged package/kind/target/path/size/hash/profile mismatch.'}

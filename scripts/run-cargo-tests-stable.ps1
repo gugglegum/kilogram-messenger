@@ -55,11 +55,12 @@ $frozenOptIn = -not [string]::IsNullOrWhiteSpace($BuildEvidencePath) -or -not [s
 $frozenExpected = $null
 if ($frozenOptIn) {
     . (Join-Path $PSScriptRoot 'cargo-frozen-artifacts.ps1')
+    $frozenArtifactCount = Get-KilogramFrozenArtifactCount $Package
     if ([string]::IsNullOrWhiteSpace($BuildEvidencePath) -or -not [IO.Path]::IsPathRooted($BuildEvidencePath) -or (Test-Path -LiteralPath $BuildEvidencePath)) { throw 'New absolute build evidence path required.' }
     $requiredStable = [IO.Path]::GetFullPath((Join-Path $workspaceRoot 'target/verification-scale/deps'))
     if ([IO.Path]::GetFullPath($StableArtifactsDirectory) -cne $requiredStable) { throw 'Frozen scale stable directory mismatch.' }
     if ($Run -and [string]::IsNullOrWhiteSpace($ExpectedArtifactsManifest)) { throw 'Run capture requires an independently frozen expected manifest.' }
-    if (-not [string]::IsNullOrWhiteSpace($ExpectedArtifactsManifest)) { $frozenExpected = Read-KilogramFrozenManifest $ExpectedArtifactsManifest $ExpectedArtifactsSha256 }
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedArtifactsManifest)) { $frozenExpected = Read-KilogramFrozenManifest $ExpectedArtifactsManifest $ExpectedArtifactsSha256 $frozenArtifactCount }
     elseif (-not [string]::IsNullOrWhiteSpace($ExpectedArtifactsSha256)) { throw 'Expected manifest/hash must be paired.' }
     $frozenBefore = Get-KilogramFrozenBuildInputs -Workspace $workspaceRoot -Profile $Profile -Target $CargoTarget -Package $Package -CargoFeatures $CargoFeatures
     if ($frozenExpected) { Assert-KilogramFrozenInputs $frozenExpected.build_inputs $frozenBefore }
@@ -174,10 +175,10 @@ if ($frozenOptIn) {
     $frozenAfter = Get-KilogramFrozenBuildInputs -Workspace $workspaceRoot -Profile $Profile -Target $CargoTarget -Package $Package -CargoFeatures $CargoFeatures
     Assert-KilogramFrozenInputs $frozenBefore $frozenAfter
     $frozenRows = @(Get-KilogramFrozenStableRows $stableArtifacts $Profile)
-    if ($frozenRows.Count -ne 6) { throw 'Frozen staging requires exactly six artifacts.' }
+    if ($frozenRows.Count -ne $frozenArtifactCount) { throw 'Frozen staging artifact set differs from the selected package graph.' }
     if ($frozenExpected) {
         Assert-KilogramFrozenInputs $frozenExpected.build_inputs $frozenAfter
-        Assert-KilogramFrozenArtifacts $frozenExpected $frozenRows $Profile $CargoTarget $StableArtifactsDirectory
+        Assert-KilogramFrozenArtifacts $frozenExpected $frozenRows $Profile $CargoTarget $StableArtifactsDirectory $frozenArtifactCount
         Assert-KilogramFrozenInputs $frozenExpected.units_identity (Get-KilogramFrozenUnitIdentity $frozenUnits)
     }
     Write-KilogramFrozenJson $BuildEvidencePath ([ordered]@{

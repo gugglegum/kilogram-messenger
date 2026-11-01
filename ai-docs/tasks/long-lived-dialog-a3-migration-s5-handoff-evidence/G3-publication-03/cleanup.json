@@ -1,0 +1,93 @@
+{
+  "live_kilogram_processes": 0,
+  "checked_utc": "2026-11-01T09:56:05.4729511Z",
+  "observed_owned": [
+    {
+      "name": null,
+      "pid": 1880,
+      "present": false
+    },
+    {
+      "name": null,
+      "pid": 11916,
+      "present": false
+    },
+    {
+      "name": null,
+      "pid": 15416,
+      "present": false
+    },
+    {
+      "name": null,
+      "pid": 25796,
+      "present": false
+    },
+    {
+      "name": null,
+      "pid": 26816,
+      "present": false
+    },
+    {
+      "name": null,
+      "pid": 29888,
+      "present": false
+    },
+    {
+      "name": null,
+      "pid": 41008,
+      "present": false
+    },
+    {
+      "name": null,
+      "pid": 45956,
+      "present": false
+    },
+    {
+      "name": null,
+      "pid": 46464,
+      "present": false
+    },
+    {
+      "name": null,
+      "pid": 47812,
+      "present": false
+    },
+    {
+      "name": null,
+      "pid": 50392,
+      "present": false
+    },
+    {
+      "name": null,
+      "pid": 51052,
+      "present": false
+    },
+    {
+      "name": null,
+      "pid": 51792,
+      "present": false
+    },
+    {
+      "name": null,
+      "pid": 54012,
+      "present": false
+    },
+    {
+      "name": null,
+      "pid": 54712,
+      "present": false
+    },
+    {
+      "name": null,
+      "pid": 58276,
+      "present": false
+    },
+    {
+      "name": null,
+      "pid": 59404,
+      "present": false
+    }
+  ],
+  "outer_cleanup_verified": true,
+  "classification": "Actual native read-only cleanup after G3 attempt03; no process terminated"
+}

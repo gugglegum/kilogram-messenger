@@ -1,0 +1,1118 @@
+{
+  "classification": "Portable public G3 acceptance evidence; local runtime provenance retained by reference",
+  "implementation_parent": "9aa47d938af990c2cb61ea6c2ffe8dc1db02a9fa",
+  "accepted_source": [
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_handoff.rs",
+      "bytes": 332454,
+      "sha256": "6fde99727ef7566da06bf114314d80d6b0bce06909a8fcdae6d90b5d0c3139db"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_two_context.rs",
+      "bytes": 33855,
+      "sha256": "0ca99123b3069fba62d53c9505b20769fee7a5e858c0c031ac16ed4548e143ee"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_two_context_finish.rs",
+      "bytes": 20058,
+      "sha256": "56448231e9b41e73f868a83ff79026f93deb3119b06e081f1a18620be2c2d5f0"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_two_context_oracle.rs",
+      "bytes": 18514,
+      "sha256": "82545984ff60e21874aa4d1c12f15d2077aee1acace780415e4816eeef0c7348"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_two_context_persistence.rs",
+      "bytes": 17106,
+      "sha256": "cbcddaa077fb79ec7a213fa89c0d3dfc530da83496f06ca5bf9cae56509ca3fa"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_two_context_persistence_tests.rs",
+      "bytes": 11364,
+      "sha256": "12bc3fd0ba07059e5f236ab586a7c527b5ddaed03c0abf56eb4399375e69f501"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_two_context_routes.rs",
+      "bytes": 8454,
+      "sha256": "346b70a7f0484a8469299d01a589d290e58e6307b49d985ae31fe75d83aec294"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_two_context_route_tests.rs",
+      "bytes": 9411,
+      "sha256": "13719fe2c5b9b50433c547236961dd425060a07d1ed0df213af615d17dc65f8e"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_two_context_tests.rs",
+      "bytes": 16109,
+      "sha256": "17225c2bcfa5e4c136bb480d23fd0ba3ef2e9125f86467dba330040d7acba92f"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_two_context_witness.rs",
+      "bytes": 24341,
+      "sha256": "5d4a6bf3f2141c62a09df92a4b83907ffaae5db80c6aba2979b05e318c799444"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs",
+      "bytes": 15074,
+      "sha256": "647a622967366c37d936af38480c03f067be8e5a935948f90378f089ea64f2ef"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/fixed_records.rs",
+      "bytes": 2254,
+      "sha256": "3cfcf41040e74e1380ff2c5552e198423d3467e80040c8390b451c287ad39a8d"
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/g3_records_tests.rs",
+      "bytes": 6542,
+      "sha256": "50d4ebfa60409f63b48ce72dec616938e07fc359e144e9047132f75475cc9a26"
+    },
+    {
+      "path": "scripts/cargo-frozen-artifacts.ps1",
+      "bytes": 12482,
+      "sha256": "80d4dbd72de47ab857a6c7ff954533e2fc1c90f08436f6f18985ea889bf695fa"
+    },
+    {
+      "path": "scripts/run-cargo-tests-stable.ps1",
+      "bytes": 14816,
+      "sha256": "c16df34557a668821e5aca0b67a1dadebcf6de2cfff5178958bff621c3e3fbe0"
+    },
+    {
+      "path": "scripts/migration-s53-metadata.ps1",
+      "bytes": 34735,
+      "sha256": "65c38ec6c3c79687b0ab62b2794ca30bcabede45d00c0006ffab23288e6adbe1"
+    },
+    {
+      "path": "scripts/invoke-migration-s53-integration-case.ps1",
+      "bytes": 41972,
+      "sha256": "7e927e89df1421268ac05c08fb84165cbdbedcccb202aee543f3444facd24be3"
+    },
+    {
+      "path": "scripts/invoke-migration-s53-integration-outer.ps1",
+      "bytes": 5432,
+      "sha256": "70f8f30c973af7d72f03f26bbe4657f56c6a2370948127cef4948724bfa778cb"
+    },
+    {
+      "path": "scripts/prepare-migration-s53-g3.ps1",
+      "bytes": 26420,
+      "sha256": "dc4218ef687df7c23eb22b97fabab691fb77c814d4b4fa8c7f564e87020ee059"
+    }
+  ],
+  "copied_public_artifacts": [
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/assertions.json",
+        "bytes": 147900,
+        "sha256": "93aa08855f7fae37e119b584189e32b1c3377035e6c5d159659321792b9f8f38"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/assertions.json",
+        "bytes": 147900,
+        "sha256": "93aa08855f7fae37e119b584189e32b1c3377035e6c5d159659321792b9f8f38"
+      }
+    },
+    {
+      "original": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-two-c-routes-integrated-01-attempt-03.json",
+        "bytes": 4150,
+        "sha256": "6abc5bd50f8cf31abf4585276f4d60dab2f29d2bcb1bc54b7b40e0573ca200b9"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/case.json",
+        "bytes": 4150,
+        "sha256": "6abc5bd50f8cf31abf4585276f4d60dab2f29d2bcb1bc54b7b40e0573ca200b9"
+      }
+    },
+    {
+      "original": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-two-c-routes-integrated-01-attempt-03.outer.json",
+        "bytes": 1098,
+        "sha256": "1c6d84bf8d49ab118da592755799c101114cd4ab0bf838adba7c5b6e3d47008f"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/outer.json",
+        "bytes": 1098,
+        "sha256": "1c6d84bf8d49ab118da592755799c101114cd4ab0bf838adba7c5b6e3d47008f"
+      }
+    },
+    {
+      "original": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-two-c-routes-integrated-01-attempt-03.log",
+        "bytes": 3035,
+        "sha256": "0d7730a82f0a6e5de426d0e240809f100f0f546baf4f8ee127cf019dc2222974"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/named-test.log",
+        "bytes": 3035,
+        "sha256": "0d7730a82f0a6e5de426d0e240809f100f0f546baf4f8ee127cf019dc2222974"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/g3-runtime-03/cleanup-03.json",
+        "bytes": 1623,
+        "sha256": "45147e1e4ab2bc6a2513fd3becc945b3e95f408cb8899c3f374a482b54decb2e"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/cleanup.json",
+        "bytes": 1623,
+        "sha256": "45147e1e4ab2bc6a2513fd3becc945b3e95f408cb8899c3f374a482b54decb2e"
+      }
+    },
+    {
+      "original": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-attempt03-root-success-verification-01.json",
+        "bytes": 2968,
+        "sha256": "5a8175d541f79ba49f484ea6336cb356d66275810c2be2c0ed9a9799b23abb25"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/root-accepted.json",
+        "bytes": 2968,
+        "sha256": "5a8175d541f79ba49f484ea6336cb356d66275810c2be2c0ed9a9799b23abb25"
+      }
+    },
+    {
+      "original": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-repair02-B-only-coverage-01.md",
+        "bytes": 6239,
+        "sha256": "039dbfc75b139e28b4e8e2846d55a5be46d4113351ded859cf37d73eeb3b6e90"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/B-only-coverage.md",
+        "bytes": 6239,
+        "sha256": "039dbfc75b139e28b4e8e2846d55a5be46d4113351ded859cf37d73eeb3b6e90"
+      }
+    },
+    {
+      "original": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-repair03-stopped-witness-premises-01.md",
+        "bytes": 5898,
+        "sha256": "6c6e9730a242c3182a14691e02a6fb71c77289f0ee3f986190795ce0cad0e81b"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/stopped-witness-premises.md",
+        "bytes": 5898,
+        "sha256": "6c6e9730a242c3182a14691e02a6fb71c77289f0ee3f986190795ce0cad0e81b"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-auto502-live-observed.json",
+        "bytes": 11025,
+        "sha256": "0c5339124e554213684c7ba1d5bdcb3fc6e367074b4f3c6f35949516052e2fc1"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-auto502-live-observed.json",
+        "bytes": 11025,
+        "sha256": "0c5339124e554213684c7ba1d5bdcb3fc6e367074b4f3c6f35949516052e2fc1"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-auto502-paths-observed.json",
+        "bytes": 8689,
+        "sha256": "98a1c1688b61a6478fe3d9054ad965dfa243a8d50cdd5f91106e8e665d8d093e"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-auto502-paths-observed.json",
+        "bytes": 8689,
+        "sha256": "98a1c1688b61a6478fe3d9054ad965dfa243a8d50cdd5f91106e8e665d8d093e"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-auto502-profile1.json",
+        "bytes": 1689,
+        "sha256": "cbc56b8a852dc30e6bf37744c8a3538b1e090a914fa6ffc4a5324b7df0822ff8"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-auto502-profile1.json",
+        "bytes": 1689,
+        "sha256": "cbc56b8a852dc30e6bf37744c8a3538b1e090a914fa6ffc4a5324b7df0822ff8"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-auto502-profile2.json",
+        "bytes": 1622,
+        "sha256": "550684b2c655a0e7db833fd13e192cfd48d664fd36733c6d09109ef2e5de1c6d"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-auto502-profile2.json",
+        "bytes": 1622,
+        "sha256": "550684b2c655a0e7db833fd13e192cfd48d664fd36733c6d09109ef2e5de1c6d"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-auto502-public-observed.json",
+        "bytes": 2208,
+        "sha256": "64fc4bab0ff9837ef9ebc07688d514a35dca11098d63edcb6688f2260663dd58"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-auto502-public-observed.json",
+        "bytes": 2208,
+        "sha256": "64fc4bab0ff9837ef9ebc07688d514a35dca11098d63edcb6688f2260663dd58"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-auto502-route-input.json",
+        "bytes": 43788,
+        "sha256": "5589153a1aa614e40797c8ed198141500988147b128dc4d7c10923bf70c34b5c"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-auto502-route-input.json",
+        "bytes": 43788,
+        "sha256": "5589153a1aa614e40797c8ed198141500988147b128dc4d7c10923bf70c34b5c"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-auto502-status-observed.json",
+        "bytes": 8702,
+        "sha256": "73325003dd84c4a9824b3990a40848182c047c85fa4d74c776be7501c570ddb6"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-auto502-status-observed.json",
+        "bytes": 8702,
+        "sha256": "73325003dd84c4a9824b3990a40848182c047c85fa4d74c776be7501c570ddb6"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-baseline-before-stop.json",
+        "bytes": 410,
+        "sha256": "99de822d34d787e10cfc93a9de0a95389431b03a11d767cff6a9ff9e39e35ded"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-baseline-before-stop.json",
+        "bytes": 410,
+        "sha256": "99de822d34d787e10cfc93a9de0a95389431b03a11d767cff6a9ff9e39e35ded"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-baseline-stopped-observed.json",
+        "bytes": 37493,
+        "sha256": "8555a4a816558b13f91ce72453d8627870eb7226d88c6da8bb544749832821bd"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-baseline-stopped-observed.json",
+        "bytes": 37493,
+        "sha256": "8555a4a816558b13f91ce72453d8627870eb7226d88c6da8bb544749832821bd"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-before-pin-observed.json",
+        "bytes": 13126,
+        "sha256": "8633134759fca4840274c74ba13f04b24d8d7c340d1d82a17644c1dd75e8283b"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-before-pin-observed.json",
+        "bytes": 13126,
+        "sha256": "8633134759fca4840274c74ba13f04b24d8d7c340d1d82a17644c1dd75e8283b"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-before-pin-status-observed.json",
+        "bytes": 11653,
+        "sha256": "6bb0c05d55d4c99dd51157947c7e8742cf4b5cddec4336507134acd65d8faf20"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-before-pin-status-observed.json",
+        "bytes": 11653,
+        "sha256": "6bb0c05d55d4c99dd51157947c7e8742cf4b5cddec4336507134acd65d8faf20"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-before501-live-observed.json",
+        "bytes": 10436,
+        "sha256": "ce19ba49e2b5b45dcc5c61cde2e0d46df39de0da22283a04f03046d591db8760"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-before501-live-observed.json",
+        "bytes": 10436,
+        "sha256": "ce19ba49e2b5b45dcc5c61cde2e0d46df39de0da22283a04f03046d591db8760"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-before501-status-observed.json",
+        "bytes": 8718,
+        "sha256": "2bd2828b26ae0371d51fb998291b28b9f6b85619cde530e5262dd4f33c9db34e"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-before501-status-observed.json",
+        "bytes": 8718,
+        "sha256": "2bd2828b26ae0371d51fb998291b28b9f6b85619cde530e5262dd4f33c9db34e"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-capacity-after-live-observed.json",
+        "bytes": 7009,
+        "sha256": "f6e5df9a6360a28a1c41567d710b32e5828bc252ed96075fb7c183263a5028e2"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-capacity-after-live-observed.json",
+        "bytes": 7009,
+        "sha256": "f6e5df9a6360a28a1c41567d710b32e5828bc252ed96075fb7c183263a5028e2"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-capacity-asserted.json",
+        "bytes": 41209,
+        "sha256": "2b176e4b14b84b04835adeed92a950bd092ca3b58835a28f8c9891f102fad370"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-capacity-asserted.json",
+        "bytes": 41209,
+        "sha256": "2b176e4b14b84b04835adeed92a950bd092ca3b58835a28f8c9891f102fad370"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-capacity-before-stop.json",
+        "bytes": 409,
+        "sha256": "726fae768644390f93a9d407455375fc9c84193001d281b00fde316e8539bc00"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-capacity-before-stop.json",
+        "bytes": 409,
+        "sha256": "726fae768644390f93a9d407455375fc9c84193001d281b00fde316e8539bc00"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-capacity-cas-result.json",
+        "bytes": 956,
+        "sha256": "01d45aa05240e8e426b4f1ec287d20423c175c95cc2271527696982ccfc4eef7"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-capacity-cas-result.json",
+        "bytes": 956,
+        "sha256": "01d45aa05240e8e426b4f1ec287d20423c175c95cc2271527696982ccfc4eef7"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-capacity-pre-cas-observed.json",
+        "bytes": 26031,
+        "sha256": "ed22754436e4b2461851218b290bd642fd6b4f068b8253f5bb4861f3e2f74339"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-capacity-pre-cas-observed.json",
+        "bytes": 26031,
+        "sha256": "ed22754436e4b2461851218b290bd642fd6b4f068b8253f5bb4861f3e2f74339"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-capacity-solo-live-observed.json",
+        "bytes": 7070,
+        "sha256": "2f4651ee3a99ab4ee8c418d7851c49e7b14b7ee4c8420d8d8a19f74d6dd05215"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-capacity-solo-live-observed.json",
+        "bytes": 7070,
+        "sha256": "2f4651ee3a99ab4ee8c418d7851c49e7b14b7ee4c8420d8d8a19f74d6dd05215"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-capacity-solo-public-status.json",
+        "bytes": 5686,
+        "sha256": "b7b7f9a667e5940026b27cec516f3dc8db9526d3c69d653d18220293cccf33cf"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-capacity-solo-public-status.json",
+        "bytes": 5686,
+        "sha256": "b7b7f9a667e5940026b27cec516f3dc8db9526d3c69d653d18220293cccf33cf"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-capacity-solo-publication.json",
+        "bytes": 1258,
+        "sha256": "f0ce1c12b917595ffc558fec380ed695431079fb56a87bb58120460ddfeb645e"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-capacity-solo-publication.json",
+        "bytes": 1258,
+        "sha256": "f0ce1c12b917595ffc558fec380ed695431079fb56a87bb58120460ddfeb645e"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-capacity-solo-route-input.json",
+        "bytes": 41171,
+        "sha256": "7a1fdc6a05af79c38c1e26b8a3e3aa67ff6ac25f4515e6257c0f2dfacf2b4ef5"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-capacity-solo-route-input.json",
+        "bytes": 41171,
+        "sha256": "7a1fdc6a05af79c38c1e26b8a3e3aa67ff6ac25f4515e6257c0f2dfacf2b4ef5"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-capacity-solo-status-observed.json",
+        "bytes": 5720,
+        "sha256": "4e5c075dcb74afc693780b3f4f134e8e0de6f4031b92c5c0a90b89bcb43a5eb1"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-capacity-solo-status-observed.json",
+        "bytes": 5720,
+        "sha256": "4e5c075dcb74afc693780b3f4f134e8e0de6f4031b92c5c0a90b89bcb43a5eb1"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-capacity-stopped-observed.json",
+        "bytes": 41199,
+        "sha256": "88c89a7c340b201121b7ab66b53abd92a754b8fc0898097081b0f380fc1510a5"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-capacity-stopped-observed.json",
+        "bytes": 41199,
+        "sha256": "88c89a7c340b201121b7ab66b53abd92a754b8fc0898097081b0f380fc1510a5"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-cleanup-complete.json",
+        "bytes": 412,
+        "sha256": "2a24556805cdc1b87b461c3d1d8e2422ecb8f7a769c9530dcd6b1ae5a6011493"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-cleanup-complete.json",
+        "bytes": 412,
+        "sha256": "2a24556805cdc1b87b461c3d1d8e2422ecb8f7a769c9530dcd6b1ae5a6011493"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-delivery500-before-stop.json",
+        "bytes": 413,
+        "sha256": "fd07e03747f961db8ff28d3eb0881f8ec524f99303d7c02e4626c815e29671af"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-delivery500-before-stop.json",
+        "bytes": 413,
+        "sha256": "fd07e03747f961db8ff28d3eb0881f8ec524f99303d7c02e4626c815e29671af"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-delivery500-live-observed.json",
+        "bytes": 14414,
+        "sha256": "03ce3fe55a77459535c1a8e6d97b7560e47d0a56476106ca3f484b0614e01793"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-delivery500-live-observed.json",
+        "bytes": 14414,
+        "sha256": "03ce3fe55a77459535c1a8e6d97b7560e47d0a56476106ca3f484b0614e01793"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-delivery500-status-observed.json",
+        "bytes": 11881,
+        "sha256": "94582fc2ee9cb7e12fec8e9e6a16f1b3f67b65a5717188bb290bb2709557721f"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-delivery500-status-observed.json",
+        "bytes": 11881,
+        "sha256": "94582fc2ee9cb7e12fec8e9e6a16f1b3f67b65a5717188bb290bb2709557721f"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-delivery500-stopped-observed.json",
+        "bytes": 39166,
+        "sha256": "d19e6f0a8590a9d1f70244b2e6bcb87ae0511094de708a4d135e1dbd62191052"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-delivery500-stopped-observed.json",
+        "bytes": 39166,
+        "sha256": "d19e6f0a8590a9d1f70244b2e6bcb87ae0511094de708a4d135e1dbd62191052"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-delivery501-before-stop.json",
+        "bytes": 420,
+        "sha256": "23f184df57ec57e32f6f12f275ea586669d1913f9fe8cb4da4c45fe92d6cef7b"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-delivery501-before-stop.json",
+        "bytes": 420,
+        "sha256": "23f184df57ec57e32f6f12f275ea586669d1913f9fe8cb4da4c45fe92d6cef7b"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-delivery501-live-observed.json",
+        "bytes": 11497,
+        "sha256": "9c636a355041035d72f0a29c85bca63d2e498bf148f504cfcaecf8fc866391c1"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-delivery501-live-observed.json",
+        "bytes": 11497,
+        "sha256": "9c636a355041035d72f0a29c85bca63d2e498bf148f504cfcaecf8fc866391c1"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-delivery501-status-observed.json",
+        "bytes": 8747,
+        "sha256": "e90046b0e6595dee40e1b040ea3ca994f75ebb153bf48f6242400ccca5ce2465"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-delivery501-status-observed.json",
+        "bytes": 8747,
+        "sha256": "e90046b0e6595dee40e1b040ea3ca994f75ebb153bf48f6242400ccca5ce2465"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-delivery501-stopped-observed.json",
+        "bytes": 41245,
+        "sha256": "449ff6b51521c3273482f624128c948a58944685798ade098d34773b81a6e0ee"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-delivery501-stopped-observed.json",
+        "bytes": 41245,
+        "sha256": "449ff6b51521c3273482f624128c948a58944685798ade098d34773b81a6e0ee"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-delivery502-live-observed.json",
+        "bytes": 12081,
+        "sha256": "5e4ebf26e1d2020c52e35680a53027b383886602d93165e7a5834bdf0c233449"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-delivery502-live-observed.json",
+        "bytes": 12081,
+        "sha256": "5e4ebf26e1d2020c52e35680a53027b383886602d93165e7a5834bdf0c233449"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-delivery502-status-observed.json",
+        "bytes": 8732,
+        "sha256": "47f8f1fe808c55dc861d4b286aef5fdd822e2d4c2994e1f98be33fc484f4d863"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-delivery502-status-observed.json",
+        "bytes": 8732,
+        "sha256": "47f8f1fe808c55dc861d4b286aef5fdd822e2d4c2994e1f98be33fc484f4d863"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-final-before-stop.json",
+        "bytes": 416,
+        "sha256": "fd5335a3945f72f10d95fab21a39ef54f5c6222bb01793614b36aa1366f37925"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-final-before-stop.json",
+        "bytes": 416,
+        "sha256": "fd5335a3945f72f10d95fab21a39ef54f5c6222bb01793614b36aa1366f37925"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-final-invariants-asserted.json",
+        "bytes": 43068,
+        "sha256": "0bf9bc66b1679792401966d3b1c85992f6c3db22d7d8ca18badad586802a8d90"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-final-invariants-asserted.json",
+        "bytes": 43068,
+        "sha256": "0bf9bc66b1679792401966d3b1c85992f6c3db22d7d8ca18badad586802a8d90"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-final-restart-live-observed.json",
+        "bytes": 11635,
+        "sha256": "b2fa21dd391a3f45b9b47e4ecdba8f71a45c8453186a17320a3ba1fb3b30e62d"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-final-restart-live-observed.json",
+        "bytes": 11635,
+        "sha256": "b2fa21dd391a3f45b9b47e4ecdba8f71a45c8453186a17320a3ba1fb3b30e62d"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-final-restart-paths-observed.json",
+        "bytes": 8695,
+        "sha256": "2d37337fb0217851ccd15a34e50789db6e78ddec52d53fdf595395a9d6abd74c"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-final-restart-paths-observed.json",
+        "bytes": 8695,
+        "sha256": "2d37337fb0217851ccd15a34e50789db6e78ddec52d53fdf595395a9d6abd74c"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-final-restart-profile1.json",
+        "bytes": 1695,
+        "sha256": "781cda4657ee3e7b196d7b377caa0bcbfe641b41a7fa665860623a36a88fa729"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-final-restart-profile1.json",
+        "bytes": 1695,
+        "sha256": "781cda4657ee3e7b196d7b377caa0bcbfe641b41a7fa665860623a36a88fa729"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-final-restart-profile2.json",
+        "bytes": 1628,
+        "sha256": "2f444d402848b0fc69339cc38721f999739d1c9031ca8b9a76ebffc27f385625"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-final-restart-profile2.json",
+        "bytes": 1628,
+        "sha256": "2f444d402848b0fc69339cc38721f999739d1c9031ca8b9a76ebffc27f385625"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-final-restart-public-observed.json",
+        "bytes": 2195,
+        "sha256": "6532f82a7da09bcd7436a3d191289547af74b4cd0414b7c8d8d0cc989ab4f606"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-final-restart-public-observed.json",
+        "bytes": 2195,
+        "sha256": "6532f82a7da09bcd7436a3d191289547af74b4cd0414b7c8d8d0cc989ab4f606"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-final-restart-route-input.json",
+        "bytes": 45626,
+        "sha256": "8cf7aa0d22de4115c30debbc01507e1bfba100acf0a15ff05d834a32bb957fd6"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-final-restart-route-input.json",
+        "bytes": 45626,
+        "sha256": "8cf7aa0d22de4115c30debbc01507e1bfba100acf0a15ff05d834a32bb957fd6"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-final-restart-status-observed.json",
+        "bytes": 8708,
+        "sha256": "8b85f1a0801f4027fe525884d27172a888a0e91c78499c754bbb7bb291b8a87e"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-final-restart-status-observed.json",
+        "bytes": 8708,
+        "sha256": "8b85f1a0801f4027fe525884d27172a888a0e91c78499c754bbb7bb291b8a87e"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-final-stopped-observed.json",
+        "bytes": 43009,
+        "sha256": "1967bccade28c684ee54b8a8925d0100b4e97dd660a5149130a136476bd1f729"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-final-stopped-observed.json",
+        "bytes": 43009,
+        "sha256": "1967bccade28c684ee54b8a8925d0100b4e97dd660a5149130a136476bd1f729"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-legacy-delivered.json",
+        "bytes": 2086,
+        "sha256": "e3148e3cfbecfe077be7da139175143a5bb40ec4db63da8b49511ba7e57036f0"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-legacy-delivered.json",
+        "bytes": 2086,
+        "sha256": "e3148e3cfbecfe077be7da139175143a5bb40ec4db63da8b49511ba7e57036f0"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-mapping-observed.json",
+        "bytes": 13494,
+        "sha256": "321f30d315e3c84c00a4a697b999e63203344a1de616e77f370ffa3fe2839689"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-mapping-observed.json",
+        "bytes": 13494,
+        "sha256": "321f30d315e3c84c00a4a697b999e63203344a1de616e77f370ffa3fe2839689"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-pin-input-observed.json",
+        "bytes": 532,
+        "sha256": "5a43b45cdd9b0df549b78b81c998720fdb17536a7715405475d0119b9e09c1b4"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-pin-input-observed.json",
+        "bytes": 532,
+        "sha256": "5a43b45cdd9b0df549b78b81c998720fdb17536a7715405475d0119b9e09c1b4"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-pin-paused-observed.json",
+        "bytes": 13211,
+        "sha256": "576a71ed3b838104d2e99e259b0e79087e4399e40501f9bcb4d19e92099b9f09"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-pin-paused-observed.json",
+        "bytes": 13211,
+        "sha256": "576a71ed3b838104d2e99e259b0e79087e4399e40501f9bcb4d19e92099b9f09"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-pin-paused-status-observed.json",
+        "bytes": 11738,
+        "sha256": "d305babe1ee793ad1d7ceb611e145d78f7ccab2e88b2e4f1b4759f660c414a5b"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-pin-paused-status-observed.json",
+        "bytes": 11738,
+        "sha256": "d305babe1ee793ad1d7ceb611e145d78f7ccab2e88b2e4f1b4759f660c414a5b"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-pre-final-before-stop.json",
+        "bytes": 420,
+        "sha256": "e5c66970ec13ca7b20086b3b908b49fe0ff3ae0ffa35254911b7af89bb807ba9"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-pre-final-before-stop.json",
+        "bytes": 420,
+        "sha256": "e5c66970ec13ca7b20086b3b908b49fe0ff3ae0ffa35254911b7af89bb807ba9"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-pre-final-live-delivery-barrier.json",
+        "bytes": 8795,
+        "sha256": "8dd8c653bebfab1a96e0963ddf951b455eda4fed28e02274d398b8b2480fc577"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-pre-final-live-delivery-barrier.json",
+        "bytes": 8795,
+        "sha256": "8dd8c653bebfab1a96e0963ddf951b455eda4fed28e02274d398b8b2480fc577"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-pre-final-settled-asserted.json",
+        "bytes": 43025,
+        "sha256": "986fcf8298abb3aae241401dbff351889ae69314011f359056200cdd81aa85db"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-pre-final-settled-asserted.json",
+        "bytes": 43025,
+        "sha256": "986fcf8298abb3aae241401dbff351889ae69314011f359056200cdd81aa85db"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-pre-final-stopped-observed.json",
+        "bytes": 43025,
+        "sha256": "b2847bf2b8d52b590cdd47f6789ec27ebac4a9961b5e5ca603fbaeba64057d9a"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-pre-final-stopped-observed.json",
+        "bytes": 43025,
+        "sha256": "b2847bf2b8d52b590cdd47f6789ec27ebac4a9961b5e5ca603fbaeba64057d9a"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-ready-status-observed.json",
+        "bytes": 13058,
+        "sha256": "88e3e7cbdf7cf6756c4cb0595068ee1b70f7de81d89993ab3146044a955419b4"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-ready-status-observed.json",
+        "bytes": 13058,
+        "sha256": "88e3e7cbdf7cf6756c4cb0595068ee1b70f7de81d89993ab3146044a955419b4"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-rejected-c1-observed.json",
+        "bytes": 13838,
+        "sha256": "1189c9babb8a6a7530b1d76d54d7a7af90827d2299a4ad31aa3bcb87e88f121f"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-rejected-c1-observed.json",
+        "bytes": 13838,
+        "sha256": "1189c9babb8a6a7530b1d76d54d7a7af90827d2299a4ad31aa3bcb87e88f121f"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-rejected-c1-status-observed.json",
+        "bytes": 11857,
+        "sha256": "8a5c44fe99e8f6e9d3d77f663059374792780755c9b374d7051d3b23ebb9c576"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-rejected-c1-status-observed.json",
+        "bytes": 11857,
+        "sha256": "8a5c44fe99e8f6e9d3d77f663059374792780755c9b374d7051d3b23ebb9c576"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-relay-paths-observed.json",
+        "bytes": 8731,
+        "sha256": "fc475fa83b368e73e4810d680f86c94528df3d305ec0af06141ff928f635ecfd"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-relay-paths-observed.json",
+        "bytes": 8731,
+        "sha256": "fc475fa83b368e73e4810d680f86c94528df3d305ec0af06141ff928f635ecfd"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-relay-profile-1-observed.json",
+        "bytes": 2933,
+        "sha256": "7d598aadcb7fff5471974157d3a67291a6a36820e3f5049318952146fc69f751"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-relay-profile-1-observed.json",
+        "bytes": 2933,
+        "sha256": "7d598aadcb7fff5471974157d3a67291a6a36820e3f5049318952146fc69f751"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-relay-profile-2-observed.json",
+        "bytes": 2799,
+        "sha256": "3ae35b38adf815e992721dcf231e8dd672d5470742e72d97d91a89c183eb6147"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-relay-profile-2-observed.json",
+        "bytes": 2799,
+        "sha256": "3ae35b38adf815e992721dcf231e8dd672d5470742e72d97d91a89c183eb6147"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-relay-public-files-removed.json",
+        "bytes": 9694,
+        "sha256": "e90268df46fa429393e1d192b7629433c59757df8a2365a21789482e9ff9e4b7"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-relay-public-files-removed.json",
+        "bytes": 9694,
+        "sha256": "e90268df46fa429393e1d192b7629433c59757df8a2365a21789482e9ff9e4b7"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-relay-publications-observed.json",
+        "bytes": 2219,
+        "sha256": "9f2c1176b94d174a759e489ff124f786752a2e9b24fb81dc1ca2962640aa3cb4"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-relay-publications-observed.json",
+        "bytes": 2219,
+        "sha256": "9f2c1176b94d174a759e489ff124f786752a2e9b24fb81dc1ca2962640aa3cb4"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-relay-started.json",
+        "bytes": 407,
+        "sha256": "1b965e988e4439e8ed1dff6b0861e89fb7aaa51660e5c76ba90d6a2a741b998f"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-relay-started.json",
+        "bytes": 407,
+        "sha256": "1b965e988e4439e8ed1dff6b0861e89fb7aaa51660e5c76ba90d6a2a741b998f"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-relay-transition-before-stop.json",
+        "bytes": 18068,
+        "sha256": "e465579ca3e1e6fa1fed431e377e9367c3bac0127147b5bd32319ab8d6141a70"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-relay-transition-before-stop.json",
+        "bytes": 18068,
+        "sha256": "e465579ca3e1e6fa1fed431e377e9367c3bac0127147b5bd32319ab8d6141a70"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-selected-live-observed.json",
+        "bytes": 13163,
+        "sha256": "991f107ceb7c84cbbf17e03efbb71bac5b7d366a93cb0ba7b2f2e3751d644277"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-selected-live-observed.json",
+        "bytes": 13163,
+        "sha256": "991f107ceb7c84cbbf17e03efbb71bac5b7d366a93cb0ba7b2f2e3751d644277"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-selected-status-observed.json",
+        "bytes": 11685,
+        "sha256": "401a846689b2187a90fc0e985b1380fc385003b752810a8bf001cbb05036d613"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-selected-status-observed.json",
+        "bytes": 11685,
+        "sha256": "401a846689b2187a90fc0e985b1380fc385003b752810a8bf001cbb05036d613"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-slice-a-observations-complete.json",
+        "bytes": 39729,
+        "sha256": "fc99d29304f1af8946f103cd4f56951cb994465d97a6a1fd700b81cc5e80fac5"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-slice-a-observations-complete.json",
+        "bytes": 39729,
+        "sha256": "fc99d29304f1af8946f103cd4f56951cb994465d97a6a1fd700b81cc5e80fac5"
+      }
+    },
+    {
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-two-c-routes-integrated-01-attempt-03/g3-slice-b1-observations-complete.json",
+        "bytes": 41209,
+        "sha256": "b53ceb9909db75e58a4f59c5673bd2a1b5fd0352efe33ca6fff1adb98ea11037"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/phases/g3-slice-b1-observations-complete.json",
+        "bytes": 41209,
+        "sha256": "b53ceb9909db75e58a4f59c5673bd2a1b5fd0352efe33ca6fff1adb98ea11037"
+      }
+    },
+    {
+      "original": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-two-c-routes-integrated-01-attempt-01.log",
+        "bytes": 2294,
+        "sha256": "e7dc1b6f43217a552153e09ed8dde57a37e3feb4897fec83ecfa166069031ef4"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/failed-attempt01.named-test.log",
+        "bytes": 2294,
+        "sha256": "e7dc1b6f43217a552153e09ed8dde57a37e3feb4897fec83ecfa166069031ef4"
+      }
+    },
+    {
+      "original": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-two-c-routes-integrated-01-attempt-01.outer.json",
+        "bytes": 1114,
+        "sha256": "9d840bf7754dd687ec3c512d584dbc902c53289b249eec157101f70d2fac2a79"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/failed-attempt01.outer.json",
+        "bytes": 1114,
+        "sha256": "9d840bf7754dd687ec3c512d584dbc902c53289b249eec157101f70d2fac2a79"
+      }
+    },
+    {
+      "original": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-two-c-routes-integrated-01-attempt-02.log",
+        "bytes": 2294,
+        "sha256": "7347a84842a3e878683609bf4632c69b52d915aa4c2f1bdef0e5dd26fe7dbfae"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/failed-attempt02.named-test.log",
+        "bytes": 2294,
+        "sha256": "7347a84842a3e878683609bf4632c69b52d915aa4c2f1bdef0e5dd26fe7dbfae"
+      }
+    },
+    {
+      "original": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-two-c-routes-integrated-01-attempt-02.outer.json",
+        "bytes": 1113,
+        "sha256": "83e73da6e7b5dd182673b8892cb6eb0cd923081ce5333ae890cbf3e2fd7cacc9"
+      },
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-publication-03/failed-attempt02.outer.json",
+        "bytes": 1113,
+        "sha256": "83e73da6e7b5dd182673b8892cb6eb0cd923081ce5333ae890cbf3e2fd7cacc9"
+      }
+    }
+  ],
+  "local_compiler_captures": [
+    {
+      "pin": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-two-c-routes-integrated-01-attempt-03.compile-artifacts.json",
+        "bytes": 2694534,
+        "sha256": "35c963a19dabf8aff0280ea7b17ed30bd80bbae03bf8e5ae13eed9340703371d"
+      },
+      "source_inputs": 521,
+      "raw_units": 501,
+      "normalized_units": 501,
+      "stable_images": 6,
+      "fresh": 501,
+      "rebuilt": 0,
+      "frozen_guard_verified": true
+    },
+    {
+      "pin": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-two-c-routes-integrated-01-attempt-03.run-artifacts.json",
+        "bytes": 2694534,
+        "sha256": "102ce2539952173ec8b2fdc73d5ff729a80a72fd94d351cd9f213568a535b84e"
+      },
+      "source_inputs": 521,
+      "raw_units": 501,
+      "normalized_units": 501,
+      "stable_images": 6,
+      "fresh": 501,
+      "rebuilt": 0,
+      "frozen_guard_verified": true
+    }
+  ],
+  "local_candidate": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-two-context-routes-03.binding.candidate.json",
+    "bytes": 116961,
+    "sha256": "40802c3e733eccdb61b19fc019b2827a2c5ea1d8cc670ae436396cb54800f56e"
+  },
+  "local_expected": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-two-context-routes-03.expected-artifacts.candidate.json",
+    "bytes": 1285999,
+    "sha256": "37dd8fedd1e9e3407f8d8c5a1f8598f3bdeb8654fac4b90a77291ceee5d16fa0"
+  },
+  "local_executor_review": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-attempt03-success-review-01.json",
+    "bytes": 528301,
+    "sha256": "dd342f5c1c08ea98720c6304cc444bbb1a30142a1722a563f9ee544272fcba62"
+  },
+  "local_preparation_review": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-repair03-source-preparation-review-01.json",
+    "bytes": 558420,
+    "sha256": "2826d66fa74debd1d2a27b2e6db342f3962fdf3f6d4a324866cb5b1f8e70d9c5"
+  },
+  "limitations": [
+    "No executable, key, account or database copies",
+    "Local original paths/hashes are historical provenance, not fresh-clone replay instructions",
+    "B-only before current ALPN2 startup and G4 remain required before whole-S5.3 acceptance"
+  ]
+}

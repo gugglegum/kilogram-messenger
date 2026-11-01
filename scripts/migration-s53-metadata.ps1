@@ -79,6 +79,7 @@ function Read-KilogramS53Baseline([string]$Workspace,[string]$Expected) {
 }
 
 function Get-KilogramS53BindingName([string]$Case) {
+    if($Case -ceq 'F-s53-two-c-routes-integrated-01'){return 'G3-two-context-routes-03.binding.candidate.json'}
     if($Case -ceq 'F-s53-capacity-recovery-r2-01'){return 'G2-capacity-route-02.binding.candidate.json'}
     if($Case -ceq 'F-s53-exhausted-integrated-01'){return 'C-s53-g1-continuation-C2-01.binding.candidate.json'}
     return 'S5.3-integration-binding-r30.json'
@@ -102,10 +103,61 @@ function Assert-KilogramS53G2Policy([string]$Case,$Binding) {
         throw 'Exact G2 selector, frozen scale artifacts and finite case policy required.'
     }
 }
+function Assert-KilogramS53G3Policy([string]$Case,$Binding) {
+    $g3='F-s53-two-c-routes-integrated-01'
+    $kind='g3-only-current-two-context-routes-candidate'
+    $selector='live_l1::handoff::s53_two_c_pin_resources_routes_public'
+    if($Case -cne $g3){
+        $classification=if($Binding -is [Collections.IDictionary]){$Binding['classification']}elseif($Binding.PSObject.Properties['classification']){$Binding.classification}
+        if($classification -ceq $kind){throw 'G3 binding cannot authorize another case.'}
+        foreach($p in $Binding.cases){
+            $s=if($p -is [Collections.IDictionary]){$p['selector']}elseif($p.PSObject.Properties['selector']){$p.selector}
+            if($p.case -ceq $Case -and $s -ceq $selector){throw 'G3 selector cannot authorize another case.'}
+        }
+        return
+    }
+    if($Binding.classification -cne $kind -or $Binding.baseline -cne '64c2359788ead360314793e47741adacb83b8d4f' -or
+        $Binding.source_head -isnot [string] -or $Binding.source_head -cnotmatch '^[0-9a-f]{40}$' -or
+        $Binding.cases -isnot [Array] -or $Binding.cases.Count -ne 1){throw 'Exact G3 current source and single-case binding required.'}
+    $p=$Binding.cases[0];$g=$Binding.runtime_graph
+    if($p.case -cne $g3 -or $p.selector -cne $selector -or $p.expected_count -ne 1 -or
+        $p.build_profile -cne 'verification-scale' -or $p.image -cne 'target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe' -or
+        $p.controller_seconds -ne 420 -or $p.work_seconds -ne 480 -or $p.whole_seconds -ne 510 -or
+        $g.target -cne 'x86_64-pc-windows-msvc' -or $g.profile -cne 'verification-scale' -or $g.harness_count -ne 6 -or
+        (@($g.packages|Sort-Object)-join ',') -cne 'kilogram-cli,kilogram-transport-iroh' -or
+        $Binding.expected_artifacts.path -cne 'ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G3-two-context-routes-03.expected-artifacts.candidate.json' -or
+        $Binding.expected_artifacts.sha256 -isnot [string] -or $Binding.expected_artifacts.sha256 -cnotmatch '^[0-9a-f]{64}$'){
+        throw 'Exact G3 selector, six-harness graph and finite frozen scale policy required.'
+    }
+}
+function Assert-KilogramS53G3FrozenAllocation([string]$Workspace,[string]$Case,$Binding,$Allocation,$Activation) {
+    Assert-KilogramS53G3Policy $Case $Binding
+    if($Case -cne 'F-s53-two-c-routes-integrated-01'){return}
+    $head=Read-KilogramS53CaseBaseline $Workspace $Case $Binding
+    if($head.status -cne 'verified_match' -or -not $head.cleanup_verified -or
+        $Allocation.build_profile -cne 'verification-scale' -or $Allocation.selector -cne $Binding.cases[0].selector -or
+        $Allocation.work_seconds -ne 480 -or $Allocation.whole_seconds -ne 510 -or
+        $Activation.expected_artifacts_sha256 -cne $Binding.expected_artifacts.sha256){throw 'Current G3 HEAD and exact frozen scale allocation required.'}
+    . (Join-Path $PSScriptRoot 'cargo-frozen-artifacts.ps1')
+    $m=Read-KilogramFrozenManifest (Join-Path $Workspace $Binding.expected_artifacts.path) $Binding.expected_artifacts.sha256 6
+    Assert-KilogramS53G3RuntimeGraph $m
+}
+function Assert-KilogramS53G3RuntimeGraph($Manifest) {
+    if($Manifest.profile -cne 'verification-scale' -or $Manifest.target -cne 'x86_64-pc-windows-msvc' -or
+        (@($Manifest.build_inputs.packages|Sort-Object)-join ',') -cne 'kilogram-cli,kilogram-transport-iroh' -or
+        $Manifest.artifacts -isnot [Array] -or $Manifest.artifacts.Count -ne 6){throw 'G3 requires the actual six-harness CLI/transport manifest.'}
+    $roles=@(Get-KilogramS53ImageRoles 'F-s53-two-c-routes-integrated-01'|Where-Object {$_ -like 'target/verification-scale/deps/*'})
+    $seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    foreach($a in $Manifest.artifacts){
+        $p='target/verification-scale/deps/'+[IO.Path]::GetFileName($a.path)
+        if($p -cnotin $roles -or -not $seen.Add($p) -or $a.profile -cne 'verification-scale'){throw 'G3 manifest has missing, extra or duplicate harness roles.'}
+    }
+}
 function Read-KilogramS53CaseBaseline([string]$Workspace,[string]$Case,$Binding) {
     Assert-KilogramS53G2Policy $Case $Binding
+    Assert-KilogramS53G3Policy $Case $Binding
     $expected='64c2359788ead360314793e47741adacb83b8d4f'
-    if($Case -cin @('F-s53-exhausted-integrated-01','F-s53-capacity-recovery-r2-01')){
+    if($Case -cin @('F-s53-exhausted-integrated-01','F-s53-capacity-recovery-r2-01','F-s53-two-c-routes-integrated-01')){
         if($Binding.source_head -isnot [string] -or $Binding.source_head -cnotmatch '^[0-9a-f]{40}$'){throw 'Exact current case source HEAD required.'}
         $expected=$Binding.source_head
     }
@@ -123,7 +175,7 @@ function Get-KilogramS53ImageRoles([string]$Case) {
         'target/verification-scale/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe',
         'target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe'
     )
-    if($Case -ceq 'F-s53-capacity-recovery-r2-01'){'target/compatibility/long-lived-dialog-runtime/kilogram-relay.exe'}
+    if($Case -cin @('F-s53-capacity-recovery-r2-01','F-s53-two-c-routes-integrated-01')){'target/compatibility/long-lived-dialog-runtime/kilogram-relay.exe'}
 }
 function Assert-KilogramS53ImageRoles([string]$Case,$Images) {
     $roles=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
@@ -194,6 +246,7 @@ function New-KilogramS53InventoryEnvelope {
         $workspaceFull -ceq [IO.Path]::GetPathRoot($Workspace).TrimEnd([char[]]@('\', '/'))) { throw 'Inventory workspace is not a normalized owned directory.' }
     $workspacePrefix = $workspaceFull + [IO.Path]::DirectorySeparatorChar
     $bound = & $members $Binding 'Binding' $null
+    Assert-KilogramS53G3Policy $Case $Binding
     if($Case -ceq 'F-s53-capacity-recovery-r2-01' -or ($bound.ContainsKey('classification') -and $bound['classification'] -ceq 'g2-only-current-capacity-route-candidate')){
         Assert-KilogramS53G2Policy $Case $Binding
     }
@@ -355,7 +408,7 @@ function Assert-KilogramS53WrittenInventory {
         $value['binding_sha256'] -isnot [string] -or $value['binding_sha256'] -cnotmatch '\A[0-9a-f]{64}\z' -or
         $value['activation_sha256'] -isnot [string] -or $value['activation_sha256'] -cnotmatch '\A[0-9a-f]{64}\z') { throw 'Invalid prepared inventory context.' }
     Assert-KilogramS53ImageRoles $value['case'] $value['images']
-    if($value['case'] -ceq 'F-s53-capacity-recovery-r2-01' -and $value['prerequisites'].Count -ne 0){throw 'G2 requires zero prerequisites.'}
+    if($value['case'] -cin @('F-s53-capacity-recovery-r2-01','F-s53-two-c-routes-integrated-01') -and $value['prerequisites'].Count -ne 0){throw 'G2/G3 require zero prerequisites.'}
     $run = [IO.Path]::Combine($Envelope.Workspace, '.tmp', 'migration-s53-integrated', $value['attempt'])
     $ownedPath = [IO.Path]::Combine($Envelope.Workspace, 'ai-docs', 'tasks', 'long-lived-dialog-a3-migration-s5-handoff-evidence', $value['attempt'] + '.inputs.json')
     if ($Envelope.InventoryPath -isnot [string] -or $Envelope.InventoryPath -cne $ownedPath -or

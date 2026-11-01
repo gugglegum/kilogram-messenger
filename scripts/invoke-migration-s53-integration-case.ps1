@@ -232,6 +232,7 @@ $bindingPath=Join-Path $evidence $bindingName
 $bindingHash=Hash $bindingPath
 $binding=Get-Content -LiteralPath $bindingPath -Raw|ConvertFrom-Json
 Assert-KilogramS53G2Policy $Case $binding
+Assert-KilogramS53G3Policy $Case $binding
 if($activation.classification -cne 'root-approved-integration-allocation' -or $activation.activated -ne $true -or $activation.binding_sha256 -cne $bindingHash -or $activation.baseline -cne $baseline -or $activation.execution_mode -cne 'NativeToken' -or $activation.stop_on_first_failure -ne $true -or $activation.require_actual_outer_return_before_successor -ne $true){throw 'Inactive/unbound root allocation.'}
 if($activation.allocation_id -cnotmatch '^s53-integrated-[a-z0-9-]+$'){throw 'Allocation identity.'}
 if(@($binding.runtime_dependencies).Count -ne 1 -or @($activation.runtime_dependencies).Count -ne 1){throw 'Exactly one reviewed shell dependency required.'}
@@ -247,8 +248,9 @@ $policy=@($binding.cases|Where-Object case -CEQ $Case)
 $allocated=@($activation.cases|Where-Object case -CEQ $Case|Where-Object attempt -CEQ $Attempt)
 if($policy.Count -ne 1 -or $allocated.Count -ne 1){throw 'Case not uniquely activated.'}
 $policy=$policy[0];$allocated=$allocated[0]
+Assert-KilogramS53G3FrozenAllocation $workspace $Case $binding $allocated $activation
 $buildProfile='verification';$frozenArguments=@{}
-if($Case -ceq 'F-s53-capacity-recovery-r2-01'){
+if($Case -cin @('F-s53-capacity-recovery-r2-01','F-s53-two-c-routes-integrated-01')){
     if($policy.build_profile -cne 'verification-scale' -or $allocated.build_profile -cne 'verification-scale' -or $activation.expected_artifacts_sha256 -cne $binding.expected_artifacts.sha256){throw 'Frozen G2 scale allocation/profile identity required.'}
     $buildProfile='verification-scale'
     $frozenArguments=@{ExpectedArtifactsManifest=(Join-Path $workspace $binding.expected_artifacts.path);ExpectedArtifactsSha256=$binding.expected_artifacts.sha256;CargoTarget='x86_64-pc-windows-msvc';StableArtifactsDirectory=(Join-Path $workspace 'target/verification-scale/deps')}

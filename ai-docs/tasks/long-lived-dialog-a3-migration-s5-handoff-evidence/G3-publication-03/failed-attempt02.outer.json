@@ -1,0 +1,24 @@
+{
+  "input_inventory_sha256": "a8924e2c763d9898678b1ae4375f9fcec5cf6534e38aa090d32209e8f1a868d5",
+  "binding_sha256": "c8345836b07bae87a1599fc3bbf97ed0014a4a25d42e1fa22e704cd9c82a749e",
+  "error": "Child case failed.",
+  "case": "F-s53-two-c-routes-integrated-01",
+  "attempt": "F-s53-two-c-routes-integrated-01-attempt-02",
+  "owned_children_after_cleanup": 0,
+  "whole_seconds": 510,
+  "outer_exit_code": 1,
+  "elapsed_seconds": 70.7828453,
+  "child_runner_exit_code": 1,
+  "case_record_sha256": "147dde72ff02777364a371ac6e1edd920845c184cd7e8f7b3be20ebf3ac43bf8",
+  "cleanup_verified": true,
+  "activation_sha256": "d6602939fd9b6eb44f58a4b39689bd5b8a79cce17e1ccb44ac61e9165b3922b6",
+  "runtime_dependencies": [
+    {
+      "role": "metadata-shell",
+      "path": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "bytes": 301368,
+      "sha256": "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139"
+    }
+  ],
+  "classification": "independent outer process outcome; actual final tool return still required"
+}

@@ -15,6 +15,7 @@ $activation=Get-Content -LiteralPath $ActivationFile -Raw|ConvertFrom-Json
 $allocation=@($activation.cases|Where-Object {$_.case -ceq $Case -and $_.attempt -ceq $Attempt})
 if($activation.activated -ne $true -or $activation.binding_sha256 -cne $bindingHash -or $allocation.Count -ne 1){throw 'Inactive exact outer allocation.'}
 Assert-KilogramS53G2Policy $Case $binding
+Assert-KilogramS53G3FrozenAllocation $workspace $Case $binding $allocation[0] $activation
 if($Case -ceq 'F-s53-capacity-recovery-r2-01'){
     $head=Read-KilogramS53CaseBaseline -Workspace $workspace -Case $Case -Binding $binding
     if($head.status -cne 'verified_match' -or $allocation[0].build_profile -cne 'verification-scale' -or $activation.expected_artifacts_sha256 -cne $binding.expected_artifacts.sha256){throw 'Current G2 HEAD and frozen scale outer allocation required.'}
