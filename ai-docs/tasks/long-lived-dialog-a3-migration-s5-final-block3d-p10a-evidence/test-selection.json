@@ -1,0 +1,25 @@
+{
+  "filter": "s54_p10a_",
+  "skip": [],
+  "expected_names": [
+    "s54_p10a_c1_command_and_upgrade_wrappers_preserve_actual_argument_order",
+    "s54_p10a_ceremony_uses_original_roots_accounts_and_selected_c2_context",
+    "s54_p10a_nondefault_ready_slot_c2_locator_and_upgrade_use_actual_view",
+    "s54_p10a_borrowed_metadata_rejects_swapped_role_context_identity_paths_and_slot",
+    "s54_p10a_entry_and_request_digest_reject_missing_owner_phase_text_growth_or_changed_reply",
+    "s54_p10a_intent_ids_bind_actual_prior_controls_and_text_inventory",
+    "s54_p10a_c2_identity_consent_sources_and_no_intent_are_checked_through_import",
+    "s54_p10a_transient_lease_loss_waits_but_stable_requires_current_family2_head_direct",
+    "s54_p10a_selection_is_anchored_to_actual_ceremony_and_retained_control_observations",
+    "s54_p10a_c1_actual_controls_and_original_b640_frontiers_cannot_change",
+    "s54_p10a_zero_conversion_work_rejects_every_packet_constructor_outcome_and_regression",
+    "s54_p10a_published_hold_equality_rejects_ack_prefix_live_selector_and_file_changes",
+    "s54_p10a_live_history_preserves_ids_requests_body_format_and_lane_order",
+    "s54_p10a_ready_resolves_c2_to_slot_zero_for_the_real_import_builder",
+    "s54_p10a_live_commit_counts_are_actual_decoder_records_not_expected_totals"
+  ],
+  "network": false,
+  "process": false,
+  "enrollment": false,
+  "private_fixtures": false
+}

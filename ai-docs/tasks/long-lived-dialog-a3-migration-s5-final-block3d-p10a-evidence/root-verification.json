@@ -1,0 +1,34 @@
+{
+  "classification": "root independent P10A source/static/pure verification; no actual scenario",
+  "baseline": "5006de9c6aafcbf3fab362d248b14eb9c167f190",
+  "pin_checks": 656,
+  "source_paths": 11,
+  "source_inputs": 560,
+  "fresh_units": 501,
+  "exact_passed_tests": [
+    "live_l1::handoff::borrowed::tests::s54_p10a_borrowed_metadata_rejects_swapped_role_context_identity_paths_and_slot",
+    "live_l1::handoff::borrowed::tests::s54_p10a_c1_command_and_upgrade_wrappers_preserve_actual_argument_order",
+    "live_l1::handoff::borrowed::tests::s54_p10a_ceremony_uses_original_roots_accounts_and_selected_c2_context",
+    "live_l1::handoff::borrowed::tests::s54_p10a_nondefault_ready_slot_c2_locator_and_upgrade_use_actual_view",
+    "live_l1::handoff::final_p5::handoff::tests::s54_p10a_c1_actual_controls_and_original_b640_frontiers_cannot_change",
+    "live_l1::handoff::final_p5::handoff::tests::s54_p10a_c2_identity_consent_sources_and_no_intent_are_checked_through_import",
+    "live_l1::handoff::final_p5::handoff::tests::s54_p10a_entry_and_request_digest_reject_missing_owner_phase_text_growth_or_changed_reply",
+    "live_l1::handoff::final_p5::handoff::tests::s54_p10a_intent_ids_bind_actual_prior_controls_and_text_inventory",
+    "live_l1::handoff::final_p5::handoff::tests::s54_p10a_live_commit_counts_are_actual_decoder_records_not_expected_totals",
+    "live_l1::handoff::final_p5::handoff::tests::s54_p10a_live_history_preserves_ids_requests_body_format_and_lane_order",
+    "live_l1::handoff::final_p5::handoff::tests::s54_p10a_published_hold_equality_rejects_ack_prefix_live_selector_and_file_changes",
+    "live_l1::handoff::final_p5::handoff::tests::s54_p10a_ready_resolves_c2_to_slot_zero_for_the_real_import_builder",
+    "live_l1::handoff::final_p5::handoff::tests::s54_p10a_selection_is_anchored_to_actual_ceremony_and_retained_control_observations",
+    "live_l1::handoff::final_p5::handoff::tests::s54_p10a_transient_lease_loss_waits_but_stable_requires_current_family2_head_direct",
+    "live_l1::handoff::final_p5::handoff::tests::s54_p10a_zero_conversion_work_rejects_every_packet_constructor_outcome_and_regression"
+  ],
+  "source_blob_checks": 11,
+  "actual_app_check_ids": {
+    "clippy": "exec-02993aca-5a77-45c6-95f4-dea98d1a784f",
+    "compile": "exec-921c81c0-fceb-4406-88d4-58435f2cb788",
+    "pure": "exec-17f22807-46bb-4062-86e0-42673c644e74",
+    "fmt": "exec-f8c5d94b-71f6-46a9-9fdb-ac716098c6cc"
+  },
+  "index_empty": true,
+  "runtime_unexecuted": true
+}

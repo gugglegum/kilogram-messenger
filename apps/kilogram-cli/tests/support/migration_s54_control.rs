@@ -424,6 +424,10 @@ impl Controller {
         Ok(())
     }
     pub fn import2(&mut self) -> Result<()> {
+        self.import2_for(0)
+    }
+    pub fn import2_for(&mut self, context: usize) -> Result<()> {
+        ensure!(context < 2, "bounded logical Locator2 context");
         self.wait(15, |s| {
             Ok(s.origin
                 .pair
@@ -431,12 +435,18 @@ impl Controller {
                 .iter()
                 .all(|n| {
                     n.locators
-                        .join(format!("{}.locator2", s.origin.contexts[0]))
+                        .join(format!("{}.locator2", s.origin.contexts[context]))
                         .is_file()
                 })
                 .then_some(()))
         })?;
-        self.origin.pair.exchange2()?;
+        for owner in 0..2 {
+            self.check()?;
+            let node = self.view(owner, context)?;
+            let peer = self.view(1 - owner, context)?;
+            cli(&current(), &borrowed::locator_arguments(&node, &peer)?)?;
+            self.check()?;
+        }
         self.check()
     }
     pub fn send(&mut self, owner: usize, number: u16) -> Result<Value> {

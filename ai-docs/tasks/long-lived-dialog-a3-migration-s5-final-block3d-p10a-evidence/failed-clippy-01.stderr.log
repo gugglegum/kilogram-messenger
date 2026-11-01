@@ -1,0 +1,94 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error[E0599]: no method named `context` found for enum `std::option::Option<T>` in the current scope
+   --> apps\kilogram-cli\tests\support\migration_s54_borrowed.rs:142:38
+    |
+142 |                 self.nodes.get(role).context("borrowed original role")?,
+    |                                      ^^^^^^^
+    |
+note: the method `context` exists on the type `&live_l1::Node`
+   --> apps\kilogram-cli\tests\support\migration_s5_l1.rs:141:5
+    |
+141 |     fn context<'a>(&self, status: &'a Value) -> Result<&'a Value> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: items from traits can only be used if the trait is in scope
+help: consider using `Option::expect` to unwrap the `&live_l1::Node` value, panicking if the value is an `Option::None`
+    |
+142 |                 self.nodes.get(role).expect("REASON").context("borrowed original role")?,
+    |                                     +++++++++++++++++
+help: the following traits which provide `context` are implemented but not in scope; perhaps you want to import one of them
+    |
+  2 + use anyhow::Context;
+    |
+  2 + use n0_error::ext::StackResultExt;
+    |
+help: there is a method `std_context` with a similar name
+    |
+142 |                 self.nodes.get(role).std_context("borrowed original role")?,
+    |                                      ++++
+
+error[E0599]: no method named `context` found for enum `std::option::Option<T>` in the current scope
+   --> apps\kilogram-cli\tests\support\migration_s54_borrowed.rs:155:34
+    |
+155 |             self.nodes.get(role).context("borrowed original role")?,
+    |                                  ^^^^^^^
+    |
+note: the method `context` exists on the type `&live_l1::Node`
+   --> apps\kilogram-cli\tests\support\migration_s5_l1.rs:141:5
+    |
+141 |     fn context<'a>(&self, status: &'a Value) -> Result<&'a Value> {
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    = help: items from traits can only be used if the trait is in scope
+help: consider using `Option::expect` to unwrap the `&live_l1::Node` value, panicking if the value is an `Option::None`
+    |
+155 |             self.nodes.get(role).expect("REASON").context("borrowed original role")?,
+    |                                 +++++++++++++++++
+help: the following traits which provide `context` are implemented but not in scope; perhaps you want to import one of them
+    |
+  2 + use anyhow::Context;
+    |
+  2 + use n0_error::ext::StackResultExt;
+    |
+help: there is a method `std_context` with a similar name
+    |
+155 |             self.nodes.get(role).std_context("borrowed original role")?,
+    |                                  ++++
+
+error[E0599]: no method named `context` found for enum `std::option::Option<T>` in the current scope
+  --> apps\kilogram-cli\tests\support\migration_s54_borrowed_tests.rs:47:10
+   |
+44 |       let at = args
+   |  ______________-
+45 | |         .iter()
+46 | |         .position(|a| a == name)
+47 | |         .context("real command argument")?;
+   | |_________-^^^^^^^
+   |
+   = help: items from traits can only be used if the trait is in scope
+help: the following traits which provide `context` are implemented but not in scope; perhaps you want to import one of them
+   |
+ 2 + use anyhow::Context;
+   |
+ 2 + use n0_error::ext::StackResultExt;
+   |
+help: there is a method `std_context` with a similar name
+   |
+47 |         .std_context("real command argument")?;
+   |          ++++
+
+error[E0509]: cannot move out of type `live_l1::handoff::Pair`, which implements the `Drop` trait
+   --> apps\kilogram-cli\tests\support\migration_s54_borrowed_tests.rs:131:28
+    |
+131 |     wrong.branch.context = p.c;
+    |                            ^^^
+    |                            |
+    |                            cannot move out of here
+    |                            move occurs because `p.c` has type `std::string::String`, which does not implement the `Copy` trait
+    |
+help: consider cloning the value if the performance cost is acceptable
+    |
+131 |     wrong.branch.context = p.c.clone();
+    |                               ++++++++
+
+Some errors have detailed explanations: E0509, E0599.
+For more information about an error, try `rustc --explain E0509`.
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 4 previous errors

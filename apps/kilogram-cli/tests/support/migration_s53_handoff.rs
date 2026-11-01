@@ -1,6 +1,8 @@
 //! Inactive until an exact managed case is allocated. Real public CLI children,
 //! fixed images, one absolute deadline, and genuine frozen Engine origins only.
 use super::*;
+#[path = "migration_s54_borrowed.rs"]
+mod borrowed;
 #[path = "migration_s53_capacity_review2.rs"]
 mod capacity_review2;
 #[allow(dead_code)] // Block1 helpers are not process-activated yet.
@@ -420,97 +422,22 @@ impl Pair {
         Ok(())
     }
     fn command(&self, role: usize, name: &str, extra: &[String]) -> Result<String> {
-        let node = &self.nodes[role];
-        let mut args = vec![
-            "ordered".into(),
-            name.into(),
-            "--ipc-file".into(),
-            text(&node.ipc),
-            "--slot".into(),
-            node.slot.to_string(),
-        ];
-        args.extend_from_slice(extra);
-        cli(&current(), &args)
+        let node = self.nodes.get(role).context("original command role")?;
+        cli(&current(), &borrowed::command_arguments(node, name, extra)?)
     }
     fn upgrade(&self, role: usize, id: u8) -> Result<()> {
-        self.command(
-            role,
-            "upgrade",
-            &["--request-id".into(), format!("{id:02x}").repeat(16)],
-        )?;
+        let node = self.nodes.get(role).context("original upgrade role")?;
+        cli(&current(), &borrowed::upgrade_arguments(node, [id; 16])?)?;
         Ok(())
     }
     fn ceremony(&self, name: &str, expected: &str, ttl: u64) -> Result<()> {
-        let origin = self.base.join(format!("{name}.origin.cbor"));
-        cli(
-            &current(),
-            &[
-                "ordered".into(),
-                "existing-origin-export".into(),
-                "--profile".into(),
-                text(&self.nodes[0].profile),
-                "--context".into(),
-                self.c.clone(),
-                "--output-file".into(),
-                text(&origin),
-            ],
-        )?;
-        let authorities = [
-            policy::snapshot(&self.base, &self.roots[0], &format!("{name}.a.authority"))?,
-            policy::snapshot(&self.base, &self.roots[1], &format!("{name}.b.authority"))?,
-        ];
-        let proposal = self.base.join(format!("{name}.proposal"));
-        let consent = self.base.join(format!("{name}.consent"));
-        for role in 0..2 {
-            let mut args = vec![
-                "ordered".into(),
-                "consent2-create".into(),
-                "--origin".into(),
-                "existing".into(),
-                "--step".into(),
-                if role == 0 { "propose" } else { "cosign" }.into(),
-                "--context".into(),
-                self.c.clone(),
-                "--existing-origin-file".into(),
-                text(&origin),
-                "--account-dir".into(),
-                text(&self.roots[role]),
-                "--expect-account".into(),
-                self.nodes[role].branch.account.clone(),
-                "--expect-peer-account".into(),
-                self.nodes[1 - role].branch.account.clone(),
-                "--authority-a-file".into(),
-                text(&authorities[0]),
-                "--authority-b-file".into(),
-                text(&authorities[1]),
-                "--minimum-authority-a-file".into(),
-                text(&authorities[0]),
-                "--minimum-authority-b-file".into(),
-                text(&authorities[1]),
-                "--valid-for-seconds".into(),
-                ttl.to_string(),
-                "--output-file".into(),
-                text(if role == 0 { &proposal } else { &consent }),
-            ];
-            if role == 1 {
-                args.extend(["--proposal-file".into(), text(&proposal)]);
-            }
-            policy::audit(&self.base, &current(), &args)?;
-        }
-        for role in 0..2 {
-            self.command(
-                role,
-                "consent2-import",
-                &[
-                    "--existing".into(),
-                    "--expected-current".into(),
-                    expected.into(),
-                    "--consent-file".into(),
-                    text(&consent),
-                ],
-            )?;
-        }
-        Ok(())
+        let views = self
+            .nodes
+            .each_ref()
+            .map(|node| node.view(&self.c, node.slot));
+        self.borrowed_for(views, &self.c)?
+            .ceremony(name, expected, ttl, |_| s53_deadline::check())
+            .map(|_| ())
     }
     fn converge(&mut self) -> Result<[Value; 2]> {
         self.wait(0, 45, |r| r["mode"] == "Active")?;

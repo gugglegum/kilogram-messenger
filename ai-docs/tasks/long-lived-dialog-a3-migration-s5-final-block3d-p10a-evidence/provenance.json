@@ -1,0 +1,2637 @@
+{
+  "classification": "P10A inactive source/static/pure only; actual C2 transition unexecuted",
+  "baseline": "5006de9c6aafcbf3fab362d248b14eb9c167f190",
+  "source": [
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_handoff.rs",
+      "bytes": 330116,
+      "sha256": "f256b9b11666789c01041ccd68c31e555d84707f944287a99127214fe00ca266",
+      "git_blob": "e8dab1416ce5e461156c9577c6397238ae1d3290"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_borrowed.rs",
+      "bytes": 8685,
+      "sha256": "41679189a9d3ac86fcf7d1cd659303ab921d3a50c41e6156a9d3fc9c08c4396e",
+      "git_blob": "35f803ed3cee247f2d1c1eac03cea94cd643ab34"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_borrowed_tests.rs",
+      "bytes": 5855,
+      "sha256": "119f144a24ef12f16819779568c06ebd3fe00340da64526bdfd015fa027f022d",
+      "git_blob": "74e1f586c4c2295728bca310434f9de817c5bbfb"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_control.rs",
+      "bytes": 17917,
+      "sha256": "5841e356898f191f75bd301963c3fdf47788c5f3ef3d028f1aca0729b3840aa8",
+      "git_blob": "be72efad5e45be18b614b8bf586d14a7f9295a2b"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_handoff.rs",
+      "bytes": 4597,
+      "sha256": "8916b804ef64e25d8d83b04118e2034e8ed7e2b0c1574106d785cb0c6dc1a26d",
+      "git_blob": "a381c904c9e7b6f990d38643d256dfb0897a80b0"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_handoff_live.rs",
+      "bytes": 8507,
+      "sha256": "33f43047792cbd5ab8e67558f81dadd994af342bb2cf68dd9039d72e9ce7d120",
+      "git_blob": "0aee82ef915d2dfc740c1fc1032cac965fc9e314"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_handoff_proofs.rs",
+      "bytes": 10184,
+      "sha256": "c47899c7751a8a1bd4ec9798652a83f8ad01fd9e2b36f01ca50bdad141a33032",
+      "git_blob": "d2814b908bbc7853851c9f92b86adbc51bac57ac"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_handoff_tests.rs",
+      "bytes": 13391,
+      "sha256": "895e203a82e145410cb9df295cef99d30643fbe137c7c701ec63dd03428f4fc6",
+      "git_blob": "21b900fe1a07f0113e9968c6fb9e4d94bfbfe649"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_observations.rs",
+      "bytes": 15545,
+      "sha256": "5c3706b29c0afb76c29c8c19b85051c296dd5b565e871bf064d1bfcfb5279bf8",
+      "git_blob": "21d6aec770bc029e411339de5b003720017af641"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_p5.rs",
+      "bytes": 4684,
+      "sha256": "2948fbe49a1d080014b30aeef55654199e5786ef02849a219411d947fed7553b",
+      "git_blob": "dd403b33167432582672ab7a8eaf22d73a09c8f9"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_transition.rs",
+      "bytes": 15374,
+      "sha256": "f40df07eeaf50cfe082e3231c52d21b2e8daae6218f60d1ed58bc0d91d26195c",
+      "git_blob": "7d27eec17033ad26f9f4dd817b20f715d3d93dc1"
+    }
+  ],
+  "contracts": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3d-p10a-controller-task-01.md",
+      "bytes": 6987,
+      "sha256": "b67f57c33ec2398792878f706cfde54719f4a8a5b7eee7fcd469416b121ebfa2"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3d-p10-contract-01.md",
+      "bytes": 14515,
+      "sha256": "ff76125edb7251a774acf6fc5708a891247abfc1c286152507dbfea29f193f11"
+    }
+  ],
+  "report": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3d-p10a-controller-implementation.md",
+    "bytes": 14936,
+    "sha256": "72160c25b287d96c0396ff4bac5113cf5115b26b53d2894afe66d6f025e2ba02"
+  },
+  "review": {
+    "path": ".tmp/s54-block3d-p10a-01/review.json",
+    "bytes": 25640,
+    "sha256": "0c716a567543a89b25735c9cd48223fbc1661992aa8ccf0097717cdc3054e84f"
+  },
+  "raw_capture_and_preimage_pins": [
+    {
+      "path": ".tmp/s54-block3d-p10a-01/compile-01.capture.json",
+      "bytes": 2709107,
+      "sha256": "9d4bbd20ae946b400cd09323b47fca47703439d6857e6ffed65a89c8be96a3e3"
+    },
+    {
+      "path": ".tmp/s54-block3d-p10a-01/pure-01.capture.json",
+      "bytes": 2709166,
+      "sha256": "791382d909457e3a8f377915d3962eb344a3e71878ab0778b5eea088cd8b4d96"
+    },
+    {
+      "path": ".tmp/s54-block3d-p10a-01/pure-01.expected.json",
+      "bytes": 1293315,
+      "sha256": "f497f3821f7d55317f377d931dde3c4875ecebce112eda81d34d5a45f86c62f7"
+    },
+    {
+      "path": ".tmp/s54-block3d-p10a-01/preimages.json",
+      "bytes": 3866,
+      "sha256": "419ed5a550d21cd515a945cc65debfb9cc81e2203db874f230905138115cf898"
+    },
+    {
+      "path": ".tmp/s54-block3d-p10a-01/preimages-extended.json",
+      "bytes": 4174,
+      "sha256": "5c8c323130ae423df9b3db7441ace70dee5474cb9033f2cd2e0072e5a22bf012"
+    }
+  ],
+  "compiler_inputs_equal": true,
+  "compiler_source_inputs": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3d-p10a-evidence/compiler-source-inputs.json",
+    "bytes": 100495,
+    "sha256": "2acac871698a6c06d8c5225e493e75e75c654128c8d3283a8f4b9ba30a0a150e"
+  },
+  "units": 501,
+  "pure_fresh_units": 501,
+  "frozen_guard_verified": true,
+  "build_configuration": {
+    "format_version": 1,
+    "profile": "verification-scale",
+    "target": "x86_64-pc-windows-msvc",
+    "packages": [
+      "kilogram-cli",
+      "kilogram-transport-iroh"
+    ],
+    "cargo_features": [],
+    "tools": [
+      {
+        "name": "cargo",
+        "path": "C:\\Users\\Paul\\.rustup\\toolchains\\1.98.0-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+        "sha256": "197c9f582da4994c585b13366abc12e810de2708ce14ddcf0873a8f377f3954e",
+        "shim_path": "C:\\Users\\Paul\\.cargo\\bin\\cargo.exe",
+        "shim_sha256": "6f4bef66261261fcb43131be8720bab817d403a09edec7455c371974b90bdb7e"
+      },
+      {
+        "name": "rustc",
+        "path": "C:\\Users\\Paul\\.rustup\\toolchains\\1.98.0-x86_64-pc-windows-msvc\\bin\\rustc.exe",
+        "sha256": "777119d5feeca3d9fc163dc0e0d8be896cfcb65c45255328cef214d833546c6a",
+        "shim_path": "C:\\Users\\Paul\\.cargo\\bin\\rustc.exe",
+        "shim_sha256": "6f4bef66261261fcb43131be8720bab817d403a09edec7455c371974b90bdb7e"
+      }
+    ],
+    "rustc": [
+      "rustc 1.98.0 (88d9e12ae 2026-08-18)",
+      "binary: rustc",
+      "commit-hash: 88d9e12ae178fab0fb5cc050a94da85685d449ea",
+      "commit-date: 2026-08-18",
+      "host: x86_64-pc-windows-msvc",
+      "release: 1.98.0",
+      "LLVM version: 22.1.8"
+    ],
+    "cargo": [
+      "cargo 1.98.0 (797e8a9bc 2026-08-05)",
+      "release: 1.98.0",
+      "commit-hash: 797e8a9bca276c1c9f9f738d2a20f484fa4eea9d",
+      "commit-date: 2026-08-05",
+      "host: x86_64-pc-windows-msvc",
+      "libgit2: 1.9.4 (sys:0.21.0 vendored)",
+      "libcurl: 8.21.0-DEV (sys:0.4.90+curl-8.21.0 vendored ssl:Schannel)",
+      "os: Windows 10.0.26300 (Windows 11 Professional) [64-bit]"
+    ],
+    "environment": [
+      {
+        "name": "AR",
+        "present": false,
+        "value_sha256": null
+      },
+      {
+        "name": "ARFLAGS",
+        "present": false,
+        "value_sha256": null
+      },
+      {
+        "name": "CARGO_HOME",
+        "present": false,
+        "value_sha256": null
+      },
+      {
+        "name": "CARGO_INCREMENTAL",
+        "present": false,
+        "value_sha256": null
+      },
+      {
+        "name": "CARGO_NET_OFFLINE",
+        "present": true,
+        "value_sha256": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b"
+      },
+      {
+        "name": "CC",
+        "present": false,
+        "value_sha256": null
+      },
+      {
+        "name": "CFLAGS",
+        "present": false,
+        "value_sha256": null
+      },
+      {
+        "name": "CXX",
+        "present": false,
+        "value_sha256": null
+      },
+      {
+        "name": "CXXFLAGS",
+        "present": false,
+        "value_sha256": null
+      },
+      {
+        "name": "INCLUDE",
+        "present": false,
+        "value_sha256": null
+      },
+      {
+        "name": "LIB",
+        "present": false,
+        "value_sha256": null
+      },
+      {
+        "name": "LIBPATH",
+        "present": false,
+        "value_sha256": null
+      },
+      {
+        "name": "PATH",
+        "present": true,
+        "value_sha256": "32afa634aa3fe135e1ae545834facb755758a036d57f369377b3455a99075f88"
+      },
+      {
+        "name": "RUST_LOG",
+        "present": true,
+        "value_sha256": "aa63925edf225e26d79eca9cebc7639de6dfe576d2d9e4183e162f99e38be7ee"
+      },
+      {
+        "name": "RUSTUP_HOME",
+        "present": false,
+        "value_sha256": null
+      },
+      {
+        "name": "RUSTUP_TOOLCHAIN",
+        "present": false,
+        "value_sha256": null
+      },
+      {
+        "name": "VCTOOLSINSTALLDIR",
+        "present": false,
+        "value_sha256": null
+      },
+      {
+        "name": "VSINSTALLDIR",
+        "present": false,
+        "value_sha256": null
+      },
+      {
+        "name": "WINDOWSSDKDIR",
+        "present": false,
+        "value_sha256": null
+      }
+    ],
+    "configs": [
+      {
+        "path": "C:\\Users\\Paul\\.cargo\\config",
+        "exists": false,
+        "sha256": null
+      },
+      {
+        "path": "C:\\Users\\Paul\\.cargo\\config.toml",
+        "exists": false,
+        "sha256": null
+      },
+      {
+        "path": "E:\\.cargo\\config",
+        "exists": false,
+        "sha256": null
+      },
+      {
+        "path": "E:\\.cargo\\config.toml",
+        "exists": false,
+        "sha256": null
+      },
+      {
+        "path": "E:\\AI-Projects\\.cargo\\config",
+        "exists": false,
+        "sha256": null
+      },
+      {
+        "path": "E:\\AI-Projects\\.cargo\\config.toml",
+        "exists": false,
+        "sha256": null
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.cargo\\config",
+        "exists": false,
+        "sha256": null
+      },
+      {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.cargo\\config.toml",
+        "exists": false,
+        "sha256": null
+      }
+    ],
+    "package_names": [
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/apps/kilogram-bootstrap#0.1.0",
+        "name": "kilogram-bootstrap"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/apps/kilogram-cli#0.1.0",
+        "name": "kilogram-cli"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/apps/kilogram-offline#0.1.0",
+        "name": "kilogram-offline"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/apps/kilogram-ticket-store#0.1.0",
+        "name": "kilogram-ticket-store"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/apps/kilogram-windows#0.1.0",
+        "name": "kilogram-windows"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-bootstrap-contract#0.1.0",
+        "name": "kilogram-bootstrap-contract"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-crypto#0.1.0",
+        "name": "kilogram-crypto"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-identity#0.1.0",
+        "name": "kilogram-identity"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-mailbox-client#0.1.0",
+        "name": "kilogram-mailbox-client"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-mailbox-provisioning#0.1.0",
+        "name": "kilogram-mailbox-provisioning"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-mailbox#0.1.0",
+        "name": "kilogram-mailbox"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-peer-capability-store#0.1.0",
+        "name": "kilogram-peer-capability-store"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-peer-history-recovery-consent#0.1.0",
+        "name": "kilogram-peer-history-recovery-consent"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-peer-history-recovery-execution#0.1.0",
+        "name": "kilogram-peer-history-recovery-execution"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-peer-history-recovery-runtime#0.1.0",
+        "name": "kilogram-peer-history-recovery-runtime"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-peer-history-recovery-transport#0.1.0",
+        "name": "kilogram-peer-history-recovery-transport"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-peer-history-recovery#0.1.0",
+        "name": "kilogram-peer-history-recovery"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-peer-reenrollment-acceptance#0.1.0",
+        "name": "kilogram-peer-reenrollment-acceptance"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-peer-reenrollment-runtime#0.1.0",
+        "name": "kilogram-peer-reenrollment-runtime"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-peer-reenrollment-staging#0.1.0",
+        "name": "kilogram-peer-reenrollment-staging"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-peer-reenrollment#0.1.0",
+        "name": "kilogram-peer-reenrollment"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-protocol#0.1.0",
+        "name": "kilogram-protocol"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-publication-conflict#0.1.0",
+        "name": "kilogram-publication-conflict"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-ratchet#0.1.0",
+        "name": "kilogram-ratchet"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-rollout#0.1.0",
+        "name": "kilogram-rollout"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-runtime-ipc#0.1.0",
+        "name": "kilogram-runtime-ipc"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-session#0.1.0",
+        "name": "kilogram-session"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-state#0.1.0",
+        "name": "kilogram-state"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-store#0.1.0",
+        "name": "kilogram-store"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-sync-capability#0.1.0",
+        "name": "kilogram-sync-capability"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-ticket-publication#0.1.0",
+        "name": "kilogram-ticket-publication"
+      },
+      {
+        "id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/crates/kilogram-transport-iroh#0.1.0",
+        "name": "kilogram-transport-iroh"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ab_glyph_rasterizer@0.1.10",
+        "name": "ab_glyph_rasterizer"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ab_glyph@0.2.32",
+        "name": "ab_glyph"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#accesskit_consumer@0.31.0",
+        "name": "accesskit_consumer"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#accesskit_windows@0.29.2",
+        "name": "accesskit_windows"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#accesskit_winit@0.29.2",
+        "name": "accesskit_winit"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#accesskit@0.21.1",
+        "name": "accesskit"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#adler2@2.0.1",
+        "name": "adler2"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#aead@0.5.2",
+        "name": "aead"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#aead@0.6.1",
+        "name": "aead"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#aes-gcm@0.10.3",
+        "name": "aes-gcm"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#aes@0.8.4",
+        "name": "aes"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ahash@0.8.12",
+        "name": "ahash"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#aho-corasick@1.1.5",
+        "name": "aho-corasick"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#allocator-api2@0.2.21",
+        "name": "allocator-api2"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#anstream@1.0.0",
+        "name": "anstream"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#anstyle-parse@1.0.0",
+        "name": "anstyle-parse"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#anstyle-query@1.1.5",
+        "name": "anstyle-query"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#anstyle-wincon@3.0.11",
+        "name": "anstyle-wincon"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#anstyle@1.0.14",
+        "name": "anstyle"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#anyhow@1.0.104",
+        "name": "anyhow"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#arboard@3.6.1",
+        "name": "arboard"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#arc-swap@1.9.2",
+        "name": "arc-swap"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#argon2@0.5.3",
+        "name": "argon2"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#arrayvec@0.7.8",
+        "name": "arrayvec"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#asn1-rs-derive@0.6.0",
+        "name": "asn1-rs-derive"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#asn1-rs-impl@0.2.0",
+        "name": "asn1-rs-impl"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#asn1-rs@0.7.2",
+        "name": "asn1-rs"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#async-trait@0.1.92",
+        "name": "async-trait"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#atomic-waker@1.1.2",
+        "name": "atomic-waker"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#attohttpc@0.30.1",
+        "name": "attohttpc"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#autocfg@1.5.1",
+        "name": "autocfg"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#aws-lc-rs@1.18.1",
+        "name": "aws-lc-rs"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#aws-lc-sys@0.45.0",
+        "name": "aws-lc-sys"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#backon@1.6.0",
+        "name": "backon"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#base16ct@1.0.0",
+        "name": "base16ct"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#base64@0.22.1",
+        "name": "base64"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#base64@0.23.1",
+        "name": "base64"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#base64ct@1.8.3",
+        "name": "base64ct"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#bip39@2.2.2",
+        "name": "bip39"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#bit-set@0.8.0",
+        "name": "bit-set"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#bit-vec@0.8.0",
+        "name": "bit-vec"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#bit-vec@0.9.1",
+        "name": "bit-vec"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#bitcoin_hashes@0.14.101",
+        "name": "bitcoin_hashes"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#bitflags@2.13.1",
+        "name": "bitflags"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#blake2@0.10.6",
+        "name": "blake2"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#blake3@1.8.7",
+        "name": "blake3"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#block-buffer@0.10.4",
+        "name": "block-buffer"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#block-buffer@0.12.1",
+        "name": "block-buffer"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#block-padding@0.3.3",
+        "name": "block-padding"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#bytemuck_derive@1.12.0",
+        "name": "bytemuck_derive"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#bytemuck@1.25.2",
+        "name": "bytemuck"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#byteorder-lite@0.1.0",
+        "name": "byteorder-lite"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#byteorder@1.5.0",
+        "name": "byteorder"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#bytes@1.12.1",
+        "name": "bytes"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#cbc@0.1.2",
+        "name": "cbc"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#cc@1.4.4",
+        "name": "cc"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#cfg_aliases@0.2.2",
+        "name": "cfg_aliases"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#cfg-if@1.0.4",
+        "name": "cfg-if"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#chacha20@0.10.1",
+        "name": "chacha20"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#chacha20@0.9.1",
+        "name": "chacha20"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#chacha20poly1305@0.10.1",
+        "name": "chacha20poly1305"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#chacha20poly1305@0.11.0",
+        "name": "chacha20poly1305"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#chrono@0.4.45",
+        "name": "chrono"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#cipher@0.4.4",
+        "name": "cipher"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#cipher@0.5.2",
+        "name": "cipher"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#clap_builder@4.6.6",
+        "name": "clap_builder"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#clap_derive@4.6.4",
+        "name": "clap_derive"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#clap_lex@1.1.0",
+        "name": "clap_lex"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#clap@4.6.6",
+        "name": "clap"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#clipboard-win@5.4.1",
+        "name": "clipboard-win"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#cmake@0.1.58",
+        "name": "cmake"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#cmov@0.5.4",
+        "name": "cmov"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#cobs@0.3.0",
+        "name": "cobs"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#codespan-reporting@0.12.0",
+        "name": "codespan-reporting"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#colorchoice@1.0.5",
+        "name": "colorchoice"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#const-oid@0.10.2",
+        "name": "const-oid"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#const-oid@0.9.6",
+        "name": "const-oid"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#constant_time_eq@0.4.2",
+        "name": "constant_time_eq"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#convert_case@0.10.0",
+        "name": "convert_case"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#cordyceps@0.3.5",
+        "name": "cordyceps"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#cpufeatures@0.2.17",
+        "name": "cpufeatures"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#cpufeatures@0.3.0",
+        "name": "cpufeatures"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#crc32fast@1.5.1",
+        "name": "crc32fast"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#critical-section@1.2.0",
+        "name": "critical-section"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#crossbeam-channel@0.5.16",
+        "name": "crossbeam-channel"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#crossbeam-epoch@0.9.20",
+        "name": "crossbeam-epoch"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#crossbeam-utils@0.8.22",
+        "name": "crossbeam-utils"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#crypto-common@0.1.7",
+        "name": "crypto-common"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#crypto-common@0.2.2",
+        "name": "crypto-common"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ctr@0.9.2",
+        "name": "ctr"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ctutils@0.4.4",
+        "name": "ctutils"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#cursor-icon@1.2.0",
+        "name": "cursor-icon"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#curve25519-dalek-derive@0.1.1",
+        "name": "curve25519-dalek-derive"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#curve25519-dalek@4.1.3",
+        "name": "curve25519-dalek"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#curve25519-dalek@5.0.0",
+        "name": "curve25519-dalek"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#dashmap@6.2.1",
+        "name": "dashmap"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#data-encoding-macro-internal@0.1.19",
+        "name": "data-encoding-macro-internal"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#data-encoding-macro@0.1.21",
+        "name": "data-encoding-macro"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#data-encoding@2.11.1",
+        "name": "data-encoding"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#der-parser@10.0.0",
+        "name": "der-parser"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#der@0.7.10",
+        "name": "der"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#der@0.8.1",
+        "name": "der"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#deranged@0.5.8",
+        "name": "deranged"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#derive_more-impl@2.1.1",
+        "name": "derive_more-impl"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#derive_more@2.1.1",
+        "name": "derive_more"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#diatomic-waker@0.2.3",
+        "name": "diatomic-waker"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#digest@0.10.7",
+        "name": "digest"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#digest@0.11.3",
+        "name": "digest"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#displaydoc@0.2.7",
+        "name": "displaydoc"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#document-features@0.2.12",
+        "name": "document-features"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#dpi@0.1.2",
+        "name": "dpi"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#dunce@1.0.5",
+        "name": "dunce"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ecolor@0.33.3",
+        "name": "ecolor"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ed25519-dalek@2.2.0",
+        "name": "ed25519-dalek"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ed25519-dalek@3.0.0",
+        "name": "ed25519-dalek"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ed25519@2.2.3",
+        "name": "ed25519"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ed25519@3.0.0",
+        "name": "ed25519"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#eframe@0.33.3",
+        "name": "eframe"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#egui_glow@0.33.3",
+        "name": "egui_glow"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#egui-wgpu@0.33.3",
+        "name": "egui-wgpu"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#egui-winit@0.33.3",
+        "name": "egui-winit"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#egui@0.33.3",
+        "name": "egui"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#either@1.18.0",
+        "name": "either"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#emath@0.33.3",
+        "name": "emath"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#embedded-io@0.4.0",
+        "name": "embedded-io"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#embedded-io@0.6.1",
+        "name": "embedded-io"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#enum-assoc@1.4.1",
+        "name": "enum-assoc"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#epaint_default_fonts@0.33.3",
+        "name": "epaint_default_fonts"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#epaint@0.33.3",
+        "name": "epaint"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#equivalent@1.0.2",
+        "name": "equivalent"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#error-code@3.4.0",
+        "name": "error-code"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#fastrand@2.5.0",
+        "name": "fastrand"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#fax@0.2.7",
+        "name": "fax"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#fdeflate@0.3.7",
+        "name": "fdeflate"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#find-msvc-tools@0.1.11",
+        "name": "find-msvc-tools"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#flate2@1.1.10",
+        "name": "flate2"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#fnv@1.0.7",
+        "name": "fnv"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#foldhash@0.1.5",
+        "name": "foldhash"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#foldhash@0.2.0",
+        "name": "foldhash"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#form_urlencoded@1.2.2",
+        "name": "form_urlencoded"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#fs_extra@1.3.0",
+        "name": "fs_extra"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#futures-buffered@0.2.13",
+        "name": "futures-buffered"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#futures-channel@0.3.34",
+        "name": "futures-channel"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#futures-core@0.3.34",
+        "name": "futures-core"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#futures-executor@0.3.34",
+        "name": "futures-executor"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#futures-io@0.3.34",
+        "name": "futures-io"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#futures-lite@2.6.1",
+        "name": "futures-lite"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#futures-macro@0.3.34",
+        "name": "futures-macro"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#futures-sink@0.3.34",
+        "name": "futures-sink"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#futures-task@0.3.34",
+        "name": "futures-task"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#futures-util@0.3.34",
+        "name": "futures-util"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#futures@0.3.34",
+        "name": "futures"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#g2gen@1.2.2",
+        "name": "g2gen"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#g2p@1.2.2",
+        "name": "g2p"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#g2poly@1.2.2",
+        "name": "g2poly"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#generic-array@0.14.7",
+        "name": "generic-array"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.2.17",
+        "name": "getrandom"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.3.4",
+        "name": "getrandom"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#getrandom@0.4.3",
+        "name": "getrandom"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ghash@0.5.1",
+        "name": "ghash"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#gl_generator@0.14.0",
+        "name": "gl_generator"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#glow@0.16.0",
+        "name": "glow"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#glutin_egl_sys@0.7.1",
+        "name": "glutin_egl_sys"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#glutin_wgl_sys@0.6.1",
+        "name": "glutin_wgl_sys"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#glutin-winit@0.5.0",
+        "name": "glutin-winit"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#glutin@0.32.3",
+        "name": "glutin"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#h2@0.4.19",
+        "name": "h2"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#half@2.7.1",
+        "name": "half"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hash32@0.2.1",
+        "name": "hash32"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hashbrown@0.14.5",
+        "name": "hashbrown"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hashbrown@0.15.5",
+        "name": "hashbrown"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hashbrown@0.16.1",
+        "name": "hashbrown"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hashbrown@0.17.1",
+        "name": "hashbrown"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#heapless@0.7.17",
+        "name": "heapless"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#heck@0.5.0",
+        "name": "heck"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hex-conservative@0.2.3",
+        "name": "hex-conservative"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hexf-parse@0.2.1",
+        "name": "hexf-parse"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hickory-net@0.26.1",
+        "name": "hickory-net"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hickory-proto@0.26.1",
+        "name": "hickory-proto"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hickory-resolver@0.26.1",
+        "name": "hickory-resolver"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hkdf@0.12.4",
+        "name": "hkdf"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hkdf@0.13.0",
+        "name": "hkdf"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hmac@0.12.1",
+        "name": "hmac"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hmac@0.13.0",
+        "name": "hmac"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hpke@0.14.0",
+        "name": "hpke"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#http-body-util@0.1.5",
+        "name": "http-body-util"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#http-body@1.1.0",
+        "name": "http-body"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#http@1.5.0",
+        "name": "http"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#httparse@1.10.1",
+        "name": "httparse"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#httpdate@1.0.3",
+        "name": "httpdate"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hybrid-array@0.4.14",
+        "name": "hybrid-array"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hyper-rustls@0.27.9",
+        "name": "hyper-rustls"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hyper-util@0.1.20",
+        "name": "hyper-util"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#hyper@1.11.0",
+        "name": "hyper"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#icu_collections@2.3.0",
+        "name": "icu_collections"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#icu_locale_core@2.3.0",
+        "name": "icu_locale_core"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#icu_normalizer_data@2.3.0",
+        "name": "icu_normalizer_data"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#icu_normalizer@2.3.0",
+        "name": "icu_normalizer"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#icu_properties_data@2.3.0",
+        "name": "icu_properties_data"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#icu_properties@2.3.0",
+        "name": "icu_properties"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#icu_provider@2.3.1",
+        "name": "icu_provider"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#identity-hash@0.1.0",
+        "name": "identity-hash"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#idna_adapter@1.2.2",
+        "name": "idna_adapter"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#idna@1.1.0",
+        "name": "idna"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#igd-next@0.17.1",
+        "name": "igd-next"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#image@0.25.10",
+        "name": "image"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#indexmap@2.14.0",
+        "name": "indexmap"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#inout@0.1.4",
+        "name": "inout"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#inout@0.2.2",
+        "name": "inout"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ipconfig@0.3.4",
+        "name": "ipconfig"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ipnet@2.12.1",
+        "name": "ipnet"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#iroh-base@1.1.0",
+        "name": "iroh-base"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#iroh-dns@1.1.0",
+        "name": "iroh-dns"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#iroh-metrics-derive@1.0.1",
+        "name": "iroh-metrics-derive"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#iroh-metrics@1.0.1",
+        "name": "iroh-metrics"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#iroh-relay@1.1.0",
+        "name": "iroh-relay"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#iroh@1.1.0",
+        "name": "iroh"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#is_terminal_polyfill@1.70.2",
+        "name": "is_terminal_polyfill"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#itertools@0.14.0",
+        "name": "itertools"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#itoa@1.0.18",
+        "name": "itoa"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#jobserver@0.1.35",
+        "name": "jobserver"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#khronos_api@3.1.0",
+        "name": "khronos_api"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#lazy_static@1.5.0",
+        "name": "lazy_static"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#libc@0.2.189",
+        "name": "libc"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#libloading@0.8.9",
+        "name": "libloading"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#libm@0.2.16",
+        "name": "libm"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#litemap@0.8.3",
+        "name": "litemap"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#litrs@1.0.0",
+        "name": "litrs"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#lock_api@0.4.14",
+        "name": "lock_api"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#log@0.4.34",
+        "name": "log"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#lru-slab@0.1.2",
+        "name": "lru-slab"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#lru@0.16.4",
+        "name": "lru"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#lru@0.18.2",
+        "name": "lru"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#mac-addr@0.3.0",
+        "name": "mac-addr"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#matchers@0.2.0",
+        "name": "matchers"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#matrix-pickle-derive@0.2.3",
+        "name": "matrix-pickle-derive"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#matrix-pickle@0.2.3",
+        "name": "matrix-pickle"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#memchr@2.8.3",
+        "name": "memchr"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#memoffset@0.9.1",
+        "name": "memoffset"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#minimal-lexical@0.2.1",
+        "name": "minimal-lexical"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#miniz_oxide@0.8.9",
+        "name": "miniz_oxide"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#miniz_oxide@0.9.1",
+        "name": "miniz_oxide"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#mio@1.2.2",
+        "name": "mio"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#moka@0.12.16",
+        "name": "moka"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#moxcms@0.8.1",
+        "name": "moxcms"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#n0-error-macros@1.0.0",
+        "name": "n0-error-macros"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#n0-error@1.0.0",
+        "name": "n0-error"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#n0-future@0.3.2",
+        "name": "n0-future"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#n0-watcher@1.0.0",
+        "name": "n0-watcher"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#naga@27.0.3",
+        "name": "naga"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#netdev@0.45.1",
+        "name": "netdev"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#netwatch@0.19.3",
+        "name": "netwatch"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#nohash-hasher@0.2.0",
+        "name": "nohash-hasher"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#nom@7.1.3",
+        "name": "nom"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#noq-proto@1.2.0",
+        "name": "noq-proto"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#noq-udp@1.2.0",
+        "name": "noq-udp"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#noq@1.2.0",
+        "name": "noq"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#nu-ansi-term@0.50.3",
+        "name": "nu-ansi-term"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#num_enum_derive@0.7.6",
+        "name": "num_enum_derive"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#num_enum@0.7.6",
+        "name": "num_enum"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#num-bigint@0.4.8",
+        "name": "num-bigint"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#num-conv@0.2.2",
+        "name": "num-conv"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#num-integer@0.1.47",
+        "name": "num-integer"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#num-traits@0.2.19",
+        "name": "num-traits"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#oid-registry@0.8.1",
+        "name": "oid-registry"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#once_cell_polyfill@1.70.2",
+        "name": "once_cell_polyfill"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#once_cell@1.21.4",
+        "name": "once_cell"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#opaque-debug@0.3.1",
+        "name": "opaque-debug"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#owned_ttf_parser@0.25.1",
+        "name": "owned_ttf_parser"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#papaya@0.2.5",
+        "name": "papaya"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#parking_lot_core@0.9.12",
+        "name": "parking_lot_core"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#parking_lot@0.12.5",
+        "name": "parking_lot"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#parking@2.2.1",
+        "name": "parking"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#password-hash@0.5.0",
+        "name": "password-hash"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#pem-rfc7468@1.0.0",
+        "name": "pem-rfc7468"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#pem@3.0.6",
+        "name": "pem"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#pem@4.0.0",
+        "name": "pem"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#percent-encoding@2.3.2",
+        "name": "percent-encoding"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#pin-project-internal@1.1.13",
+        "name": "pin-project-internal"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#pin-project-lite@0.2.17",
+        "name": "pin-project-lite"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#pin-project@1.1.13",
+        "name": "pin-project"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#pkcs8@0.10.2",
+        "name": "pkcs8"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#pkcs8@0.11.0",
+        "name": "pkcs8"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#png@0.18.1",
+        "name": "png"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#poly1305@0.8.0",
+        "name": "poly1305"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#poly1305@0.9.1",
+        "name": "poly1305"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#polyval@0.6.2",
+        "name": "polyval"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#portable-atomic@1.15.0",
+        "name": "portable-atomic"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#portmapper@0.19.3",
+        "name": "portmapper"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#postcard-derive@0.2.2",
+        "name": "postcard-derive"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#postcard@1.1.3",
+        "name": "postcard"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#potential_utf@0.1.6",
+        "name": "potential_utf"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#powerfmt@0.2.0",
+        "name": "powerfmt"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ppv-lite86@0.2.21",
+        "name": "ppv-lite86"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#prefix-trie@0.8.4",
+        "name": "prefix-trie"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#proc-macro-crate@3.5.0",
+        "name": "proc-macro-crate"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#proc-macro2@1.0.107",
+        "name": "proc-macro2"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#profiling@1.0.18",
+        "name": "profiling"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#prost-derive@0.14.4",
+        "name": "prost-derive"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#prost@0.14.4",
+        "name": "prost"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#pxfm@0.1.30",
+        "name": "pxfm"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#qrcode@0.14.1",
+        "name": "qrcode"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#quick-error@2.0.1",
+        "name": "quick-error"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#quinn-proto@0.11.18",
+        "name": "quinn-proto"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#quinn-udp@0.5.15",
+        "name": "quinn-udp"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#quinn@0.11.11",
+        "name": "quinn"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#quote@1.0.47",
+        "name": "quote"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rand_chacha@0.3.1",
+        "name": "rand_chacha"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rand_core@0.10.1",
+        "name": "rand_core"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rand_core@0.6.4",
+        "name": "rand_core"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rand_pcg@0.10.2",
+        "name": "rand_pcg"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rand@0.10.2",
+        "name": "rand"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rand@0.8.8",
+        "name": "rand"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#raw-window-handle@0.6.2",
+        "name": "raw-window-handle"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rcgen@0.14.10",
+        "name": "rcgen"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#redb@4.2.0",
+        "name": "redb"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#regex-automata@0.4.18",
+        "name": "regex-automata"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#regex-syntax@0.8.11",
+        "name": "regex-syntax"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#reloadable-core@0.1.0",
+        "name": "reloadable-core"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#reloadable-state@0.1.0",
+        "name": "reloadable-state"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#renderdoc-sys@1.1.0",
+        "name": "renderdoc-sys"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#reqwest@0.13.4",
+        "name": "reqwest"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#resolv-conf@0.7.6",
+        "name": "resolv-conf"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ring@0.17.14",
+        "name": "ring"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rqrr@0.10.1",
+        "name": "rqrr"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rustc_version@0.4.1",
+        "name": "rustc_version"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rustc-hash@1.1.0",
+        "name": "rustc-hash"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rustc-hash@2.1.3",
+        "name": "rustc-hash"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rusticata-macros@4.1.0",
+        "name": "rusticata-macros"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rustls-cert-file-reader@0.4.2",
+        "name": "rustls-cert-file-reader"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rustls-cert-read@0.3.0",
+        "name": "rustls-cert-read"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rustls-cert-reloadable-resolver@0.7.1",
+        "name": "rustls-cert-reloadable-resolver"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rustls-pki-types@1.15.1",
+        "name": "rustls-pki-types"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rustls-platform-verifier@0.7.0",
+        "name": "rustls-platform-verifier"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rustls-webpki@0.103.16",
+        "name": "rustls-webpki"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rustls@0.23.46",
+        "name": "rustls"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#rustversion@1.0.23",
+        "name": "rustversion"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ryu@1.0.23",
+        "name": "ryu"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#scopeguard@1.2.0",
+        "name": "scopeguard"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#seize@0.5.1",
+        "name": "seize"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#semver@1.0.28",
+        "name": "semver"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#serde_bytes@0.11.19",
+        "name": "serde_bytes"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#serde_core@1.0.229",
+        "name": "serde_core"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#serde_derive@1.0.229",
+        "name": "serde_derive"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#serde_json@1.0.151",
+        "name": "serde_json"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#serde_spanned@1.1.2",
+        "name": "serde_spanned"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#serde@1.0.229",
+        "name": "serde"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#serdect@0.4.3",
+        "name": "serdect"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#sha1_smol@1.0.1",
+        "name": "sha1_smol"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#sha1@0.11.0",
+        "name": "sha1"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#sha2@0.10.9",
+        "name": "sha2"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#sha2@0.11.0",
+        "name": "sha2"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#sharded-slab@0.1.7",
+        "name": "sharded-slab"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#shlex@2.0.1",
+        "name": "shlex"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#signature@2.2.0",
+        "name": "signature"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#signature@3.0.0",
+        "name": "signature"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#simd-adler32@0.3.10",
+        "name": "simd-adler32"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#simdutf8@0.1.5",
+        "name": "simdutf8"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#simple-dns@0.12.0",
+        "name": "simple-dns"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#slab@0.4.12",
+        "name": "slab"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#smallvec@1.15.2",
+        "name": "smallvec"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#smol_str@0.2.2",
+        "name": "smol_str"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#socket2@0.6.5",
+        "name": "socket2"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#sorted-index-buffer@0.2.1",
+        "name": "sorted-index-buffer"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#spez@0.1.2",
+        "name": "spez"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#spin@0.10.1",
+        "name": "spin"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#spin@0.9.9",
+        "name": "spin"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#spki@0.7.3",
+        "name": "spki"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#spki@0.8.0",
+        "name": "spki"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#stable_deref_trait@1.2.1",
+        "name": "stable_deref_trait"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#static_assertions@1.1.0",
+        "name": "static_assertions"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#stellar-agent-windows-identity@0.1.0-alpha.6",
+        "name": "stellar-agent-windows-identity"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#strsim@0.11.1",
+        "name": "strsim"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#strum_macros@0.28.0",
+        "name": "strum_macros"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#strum@0.28.0",
+        "name": "strum"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#subtle@2.6.1",
+        "name": "subtle"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#syn@2.0.119",
+        "name": "syn"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#syn@3.0.4",
+        "name": "syn"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#sync_wrapper@1.0.2",
+        "name": "sync_wrapper"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#synstructure@0.13.2",
+        "name": "synstructure"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tagptr@0.2.0",
+        "name": "tagptr"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tempfile@3.27.0",
+        "name": "tempfile"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#thiserror-impl@2.0.20",
+        "name": "thiserror-impl"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#thiserror@2.0.20",
+        "name": "thiserror"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#thread_local@1.1.10",
+        "name": "thread_local"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tiff@0.11.3",
+        "name": "tiff"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#time-core@0.1.9",
+        "name": "time-core"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#time-macros@0.2.32",
+        "name": "time-macros"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#time@0.3.55",
+        "name": "time"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tinystr@0.8.4",
+        "name": "tinystr"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tinyvec_macros@0.1.1",
+        "name": "tinyvec_macros"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tinyvec@1.12.0",
+        "name": "tinyvec"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tokio-macros@2.7.2",
+        "name": "tokio-macros"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tokio-rustls-acme@0.9.1",
+        "name": "tokio-rustls-acme"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tokio-rustls@0.26.4",
+        "name": "tokio-rustls"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tokio-stream@0.1.19",
+        "name": "tokio-stream"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tokio-util@0.7.19",
+        "name": "tokio-util"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tokio-websockets@0.13.3",
+        "name": "tokio-websockets"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tokio@1.53.3",
+        "name": "tokio"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#toml_datetime@1.1.2+spec-1.1.0",
+        "name": "toml_datetime"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#toml_edit@0.25.13+spec-1.1.0",
+        "name": "toml_edit"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#toml_parser@1.1.5+spec-1.1.0",
+        "name": "toml_parser"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#toml_writer@1.1.3+spec-1.1.0",
+        "name": "toml_writer"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#toml@1.1.8+spec-1.1.0",
+        "name": "toml"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tower-http@0.6.11",
+        "name": "tower-http"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tower-layer@0.3.3",
+        "name": "tower-layer"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tower-service@0.3.3",
+        "name": "tower-service"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tower@0.5.3",
+        "name": "tower"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tracing-attributes@0.1.31",
+        "name": "tracing-attributes"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tracing-core@0.1.36",
+        "name": "tracing-core"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tracing-log@0.2.0",
+        "name": "tracing-log"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tracing-subscriber@0.3.23",
+        "name": "tracing-subscriber"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#tracing@0.1.44",
+        "name": "tracing"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#try-lock@0.2.5",
+        "name": "try-lock"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#ttf-parser@0.25.1",
+        "name": "ttf-parser"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#type-map@0.5.1",
+        "name": "type-map"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#typenum@1.20.1",
+        "name": "typenum"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#unicode-ident@1.0.24",
+        "name": "unicode-ident"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#unicode-normalization@0.1.25",
+        "name": "unicode-normalization"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#unicode-segmentation@1.13.3",
+        "name": "unicode-segmentation"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#unicode-width@0.2.2",
+        "name": "unicode-width"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#unicode-xid@0.2.6",
+        "name": "unicode-xid"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#universal-hash@0.5.1",
+        "name": "universal-hash"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#universal-hash@0.6.1",
+        "name": "universal-hash"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#untrusted@0.9.0",
+        "name": "untrusted"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#url@2.5.8",
+        "name": "url"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#utf8_iter@1.0.4",
+        "name": "utf8_iter"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#utf8parse@0.2.2",
+        "name": "utf8parse"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#uuid@1.25.0",
+        "name": "uuid"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#version_check@0.9.5",
+        "name": "version_check"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#vodozemac@0.10.0",
+        "name": "vodozemac"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#want@0.3.1",
+        "name": "want"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#web-time@1.1.0",
+        "name": "web-time"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#webbrowser@1.2.4",
+        "name": "webbrowser"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#webpki-roots@1.0.10",
+        "name": "webpki-roots"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#weezl@0.1.12",
+        "name": "weezl"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#wgpu-core-deps-windows-linux-android@27.0.0",
+        "name": "wgpu-core-deps-windows-linux-android"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#wgpu-core@27.0.3",
+        "name": "wgpu-core"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#wgpu-hal@27.0.4",
+        "name": "wgpu-hal"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#wgpu-types@27.0.1",
+        "name": "wgpu-types"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#wgpu@27.0.1",
+        "name": "wgpu"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#widestring@1.2.1",
+        "name": "widestring"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows_x86_64_msvc@0.52.6",
+        "name": "windows_x86_64_msvc"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-collections@0.2.0",
+        "name": "windows-collections"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-collections@0.3.2",
+        "name": "windows-collections"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-core@0.61.2",
+        "name": "windows-core"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-core@0.62.2",
+        "name": "windows-core"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-future@0.2.1",
+        "name": "windows-future"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-future@0.3.2",
+        "name": "windows-future"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-implement@0.60.2",
+        "name": "windows-implement"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-interface@0.59.3",
+        "name": "windows-interface"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-link@0.1.3",
+        "name": "windows-link"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-link@0.2.1",
+        "name": "windows-link"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-numerics@0.2.0",
+        "name": "windows-numerics"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-numerics@0.3.1",
+        "name": "windows-numerics"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-registry@0.6.1",
+        "name": "windows-registry"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-result@0.3.4",
+        "name": "windows-result"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-result@0.4.1",
+        "name": "windows-result"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-strings@0.4.2",
+        "name": "windows-strings"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-strings@0.5.1",
+        "name": "windows-strings"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-sys@0.52.0",
+        "name": "windows-sys"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-sys@0.61.2",
+        "name": "windows-sys"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-targets@0.52.6",
+        "name": "windows-targets"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-threading@0.1.0",
+        "name": "windows-threading"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows-threading@0.2.1",
+        "name": "windows-threading"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows@0.61.3",
+        "name": "windows"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#windows@0.62.2",
+        "name": "windows"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#winit@0.30.13",
+        "name": "winit"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#winnow@1.0.4",
+        "name": "winnow"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#wmi@0.18.4",
+        "name": "wmi"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#writeable@0.6.4",
+        "name": "writeable"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#x25519-dalek@2.0.1",
+        "name": "x25519-dalek"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#x25519-dalek@3.0.0",
+        "name": "x25519-dalek"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#x509-parser@0.18.1",
+        "name": "x509-parser"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#xml-rs@0.8.29",
+        "name": "xml-rs"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#xmltree@0.10.3",
+        "name": "xmltree"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#yasna@0.6.0",
+        "name": "yasna"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#yoke-derive@0.8.2",
+        "name": "yoke-derive"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#yoke@0.8.3",
+        "name": "yoke"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#zerocopy-derive@0.8.56",
+        "name": "zerocopy-derive"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#zerocopy@0.8.56",
+        "name": "zerocopy"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#zerofrom-derive@0.1.7",
+        "name": "zerofrom-derive"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#zerofrom@0.1.8",
+        "name": "zerofrom"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#zeroize_derive@1.5.0",
+        "name": "zeroize_derive"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#zeroize@1.9.0",
+        "name": "zeroize"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#zerotrie@0.2.5",
+        "name": "zerotrie"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#zerovec-derive@0.11.6",
+        "name": "zerovec-derive"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#zerovec@0.11.8",
+        "name": "zerovec"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#zlib-rs@0.6.7",
+        "name": "zlib-rs"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#zmij@1.0.23",
+        "name": "zmij"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#zune-core@0.5.3",
+        "name": "zune-core"
+      },
+      {
+        "id": "registry+https://github.com/rust-lang/crates.io-index#zune-jpeg@0.5.15",
+        "name": "zune-jpeg"
+      }
+    ]
+  },
+  "resolved_graph_sha256": "03928e5de62a1178f880e1fe99ec5c42c13d1def6be3707a58f97c7f847faa66",
+  "artifacts": [
+    {
+      "path": "E:/AI-Projects/kilogram-p2p-messenger/target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe",
+      "bytes": 50473984,
+      "sha256": "f5322cfc26b93ab7a431a474d7f33e9ff805a3e1a3df98fb1d0f84185794dcb9"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "bin",
+      "target": "kilogram-cli",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 50781696,
+      "sha256": "1992cef4b4b6b2b18bb67ce80c94fb4c751ea3715626146936c44bdb619c4d57",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "lib",
+      "target": "kilogram_cli",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 32656384,
+      "sha256": "2fcbfb6529fad0f156cbed869ea0455e864119dcecef94eba508aa06e588762f",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 16982528,
+      "sha256": "43d10254d0ae51fddfc9ae11bbc506cf95c9f209d9e310d71ac137d80a85047e",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "runtime2_process",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 23695360,
+      "sha256": "4a08ce3de743241c720ec3bf25425c75b8efa695a03780fe1f74e1e7109f2a98",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-transport-iroh",
+      "kind": "lib",
+      "target": "kilogram_transport_iroh",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+      "bytes": 19419648,
+      "sha256": "f5822cd40225a7ac12dbc2c58264439b8e3c5d4b4d20cf87309b9aa28f2023ad",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-transport-iroh",
+      "kind": "test",
+      "target": "local_relay_transport",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+      "bytes": 22317056,
+      "sha256": "552cc6c23452ad50c94b65391e33df462b89e14551c7eac51304e55872788cf0",
+      "profile": "verification-scale"
+    }
+  ],
+  "steps": [
+    {
+      "step": "clippy-01",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3d-p10a-01\\clippy.ps1"
+      ],
+      "actual_child_exit_code": 101,
+      "exit_code": 1,
+      "elapsed_seconds": 9.9598218,
+      "cleanup_verified": true,
+      "error": "Native check exit 101"
+    },
+    {
+      "step": "clippy-02",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3d-p10a-01\\clippy.ps1"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 9.307482,
+      "cleanup_verified": true,
+      "error": null
+    },
+    {
+      "step": "clippy-03",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3d-p10a-01\\clippy.ps1"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 9.5117898,
+      "cleanup_verified": true,
+      "error": null
+    },
+    {
+      "step": "clippy-04",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3d-p10a-01\\clippy.ps1"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 8.9849976,
+      "cleanup_verified": true,
+      "error": null
+    },
+    {
+      "step": "clippy-05",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3d-p10a-01\\clippy.ps1"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 9.6431625,
+      "cleanup_verified": true,
+      "error": null
+    },
+    {
+      "step": "compile-01",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3d-p10a-01\\compile.ps1",
+        "-Capture",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3d-p10a-01\\compile-01.capture.json"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 86.7047846,
+      "cleanup_verified": true,
+      "error": null
+    },
+    {
+      "step": "pure-01",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3d-p10a-01\\pure.ps1",
+        "-Step",
+        "pure-01"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 15.0631493,
+      "cleanup_verified": true,
+      "error": null
+    },
+    {
+      "step": "fmt-01",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3d-p10a-01\\fmt.ps1"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 4.3155333,
+      "cleanup_verified": true,
+      "error": null
+    }
+  ],
+  "helper_pins": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3d-p10a-evidence/check.ps1",
+      "bytes": 2756,
+      "sha256": "f0a1153a70babd9f0e7e82f8fdbee15bf1c8fb9ab4cc5c92e1c6fbc9298115e1"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3d-p10a-evidence/clippy.ps1",
+      "bytes": 460,
+      "sha256": "c4533d1360cea309f7f8db1b6a792c36584a5e516f68343e7713496e3d42d59f"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3d-p10a-evidence/compile.ps1",
+      "bytes": 501,
+      "sha256": "c99cb6d1340258a47fc9359490beaec9881f8b3f736ae882937adfb425c2cb43"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3d-p10a-evidence/pure.ps1",
+      "bytes": 1923,
+      "sha256": "4c213953abe70c99e459d948e1b5d3e3df607963bdea11667ef47033ec9b2dba"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3d-p10a-evidence/fmt.ps1",
+      "bytes": 81,
+      "sha256": "6766fdce5d3716ac62a85b863fd3527ec0fb3c73e4a0f09c800b3a941aeb0b71"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3d-p10a-evidence/review.py",
+      "bytes": 4860,
+      "sha256": "1cf5f43930f6286066b40f8e4b186b0e4de9e3917a3d7928bdd122b8f53ca505"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3d-p10a-evidence/test-selection.json",
+      "bytes": 1439,
+      "sha256": "7f27080b8a23334ba7032af6b1d82c7a082b479931460dd4d3c9a6426862446e"
+    }
+  ]
+}

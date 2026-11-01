@@ -13,6 +13,8 @@ mod catchup;
 mod control;
 #[path = "migration_s54_early.rs"]
 mod early;
+#[path = "migration_s54_handoff.rs"]
+mod handoff;
 #[path = "migration_s54_observations.rs"]
 mod observations;
 #[path = "migration_s54_offline.rs"]

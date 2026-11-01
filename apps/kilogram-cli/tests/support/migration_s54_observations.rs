@@ -56,6 +56,10 @@ pub(super) struct Decoder {
     pub live_retry_complete: Option<Value>,
 }
 impl Decoder {
+    pub fn observed_counts(&self) -> Result<oracle::Counts> {
+        self.incarnation()?;
+        Ok(self.counts)
+    }
     pub fn new(pid: u32, owner: old::Id, contexts: [String; 2], role: u8) -> Self {
         Self {
             pid,

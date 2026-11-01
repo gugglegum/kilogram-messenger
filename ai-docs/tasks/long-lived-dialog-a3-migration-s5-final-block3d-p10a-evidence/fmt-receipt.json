@@ -1,0 +1,15 @@
+{
+  "step": "fmt-01",
+  "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3d-p10a-01\\fmt.ps1"
+  ],
+  "actual_child_exit_code": 0,
+  "exit_code": 0,
+  "elapsed_seconds": 4.3155333,
+  "cleanup_verified": true,
+  "error": null
+}

@@ -84,8 +84,14 @@ impl Controller {
         self.import1()?;
         self.origin.pair.ceremony("p5-c1", "absent", 30 * 86400)?;
         self.import2()?;
-        self.origin.pair.upgrade(1, 71)?;
-        self.origin.pair.upgrade(0, 72)?;
+        let intents = [(1, 71u8), (0, 72u8)];
+        for (owner, id) in intents {
+            self.origin.pair.upgrade(owner, id)?;
+        }
+        self.remember(
+            "c1-upgrade-requests",
+            json!(intents.map(|(owner, id)| json!({"owner":owner,"request":state::hex(&[id;16])}))),
+        )?;
         self.wait(30, |s| {
             Ok((s.controls[0].hit("s53-P-before-publication")?
                 && s.pre_q_heads.iter().all(|n| *n > 0))
