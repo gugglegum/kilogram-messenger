@@ -464,10 +464,12 @@ impl Owner7 {
         }
         let count = rows.len() as u64;
         let change = self.mixed_change(c, &mut head, &native)?;
-        self.commit_data2(c, None, store::ExistingData7::Materialize { change, rows })?;
+        let report =
+            self.commit_data2(c, None, store::ExistingData7::Materialize { change, rows })?;
         self.retain_mixed(c, &head, native);
         self.stats.materialized += count;
         self.stats.committed_encrypt += count;
+        self.observe_native(c, report)?;
         self.wake.notify_waiters();
         Ok(true)
     }
@@ -659,7 +661,7 @@ impl Owner7 {
         if worked {
             let count = rows.len() as u64;
             let change = self.mixed_change(c, &mut head, &working)?;
-            self.commit_data2(
+            let report = self.commit_data2(
                 c,
                 Some(binding),
                 store::ExistingData7::Readable { change, rows },
@@ -667,6 +669,7 @@ impl Owner7 {
             self.retain_mixed(c, &head, working);
             self.stats.committed_decrypt += count;
             self.stats.readable += count;
+            self.observe_native(c, report)?;
         }
         if let Some(ordinal) = quarantine {
             self.commit_data2(

@@ -174,10 +174,11 @@ impl Owner7 {
         }
         let count = rows.len() as u64;
         let change = self.change(c, &mut head, Some(&private))?;
-        self.commit(c, binding, store::L1Operation::Materialize { change, rows })?;
+        let report = self.commit(c, binding, store::L1Operation::Materialize { change, rows })?;
         self.retain_native(c, &head, private);
         self.stats.committed_encrypt += count;
         self.stats.materialized += count;
+        self.observe_native(c, report)?;
         self.wake.notify_waiters();
         Ok(true)
     }
@@ -468,10 +469,11 @@ impl Owner7 {
         if worked {
             let count = rows.len() as u64;
             let change = self.change(c, &mut head, Some(&working))?;
-            self.commit(c, binding, store::L1Operation::Drain { change, rows })?;
+            let report = self.commit(c, binding, store::L1Operation::Drain { change, rows })?;
             self.retain_native(c, &head, working);
             self.stats.committed_decrypt += count;
             self.stats.readable += count;
+            self.observe_native(c, report)?;
         }
         if let Some(ordinal) = quarantine {
             self.commit(

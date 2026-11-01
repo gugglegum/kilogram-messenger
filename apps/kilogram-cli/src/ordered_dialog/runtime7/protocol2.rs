@@ -337,6 +337,9 @@ impl Owner7 {
         binding: Id,
     ) -> Result<Option<(DispatchExisting7, Prefix7)>> {
         self.check_existing_lease(c, binding)?;
+        if self.verification_plan(c)?.is_some_and(|s| s.suspend_prefix) {
+            return Ok(None);
+        }
         let schedule = super::super::test_support::load()?;
         if schedule.applies(self.spec(c)?.c) && schedule.suspend_prefix_requests {
             return Ok(None);
@@ -494,7 +497,7 @@ impl Owner7 {
         binding: Id,
         frame: v2::ParsedFrame2,
         plan: &Prefix7,
-    ) -> Result<Vec<Id>> {
+    ) -> Result<Option<verification::PageNotice>> {
         let verified = self.verified_frame2(c, binding, frame)?;
         let frame = verified.frame();
         ensure!(
@@ -584,11 +587,35 @@ impl Owner7 {
                 },
             )?;
         }
-        let ids = self.receive2(c, binding, items, records, plan.grant, plan.head)?;
+        let mut new_sources = 0;
+        if self.verification.enabled() {
+            for n in start..end {
+                if self.repo()?.event_at(c, peer as u8, n)?.is_none()
+                    && self.repo()?.pending(c, n)?.is_none()
+                {
+                    new_sources += 1;
+                }
+            }
+        }
+        self.receive2(c, binding, items, records, plan.grant, plan.head)?;
         if let Some(id) = plan.grant {
             self.commit_data2(c, Some(binding), store::ExistingData7::CancelGrant { id })?;
         }
-        Ok(ids)
+        if !self.verification.enabled() {
+            return Ok(None);
+        }
+        let page = verification::Page {
+            start,
+            end,
+            new_sources,
+            head: plan.head,
+            grant: plan.grant,
+            generation: self.repo()?.generation(),
+            operation: self.repo()?.last_commit()?,
+        };
+        let context = self.spec(c)?.c;
+        let role = self.role(c)? as u8;
+        self.verification.page(c, context, role, page)
     }
     pub(super) fn outgoing2(
         &mut self,
@@ -598,6 +625,10 @@ impl Owner7 {
         credit: Value,
     ) -> Result<Option<Outgoing7>> {
         self.check_existing_lease(c, binding)?;
+        let verification = self.verification_plan(c)?;
+        if verification.as_ref().is_some_and(|s| s.suspend_live) {
+            return Ok(None);
+        }
         let meta = self.repo()?.metadata(c)?;
         let role = self.role(c)? as usize;
         let cr = credit.fields(7)?;
@@ -623,6 +654,12 @@ impl Owner7 {
                 break;
             }
             if schedule.held(context, role as u64, n) {
+                continue;
+            }
+            if verification
+                .as_ref()
+                .is_some_and(|s| s.hold_ordinals.contains(&n))
+            {
                 continue;
             }
             let (item, reference, auth) = self.source_item2(c, n)?;

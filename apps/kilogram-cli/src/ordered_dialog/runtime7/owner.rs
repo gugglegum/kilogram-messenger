@@ -98,6 +98,7 @@ pub(super) struct Owner7 {
     pub stats: Stats7,
     pub resources: Arc<resources::Resources7>,
     pub window: Arc<window::RefWindow2>,
+    pub(super) verification: verification::Observer,
     pub wake: Arc<tokio::sync::Notify>,
     pub(super) native_cache: [Option<(Id, native::Native7)>; 2],
     pub route: kilogram_transport_iroh::ordered2::RouteConfig2,
@@ -115,6 +116,7 @@ impl Owner7 {
         self.repository.as_mut().context("owner recovery failed")
     }
     pub fn new(mut repository: store::L1Repository, enabled_ids: &[Id]) -> Result<Self> {
+        let verification = verification::Observer::new(repository.root(), repository.source_id())?;
         let material = repository.owner_material()?;
         let device = DeviceState::from_secret_material(
             repository.root(),
@@ -237,6 +239,7 @@ impl Owner7 {
             stats: Stats7::default(),
             resources: Arc::new(resources::Resources7::default()),
             window,
+            verification,
             wake: Arc::new(tokio::sync::Notify::new()),
             native_cache: [None, None],
             route: kilogram_transport_iroh::ordered2::RouteConfig2 {

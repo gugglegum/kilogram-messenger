@@ -3,17 +3,20 @@
 use super::*;
 #[path = "migration_s53_capacity_review2.rs"]
 mod capacity_review2;
+#[allow(dead_code)] // Block1 helpers are not process-activated yet.
+#[path = "migration_s54_p5.rs"]
+mod final_p5;
 #[cfg(windows)]
 #[path = "migration_s53_g1_admission.rs"]
 mod g1_admission;
+#[cfg(windows)]
+#[path = "migration_s53_g1_continue.rs"]
+mod g1_continue;
 #[cfg(windows)]
 #[path = "migration_s53_g1_data.rs"]
 mod g1_data;
 #[path = "migration_s53_g1_prerequisite.rs"]
 mod g1_prerequisite;
-#[cfg(windows)]
-#[path = "migration_s53_g1_witness.rs"]
-mod g1_witness;
 #[cfg(windows)]
 // The pinned G1b1 verifier modules are private. Reuse their pure source in C1
 // without editing that accepted helper or widening its visibility.
@@ -21,8 +24,8 @@ mod g1_witness;
 #[path = "migration_s53_g1_replay.rs"]
 mod g1_replay;
 #[cfg(windows)]
-#[path = "migration_s53_g1_continue.rs"]
-mod g1_continue;
+#[path = "migration_s53_g1_witness.rs"]
+mod g1_witness;
 #[path = "migration_s53_metadata_review2.rs"]
 mod metadata_review2;
 #[path = "migration_s53_two_context.rs"]

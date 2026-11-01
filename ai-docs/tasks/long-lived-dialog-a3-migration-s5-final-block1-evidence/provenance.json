@@ -1,0 +1,123 @@
+{
+  "classification": "Exact public copies for accepted S54 block1; original provenance paths intentionally retained",
+  "copies": [
+    {
+      "original": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block1-root-review-01.json",
+        "bytes": 8992,
+        "sha256": "96a19a124cdfcb547e835d9e4afe017bb6bbfb150e71545c0c02df5cab9af07a"
+      },
+      "public": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block1-evidence/root-review.json",
+        "bytes": 8992,
+        "sha256": "96a19a124cdfcb547e835d9e4afe017bb6bbfb150e71545c0c02df5cab9af07a"
+      },
+      "transform": "none"
+    },
+    {
+      "original": {
+        "path": ".tmp/s54-block1-01/review.json",
+        "bytes": 30413,
+        "sha256": "f6dab6042f6395c39c33829023752e35633394413d4f423792cc5d6d35f9b270"
+      },
+      "public": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block1-evidence/executor-review.json",
+        "bytes": 30413,
+        "sha256": "f6dab6042f6395c39c33829023752e35633394413d4f423792cc5d6d35f9b270"
+      },
+      "transform": "none"
+    },
+    {
+      "original": {
+        "path": ".tmp/s54-block1-01/compile-05.json",
+        "bytes": 556,
+        "sha256": "f7f3329d85b2a95e1403f220875ac872802e1daac0e81416ed1f81c68590577f"
+      },
+      "public": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block1-evidence/compile-05.json",
+        "bytes": 556,
+        "sha256": "f7f3329d85b2a95e1403f220875ac872802e1daac0e81416ed1f81c68590577f"
+      },
+      "transform": "none"
+    },
+    {
+      "original": {
+        "path": ".tmp/s54-block1-01/compile-05.stderr.log",
+        "bytes": 177,
+        "sha256": "d5b67f3049c249ad1003b6d7d11dd1204f125c2a29eb94926fc3681e251bcdb6"
+      },
+      "public": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block1-evidence/compile-05.stderr.log",
+        "bytes": 177,
+        "sha256": "d5b67f3049c249ad1003b6d7d11dd1204f125c2a29eb94926fc3681e251bcdb6"
+      },
+      "transform": "none"
+    },
+    {
+      "original": {
+        "path": ".tmp/s54-block1-01/clippy-05.json",
+        "bytes": 442,
+        "sha256": "f41151c943266cb29bc36838e354e86f26ec2778ce885d1c9e0eda588deee40a"
+      },
+      "public": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block1-evidence/clippy-05.json",
+        "bytes": 442,
+        "sha256": "f41151c943266cb29bc36838e354e86f26ec2778ce885d1c9e0eda588deee40a"
+      },
+      "transform": "none"
+    },
+    {
+      "original": {
+        "path": ".tmp/s54-block1-01/clippy-05.stderr.log",
+        "bytes": 177,
+        "sha256": "d7ec40fdabca5defaa6171fdab4bb6842aed60d15ed2fe928d8285ddb9a0854c"
+      },
+      "public": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block1-evidence/clippy-05.stderr.log",
+        "bytes": 177,
+        "sha256": "d7ec40fdabca5defaa6171fdab4bb6842aed60d15ed2fe928d8285ddb9a0854c"
+      },
+      "transform": "none"
+    },
+    {
+      "original": {
+        "path": ".tmp/s54-block1-01/pure-02.json",
+        "bytes": 468,
+        "sha256": "0832789cd5a1578cfad5a6c0a964068dfd2cc87fc96f272f934869d10a1a31a8"
+      },
+      "public": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block1-evidence/pure-02.json",
+        "bytes": 468,
+        "sha256": "0832789cd5a1578cfad5a6c0a964068dfd2cc87fc96f272f934869d10a1a31a8"
+      },
+      "transform": "none"
+    },
+    {
+      "original": {
+        "path": ".tmp/s54-block1-01/pure-02.stdout.log",
+        "bytes": 5518,
+        "sha256": "418ed7a0d5d618e890117425c7de8e0ad2dcd1668edcec660ebd95e2a528bb36"
+      },
+      "public": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block1-evidence/pure-02.stdout.log",
+        "bytes": 5518,
+        "sha256": "418ed7a0d5d618e890117425c7de8e0ad2dcd1668edcec660ebd95e2a528bb36"
+      },
+      "transform": "none"
+    },
+    {
+      "original": {
+        "path": ".tmp/s54-block1-01/pure-02.stderr.log",
+        "bytes": 1555,
+        "sha256": "3398d6758eeadff1b85c4dcbb8829cb421d247d9b7a7c4a66e25abf63a4c4e23"
+      },
+      "public": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block1-evidence/pure-02.stderr.log",
+        "bytes": 1555,
+        "sha256": "3398d6758eeadff1b85c4dcbb8829cb421d247d9b7a7c4a66e25abf63a4c4e23"
+      },
+      "transform": "none"
+    }
+  ],
+  "local_only": "Compiler captures, expected inventories, original check helpers, archived PE images and failed-attempt source snapshots remain pinned local evidence, not bundled runnable activations. No private fixtures or keys included."
+}

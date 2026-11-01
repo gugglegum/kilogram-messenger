@@ -1,0 +1,74 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification-scale' without executing them...
+frozen_artifacts_verified=True
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-runtime2_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+WARNING: Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 12 tests
+test ordered_dialog::runtime7::verification::tests::s54_absent_control_has_no_file_wait_marker_or_page_side_effect ... ok
+test ordered_dialog::runtime7::verification::tests::s54_ack_gate_covers_push_and_query_reply_but_never_empty_or_malformed_ack ... ok
+test ordered_dialog::runtime7::verification::tests::s54_async_retention_cancellation_drops_real_references ... ok
+test ordered_dialog::runtime7::verification::tests::s54_busy64_never_calls_reader_or_spins_in_owner ... ok
+test ordered_dialog::runtime7::verification::tests::s54_cancelled_owner_reply_drops_selection_without_leaking_quota ... ok
+test ordered_dialog::runtime7::verification::tests::s54_control_location_revalidates_updates_and_rejects_inside_state ... ok
+test ordered_dialog::runtime7::verification::tests::s54_control_parent_cannot_be_retargeted_while_pinned ... ok
+test ordered_dialog::runtime7::verification::tests::s54_controls_are_closed_bounded_and_debug_only ... ok
+test ordered_dialog::runtime7::verification::tests::s54_page_observations_classify_head_replay_and_pause_only_after_progress ... ok
+test ordered_dialog::runtime7::verification::tests::s54_partial_duplicate_wrong_context_and_read_errors_release_same_permit ... ok
+test ordered_dialog::runtime7::verification::tests::s54_pressure_wait_releases_actual_selection_on_control_release_and_connection_loss ... ok
+test ordered_dialog::runtime7::verification::tests::s54_real64_share_is_owned_before_either_read_and_other_share_is_independent ... ok
+
+test result: ok. 12 passed; 0 failed; 0 ignored; 0 measured; 45 filtered out; finished in 0.14s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+running 10 tests
+test live_l1::handoff::final_p5::oracle::tests::s54_p5_counter_samples_reject_overlap_regression_and_pid_confusion ... ok
+test live_l1::handoff::final_p5::oracle::tests::s54_p5_counters_decode_actual_fields_and_reject_constructor_or_missing_outcome ... ok
+test live_l1::handoff::final_p5::oracle::tests::s54_p5_history_freezes_old_suffix_across_append_and_reorder ... ok
+test live_l1::handoff::final_p5::oracle::tests::s54_p5_history_rejects_changed_body_format_parent_and_cross_context ... ok
+test live_l1::handoff::final_p5::oracle::tests::s54_p5_old104_subtotal_is_not_chronological106 ... ok
+test live_l1::handoff::final_p5::oracle::tests::s54_p5_original_ready_and_slot_mapping_reject_extra_setup_text ... ok
+test live_l1::handoff::final_p5::oracle::tests::s54_p5_page2_then_reopened_page3_is_global_page5 ... ok
+test live_l1::handoff::final_p5::oracle::tests::s54_p5_phase_order_rejects_stitching_and_replayed_prefix ... ok
+test live_l1::handoff::final_p5::oracle::tests::s54_p5_requests_retry_and_cardinality_are_one_continuous_domain ... ok
+test live_l1::handoff::final_p5::oracle::tests::s54_p5_stopped_source_reconciliation_requires_actual_resolved_effects ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 80 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+cache_status=skipped_explicitly
+status=passed
+isolated_test_count=0

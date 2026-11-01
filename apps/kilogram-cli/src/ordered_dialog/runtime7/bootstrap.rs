@@ -138,7 +138,7 @@ impl Owner7 {
             .count() as u64;
         let decrypt = rows.len() as u64 - encrypt;
         let change = self.change(c, &mut head, private.as_ref())?;
-        self.commit(
+        let report = self.commit(
             c,
             binding,
             store::L1Operation::Bootstrap {
@@ -152,6 +152,7 @@ impl Owner7 {
         )?;
         self.stats.committed_encrypt += encrypt;
         self.stats.committed_decrypt += decrypt;
+        self.observe_native(c, report)?;
         if let Some(private) = private {
             self.retain_native(c, &head, private);
         }

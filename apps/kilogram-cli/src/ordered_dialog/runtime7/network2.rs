@@ -152,6 +152,15 @@ pub(super) async fn rpc(
     dispatch: &DispatchExisting7,
 ) -> Result<v2::ParsedFrame2> {
     before_publication(&dispatch.frame).await?;
+    if handle.verification_enabled {
+        let frame = dispatch.frame.clone();
+        if let Some(pause) = handle
+            .call(move |o| o.verification_ack(c, &frame, false))
+            .await?
+        {
+            pause.wait(connection).await?;
+        }
+    }
     if super::super::test_support::load()?.trace_rpc {
         eprintln!("s53_rpc slot={c} kind={:?}", dispatch.frame.body().kind());
     }
@@ -389,6 +398,16 @@ pub(super) async fn incoming(
             match result {
                 Ok(reply) => {
                     before_publication(&reply.frame).await?;
+                    if handle.verification_enabled {
+                        let frame = reply.frame.clone();
+                        if let Some(pause) = handle
+                            .call(move |o| o.verification_ack(c, &frame, true))
+                            .await?
+                        {
+                            // The existing incoming15s bound still encloses this ACK-query reply.
+                            pause.wait(&connection).await?;
+                        }
+                    }
                     handle
                         .call(move |o| o.check_existing_lease(c, binding))
                         .await?;
@@ -536,6 +555,21 @@ pub(super) async fn worker(
                 _ => (),
             }
         }
+        // No RPC is outstanding here. The owner callback has replied and no
+        // signed dispatch is retained across this long pressure-only pause.
+        if handle.verification_enabled
+            && let Some(mut selection) = handle
+                .call(move |o| o.verification_selection(c, binding))
+                .await?
+        {
+            if let Some(pause) = selection.pause.take() {
+                pause.wait(connection).await?;
+            }
+            drop(selection);
+            handle
+                .call(move |o| o.check_existing_lease(c, binding))
+                .await?;
+        }
         let head = handle
             .call(move |o| {
                 let body = o.head_body2(c)?;
@@ -571,9 +605,15 @@ pub(super) async fn worker(
             .await?;
         if let Some((prefix, plan)) = handle.call(move |o| o.prefix2(c, binding)).await? {
             let reply = rpc(handle, connection, c, &prefix).await?;
-            handle
+            let pause = handle
                 .call(move |o| o.accept_prefix2(c, binding, reply, &plan))
                 .await?;
+            if let Some(notice) = pause {
+                notice.after_reply(connection).await?;
+                handle
+                    .call(move |o| o.check_existing_lease(c, binding))
+                    .await?;
+            }
         }
         let first = direct_next.unwrap_or(received).max(received);
         if let Some(delivery) = handle

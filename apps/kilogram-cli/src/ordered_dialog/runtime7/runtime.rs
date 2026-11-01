@@ -17,6 +17,7 @@ pub(super) struct Handle7 {
     sender: mpsc::Sender<Job7>,
     pub stop: Arc<AtomicBool>,
     resources: Arc<resources::Resources7>,
+    pub(super) verification_enabled: bool,
 }
 impl Handle7 {
     pub async fn call<T: Send + 'static, F: FnOnce(&mut Owner7) -> Result<T> + Send + 'static>(
@@ -45,6 +46,7 @@ pub(super) fn actor(mut owner: Owner7) -> Result<(Handle7, std::thread::JoinHand
         sender,
         stop: stop.clone(),
         resources: owner.resources.clone(),
+        verification_enabled: owner.verification.enabled(),
     };
     let join = std::thread::Builder::new()
         .name("kilogram-indexed-L1-owner".into())
@@ -88,6 +90,11 @@ pub(super) fn actor(mut owner: Owner7) -> Result<(Handle7, std::thread::JoinHand
             for c in 0..owner.specs.len() {
                 owner.invalidate(c as u8);
             }
+            let resolved = owner
+                .repository
+                .as_ref()
+                .is_some_and(|r| !r.requires_reopen());
+            owner.verification.finish(&owner.stats, resolved);
         })?;
     Ok((handle, join))
 }
@@ -267,9 +274,11 @@ fn status(owner: &mut Owner7) -> Result<Vec<u8>> {
             if existing.mode.selected() {
                 let native = owner.mixed_native(c, &head)?;
                 let s = &native.session;
-                Some(
-                    serde_json::json!({"sid":s.sid(),"keys":s.keys().iter().map(|k|state::hex(k)).collect::<Vec<_>>(),"own_next":meta.next[head.role as usize],"peer_next":meta.next[1-head.role as usize]}),
-                )
+                let mut value = serde_json::json!({"sid":s.sid(),"keys":s.keys().iter().map(|k|state::hex(k)).collect::<Vec<_>>(),"own_next":meta.next[head.role as usize],"peer_next":meta.next[1-head.role as usize]});
+                if owner.verification.enabled() {
+                    value["verification_guard"] = serde_json::json!({"own_g":native.guard.own().g,"own_index":native.guard.own().index,"own_first":native.guard.own().first.map(|id|state::hex(&id)),"peer_g":native.guard.peer().g,"peer_index":native.guard.peer().index,"peer_first":native.guard.peer().first.map(|id|state::hex(&id)),"rotate_due":native.guard.rotate_due()});
+                }
+                Some(value)
             } else {
                 let native = owner.native(c, &head)?;
                 native.session.as_ref().map(|s|serde_json::json!({"sid":s.sid(),"keys":s.keys().iter().map(|k|state::hex(k)).collect::<Vec<_>>(),"own_next":meta.next[head.role as usize],"peer_next":meta.next[1-head.role as usize]}))

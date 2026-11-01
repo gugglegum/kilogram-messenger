@@ -24,6 +24,7 @@ mod protocol;
 mod protocol2;
 mod resources;
 pub mod runtime;
+mod verification;
 use super::runtime2::window;
 #[cfg(test)]
 mod handoff_tests;
