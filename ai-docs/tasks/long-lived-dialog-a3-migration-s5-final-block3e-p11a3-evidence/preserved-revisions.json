@@ -1,0 +1,42 @@
+[
+  {
+    "path": ".tmp/s54-block3e-p11a3-01/clippy-01-sources/migration_s54_p5.rs",
+    "bytes": 4838,
+    "sha256": "9fda96f9a9c9c51366e53b732d7245089fa65749fd8f838c875563ec8cbab7db"
+  },
+  {
+    "path": ".tmp/s54-block3e-p11a3-01/clippy-01-sources/migration_s54_records.rs",
+    "bytes": 6676,
+    "sha256": "3f8bedd49a1b8391ad048e66bdaa269f82acdb5db86cdd26dcdaecba8f3e6e6f"
+  },
+  {
+    "path": ".tmp/s54-block3e-p11a3-01/clippy-01-sources/migration_s54_records_fixture.rs",
+    "bytes": 9506,
+    "sha256": "ac4f0344c8c23735d659133e7500f8b94a480d9cb1060c03af90eba0773857a6"
+  },
+  {
+    "path": ".tmp/s54-block3e-p11a3-01/clippy-01-sources/migration_s54_records_tests.rs",
+    "bytes": 12804,
+    "sha256": "a6fc847abe09bfc1fbb06b4b4859940e11cb3e28482893a7b3c67773deea9f28"
+  },
+  {
+    "path": ".tmp/s54-block3e-p11a3-01/clippy-02-sources/migration_s54_p5.rs",
+    "bytes": 4838,
+    "sha256": "9fda96f9a9c9c51366e53b732d7245089fa65749fd8f838c875563ec8cbab7db"
+  },
+  {
+    "path": ".tmp/s54-block3e-p11a3-01/clippy-02-sources/migration_s54_records.rs",
+    "bytes": 6676,
+    "sha256": "3f8bedd49a1b8391ad048e66bdaa269f82acdb5db86cdd26dcdaecba8f3e6e6f"
+  },
+  {
+    "path": ".tmp/s54-block3e-p11a3-01/clippy-02-sources/migration_s54_records_fixture.rs",
+    "bytes": 9506,
+    "sha256": "ac4f0344c8c23735d659133e7500f8b94a480d9cb1060c03af90eba0773857a6"
+  },
+  {
+    "path": ".tmp/s54-block3e-p11a3-01/clippy-02-sources/migration_s54_records_tests.rs",
+    "bytes": 13156,
+    "sha256": "c61879353cc8054acbf9230827672cd3bc049fc859bcc30e23f025b3361030b8"
+  }
+]

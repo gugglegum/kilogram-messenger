@@ -1,0 +1,469 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error[E0308]: mismatched types
+  --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:25:21
+   |
+25 | /                     ensure!(
+26 | |                         record.format == if index == 0 && n >= 25 { 2 } else { 1 },
+27 | |                         "actual selected source encoding"
+28 | |                     );
+   | |_____________________^ expected `Box<dyn Error>`, found `Error`
+   |
+   = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+              found struct `anyhow::Error`
+   = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+   |
+28 |                     ).into();
+   |                      +++++++
+
+error[E0308]: mismatched types
+  --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:29:21
+   |
+29 | /                     ensure!(
+30 | |                         record.receipt_format == encoding
+31 | |                             && record.event == case.id
+32 | |                             && record.request == case.core.request
+...  |
+37 | |                         "actual independent receipt/source commitments"
+38 | |                     );
+   | |_____________________^ expected `Box<dyn Error>`, found `Error`
+   |
+   = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+              found struct `anyhow::Error`
+   = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+   |
+38 |                     ).into();
+   |                      +++++++
+
+error[E0308]: mismatched types
+  --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:43:5
+   |
+43 | /     ensure!(
+44 | |         kilogram_ratchet::ordered::native_call_counts() == before,
+45 | |         "signed fixture/helper performs no Native constructors/packet crypto"
+46 | |     );
+   | |_____^ expected `Box<dyn Error>`, found `Error`
+   |
+   = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+              found struct `anyhow::Error`
+   = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+   |
+46 |     ).into();
+   |      +++++++
+
+error[E0308]: mismatched types
+  --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:55:9
+   |
+55 | /         ensure!(
+56 | |             f.check(&case).is_err(),
+57 | |             "signed wrong boundary encoding is rejected"
+58 | |         );
+   | |_________^ expected `Box<dyn Error>`, found `Error`
+   |
+   = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+              found struct `anyhow::Error`
+   = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+   |
+58 |         ).into();
+   |          +++++++
+
+error[E0308]: mismatched types
+  --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:74:5
+   |
+74 | /     ensure!(
+75 | |         verify(
+76 | |             &expected,
+77 | |             &f.projection(&case),
+...  |
+87 | |         "authenticated different selected cuts still cannot replace original25/25"
+88 | |     );
+   | |_____^ expected `Box<dyn Error>`, found `Error`
+   |
+   = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+              found struct `anyhow::Error`
+   = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+   |
+88 |     ).into();
+   |      +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:107:9
+    |
+107 | /         ensure!(
+108 | |             verify(
+109 | |                 &expected,
+110 | |                 &f.projection(&case),
+...   |
+120 | |             "original expected association {mutation}"
+121 | |         );
+    | |_________^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+121 |         ).into();
+    |          +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:130:9
+    |
+130 | /         ensure!(
+131 | |             verify(
+132 | |                 &f.expected(&case),
+133 | |                 &actual,
+...   |
+143 | |             "actual projection association {mutation}"
+144 | |         );
+    | |_________^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+144 |         ).into();
+    |          +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:169:13
+    |
+169 | /             ensure!(
+170 | |                 f.check(&case).is_err(),
+171 | |                 "actual signature with foreign signed binding {n}/{mutation}"
+172 | |             );
+    | |_____________^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+172 |             ).into();
+    |              +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:176:9
+    |
+176 |         ensure!(f.check(&case).is_err(), "source signature corruption");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+176 |         ensure!(f.check(&case).is_err(), "source signature corruption").into();
+    |                                                                        +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:179:9
+    |
+179 |         ensure!(f.check(&case).is_err(), "wrong actual author credential");
+    |         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+179 |         ensure!(f.check(&case).is_err(), "wrong actual author credential").into();
+    |                                                                           +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:181:9
+    |
+181 | /         ensure!(
+182 | |             f.check(&case).is_err(),
+183 | |             "same certificate but wrong source AuthRecords ref"
+184 | |         );
+    | |_________^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+184 |         ).into();
+    |          +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:192:5
+    |
+192 | /     ensure!(
+193 | |         f.check(&current).is_err(),
+194 | |         "Receipt1 is not allowed to acknowledge Event2"
+195 | |     );
+    | |_____^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+195 |     ).into();
+    |      +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:199:5
+    |
+199 | /     ensure!(
+200 | |         f.check(&current).is_err(),
+201 | |         "valid receipt for another source"
+202 | |     );
+    | |_____^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+202 |     ).into();
+    |      +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:205:5
+    |
+205 | /     ensure!(
+206 | |         f.check(&case).is_err(),
+207 | |         "receiver must be opposite-role peer"
+208 | |     );
+    | |_____^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+208 |     ).into();
+    |      +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:212:9
+    |
+212 | /         ensure!(
+213 | |             f.check(&case).is_err(),
+214 | |             "receipt signature corruption, no fallback"
+215 | |         );
+    | |_________^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+215 |         ).into();
+    |          +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:229:9
+    |
+229 | /         ensure!(
+230 | |             f.check(&case).is_err(),
+231 | |             "validly signed wrong receipt source/receiver/Q {mutation}"
+232 | |         );
+    | |_________^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+232 |         ).into();
+    |          +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:242:5
+    |
+242 | /     ensure!(
+243 | |         before.previous == case.core.previous
+244 | |             && before.parents == case.core.parents
+245 | |             && before.sequence == case.core.sequence,
+246 | |         "actual signed graph facts retained"
+247 | |     );
+    | |_____^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+247 |     ).into();
+    |      +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:254:5
+    |
+254 | /     ensure!(
+255 | |         after.parents == vec![[80; 32], [90; 32]]
+256 | |             && after.sequence == 700
+257 | |             && before.same(&after).is_err(),
+258 | |         "new signed graph facts survive; actual parent existence is a later graph obligation"
+259 | |     );
+    | |_____^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+259 |     ).into();
+    |      +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:264:5
+    |
+264 | /     ensure!(
+265 | |         after.source_hash != before.source_hash
+266 | |             && after.ciphertext_hash != before.ciphertext_hash
+267 | |             && after.body_hash == before.body_hash
+268 | |             && before.same(&after).is_err(),
+269 | |         "actual opaque ciphertext/raw changes despite matching supplied projection"
+270 | |     );
+    | |_____^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+270 |     ).into();
+    |      +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:272:5
+    |
+272 | /     ensure!(
+273 | |         peer.sequence == before.sequence,
+274 | |         "author sequence is not a shared cross-author clock"
+275 | |     );
+    | |_____^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+275 |     ).into();
+    |      +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:287:9
+    |
+287 | /         ensure!(
+288 | |             after.source_hash == before.source_hash
+289 | |                 && after.ciphertext_hash == before.ciphertext_hash
+290 | |                 && after.receipt_hash != before.receipt_hash
+...   |
+293 | |             "actual accepted new receiver authority produces different signed receipt bytes"
+294 | |         );
+    | |_________^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+294 |         ).into();
+    |          +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:303:5
+    |
+303 |     ensure!(f.check(&case).is_err(), "source cap");
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+303 |     ensure!(f.check(&case).is_err(), "source cap").into();
+    |                                                   +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:306:5
+    |
+306 |     ensure!(f.check(&case).is_err(), "receipt cap");
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+306 |     ensure!(f.check(&case).is_err(), "receipt cap").into();
+    |                                                    +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:309:5
+    |
+309 |     ensure!(f.check(&case).is_err(), "projection cap before copying");
+    |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+309 |     ensure!(f.check(&case).is_err(), "projection cap before copying").into();
+    |                                                                      +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:313:5
+    |
+313 | /     ensure!(
+314 | |         f.check(&case).is_err(),
+315 | |         "valid signed genesis cannot be assigned a Text request/receipt"
+316 | |     );
+    | |_____^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+316 |     ).into();
+    |      +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:330:9
+    |
+330 | /         ensure!(
+331 | |             f.check(&case).is_err(),
+332 | |             "malformed declared version never retries another receipt encoding"
+333 | |         );
+    | |_________^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+333 |         ).into();
+    |          +++++++
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_records_tests.rs:347:5
+    |
+347 | /     ensure!(
+348 | |         f.check(&case).is_err(),
+349 | |         "actual parser rejects a validly signed source with more than two parents"
+350 | |     );
+    | |_____^ expected `Box<dyn Error>`, found `Error`
+    |
+    = note: expected struct `std::boxed::Box<dyn std::error::Error>`
+               found struct `anyhow::Error`
+    = note: this error originates in the macro `$crate::__anyhow` which comes from the expansion of the macro `ensure` (in Nightly builds, run with -Z macro-backtrace for more info)
+help: call `Into::into` on this expression to convert `anyhow::Error` into `std::boxed::Box<dyn std::error::Error>`
+    |
+350 |     ).into();
+    |      +++++++
+
+For more information about this error, try `rustc --explain E0308`.
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 27 previous errors

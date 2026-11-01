@@ -1,0 +1,14 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: used `expect()` on a `Result` value
+   --> apps\kilogram-cli\tests\support\migration_s54_records_fixture.rs:267:22
+    |
+267 |               request: source::parse_request_id(&source::request_id(case.expected))
+    |  ______________________^
+268 | |                 .expect("valid fixture request"),
+    | |________________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#expect_used
+    = note: requested on the command line with `-D clippy::expect-used`
+
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 1 previous error
