@@ -8,7 +8,7 @@ use zeroize::Zeroizing;
 const LOCAL: &[u8] = b"kg:od1:local-projection\0";
 
 impl Owner7 {
-    fn open_queue(&self, c: Id, item: &store::L1Queue) -> Result<String> {
+    pub(super) fn open_queue(&self, c: Id, item: &store::L1Queue) -> Result<String> {
         let value = wire::decode(&item.sealed, 8192)?;
         let f = value.fields(3)?;
         ensure!(f[0].uint()? == 1, "local queue version");
@@ -32,7 +32,7 @@ impl Owner7 {
         Ok(f[3].text()?.to_owned())
     }
     pub fn queue(&mut self, c: u8, request: [u8; 16], text: String) -> Result<store::L1Request> {
-        let expires = self.current(c)?;
+        let expires = self.data_permission(c)?;
         ensure!(text.len() <= 4096, "Text body max4096 UTF8 bytes");
         let text_hash = wire::hash(b"kg:od1:request-text\0", text.as_bytes());
         if let Some(prior) = self.repo()?.request(c, request)? {
@@ -55,8 +55,13 @@ impl Owner7 {
         let role = self.role(c)? as usize;
         let meta = self.repo()?.metadata(c)?;
         let queued = self.repo()?.counts(c)?.queued;
+        let mode = self.repo()?.existing_state(c)?.mode;
         ensure!(
-            meta.next[role].max(1) + queued < 512,
+            mode == store::ExistingMode::Active
+                || meta.next[role]
+                    .max(1)
+                    .checked_add(queued)
+                    .is_some_and(|n| n < 512),
             "UpgradeRequired: send lane lifetime capacity"
         );
         ensure!(queued < 128, "StorageBlocked: unmaterialized queue");
@@ -83,22 +88,42 @@ impl Owner7 {
             }
             Ok(())
         };
-        self.repo()?.commit(
-            store::L1Operation::Queue {
-                context: c,
-                request,
-                text_hash,
-                sealed,
-                now: floor,
-            },
-            Some(&mut gate),
-        )?;
+        if mode != store::ExistingMode::L1
+            || self.leases[usize::from(c)]
+                .as_ref()
+                .is_some_and(|lease| lease.family == 2)
+        {
+            self.commit_data2(
+                c,
+                None,
+                store::ExistingData7::Queue {
+                    request,
+                    text_hash,
+                    sealed,
+                    now: floor,
+                },
+            )?;
+        } else {
+            self.repo()?.commit(
+                store::L1Operation::Queue {
+                    context: c,
+                    request,
+                    text_hash,
+                    sealed,
+                    now: floor,
+                },
+                Some(&mut gate),
+            )?;
+        }
         self.wake.notify_waiters();
         self.repo()?
             .request(c, request)?
             .context("accepted request result")
     }
     pub fn materialize(&mut self, c: u8) -> Result<bool> {
+        if self.repo()?.existing_state(c)?.mode.selected() {
+            return self.materialize2(c);
+        }
         let counts = self.repo()?.counts(c)?;
         let available = materialize_limit(counts.queued, counts.debt)?;
         let schedule = super::super::test_support::load()?;
@@ -112,7 +137,7 @@ impl Owner7 {
             .as_ref()
             .context("AuthBlocked: materialize lease absent")?
             .binding;
-        self.check_lease(c, binding)?;
+        self.native1_materialize_gate(c, binding)?;
         let items = self.repo()?.queue_page(c, None, available)?;
         if items.is_empty() {
             return Ok(false);
@@ -124,7 +149,7 @@ impl Owner7 {
         let mut sequence = self.repo()?.next_author_sequence()?;
         let original = self.credentials(c, head.role)?.raw;
         for item in items {
-            self.check_lease(c, binding)?;
+            self.native1_materialize_gate(c, binding)?;
             let text = self.open_queue(head.c, &item)?;
             let event = self.encrypt(
                 &head,
@@ -182,6 +207,11 @@ impl Owner7 {
             let lease = self.check_lease(c, binding)?;
             let event = Event::parse(&raw, cert.device_id())?;
             self.check_scope(&head, &event, true)?;
+            ensure!(
+                self.repo()?.existing_state(c)?.cuts[peer as usize]
+                    .is_none_or(|cut| event.core.n < cut),
+                "legacy source at/above known cut"
+            );
             ensure!(
                 event.core.role == peer && event.core.kind == 3,
                 "data role/kind"
@@ -267,7 +297,16 @@ impl Owner7 {
                 break;
             }
             for item in &page {
-                if wire::hash(wire::EVENT_ID, &item.raw) == id {
+                let (format, _, _) = super::data2::declared(&item.raw)?;
+                if wire::hash(
+                    if format == 1 {
+                        wire::EVENT_ID
+                    } else {
+                        kilogram_protocol::ordered_dialog_v2::EVENT_ID
+                    },
+                    &item.raw,
+                ) == id
+                {
                     return Ok(item.raw.clone());
                 }
             }
@@ -299,7 +338,14 @@ impl Owner7 {
         Ok((wire::encode(&a([body, b(signature)]), 1024)?, receiver.raw))
     }
     pub fn drain(&mut self, c: u8) -> Result<bool> {
-        if self.repo()?.counts(c)?.pending == 0 || !self.active(c)? {
+        let schedule = super::super::test_support::load()?;
+        if schedule.applies(self.spec(c)?.c) && schedule.suspend_drain {
+            return Ok(false);
+        }
+        if self.repo()?.existing_state(c)?.mode.selected() {
+            return self.drain2(c);
+        }
+        if self.repo()?.counts(c)?.pending == 0 || !self.data_ready(c)? {
             return Ok(false);
         }
         let binding = self.leases[usize::from(c)]

@@ -74,7 +74,7 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
         if self.l1_control(p, c, L1Control::BlockedFork)?.is_some() {
             return Err(Error::PolicyRejected("signed fork blocked"));
         }
-        let wrapper = self.l1_head(c)?;
+        let wrapper = self.data_head7(c)?;
         let old = own_head(wrapper.fields(9)?[4].bytes()?)?;
         let old_f = old.fields(13)?;
         let next = own_head(&change.head)?;
@@ -109,8 +109,16 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
             }
         }
         if let Some(blob) = &change.native {
+            let mode = self.existing_state7(c)?.mode;
             if n[12].optional()?.map(Value::fixed::<32>).transpose()?
-                != Some(hash(b"kg:od1:native-state\0", blob))
+                != Some(hash(
+                    if mode.selected() {
+                        MIXED_NATIVE_ID
+                    } else {
+                        b"kg:od1:native-state\0"
+                    },
+                    blob,
+                ))
             {
                 return Err(Error::Integrity("Native after hash"));
             }
@@ -120,7 +128,7 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
         Ok(old)
     }
     fn l1_change_finish(&mut self, change: &L1NativeChange) -> Result<()> {
-        let mut wrapper = self.l1_head(change.context)?.fields(9)?.to_vec();
+        let mut wrapper = self.data_head7(change.context)?.fields(9)?.to_vec();
         wrapper[4] = b(&change.head);
         let head = own_head(&change.head)?;
         wrapper[5] = head.fields(13)?[12].clone();
@@ -144,17 +152,31 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
         self.l1_meta_put(change.context, &meta)?;
         Ok(())
     }
-    fn l1_event_scope(
+    pub(in crate::vault::indexed_dialog::migration7::live1) fn l1_event_scope(
         &mut self,
         p: &Profile,
         c: u8,
         raw: &[u8],
         head: &Value,
     ) -> Result<super::super::super::copy::EventFields> {
-        let event = super::super::super::copy::event_fields(raw)?;
+        let event = data_event7(raw)?;
         let v = codec::decode(raw, 16 * 1024)?;
         let f = v.fields(5)?;
-        let core = f[1].fields(14)?;
+        let core = data_core7(&v)?;
+        let mode = self.existing_state7(c)?;
+        match event.format {
+            1 if mode.cuts[usize::from(event.role)].is_some_and(|cut| event.n >= cut) => {
+                return Err(Error::Integrity("legacy source at/above selected cut"));
+            }
+            2 if !mode.mode.selected()
+                || core[14].fixed::<32>()?
+                    != mode.q.ok_or(Error::Integrity("Event2 without Q"))?
+                || mode.cuts[usize::from(event.role)].is_none_or(|cut| event.n < cut) =>
+            {
+                return Err(Error::Integrity("Event2 outside selected Q/cut"));
+            }
+            _ => (),
+        }
         let h = head.fields(13)?;
         if event.c != p.contexts[usize::from(c)].0
             || f[4].bytes()?.len() != 64
@@ -167,10 +189,14 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
         Ok(event)
     }
     fn l1_readable(&mut self, p: &Profile, c: u8, row: L1Readable, head: &Value) -> Result<()> {
+        let before_new = self
+            .new_charge
+            .keys()
+            .copied()
+            .collect::<std::collections::BTreeSet<_>>();
         let e = self.l1_event_scope(p, c, &row.source, head)?;
         let value = codec::decode(&row.source, 16 * 1024)?;
-        let f = value.fields(5)?;
-        let core = f[1].fields(14)?;
+        let core = data_core7(&value)?;
         let mut meta = self.l1_meta(c)?;
         let role = usize::from(e.role);
         let local = p.contexts[usize::from(c)].1;
@@ -195,7 +221,7 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
             let raw = self
                 .get(Key::hash(c, Namespace::Event, id)?)?
                 .ok_or(Error::Integrity("readable parent missing"))?;
-            let parent = super::super::super::copy::event_fields(&raw)?;
+            let parent = data_event7(&raw)?;
             if parent.c != e.c
                 || parent.kind != 3
                 || parent.n >= meta.next[usize::from(parent.role)]
@@ -265,10 +291,17 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
         let proof_key = Key::hash(
             c,
             Namespace::Control,
-            hash(b"kg:od1:full-L1-proof/v7\0", &e.id),
+            hash(
+                if e.format == 1 {
+                    b"kg:od1:full-L1-proof/v7\0"
+                } else {
+                    b"kg:od2:full-mixed-proof/v7\0"
+                },
+                &e.id,
+            ),
         )?;
         let proof = codec::record(
-            41,
+            if e.format == 1 { 41 } else { 42 },
             &a([
                 u(7),
                 b(p.mid),
@@ -294,7 +327,7 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
                     u(7),
                     b(p.mid),
                     b(p.source),
-                    a([u(1), b(proof_key.bytes)]),
+                    a([u(u64::from(e.format)), b(proof_key.bytes)]),
                     b(e.request),
                 ]),
                 2304,
@@ -310,8 +343,9 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
                 false,
             )?;
             if e.role == local {
-                if self.root.roots[usize::from(c) * 24 + Namespace::Undelivered as usize].count
-                    >= L1_MAX_UNACKED
+                if (e.format != 2 || self.existing_state7(c)?.mode != ExistingMode::Active)
+                    && self.root.roots[usize::from(c) * 24 + Namespace::Undelivered as usize].count
+                        >= L1_MAX_UNACKED
                 {
                     return Err(Error::Quota);
                 }
@@ -371,11 +405,26 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
                     return Err(Error::Integrity("pending actual O/A/quarantine"));
                 }
                 self.remove(Key::ordinal(c, Namespace::Pending, e.n)?)?;
-                self.root.ledger[usize::from(c)].legacy1_retire_pending(e.n, s[2].uint()? == 1)?;
+                if s[0].uint()? == 1 {
+                    self.root.ledger[usize::from(c)]
+                        .legacy1_retire_pending(e.n, s[2].uint()? == 1)?;
+                } else if s[0].uint()? != 2 {
+                    return Err(Error::Integrity("pending origin version"));
+                }
                 let receipt = row
                     .receipt
                     .as_ref()
                     .ok_or(Error::Integrity("readable receipt missing"))?;
+                if self.existing_state7(c)?.mode.selected()
+                    && codec::decode(receipt, 1024)?.fields(2)?[0]
+                        .list()?
+                        .first()
+                        .ok_or(Error::Integrity("receipt version"))?
+                        .uint()?
+                        != 2
+                {
+                    return Err(Error::Integrity("late readable must create Receipt2"));
+                }
                 self.l1_receipt(
                     c,
                     &e,
@@ -385,6 +434,29 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
                         .as_ref()
                         .ok_or(Error::Integrity("receiver capture missing"))?,
                 )?;
+                if s[0].uint()? == 2 {
+                    let retained = self
+                        .new_charge
+                        .iter()
+                        .filter(|(key, _)| {
+                            key.context == c
+                                && !before_new.contains(key)
+                                && !matches!(
+                                    key.namespace,
+                                    Namespace::Current | Namespace::Runtime | Namespace::Native
+                                )
+                        })
+                        .try_fold(ticket.fields(10)?[8].uint()?, |n, (_, cost)| {
+                            n.checked_add(*cost)
+                                .ok_or(Error::Bound("mixed retained charge"))
+                        })?;
+                    self.root.ledger[usize::from(c)].mixed_retire7(
+                        e.n,
+                        s[2].uint()? == 1,
+                        !s[6].bytes()?.is_empty(),
+                        retained,
+                    )?;
+                }
             }
         } else if row.text.is_some() || row.queue.is_some() || row.receipt.is_some() {
             return Err(Error::Integrity("genesis capture/debt shape"));
@@ -404,6 +476,7 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
         own: bool,
     ) -> Result<()> {
         if own
+            && self.existing_state7(change.context)?.mode != ExistingMode::Active
             && self.root.roots[usize::from(change.context) * 24 + Namespace::Undelivered as usize]
                 .count
                 .checked_add(rows.len() as u64)
@@ -422,7 +495,7 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
             return Err(Error::PolicyRejected("NeedHandshake"));
         }
         for row in rows {
-            let e = super::super::super::copy::event_fields(&row.source)?;
+            let e = data_event7(&row.source)?;
             if e.kind != 3 || (e.role == p.contexts[usize::from(c)].1) != own {
                 return Err(Error::Integrity("L1 native purpose/role"));
             }
@@ -480,7 +553,7 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
             self.put(Key::hash(c, Namespace::Control, id)?, &control, 0, false)?;
         }
         for row in rows {
-            if super::super::super::copy::event_fields(&row.source)?.kind == 3 {
+            if data_event7(&row.source)?.kind == 3 {
                 return Err(Error::Integrity("bootstrap Text forbidden"));
             }
             self.l1_readable(p, c, row, &next)?;
@@ -504,7 +577,7 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
         Ok(())
     }
     #[allow(clippy::too_many_arguments)] // Mirrors the closed Possess operation and its paid captures.
-    pub(super) fn l1_pending(
+    pub(in crate::vault::indexed_dialog::migration7::live1) fn l1_pending(
         &mut self,
         p: &Profile,
         c: u8,
@@ -513,8 +586,9 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
         original: HistoryAuth,
         admission: HistoryAuth,
         head: bool,
+        grant: Option<Id>,
     ) -> Result<()> {
-        let wrapper = self.l1_head(c)?;
+        let wrapper = self.data_head7(c)?;
         let inner = own_head(wrapper.fields(9)?[4].bytes()?)?;
         let e = self.l1_event_scope(p, c, &raw, &inner)?;
         let meta = self.l1_meta(c)?;
@@ -535,13 +609,7 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
             return Ok(());
         }
         let value = codec::decode(&raw, 16 * 1024)?;
-        self.l1_author(
-            p,
-            c,
-            author,
-            value.fields(5)?[1].fields(14)?[8].uint()?,
-            e.id,
-        )?;
+        self.l1_author(p, c, author, data_core7(&value)?[8].uint()?, e.id)?;
         let mut paid_auth = Vec::new();
         let mut paid = 65 + OVERHEAD1;
         for auth in [&original, &admission] {
@@ -568,13 +636,17 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
         }
         let state = codec::encode(
             &a([
-                u(1),
+                u(if self.existing_state7(c)?.mode.selected() {
+                    2
+                } else {
+                    1
+                }),
                 b(e.id),
                 u(u64::from(head)),
                 u(0),
                 b(original.id),
                 b(admission.id),
-                b([]),
+                b(grant.map_or_else(Vec::new, |id| id.to_vec())),
                 u(charge as u64),
             ]),
             2048,
@@ -585,7 +657,11 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
             .and_then(|n| n.checked_sub(paid))
             .ok_or(Error::Bound("L1 pending reservation"))?;
         self.put(k, &ticket, reserved, false)?;
-        self.root.ledger[usize::from(c)].legacy1_admit_pending(e.n, head)?;
+        if self.existing_state7(c)?.mode.selected() {
+            self.root.ledger[usize::from(c)].mixed_admit7(e.n, head, grant)?;
+        } else {
+            self.root.ledger[usize::from(c)].legacy1_admit_pending(e.n, head)?;
+        }
         Ok(())
     }
     fn l1_receipt(
@@ -596,20 +672,10 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
         raw: &[u8],
         receiver: &HistoryAuth,
     ) -> Result<()> {
-        let value = codec::decode(raw, 1024)?;
-        let f = value.fields(2)?;
-        let receipt = f[0].fields(8)?;
-        let source = codec::decode(source, 16 * 1024)?;
-        let core = source.fields(5)?[1].fields(14)?;
-        if receipt[0].uint()? != 1
-            || receipt[1] != core[2]
-            || receipt[2] != core[3]
-            || receipt[3].uint()? != u64::from(e.role)
-            || receipt[4].uint()? != e.n
-            || receipt[5].fixed::<32>()? != e.id
-            || receipt[7].fixed::<32>()? != receiver.id
-            || f[1].bytes()?.len() != 64
-        {
+        let p = self.migration_profile()?;
+        let q = self.existing_state7(c)?.q;
+        let certs = self.l1_cert_refs(&p, c)?;
+        if super::super::mixed::receipt7(raw, source, q, certs)? != receiver.id {
             return Err(Error::Integrity("Receipt1 exact source/capture"));
         }
         self.l1_auth(c, receiver)?;
@@ -631,7 +697,7 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
         let raw = self
             .get(Key::hash(c, Namespace::Event, id)?)?
             .ok_or(Error::Integrity("ACK unknown source"))?;
-        let e = super::super::super::copy::event_fields(&raw)?;
+        let e = data_event7(&raw)?;
         if e.kind != 3 || e.role != p.contexts[usize::from(c)].1 {
             return Err(Error::Integrity("ACK source kind/role"));
         }

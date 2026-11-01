@@ -1,0 +1,1161 @@
+{
+  "classification": "exact current source prerequisite cohort for accepted G1; not whole S5.3 acceptance",
+  "parent": "df242b08c2958c2c9fc0553bdc002e67a7df2514",
+  "source_count": 64,
+  "rust_count": 57,
+  "runtime_script_count": 7,
+  "source_raw_bytes": 1826258,
+  "files": [
+    {
+      "path": "apps/kilogram-cli/src/ordered2_cli.rs",
+      "bytes": 30697,
+      "sha256": "0c7036b41de7aa175337e69cdc3390a56d398fdd66a53be8a61281c1a42df583",
+      "blob": "3701ea5e8987ae40404b8bf2fee6a82d5397dfb2",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered3_cli.rs",
+      "bytes": 11599,
+      "sha256": "9fb5e040ae90817af644eb4bb9a490c610b1afc9ce200e8191704bdeb64b2344",
+      "blob": "a584889c70f5598a6f72d062aca13ead67de171c",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/repair_tests.rs",
+      "bytes": 31325,
+      "sha256": "2814025589248c6d2584da8260543b4d19bae25d8482c42e154b4efbb8ae409d",
+      "blob": "e4b69e1c90e94ccf72301b005be922442ba6180f",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/admission2.rs",
+      "bytes": 24673,
+      "sha256": "c708f2460bbd0d42144677ec390c75f487582747bf66e2543ecb1686006101fc",
+      "blob": "7c2d26c88ada672b0ebd602b9a2f5f617a15f2d1",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/bootstrap.rs",
+      "bytes": 22477,
+      "sha256": "b9ba1d509e9927f29e2b073a9e50ec2a4230fd9700d6965c493eef3cf5b4c592",
+      "blob": "8e8f658a2dc449eac5dacd15150d840e004c1513",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/config.rs",
+      "bytes": 4018,
+      "sha256": "3abcc30cea7cad1f704c88d169fe53f50d4b2d41fd8ba02bf5cb8f413e288abc",
+      "blob": "62226f30c639d30943e9aaa3c186759ed8b596ed",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/control.rs",
+      "bytes": 32114,
+      "sha256": "ffafda3b64062a460ed4a7929720a66559fefa5a4a9ca02049da2c4289b586b8",
+      "blob": "90f649e7adb523105d70b197531bdbe1a6dc4cc7",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/control/scheduler.rs",
+      "bytes": 7853,
+      "sha256": "6f21b806b20b7db19f445ee7263c8d3f7d5532cb7d493fe6015b2d7edbc25824",
+      "blob": "e99726d9525ea039c4da6aadc44ce0f5662d1572",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/data.rs",
+      "bytes": 20922,
+      "sha256": "7369b13bd5ac6840ae0f06b0199d2d551a0d82751aa313045d67158c317032a1",
+      "blob": "54ab34f137f7356a1da98f1e4c576d580e98b3ab",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/data2.rs",
+      "bytes": 28430,
+      "sha256": "0898ba774d77224060fcbcdb0cf438a963f49e26633ce2b227af7cc53556eaca",
+      "blob": "fef5dfc137bca0aa47af1de47d466fde28c52bb5",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/existing_admin.rs",
+      "bytes": 5540,
+      "sha256": "84db715026d27e69450e90be7fc39f15bb5ceec504ceced5bda2a0913c7b7200",
+      "blob": "0b69f41396bdc5b96cc6b2d30c39406c41199adf",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/handoff_integration_tests.rs",
+      "bytes": 51234,
+      "sha256": "76391bfa7ef4328e926e974800a8c6df54f8705e2032ddaba7d30921cf81bc53",
+      "blob": "c451ff56a0d3b23e4a3362a8ae94a0d93fcfe043",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/handoff_regression_tests.rs",
+      "bytes": 25575,
+      "sha256": "751330a4c81e734b9aac5fca40a8152c9b043f32ad9dd23ca2143948b10bf566",
+      "blob": "359478b4460e9e1cdaed217eff0a999e34fb92b5",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/handoff_seen_batch_tests.rs",
+      "bytes": 32406,
+      "sha256": "8362b8379838e4746250a5fcb078d3a8cb516602ff681f127e79b0d894ee1116",
+      "blob": "7969a1b03451ccd6331008d67c5d49a7e9965a8c",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/handoff_tests.rs",
+      "bytes": 47976,
+      "sha256": "0651db7c85835a87a3392cbe67b3bc753baa65c380a4f8778b9bfad354e1565e",
+      "blob": "d6d59bee08020c89fede6c001a320ef19d4656b7",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/mod.rs",
+      "bytes": 1378,
+      "sha256": "36f066a245d64cb4306bb0d7bcdfc919e22dfbf0b43e8cedefcaa15dafda9b6e",
+      "blob": "8e7e971c437bc8c01cef6d5c682c5d6a303895ed",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/native.rs",
+      "bytes": 8020,
+      "sha256": "19a610f3b37c4e65732dc3475f525c76d299f99b75be078f2323eac66a38f768",
+      "blob": "6f4e880f9f4c76b2b79703502efa87350cd702ed",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/network.rs",
+      "bytes": 26708,
+      "sha256": "502097a506ae8d82d801d5577b59e14b32cc70624922bf699a86d921756de08a",
+      "blob": "fce63fdac1e630fc87012495070bd9af07d5845c",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/network2.rs",
+      "bytes": 32441,
+      "sha256": "0679d462875efd9b38d588f98ea2990b706363143c423315755cfa6e2fe3b826",
+      "blob": "a90db982fa33e9a66ac09a92ad6cbd7bf632751a",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/owner.rs",
+      "bytes": 37231,
+      "sha256": "fda88ef5c474574e3368d27fa22240e39dce29288e417947244b84ba3b500bb2",
+      "blob": "7f50474e1a83d3e7f3dc8fb5cd2716bc12caf1f7",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/protocol2.rs",
+      "bytes": 38411,
+      "sha256": "4c046fc25f55933067cc3e28b3933eea422f22ef625b461b5f9b16586ad779c5",
+      "blob": "637f46d143e1445a476354500e4ddf47b324147f",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7/runtime.rs",
+      "bytes": 30417,
+      "sha256": "ecdf0437ad8568cb88bd18ebb3c0cbea77c182cafabfb9ffd0592c5e2a5387c6",
+      "blob": "648ae819aa09d163562f492b69188327389533dd",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/storage_migration.rs",
+      "bytes": 11026,
+      "sha256": "8cd4a95180cc61eb1af2c8cf83a580dba314d1918393038d79a3f47e541afb83",
+      "blob": "3422e1d8802c270a26bc52d27e80826a02ff9cd0",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/test_support.rs",
+      "bytes": 12555,
+      "sha256": "7154e7beb109d020baa5dc7089b36244717d0419a47be9840236dd5f1cc3cd9c",
+      "blob": "7c5dd25480420e993630cb5c43fe191bebd1a996",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/tests/migration_s5_process.rs",
+      "bytes": 48269,
+      "sha256": "a9b86c94b717c387f09f48a569ea2080b3529759a990387b367ed27d29eac52d",
+      "blob": "b3983c3077c61bfe7803f6977f54a7361416994f",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_capacity_review2.rs",
+      "bytes": 6975,
+      "sha256": "ed2d4cc314ae57b8e7ea90f47413fd297de1c5b5d5738ab12e5590581550488a",
+      "blob": "c0e76e553005b46b23bb352f2ff8c8b27ea1669c",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_deadline.rs",
+      "bytes": 2764,
+      "sha256": "74ff0300c95db9ece384515de2ecf068ea0c4cc4093d6056b75f13cfe3c40cb7",
+      "blob": "451cd02d2e27f1ece85431200ff23ecb6b8d6990",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_g1_admission.rs",
+      "bytes": 18014,
+      "sha256": "f9947221527433562b1953675c5c81d3513628c06ce86f902b524129f1cfcce6",
+      "blob": "c65ee64d79c0e30635abe79a515c4d31501be443",
+      "provenance": "G1_reviewed_delta_over_accepted_inherited_source",
+      "exact_snapshot_matches": [],
+      "review_refs": [
+        "review6",
+        "review7",
+        "review8"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_g1_continue.rs",
+      "bytes": 20838,
+      "sha256": "514517c76bc9852fe75c96673831a003c50e9a84c7e06717f6ea3fccb447ca26",
+      "blob": "86b2d8becbcc7893647c18282743d6e18e5151fc",
+      "provenance": "G1_reviewed_delta_over_accepted_inherited_source",
+      "exact_snapshot_matches": [],
+      "review_refs": [
+        "review6",
+        "review7",
+        "review8"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_g1_data.rs",
+      "bytes": 45573,
+      "sha256": "c9aa44cb20dfa03c2d80b2d1ec4599aacaccaf79302033a425f28deafe8b22d4",
+      "blob": "d446eab6f30fc815d96ca58799c19a3cb6ba2050",
+      "provenance": "G1_reviewed_delta_over_accepted_inherited_source",
+      "exact_snapshot_matches": [],
+      "review_refs": [
+        "review6",
+        "review7",
+        "review8"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_g1_prerequisite.rs",
+      "bytes": 20611,
+      "sha256": "727e8f65eb443c807bfe48d9ed749c5e25a6dc9d1de7dadd7c0485ecedb4a7c1",
+      "blob": "fd807d6e7a051749977e94633dac5454214718e5",
+      "provenance": "G1_reviewed_delta_over_accepted_inherited_source",
+      "exact_snapshot_matches": [],
+      "review_refs": [
+        "review6",
+        "review7",
+        "review8"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_g1_replay.rs",
+      "bytes": 23287,
+      "sha256": "d94529f8bc46bfde226337556b0d43dfc80519d385832aeedc2b07d71923da28",
+      "blob": "4eade09ad9883be26190a9f87bccd80124025618",
+      "provenance": "G1_reviewed_delta_over_accepted_inherited_source",
+      "exact_snapshot_matches": [],
+      "review_refs": [
+        "review6",
+        "review7",
+        "review8"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_g1_replay_tests.rs",
+      "bytes": 16605,
+      "sha256": "4928283c469f9e3997ca17579f949744c5aa3947732979a85ffb2d5db4111e29",
+      "blob": "778c4043407b8499d2c5b938bb9cd31dfdcd22d6",
+      "provenance": "G1_reviewed_delta_over_accepted_inherited_source",
+      "exact_snapshot_matches": [],
+      "review_refs": [
+        "review6",
+        "review7",
+        "review8"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_g1_witness.rs",
+      "bytes": 22308,
+      "sha256": "4e805ed2b71c18c7d89f1dc9956c709100a9f4596761969feacf42d7f5c0f253",
+      "blob": "25f9a08f81cdb5c9fb6a724d1480db987e5bee49",
+      "provenance": "G1_reviewed_delta_over_accepted_inherited_source",
+      "exact_snapshot_matches": [],
+      "review_refs": [
+        "review6",
+        "review7",
+        "review8"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_handoff.rs",
+      "bytes": 341027,
+      "sha256": "ce9585cef28e4568edaad815848edd0109e6d2064a0d5b908b5510dbbe7b2620",
+      "blob": "705bf6a7f16bb8266971d7ec71a8faf305ed726e",
+      "provenance": "G1_reviewed_delta_over_accepted_inherited_source",
+      "exact_snapshot_matches": [],
+      "review_refs": [
+        "review6",
+        "review7",
+        "review8"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_metadata_review2.rs",
+      "bytes": 2541,
+      "sha256": "780543901898a31d7b1413a398acf2d7b8963513a9142398fa2f7e19393acdf9",
+      "blob": "7b2f48a7ae716c0400843b41aee00dda3d7db6e8",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1.rs",
+      "bytes": 20609,
+      "sha256": "c65924f27b48840fe21faa5d86c3d274d2d6e65142f809355a0db5e2e01995a0",
+      "blob": "bbac142c38930f25404a3db31525ad54aeb117d2",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1_isolation.rs",
+      "bytes": 7606,
+      "sha256": "6da90c2d20b248051543e16ae5b7c3675142e32ad5c371700ebdcf134bbaddf3",
+      "blob": "90f6ffc093c45bd28e887ce94b97cedc2e017fbd",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-identity/src/account.rs",
+      "bytes": 118709,
+      "sha256": "99ba6e2fa480299c5dff3a9368de97575d7e64d9493a63ce10f238efb9aefc0e",
+      "blob": "f5956e4af127c709f69771ed6d3f01ccc00cd777",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2.rs",
+      "bytes": 13344,
+      "sha256": "ecd5a5ec19383de545c96f34a8c5623a07ac37a79b23ddd9576cdfb0b7f5611d",
+      "blob": "4eba49b01d735d647a06d7542572968a03de29d4",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/authority.rs",
+      "bytes": 18840,
+      "sha256": "3c36ac344aa343a06f6ea85778db0b75f52dc1ab094b6c5d5bb33338d81fc5ae",
+      "blob": "cf406224738462e8e0fe897fd009eb2b0369bb5f",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/existing.rs",
+      "bytes": 11242,
+      "sha256": "8f70f5b35f0c740a03b70a4f156c520a8b359a8f71485a794da643cc8052fd74",
+      "blob": "90d1410353670b217857ad88d2e46afe7b7b587f",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-protocol/src/ordered_dialog_v2/frame.rs",
+      "bytes": 14674,
+      "sha256": "3b4732f833bd368ee3d0d31c12b230bd6431d064c9bfba1851b64e8854948819",
+      "blob": "c26a96c1d381d87821a4f1a0993125a5c990f633",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog.rs",
+      "bytes": 58525,
+      "sha256": "7956cfdb142969d1384d5747ed2596ff02262f58badff3090956f6cc04465770",
+      "blob": "5ab22f04f3b4cb239e7bbfc5e484b8f15e0a9732",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/credits.rs",
+      "bytes": 29678,
+      "sha256": "d4369adbaa0854f821fd1f9cb73eb644a57a9859db935dec895862a2fcc54aa1",
+      "blob": "8d83f39c624e4473d12501170881d16a3e3750c1",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7.rs",
+      "bytes": 4173,
+      "sha256": "3a24229d0e139ba6ce8e854250fcb9e5ca4722a05c6f2c99c2e95e5b916fab30",
+      "blob": "7f6d724c1daec6265524cf40a1b53a63a3fc6745",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/admin.rs",
+      "bytes": 25383,
+      "sha256": "76048c0cb380b9c9e0ff11a850281ff94bcc774b9e43f73f0b6ce74cf1c8fe04",
+      "blob": "283455826347436b4e1a246a0e84b89a14b132dd",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/copy.rs",
+      "bytes": 29753,
+      "sha256": "477ef8512458527177449e32cf6ed677fe6d4203347afa5eaa316f21ca844642",
+      "blob": "07f0d709ce8b5c92d7a2c2f059ce58674b7afad5",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/existing.rs",
+      "bytes": 48850,
+      "sha256": "fdbe0624ceb46fec3dc2c01e40d87bdd1694a82963f578c7e27fab40d60d57cf",
+      "blob": "ae87c3da877279fab78a2a245e72eb48a13dee40",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1.rs",
+      "bytes": 14569,
+      "sha256": "e3fce00592826546530546559981b047a817f9e45c35ab2dab25cf0bd01caea0",
+      "blob": "9d1916f4077de67521240f724b9c5ca5ccd1bce2",
+      "provenance": "inherited_r30_plus_verification_close_hook_already_in_HEAD",
+      "exact_snapshot_matches": [],
+      "review_refs": [
+        "review9",
+        "review10"
+      ]
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/data.rs",
+      "bytes": 27922,
+      "sha256": "ec3892da5b6ebb698ccf7eb7b9359e5f0d60244a127bbf62b937c2bcaaae9c33",
+      "blob": "3626ef6f7920b6444ce88c26f2f007d6ebe734fd",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/history.rs",
+      "bytes": 17506,
+      "sha256": "4157f52f5df198735bf93bca1db221045306ebc72cb23e48e44fbdbb8b38f38c",
+      "blob": "23dd1e471116446eeecf76ce198af4b2a652728a",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/mixed.rs",
+      "bytes": 17533,
+      "sha256": "0e41e2f16c45c3562e74aa5d849a2aa53b5b1772cb86bb1e074b357d2366acc8",
+      "blob": "bf9a1ed45264290981e82e9c3072006eacd801ef",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/ops.rs",
+      "bytes": 24109,
+      "sha256": "bc0a593930a0c27164ac1bbb39867a11b97784b8688b5e080fd5c735b11d85b9",
+      "blob": "7049c445b79304ef6a86fbd1bb0f2bbd58a497f8",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/live1/read.rs",
+      "bytes": 21212,
+      "sha256": "022e548e172c420ea3a8346d1b00bd84d7cac01696eb14dba0363af194ec1879",
+      "blob": "469d4b178ba2adc4ac251751421c464d6dfc694f",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-state/src/vault/indexed_dialog/migration7/records.rs",
+      "bytes": 35692,
+      "sha256": "7ca099e2a7092b65bd01c5fe36413c167d9e4d51e857e66b3ddfeef241f2e3b5",
+      "blob": "db9ec24cb4709da3f1efebd05096cfa9053a18e9",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "crates/kilogram-transport-iroh/src/ordered2.rs",
+      "bytes": 10348,
+      "sha256": "c820d88db9203c8fa4da1804aeedfa081565530cd33fdc02ef6f883c41de93b1",
+      "blob": "26d798139596e9ef9f2990ac06c9f9a34f350555",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "scripts/run-cargo-tests-stable.ps1",
+      "bytes": 14665,
+      "sha256": "71a6a811330352e9279e06d66d2aba8e2061d937a5024bc0ae43cfbcd0d69d42",
+      "blob": "0e806f97b1bb35d6a5a084052252590a21121568",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "scripts/cargo-frozen-artifacts.ps1",
+      "bytes": 12109,
+      "sha256": "3481561bd80a5dde79fd6b0ac927a88ecbda749cad5f465ffe55e029b2c18de8",
+      "blob": "a313a5089f3944d98d2b1199c7e48c9c2e5c801c",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "scripts/migration-s53-metadata.ps1",
+      "bytes": 26930,
+      "sha256": "d2b65d9b6abdfc6a8d73d0d0ec6749958ed2a80fb8fdd6dc9a23d82a154de70e",
+      "blob": "d28d94b819cf3d5cea101b285cff07dfd950357d",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "scripts/migration-s53-predecessor-proof.ps1",
+      "bytes": 10212,
+      "sha256": "d274fc4032a614e2660898ef5f79e066ec4e4abbc145f610f45d770f38672f1b",
+      "blob": "12c3ecc473818c8609ae58d81453d25599b0f64b",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "scripts/migration-s53-runtime-dependencies.ps1",
+      "bytes": 1750,
+      "sha256": "acba3161dbf7395fcee300ee5487fe8a1a3e22e59b756a8c9fab86c74259d029",
+      "blob": "57edd03489be0280a5da64e8d1bcf9f8d884f03e",
+      "provenance": "inherited_exact_source_snapshot; functional acceptance only in prior named scopes",
+      "exact_snapshot_matches": [
+        14,
+        30
+      ],
+      "review_refs": [
+        "review1",
+        "review2",
+        "review3",
+        "review4",
+        "review5"
+      ]
+    },
+    {
+      "path": "scripts/invoke-migration-s53-integration-case.ps1",
+      "bytes": 41519,
+      "sha256": "b29b160792ad7d90727ef7caca7bdbe2cad6274c15c55c435108d85e55d6c34b",
+      "blob": "aeea5ef2117e4dfc231f170dd50a9950d4b91d54",
+      "provenance": "G1_reviewed_delta_over_accepted_inherited_source",
+      "exact_snapshot_matches": [],
+      "review_refs": [
+        "review6",
+        "review7",
+        "review8"
+      ]
+    },
+    {
+      "path": "scripts/invoke-migration-s53-integration-outer.ps1",
+      "bytes": 4958,
+      "sha256": "1ab0d935e7b00665c09c580e284243e56429d99f453aa6707969ba4593fdc50f",
+      "blob": "f8e466b5c66a01866737f8e7476e256855cef388",
+      "provenance": "G1_reviewed_delta_over_accepted_inherited_source",
+      "exact_snapshot_matches": [],
+      "review_refs": [
+        "review6",
+        "review7",
+        "review8"
+      ]
+    }
+  ],
+  "snapshot_bindings_local_only": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/S5.3-integration-binding-r14.json",
+      "bytes": 287806,
+      "sha256": "e4258b3943c4928059f2e8234603abf0a75bf28430f1d95f3e662803de672e15"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/S5.3-integration-binding-r30.json",
+      "bytes": 1658912,
+      "sha256": "e1b44a8621362486ab824426f7f4fa719600aa5ef21e1dfe62afdfc5104a6dab"
+    }
+  ],
+  "unchanged_shared_controller_function_bodies_vs_r30": [
+    "s53_control_loss_reopen_public",
+    "s53_discovery_preserves_ordinary_no_intent_public",
+    "s53_pre_q_gap_early_mixed_public",
+    "s53_two_c_pin_resources_routes_public"
+  ],
+  "inherited_pending_scopes": [
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_capacity_review2.rs",
+      "status": "G2 actual capacity/route case NOT accepted; exact prior source, required by unconditional controller mod"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_handoff.rs",
+      "symbol": "s53_two_c_pin_resources_routes_public",
+      "status": "G3 actual case NOT accepted; exact r30 function body, in same untracked source file"
+    },
+    {
+      "path": "apps/kilogram-cli/src/ordered_dialog/runtime7",
+      "status": "Earlier accepted source cohort affects fresh paths; G4 process regressions still pending"
+    }
+  ],
+  "why_whole_shared_files": "HEAD does not track controller/wrappers or S5.3 runtime modules. Publishing only G1 helpers would orphan them. Publishing exact tested current compilation source requires this inherited cohort. Avoiding inactive case bodies would require new source extraction/rewiring and separate review, forbidden in this packaging task.",
+  "acceptance_limit": "Prior source/static/scoped actual acceptances justify inherited bytes, not complete G2/G3/G4 behavior. Root must review this explicit whole-file composition before publication.",
+  "provided_by_HEAD": [
+    "apps/kilogram-cli/tests/support/s53_cold/{fixed,fixture,history,progress,readers}.rs",
+    "scripts/migration-s5-l1-deadline.ps1",
+    "scripts/cargo-resource-policy.ps1",
+    "Cargo.toml/Cargo.lock and unchanged normal workspace sources"
+  ],
+  "runtime_replay_not_claimed": "Historical frozen binding/artifact inventories and ignored public first-page inputs are local run assets. No standalone rerun on a fresh clone is promised; S now has A+B and must not rerun G1.",
+  "review_references": {
+    "review1": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-source-review-2.md",
+    "review2": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-integration-review-3.md",
+    "review3": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-mixed-acceptance-r14-and-policy.md",
+    "review4": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-source-acceptance-and-static-task-r30.md",
+    "review5": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-r30-acceptance-and-completion-audit-r31.md",
+    "review6": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G1-continuation-C1-accepted-C2-task.md",
+    "review7": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G1-continuation-C2-accepted-runtime-task.md",
+    "review8": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G1-publication-01/root-accepted.json",
+    "review9": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/Cold-B-B1-publication.json",
+    "review10": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/Cold-B-attempt02-publication.json"
+  },
+  "tuple_rule": "snapshot matches mean original size/SHA tuple equals the current row; full old bindings remain local with recorded hashes",
+  "standalone_G1_only_without_inherited_cohort_or_source_changes": false
+}

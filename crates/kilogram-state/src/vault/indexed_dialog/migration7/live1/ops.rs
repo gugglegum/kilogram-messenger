@@ -10,7 +10,7 @@ fn authority_key(account: Id) -> Result<Key> {
     name.extend(account);
     key(0, &name)
 }
-fn own_head(raw: &[u8]) -> Result<Value> {
+pub(super) fn own_head(raw: &[u8]) -> Result<Value> {
     let value = codec::decode(raw, 2048)?;
     let f = value.fields(13)?;
     if f[0].uint()? != 1 || f[3].uint()? > 1 {
@@ -90,7 +90,7 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
                 .ok_or(Error::Integrity("L1 global metadata missing"))?,
         )
     }
-    fn l1_meta_put(&mut self, c: u8, meta: &L1Metadata) -> Result<()> {
+    pub(super) fn l1_meta_put(&mut self, c: u8, meta: &L1Metadata) -> Result<()> {
         let raw = packed(meta)?;
         self.put(key(c, b"meta")?, &raw, (META - raw.len()) as u64, true)
     }
@@ -110,14 +110,8 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
             .ok_or(Error::Integrity("Head7 missing"))?;
         let value = codec::read_record(&raw, 10, 8192)?;
         let h = value.fields(9)?;
-        if h[0].uint()? != 7
-            || h[6].uint()? != 1
-            || h[7].optional()?.is_some()
-            || h[8]
-                .fields(2)?
-                .iter()
-                .any(|x| !x.optional().is_ok_and(|o| o.is_none()))
-        {
+        let state = self.existing_head_check7(c, &value)?;
+        if h[0].uint()? != 7 || state.mode.selected() {
             return Err(Error::UnsupportedRuntimeProfile);
         }
         Ok(value)
@@ -138,7 +132,7 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
             &name,
         )?)
     }
-    fn l1_cert_refs(&mut self, profile: &Profile, c: u8) -> Result<[Id; 2]> {
+    pub(super) fn l1_cert_refs(&mut self, profile: &Profile, c: u8) -> Result<[Id; 2]> {
         let raw = self
             .get(original_control(
                 c,
@@ -169,6 +163,12 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
                 return Err(Error::Bound("unoccupied L1 context"));
             }
             self.l1_head(c)?;
+            let mode = self.existing_state7(c)?.mode;
+            if mode != ExistingMode::L1 {
+                return Err(Error::PolicyRejected(
+                    "L1 purpose forbidden after durable Propose/Prepared",
+                ));
+            }
             self.migration_budget_check(
                 &profile,
                 usize::from(c),
@@ -460,7 +460,12 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
                 }
                 let role = usize::from(profile.contexts[usize::from(c)].1);
                 let queued = self.root.roots[usize::from(c) * 24 + 5].count;
-                if meta.next[role].max(1) + queued >= 512 || queued >= 128 {
+                let mode = self.existing_state7(c)?.mode;
+                let end = meta.next[role]
+                    .max(1)
+                    .checked_add(queued)
+                    .ok_or(Error::Bound("queue frontier"))?;
+                if mode != ExistingMode::Active && end >= 512 || queued >= 128 {
                     return Err(Error::PolicyRejected("UpgradeRequired/queue capacity"));
                 }
                 let order = meta.next_queue;
@@ -507,7 +512,9 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
                 admission,
                 head,
             } => {
-                self.l1_pending(&profile, context, author, raw, original, admission, head)?;
+                self.l1_pending(
+                    &profile, context, author, raw, original, admission, head, None,
+                )?;
             }
             L1Operation::Drain { change, rows } => {
                 self.l1_native_rows(&profile, change, rows, false)?;
@@ -552,7 +559,7 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
                 last,
             } => {
                 let mut meta = self.l1_meta(c)?;
-                if next > 512
+                if next > 512 && !self.existing_state7(c)?.mode.selected()
                     || (next == 0) != last.is_none()
                     || next == meta.peer_source_next && last != meta.peer_source_last
                 {

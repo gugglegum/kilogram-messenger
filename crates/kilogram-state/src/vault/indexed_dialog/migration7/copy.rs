@@ -68,6 +68,7 @@ impl ProducedRows {
     }
 }
 pub(super) struct EventFields {
+    pub format: u8,
     pub id: Id,
     pub c: Id,
     pub role: u8,
@@ -100,6 +101,7 @@ pub(super) fn event_fields(raw: &[u8]) -> Result<EventFields> {
         return Err(Error::Integrity("legacy event structure"));
     }
     Ok(EventFields {
+        format: 1,
         id: raw_hash(b"kg:od1:event-id\0", raw),
         c: c[1].fixed()?,
         role,

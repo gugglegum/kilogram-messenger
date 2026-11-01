@@ -16,13 +16,13 @@ use kilogram_state::{OrderedMutation, OrderedVault, StateDirectoryLock};
 use std::{path::PathBuf, sync::Arc};
 use tokio::sync::Mutex;
 
-struct Pair {
-    _tmp: tempfile::TempDir,
-    accounts: [PathBuf; 2],
-    a: Engine,
-    b: Engine,
-    c: Id,
-    binding: Id,
+pub(super) struct Pair {
+    pub(super) _tmp: tempfile::TempDir,
+    pub(super) accounts: [PathBuf; 2],
+    pub(super) a: Engine,
+    pub(super) b: Engine,
+    pub(super) c: Id,
+    pub(super) binding: Id,
 }
 fn reopen(engine: Engine) -> Result<Engine> {
     let root = engine.store.root().to_path_buf();
@@ -32,6 +32,16 @@ fn reopen(engine: Engine) -> Result<Engine> {
 impl Pair {
     fn new() -> Result<Self> {
         let tmp = tempfile::tempdir()?;
+        Self::from_temp(tmp)
+    }
+    pub(super) fn new_in(parent: &std::path::Path) -> Result<Self> {
+        Self::from_temp(
+            tempfile::Builder::new()
+                .prefix("genuine-l1-")
+                .tempdir_in(parent)?,
+        )
+    }
+    fn from_temp(tmp: tempfile::TempDir) -> Result<Self> {
         let mut stores = Vec::new();
         for i in 0..2 {
             let owner = tmp.path().join(format!("owner{i}"));
@@ -150,7 +160,7 @@ impl Pair {
             proofs[1].clone(),
         )
     }
-    fn admit(&mut self) -> Result<Vec<u8>> {
+    pub(super) fn admit(&mut self) -> Result<Vec<u8>> {
         self.binding = admin::random()?;
         for e in [&mut self.a, &mut self.b] {
             e.policy(self.c)?;
@@ -166,7 +176,7 @@ impl Pair {
         let consent = admin::required(&self.a.store, &admin::consent_path(self.c))?;
         self.pair_with_refs([wire::hash(handshake::CONSENT, &consent); 2], self.binding)
     }
-    fn activate(&mut self, pair: &[u8]) -> Result<()> {
+    pub(super) fn activate(&mut self, pair: &[u8]) -> Result<()> {
         let offer = self.a.ensure_offer(self.c, pair, self.binding)?;
         let grant = self.b.grant(self.c, &offer, pair, self.binding)?;
         let init = self.a.init(self.c, &grant, self.binding)?;

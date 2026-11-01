@@ -6,6 +6,8 @@ mod atomic;
 mod attempt_result;
 #[path = "migration_s5_l1_exhausted.rs"]
 mod exhausted;
+#[path = "migration_s53_handoff.rs"]
+mod handoff;
 #[path = "migration_s5_l1_isolation.rs"]
 mod isolation;
 #[path = "migration_s5_l1_obligations.rs"]

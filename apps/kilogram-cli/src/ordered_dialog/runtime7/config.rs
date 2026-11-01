@@ -18,6 +18,8 @@ pub struct Profile3 {
     pub logical_quota: [u64; 2],
     pub physical_capacity: u64,
     pub route_policy: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub route: Option<kilogram_transport_iroh::ordered2::RouteConfig2>,
     pub enabled_contexts: Vec<String>,
 }
 impl Profile3 {
@@ -31,6 +33,7 @@ impl Profile3 {
             profile.route_policy == "direct-only",
             "L1RequiresDirectOnly"
         );
+        profile.route_config()?.effective()?;
         for id in [
             &profile.account,
             &profile.claim,
@@ -65,6 +68,16 @@ impl Profile3 {
             );
         }
         Ok(profile)
+    }
+    pub fn route_config(&self) -> Result<kilogram_transport_iroh::ordered2::RouteConfig2> {
+        Ok(self
+            .route
+            .clone()
+            .unwrap_or(kilogram_transport_iroh::ordered2::RouteConfig2 {
+                policy: kilogram_transport_iroh::RoutePolicy::DirectOnly,
+                bind: Some("127.0.0.1:0".parse()?),
+                relay: None,
+            }))
     }
     pub fn open(&self, profile_path: &Path) -> Result<store::L1Repository> {
         let root = kilogram_state::StateDirectoryLock::acquire(&self.state_dir)?;

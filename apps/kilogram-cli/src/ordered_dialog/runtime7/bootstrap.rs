@@ -596,8 +596,17 @@ impl Owner7 {
             .is_none()
         {
             let proof = wire::encode(&a([u(1), b(reason.as_bytes()), b(old), b(new)]), 64 * 1024)?;
-            self.repo()?
-                .commit(store::L1Operation::Block { context: c, proof }, None)?;
+            let existing = self.leases[usize::from(c)]
+                .as_ref()
+                .is_some_and(|lease| lease.family == 2)
+                || self.repo()?.existing_state(c)?.mode != store::ExistingMode::L1;
+            self.invalidate(c);
+            if existing {
+                self.commit_data2(c, None, store::ExistingData7::Block { proof })?;
+            } else {
+                self.repo()?
+                    .commit(store::L1Operation::Block { context: c, proof }, None)?;
+            }
         }
         self.invalidate(c);
         anyhow::bail!("Blocked: signed fork {reason}")

@@ -120,6 +120,67 @@ pub(super) struct Ledger {
     grant: Option<Grant>,
 }
 impl Ledger {
+    pub(super) fn mixed_admit7(
+        &mut self,
+        ordinal: u64,
+        head: bool,
+        grant: Option<Id>,
+    ) -> Result<()> {
+        if head && grant.is_none() {
+            return Err(Error::PolicyRejected("head requires repair grant"));
+        }
+        if head {
+            if self.head.is_some() {
+                return Err(Error::Quota);
+            }
+            self.head = Some(ordinal);
+        } else {
+            self.pending = self
+                .pending
+                .checked_add(1)
+                .filter(|n| *n <= 64)
+                .ok_or(Error::Quota)?;
+        }
+        if let Some(id) = grant {
+            let g = self.grant.as_mut().ok_or(Error::Conflict)?;
+            if g.id != id {
+                return Err(Error::Conflict);
+            }
+            let (i, bit) = g.bit(ordinal)?;
+            if g.available[i] & bit == 0 {
+                return Err(Error::Conflict);
+            }
+            g.available[i] &= !bit;
+            self.outstanding = self
+                .outstanding
+                .checked_add(FRAME_CREDIT)
+                .ok_or(Error::Bound("mixed outstanding"))?;
+        }
+        Ok(())
+    }
+    pub(super) fn mixed_retire7(
+        &mut self,
+        ordinal: u64,
+        head: bool,
+        repair: bool,
+        spent: u64,
+    ) -> Result<()> {
+        if spent > FRAME_CREDIT {
+            return Err(Error::Quota);
+        }
+        self.legacy1_retire_pending(ordinal, head)?;
+        if repair {
+            self.outstanding = self
+                .outstanding
+                .checked_sub(FRAME_CREDIT)
+                .ok_or(Error::Integrity("mixed outstanding underflow"))?;
+            self.repair_free = self
+                .repair_free
+                .checked_add(FRAME_CREDIT - spent)
+                .ok_or(Error::Bound("mixed repair remainder"))?;
+        }
+        Ok(())
+    }
     pub(super) fn legacy1_admit_pending(&mut self, ordinal: u64, head: bool) -> Result<()> {
         if ordinal >= 512
             || self.repair_free != REPAIR_POOL

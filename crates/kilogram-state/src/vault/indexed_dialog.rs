@@ -476,6 +476,7 @@ struct LoadedCore {
     backend: backend::BackendControl,
 }
 enum CommitInput {
+    Existing7(Box<migration7::live1::ExistingOperation7>),
     Legacy1(Box<migration7::live1::L1Operation>),
     Runtime2(Box<RuntimeOperation>),
     Migration7(Box<migration7::Operation>),
@@ -887,11 +888,19 @@ impl IndexedDialogVault {
         let purpose_matches = match self.root.layout {
             RootLayout::Component5 => !matches!(
                 &input,
-                CommitInput::Runtime2(_) | CommitInput::Migration7(_) | CommitInput::Legacy1(_)
+                CommitInput::Runtime2(_)
+                    | CommitInput::Migration7(_)
+                    | CommitInput::Legacy1(_)
+                    | CommitInput::Existing7(_)
             ),
             RootLayout::Runtime6 => matches!(&input, CommitInput::Runtime2(_)),
             RootLayout::Migrated7 => {
-                matches!(&input, CommitInput::Migration7(_) | CommitInput::Legacy1(_))
+                matches!(
+                    &input,
+                    CommitInput::Migration7(_)
+                        | CommitInput::Legacy1(_)
+                        | CommitInput::Existing7(_)
+                )
             }
         };
         if !purpose_matches {
@@ -909,6 +918,7 @@ impl IndexedDialogVault {
         let values = tx.open_table(VALUES).map_err(db)?;
         let mut w = Work::new(&nodes, &values, &self.crypto, self.root.clone());
         match &input {
+            CommitInput::Existing7(op) => w.existing_check7(op, id == self.root.commit_id)?,
             CommitInput::Legacy1(op) => w.l1_check(op, id == self.root.commit_id)?,
             CommitInput::Runtime2(op) => w.runtime_check(op, id == self.root.commit_id)?,
             CommitInput::Migration7(op) => {
@@ -964,6 +974,7 @@ impl IndexedDialogVault {
             return Err(Error::StaleGeneration);
         }
         match input {
+            CommitInput::Existing7(op) => w.existing_apply7(*op)?,
             CommitInput::Legacy1(op) => w.l1_apply(*op)?,
             CommitInput::Runtime2(op) => w.runtime_apply(*op)?,
             CommitInput::Migration7(op) => w.migration_apply(*op)?,

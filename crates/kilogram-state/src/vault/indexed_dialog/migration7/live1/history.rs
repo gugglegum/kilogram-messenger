@@ -4,6 +4,7 @@ use super::*;
 
 #[derive(Clone, Serialize)]
 pub struct L1HistoryItem {
+    pub format: u8,
     pub id: String,
     pub role: u8,
     pub ordinal: u64,
@@ -30,6 +31,19 @@ struct Candidate {
 }
 
 impl L1Repository {
+    /// Check the saved view identity without creating or replacing one.
+    pub fn history_initialized(&mut self, c: u8) -> Result<bool> {
+        self.occupied(c)?;
+        let tx = self.core.vault.database.begin_read().map_err(db)?;
+        let nodes = tx.open_table(NODES).map_err(db)?;
+        let values = tx.open_table(VALUES).map_err(db)?;
+        let mut w = Work::new(&nodes, &values, &self.core.crypto, self.core.root.clone());
+        match w.l1_history_view(c) {
+            Ok(_) => Ok(true),
+            Err(Error::HistoryUnavailable) => Ok(false),
+            Err(error) => Err(error),
+        }
+    }
     pub fn history(
         &mut self,
         c: u8,
@@ -184,13 +198,25 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
             false,
         )
     }
-    fn l1_history_view(&mut self, c: u8) -> Result<Identity> {
+    pub(super) fn l1_history_view(&mut self, c: u8) -> Result<Identity> {
         let raw = self
             .get(super::super::super::history::identity_key(c)?)?
             .ok_or(Error::HistoryUnavailable)?;
         let identity = Identity::decode(&raw)?;
+        let profile = self.migration_profile()?;
+        let raw_head = self
+            .get(head_key(c)?)?
+            .ok_or(Error::Integrity("history Head7"))?;
+        let wrapper = codec::read_record(&raw_head, 10, 8192)?;
+        let head = codec::decode(wrapper.fields(9)?[4].bytes()?, 4096)?;
+        let h = head.fields(13)?;
         if identity.incarnation != self.root.incarnation
             || identity.init.scope.context != self.root.contexts[usize::from(c)]
+            || identity.init.own_role != profile.contexts[usize::from(c)].1
+            || Some(identity.init.scope.dialog) != h[9].optional()?.map(Value::fixed).transpose()?
+            || Some(identity.init.scope.epoch) != h[10].optional()?.map(Value::fixed).transpose()?
+            || Some(identity.init.scope.session_id.as_bytes())
+                != h[11].optional()?.map(Value::bytes).transpose()?
         {
             return Err(Error::Integrity("L1 history view scope"));
         }
@@ -215,9 +241,18 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
         let source = self
             .get(Key::hash(c, Namespace::Event, id)?)?
             .ok_or(Error::Integrity("history source missing"))?;
-        let e = super::super::copy::event_fields(&source)?;
+        let e = data_event7(&source)?;
         let value = codec::decode(&source, 16 * 1024)?;
-        let core = value.fields(5)?[1].fields(14)?;
+        let core = data_core7(&value)?;
+        let mode = self.existing_state7(c)?;
+        if e.format == 1 && mode.cuts[usize::from(role)].is_some_and(|cut| n >= cut)
+            || e.format == 2
+                && (!mode.mode.selected()
+                    || Some(core[14].fixed::<32>()?) != mode.q
+                    || mode.cuts[usize::from(role)].is_none_or(|cut| n < cut))
+        {
+            return Err(Error::Integrity("history source format/cut/Q"));
+        }
         let scope = &identity.init.scope;
         if e.id != id
             || e.c != scope.context
@@ -246,6 +281,9 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
         }
         let proof_kind = match &f[3] {
             Value::B(pointer) => {
+                if e.format != 1 {
+                    return Err(Error::Integrity("Event2 cannot use legacy snapshot proof"));
+                }
                 let expected = migration_key(p.mid, 5, &id)?;
                 if pointer.as_slice() != expected.bytes {
                     return Err(Error::Integrity("snapshot membership key"));
@@ -285,15 +323,23 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
                 let k = Key::hash(
                     c,
                     Namespace::Control,
-                    hash(b"kg:od1:full-L1-proof/v7\0", &id),
+                    hash(
+                        if e.format == 1 {
+                            b"kg:od1:full-L1-proof/v7\0"
+                        } else {
+                            b"kg:od2:full-mixed-proof/v7\0"
+                        },
+                        &id,
+                    ),
                 )?;
-                if pointer[0].uint()? != 1 || pointer[1].fixed::<32>()? != k.bytes {
+                if pointer[0].uint()? != u64::from(e.format) || pointer[1].fixed::<32>()? != k.bytes
+                {
                     return Err(Error::Integrity("full L1 proof key"));
                 }
                 let proof = self
                     .get(k)?
                     .ok_or(Error::Integrity("full L1 proof missing"))?;
-                let proof = codec::read_record(&proof, 41, 4096)?;
+                let proof = codec::read_record(&proof, if e.format == 1 { 41 } else { 42 }, 4096)?;
                 let r = proof.fields(11)?;
                 if r[0].uint()? != 7
                     || r[1].fixed::<32>()? != p.mid
@@ -344,22 +390,14 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
                         return Err(Error::Integrity("full L1 actual receipt hash"));
                     }
                 }
-                "FullL1"
+                if e.format == 1 { "FullL1" } else { "FullMixed" }
             }
             _ => return Err(Error::Integrity("unknown history proof variant")),
         };
         let receipt = self.get(super::super::super::history::receipt(c, role, n)?)?;
         if let Some(raw) = &receipt {
-            let value = codec::decode(raw, 1024)?;
-            let r = value.fields(2)?[0].fields(8)?;
-            if r[1] != core[2]
-                || r[2] != core[3]
-                || r[3].uint()? != u64::from(role)
-                || r[4].uint()? != n
-                || r[5].fixed::<32>()? != id
-            {
-                return Err(Error::Integrity("history receipt delivery overlay"));
-            }
+            let certs = self.l1_cert_refs(p, c)?;
+            super::mixed::receipt7(raw, &source, mode.q, certs)?;
         }
         let mut parents = Vec::with_capacity(2);
         for parent in core[11].list()? {
@@ -367,7 +405,7 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
             let raw = self
                 .get(Key::hash(c, Namespace::Event, id)?)?
                 .ok_or(Error::Integrity("history parent missing"))?;
-            let e = super::super::copy::event_fields(&raw)?;
+            let e = data_event7(&raw)?;
             if e.c != scope.context || e.kind != 3 || e.n >= frontiers[usize::from(e.role)] {
                 return Err(Error::Integrity("history parent outside snapshot"));
             }
@@ -376,6 +414,7 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
         Ok(Candidate {
             id,
             row: L1HistoryItem {
+                format: e.format,
                 id: super::super::source::hex(&id),
                 role,
                 ordinal: n,

@@ -1,0 +1,138 @@
+{
+  "classification": "portable public G1 evidence copies, not reconstructed phase data",
+  "root_acceptance_original_sha256": "d028883348bc74c50f6f3454978b6f080227d4e345d37cdbc658713ccc8510ce",
+  "files": [
+    {
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G1-publication-01/continuation-stopped-A.json",
+        "bytes": 10239,
+        "sha256": "d0a01179455c9036fb8c9b158dd2f46f538cad5ba25bb3061bf55a178daa1db2"
+      },
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-exhausted-integrated-01-attempt-02/continuation-stopped-A.json",
+        "bytes": 10239,
+        "sha256": "d0a01179455c9036fb8c9b158dd2f46f538cad5ba25bb3061bf55a178daa1db2"
+      },
+      "copy": "exact raw bytes; per-directory -text preserves SHA across Git checkout"
+    },
+    {
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G1-publication-01/continuation-A-gate.json",
+        "bytes": 9816,
+        "sha256": "20aebe39c3dbf54e51bc278e39071e8d5477898a7a75ad1b4643655af1677c6a"
+      },
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-exhausted-integrated-01-attempt-02/continuation-A-gate.json",
+        "bytes": 9816,
+        "sha256": "20aebe39c3dbf54e51bc278e39071e8d5477898a7a75ad1b4643655af1677c6a"
+      },
+      "copy": "exact raw bytes; per-directory -text preserves SHA across Git checkout"
+    },
+    {
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G1-publication-01/continuation-B-before-restart.json",
+        "bytes": 12670,
+        "sha256": "d6600b617ca35d050f3a3251de845b943cf9ff2675e5027f51a9948464d506cf"
+      },
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-exhausted-integrated-01-attempt-02/continuation-B-before-restart.json",
+        "bytes": 12670,
+        "sha256": "d6600b617ca35d050f3a3251de845b943cf9ff2675e5027f51a9948464d506cf"
+      },
+      "copy": "exact raw bytes; per-directory -text preserves SHA across Git checkout"
+    },
+    {
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G1-publication-01/continuation-restart.json",
+        "bytes": 12661,
+        "sha256": "eef5147a0a987a808be58768d7061d158aa44a6845a97711bcab0303fd679ff6"
+      },
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-exhausted-integrated-01-attempt-02/continuation-restart.json",
+        "bytes": 12661,
+        "sha256": "eef5147a0a987a808be58768d7061d158aa44a6845a97711bcab0303fd679ff6"
+      },
+      "copy": "exact raw bytes; per-directory -text preserves SHA across Git checkout"
+    },
+    {
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G1-publication-01/assertions.json",
+        "bytes": 7875,
+        "sha256": "cee056c3b04b4e637cb421a09b304296d8ed7884c917f70771c961ed7d30b92e"
+      },
+      "original": {
+        "path": ".tmp/migration-s53-integrated/F-s53-exhausted-integrated-01-attempt-02/assertions.json",
+        "bytes": 7875,
+        "sha256": "cee056c3b04b4e637cb421a09b304296d8ed7884c917f70771c961ed7d30b92e"
+      },
+      "copy": "exact raw bytes; per-directory -text preserves SHA across Git checkout"
+    },
+    {
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G1-publication-01/root-accepted.json",
+        "bytes": 2607,
+        "sha256": "d028883348bc74c50f6f3454978b6f080227d4e345d37cdbc658713ccc8510ce"
+      },
+      "original": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-exhausted-integrated-01-attempt-02.root-accepted.json",
+        "bytes": 2607,
+        "sha256": "d028883348bc74c50f6f3454978b6f080227d4e345d37cdbc658713ccc8510ce"
+      },
+      "copy": "exact raw bytes"
+    },
+    {
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G1-publication-01/outer.json",
+        "bytes": 1091,
+        "sha256": "80af897188b767b52c23c09d8de4f37d49c2d8306e1257b17c44d81e351687d2"
+      },
+      "original": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-exhausted-integrated-01-attempt-02.outer.json",
+        "bytes": 1091,
+        "sha256": "80af897188b767b52c23c09d8de4f37d49c2d8306e1257b17c44d81e351687d2"
+      },
+      "copy": "exact raw bytes"
+    },
+    {
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G1-publication-01/case.json",
+        "bytes": 4137,
+        "sha256": "9e4e2cf885771945bc1428c454dd4269301ca4eb39a372b7a9a5cadadf4deeee"
+      },
+      "original": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-exhausted-integrated-01-attempt-02.json",
+        "bytes": 4137,
+        "sha256": "9e4e2cf885771945bc1428c454dd4269301ca4eb39a372b7a9a5cadadf4deeee"
+      },
+      "copy": "exact raw bytes"
+    },
+    {
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G1-publication-01/selected.log",
+        "bytes": 3034,
+        "sha256": "365d210a9ce59b250c7a2fd04856e8cffff511939f5da08b607e887a1a5e622f"
+      },
+      "original": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-exhausted-integrated-01-attempt-02.log",
+        "bytes": 3034,
+        "sha256": "365d210a9ce59b250c7a2fd04856e8cffff511939f5da08b607e887a1a5e622f"
+      },
+      "copy": "exact raw bytes"
+    },
+    {
+      "published": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G1-publication-01/attempt01-failure-review.json",
+        "bytes": 2838,
+        "sha256": "aa1c3efb12f1c3d58a1241cfcc3356f9d50edd110778b1e27699d467204a4185"
+      },
+      "original": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-exhausted-integrated-01-attempt-01.root-failure-review.json",
+        "bytes": 2838,
+        "sha256": "aa1c3efb12f1c3d58a1241cfcc3356f9d50edd110778b1e27699d467204a4185"
+      },
+      "copy": "exact raw bytes; historical FAIL preserved"
+    }
+  ],
+  "historical_attempt01": "FAILED; source-bound historical prefix inference accepted by root; no recovered ephemeral values",
+  "not_copied": "Private S/O/BKP/R, EXE/PDB/build cache and bulky compiler/full inventory/canonical raw public logs remain local"
+}

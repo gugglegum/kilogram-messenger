@@ -418,14 +418,26 @@ impl Effective {
     }
 }
 pub(super) fn desired_profile(profile: &Profile, config: &Effective) -> Result<Vec<u8>> {
+    desired_profile_with_route(profile, config, None)
+}
+pub(super) fn desired_profile_with_route(
+    profile: &Profile,
+    config: &Effective,
+    route: Option<&serde_json::Value>,
+) -> Result<Vec<u8>> {
     let f = profile.identity.fields(14)?;
     let paths = f[11].fields(3)?;
-    let value = serde_json::json!({"version":3,"profile_mode":"ordered-dialog-indexed",
+    let mut value = serde_json::json!({"version":3,"profile_mode":"ordered-dialog-indexed",
         "account":source::hex(&f[1].fixed::<32>()?),"claim":source::hex(&f[2].fixed::<32>()?),"device":source::hex(&profile.device),
         "source_id":source::hex(&profile.source),"migration_id":source::hex(&profile.mid),"config_revision":config.revision,
         "state_dir":f[10].text()?,"ipc_file":paths[1].text()?,"locator_directory":paths[2].text()?,
         "logical_quota":config.quotas,"physical_capacity":config.physical,"route_policy":"direct-only",
         "enabled_contexts":profile.contexts.iter().map(|(c,_)|source::hex(c)).collect::<Vec<_>>()});
+    // Local transport configuration has no authority over Root7. Preserve it
+    // across a capacity-only CAS; runtime validates its exact RouteConfig2.
+    if let Some(route) = route {
+        value["route"] = route.clone();
+    }
     let mut raw =
         serde_json::to_vec_pretty(&value).map_err(|_| Error::Bound("migration profile JSON"))?;
     raw.push(b'\n');
@@ -509,12 +521,48 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
                 continue;
             }
             let (used, reserved) = covered(&self.root, c)?;
-            let hold = B4.saturating_sub(
+            let mut hold = B4.saturating_sub(
                 used.checked_add(reserved)
                     .ok_or(Error::Bound("covered total"))?,
             );
             let ready = stage == MigrationStage::Ready;
             let e = if ready { 0 } else { REPAIR_POOL };
+            let mut hold_state = 0;
+            let mut release_generation = None;
+            let mut release_q = None;
+            let (mut audit_used, mut audit_reserved) = (used, reserved);
+            if ready {
+                let head_raw = self
+                    .get(head_key(c as u8)?)?
+                    .ok_or(Error::Integrity("budget Head7"))?;
+                let head = codec::read_record(&head_raw, 10, 8192)?;
+                let state = self.existing_head_check7(c as u8, &head)?;
+                if state.mode.selected() {
+                    hold_state = 1;
+                    hold = 0;
+                    release_q = state.q;
+                    let old = self
+                        .get(budget_key(c as u8)?)?
+                        .ok_or(Error::Integrity("release prior budget"))?;
+                    let old = codec::read_record(&old, 6, META_CAP)?;
+                    let f = old.fields(12)?;
+                    if f[4].uint()? == 1 {
+                        audit_used = f[5].uint()?;
+                        audit_reserved = f[6].uint()?;
+                        release_generation = f[10].optional()?.map(Value::uint).transpose()?;
+                        if f[11].optional()?.map(Value::fixed::<32>).transpose()? != release_q {
+                            return Err(Error::Integrity("released budget Q"));
+                        }
+                    } else {
+                        release_generation = Some(
+                            self.root
+                                .generation
+                                .checked_add(1)
+                                .ok_or(Error::Bound("release generation"))?,
+                        );
+                    }
+                }
+            }
             let raw = codec::record(
                 6,
                 &a([
@@ -522,14 +570,14 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
                     b(profile.mid),
                     u(c as u64),
                     u(B4),
-                    u(0),
-                    u(used),
-                    u(reserved),
+                    u(hold_state),
+                    u(audit_used),
+                    u(audit_reserved),
                     u(hold),
                     u(u64::from(ready)),
                     u(e),
-                    a([]),
-                    a([]),
+                    opt(release_generation.map(u)),
+                    opt(release_q.map(b)),
                 ]),
                 META_CAP,
             )?;
@@ -587,6 +635,42 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
             .ok_or(Error::Integrity("missing legacy budget"))?;
         let value = codec::read_record(&raw, 6, META_CAP)?;
         value.fields(12)?;
+        let head_raw = self
+            .get(head_key(c as u8)?)?
+            .ok_or(Error::Integrity("budget Head7"))?;
+        let head = codec::read_record(&head_raw, 10, 8192)?;
+        let state = self.existing_head_check7(c as u8, &head)?;
+        if state.mode.selected() {
+            let f = value.fields(12)?;
+            if stage != MigrationStage::Ready
+                || f[0].uint()? != 7
+                || f[1].fixed::<32>()? != profile.mid
+                || f[2].uint()? != c as u64
+                || f[3].uint()? != B4
+                || f[4].uint()? != 1
+                || f[7].uint()? != 0
+                || f[8].uint()? != 1
+                || f[9].uint()? != 0
+                || !f[10]
+                    .optional()?
+                    .map(Value::uint)
+                    .transpose()?
+                    .is_some_and(|g| g > 0 && g <= self.root.generation)
+                || f[11].optional()?.map(Value::fixed::<32>).transpose()? != state.q
+            {
+                return Err(Error::Integrity("released budget state/mode"));
+            }
+            f[5].uint()?;
+            f[6].uint()?;
+            if self.root.roots[23 + 24 * c].count != 1 {
+                return Err(Error::Integrity("released budget singleton"));
+            }
+            return self.migration_leaf_check(
+                budget_key(c as u8)?,
+                &raw,
+                (META_CAP - raw.len()) as u64,
+            );
+        }
         let (used, reserved) = covered(&self.root, c)?;
         let hold = B4.saturating_sub(
             used.checked_add(reserved)
@@ -690,17 +774,12 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
                 (8192 - head_raw.len()) as u64,
             )?;
             let h = head.fields(9)?;
+            let existing = self.existing_head_check7(c as u8, &head)?;
             if self.root.roots[c * 24 + 21].count != 1
                 || h[0].uint()? != 7
                 || h[1].fixed::<32>()? != profile.source
                 || h[2].fixed::<32>()? != profile.contexts[c].0
                 || h[3].uint()? != u64::from(profile.contexts[c].1)
-                || h[6].uint()? != 1
-                || h[7].optional()?.is_some()
-                || h[8]
-                    .fields(2)?
-                    .iter()
-                    .any(|v| !v.optional().is_ok_and(|n| n.is_none()))
             {
                 return Err(Error::Integrity("Head7 L1/current-purpose shape"));
             }
@@ -732,7 +811,14 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
             }
             if let Some(raw) = raw {
                 if raw.len() > 128 * 1024
-                    || Some(super::copy::raw_hash(b"kg:od1:native-state\0", &raw)) != native
+                    || Some(super::copy::raw_hash(
+                        if existing.mode.selected() {
+                            super::live1::MIXED_NATIVE_ID
+                        } else {
+                            b"kg:od1:native-state\0"
+                        },
+                        &raw,
+                    )) != native
                 {
                     return Err(Error::Integrity("copied original Native1"));
                 }
@@ -741,16 +827,21 @@ impl<N: ReadableTable<&'static [u8], &'static [u8]>, V: ReadableTable<&'static [
             self.migration_budget_check(&profile, c, progress.stage)?;
             {
                 let state = self.root.ledger[c].runtime_state();
-                if state.repair_free != if ready { REPAIR_POOL } else { 0 }
-                    || state.outstanding != 0
-                    || state.grant.is_some()
+                if (!existing.mode.selected()
+                    && (state.repair_free != if ready { REPAIR_POOL } else { 0 }
+                        || state.outstanding != 0
+                        || state.grant.is_some()))
                     || state.pending + u64::from(state.head.is_some())
                         != self.root.roots[c * 24 + 9].count
                 {
                     return Err(Error::Integrity("migration funding and pending ledger"));
                 }
             }
-            self.migration_ticket_check(&profile, c as u8)?;
+            if ready {
+                self.current_pending_check7(&profile, c as u8)?;
+            } else {
+                self.migration_ticket_check(&profile, c as u8)?;
+            }
         }
         let raw = self
             .get(migration_key(profile.mid, 8, b"")?)?

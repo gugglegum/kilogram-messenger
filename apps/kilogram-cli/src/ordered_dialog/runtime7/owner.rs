@@ -8,13 +8,20 @@ use std::{
     collections::BTreeMap,
     sync::{
         Arc,
-        atomic::{AtomicBool, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
     },
     time::{Duration, Instant},
 };
 
 #[derive(Clone)]
 pub(super) struct Lease1 {
+    pub family: u8,
+    pub route: kilogram_transport_iroh::RoutePolicy,
+    pub peer_stage: u8,
+    pub peer_q: Option<Id>,
+    pub peer_cuts: [Option<u64>; 2],
+    pub opportunity_deadline: Option<Instant>,
+    pub high_water: Arc<AtomicU64>,
     pub connection: Connection,
     pub binding: Id,
     pub generation: u64,
@@ -31,16 +38,22 @@ impl Lease1 {
         if !self.valid.load(Ordering::Acquire)
             || self.connection.close_reason().is_some()
             || Instant::now() >= self.deadline
-            || now().map_or(true, |n| n >= self.expires)
+            || now().map_or(true, |n| {
+                n >= self.expires || n < self.high_water.load(Ordering::Acquire)
+            })
         {
             return Err(db::Error::PolicyRejected("closed/expired L1 lease"));
         }
-        if !self
-            .connection
-            .paths()
+        let paths = self.connection.paths();
+        let allowed = paths
             .iter()
-            .any(|p| p.is_selected() && p.is_ip())
-        {
+            .filter(|p| p.is_selected())
+            .any(|p| match self.route {
+                kilogram_transport_iroh::RoutePolicy::DirectOnly => p.is_ip(),
+                kilogram_transport_iroh::RoutePolicy::RelayOnly => p.is_relay(),
+                kilogram_transport_iroh::RoutePolicy::Auto => p.is_ip() || p.is_relay(),
+            });
+        if !allowed {
             return Err(db::Error::PolicyRejected(
                 "L1 requires actual direct IP path",
             ));
@@ -50,6 +63,10 @@ impl Lease1 {
 }
 #[derive(Default, serde::Serialize)]
 pub(super) struct Stats7 {
+    #[cfg(test)]
+    #[serde(skip)]
+    pub worker_head_progress: [Option<(Id, u64)>; 2],
+    pub open_intent_received: u64,
     pub packet_attempts: u64,
     pub committed_encrypt: u64,
     pub committed_decrypt: u64,
@@ -75,11 +92,19 @@ pub(super) struct Owner7 {
     pub enabled: Vec<u8>,
     pub leases: [Option<Lease1>; 2],
     pub endpoint: Option<EndpointAddr>,
+    pub publication_errors: [[Option<String>; 2]; 2],
+    pub origin_error: [Option<String>; 2],
+    pub origin_ready: [bool; 2],
     pub stats: Stats7,
     pub resources: Arc<resources::Resources7>,
     pub window: Arc<window::RefWindow2>,
     pub wake: Arc<tokio::sync::Notify>,
-    pub(super) native_cache: [Option<(Id, PrivateState)>; 2],
+    pub(super) native_cache: [Option<(Id, native::Native7)>; 2],
+    pub route: kilogram_transport_iroh::ordered2::RouteConfig2,
+    pub(super) admissions: [Option<super::admission2::Admission7>; 2],
+    pub(super) next_connection: u64,
+    pub(super) mixed_identity: native::MixedIdentity7,
+    pub(super) high_water: [Arc<AtomicU64>; 2],
     current_cache: [Option<(u64, u64, u64)>; 2],
     // At most the three already pinned accounts; public snapshots only.
     // Failed persistence cannot revive permission from an older durable pin.
@@ -158,6 +183,12 @@ impl Owner7 {
             repository.initialize(accounts, pins.into_values().collect())?;
         }
         for c in 0..specs.len() {
+            let mode = repository.existing_state(c as u8)?.mode;
+            ensure!(
+                mode == store::ExistingMode::L1
+                    || repository.metadata(c as u8)?.request_index_ready,
+                "transition requires the saved complete request index"
+            );
             while !repository.metadata(c as u8)?.request_index_ready {
                 repository.commit(
                     store::L1Operation::PrepareRequests { context: c as u8 },
@@ -171,14 +202,26 @@ impl Owner7 {
                     .control(c as u8, store::L1Control::Ready(1))?
                     .is_some()
             {
-                repository.commit(
-                    store::L1Operation::InitializeHistory { context: c as u8 },
-                    None,
-                )?;
+                if !repository.history_initialized(c as u8)? {
+                    ensure!(
+                        mode == store::ExistingMode::L1,
+                        "transition history identity absent"
+                    );
+                    repository.commit(
+                        store::L1Operation::InitializeHistory { context: c as u8 },
+                        None,
+                    )?;
+                }
+            } else {
+                ensure!(
+                    mode == store::ExistingMode::L1,
+                    "transition requires both original Ready1"
+                );
             }
         }
         let window = window::RefWindow2::new(&enabled);
-        Ok(Self {
+        let source = repository.source_id();
+        let mut owner = Self {
             repository: Some(repository),
             failed_lock: None,
             device,
@@ -188,14 +231,38 @@ impl Owner7 {
             enabled,
             leases: [None, None],
             endpoint: None,
+            publication_errors: std::array::from_fn(|_| [None, None]),
+            origin_error: [None, None],
+            origin_ready: [false, false],
             stats: Stats7::default(),
             resources: Arc::new(resources::Resources7::default()),
             window,
             wake: Arc::new(tokio::sync::Notify::new()),
             native_cache: [None, None],
+            route: kilogram_transport_iroh::ordered2::RouteConfig2 {
+                policy: kilogram_transport_iroh::RoutePolicy::DirectOnly,
+                bind: Some("127.0.0.1:0".parse()?),
+                relay: None,
+            },
+            admissions: [None, None],
+            next_connection: 1,
+            mixed_identity: native::MixedIdentity7 {
+                incarnation: material.incarnation,
+                claim: material.nonce,
+                source,
+            },
+            high_water: std::array::from_fn(|_| Arc::new(AtomicU64::new(0))),
             current_cache: [None, None],
             pending_authorities: BTreeMap::new(),
-        })
+        };
+        owner.sync_high_water()?;
+        for c in 0..owner.specs.len() {
+            let mode = owner.repo()?.existing_state(c as u8)?.mode;
+            if mode != store::ExistingMode::L1 {
+                owner.existing(c as u8, |controls| controls.validate_saved(c as u8))?;
+            }
+        }
+        Ok(owner)
     }
     pub fn slot(&self, c: Id) -> Result<u8> {
         Ok(self
@@ -212,6 +279,40 @@ impl Owner7 {
     pub fn role(&self, c: u8) -> Result<u64> {
         self.spec(c)?.role(self.device.identity().device_id())
     }
+    /// The one writer owns existing controls as well as L1. Invalidate socket
+    /// tokens before returning from a durable freeze/policy change, including an
+    /// ambiguous write; asynchronous tasks cannot publish on the old L1 lease.
+    pub fn existing<T>(
+        &mut self,
+        c: u8,
+        action: impl FnOnce(&mut control::ExistingControls7<'_>) -> Result<T>,
+    ) -> Result<T> {
+        self.authorities_persisted(c)?;
+        let policy = self.repo()?.metadata(c)?.policy_generation;
+        let result = {
+            let repository = self.repository.as_mut().context("owner recovery failed")?;
+            action(&mut control::ExistingControls7::new(
+                repository,
+                &self.device,
+            )?)
+        };
+        if self.repo()?.requires_reopen() {
+            for slot in 0..self.specs.len() {
+                self.invalidate(slot as u8);
+            }
+        } else if self.repo()?.metadata(c)?.policy_generation != policy
+            || !self.repo()?.existing_state(c)?.mode.allows_l1_transport()
+                && self.leases[usize::from(c)]
+                    .as_ref()
+                    .is_some_and(|lease| lease.family == 1)
+        {
+            self.invalidate(c);
+        }
+        if !self.repo()?.requires_reopen() {
+            self.sync_high_water()?;
+        }
+        result
+    }
     pub fn head(&mut self, c: u8) -> Result<Head> {
         let role = self.role(c)?;
         let cert = self.spec(c)?.peers[role as usize].cert_ref()?;
@@ -224,17 +325,29 @@ impl Owner7 {
             .context("required indexed L1 control")
     }
     pub fn active(&mut self, c: u8) -> Result<bool> {
-        Ok(self.head(c)?.phase == 3
-            && self
-                .repo()?
-                .control(c, store::L1Control::Ready(0))?
-                .is_some()
-            && self
-                .repo()?
-                .control(c, store::L1Control::Ready(1))?
-                .is_some())
+        Ok(
+            self.repo()?.existing_state(c)?.mode == store::ExistingMode::L1
+                && self.head(c)?.phase == 3
+                && self
+                    .repo()?
+                    .control(c, store::L1Control::Ready(0))?
+                    .is_some()
+                && self
+                    .repo()?
+                    .control(c, store::L1Control::Ready(1))?
+                    .is_some(),
+        )
     }
     pub fn current(&mut self, c: u8) -> Result<u64> {
+        if !self.repo()?.existing_state(c)?.mode.allows_l1_transport() {
+            if self.leases[usize::from(c)]
+                .as_ref()
+                .is_some_and(|lease| lease.family == 1)
+            {
+                self.invalidate(c);
+            }
+            anyhow::bail!("ALPN1 forbidden after durable Propose/Prepared");
+        }
         self.authorities_persisted(c)?;
         ensure!(
             self.repo()?
@@ -278,6 +391,39 @@ impl Owner7 {
         self.current_cache[usize::from(c)] = Some((meta.policy_generation, not_before, expires));
         Ok(expires)
     }
+    pub fn current_existing(&mut self, c: u8) -> Result<u64> {
+        self.authorities_persisted(c)?;
+        self.existing(c, |controls| controls.current_permission(c))
+    }
+    pub fn data_permission(&mut self, c: u8) -> Result<u64> {
+        if self.repo()?.existing_state(c)?.mode != store::ExistingMode::L1
+            || self.leases[usize::from(c)]
+                .as_ref()
+                .is_some_and(|l| l.family == 2)
+        {
+            self.current_existing(c)
+        } else {
+            self.current(c)
+        }
+    }
+    pub fn data_ready(&mut self, c: u8) -> Result<bool> {
+        Ok(self.head(c)?.phase == 3
+            && self
+                .repo()?
+                .control(c, store::L1Control::Ready(0))?
+                .is_some()
+            && self
+                .repo()?
+                .control(c, store::L1Control::Ready(1))?
+                .is_some())
+    }
+    pub(super) fn sync_high_water(&mut self) -> Result<()> {
+        for c in 0..self.specs.len() {
+            let floor = self.repo()?.metadata(c as u8)?.wall_high_water;
+            self.high_water[c].fetch_max(floor, Ordering::AcqRel);
+        }
+        Ok(())
+    }
     fn authorities_persisted(&self, c: u8) -> Result<()> {
         ensure!(
             !self.spec(c)?.peers.iter().any(|p| self
@@ -295,6 +441,11 @@ impl Owner7 {
         Credentials::new(cert, authority)
     }
     pub fn invalidate(&mut self, c: u8) {
+        if let Some(pending) = self.admissions[usize::from(c)].take() {
+            pending
+                .connection
+                .close(0_u32.into(), b"existing admission invalidated");
+        }
         if let Some(lease) = self.leases[usize::from(c)].take() {
             lease.valid.store(false, Ordering::Release);
             lease.connection.close(0_u32.into(), b"L1 policy changed");
@@ -356,6 +507,7 @@ impl Owner7 {
             None,
         )?;
         self.pending_authorities.remove(&account);
+        self.sync_high_water()?;
         self.wake.notify_waiters();
         Ok(())
     }
@@ -478,6 +630,12 @@ impl Owner7 {
         Ok(descriptor.raw)
     }
     pub fn check_lease(&mut self, c: u8, binding: Id) -> Result<Lease1> {
+        if self.leases[usize::from(c)]
+            .as_ref()
+            .is_some_and(|l| l.family == 2)
+        {
+            return self.check_existing_lease(c, binding);
+        }
         self.current(c)?;
         let meta = self.repo()?.metadata(c)?;
         let lease = self.leases[usize::from(c)]
@@ -498,6 +656,22 @@ impl Owner7 {
         );
         Ok(lease)
     }
+    pub(super) fn native1_materialize_gate(&mut self, c: u8, binding: Id) -> Result<Lease1> {
+        ensure!(
+            self.repo()?.existing_state(c)?.mode == store::ExistingMode::L1,
+            "Native1 materialization frozen"
+        );
+        ensure!(
+            self.leases[usize::from(c)]
+                .as_ref()
+                .is_some_and(|lease| lease.family == 1),
+            "Native1 materialization requires its L1 lease"
+        );
+        self.current(c)?;
+        let lease = self.check_lease(c, binding)?;
+        ensure!(lease.family == 1, "Native1 permission family");
+        Ok(lease)
+    }
     pub fn admit(
         &mut self,
         c: u8,
@@ -512,6 +686,13 @@ impl Owner7 {
             .min(self.descriptor(c, true)?.expires)
             .min(self.descriptor(c, false)?.expires);
         let lease = Lease1 {
+            family: 1,
+            route: kilogram_transport_iroh::RoutePolicy::DirectOnly,
+            peer_stage: 1,
+            peer_q: None,
+            peer_cuts: [None, None],
+            opportunity_deadline: None,
+            high_water: self.high_water[usize::from(c)].clone(),
             connection,
             binding,
             generation,
@@ -532,8 +713,12 @@ impl Owner7 {
         Ok(lease)
     }
     pub fn native(&mut self, c: u8, head: &Head) -> Result<PrivateState> {
+        ensure!(
+            !self.repo()?.existing_state(c)?.mode.selected(),
+            "Legacy7 open after selection forbidden"
+        );
         let hash = head.blob.context("private state absent")?;
-        if let Some((saved, native)) = &self.native_cache[usize::from(c)]
+        if let Some((saved, native::Native7::Legacy(native))) = &self.native_cache[usize::from(c)]
             && *saved == hash
         {
             return Ok(native.fork());
@@ -573,7 +758,7 @@ impl Owner7 {
             );
         }
         let trial = private.fork();
-        self.native_cache[usize::from(c)] = Some((hash, private));
+        self.native_cache[usize::from(c)] = Some((hash, native::Native7::Legacy(private)));
         Ok(trial)
     }
     pub fn commit(
@@ -582,7 +767,55 @@ impl Owner7 {
         binding: Id,
         op: store::L1Operation,
     ) -> Result<db::CommitReport> {
-        let lease = self.check_lease(c, binding)?;
+        let lease = if matches!(&op, store::L1Operation::Materialize { .. }) {
+            self.native1_materialize_gate(c, binding)?
+        } else {
+            self.check_lease(c, binding)?
+        };
+        if lease.family == 2 {
+            let data = match op {
+                store::L1Operation::Drain { change, rows } => {
+                    store::ExistingData7::Readable { change, rows }
+                }
+                store::L1Operation::Pending {
+                    author,
+                    raw,
+                    original,
+                    admission,
+                    head,
+                    ..
+                } => store::ExistingData7::Pending {
+                    author,
+                    raw,
+                    original,
+                    admission,
+                    head,
+                    grant: None,
+                },
+                store::L1Operation::Quarantine { ordinal, .. } => {
+                    store::ExistingData7::Quarantine { ordinal }
+                }
+                store::L1Operation::Acknowledge {
+                    event,
+                    receipt,
+                    receiver,
+                    ..
+                } => store::ExistingData7::Acknowledge {
+                    event,
+                    receipt,
+                    receiver,
+                },
+                store::L1Operation::AckProgress { next, .. } => {
+                    store::ExistingData7::AckProgress { next }
+                }
+                store::L1Operation::ObserveHead { next, last, .. } => {
+                    store::ExistingData7::ObserveHead { next, last }
+                }
+                store::L1Operation::Block { proof, .. } => store::ExistingData7::Block { proof },
+                _ => anyhow::bail!("ALPN2 rejects L1 bootstrap/administrative purpose"),
+            };
+            return self.commit_data2(c, Some(binding), data);
+        }
         let native = matches!(
             &op,
             store::L1Operation::Materialize { .. } | store::L1Operation::Drain { .. }
@@ -602,6 +835,7 @@ impl Owner7 {
         let result = self.repo()?.commit(op, Some(&mut gate));
         match result {
             Ok(report) => {
+                self.sync_high_water()?;
                 if native {
                     super::super::test_support::checkpoint("l1-after-native-commit")?;
                 }
@@ -650,6 +884,11 @@ impl Owner7 {
                         self.pending_authorities.remove(&id);
                     }
                 }
+                for c in 0..self.specs.len() {
+                    if self.repo()?.existing_state(c as u8)?.mode.selected() {
+                        self.existing(c as u8, |controls| controls.validate_mixed(c as u8))?;
+                    }
+                }
                 self.stats.reopens += 1;
                 Ok(())
             }
@@ -669,6 +908,13 @@ impl Owner7 {
         let plan = self
             .repo()?
             .prepare_capacity(expected, revision, hash, candidate)?;
+        if let Some(value) = plan.profile_route()
+            && !value.is_null()
+        {
+            let route: kilogram_transport_iroh::ordered2::RouteConfig2 =
+                serde_json::from_value(value.clone())?;
+            route.effective()?;
+        }
         let repository = self
             .repository
             .take()
@@ -709,7 +955,7 @@ impl Owner7 {
     }
     pub fn retain_native(&mut self, c: u8, head: &Head, private: PrivateState) {
         if let Some(hash) = head.blob {
-            self.native_cache[usize::from(c)] = Some((hash, private));
+            self.native_cache[usize::from(c)] = Some((hash, native::Native7::Legacy(private)));
         }
     }
     pub fn event_at(&mut self, c: u8, role: u64, n: u64) -> Result<Option<Event>> {

@@ -1,0 +1,61 @@
+{
+  "classification": "root observed failed G1 actual return; not predecessor success or G1 acceptance",
+  "case": "F-s53-exhausted-integrated-01",
+  "attempt": "F-s53-exhausted-integrated-01-attempt-01",
+  "actual_command": {
+    "id": "exec-b07536e1-09cd-4c70-803f-1d4a9d436064",
+    "status": "failed",
+    "exit_code": 1,
+    "duration_ms": 162198
+  },
+  "outer": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-exhausted-integrated-01-attempt-01.outer.json",
+    "bytes": 1108,
+    "sha256": "35ac73b6b71cb7dc541883586dd34f1ccd77a150881fea5f36311cca565e8b2b"
+  },
+  "case_record": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-exhausted-integrated-01-attempt-01.json",
+    "bytes": 4138,
+    "sha256": "37ca0018efaebb27863d310a8b14d60f5e4ceffc8f4ca9124533d4e68bbfe47a"
+  },
+  "handoff": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-exhausted-integrated-01-attempt-01.handoff.json",
+    "bytes": 20566,
+    "sha256": "f9eb64e0ddac9eaa6b233b52979465d573c36d71fe6c22441c06ee84e1d465c8"
+  },
+  "diagnosis": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-exhausted-integrated-01-attempt-01.diagnosis.json",
+    "bytes": 13090,
+    "sha256": "155b39afe098ad49271b22a74e819aefedf2af6b786de7f74c44f73c626d910b"
+  },
+  "public_files_manifest": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-exhausted-integrated-01-attempt-01.public-command-files.json",
+    "bytes": 509647,
+    "sha256": "aea46b7e73c8c44163945ae576fd0ae8079498a1fcae38c16e18288e137c24c3"
+  },
+  "root_verification_command": "b30c88",
+  "public_files_verified": 2243,
+  "bound_inputs_verified": 1012,
+  "images_verified": 9,
+  "full_inventory_guards_pass": true,
+  "owned_children_after": 0,
+  "charge": {
+    "set": "F",
+    "seconds": 161.6326487,
+    "basis": "independent outer elapsed confirmed by later native final-return read; existing accounting convention, not allocated600; nested times not summed",
+    "case_lower_bound_seconds": 160.4663547,
+    "test_seconds": 136.26,
+    "native_envelope_seconds": 162.198
+  },
+  "ledger_after": {
+    "S53_C": 5854.6661857,
+    "S53_F": 2042.7977115,
+    "combined_C": 6442.1147966,
+    "combined_F": 6759.1178604,
+    "P": 0
+  },
+  "failure": "test observer assumes delivered request loses queue sequence; actual native materialization preserves Some(queue) after removing Queue",
+  "partial_state": "S observed Active sameQ, cuts512/18,next513/18,531sources; A600 id36c4b673903a55449df7e4dfc28d4de8d36bc0299b2ef4814dd4a91dd835f800 delivered status with retained queue1564. B601 not sent; final cryptographic/history/restart checks not reached.",
+  "original_attempt_preserved": true,
+  "product_failure_established": false
+}

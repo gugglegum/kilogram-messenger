@@ -146,7 +146,7 @@ impl ParsedFrame2 {
             &signing_bytes(Self::tag(self.body.kind), &self.unsigned(), MAX_WIRE - 4)?,
             &self.sig,
         )?;
-        Ok(VerifiedFrame2(self))
+        Ok(VerifiedFrame2(self, signer))
     }
     pub fn binding(&self) -> Id {
         self.binding
@@ -161,8 +161,11 @@ impl ParsedFrame2 {
         &self.raw
     }
 }
-pub struct VerifiedFrame2(ParsedFrame2);
+pub struct VerifiedFrame2(ParsedFrame2, DeviceId);
 impl VerifiedFrame2 {
+    pub fn signer(&self) -> DeviceId {
+        self.1
+    }
     pub fn frame(&self) -> &ParsedFrame2 {
         &self.0
     }

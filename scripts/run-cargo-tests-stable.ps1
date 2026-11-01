@@ -12,11 +12,29 @@ param(
     [switch]$Run,
     [switch]$NoFailFast,
     [switch]$NoCapture,
-    [string[]]$SkipTest = @()
+    [switch]$SkipCacheStatus,
+    [string[]]$SkipTest = @(),
+    [string]$ExpectedArtifactsManifest,
+    [string]$ExpectedArtifactsSha256,
+    [string]$BuildEvidencePath,
+    [string]$CargoTarget,
+    [string]$StableArtifactsDirectory
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+function Complete-CacheStatus {
+    if ($SkipCacheStatus) {
+        Write-Host 'cache_status=skipped_explicitly'
+        return
+    }
+    & powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'cargo-cache-maintenance.ps1')
+    $cacheStatusExit = $LASTEXITCODE
+    if ($cacheStatusExit -ne 0) {
+        throw "Cargo cache status check failed with exit code $cacheStatusExit."
+    }
+}
 
 . (Join-Path $PSScriptRoot 'cargo-resource-policy.ps1')
 $cargoJobsResolved = Set-KilogramCargoResourcePolicy -RequestedJobs $CargoJobs
@@ -33,6 +51,19 @@ if ($NormalProcessPriority) {
 
 $workspaceRoot = Split-Path -Parent $PSScriptRoot
 $manifestPath = Join-Path $workspaceRoot 'Cargo.toml'
+$frozenOptIn = -not [string]::IsNullOrWhiteSpace($BuildEvidencePath) -or -not [string]::IsNullOrWhiteSpace($ExpectedArtifactsManifest)
+$frozenExpected = $null
+if ($frozenOptIn) {
+    . (Join-Path $PSScriptRoot 'cargo-frozen-artifacts.ps1')
+    if ([string]::IsNullOrWhiteSpace($BuildEvidencePath) -or -not [IO.Path]::IsPathRooted($BuildEvidencePath) -or (Test-Path -LiteralPath $BuildEvidencePath)) { throw 'New absolute build evidence path required.' }
+    $requiredStable = [IO.Path]::GetFullPath((Join-Path $workspaceRoot 'target/verification-scale/deps'))
+    if ([IO.Path]::GetFullPath($StableArtifactsDirectory) -cne $requiredStable) { throw 'Frozen scale stable directory mismatch.' }
+    if ($Run -and [string]::IsNullOrWhiteSpace($ExpectedArtifactsManifest)) { throw 'Run capture requires an independently frozen expected manifest.' }
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedArtifactsManifest)) { $frozenExpected = Read-KilogramFrozenManifest $ExpectedArtifactsManifest $ExpectedArtifactsSha256 }
+    elseif (-not [string]::IsNullOrWhiteSpace($ExpectedArtifactsSha256)) { throw 'Expected manifest/hash must be paired.' }
+    $frozenBefore = Get-KilogramFrozenBuildInputs -Workspace $workspaceRoot -Profile $Profile -Target $CargoTarget -Package $Package -CargoFeatures $CargoFeatures
+    if ($frozenExpected) { Assert-KilogramFrozenInputs $frozenExpected.build_inputs $frozenBefore }
+} elseif ($CargoTarget -or $StableArtifactsDirectory -or $ExpectedArtifactsSha256) { throw 'Frozen build options require explicit evidence/manifest opt-in.' }
 $metadataOutput = & cargo metadata --manifest-path $manifestPath --locked --no-deps --format-version 1
 if ($LASTEXITCODE -ne 0) {
     throw "cargo metadata failed with exit code $LASTEXITCODE"
@@ -52,6 +83,7 @@ $cargoArguments = @(
     '--no-run'
     '--message-format=json-render-diagnostics'
 )
+if ($frozenOptIn) { $cargoArguments += @('--offline', '--target', $CargoTarget) }
 if ($CargoFeatures.Count -gt 0) {
     if ($CargoFeatures | Where-Object { [string]::IsNullOrWhiteSpace($_) }) {
         throw 'Cargo feature names must not be empty.'
@@ -120,6 +152,10 @@ foreach ($entry in $artifactsByExecutable.GetEnumerator()) {
     $stableStem = "$packageName-$targetKind-$targetName-tests"
     $stableStem = $stableStem -replace '[^A-Za-z0-9._-]', '-'
     $stablePath = Join-Path ([System.IO.Path]::GetDirectoryName($sourcePath)) "$stableStem.exe"
+    if ($frozenOptIn) {
+        [void][IO.Directory]::CreateDirectory($StableArtifactsDirectory)
+        $stablePath = Join-Path $StableArtifactsDirectory "$stableStem.exe"
+    }
 
     Copy-Item -LiteralPath $sourcePath -Destination $stablePath -Force
     $stableArtifacts += [PSCustomObject]@{
@@ -131,6 +167,28 @@ foreach ($entry in $artifactsByExecutable.GetEnumerator()) {
 }
 
 $stableArtifacts = @($stableArtifacts | Sort-Object Package, Kind, Target, Path -Unique)
+# This guard precedes BOTH the compile-only return and every --list/Run branch.
+# -Run compiles/stages again, so validating only in its caller is insufficient.
+if ($frozenOptIn) {
+    $frozenUnits = @(Get-KilogramCompilerUnits -Lines $cargoOutput -Workspace $workspaceRoot -Target $CargoTarget -Profile $Profile -PackageNames $frozenBefore.package_names)
+    $frozenAfter = Get-KilogramFrozenBuildInputs -Workspace $workspaceRoot -Profile $Profile -Target $CargoTarget -Package $Package -CargoFeatures $CargoFeatures
+    Assert-KilogramFrozenInputs $frozenBefore $frozenAfter
+    $frozenRows = @(Get-KilogramFrozenStableRows $stableArtifacts $Profile)
+    if ($frozenRows.Count -ne 6) { throw 'Frozen staging requires exactly six artifacts.' }
+    if ($frozenExpected) {
+        Assert-KilogramFrozenInputs $frozenExpected.build_inputs $frozenAfter
+        Assert-KilogramFrozenArtifacts $frozenExpected $frozenRows $Profile $CargoTarget $StableArtifactsDirectory
+        Assert-KilogramFrozenInputs $frozenExpected.units_identity (Get-KilogramFrozenUnitIdentity $frozenUnits)
+    }
+    Write-KilogramFrozenJson $BuildEvidencePath ([ordered]@{
+        classification='nonexecuting-compiler-artifact-provenance'; profile=$Profile; target=$CargoTarget
+        expected_manifest_sha256=if($frozenExpected){$ExpectedArtifactsSha256}else{$null}
+        build_inputs_before=$frozenBefore;build_inputs_after=$frozenAfter; units=$frozenUnits
+        raw_compiler_artifact_json=@($cargoOutput|Where-Object {$_ -match '^\s*\{"reason":"compiler-artifact"'})
+        stable_artifacts=$frozenRows;frozen_guard_verified=($null -ne $frozenExpected)
+    })
+    Write-Host "frozen_artifacts_verified=$($null -ne $frozenExpected)"
+}
 foreach ($artifact in $stableArtifacts) {
     Write-Host "stable_test_executable=$($artifact.Path)"
 }
@@ -206,13 +264,10 @@ if (-not [string]::IsNullOrWhiteSpace($IsolatedTestsFile)) {
 }
 
 if (-not $Run) {
+    Complete-CacheStatus
     Write-Host "test_profile=$Profile"
     Write-Host 'status=compiled-only'
     Write-Host 'No test executable was started. Pass -Run explicitly when it is safe to run tests.'
-    & powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'cargo-cache-maintenance.ps1')
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Cargo cache status check failed.'
-    }
     exit 0
 }
 
@@ -295,9 +350,6 @@ if ($failedArtifacts.Count -ne 0) {
     throw "One or more stable test executables failed: $($failedArtifacts -join ', ')"
 }
 
+Complete-CacheStatus
 Write-Host 'status=passed'
 Write-Host "isolated_test_count=$($isolatedTests.Count)"
-& powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'cargo-cache-maintenance.ps1')
-if ($LASTEXITCODE -ne 0) {
-    throw 'Cargo cache status check failed.'
-}

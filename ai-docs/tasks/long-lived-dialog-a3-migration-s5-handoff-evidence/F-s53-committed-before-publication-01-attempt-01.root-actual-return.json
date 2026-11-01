@@ -1,0 +1,97 @@
+{
+  "classification": "root-owned-actual-predecessor-proof-r2",
+  "producer_thread_id": "01a164ec-589c-7b41-bc34-3ba158d1f22b",
+  "producer_contract_sha256": "a27c857d21fc62d4900509a76f3b9bf0c0cc5d92e100e95905cb158cd750c232",
+  "observed_after_final_return": true,
+  "case": "F-s53-committed-before-publication-01",
+  "attempt": "F-s53-committed-before-publication-01-attempt-01",
+  "binding_sha256": "e1b44a8621362486ab824426f7f4fa719600aa5ef21e1dfe62afdfc5104a6dab",
+  "activation_sha256": "b87d3eee9f3bcda115c1bf21f33caeb36553daa17ea1496af2448b72c32bbf51",
+  "actual_outer_seconds": 101.6072904,
+  "actual_outer_exit_code": 0,
+  "whole_exit_code": 0,
+  "actual_final_chunk": "29b85c",
+  "inspection_source": "Root read_thread of executor 01a1653c-0154-7611-8e8c-044fbe1e4d7a, completed turn 01a1876b-befb-76b1-9c0d-39dcee512795, actual native item exec-2c33f14d-c413-403d-9cc8-a414e4373397 (exit0,101.606s,complete command/output), inspected after final return. Ten original raw tool-return chunks and receive stamps retained; per-poll item_id is the real return chunk_id, not an invented app item. Root independent checks e37c17(integrity),0171b4(semantics),a1a146(marker/profile/compiler classes),dcf0a0(cleanup). Actual executor turn/idle state confirmed on resume; no runtime replay.",
+  "artifacts": {
+    "case_record": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-committed-before-publication-01-attempt-01.json",
+      "bytes": 4165,
+      "sha256": "2ca80044e625f20535da3b0b5bf5a89e8f76536909df08fbe2e02272743b7351"
+    },
+    "outer_record": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-committed-before-publication-01-attempt-01.outer.json",
+      "bytes": 1108,
+      "sha256": "234c1b61d8303824cf9b9da6ff4765e5e5d060a1213a122398f911f746e92c90"
+    },
+    "input_inventory": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-committed-before-publication-01-attempt-01.inputs.json",
+      "bytes": 1610610,
+      "sha256": "47358f4ca13a548a2f8a331898d3e26fb5d473495f37b8175d1cde85be0470ba"
+    },
+    "binding": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/S5.3-integration-binding-r30.json",
+      "bytes": 1658912,
+      "sha256": "e1b44a8621362486ab824426f7f4fa719600aa5ef21e1dfe62afdfc5104a6dab"
+    },
+    "activation": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/S5.3-integrated-r30-committed-before-publication-01.activation.json",
+      "bytes": 3988,
+      "sha256": "b87d3eee9f3bcda115c1bf21f33caeb36553daa17ea1496af2448b72c32bbf51"
+    },
+    "log": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-committed-before-publication-01-attempt-01.log",
+      "bytes": 3028,
+      "sha256": "285e11bf6c02613552f8c62fbb89185abc852b6db3f0f060e1c6017c8f7b357b"
+    },
+    "assertions": {
+      "path": ".tmp/migration-s53-integrated/F-s53-committed-before-publication-01-attempt-01/assertions.json",
+      "bytes": 203083,
+      "sha256": "eebc8c4fcaa497a67654468af9bd5847b57689fe7e2dccb029f2e87a0b4e35d4"
+    },
+    "actual_invocation": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-committed-before-publication-01-attempt-01.native-call-arguments.json",
+      "bytes": 1737,
+      "sha256": "2f73f18c91c76e234cbece7a3f1c31ea0d2b761faffcbb1695e73071e5d2d2e2"
+    },
+    "actual_native": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-committed-before-publication-01-attempt-01.app-native-return.json",
+      "bytes": 1513,
+      "sha256": "a3e0f71f097fcc3996bd20df2bce673304d72c99abf40048805931d9aca16986"
+    },
+    "raw_final_executor_return": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-committed-before-publication-01-attempt-01.tool-wait-09-return.json",
+      "bytes": 321,
+      "sha256": "5e67c6bb9b341c1eeb6180bcab47a4379fabb9beafe85b174a44329756447a1f"
+    },
+    "inventory_admission": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-committed-before-publication-01-attempt-01.inventory-admission.json",
+      "bytes": 1895,
+      "sha256": "7654964fc5f86e475a2d4218aaf0269177784f84e0758694f72371c44a71ced0"
+    },
+    "runtime_readiness": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-runtime-readiness-r30.md",
+      "bytes": 19182,
+      "sha256": "d04a280e9ba12a75926d272e34564009e1944459ecb6bdc69d2f817ddb483006"
+    },
+    "raw_history": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-committed-before-publication-01-attempt-01.tool-history.json",
+      "bytes": 10760,
+      "sha256": "89acd8791f3fc73fcc0cdb84378f5b6b6fc128de8a232ded40ab0325cd6ad517"
+    },
+    "raw_final_return": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-committed-before-publication-01-attempt-01.final-tool-return.json",
+      "bytes": 321,
+      "sha256": "5e67c6bb9b341c1eeb6180bcab47a4379fabb9beafe85b174a44329756447a1f"
+    },
+    "root_verification": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-committed-before-publication-01-attempt-01.root-success-verification.json",
+      "bytes": 16401,
+      "sha256": "7523951668d94ad0eeb1f4bb8ada94b5fe9846a1831f902365e7c96af932334d"
+    },
+    "root_charge": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-committed-before-publication-01-attempt-01.root-actual-charge.json",
+      "bytes": 1224,
+      "sha256": "8708c95f7d14cf7ebf232862664dbd2cb932018c339e9b3fd81ae1a10bad39c4"
+    }
+  }
+}

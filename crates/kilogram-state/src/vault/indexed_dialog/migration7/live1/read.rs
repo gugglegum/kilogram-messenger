@@ -104,19 +104,26 @@ impl L1Repository {
             .ok_or(Error::Integrity("Head7"))?;
         let value = codec::read_record(&raw, 10, 8192)?;
         let f = value.fields(9)?;
-        if f[6].uint()? != 1
-            || f[7].optional()?.is_some()
-            || f[8]
-                .fields(2)?
-                .iter()
-                .any(|v| !v.optional().is_ok_and(|o| o.is_none()))
+        let existing = self.existing_state(c)?;
+        if f[6].uint()? != existing.mode.wire()
+            || f[7].optional()?.map(Value::fixed::<32>).transpose()? != existing.q
+            || f[8] != a(existing.cuts.map(|n| opt(n.map(u))))
         {
             return Err(Error::UnsupportedRuntimeProfile);
         }
         let head = f[4].bytes()?.to_vec();
         let native = self.core.get(Key::hash(c, Namespace::Native, [0; 32])?)?;
         if f[5].optional()?.map(Value::fixed::<32>).transpose()?
-            != native.as_ref().map(|n| hash(b"kg:od1:native-state\0", n))
+            != native.as_ref().map(|n| {
+                hash(
+                    if existing.mode.selected() {
+                        MIXED_NATIVE_ID
+                    } else {
+                        b"kg:od1:native-state\0"
+                    },
+                    n,
+                )
+            })
         {
             return Err(Error::Integrity("current Native pointer"));
         }
@@ -270,20 +277,34 @@ impl L1Repository {
     /// One immutable full-L1 witness plus the separate actual receipt overlay.
     /// Imported snapshots deliberately do not become full-L1 proof objects.
     pub fn full_l1_proof(&mut self, c: u8, id: Id) -> Result<Option<L1ProofRefs>> {
+        let source = self
+            .event(c, id)?
+            .ok_or(Error::Integrity("proof source absent"))?;
+        if data_event7(&source)?.format != 1 {
+            return Err(Error::Integrity("L1 proof requested for Event2"));
+        }
+        self.data_proof(c, id)
+    }
+    pub fn data_proof(&mut self, c: u8, id: Id) -> Result<Option<L1ProofRefs>> {
         let context = self.occupied(c)?;
         let source = self
             .event(c, id)?
             .ok_or(Error::Integrity("proof source absent"))?;
-        let event = super::super::copy::event_fields(&source)?;
+        let event = data_event7(&source)?;
         if event.c != context || event.id != id {
             return Err(Error::Integrity("proof source scope"));
         }
-        let event_value = codec::decode(&source, 16 * 1024)?;
-        let event_core = event_value.fields(5)?[1].fields(14)?;
         let key = Key::hash(
             c,
             Namespace::Control,
-            hash(b"kg:od1:full-L1-proof/v7\0", &id),
+            hash(
+                if event.format == 1 {
+                    b"kg:od1:full-L1-proof/v7\0"
+                } else {
+                    b"kg:od2:full-mixed-proof/v7\0"
+                },
+                &id,
+            ),
         )?;
         let Some(raw) = self.core.get(key)? else {
             if event.kind == 3 {
@@ -295,7 +316,7 @@ impl L1Repository {
             }
             return Ok(None);
         };
-        let value = codec::read_record(&raw, 41, 4096)?;
+        let value = codec::read_record(&raw, if event.format == 1 { 41 } else { 42 }, 4096)?;
         let f = value.fields(11)?;
         if event.c != context
             || event.id != id
@@ -347,18 +368,15 @@ impl L1Repository {
             }
         }
         if let Some(receipt) = self.receipt(c, event.role, event.n)? {
-            let value = codec::decode(&receipt, 1024)?;
-            let r = value.fields(2)?[0].fields(8)?;
-            if r[0].uint()? != 1
-                || r[1] != event_core[2]
-                || r[2] != event_core[3]
-                || r[3].uint()? != u64::from(event.role)
-                || r[4].uint()? != event.n
-                || r[5].fixed::<32>()? != id
-            {
-                return Err(Error::Integrity("proof receipt scope"));
-            }
-            let receiver = r[7].fixed::<32>()?;
+            let q = self.existing_state(c)?.q;
+            let spec = codec::decode(&self.spec(c)?, 96 * 1024)?;
+            let s = spec.fields(6)?;
+            let cert_ref = |credential: &Value| -> Result<Id> {
+                let value = codec::decode(credential.bytes()?, 16 * 1024)?;
+                Ok(hash(b"", value.fields(3)?[1].bytes()?))
+            };
+            let receiver =
+                super::mixed::receipt7(&receipt, &source, q, [cert_ref(&s[2])?, cert_ref(&s[3])?])?;
             let raw = self
                 .auth(c, receiver)?
                 .ok_or(Error::Integrity("receipt capture absent"))?;

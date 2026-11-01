@@ -18,6 +18,28 @@ use kilogram_state::{
 };
 use std::path::Path;
 
+/// Only the owner calls this with current authenticated indexed readable rows
+/// and the current Head-bound Guard1. This never reopens the migration source.
+pub(super) fn fold_current_legacy(
+    guard: &super::ratchet::Guard,
+    lanes: &[Vec<kilogram_protocol::ordered_dialog_v1::Event>; 2],
+) -> Result<kilogram_ratchet::ordered_v2::ImportedL1> {
+    let metas = lanes.each_ref().map(|events| {
+        events
+            .iter()
+            .map(fold::ReadableMeta::of)
+            .collect::<Result<Vec<_>>>()
+    });
+    let [a, b] = metas;
+    fold::fold(guard, &[a?, b?])
+}
+/// The same authenticated OD1 metadata projection used by the conversion fold.
+pub(super) fn legacy_event_meta(
+    event: &kilogram_protocol::ordered_dialog_v1::Event,
+) -> Result<kilogram_ratchet::ordered_v2::EventMeta> {
+    Ok(fold::ReadableMeta::of(event)?.event)
+}
+
 fn derived(
     verified: &provenance::VerifiedSource,
     entry: &LegacyEntry,
@@ -127,7 +149,15 @@ pub fn upgrade(
             let final_facts = final_source.facts(&repo)?;
             repo.ready(final_facts)?;
         }
-        repo.publish_profile(expected_profile)?;
+        let publication = repo.prepare_profile_publication(expected_profile)?;
+        if let Some(value) = publication.profile_route()
+            && !value.is_null()
+        {
+            let route: kilogram_transport_iroh::ordered2::RouteConfig2 =
+                serde_json::from_value(value.clone())?;
+            route.effective()?;
+        }
+        repo.publish_profile_plan(publication)?;
         ensure!(
             kilogram_ratchet::ordered::native_call_counts() == calls,
             "zero migration packet crypto/constructors"

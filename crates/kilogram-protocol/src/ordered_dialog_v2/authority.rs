@@ -413,6 +413,48 @@ pub struct ParsedReceipt1 {
     signature: [u8; 64],
 }
 impl ParsedReceipt1 {
+    pub fn verify_pre_q(
+        self,
+        source: &VerifiedLegacyEvent,
+        scope: &VerifiedExistingScope1,
+        receiver: &RootVerifiedCredential,
+    ) -> Result<VerifiedReceipt1> {
+        let event = source.event();
+        let e = &event.core;
+        let role = usize::try_from(e.role).map_err(|_| Error::Invalid("pre-Q receipt role"))?;
+        require(
+            role < 2
+                && e.c == scope.c()
+                && e.d == scope.d()
+                && e.e == scope.e()
+                && e.sid == scope.sid()
+                && e.kind == 3
+                && e.n > 0
+                && e.n < 512
+                && scope.certs()[1 - role] == receiver.cert_ref()
+                && self.body
+                    == a([
+                        u(1),
+                        b(e.d),
+                        b(e.e),
+                        u(e.role),
+                        u(e.n),
+                        b(event.id()?),
+                        b(receiver.cert_ref()),
+                        b(receiver.reference()),
+                    ]),
+            "pre-Q Receipt1 source/receiver",
+        )?;
+        receiver.certificate().device_id().verify(
+            &signing_bytes(
+                crate::ordered_dialog_v1::RECEIPT_SIGN,
+                &self.body,
+                MAX_RECEIPT,
+            )?,
+            &self.signature,
+        )?;
+        Ok(VerifiedReceipt1(self))
+    }
     pub fn parse(raw: &[u8]) -> Result<Self> {
         let v = decode(raw, MAX_RECEIPT)?;
         let f = v.fields(2)?;

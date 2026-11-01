@@ -6,6 +6,19 @@ use super::{
 };
 use serde::Serialize;
 
+pub struct ProfilePublicationPlan7 {
+    mid: Id,
+    effective: Id,
+    expected: Option<Id>,
+    captured: Option<Id>,
+    route: Option<serde_json::Value>,
+}
+impl ProfilePublicationPlan7 {
+    pub fn profile_route(&self) -> Option<&serde_json::Value> {
+        self.route.as_ref()
+    }
+}
+
 macro_rules! read_migration {
     ($this:ident,$w:ident,$body:block) => {{
         if $this.core.poisoned {
@@ -478,8 +491,104 @@ impl MigrationRepository {
         Ok(())
     }
     pub fn publish_profile(&mut self, expected_existing: Option<Id>) -> Result<()> {
+        let plan = self.prepare_profile_publication(expected_existing)?;
+        if plan.route.as_ref().is_some_and(|route| !route.is_null()) {
+            return Err(Error::PolicyRejected(
+                "route requires transport-owner publication validation",
+            ));
+        }
+        self.publish_profile_plan(plan)
+    }
+    pub fn prepare_profile_publication(
+        &mut self,
+        expected: Option<Id>,
+    ) -> Result<ProfilePublicationPlan7> {
         let (p, s, c) = self.metadata()?;
-        publish_profile_core(&mut self.core, &p, s.stage, &c, expected_existing)
+        if s.stage != MigrationStage::Ready {
+            return Err(Error::Integrity("profile publication before Ready"));
+        }
+        let path = std::path::PathBuf::from(p.identity.fields(14)?[11].fields(3)?[0].text()?);
+        let mut captured = None;
+        let mut route = None;
+        if path.exists() {
+            crate::reject_symlink(&path)?;
+            if fs::metadata(&path)?.len() > 64 * 1024 {
+                return Err(Error::Bound("profile publication size"));
+            }
+            let raw = fs::read(&path)?;
+            captured = Some(super::copy::raw_hash(b"", &raw));
+            let mut prior: serde_json::Value =
+                serde_json::from_slice(&raw).map_err(|_| Error::Bound("profile JSON"))?;
+            let object = prior.as_object_mut().ok_or(Error::Bound("profile JSON"))?;
+            route = object.remove("route");
+            let latest: serde_json::Value = serde_json::from_slice(&desired_profile(&p, &c)?)
+                .map_err(|_| Error::Bound("profile JSON"))?;
+            let revision = prior["config_revision"].as_u64().ok_or(Error::Conflict)?;
+            let quotas = prior["logical_quota"]
+                .as_array()
+                .filter(|v| v.len() == 2)
+                .ok_or(Error::Conflict)?;
+            if revision == 0
+                || revision > c.revision
+                || quotas
+                    .iter()
+                    .zip(c.quotas)
+                    .any(|(value, max)| value.as_u64().is_none_or(|n| n > max))
+                || prior["physical_capacity"]
+                    .as_u64()
+                    .is_none_or(|n| n > c.physical)
+            {
+                return Err(Error::Conflict);
+            }
+            // Only the committed capacity fields may lag. Every identity/path/
+            // context/base field must match; the sole local overlay is route.
+            for field in ["config_revision", "logical_quota", "physical_capacity"] {
+                prior[field] = latest[field].clone();
+            }
+            if prior != latest {
+                return Err(Error::Bound("ReadyNeedsProfileUpdate"));
+            }
+            let desired = desired_profile_with_route(&p, &c, route.as_ref())?;
+            if raw != desired && expected != captured {
+                return Err(Error::Bound("ReadyNeedsProfileUpdate"));
+            }
+        } else if expected.is_some() {
+            return Err(Error::Conflict);
+        }
+        Ok(ProfilePublicationPlan7 {
+            mid: p.mid,
+            effective: Effective::hash(&c.raw()?),
+            expected,
+            captured,
+            route,
+        })
+    }
+    pub fn publish_profile_plan(&mut self, plan: ProfilePublicationPlan7) -> Result<()> {
+        let (p, s, c) = self.metadata()?;
+        if p.mid != plan.mid || Effective::hash(&c.raw()?) != plan.effective {
+            return Err(Error::Conflict);
+        }
+        let path = std::path::PathBuf::from(p.identity.fields(14)?[11].fields(3)?[0].text()?);
+        let actual = if path.exists() {
+            crate::reject_symlink(&path)?;
+            if fs::metadata(&path)?.len() > 64 * 1024 {
+                return Err(Error::Conflict);
+            }
+            Some(super::copy::raw_hash(b"", &fs::read(&path)?))
+        } else {
+            None
+        };
+        if actual != plan.captured {
+            return Err(Error::Conflict);
+        }
+        publish_profile_core_with_route(
+            &mut self.core,
+            &p,
+            s.stage,
+            &c,
+            plan.expected,
+            plan.route.as_ref(),
+        )
     }
     pub fn last_commit(&self) -> Result<Id> {
         self.core.last_commit()
@@ -501,18 +610,19 @@ impl MigrationRepository {
     }
 }
 
-pub(super) fn publish_profile_core(
+pub(super) fn publish_profile_core_with_route(
     core: &mut IndexedDialogVault,
     p: &Profile,
     stage: MigrationStage,
     c: &Effective,
     expected_existing: Option<Id>,
+    route: Option<&serde_json::Value>,
 ) -> Result<()> {
     use std::io::{Read, Write};
     if stage != MigrationStage::Ready {
         return Err(Error::Integrity("profile publication before Ready"));
     }
-    let raw = desired_profile(p, c)?;
+    let raw = desired_profile_with_route(p, c, route)?;
     let path = std::path::PathBuf::from(p.identity.fields(14)?[11].fields(3)?[0].text()?);
     let staged = profile_stage(&path)?;
     let prior = if path.exists() {

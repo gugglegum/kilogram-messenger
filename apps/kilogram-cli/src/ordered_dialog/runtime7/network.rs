@@ -13,6 +13,22 @@ use std::{
 };
 use tokio::sync::Mutex;
 static CONNECTION: AtomicU64 = AtomicU64::new(1);
+#[derive(Clone, Copy)]
+pub(super) struct OrdinaryTurn7 {
+    pub floor: std::time::Instant,
+    pub whole: std::time::Instant,
+    pub no_trigger_due: std::time::Instant,
+    pub preempt_intent: bool,
+}
+async fn intent_wake(handle: &Handle7, c: u8, turn: Option<OrdinaryTurn7>) -> Result<bool> {
+    if turn.is_some_and(|turn| turn.preempt_intent) {
+        handle
+            .call(move |o| Ok(o.repo()?.existing_state(c)?.triggered()))
+            .await
+    } else {
+        Ok(false)
+    }
+}
 pub(super) struct Link7 {
     pub c: u8,
     pub context: Id,
@@ -562,6 +578,7 @@ async fn worker(
     connection: &Connection,
     link: &Link7,
     spec: &Spec,
+    ordinary: Option<OrdinaryTurn7>,
 ) -> Result<()> {
     let c = link.c;
     let binding = link.binding;
@@ -583,10 +600,16 @@ async fn worker(
             let reply = checked_rpc(handle, connection, link, &resume, spec).await?;
             ensure!(reply.kind == 9, "Resume response");
             handle.call(move |o| o.observe_hint(c, &reply)).await?;
+            if intent_wake(handle, c, ordinary).await? {
+                return Ok(());
+            }
             if let Some(request) = handle.call(move |o| o.prefix_request(c, binding)).await? {
                 let reply = checked_rpc(handle, connection, link, &request, spec).await?;
                 ensure!(reply.kind == 12, "PrefixBatch response");
                 handle.call(move |o| o.accept_data_frame(c, &reply)).await?;
+                if intent_wake(handle, c, ordinary).await? {
+                    return Ok(());
+                }
             }
             let schedule = super::super::test_support::load()?;
             let trace = schedule.trace_rpc && schedule.applies(link.context);
@@ -647,6 +670,9 @@ async fn worker(
                     })
                     .transpose()?;
                 drop(delivery.refs);
+                if intent_wake(handle, c, ordinary).await? {
+                    return Ok(());
+                }
             } else {
                 direct_after = None;
             }
@@ -654,6 +680,19 @@ async fn worker(
                 let reply = checked_rpc(handle, connection, link, &query, spec).await?;
                 ensure!(reply.kind == 15, "AckBatch response");
                 handle.call(move |o| o.accept_ack_frame(c, &reply)).await?;
+            }
+        }
+        if active && let Some(turn) = ordinary {
+            let trigger = handle
+                .call(move |o| Ok(o.repo()?.existing_state(c)?.triggered()))
+                .await?;
+            let target = if trigger {
+                turn.floor
+            } else {
+                turn.floor.max(turn.no_trigger_due)
+            };
+            if trigger && turn.preempt_intent || std::time::Instant::now() >= target {
+                return Ok(());
             }
         }
         tokio::time::sleep(Duration::from_millis(25)).await;
@@ -665,6 +704,24 @@ pub(super) async fn established(
     link: Arc<Link7>,
     pair: Option<Vec<u8>>,
 ) -> Result<()> {
+    established_inner(handle, connection, link, pair, None).await
+}
+pub(super) async fn established_turn(
+    handle: Handle7,
+    connection: Connection,
+    link: Arc<Link7>,
+    pair: Vec<u8>,
+    turn: OrdinaryTurn7,
+) -> Result<()> {
+    established_inner(handle, connection, link, Some(pair), Some(turn)).await
+}
+async fn established_inner(
+    handle: Handle7,
+    connection: Connection,
+    link: Arc<Link7>,
+    pair: Option<Vec<u8>>,
+    turn: Option<OrdinaryTurn7>,
+) -> Result<()> {
     let c = link.c;
     let spec = handle.call(move |o| Ok(o.spec(c)?.clone())).await?;
     let result = async {
@@ -673,11 +730,12 @@ pub(super) async fn established(
             if let Some(pair) = pair {
                 handshake_a(&handle, &connection, &link, pair, &spec).await?;
             }
-            worker(&handle, &connection, &link, &spec).await
+            worker(&handle, &connection, &link, &spec,turn).await
         };
         let (result,incoming_done) = tokio::select! {
             result=outbound=>(result,false),
-            result=&mut incoming=>(match result {Ok(result)=>result,Err(error)=>Err(error.into())},true)
+            result=&mut incoming=>(match result {Ok(result)=>result,Err(error)=>Err(error.into())},true),
+            _=async{if let Some(turn)=turn{tokio::time::sleep_until(turn.whole.into()).await}else{std::future::pending::<()>().await}}=>(Err(anyhow::anyhow!("ordinary whole deadline")),false)
         };
         if !incoming_done { incoming.abort(); let _=incoming.await; }
         result

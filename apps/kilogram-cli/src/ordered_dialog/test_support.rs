@@ -25,6 +25,8 @@ pub struct Schedule {
     #[serde(default)]
     pub suspend_materialization: bool,
     #[serde(default)]
+    pub suspend_drain: bool,
+    #[serde(default)]
     pub ready_fault: Option<String>,
     #[serde(default)]
     pub delay_cursor_updates: bool,
@@ -211,9 +213,36 @@ pub fn delivery(frame: Frame, signer: &kilogram_identity::DeviceIdentity) -> Res
     )?)
 }
 pub fn checkpoint(name: &str) -> Result<()> {
+    checkpoint_facts(name, None)
+}
+/// Public fingerprints from the real operation, written only at an armed debug
+/// boundary. This observes the committed owner; it grants no persistence right.
+pub fn checkpoint_facts(name: &str, facts: Option<&serde_json::Value>) -> Result<()> {
     let Some(path) = path()? else { return Ok(()) };
     if load()?.pause_point.as_deref() != Some(name) {
         return Ok(());
+    }
+    if let Some(facts) = facts {
+        ensure!(
+            name.bytes()
+                .all(|ch| ch.is_ascii_alphanumeric() || ch == b'-'),
+            "checkpoint name"
+        );
+        let raw = serde_json::to_vec(facts)?;
+        ensure!(raw.len() <= 4096, "public checkpoint facts cap");
+        let output = path.with_extension(format!("{name}.facts.json"));
+        if output.exists() {
+            ensure!(
+                std::fs::read(&output)? == raw,
+                "immutable checkpoint fact differs"
+            );
+        } else {
+            let mut file =
+                tempfile::NamedTempFile::new_in(output.parent().context("checkpoint parent")?)?;
+            std::io::Write::write_all(file.as_file_mut(), &raw)?;
+            file.as_file().sync_all()?;
+            file.persist_noclobber(output).map_err(|e| e.error)?;
+        }
     }
     let hit = path.with_extension("hit");
     let mut marker = tempfile::NamedTempFile::new_in(hit.parent().context("marker parent")?)?;

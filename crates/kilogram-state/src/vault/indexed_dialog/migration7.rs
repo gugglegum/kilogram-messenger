@@ -23,7 +23,7 @@ mod source;
 #[path = "migration7/tests.rs"]
 mod tests;
 use super::{Id, Result};
-pub use admin::MigrationStatus;
+pub use admin::{MigrationStatus, ProfilePublicationPlan7};
 pub use copy::MigrationProjection;
 pub(in crate::vault::indexed_dialog) use operations::Operation;
 pub use preview::{MigrationInput, MigrationPreview};

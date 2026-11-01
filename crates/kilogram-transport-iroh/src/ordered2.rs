@@ -96,6 +96,14 @@ impl RouteConfig2 {
     }
 }
 pub async fn bind(config: &RouteConfig2) -> Result<Endpoint> {
+    bind_alpns(config, false).await
+}
+/// Existing dialogs use negotiated ALPN to select their closed wire decoder.
+/// The fresh S4 entry point keeps its original single-ALPN behavior.
+pub async fn bind_existing(config: &RouteConfig2) -> Result<Endpoint> {
+    bind_alpns(config, true).await
+}
+async fn bind_alpns(config: &RouteConfig2, existing: bool) -> Result<Endpoint> {
     let policy = config.effective()?;
     let mut builder = Endpoint::builder(presets::Minimal)
         .clear_address_lookup()
@@ -108,7 +116,14 @@ pub async fn bind(config: &RouteConfig2) -> Result<Endpoint> {
                 .receive_window((4_u32 * 1024 * 1024).into())
                 .build(),
         )
-        .alpns(vec![wire::ALPN.to_vec()]);
+        .alpns(if existing {
+            vec![
+                wire::ALPN.to_vec(),
+                kilogram_protocol::ordered_dialog_v1::ALPN.to_vec(),
+            ]
+        } else {
+            vec![wire::ALPN.to_vec()]
+        });
     if policy != RoutePolicy::RelayOnly {
         builder = builder.bind_addr(config.bind.context("explicit IP bind")?)?;
     }

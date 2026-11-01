@@ -8,8 +8,13 @@ use serde::{Deserialize, Serialize};
 #[path = "live1/types.rs"]
 mod types;
 pub use types::*;
+#[path = "existing.rs"]
+mod existing;
+pub use existing::*;
 #[path = "live1/history.rs"]
 mod history;
+#[path = "live1/mixed.rs"]
+mod mixed;
 #[path = "live1/ops.rs"]
 mod ops;
 #[path = "live1/read.rs"]
@@ -17,6 +22,8 @@ mod read;
 #[cfg(all(windows, feature = "verification-state-lock-adoption"))]
 #[path = "live1/verification_close.rs"]
 mod verification_close;
+pub use mixed::ExistingData7;
+use mixed::{data_core7, data_event7};
 #[cfg(test)]
 #[path = "live1/tests.rs"]
 mod tests;
@@ -77,6 +84,14 @@ pub struct L1CapacityPlan {
     hash: Id,
     candidate: super::MigrationConfig,
     prior_profile_hash: Id,
+    route: Option<serde_json::Value>,
+}
+impl L1CapacityPlan {
+    /// Exact captured local overlay, validated by the transport owner before
+    /// applying this closed plan. It does not confer storage/network authority.
+    pub fn profile_route(&self) -> Option<&serde_json::Value> {
+        self.route.as_ref()
+    }
 }
 
 impl L1Repository {
@@ -240,7 +255,19 @@ impl L1Repository {
         let old = Effective::parse(&raw, &self.profile)?;
         let expected_profile = desired_profile(&self.profile, &old)?;
         let path = &self.config.output_profile;
-        if fs::metadata(path)?.len() > 64 * 1024 || fs::read(path)? != expected_profile {
+        if fs::metadata(path)?.len() > 64 * 1024 {
+            return Err(Error::Bound("ReadyNeedsProfileUpdate"));
+        }
+        let actual_profile = fs::read(path)?;
+        let mut actual: serde_json::Value = serde_json::from_slice(&actual_profile)
+            .map_err(|_| Error::Bound("migration profile JSON"))?;
+        let route = actual
+            .as_object_mut()
+            .ok_or(Error::Bound("migration profile JSON"))?
+            .remove("route");
+        let expected_value: serde_json::Value = serde_json::from_slice(&expected_profile)
+            .map_err(|_| Error::Bound("migration profile JSON"))?;
+        if actual != expected_value {
             return Err(Error::Bound("ReadyNeedsProfileUpdate"));
         }
         Ok(L1CapacityPlan {
@@ -248,7 +275,8 @@ impl L1Repository {
             revision,
             hash,
             candidate,
-            prior_profile_hash: super::copy::raw_hash(b"", &expected_profile),
+            prior_profile_hash: super::copy::raw_hash(b"", &actual_profile),
+            route,
         })
     }
     pub fn apply_capacity(
@@ -286,6 +314,7 @@ impl L1Repository {
                 CommitInput::Migration7(Box::new(op)),
                 bound,
             )?;
+            super::checkpoint(repository.core._lease.root(), "capacity-committed")?;
             repository.profile = Profile::parse(
                 &repository
                     .core
@@ -298,12 +327,13 @@ impl L1Repository {
                 .get(migration_key(repository.profile.mid, 7, b"")?)?
                 .ok_or(Error::Integrity("effective config"))?;
             let effective = Effective::parse(&raw, &repository.profile)?;
-            super::admin::publish_profile_core(
+            super::admin::publish_profile_core_with_route(
                 &mut repository.core,
                 &repository.profile,
                 super::MigrationStage::Ready,
                 &effective,
                 Some(plan.prior_profile_hash),
+                plan.route.as_ref(),
             )
         })();
         if result.is_err() && repository.core.poisoned {

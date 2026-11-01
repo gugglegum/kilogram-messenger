@@ -1,7 +1,7 @@
 //! Actual d9b signed-fork origin with a third independent peer in C2.
 use super::*;
 
-fn old_queue(node: &OldNode, c: &str, id: u64) -> Result<()> {
+pub(super) fn old_queue(node: &OldNode, c: &str, id: u64) -> Result<()> {
     cli(
         &frozen(),
         &[
@@ -19,7 +19,12 @@ fn old_queue(node: &OldNode, c: &str, id: u64) -> Result<()> {
     )?;
     Ok(())
 }
-fn wait_old_context(node: &OldNode, c: &str, child: &mut OwnedChild, next: u64) -> Result<Value> {
+pub(super) fn wait_old_context(
+    node: &OldNode,
+    c: &str,
+    child: &mut OwnedChild,
+    next: u64,
+) -> Result<Value> {
     let start = Instant::now();
     loop {
         child.alive()?;

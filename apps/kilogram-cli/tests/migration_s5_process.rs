@@ -2,6 +2,8 @@
 //! frozen d9b enrollment; this controller never writes Native, Head or Event rows.
 #[path = "support/migration_s5_l1.rs"]
 mod live_l1;
+#[path = "support/migration_s53_deadline.rs"]
+mod s53_deadline;
 use anyhow::{Context, Result, ensure};
 use kilogram_cli::ordered_dialog::handshake::Credentials;
 use serde_json::{Value, json};
@@ -73,7 +75,7 @@ fn command(exe: &Path) -> Command {
     command
 }
 fn cli(exe: &Path, args: &[String]) -> Result<String> {
-    let output = command(exe).args(args).output()?;
+    let output = s53_deadline::output(command(exe).args(args))?;
     ensure!(
         output.status.success(),
         "CLI {args:?}: {} {}",
@@ -83,7 +85,7 @@ fn cli(exe: &Path, args: &[String]) -> Result<String> {
     Ok(String::from_utf8(output.stdout)?)
 }
 fn rejected(exe: &Path, args: &[String]) -> Result<String> {
-    let output = command(exe).args(args).output()?;
+    let output = s53_deadline::output(command(exe).args(args))?;
     ensure!(
         !output.status.success(),
         "unexpected writer admission {args:?}"
@@ -149,6 +151,7 @@ fn spawn(
 fn wait_file(child: &mut OwnedChild, path: &Path, seconds: u64) -> Result<()> {
     let start = Instant::now();
     while !path.is_file() {
+        s53_deadline::check()?;
         child.alive()?;
         ensure!(
             start.elapsed() < Duration::from_secs(seconds),

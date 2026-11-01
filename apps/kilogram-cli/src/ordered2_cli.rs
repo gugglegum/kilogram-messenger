@@ -36,8 +36,8 @@ pub enum Command {
         #[arg(long)]
         output_consent_file: PathBuf,
     },
-    Consent2Create(Ceremony2),
-    Context2Create(Ceremony2),
+    Consent2Create(Box<Ceremony2>),
+    Context2Create(Box<Ceremony2>),
     Context2Import {
         #[arg(long)]
         state_dir: PathBuf,
@@ -100,6 +100,8 @@ pub enum Command {
     },
     Locator2Import {
         #[arg(long)]
+        existing: bool,
+        #[arg(long)]
         ipc_file: PathBuf,
         #[arg(long)]
         slot: u8,
@@ -107,6 +109,8 @@ pub enum Command {
         locator_file: PathBuf,
     },
     Locator2Export {
+        #[arg(long)]
+        existing: bool,
         #[arg(long)]
         ipc_file: PathBuf,
         #[arg(long)]
@@ -121,6 +125,8 @@ pub enum Command {
         snapshot_file: PathBuf,
     },
     Consent2Import {
+        #[arg(long)]
+        existing: bool,
         #[arg(long)]
         ipc_file: PathBuf,
         #[arg(long)]
@@ -173,10 +179,6 @@ pub enum Command {
         expected_config_revision: u64,
         #[arg(long)]
         expected_config_hash: String,
-    },
-    Upgrade {
-        #[arg(long)]
-        state_dir: PathBuf,
     },
 }
 #[derive(Debug, Args)]
@@ -248,9 +250,29 @@ pub struct StorageAccess {
 pub struct Ceremony2 {
     #[arg(long)]
     context: String,
+    #[arg(long, default_value = "fresh", value_parser = ["fresh", "existing"])]
+    origin: String,
+    #[arg(long)]
+    existing_origin_file: Option<PathBuf>,
+    #[arg(long, value_parser = ["propose", "cosign"])]
+    step: Option<String>,
+    #[arg(long)]
+    proposal_file: Option<PathBuf>,
+    #[arg(long)]
+    expect_account: Option<AccountId>,
+    #[arg(long)]
+    expect_peer_account: Option<AccountId>,
+    #[arg(long)]
+    authority_a_file: Option<PathBuf>,
+    #[arg(long)]
+    authority_b_file: Option<PathBuf>,
+    #[arg(long)]
+    minimum_authority_a_file: Option<PathBuf>,
+    #[arg(long)]
+    minimum_authority_b_file: Option<PathBuf>,
     #[arg(long = "credentials-file", num_args = 2)]
     credentials: Vec<PathBuf>,
-    #[arg(long = "account-dir", num_args = 2)]
+    #[arg(long = "account-dir", num_args = 1..=2)]
     accounts: Vec<PathBuf>,
     #[arg(long)]
     not_before: Option<u64>,
@@ -531,6 +553,111 @@ pub async fn run(command: Command, lease: Option<StateDirectoryLock>) -> Result<
         other => other,
     };
     if let Command::Consent2Create(args) | Command::Context2Create(args) = &command {
+        if args.origin == "existing" {
+            ensure!(
+                matches!(&command, Command::Consent2Create(_)),
+                "existing requires consent2-create"
+            );
+            ensure!(
+                lease.is_none(),
+                "offline consent must not open a messenger vault"
+            );
+            ensure!(
+                args.accounts.len() == 1 && args.credentials.is_empty(),
+                "existing ceremony needs only own account-dir"
+            );
+            use kilogram_cli::ordered_dialog::runtime7::existing_admin::{
+                self, ExistingConsentInputs,
+            };
+            let origin = shared::read_public(
+                args.existing_origin_file
+                    .as_ref()
+                    .context("existing-origin-file required")?,
+                wire::MAX_EXISTING_ORIGIN,
+            )?;
+            let authority_a = shared::read_public(
+                args.authority_a_file
+                    .as_ref()
+                    .context("authority-a-file required")?,
+                wire::MAX_AUTH,
+            )?;
+            let authority_b = shared::read_public(
+                args.authority_b_file
+                    .as_ref()
+                    .context("authority-b-file required")?,
+                wire::MAX_AUTH,
+            )?;
+            let minimum_a = shared::read_public(
+                args.minimum_authority_a_file
+                    .as_ref()
+                    .context("minimum-authority-a-file required")?,
+                wire::MAX_AUTH,
+            )?;
+            let minimum_b = shared::read_public(
+                args.minimum_authority_b_file
+                    .as_ref()
+                    .context("minimum-authority-b-file required")?,
+                wire::MAX_AUTH,
+            )?;
+            let inputs = ExistingConsentInputs {
+                origin: &origin,
+                authorities: [&authority_a, &authority_b],
+                minimum_authorities: [&minimum_a, &minimum_b],
+                context: parse_id(&args.context)?,
+                account: args.expect_account.context("expect-account required")?,
+                peer: args
+                    .expect_peer_account
+                    .context("expect-peer-account required")?,
+            };
+            let now = runtime2::now()?;
+            let output = match args.step.as_deref().context("step required")? {
+                "propose" => {
+                    ensure!(
+                        args.proposal_file.is_none(),
+                        "proposal-file is only for cosign"
+                    );
+                    existing_admin::propose(
+                        inputs,
+                        &args.accounts[0],
+                        args.not_before.unwrap_or(now),
+                        args.valid_for_seconds,
+                        now,
+                    )?
+                }
+                "cosign" => {
+                    ensure!(
+                        args.not_before.is_none(),
+                        "cosign interval comes from proposal"
+                    );
+                    let proposal = shared::read_public(
+                        args.proposal_file
+                            .as_ref()
+                            .context("proposal-file required")?,
+                        4096,
+                    )?;
+                    existing_admin::cosign(inputs, &proposal, &args.accounts[0], now)?
+                }
+                _ => bail!("unknown ceremony step"),
+            };
+            shared::write_public(
+                &args.output_file,
+                &output,
+                &args.accounts[0].canonicalize()?,
+            )?;
+            return Ok(());
+        }
+        ensure!(
+            args.existing_origin_file.is_none()
+                && args.step.is_none()
+                && args.proposal_file.is_none()
+                && args.expect_account.is_none()
+                && args.expect_peer_account.is_none()
+                && args.authority_a_file.is_none()
+                && args.authority_b_file.is_none()
+                && args.minimum_authority_a_file.is_none()
+                && args.minimum_authority_b_file.is_none(),
+            "fresh ceremony rejects existing-only arguments"
+        );
         ensure!(
             args.credentials.len() == 2 && args.accounts.len() == 2,
             "two credential files and Root directories required"
@@ -685,10 +812,27 @@ pub async fn run(command: Command, lease: Option<StateDirectoryLock>) -> Result<
             return Ok(());
         }
         Command::Locator2Import {
+            existing,
             ipc_file,
             slot,
             locator_file,
         } => {
+            if existing {
+                let result = crate::ordered3_cli::call(
+                    &ipc_file,
+                    a([
+                        u(3),
+                        u(5),
+                        u(slot.into()),
+                        u(2),
+                        u(0),
+                        opt(Some(b(shared::read_public(&locator_file, 8192)?))),
+                    ]),
+                )
+                .await?;
+                println!("{}", json(&result));
+                return Ok(());
+            }
             call(
                 &ipc_file,
                 a([
@@ -701,10 +845,26 @@ pub async fn run(command: Command, lease: Option<StateDirectoryLock>) -> Result<
             .await?
         }
         Command::Locator2Export {
+            existing,
             ipc_file,
             slot,
             output_file,
         } => {
+            if existing {
+                let result = crate::ordered3_cli::call(
+                    &ipc_file,
+                    a([u(3), u(5), u(slot.into()), u(2), u(1), opt(None)]),
+                )
+                .await?;
+                let mut file = std::fs::OpenOptions::new()
+                    .write(true)
+                    .create_new(true)
+                    .open(output_file)?;
+                use std::io::Write;
+                file.write_all(result.bytes()?)?;
+                file.sync_all()?;
+                return Ok(());
+            }
             let result = call(&ipc_file, a([u(2), u(6), u(u64::from(slot))])).await?;
             call(
                 &ipc_file,
@@ -734,12 +894,34 @@ pub async fn run(command: Command, lease: Option<StateDirectoryLock>) -> Result<
             .await?
         }
         Command::Consent2Import {
+            existing,
             ipc_file,
             slot,
             consent_file,
             expected_current,
             historical,
         } => {
+            if existing {
+                let expected = if expected_current == "absent" {
+                    None
+                } else {
+                    Some(parse_id(&expected_current)?)
+                };
+                let result = crate::ordered3_cli::call(
+                    &ipc_file,
+                    a([
+                        u(3),
+                        u(7),
+                        u(slot.into()),
+                        opt(expected.map(b)),
+                        b(shared::read_public(&consent_file, 4096)?),
+                        u(u64::from(historical)),
+                    ]),
+                )
+                .await?;
+                println!("{}", json(&result));
+                return Ok(());
+            }
             call(
                 &ipc_file,
                 a([
@@ -766,7 +948,6 @@ pub async fn run(command: Command, lease: Option<StateDirectoryLock>) -> Result<
         | Command::StorageIncreaseCapacity { .. } => {
             unreachable!("offline migration dispatched under original lease")
         }
-        Command::Upgrade { .. } => bail!("UnsupportedHandoff: successor S5"),
     };
     println!("{}", json(&result));
     Ok(())

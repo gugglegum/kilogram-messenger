@@ -10,14 +10,23 @@ use kilogram_protocol::ordered_dialog_v1::{self as wire, Event, Frame, Id, Value
 use kilogram_state::indexed_dialog::{self as db, migration7::live1 as store};
 mod config;
 pub use config::Profile3;
+mod admission2;
 mod bootstrap;
+pub mod control;
 mod data;
+mod data2;
+pub mod existing_admin;
+mod native;
 mod network;
+mod network2;
 mod owner;
 mod protocol;
+mod protocol2;
 mod resources;
 pub mod runtime;
 use super::runtime2::window;
+#[cfg(test)]
+mod handoff_tests;
 #[cfg(test)]
 mod review1_tests;
 

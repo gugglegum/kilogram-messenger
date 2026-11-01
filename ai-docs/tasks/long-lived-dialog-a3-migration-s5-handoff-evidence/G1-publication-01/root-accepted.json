@@ -1,0 +1,59 @@
+{
+  "classification": "root-accepted integrated G1 composite evidence; S5.3 not complete",
+  "actual_native": {
+    "id": "exec-253bc5f8-e9b9-4b4c-8f8c-344d3e61fc28",
+    "exit_code": 0,
+    "duration_ms": 68958,
+    "independent_outer_seconds": 68.4965551
+  },
+  "handoff": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-exhausted-integrated-01-attempt-02.handoff.json",
+    "bytes": 10393,
+    "sha256": "46be556c11feeb39421c5f2a19b1f77cb350da859f31c4e8642aea85f62128c4"
+  },
+  "outer": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-exhausted-integrated-01-attempt-02.outer.json",
+    "bytes": 1091,
+    "sha256": "80af897188b767b52c23c09d8de4f37d49c2d8306e1257b17c44d81e351687d2"
+  },
+  "case": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-exhausted-integrated-01-attempt-02.json",
+    "bytes": 4137,
+    "sha256": "9e4e2cf885771945bc1428c454dd4269301ca4eb39a372b7a9a5cadadf4deeee"
+  },
+  "assertions": {
+    "path": ".tmp/migration-s53-integrated/F-s53-exhausted-integrated-01-attempt-02/assertions.json",
+    "bytes": 7875,
+    "sha256": "cee056c3b04b4e637cb421a09b304296d8ed7884c917f70771c961ed7d30b92e"
+  },
+  "verified_pins": 3908,
+  "current_public_files": 608,
+  "historical_public_files_unchanged": 2243,
+  "full_inventory_matches_activated_placeholder": true,
+  "compile_run_inputs_units_images_equal": true,
+  "frozen_guard_verified": true,
+  "all_four_phases_completed": true,
+  "original_B1_and_logical_anchors_all_three_stages": true,
+  "original_texts_per_role": 528,
+  "new_delivered_messages": 2,
+  "final_history_rows_per_role": 530,
+  "raw_A_preserved": true,
+  "raw_AB_persists_restart": true,
+  "exact_Native_requests_profiles_history_persist_restart": true,
+  "no_repeated_crypto_work_or_constructors_after_restart": true,
+  "owned_children_after_cleanup": 0,
+  "historical_limit": "Attempt01 remains FAILED. Earlier root acceptance of executed-source prefix inference remains the basis for first refusal/conversion; lost ephemeral values were not recovered. New continuation directly establishes preserved original histories, genuine A/B delivery and restart.",
+  "charge_F_once": 68.4965551,
+  "S53_actual": {
+    "C": 6402.2470595,
+    "F": 2111.2942666,
+    "P": 0
+  },
+  "combined_actual": {
+    "C": 6989.6956704,
+    "F": 6827.6144155,
+    "P": 0
+  },
+  "publication": "Exact source dependency and evidence allowlist to be prepared; not blanket permission for inherited S5.3 worktree",
+  "remaining": "G2/G3/G4 and final S5.3 acceptance remain separate."
+}

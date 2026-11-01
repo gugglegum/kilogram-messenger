@@ -93,6 +93,17 @@ impl AccountId {
         self.verify(&message, signature)
     }
 
+    /// Verifies an offline OD2 consent proposal under the OD2 Root domain.
+    pub fn verify_ordered_context_consent2(
+        &self,
+        payload: &[u8],
+        signature: &[u8],
+    ) -> Result<(), IdentityError> {
+        let mut message = b"kg:od2:consent\0".to_vec();
+        message.extend_from_slice(payload);
+        self.verify(&message, signature)
+    }
+
     /// Verifies an Account Root signature over a canonical device-link
     /// authorization payload. The fixed domain prevents this narrow API from
     /// becoming a generic Root signature oracle.

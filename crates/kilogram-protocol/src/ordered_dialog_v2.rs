@@ -7,10 +7,12 @@ pub use kilogram_ratchet::ordered_v2::{ClosedTail, Expected};
 use thiserror::Error;
 
 mod authority;
+mod existing;
 mod frame;
 mod mode;
 mod runtime_locator;
 pub use authority::*;
+pub use existing::*;
 pub use frame::*;
 pub use mode::*;
 pub use runtime_locator::*;
