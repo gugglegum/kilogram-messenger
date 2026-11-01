@@ -250,7 +250,7 @@ if($policy.Count -ne 1 -or $allocated.Count -ne 1){throw 'Case not uniquely acti
 $policy=$policy[0];$allocated=$allocated[0]
 Assert-KilogramS53G3FrozenAllocation $workspace $Case $binding $allocated $activation
 $buildProfile='verification';$frozenArguments=@{}
-if($Case -cin @('F-s53-capacity-recovery-r2-01','F-s53-two-c-routes-integrated-01')){
+if($Case -cin @('F-s53-capacity-recovery-r2-01','F-s53-two-c-routes-integrated-01','F-s53-b-before-alpn2-two-c-01')){
     if($policy.build_profile -cne 'verification-scale' -or $allocated.build_profile -cne 'verification-scale' -or $activation.expected_artifacts_sha256 -cne $binding.expected_artifacts.sha256){throw 'Frozen G2 scale allocation/profile identity required.'}
     $buildProfile='verification-scale'
     $frozenArguments=@{ExpectedArtifactsManifest=(Join-Path $workspace $binding.expected_artifacts.path);ExpectedArtifactsSha256=$binding.expected_artifacts.sha256;CargoTarget='x86_64-pc-windows-msvc';StableArtifactsDirectory=(Join-Path $workspace 'target/verification-scale/deps')}

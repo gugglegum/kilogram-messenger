@@ -5,13 +5,13 @@ use oracle::{
     request_id, request_stable, resources, sent, stopped_owners, stored_request,
 };
 
-fn contexts() -> [String; 2] {
+pub(super) fn contexts() -> [String; 2] {
     ["11".repeat(32), "22".repeat(32)]
 }
 fn row_fixture(c: &str, slot: u8, role: u8) -> Value {
     json!({"context":c,"slot":slot,"role":role,"enabled":true,"active":true,"lease_current":true,"lease_family":2,"publication_ready":true,"existing_origin_ready":true,"policy_error":null,"handoff_policy_error":null,"publication_error":null,"origin_publication_error":null,"mode":"Active","d":"33".repeat(32),"e":"44".repeat(32),"sid":"A".repeat(43),"q":"55".repeat(32),"cuts":[1,2],"controls":{"committed":"66".repeat(32)},"native_hash":"77".repeat(32),"native_generation":3,"next":if c==contexts()[0]{[1,2]}else{[2,1]},"counts":{"queued":0,"pending":0,"debt":0},"current_consent":"66".repeat(32),"current_consent2":"66".repeat(32),"policy_generation":4,"repair_free":64,"head_pending":null})
 }
-fn status_fixture() -> [Value; 3] {
+pub(super) fn status_fixture() -> [Value; 3] {
     let [a, b] = contexts();
     let rows = [
         json!([row_fixture(&a, 0, 0)]),
@@ -22,7 +22,7 @@ fn status_fixture() -> [Value; 3] {
         |i| json!({"contexts":rows[i],"window":[if i==1{[64,64]}else{[128,0]},[0,0],[0,0]],"resources":{"connections":1,"peak_connections":2,"connection_limit":2,"mailbox":1,"peak_mailbox":3,"mailbox_limit":16},"stats":{"committed_encrypt":0,"committed_decrypt":0,"materialized":0,"readable":0,"account_constructors":0,"outbound_constructors":0,"inbound_constructors":0,"aborted_packet_calls":0,"ambiguous_packet_calls":0}}),
     )
 }
-fn directed(role: u8, previous: Option<old::Id>) -> Directed {
+pub(super) fn directed(role: u8, previous: Option<old::Id>) -> Directed {
     Directed {
         context: contexts()[1].clone(),
         author: if role == 0 { 1 } else { 2 },
@@ -62,7 +62,7 @@ fn core(d: &Directed) -> Result<wire::Core2> {
         q: [6; 32],
     })
 }
-fn item(d: &Directed) -> Item {
+pub(super) fn item(d: &Directed) -> Item {
     Item {
         format: 2,
         id: d.saved.event.clone().unwrap_or_default(),

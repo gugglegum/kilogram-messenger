@@ -1,0 +1,228 @@
+{
+  "classification": "root accepted controlled B-only pre-ALPN2 startup and exact delivered persistence; whole S5.3 still open",
+  "accepted": true,
+  "actual_native_tool": {
+    "id": "exec-aabff6aa-c73f-4402-ae5e-585fdc12fa55",
+    "exit_code": 0,
+    "duration_ms": 107390
+  },
+  "case": "F-s53-b-before-alpn2-two-c-01",
+  "attempt": "F-s53-b-before-alpn2-two-c-01-attempt-02",
+  "head": "5f31239ecc3be0eace190db8362c310a99d7e53f",
+  "source_count": 534,
+  "image_count": 9,
+  "public_json_count": 19,
+  "timing_ms": {
+    "tb_ms": 13896,
+    "tr_ms": 14134,
+    "active_ms": 77611
+  },
+  "active_after_B_ms": 63715,
+  "directed": {
+    "author": 1,
+    "body": "B-start C1 B to A exactly once",
+    "context": "5bcd4f8ef301a1fa495c98b45d04dc7cfa332f21df92dc25702b2eae7ed41584",
+    "id": 601,
+    "ordinal": 2,
+    "previous": [
+      218,
+      33,
+      153,
+      147,
+      175,
+      116,
+      51,
+      17,
+      220,
+      210,
+      235,
+      26,
+      74,
+      226,
+      16,
+      98,
+      236,
+      230,
+      119,
+      86,
+      170,
+      178,
+      216,
+      115,
+      112,
+      69,
+      230,
+      222,
+      100,
+      157,
+      133,
+      228
+    ],
+    "role": 1,
+    "saved": {
+      "delivered": true,
+      "event": "38bc285b8e43104f7eddb80968e240eba95a921d83f8b4ee82014e36e25d9abd",
+      "queue": 10
+    },
+    "sequence": 4
+  },
+  "owned_pids": [
+    3684,
+    24828,
+    46316,
+    56952,
+    57988,
+    60020
+  ],
+  "cleanup": {
+    "path": ".tmp\\b-start-parser-repair02\\runtime-attempt02-cleanup.json",
+    "bytes": 716,
+    "sha256": "e30743d3b97fbb246d23db7a743894c8c27dfece44ab7b56f0c657844d1b8017"
+  },
+  "pins": [
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\assertions.json",
+      "bytes": 191532,
+      "sha256": "10085ef73f7d9c7edec1f26b7235305109e6b434e62f714cc91ee86e016f5e11"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\b-start-Active-observed.json",
+      "bytes": 42954,
+      "sha256": "d751653c314316d19e8ae2116ee89d67e9924d61b1cfe61f0d98f3d1d134b6c7"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\b-start-B-serialized-reply.json",
+      "bytes": 15102,
+      "sha256": "c00b2b898210f5a7c804e25cabf8d2e3db303121b23ee26cb263ff1e33778590"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\b-start-C1-imports-complete.json",
+      "bytes": 18430,
+      "sha256": "eadfee81b2fc1e2bccd89abd7b3414d9853adacfe95360b9e3181c872ec02836"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\b-start-pre-B.json",
+      "bytes": 13450,
+      "sha256": "8571bc9305f1dce9d1828f82b13e1faa5711ce52c07d18c97be41bc53ade3462"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\b-start-send-accepted.json",
+      "bytes": 43126,
+      "sha256": "86e3a100658e3657e31dd406c584fc8986ff2b5d0dbc23bdd8ca5849bd5c749a"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\b-start-Y-status-raw.json",
+      "bytes": 12975,
+      "sha256": "220d51565c12b143f30172bf8b460804dd234d61148bbf2670d45608e7e8bd91"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\g3-b-start-data-observed.json",
+      "bytes": 14238,
+      "sha256": "1d5171b7d4c7c0a5d2e7e32038464f83822185c0320ad87060901ef4afa9b1bd"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\g3-b-start-delivered-status-observed.json",
+      "bytes": 11684,
+      "sha256": "9336bb4d3209072f888f5580e540f47435e5b3fca3cd072130491682b7846386"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\g3-b-start-final-before-stop.json",
+      "bytes": 406,
+      "sha256": "e746bd9ecdefc98682fb6ae156c0d84066d60dedf45b6d7df445ca18ae09ad0c"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\g3-b-start-final-status-observed.json",
+      "bytes": 11680,
+      "sha256": "052f638cf88028ef9f8af1d03a2c6ec0f0bcdc1d9e5192ff285fc7dedf29ac1f"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\g3-b-start-final-stopped-observed.json",
+      "bytes": 38565,
+      "sha256": "db19f77007bd322d5410f6b6c3466f377ca2ca7e11c80025e7d216126eb5e008"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\g3-b-start-owner-0.json",
+      "bytes": 821,
+      "sha256": "1305af5e8663441f4afad4f2d0690b23df512c199805e4524f398afd22c5ad1c"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\g3-b-start-owner-1.json",
+      "bytes": 831,
+      "sha256": "ca7e893d5b895b28e612fa57b7214b4d01dc9cab01707dab1235ab6d4aa85c24"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\g3-b-start-owner-2.json",
+      "bytes": 841,
+      "sha256": "a9d55b63a7a8fde403652c86d7f30201dafc9ad6c170a6b75d65a31918f5c029"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\g3-b-start-selected-status-observed.json",
+      "bytes": 11676,
+      "sha256": "8049d05c8a7db1833785ad1383b87b1eea72cda87c6517ded89fa6b060c7a4d0"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\g3-legacy-delivered.json",
+      "bytes": 2076,
+      "sha256": "42a2a38570ceb8d3068331a8c81b81ee28f19560f9a11005bd896c78344fae30"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\g3-mapping-observed.json",
+      "bytes": 13485,
+      "sha256": "ba22626ce6726b1b6ae937eeaca7c1d8e9e352f71e6b05cb258dce6ce4210644"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\g3-ready-status-observed.json",
+      "bytes": 13049,
+      "sha256": "d7e4b2b3a29b67e8564fe8cf1fe1ce56e1bdb4f881c5342f9c671cd81782c1e4"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-b-before-alpn2-two-c-01-attempt-02.root-activation.json",
+      "bytes": 3109,
+      "sha256": "0c8893cf5dceb9c48e118b163ef52c78e4e684070870748048eb336ac2b8834c"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-b-before-alpn2-two-c-01-attempt-02.inventory-admission.json",
+      "bytes": 1869,
+      "sha256": "3933c97d99db5b1655f7d1746d5aac3a623bb860f609c13133a18e42008db83b"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-b-before-alpn2-two-c-01-attempt-02.outer.json",
+      "bytes": 1092,
+      "sha256": "d9e7d0035ce3e6fb067e80abe45d6bb8acde3e0d7df7a54a7caefe260eb13458"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-b-before-alpn2-two-c-01-attempt-02.json",
+      "bytes": 4132,
+      "sha256": "f3e3c79add17339ca77bff983916644275a43520a3fd3eed0baca21ae414730c"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-b-before-alpn2-two-c-01-attempt-02.inputs.json",
+      "bytes": 115315,
+      "sha256": "ebd5441a75f7bbadb62acc9be1a95b7c6d6e902e7af0831e7125c516148bf88a"
+    },
+    {
+      "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-b-before-alpn2-two-c-01-attempt-02.log",
+      "bytes": 3028,
+      "sha256": "7985911f41095022b2dbb5a46b68e1f6dee7000894c464cf4757a699ce3317ee"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\two-c\\live-6f895d7e\\selected-0.stderr.log",
+      "bytes": 1040,
+      "sha256": "3824c91ec7b1f09ea1717b1c675798e548f30dc996d8739a10cfac83e1f93047"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\two-c\\live-704fbc57\\selected-1.stderr.log",
+      "bytes": 2559,
+      "sha256": "f7f5998719df1ce3c43b04667eea78641c544ff111bf11f19b02086548e2d333"
+    },
+    {
+      "path": ".tmp\\migration-s53-integrated\\F-s53-b-before-alpn2-two-c-01-attempt-02\\two-c\\live-d291783b\\selected-2.stderr.log",
+      "bytes": 2054,
+      "sha256": "2b5f6ef7775ac8e7013aaa9536d172c829e14cab28dc1720440a90ddb8e0cf78"
+    }
+  ],
+  "charge_F_once": "106.8588589",
+  "s53_F_after": "2766.7316168",
+  "combined_F_after": "7483.0517657",
+  "limits": "one controlled local fixture; no SLA/crash/stress proof; SHA and public associations checked here, private cryptographic/source validation attributed to pinned executed Rust verifier; attempt01 remains FAILED; G4 pending"
+}

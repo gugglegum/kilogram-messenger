@@ -1,0 +1,34 @@
+{
+  "classification": "independent owned PID absence after actual NativeToken final return",
+  "actual_invocation_chunk": "117172",
+  "actual_final_return_chunk": "43c4c7",
+  "actual_exit_code": 0,
+  "owned_pids": [
+    {
+      "pid": 3684,
+      "present": false
+    },
+    {
+      "pid": 24828,
+      "present": false
+    },
+    {
+      "pid": 46316,
+      "present": false
+    },
+    {
+      "pid": 56952,
+      "present": false
+    },
+    {
+      "pid": 57988,
+      "present": false
+    },
+    {
+      "pid": 60020,
+      "present": false
+    }
+  ],
+  "all_kilogram_processes": [],
+  "public_review_sha256": "0b1352590b6c7ebd3b801853d9348307074584a24ea07d8a2bd66e9857c323e8"
+}

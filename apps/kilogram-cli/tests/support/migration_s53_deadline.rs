@@ -4,6 +4,7 @@ use super::*;
 use std::{cell::RefCell, process::Output};
 struct Scope {
     deadline: Instant,
+    local: Option<Instant>,
     run: PathBuf,
     next: u64,
 }
@@ -15,12 +16,40 @@ impl Guard {
             ensure!(scope.is_none(), "one absolute managed controller scope");
             *scope = Some(Scope {
                 deadline: Instant::now() + Duration::from_secs(seconds),
+                local: None,
                 run: run.into(),
                 next: 0,
             });
             Ok(Self)
         })
     }
+}
+/// A local phase can only shorten the current bound. Dropping it restores the
+/// previous phase, never the absolute managed deadline or command sequence.
+pub(super) struct Phase(Option<Instant>);
+impl Phase {
+    pub(super) fn until(deadline: Instant) -> Result<Self> {
+        SCOPE.with_borrow_mut(|scope| {
+            let s = scope.as_mut().context("phase requires managed scope")?;
+            let previous = s.local;
+            let effective = deadline.min(s.deadline).min(previous.unwrap_or(deadline));
+            ensure!(Instant::now() < effective, "expired S5.3 phase deadline");
+            s.local = Some(effective);
+            Ok(Self(previous))
+        })
+    }
+}
+impl Drop for Phase {
+    fn drop(&mut self) {
+        SCOPE.with_borrow_mut(|scope| {
+            if let Some(s) = scope {
+                s.local = self.0;
+            }
+        });
+    }
+}
+fn effective(s: &Scope) -> Instant {
+    s.deadline.min(s.local.unwrap_or(s.deadline))
 }
 impl Drop for Guard {
     fn drop(&mut self) {
@@ -30,7 +59,7 @@ impl Drop for Guard {
 pub(super) fn check() -> Result<()> {
     SCOPE.with_borrow(|scope| {
         ensure!(
-            scope.as_ref().is_none_or(|s| Instant::now() < s.deadline),
+            scope.as_ref().is_none_or(|s| Instant::now() < effective(s)),
             "absolute S5.3 process controller deadline"
         );
         Ok(())
@@ -43,7 +72,7 @@ pub(super) fn output(command: &mut Command) -> Result<Output> {
             let n = s.next;
             s.next += 1;
             (
-                s.deadline,
+                effective(s),
                 s.run.join(format!("command-{n:04}.stdout.log")),
                 s.run.join(format!("command-{n:04}.stderr.log")),
             )
@@ -80,9 +109,64 @@ pub(super) fn output(command: &mut Command) -> Result<Output> {
             && std::fs::metadata(&err)?.len() <= 1024 * 1024,
         "bounded CLI logs"
     );
-    Ok(Output {
+    let output = Output {
         status,
         stdout: std::fs::read(out)?,
         stderr: std::fs::read(err)?,
-    })
+    };
+    // A child observed as exited on the final polling tick must not turn an
+    // expired local phase into success. Legacy callers retain their old path.
+    if SCOPE.with_borrow(|s| s.as_ref().is_some_and(|s| s.local.is_some())) {
+        check()?;
+    }
+    Ok(output)
+}
+
+#[cfg(test)]
+fn test_scope<T>(f: impl FnOnce(&mut Scope) -> T) -> Result<T> {
+    SCOPE.with_borrow_mut(|s| Ok(f(s.as_mut().context("pure test managed scope")?)))
+}
+#[test]
+fn b_start_deadline_nested_minimum_restores_without_reset() -> Result<()> {
+    let _managed = Guard::enter(Path::new("unused-pure-deadline-test"), 60)?;
+    let absolute = test_scope(|s| s.deadline)?;
+    test_scope(|s| s.next = 17)?;
+    let local = Instant::now() + Duration::from_secs(20);
+    {
+        let _outer = Phase::until(local)?;
+        {
+            let _longer = Phase::until(absolute + Duration::from_secs(30))?;
+            assert_eq!(test_scope(|s| effective(s))?, local);
+            let short = Instant::now() + Duration::from_secs(5);
+            {
+                let _inner = Phase::until(short)?;
+                assert_eq!(test_scope(|s| effective(s))?, short);
+            }
+            assert_eq!(test_scope(|s| effective(s))?, local);
+        }
+    }
+    test_scope(|s| {
+        assert_eq!(effective(s), absolute);
+        assert_eq!(s.next, 17);
+    })?;
+    let _cannot_extend = Phase::until(absolute + Duration::from_secs(30))?;
+    assert_eq!(test_scope(|s| effective(s))?, absolute);
+    Ok(())
+}
+
+#[test]
+fn b_start_deadline_expired_bound_cannot_spawn_or_revive() -> Result<()> {
+    assert!(Phase::until(Instant::now() + Duration::from_secs(1)).is_err());
+    let _managed = Guard::enter(Path::new("unused-pure-deadline-test"), 60)?;
+    assert!(Phase::until(Instant::now()).is_err());
+    check()?;
+    let outer = Phase::until(Instant::now() + Duration::from_secs(1))?;
+    test_scope(|s| s.deadline = Instant::now())?;
+    assert!(check().is_err());
+    assert!(output(&mut Command::new("must-not-spawn-b-start-test")).is_err());
+    assert_eq!(test_scope(|s| s.next)?, 0);
+    drop(outer);
+    assert!(check().is_err());
+    assert!(Phase::until(Instant::now() + Duration::from_secs(60)).is_err());
+    Ok(())
 }

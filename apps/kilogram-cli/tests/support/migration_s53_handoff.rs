@@ -7211,3 +7211,8 @@ fn s53_exhausted_exact_path_public() -> Result<()> {
 fn s53_exhausted_continue_after_a_public() -> Result<()> {
     g1_continue::run()
 }
+
+#[test]
+fn s53_b_before_alpn2_two_c_public() -> Result<()> {
+    two_context::b_start_run()
+}

@@ -4,12 +4,12 @@ use kilogram_cli::ordered_dialog::{runtime7::Profile3, state};
 use kilogram_protocol::{ordered_dialog_v1 as old, ordered_dialog_v2 as wire};
 use kilogram_state::indexed_dialog::{self as db, migration7::live1 as store};
 use std::io::Write;
+#[path = "migration_s53_two_context_finish.rs"]
+mod finish;
 #[path = "migration_s53_two_context_oracle.rs"]
 mod oracle;
 #[path = "migration_s53_two_context_persistence.rs"]
 mod persistence;
-#[path = "migration_s53_two_context_finish.rs"]
-mod finish;
 #[path = "migration_s53_two_context_routes.rs"]
 mod routes;
 #[cfg(test)]
@@ -17,6 +17,12 @@ mod routes;
 mod tests;
 #[path = "migration_s53_two_context_witness.rs"]
 mod witness;
+
+#[path = "migration_s53_b_start.rs"]
+mod b_start;
+pub(super) fn b_start_run() -> Result<()> {
+    b_start::run()
+}
 
 #[derive(Default)]
 struct Owners {
@@ -360,8 +366,18 @@ fn stop_read(
     Ok(saved)
 }
 
-pub(super) fn run() -> Result<()> {
-    let managed = Managed::new("F-s53-two-c-routes-integrated-01", 420)?;
+struct Initial {
+    base: PathBuf,
+    old: [OldNode; 3],
+    contexts: [String; 2],
+    owners: Owners,
+    nodes: [Node; 3],
+    maps: Vec<oracle::Mapping>,
+    first: Pair,
+    second: Pair,
+}
+fn initial(managed: &Managed, trace: Option<Instant>) -> Result<Initial> {
+    let clock = trace.unwrap_or_else(Instant::now);
     let base = managed.run.join("two-c");
     std::fs::create_dir(&base)?;
     let mut old = [
@@ -431,7 +447,7 @@ pub(super) fn run() -> Result<()> {
         Ok(Some(full))
     })?;
     phase(
-        &managed,
+        managed,
         "legacy-delivered",
         json!({"status":legacy,"owned":owners.pids()}),
     )?;
@@ -445,21 +461,39 @@ pub(super) fn run() -> Result<()> {
     for n in &mut nodes {
         ready.push(n.migrate()?);
     }
-    owners.start(&nodes, "selected")?;
+    if trace.is_some() {
+        owners.stopped()?;
+        for (owner, node) in nodes.iter().enumerate() {
+            let plan = base.join(format!("b-start-{owner}.schedule.json"));
+            std::fs::write(&plan, serde_json::to_vec(&json!({"trace_rpc":true}))?)?;
+            owners.alive()?;
+            let start_ms = clock.elapsed().as_millis();
+            let child = node.start_controlled(&format!("selected-{owner}"), Some(&plan), None)?;
+            owners.insert(owner, child)?;
+            phase(
+                managed,
+                &format!("b-start-owner-{owner}"),
+                json!({"owner":owner,"pid":owners.pids(),"start_before_ms":start_ms,"start_after_ms":clock.elapsed().as_millis(),"clock":"B-start controller monotonic origin","plan":{"trace_rpc":true},"profile":node.profile,"account":node.branch.account,"device":node.branch.device}),
+            )?;
+        }
+        owners.require([true; 3])?;
+    } else {
+        owners.start(&nodes, "selected")?;
+    }
     let full = statuses(&mut owners, &nodes)?;
     phase(
-        &managed,
+        managed,
         "ready-status-observed",
         json!({"ready":ready,"status":full,"owned":owners.pids()}),
     )?;
     let maps = oracle::mappings(&full, &contexts)?;
     phase(
-        &managed,
+        managed,
         "mapping-observed",
         json!({"ready":ready,"mappings":maps,"status":full,"owned":owners.pids()}),
     )?;
     oracle::ready_mappings(&ready, &maps)?;
-    let mut first = view_pair(
+    let first = view_pair(
         &base,
         [
             view(&nodes, &maps, 0, &contexts[0])?,
@@ -468,7 +502,7 @@ pub(super) fn run() -> Result<()> {
         [y.root.clone(), x.root.clone()],
         &contexts[0],
     );
-    let mut second = view_pair(
+    let second = view_pair(
         &base,
         [
             view(&nodes, &maps, 1, &contexts[1])?,
@@ -481,6 +515,30 @@ pub(super) fn run() -> Result<()> {
     first.ceremony("c1", "absent", 30 * 86400)?;
     owners.alive()?;
     second.ceremony("c2", "absent", 30 * 86400)?;
+    Ok(Initial {
+        base,
+        old,
+        contexts,
+        owners,
+        nodes,
+        maps,
+        first,
+        second,
+    })
+}
+pub(super) fn run() -> Result<()> {
+    let managed = Managed::new("F-s53-two-c-routes-integrated-01", 420)?;
+    let Initial {
+        base,
+        old,
+        contexts,
+        mut owners,
+        nodes,
+        maps,
+        mut first,
+        mut second,
+    } = initial(&managed, None)?;
+    let y = &old[0];
     first.upgrade(1, 51)?;
     // G3 initial readiness uses an explicit A trigger; retain X/B intent.
     first.upgrade(0, 53)?;

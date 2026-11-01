@@ -1,0 +1,25 @@
+s53_scheduler slot=0 phase=ordinary-start monotonic_ms=14
+s53_scheduler slot=0 phase=ordinary-finished monotonic_ms=995
+s53_ordinary_attempt slot=0 L1 pending admission policy changed
+s53_scheduler slot=0 phase=ordinary-start monotonic_ms=1516
+s53_scheduler slot=0 phase=ordinary-finished monotonic_ms=31532
+s53_ordinary_attempt slot=0 ordinary admission deadline: deadline has elapsed
+s53_scheduler slot=0 phase=ordinary-start monotonic_ms=32056
+s53_scheduler slot=0 phase=ordinary-finished monotonic_ms=62059
+s53_ordinary_attempt slot=0 ordinary admission deadline: deadline has elapsed
+s53_scheduler slot=0 phase=probe-start monotonic_ms=62586
+s53_rpc slot=0 kind=Head
+s53_rpc slot=0 kind=AckBatch
+s53_rpc slot=0 kind=Propose
+s53_rpc slot=0 kind=Select
+s53_rpc slot=0 kind=Head
+s53_rpc slot=0 kind=Head
+s53_rpc slot=0 kind=Head
+s53_rpc slot=0 kind=Head
+s53_rpc slot=0 kind=Head
+s53_rpc slot=0 kind=PrefixReq
+s53_rpc slot=0 kind=AckBatch
+s53_rpc slot=0 kind=Head
+s53_rpc slot=0 kind=Head
+s53_rpc slot=0 kind=Head
+s53_rpc slot=0 kind=Head
