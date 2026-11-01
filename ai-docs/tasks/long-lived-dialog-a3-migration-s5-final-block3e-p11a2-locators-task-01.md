@@ -1,0 +1,31 @@
+# P11A2: authenticated same-route restart publications
+
+2026-11-02. Baseline `5fef1926d532d2a5b926739d71af7680818550e8`, parent `f70aec67a304354e6130198d48020b448951376e`, tree `287d3ce335ae77c88f857827d7136462622bd23c`. P11A1 exact publication independently verified by root `9c569f` (45 paths/raw576494B) and `3a724a` (actual remote master). Same GPT-6.1 Sol High, no Fast.
+
+Implement only the next cohesive prerequisite from accepted [P11 contract section 3](long-lived-dialog-a3-migration-s5-final-block3e-p11-contract-01.md), preserving the [smaller-slice grouping](long-lived-dialog-a3-migration-s5-final-block3e-p11-contract-root-review-01.md). Contract review is already complete; routine source choices need no extra proposal/approval cycle. A material contradiction requires a concrete report before dependent work.
+
+## Premises reviewed before implementation
+
+Root traced `runtime7/admission2.rs::publish_locator2`: authenticated stored bytes are reused when endpoint, address set and relay match, not_before is current and expiry exceeds publication wall time plus 60 seconds. Otherwise revision advances with checked addition. A same-route restart therefore need not rotate endpoint, revision or signed bytes. Expiry headroom belongs to the publisher's reuse decision at publication time; do not blindly demand that same headroom still exists at later verifier observation time. The observed current locator must still be valid at the actual verification time.
+
+Root read `migration_s54_relay_locators.rs`: `verify` authenticates context/owner/peer, current interval, revision and exact relay-only route, then its optional prior requires strictly greater revision and different bytes. `read` checks four publications against original scope/role/account/device and equal endpoints across each owner's two contexts. `admitted` separately checks actual family2/current publication readiness, own/imported revisions, lease generation and selected path. P10 relies on the strict change predicate. Existing signed synthetic fixtures live in `migration_s54_relay_locator_tests.rs`; reuse them instead of creating another identity/crypto framework.
+
+## Required change
+
+Add a narrowly scoped same-route verification/read path for the future P11 restart, sharing existing authentication, bounds and four-publication traversal where useful. Keep the existing P10 `verify/read` strict route-change behavior and existing admission semantics intact; no permissive global replacement or ambiguous default mode.
+
+The new path consumes the prior authenticated cut and fresh current bytes under the same original owner/context/peer scope and exact owned relay URL, with no advertised IPs. Validate the current signature/credential/scope/interval/revision exactly as the existing verifier does. A lower revision fails. An equal revision is accepted only for byte-identical signed content. A greater revision is accepted if all current authentication, interval, scope and same-route conditions pass; endpoint rotation is allowed but not required. Do not accept altered content at an equal revision, including endpoint or interval changes, even when the new bytes carry a valid signature. Do not silently substitute a different context/owner's prior row or a different relay. Bind comparison to the prior authenticated bytes/metadata rather than an unvalidated number supplied independently.
+
+Prior evidence was captured before shutdown and may expire by the later observation; do not reject a valid newer replacement merely because the previous publication is now expired. Equal-revision reuse still requires that the current identical bytes are valid now. At the four-publication read boundary preserve original scope/account/device checks, bounded reads, original Controller deadline/liveness checks and equal current endpoints across both contexts for each owner. The prior/current endpoint need not differ. Expose only what later P11 composition needs; no process starts, locator import commands or actual restart composition in this slice.
+
+## Focused validation
+
+Use real signed synthetic Locator2 fixtures and invoke the actual shared/new verifier. Cover unchanged valid bytes/revision; valid newer revision with unchanged endpoint; valid newer endpoint under the same route; lower revision; equal-revision different signed bytes; expired or future current interval; wrong relay/IP advertisement; wrong context/owner/peer or signature. Cover a valid newer replacement of an expired prior without weakening current expiry checks. Keep the existing strict P10 route-change tests proving unchanged bytes/revision are still rejected there. Avoid a separate toy comparison model or tests that merely restate implementation arithmetic.
+
+Run relevant strict Clippy, formatting/whitespace, locked/offline compile-only and targeted new plus affected existing locator/admission tests through `scripts/run-cargo-tests-stable.ps1`, Jobs2/BelowNormal/fixed EXE paths. Reuse built artifacts. Preserve original preimages and any failures, record exact current source/EXE pins and actual test names/receipts. No broad decoder/lifecycle replay unless an actual change requires it. Ordinary fixes and reruns within scope are autonomous with finite per-command watchdogs, not a tiny cumulative allowance. Report runtime behavior as unexecuted.
+
+## Boundaries and return
+
+Test support only; no product/runtime/protocol/crypto/state writer changes. No actual nodes, relay, network scenario, enrollment, old private fixtures, F/P or field-image changes. No full terminal source/receipt/Native reader, memory observer, capture sanitization, whole-result assembly, P11 activation or runner work. These remain mandatory later slices, not waived. Do not infer whole S5.4 acceptance or runtime feasibility from this increment. No commit/push before root implementation review.
+
+Return one implementation report and exact candidate manifest with actual commands, test names, outcomes, retained failures and scope limitations. Preserve navigation3, root Current handoff and unrelated historical files. Send one substantive callback to root `01a164ec-589c-7b41-bc34-3ba158d1f22b` under standing user authorization, then end without polling. Root will review and assign exact commit/push before the next slice.

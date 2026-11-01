@@ -267,3 +267,226 @@ fn s54_p10b_actual_relay_admission_rejects_config_only_stale_head_revision_and_r
     );
     Ok(())
 }
+
+#[test]
+fn s54_p11a2_same_route_reuses_exact_signed_bytes_for_both_contexts_and_owners() -> Result<()> {
+    let (devices, peers) = peers()?;
+    for context in [[17; 32], [18; 32]] {
+        for (owner, device) in devices.iter().enumerate() {
+            let mut f = fields(&peers, owner);
+            f.c = context;
+            let signed = v2::ParsedRuntimeLocator2::sign(f, device)?;
+            let prior =
+                locators::verify(signed.raw(), context, &peers, owner, 150, Some(URL), None)?;
+            // Reuse was a publisher decision earlier, not a new 60s verifier margin.
+            let current = locators::verify_same_route(
+                signed.raw(),
+                context,
+                &peers,
+                owner,
+                199,
+                URL,
+                &prior,
+            )?;
+            ensure!(
+                current.revision == prior.revision
+                    && current.endpoint == prior.endpoint
+                    && current.raw == prior.raw,
+                "same authenticated publication, even one second before expiry"
+            );
+            ensure!(
+                locators::verify(
+                    signed.raw(),
+                    context,
+                    &peers,
+                    owner,
+                    199,
+                    Some(URL),
+                    Some(&prior)
+                )
+                .is_err(),
+                "P10 strict route-change path still rejects unchanged revision/bytes"
+            );
+        }
+    }
+    Ok(())
+}
+#[test]
+fn s54_p11a2_newer_same_route_accepts_unchanged_or_rotated_endpoint() -> Result<()> {
+    let (devices, peers) = peers()?;
+    let prior = v2::ParsedRuntimeLocator2::sign(fields(&peers, 0), &devices[0])?;
+    let prior = locators::verify(prior.raw(), [17; 32], &peers, 0, 150, Some(URL), None)?;
+    for endpoint in [prior.endpoint, [99; 32]] {
+        let mut f = fields(&peers, 0);
+        f.revision = 3;
+        f.endpoint = endpoint;
+        f.not_before = 140;
+        f.expires = 240;
+        let signed = v2::ParsedRuntimeLocator2::sign(f, &devices[0])?;
+        let current =
+            locators::verify_same_route(signed.raw(), [17; 32], &peers, 0, 150, URL, &prior)?;
+        ensure!(
+            current.revision == 3 && current.endpoint == endpoint && current.raw == signed.raw(),
+            "actual valid new revision under same relay, no endpoint rotation assumption"
+        );
+    }
+    Ok(())
+}
+#[test]
+fn s54_p11a2_lower_or_equal_revision_changed_signed_content_is_rejected() -> Result<()> {
+    let (devices, peers) = peers()?;
+    let prior = v2::ParsedRuntimeLocator2::sign(fields(&peers, 0), &devices[0])?;
+    let prior = locators::verify(prior.raw(), [17; 32], &peers, 0, 150, Some(URL), None)?;
+    for mutation in 0..3 {
+        let mut f = fields(&peers, 0);
+        match mutation {
+            0 => f.revision = 1,
+            1 => f.endpoint = [99; 32],
+            _ => {
+                f.not_before = 110;
+                f.expires = 210;
+            }
+        }
+        let signed = v2::ParsedRuntimeLocator2::sign(f, &devices[0])?;
+        ensure!(
+            locators::verify_same_route(signed.raw(), [17; 32], &peers, 0, 150, URL, &prior)
+                .is_err(),
+            "valid signature cannot authorize lower/equal-conflicting publication {mutation}"
+        );
+    }
+    Ok(())
+}
+#[test]
+fn s54_p11a2_expired_prior_allows_new_current_but_not_expired_equal_reuse() -> Result<()> {
+    let (devices, peers) = peers()?;
+    let mut f = fields(&peers, 0);
+    f.not_before = 10;
+    f.expires = 100;
+    let old = v2::ParsedRuntimeLocator2::sign(f, &devices[0])?;
+    let prior = locators::verify(old.raw(), [17; 32], &peers, 0, 99, Some(URL), None)?;
+    let mut f = fields(&peers, 0);
+    f.revision = 3;
+    f.not_before = 140;
+    f.expires = 160;
+    let new = v2::ParsedRuntimeLocator2::sign(f, &devices[0])?;
+    locators::verify_same_route(new.raw(), [17; 32], &peers, 0, 150, URL, &prior)?;
+    for now in [100, 150] {
+        ensure!(
+            locators::verify_same_route(old.raw(), [17; 32], &peers, 0, now, URL, &prior).is_err(),
+            "equal bytes still must be current"
+        );
+    }
+    for now in [139, 160] {
+        ensure!(
+            locators::verify_same_route(new.raw(), [17; 32], &peers, 0, now, URL, &prior).is_err(),
+            "new current interval is not weakened for expired prior"
+        );
+    }
+    Ok(())
+}
+#[test]
+fn s54_p11a2_current_requires_signature_scope_owner_peer_interval_and_exact_url_only_route()
+-> Result<()> {
+    let (devices, peers) = peers()?;
+    let old = v2::ParsedRuntimeLocator2::sign(fields(&peers, 0), &devices[0])?;
+    let prior = locators::verify(old.raw(), [17; 32], &peers, 0, 150, Some(URL), None)?;
+    for mutation in 0..8 {
+        let mut f = fields(&peers, 0);
+        f.revision = 3;
+        match mutation {
+            0 => f.c = [18; 32],
+            1 => {
+                f.cert = peers[1].cert_ref();
+                f.peer_cert = peers[0].cert_ref();
+            }
+            2 => f.peer_cert = [99; 32],
+            3 => f.relay = Some("http://127.0.0.1:40124/".into()),
+            4 => f.ips.push("127.0.0.1:12345".parse()?),
+            5 => {
+                f.not_before = 151;
+                f.expires = 251;
+            }
+            6 => {
+                f.not_before = 10;
+                f.expires = 150;
+            }
+            _ => (),
+        }
+        let signer = if mutation == 1 {
+            &devices[1]
+        } else {
+            &devices[0]
+        };
+        let signed = v2::ParsedRuntimeLocator2::sign(f, signer)?;
+        let mut raw = signed.raw().to_vec();
+        if mutation == 7 {
+            *raw.last_mut().context("actual signature byte")? ^= 1;
+        }
+        ensure!(
+            locators::verify_same_route(&raw, [17; 32], &peers, 0, 150, URL, &prior).is_err(),
+            "newer current authentication/route failure {mutation}"
+        );
+    }
+    ensure!(
+        locators::verify_same_route(old.raw(), [17; 32], &peers, 2, 150, URL, &prior).is_err()
+            && locators::verify_same_route(&vec![0; 8193], [17; 32], &peers, 0, 150, URL, &prior)
+                .is_err(),
+        "bounded owner/current bytes"
+    );
+    Ok(())
+}
+#[test]
+fn s54_p11a2_prior_authentication_prevents_cross_row_or_independent_metadata_substitution()
+-> Result<()> {
+    let (devices, peers) = peers()?;
+    let old = v2::ParsedRuntimeLocator2::sign(fields(&peers, 0), &devices[0])?;
+    let prior = locators::verify(old.raw(), [17; 32], &peers, 0, 150, Some(URL), None)?;
+    let mut f = fields(&peers, 0);
+    f.revision = 3;
+    let current = v2::ParsedRuntimeLocator2::sign(f, &devices[0])?;
+    for mutation in 0..8 {
+        let mut bad = prior.clone();
+        match mutation {
+            0 => bad.revision = 1,
+            1 => bad.endpoint = [99; 32],
+            2 => {
+                *bad.raw.last_mut().context("prior signature byte")? ^= 1;
+            }
+            3 => {
+                let mut f = fields(&peers, 0);
+                f.c = [18; 32];
+                bad.raw = v2::ParsedRuntimeLocator2::sign(f, &devices[0])?
+                    .raw()
+                    .to_vec();
+            }
+            4 => {
+                let f = fields(&peers, 1);
+                bad.endpoint = f.endpoint;
+                bad.raw = v2::ParsedRuntimeLocator2::sign(f, &devices[1])?
+                    .raw()
+                    .to_vec();
+            }
+            5 => {
+                let mut f = fields(&peers, 0);
+                f.relay = Some("http://127.0.0.1:40124/".into());
+                bad.raw = v2::ParsedRuntimeLocator2::sign(f, &devices[0])?
+                    .raw()
+                    .to_vec();
+            }
+            6 => {
+                let mut f = fields(&peers, 0);
+                f.peer_cert = [99; 32];
+                bad.raw = v2::ParsedRuntimeLocator2::sign(f, &devices[0])?
+                    .raw()
+                    .to_vec();
+            }
+            _ => bad.raw = vec![0; 8193],
+        }
+        ensure!(
+            locators::verify_same_route(current.raw(), [17; 32], &peers, 0, 150, URL, &bad)
+                .is_err(),
+            "prior must be actual bounded authenticated original row {mutation}"
+        );
+    }
+    Ok(())
+}

@@ -19,6 +19,31 @@ pub(super) fn verify(
     url: Option<&str>,
     prior: Option<&Locator>,
 ) -> Result<Locator> {
+    let parsed = authenticated(raw, context, peers, owner, url)?;
+    let f = parsed.fields();
+    ensure!(
+        f.not_before <= now && now < f.expires && f.revision > 0,
+        "actual current signed locator interval/revision"
+    );
+    if let Some(prior) = prior {
+        ensure!(
+            f.revision > prior.revision && raw != prior.raw.as_slice(),
+            "strict route-change revision/content, not stale direct bytes"
+        );
+    }
+    Ok(Locator {
+        revision: f.revision,
+        endpoint: f.endpoint,
+        raw: raw.into(),
+    })
+}
+fn authenticated(
+    raw: &[u8],
+    context: old::Id,
+    peers: &[v2::RootVerifiedCredential; 2],
+    owner: usize,
+    url: Option<&str>,
+) -> Result<v2::ParsedRuntimeLocator2> {
     ensure!(
         owner < 2 && raw.len() <= 8192,
         "bounded actual locator/role"
@@ -26,10 +51,6 @@ pub(super) fn verify(
     let parsed = v2::ParsedRuntimeLocator2::parse(raw)?;
     parsed.verify(context, &peers[owner], &peers[1 - owner])?;
     let f = parsed.fields();
-    ensure!(
-        f.not_before <= now && now < f.expires && f.revision > 0,
-        "actual current signed locator interval/revision"
-    );
     if let Some(url) = url {
         relay_owner::url(url)?;
         ensure!(
@@ -42,17 +63,32 @@ pub(super) fn verify(
             "actual prior DirectOnly publication"
         );
     }
-    if let Some(prior) = prior {
-        ensure!(
-            f.revision > prior.revision && raw != prior.raw.as_slice(),
-            "strict route-change revision/content, not stale direct bytes"
-        );
-    }
-    Ok(Locator {
-        revision: f.revision,
-        endpoint: f.endpoint,
-        raw: raw.into(),
-    })
+    Ok(parsed)
+}
+pub(super) fn verify_same_route(
+    raw: &[u8],
+    context: old::Id,
+    peers: &[v2::RootVerifiedCredential; 2],
+    owner: usize,
+    now: u64,
+    url: &str,
+    prior: &Locator,
+) -> Result<Locator> {
+    // Prior is authenticated evidence, not a new observation at `now`.
+    // It may have expired while the original owners were stopped.
+    let signed_prior = authenticated(&prior.raw, context, peers, owner, Some(url))?;
+    let old = signed_prior.fields();
+    ensure!(
+        old.revision == prior.revision && old.endpoint == prior.endpoint,
+        "prior locator metadata must match its actual authenticated bytes"
+    );
+    let current = verify(raw, context, peers, owner, now, Some(url), None)?;
+    ensure!(
+        current.revision >= old.revision
+            && (current.revision != old.revision || current.raw == prior.raw),
+        "same-route revision cannot regress or change signed content at an equal revision"
+    );
+    Ok(current)
 }
 fn scope(s: &control::Controller, context: usize) -> Result<v2::VerifiedExistingScope1> {
     let node = s.view(0, context)?;
@@ -84,12 +120,27 @@ pub(super) fn read(
     url: Option<&str>,
     prior: Option<&Publications>,
 ) -> Result<Publications> {
+    read_cut(s, url, Comparison::Strict(prior))
+}
+pub(super) fn read_same_route(
+    s: &mut control::Controller,
+    url: &str,
+    prior: &Publications,
+) -> Result<Publications> {
+    read_cut(s, Some(url), Comparison::SameRoute(prior))
+}
+enum Comparison<'a> {
+    Strict(Option<&'a Publications>),
+    SameRoute(&'a Publications),
+}
+fn read_cut(
+    s: &mut control::Controller,
+    url: Option<&str>,
+    comparison: Comparison<'_>,
+) -> Result<Publications> {
     s.check()?;
     let scopes = [scope(s, 0)?, scope(s, 1)?];
     let mut rows = Vec::new();
-    let now = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)?
-        .as_secs();
     for owner in 0..2 {
         let mut contexts = Vec::new();
         for (context, scope) in scopes.iter().enumerate() {
@@ -101,15 +152,29 @@ pub(super) fn read(
                     .join(format!("{}.locator2", s.origin.contexts[context])),
                 8192,
             )?;
-            contexts.push(verify(
-                &raw,
-                scope.c(),
-                scope.peers(),
-                owner,
-                now,
-                url,
-                prior.map(|p| &p.rows[owner][context]),
-            )?);
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)?
+                .as_secs();
+            contexts.push(match comparison {
+                Comparison::Strict(prior) => verify(
+                    &raw,
+                    scope.c(),
+                    scope.peers(),
+                    owner,
+                    now,
+                    url,
+                    prior.map(|p| &p.rows[owner][context]),
+                )?,
+                Comparison::SameRoute(prior) => verify_same_route(
+                    &raw,
+                    scope.c(),
+                    scope.peers(),
+                    owner,
+                    now,
+                    url.context("explicit same-route relay URL")?,
+                    &prior.rows[owner][context],
+                )?,
+            });
         }
         let pair: [Locator; 2] = contexts
             .try_into()
@@ -120,6 +185,7 @@ pub(super) fn read(
         );
         rows.push(pair);
     }
+    s.check()?;
     Ok(Publications {
         rows: rows
             .try_into()

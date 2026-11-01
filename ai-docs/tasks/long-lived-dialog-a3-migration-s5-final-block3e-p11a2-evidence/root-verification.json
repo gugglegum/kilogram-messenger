@@ -1,0 +1,250 @@
+{
+  "classification": "Root independent acceptance checks: P11A2 dormant source/static/pure only",
+  "baseline": "5fef1926d532d2a5b926739d71af7680818550e8",
+  "verified_pin_count": 646,
+  "candidate_paths": 25,
+  "candidate_raw_bytes": 285409,
+  "source": [
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_relay_locator_tests.rs",
+      "bytes": 17976,
+      "sha256": "235e198b1ce1ae7df1ba9eaf0ab3ca56c1229728f2adaa831d50684fff3ebce1",
+      "git_blob": "79936afcb2653843215fa0f34489bcb29891dbd1"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_relay_locators.rs",
+      "bytes": 7728,
+      "sha256": "621f686714508e6f2c2be0a6e9268fcb39ef613341679b7886a4c5ddbb9d41f2",
+      "git_blob": "aae0200f51ac2c67990a63f4729880fa22d4a86b"
+    }
+  ],
+  "contracts": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3e-p11a2-locators-task-01.md",
+      "bytes": 6281,
+      "sha256": "89b649d4ef316c8e2344f6215c5141fed768fb9bb52ab45a6d759a7bdea08306"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3e-p11-contract-01.md",
+      "bytes": 24568,
+      "sha256": "5d634a445e9998a2cf2e5eeeaaff88633a9ac5b5d4dca802001a404401d7daa0"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3e-p11-contract-root-review-01.md",
+      "bytes": 2407,
+      "sha256": "ef411870f6b0c3b048b546961cea4c812d04439f3c9eb17bcaca0e81d1ddf43d"
+    }
+  ],
+  "actual_app_calls": [
+    {
+      "id": "exec-4c0d2657-c9ac-4522-a514-c939ea351b8c",
+      "exitCode": 0,
+      "durationMs": 35504,
+      "receipt": {
+        "step": "clippy-01",
+        "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "argv": [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a2-01\\clippy.ps1"
+        ],
+        "actual_child_exit_code": 0,
+        "exit_code": 0,
+        "elapsed_seconds": 26.5101677,
+        "cleanup_verified": true,
+        "error": null
+      }
+    },
+    {
+      "id": "exec-87555a0f-48f2-46e2-aa86-d39cee730748",
+      "exitCode": 0,
+      "durationMs": 99608,
+      "receipt": {
+        "step": "compile-01",
+        "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "argv": [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a2-01\\compile.ps1",
+          "-Capture",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a2-01\\compile-01.capture.json"
+        ],
+        "actual_child_exit_code": 0,
+        "exit_code": 0,
+        "elapsed_seconds": 98.4662964,
+        "cleanup_verified": true,
+        "error": null
+      }
+    },
+    {
+      "id": "exec-dae78515-879e-4f1d-a47a-8c497b9cb453",
+      "exitCode": 0,
+      "durationMs": 16427,
+      "receipt": {
+        "step": "pure-01",
+        "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "argv": [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a2-01\\pure.ps1",
+          "-Step",
+          "pure-01"
+        ],
+        "actual_child_exit_code": 0,
+        "exit_code": 0,
+        "elapsed_seconds": 15.2326012,
+        "cleanup_verified": true,
+        "error": null
+      }
+    },
+    {
+      "id": "exec-77a89fb2-4e56-4878-ae8f-4f6479217b42",
+      "exitCode": 0,
+      "durationMs": 12829,
+      "receipt": {
+        "step": "fmt-01",
+        "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "argv": [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a2-01\\fmt.ps1"
+        ],
+        "actual_child_exit_code": 0,
+        "exit_code": 0,
+        "elapsed_seconds": 4.721426,
+        "cleanup_verified": true,
+        "error": null
+      }
+    }
+  ],
+  "actual_passed_tests": [
+    "live_l1::handoff::final_p5::relay::locator_tests::s54_p10b_actual_relay_admission_rejects_config_only_stale_head_revision_and_ready_slot",
+    "live_l1::handoff::final_p5::relay::locator_tests::s54_p10b_route_flip_requires_strict_signed_revision_not_endpoint_rotation",
+    "live_l1::handoff::final_p5::relay::locator_tests::s54_p10b_signed_two_context_locators_require_current_scope_role_and_signature",
+    "live_l1::handoff::final_p5::relay::locator_tests::s54_p10b_signed_url_only_locators_reject_ip_other_url_expiry_and_cert_substitution",
+    "live_l1::handoff::final_p5::relay::locator_tests::s54_p11a2_current_requires_signature_scope_owner_peer_interval_and_exact_url_only_route",
+    "live_l1::handoff::final_p5::relay::locator_tests::s54_p11a2_expired_prior_allows_new_current_but_not_expired_equal_reuse",
+    "live_l1::handoff::final_p5::relay::locator_tests::s54_p11a2_lower_or_equal_revision_changed_signed_content_is_rejected",
+    "live_l1::handoff::final_p5::relay::locator_tests::s54_p11a2_newer_same_route_accepts_unchanged_or_rotated_endpoint",
+    "live_l1::handoff::final_p5::relay::locator_tests::s54_p11a2_prior_authentication_prevents_cross_row_or_independent_metadata_substitution",
+    "live_l1::handoff::final_p5::relay::locator_tests::s54_p11a2_same_route_reuses_exact_signed_bytes_for_both_contexts_and_owners"
+  ],
+  "compiler_inputs": 571,
+  "units": 501,
+  "all_pure_units_fresh": true,
+  "frozen_guard_verified": true,
+  "admitted_body_unchanged": true,
+  "index_empty": true,
+  "navigation_preserved": [
+    {
+      "path": "ai-docs/README.md",
+      "bytes": 210074,
+      "sha256": "ae9bebb51c93508b583b0d60082dba9fb045048abe94872110dfc7841554ab9e"
+    },
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "bytes": 165893,
+      "sha256": "ed02ebd9b46ffd7a62be15915abc5c1bfb0ea13b8e1dea23e96f1655a44a58ba"
+    },
+    {
+      "path": "ai-docs/next-stage-plan.md",
+      "bytes": 60232,
+      "sha256": "52e158dd72339b23ef93de531300a57f60345dfb3b46cd7b41c044978c2906c1"
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "E:/AI-Projects/kilogram-p2p-messenger/target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe",
+      "bytes": 50473984,
+      "sha256": "f5322cfc26b93ab7a431a474d7f33e9ff805a3e1a3df98fb1d0f84185794dcb9"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "bin",
+      "target": "kilogram-cli",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 50781696,
+      "sha256": "1992cef4b4b6b2b18bb67ce80c94fb4c751ea3715626146936c44bdb619c4d57",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "lib",
+      "target": "kilogram_cli",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 32656384,
+      "sha256": "2fcbfb6529fad0f156cbed869ea0455e864119dcecef94eba508aa06e588762f",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 17138688,
+      "sha256": "7955960b4ff265c7402951d94e3a5916ce86e60639d7fc324cb252f8b4f44cbd",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "runtime2_process",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 23695360,
+      "sha256": "4a08ce3de743241c720ec3bf25425c75b8efa695a03780fe1f74e1e7109f2a98",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-transport-iroh",
+      "kind": "lib",
+      "target": "kilogram_transport_iroh",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+      "bytes": 19419648,
+      "sha256": "f5822cd40225a7ac12dbc2c58264439b8e3c5d4b4d20cf87309b9aa28f2023ad",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-transport-iroh",
+      "kind": "test",
+      "target": "local_relay_transport",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+      "bytes": 22317056,
+      "sha256": "552cc6c23452ad50c94b65391e33df462b89e14551c7eac51304e55872788cf0",
+      "profile": "verification-scale"
+    }
+  ],
+  "capture_pins": [
+    {
+      "path": ".tmp/s54-block3e-p11a2-01/compile-01.capture.json",
+      "bytes": 2713235,
+      "sha256": "853d0769de9c84c94bd373e64d8561df8d5ac6de6011d018f9fa69abfb74f0b8"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a2-01/pure-01.capture.json",
+      "bytes": 2713294,
+      "sha256": "6dd4d32f7f6e99568c426b8a41db1f98ba195dc738ce066311754f398b313558"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a2-01/pure-01.expected.json",
+      "bytes": 1295379,
+      "sha256": "b1dfa8a4a720b279e0d002f5ae250ea34ec029b4dbe9aae461a2c233af364f3d"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a2-01/preimages.json",
+      "bytes": 3319,
+      "sha256": "291da505f4ce30283546adb03391b38a1d5ed35aaf03ed90eb88eeae29486390"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a2-01/navigation-pins.json",
+      "bytes": 471,
+      "sha256": "fcdf64acd0ddf5e81724c44e1739f63f95e6109e25ef69cc6255cd93940dc1ee"
+    }
+  ],
+  "runtime_executed": false,
+  "new_test_runs": false,
+  "root_check_correction": "Initial root audit84e887 assumed an A1-only preserved_revisions key; schema inspected3c596c, no source/test/evidence changes or reruns."
+}
