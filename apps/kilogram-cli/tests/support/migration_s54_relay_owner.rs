@@ -63,8 +63,78 @@ pub(super) struct Relay {
     pub url: Option<String>,
     pub image: Value,
     cleanup: PathBuf,
+    normal: Option<NormalRelay>,
+}
+struct NormalRelay {
+    until: Instant,
+    published: bool,
+    outcome: Option<Value>,
+}
+fn normal_exit(published: bool, code: Option<i32>, forced: bool) -> Result<()> {
+    ensure!(
+        published && code == Some(0) && !forced,
+        "actual published normal relay stop and exit0/wait; forced cleanup is not acceptance"
+    );
+    Ok(())
 }
 impl Relay {
+    pub fn check(&mut self) -> Result<()> {
+        if let Some(normal) = &self.normal {
+            ensure!(
+                Instant::now() < normal.until,
+                "original normal relay stop deadline"
+            );
+            if let Some(exit) = self.child.0.try_wait()? {
+                normal_exit(normal.published, exit.code(), false)?;
+            }
+            Ok(())
+        } else {
+            self.child.alive()
+        }
+    }
+    pub fn finish_normal(&mut self, whole: Instant) -> Result<Value> {
+        ensure!(self.normal.is_none(), "relay stop requested exactly once");
+        self.child.alive()?;
+        let url = url(self.url.as_deref().context("original owned relay URL")?)?;
+        let until = ready_until(Instant::now(), whole)?;
+        let _phase = s53_deadline::Phase::until(until)?;
+        self.normal = Some(NormalRelay {
+            until,
+            published: false,
+            outcome: None,
+        });
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&self.stop)?;
+        file.write_all(b"stop\n")?;
+        file.sync_all()?;
+        drop(file);
+        self.normal
+            .as_mut()
+            .context("retained relay request")?
+            .published = true;
+        loop {
+            s53_deadline::check()?;
+            self.check()?;
+            if self.child.0.try_wait()?.is_some() {
+                let exit = self.child.0.wait()?;
+                normal_exit(true, exit.code(), false)?;
+                s53_deadline::check()?;
+                ensure!(
+                    Instant::now() < until,
+                    "normal relay wait remains within original bound"
+                );
+                let facts = json!({"classification":"normal owned relay stop/exit0/wait resolved","pid":self.child.0.id(),"url":url,"stop":self.stop,"stop_published":true,"waited":true,"success":exit.success(),"code":exit.code(),"forced":false});
+                self.normal
+                    .as_mut()
+                    .context("retained normal relay outcome")?
+                    .outcome = Some(facts.clone());
+                return Ok(facts);
+            }
+            std::thread::sleep(Duration::from_millis(25));
+        }
+    }
     pub fn facts(&self) -> Value {
         json!({"pid":self.child.0.id(),"url":self.url,"ready":self.ready,"stop":self.stop,"stderr":self.log,"image":self.image})
     }
@@ -74,16 +144,18 @@ impl Drop for Relay {
         // No deadline check here: expiration must not skip known-handle cleanup.
         let pid = self.child.0.id();
         let mut kill_error = None;
+        let mut forced = false;
         let outcome = match self.child.0.try_wait() {
             Ok(Some(exit)) => Ok(exit),
             _ => {
+                forced = true;
                 if let Err(error) = self.child.0.kill() {
                     kill_error = Some(error.to_string());
                 }
                 self.child.0.wait()
             }
         };
-        let row = match outcome {
+        let mut row = match outcome {
             Ok(exit) => {
                 json!({"classification":"owned relay waited outcome; no node packet accounting","pid":pid,"waited":true,"success":exit.success(),"code":exit.code(),"kill_error":kill_error,"url":self.url})
             }
@@ -91,6 +163,20 @@ impl Drop for Relay {
                 json!({"classification":"unresolved owned relay cleanup","pid":pid,"waited":false,"error":error.to_string(),"kill_error":kill_error,"url":self.url})
             }
         };
+        row["forced"] = forced.into();
+        if let Some(normal) = &self.normal {
+            row["normal_stop_published"] = normal.published.into();
+            let code = row["code"].as_i64().and_then(|n| i32::try_from(n).ok());
+            let accepted = normal.outcome.is_some()
+                && row["waited"] == true
+                && normal_exit(normal.published, code, forced).is_ok();
+            row["normal_accepted"] = accepted.into();
+            row["normal_outcome"] = normal.outcome.clone().unwrap_or(Value::Null);
+            if !accepted {
+                row["classification"] =
+                    "unresolved/forced normal relay cleanup; not graceful acceptance".into();
+            }
+        }
         if let Ok(mut file) = std::fs::OpenOptions::new()
             .write(true)
             .create_new(true)
@@ -104,6 +190,10 @@ impl Drop for Relay {
 }
 pub(super) fn start(s: &mut control::Controller) -> Result<Value> {
     s.stopped_reconciled()?;
+    ensure!(
+        s.relay_outcome.is_none(),
+        "finished original relay cannot be replaced"
+    );
     unique(s.relay.is_some())?;
     s.check()?;
     let image = image()?;
@@ -140,6 +230,7 @@ pub(super) fn start(s: &mut control::Controller) -> Result<Value> {
         url: None,
         image,
         cleanup: base.join("relay-cleanup.json"),
+        normal: None,
     });
     s.wait(15, |s| {
         s.relay
@@ -158,4 +249,17 @@ pub(super) fn start(s: &mut control::Controller) -> Result<Value> {
     relay.child.alive()?;
     relay.url = Some(value);
     Ok(relay.facts())
+}
+#[cfg(test)]
+#[test]
+fn s54_p11a1_normal_relay_requires_published_stop_exit0_and_no_forced_cleanup() -> Result<()> {
+    normal_exit(true, Some(0), false)?;
+    ensure!(
+        normal_exit(false, Some(0), false).is_err()
+            && normal_exit(true, Some(1), false).is_err()
+            && normal_exit(true, None, false).is_err()
+            && normal_exit(true, Some(0), true).is_err(),
+        "stop file, acknowledgement or forced wait alone cannot accept relay"
+    );
+    Ok(())
 }

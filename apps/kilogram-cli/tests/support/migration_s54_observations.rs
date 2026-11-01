@@ -1,10 +1,13 @@
 //! Bounded decoder of actual child stderr, never expected operation counts.
 use super::*;
 use std::io::{Read, Seek, SeekFrom};
+#[path = "migration_s54_normal_observations.rs"]
+mod normal;
 #[path = "migration_s54_pause_observations.rs"]
 mod pauses;
 #[path = "migration_s54_observation_types.rs"]
 mod types;
+pub(super) use normal::FinalObservation;
 pub(super) use pauses::Pending;
 pub(super) use types::{AckObservation, PageObservation};
 
@@ -45,6 +48,7 @@ pub(super) struct Decoder {
     counts: oracle::Counts,
     last_packet: Option<PacketObservation>,
     final_seen: bool,
+    final_record: Option<FinalObservation>,
     lines: u64,
     pub pre_q_bindings: BTreeSet<(old::Id, u64)>,
     pub pending: BTreeSet<old::Id>,
@@ -86,6 +90,7 @@ impl Decoder {
             counts: Default::default(),
             last_packet: None,
             final_seen: false,
+            final_record: None,
             lines: 0,
             pre_q_bindings: BTreeSet::new(),
             pending: BTreeSet::new(),
@@ -229,7 +234,13 @@ impl Decoder {
                     facts["resolved"] == true,
                     "explicit repository resolved outcome"
                 );
-                ops.finish(key, oracle::Counts::read(&facts["counters"])?)?;
+                let counts = oracle::Counts::read(&facts["counters"])?;
+                ops.finish(key, counts)?;
+                self.final_record = Some(FinalObservation {
+                    key,
+                    sequence,
+                    counts,
+                });
                 self.final_seen = true;
             }
             "validated_head" => {

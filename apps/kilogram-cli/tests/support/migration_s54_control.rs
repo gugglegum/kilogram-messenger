@@ -1,5 +1,7 @@
 //! Per-child controls and lifetime ownership for the same two original directories.
 use super::*;
+#[path = "migration_s54_normal.rs"]
+mod normal;
 pub(super) fn runtime_workers(available: usize, inherited: Option<&str>) -> Result<usize> {
     let workers = inherited
         .map(str::parse::<usize>)
@@ -83,6 +85,7 @@ pub(super) struct Running {
     pub log: PathBuf,
     pub decoder: observations::Decoder,
     pub start_sources: (u64, u64),
+    normal: Option<normal::Stop>,
 }
 pub(super) struct Stopped {
     run: Running,
@@ -114,6 +117,7 @@ pub(super) struct Controller {
     pub controls: [Controls; 2],
     pub running: [Option<Running>; 2],
     pub relay: Option<relay_owner::Relay>,
+    pub relay_outcome: Option<Value>,
     pending_stops: [Option<Stopped>; 2],
     pub operations: oracle::Operations,
     pub pages: oracle::Pages,
@@ -139,7 +143,7 @@ impl Drop for Controller {
                 let _ = owned.child.0.kill();
                 let outcome = match owned.child.0.wait() {
                     Ok(exit) => {
-                        json!({"owner":owner,"pid":pid,"waited":true,"success":exit.success(),"code":exit.code(),"counter_outcome":"unresolved until stopped-source review"})
+                        json!({"owner":owner,"pid":pid,"waited":true,"success":exit.success(),"code":exit.code(),"normal_stop":owned.normal.as_ref().map(normal::Stop::facts),"counter_outcome":"unresolved until stopped-source review"})
                     }
                     Err(error) => {
                         json!({"owner":owner,"pid":pid,"waited":false,"error":error.to_string(),"counter_outcome":"unresolved"})
@@ -188,6 +192,7 @@ impl Controller {
             controls,
             running: [None, None],
             relay: None,
+            relay_outcome: None,
             pending_stops: [None, None],
             operations: Default::default(),
             pages: Default::default(),
@@ -208,11 +213,21 @@ impl Controller {
         s53_deadline::check()?;
         ensure!(Instant::now() < self.until, "S54 same absolute deadline");
         if let Some(relay) = self.relay.as_mut() {
-            relay.child.alive()?;
+            relay.check()?;
         }
         for owner in 0..2 {
             if let Some(run) = self.running[owner].as_mut() {
-                run.child.alive()?;
+                if let Some(stop) = run.normal.as_ref() {
+                    stop.check(
+                        run.decoder.normal_identity()?,
+                        run.child.0.id(),
+                        Instant::now(),
+                    )?;
+                }
+                normal::observed_exit(
+                    run.normal.as_ref(),
+                    run.child.0.try_wait()?.map(|s| s.code()),
+                )?;
                 run.decoder.poll(
                     &run.log,
                     &mut self.operations,
@@ -285,10 +300,10 @@ impl Controller {
     }
     pub fn start(&mut self, owner: usize) -> Result<()> {
         self.stopped(owner)?;
-        ensure!(
-            self.pending_stops[owner].is_none(),
-            "previous incarnation reconciled before reopen"
-        );
+        normal::reopen(
+            self.pending_stops[owner].is_some(),
+            self.relay_outcome.is_some(),
+        )?;
         self.controls[owner].write()?;
         let n = &self.origin.pair.nodes[owner];
         let (source_id, start_sources) = if n.indexed {
@@ -332,6 +347,7 @@ impl Controller {
                 owner as u8,
             ),
             start_sources,
+            normal: None,
         });
         self.origin.pair.starts[owner] = count;
         self.wait(15, |s| {
@@ -344,6 +360,13 @@ impl Controller {
     }
     pub fn kill_wait(&mut self, owner: usize) -> Result<()> {
         self.check()?;
+        ensure!(
+            self.running
+                .get(owner)
+                .and_then(Option::as_ref)
+                .is_some_and(|r| r.normal.is_none()),
+            "normal stop cannot be accepted as a killed outcome"
+        );
         ensure!(
             self.pending_stops[owner].is_none() && self.outcomes.len() < 32,
             "bounded unique outstanding stop"
@@ -387,6 +410,12 @@ impl Controller {
     }
     fn reconcile_stop(&mut self, owner: usize) -> Result<()> {
         self.stopped(owner)?;
+        ensure!(
+            self.pending_stops[owner]
+                .as_ref()
+                .is_some_and(|p| p.run.normal.is_none()),
+            "normal final requires read-only normal reconciliation"
+        );
         let n = &self.origin.pair.nodes[owner];
         let pending = self.pending_stops[owner]
             .as_mut()

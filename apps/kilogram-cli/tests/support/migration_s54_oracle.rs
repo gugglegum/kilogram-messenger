@@ -263,6 +263,17 @@ struct Stream {
     counts: Counts,
     closed: bool,
 }
+pub(super) struct ClosedStream {
+    pub key: Incarnation,
+    pub sequence: u64,
+    pub counts: Counts,
+}
+pub(super) struct ClosedSummary {
+    pub counts: Counts,
+    pub streams: Vec<ClosedStream>,
+    pub operations: Vec<([u8; 32], [u8; 32])>,
+    pub generations: Vec<([u8; 32], u64)>,
+}
 #[derive(Default)]
 pub(super) struct Operations {
     streams: BTreeMap<Incarnation, Stream>,
@@ -270,6 +281,82 @@ pub(super) struct Operations {
     generations: BTreeMap<[u8; 32], u64>,
 }
 impl Operations {
+    pub(super) fn closed(&self, key: Incarnation, sequence: u64, counts: Counts) -> Result<()> {
+        let stream = self
+            .streams
+            .get(&key)
+            .context("known normal final stream")?;
+        ensure!(
+            stream.closed
+                && stream.sequence == sequence
+                && stream.counts == counts
+                && counts.resolved(),
+            "actual exactly-once closed stream/final counters"
+        );
+        Ok(())
+    }
+    pub(super) fn summary(&self) -> Result<ClosedSummary> {
+        ensure!(
+            !self.streams.is_empty() && self.streams.len() <= 32 && self.operations.len() <= 4096,
+            "bounded nonempty closed ledger"
+        );
+        let mut counts = Counts::default();
+        let mut streams = Vec::with_capacity(self.streams.len());
+        for (key, stream) in &self.streams {
+            self.closed(*key, stream.sequence, stream.counts)?;
+            let c = stream.counts;
+            ensure!(
+                c.accounts == 0 && c.outbound == 0 && c.inbound == 0,
+                "closed current constructor observations"
+            );
+            counts = Counts {
+                encrypt: counts
+                    .encrypt
+                    .checked_add(c.encrypt)
+                    .context("closed encrypt overflow")?,
+                decrypt: counts
+                    .decrypt
+                    .checked_add(c.decrypt)
+                    .context("closed decrypt overflow")?,
+                attempts: counts
+                    .attempts
+                    .checked_add(c.attempts)
+                    .context("closed attempts overflow")?,
+                aborted: counts
+                    .aborted
+                    .checked_add(c.aborted)
+                    .context("closed abort overflow")?,
+                ambiguous: counts
+                    .ambiguous
+                    .checked_add(c.ambiguous)
+                    .context("closed ambiguity overflow")?,
+                accounts: counts
+                    .accounts
+                    .checked_add(c.accounts)
+                    .context("closed accounts overflow")?,
+                outbound: counts
+                    .outbound
+                    .checked_add(c.outbound)
+                    .context("closed outbound overflow")?,
+                inbound: counts
+                    .inbound
+                    .checked_add(c.inbound)
+                    .context("closed inbound overflow")?,
+            };
+            streams.push(ClosedStream {
+                key: *key,
+                sequence: stream.sequence,
+                counts: c,
+            });
+        }
+        ensure!(counts.resolved(), "resolved closed sum");
+        Ok(ClosedSummary {
+            counts,
+            streams,
+            operations: self.operations.iter().copied().collect(),
+            generations: self.generations.iter().map(|(o, g)| (*o, *g)).collect(),
+        })
+    }
     pub(super) fn start(&mut self, key: Incarnation) -> Result<()> {
         ensure!(
             self.streams.len() < 32

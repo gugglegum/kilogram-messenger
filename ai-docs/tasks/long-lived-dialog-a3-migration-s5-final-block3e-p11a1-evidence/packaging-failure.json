@@ -1,0 +1,7 @@
+{
+  "step": "evidence packaging",
+  "exit_code": 1,
+  "error": "FileNotFoundError: p11a1-controller-implementation.md; actual report is p11a1-lifecycle-implementation.md",
+  "checks_repeated": false,
+  "source_changed": false
+}

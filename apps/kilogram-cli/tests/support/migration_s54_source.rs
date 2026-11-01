@@ -445,9 +445,23 @@ pub(super) fn point(node: &Node, contexts: &[String; 2]) -> Result<(old::Id, (u6
     Ok((repo.source_id(), end.point))
 }
 pub(super) fn end(node: &Node, contexts: &[String; 2]) -> Result<End> {
+    read_end(node, contexts, None)
+}
+pub(super) fn normal_end(node: &Node, contexts: &[String; 2], source: old::Id) -> Result<End> {
+    read_end(node, contexts, Some(source))
+}
+fn read_end(node: &Node, contexts: &[String; 2], expected: Option<old::Id>) -> Result<End> {
     owned(node)?;
     let p = Profile3::load(&node.profile)?;
     let mut repo = p.open(&node.profile)?;
+    if let Some(source) = expected {
+        ensure!(
+            repo.source_id() == source
+                && p.account == node.branch.account
+                && p.device == node.branch.device,
+            "same actual normally stopped source/profile owner"
+        );
+    }
     let mut point = (0, 0);
     for c in contexts {
         let slot = repo
