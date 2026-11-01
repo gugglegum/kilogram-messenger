@@ -71,7 +71,7 @@ fn c1(rows: &[Value; 2]) -> Result<()> {
     );
     Ok(())
 }
-fn resources(full: &Value, c1_slot: usize, held: bool) -> Result<()> {
+pub(super) fn resources(full: &Value, c1_slot: usize, held: bool) -> Result<()> {
     let w = &full["window"];
     ensure!(
         w[0] == json!([64, 64])
@@ -114,7 +114,7 @@ fn resources(full: &Value, c1_slot: usize, held: bool) -> Result<()> {
     );
     Ok(())
 }
-fn full(s: &mut control::Controller, owner: usize) -> Result<(Value, [Value; 2])> {
+pub(super) fn full(s: &mut control::Controller, owner: usize) -> Result<(Value, [Value; 2])> {
     s.check()?;
     let node = s.view(owner, 0)?;
     let raw = node.status()?;
@@ -165,7 +165,11 @@ fn consent1(row: &Value, original: &Value) -> Result<()> {
     );
     Ok(())
 }
-fn bracket(s: &mut control::Controller, hold: &Hold, ids: &[(u64, old::Id)]) -> Result<[Value; 2]> {
+pub(super) fn bracket(
+    s: &mut control::Controller,
+    hold: &Hold,
+    ids: &[(u64, old::Id)],
+) -> Result<[Value; 2]> {
     ensure!(
         Instant::now() < hold.until,
         "same conservative hold bound, armed before observation"

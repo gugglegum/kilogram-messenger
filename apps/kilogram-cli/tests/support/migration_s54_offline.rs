@@ -1,5 +1,7 @@
 //! Inactive P7 consumes P6 ownership; no separate prefix-PASS test exists.
 use super::*;
+#[path = "migration_s54_retained.rs"]
+pub(super) mod retained;
 #[cfg(test)]
 #[path = "migration_s54_offline_tests.rs"]
 mod tests;
@@ -166,6 +168,10 @@ pub(super) struct Continuation {
     snapshot: Snapshot,
 }
 impl Continuation {
+    pub(super) fn immutable(&self) -> Result<retained::Immutable> {
+        self.snapshot.validate()?;
+        Ok(retained::Immutable::from_snapshot(&self.snapshot))
+    }
     pub(super) fn offline_sources(&self) -> Vec<(u64, old::Id)> {
         self.snapshot.source_ids()
     }

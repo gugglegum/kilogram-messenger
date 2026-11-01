@@ -1,0 +1,21 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error[E0308]: mismatched types
+  --> apps\kilogram-cli\tests\support\migration_s54_retained.rs:29:37
+   |
+29 |             .map(|r| old::a([old::u(r.format), old::b(&r.raw)]))
+   |                              ------ ^^^^^^^^ expected `u64`, found `u8`
+   |                              |
+   |                              arguments to this function are incorrect
+   |
+note: function defined here
+  --> crates\kilogram-protocol\src\ordered_dialog_v1.rs:46:8
+   |
+46 | pub fn u(n: u64) -> Value {
+   |        ^
+help: you can convert a `u8` to a `u64`
+   |
+29 |             .map(|r| old::a([old::u(r.format.into()), old::b(&r.raw)]))
+   |                                             +++++++
+
+For more information about this error, try `rustc --explain E0308`.
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 1 previous error

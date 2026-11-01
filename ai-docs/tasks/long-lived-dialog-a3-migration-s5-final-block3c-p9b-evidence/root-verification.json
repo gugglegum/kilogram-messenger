@@ -1,0 +1,27 @@
+{
+  "manifest_sha256": "c9ae531b6bb4f8a0d246e7c9631c5570f14eddc941feb93df2e077329d5c47ee",
+  "verified_file_checks": 645,
+  "source_inputs": 554,
+  "compile_units": 501,
+  "fresh_units": 501,
+  "final_tests": 11,
+  "archive_files": 26,
+  "archive_bytes": 233608,
+  "failed_lint_attempts_preserved": 2,
+  "head": "365468dc5046475ff923e1f5cdc68edacf649ff8",
+  "index_empty": true,
+  "scope_verified": true,
+  "runtime_verified": false,
+  "root_tool_check": "747e27",
+  "app_execution_ids": {
+    "clippy": "exec-d775a6aa-be25-46af-9a3f-dce9f6fc70f6",
+    "compile": "exec-2b74dc5f-8739-41f1-a887-c7edae3574f3",
+    "pure": "exec-14103bf1-2cdf-4cfb-a715-dce05eabef1c",
+    "fmt": "exec-41c38a25-c90d-4f3f-9e35-57281462ed81"
+  },
+  "executor_archive_manifest": {
+    "path": ".tmp/s54-block3c-p9b-01/archive-manifest.json",
+    "bytes": 5768,
+    "sha256": "ae457062a96b0dad8cdf28d4c45e6ce0ef851587dd3b3ba5ef7ddd9ffa562571"
+  }
+}

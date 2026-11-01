@@ -1,0 +1,30 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: the loop variable `owner` is used to index `rows`
+  --> apps\kilogram-cli\tests\support\migration_s54_catchup_live.rs:28:22
+   |
+28 |         for owner in 0..2 {
+   |                      ^^^^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+   = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator and enumerate()
+   |
+28 -         for owner in 0..2 {
+28 +         for (owner, <item>) in rows.iter().enumerate() {
+   |
+
+error: the loop variable `owner` is used to index `c2`
+   --> apps\kilogram-cli\tests\support\migration_s54_catchup_live.rs:229:18
+    |
+229 |     for owner in 0..2 {
+    |                  ^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+help: consider using an iterator and enumerate()
+    |
+229 -     for owner in 0..2 {
+229 +     for (owner, <item>) in c2.iter().enumerate().take(2) {
+    |
+
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 2 previous errors

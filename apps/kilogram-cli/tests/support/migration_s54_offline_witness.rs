@@ -8,7 +8,7 @@ use zeroize::Zeroizing;
 fn digest(raw: &[u8]) -> old::Id {
     *blake3::hash(raw).as_bytes()
 }
-fn existing(
+pub(super) fn existing(
     repo: &mut store::L1Repository,
     slot: u8,
     head: &Head,

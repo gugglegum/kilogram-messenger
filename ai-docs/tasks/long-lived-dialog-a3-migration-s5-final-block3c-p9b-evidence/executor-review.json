@@ -1,0 +1,522 @@
+{
+  "classification": "P9B inactive source/static/pure only; actual continuous P9 unexecuted",
+  "baseline": "365468dc5046475ff923e1f5cdc68edacf649ff8",
+  "source": [
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_catchup.rs",
+      "bytes": 9402,
+      "sha256": "6a13df493afb1cc60a0ab57d3a838fbb82e935cbb6063218ef4e55f009d21601",
+      "git_blob": "256ce4368fbd0fb7f698670dec5161353bc1d874"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_catchup_live.rs",
+      "bytes": 9524,
+      "sha256": "a757d418c2c704e43c9ea649f8f2375a37e65b8edd839736e9ac54062ab7b4d4",
+      "git_blob": "6b308205c309429e849a94824d592db3c8b40072"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_catchup_proofs.rs",
+      "bytes": 9145,
+      "sha256": "8909372e02a1a98dcefbafca70b1f8589b006db08148caf4024b1cf1ddd1d2ca",
+      "git_blob": "9a8aed54314f0d510049381a731d2758f7364926"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_catchup_tests.rs",
+      "bytes": 11046,
+      "sha256": "2d357d375b8ba97b914fa02e3fb92dbaf2a1273faff5b82c8f98333fad302ac5",
+      "git_blob": "d6072647227309b44ca1e508f1b6129668267a73"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_offline.rs",
+      "bytes": 9954,
+      "sha256": "14da4310a0f11ecc997743d10af875e4a33c3622d6f3bfb4a7366745179a1ce0",
+      "git_blob": "de7f82f269dd093493603efea5b3c4811bca90ac"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_offline_witness.rs",
+      "bytes": 10663,
+      "sha256": "cc96582523480cec8bf7fb141dc1f51671655deb42971bf945fa8b2974ae26d4",
+      "git_blob": "59f9a42b173effbe24bc02a97f0c34f5f5fbbe31"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_p5.rs",
+      "bytes": 4634,
+      "sha256": "79d0ca7811fbb8cb54a1df00fe8059027bef0b64a05f5add85f339bd4d21dc92",
+      "git_blob": "66e09fad8ce5f003ca7ff5e33e2ace1b0ebaf3ff"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_pressure.rs",
+      "bytes": 16926,
+      "sha256": "fc7c68756a34f7b209905ac4573564437a2ae9e1a0477d6158eb26dafbe1fe9e",
+      "git_blob": "7b3b7945a318448c299637aae08f647ea66e7556"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_retained.rs",
+      "bytes": 15289,
+      "sha256": "a90ceb585730248264c7324d7bcdb52a1afcfa6bec337384354ab49444d54e30",
+      "git_blob": "c0716032612a0140871e6ba7e9991d8461402f95"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_retained_tests.rs",
+      "bytes": 4743,
+      "sha256": "4ce5f6db2e88d8d0a66e992b3327c000ba397a226d0cb3b5c659a789880e294b",
+      "git_blob": "f6568ac6f3002e463a3fedee6022d5537c4fdc79"
+    }
+  ],
+  "contracts": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3c-p9b-controller-task-01.md",
+      "bytes": 9832,
+      "sha256": "e59c8615074814ee88dd14b34df09127ec2be2a2d54aa27b689a1db2faa66a65"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3c-p9-contract-01.md",
+      "bytes": 13913,
+      "sha256": "5639214e6aca95070be42655f61b24d30033e0de1f4d87054928b69ad39dfa7b"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3c-p9-contract-root-review-01.md",
+      "bytes": 3702,
+      "sha256": "aa9cf631e62e9a288ff2c287cfb32a3b01348843265af514766c72d1ce338cf8"
+    }
+  ],
+  "steps": [
+    {
+      "step": "clippy-01",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3c-p9b-01\\clippy.ps1"
+      ],
+      "actual_child_exit_code": 101,
+      "exit_code": 1,
+      "elapsed_seconds": 9.1559265,
+      "cleanup_verified": true,
+      "error": "Native check exit 101"
+    },
+    {
+      "step": "clippy-02",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3c-p9b-01\\clippy.ps1"
+      ],
+      "actual_child_exit_code": 101,
+      "exit_code": 1,
+      "elapsed_seconds": 9.3761178,
+      "cleanup_verified": true,
+      "error": "Native check exit 101"
+    },
+    {
+      "step": "clippy-03",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3c-p9b-01\\clippy.ps1"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 8.9498636,
+      "cleanup_verified": true,
+      "error": null
+    },
+    {
+      "step": "compile-01",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3c-p9b-01\\compile.ps1",
+        "-Capture",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3c-p9b-01\\compile-01.capture.json"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 86.9319802,
+      "cleanup_verified": true,
+      "error": null
+    },
+    {
+      "step": "pure-01",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3c-p9b-01\\pure.ps1",
+        "-Step",
+        "pure-01"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 15.1840563,
+      "cleanup_verified": true,
+      "error": null
+    },
+    {
+      "step": "fmt-01",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3c-p9b-01\\fmt.ps1"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 4.4574948,
+      "cleanup_verified": true,
+      "error": null
+    }
+  ],
+  "actual_passed_tests": [
+    "live_l1::handoff::final_p5::catchup::tests::s54_p9b_ack_checks_every_historical_and_offline_source",
+    "live_l1::handoff::final_p5::catchup::tests::s54_p9b_actual_work_closes_once_and_requires_observed256",
+    "live_l1::handoff::final_p5::catchup::tests::s54_p9b_barrier_requires_actual_end_drain_and_rejects_overshoot",
+    "live_l1::handoff::final_p5::catchup::tests::s54_p9b_held_schedule_requires_atomic_selector_clear_and_ack_suppression",
+    "live_l1::handoff::final_p5::catchup::tests::s54_p9b_histories_keep_one_original_b640_difference_and_lane_order",
+    "live_l1::handoff::final_p5::catchup::tests::s54_p9b_owned_entry_rejects_phase_process_request_and_pending_substitution",
+    "live_l1::handoff::final_p5::catchup::tests::s54_p9b_page_barrier_rejects_stale_process_nonce_source_and_wrong_target",
+    "live_l1::handoff::final_p5::catchup::tests::s54_p9b_replay_requires_new_binding_request_same_payload_and_owner",
+    "live_l1::handoff::final_p5::offline::retained::tests::s54_p9b_retained_ordinal_rejects_request_id_cipher_source_body_and_chain_mismatch",
+    "live_l1::handoff::final_p5::offline::retained::tests::s54_p9b_saved_receipt_digest_rejects_changed_bytes_encoding_and_batch",
+    "live_l1::handoff::final_p5::offline::retained::tests::s54_p9b_terminal_metadata_excludes_mutable_native_and_c2_zero_state"
+  ],
+  "compiler_source_input_count": 554,
+  "units": 501,
+  "pure_fresh_units": 501,
+  "normal_cli_unit": {
+    "package_id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/apps/kilogram-cli#0.1.0",
+    "package": "kilogram-cli",
+    "kind": [
+      "bin"
+    ],
+    "target": "kilogram-cli",
+    "features": [
+      "default"
+    ],
+    "profile": {
+      "opt_level": "3",
+      "debuginfo": "line-tables-only",
+      "debug_assertions": true,
+      "overflow_checks": true,
+      "test": false
+    },
+    "filenames": [
+      "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\x86_64-pc-windows-msvc\\verification-scale\\kilogram_cli.pdb",
+      "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\x86_64-pc-windows-msvc\\verification-scale\\kilogram-cli.exe"
+    ],
+    "executable": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\x86_64-pc-windows-msvc\\verification-scale\\kilogram-cli.exe",
+    "class": "runtime-target",
+    "fresh": true
+  },
+  "artifacts": [
+    {
+      "path": "E:/AI-Projects/kilogram-p2p-messenger/target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe",
+      "bytes": 50473984,
+      "sha256": "f5322cfc26b93ab7a431a474d7f33e9ff805a3e1a3df98fb1d0f84185794dcb9"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "bin",
+      "target": "kilogram-cli",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 50781696,
+      "sha256": "1992cef4b4b6b2b18bb67ce80c94fb4c751ea3715626146936c44bdb619c4d57",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "lib",
+      "target": "kilogram_cli",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 32656384,
+      "sha256": "2fcbfb6529fad0f156cbed869ea0455e864119dcecef94eba508aa06e588762f",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 16784896,
+      "sha256": "fa7f026110e21621bd2528b0fefd48ebf569c38b7d7a0c6a4870746731d04a6e",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "runtime2_process",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 23695360,
+      "sha256": "4a08ce3de743241c720ec3bf25425c75b8efa695a03780fe1f74e1e7109f2a98",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-transport-iroh",
+      "kind": "lib",
+      "target": "kilogram_transport_iroh",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+      "bytes": 19419648,
+      "sha256": "f5822cd40225a7ac12dbc2c58264439b8e3c5d4b4d20cf87309b9aa28f2023ad",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-transport-iroh",
+      "kind": "test",
+      "target": "local_relay_transport",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+      "bytes": 22317056,
+      "sha256": "552cc6c23452ad50c94b65391e33df462b89e14551c7eac51304e55872788cf0",
+      "profile": "verification-scale"
+    }
+  ],
+  "preimages_preserved": [
+    {
+      "bytes": 50473984,
+      "sha256": "f5322cfc26b93ab7a431a474d7f33e9ff805a3e1a3df98fb1d0f84185794dcb9",
+      "archive": ".tmp\\s54-block3c-p9b-01\\preimages\\target\\x86_64-pc-windows-msvc\\verification-scale\\kilogram-cli.exe",
+      "path": "target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe"
+    },
+    {
+      "bytes": 50781696,
+      "sha256": "1992cef4b4b6b2b18bb67ce80c94fb4c751ea3715626146936c44bdb619c4d57",
+      "archive": ".tmp\\s54-block3c-p9b-01\\preimages\\target\\verification-scale\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+      "path": "target/verification-scale/deps/kilogram-cli-bin-kilogram-cli-tests.exe"
+    },
+    {
+      "bytes": 32656384,
+      "sha256": "2fcbfb6529fad0f156cbed869ea0455e864119dcecef94eba508aa06e588762f",
+      "archive": ".tmp\\s54-block3c-p9b-01\\preimages\\target\\verification-scale\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "path": "target/verification-scale/deps/kilogram-cli-lib-kilogram_cli-tests.exe"
+    },
+    {
+      "bytes": 16601600,
+      "sha256": "4fedca5de5cf0139f9ea897cf720cf5b25236ffab14537b8dcc2eab747b4a3ca",
+      "archive": ".tmp\\s54-block3c-p9b-01\\preimages\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "path": "target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe"
+    },
+    {
+      "bytes": 23695360,
+      "sha256": "4a08ce3de743241c720ec3bf25425c75b8efa695a03780fe1f74e1e7109f2a98",
+      "archive": ".tmp\\s54-block3c-p9b-01\\preimages\\target\\verification-scale\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+      "path": "target/verification-scale/deps/kilogram-cli-test-runtime2_process-tests.exe"
+    },
+    {
+      "bytes": 19419648,
+      "sha256": "f5822cd40225a7ac12dbc2c58264439b8e3c5d4b4d20cf87309b9aa28f2023ad",
+      "archive": ".tmp\\s54-block3c-p9b-01\\preimages\\target\\verification-scale\\deps\\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+      "path": "target/verification-scale/deps/kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe"
+    },
+    {
+      "bytes": 22317056,
+      "sha256": "552cc6c23452ad50c94b65391e33df462b89e14551c7eac51304e55872788cf0",
+      "archive": ".tmp\\s54-block3c-p9b-01\\preimages\\target\\verification-scale\\deps\\kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+      "path": "target/verification-scale/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe"
+    },
+    {
+      "bytes": 4584,
+      "sha256": "a66d71c41b163b0f9380b740161f2eee0a2735ba4394776714a31836c95820a2",
+      "archive": ".tmp\\s54-block3c-p9b-01\\preimages\\apps\\kilogram-cli\\tests\\support\\migration_s54_p5.rs",
+      "path": "apps/kilogram-cli/tests/support/migration_s54_p5.rs"
+    },
+    {
+      "bytes": 16878,
+      "sha256": "53ac12513182da9a43fc40bb0e8a18295e0b7ddc831fbe01c6ae688e08f97088",
+      "archive": ".tmp\\s54-block3c-p9b-01\\preimages\\apps\\kilogram-cli\\tests\\support\\migration_s54_pressure.rs",
+      "path": "apps/kilogram-cli/tests/support/migration_s54_pressure.rs"
+    },
+    {
+      "bytes": 9719,
+      "sha256": "4e33f2ac5479f1502535604ca16b40f6f19b66f7565fdbd40c9fdfefcdf1c329",
+      "archive": ".tmp\\s54-block3c-p9b-01\\preimages\\apps\\kilogram-cli\\tests\\support\\migration_s54_offline.rs",
+      "path": "apps/kilogram-cli/tests/support/migration_s54_offline.rs"
+    },
+    {
+      "bytes": 10652,
+      "sha256": "0bec3e2b4ac23a58944d5a2a941b957ad516a19dab3a091e41a88dd7d187aadf",
+      "archive": ".tmp\\s54-block3c-p9b-01\\preimages\\apps\\kilogram-cli\\tests\\support\\migration_s54_offline_witness.rs",
+      "path": "apps/kilogram-cli/tests/support/migration_s54_offline_witness.rs"
+    }
+  ],
+  "fixed_field_images_unchanged": [
+    {
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "bytes": 61531648,
+      "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+      "bytes": 50019840,
+      "sha256": "adcfcf397e2d67d2936e00d759e2180bb4d767edef352aa5139b817603f3855d"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe",
+      "bytes": 50019840,
+      "sha256": "adcfcf397e2d67d2936e00d759e2180bb4d767edef352aa5139b817603f3855d"
+    },
+    {
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-relay.exe",
+      "bytes": 10460160,
+      "sha256": "cf9d029cebf1d04745c90a9712401d70e823ecf4af5a082fe7269649df358e5e"
+    }
+  ],
+  "index_empty": true,
+  "navigation_preserved": [
+    "ai-docs/README.md",
+    "ai-docs/chat-coordination.md",
+    "ai-docs/next-stage-plan.md"
+  ],
+  "runtime_executed": false,
+  "old_private_fixtures_read": false,
+  "commit_push_performed": false,
+  "evidence": [
+    {
+      "path": ".tmp/s54-block3c-p9b-01/check.ps1",
+      "bytes": 2755,
+      "sha256": "5421bcb9614bd1ba93596a34ebc3e7a8327509df1dd30d27cd933a6e1e063d27"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/clippy-01.json",
+      "bytes": 467,
+      "sha256": "c1aa5c222c081ab0017212b0090ccc73e1036cb25a8ac8f59bb7b78d553a8be3"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/clippy-01.stderr.log",
+      "bytes": 943,
+      "sha256": "178ca3ccdacd88949f36014e885e69b30d5fe067555e466962f5c4db3138cf77"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/clippy-01.stdout.log",
+      "bytes": 80,
+      "sha256": "be691fa37eaeda442136e7b3e68a041648dfc4f6e34263cc84b13ce8b6d90e2d"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/clippy-02.json",
+      "bytes": 467,
+      "sha256": "cb626a5abe202c2b26c57a3c6debe0f368b482f5976b76d8db0a301e1363baa4"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/clippy-02.stderr.log",
+      "bytes": 1303,
+      "sha256": "8032be73da7e0fe4e73a97847efa73b9d7c25e9a32c7cbae20dd3e8f02028b99"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/clippy-02.stdout.log",
+      "bytes": 80,
+      "sha256": "be691fa37eaeda442136e7b3e68a041648dfc4f6e34263cc84b13ce8b6d90e2d"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/clippy-03.json",
+      "bytes": 446,
+      "sha256": "bdf15d4afb48af681b55d1f6f675e359bf40862fe69c74f8d0e196883977df07"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/clippy-03.stderr.log",
+      "bytes": 176,
+      "sha256": "05b4fd82185ec1efd923cb4413107b3b9caaaf8731e32dc0220f03b77176b6ff"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/clippy-03.stdout.log",
+      "bytes": 80,
+      "sha256": "be691fa37eaeda442136e7b3e68a041648dfc4f6e34263cc84b13ce8b6d90e2d"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/clippy.ps1",
+      "bytes": 460,
+      "sha256": "c4533d1360cea309f7f8db1b6a792c36584a5e516f68343e7713496e3d42d59f"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/compile-01.capture.json",
+      "bytes": 2706871,
+      "sha256": "0caeda216b3b4298c11a7b0774fb97913859d8281ed0330edc6eadb584030feb"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/compile-01.json",
+      "bytes": 565,
+      "sha256": "0c141253d8fb388625a42a2d0dbe87b89f121f2d77197180d384cbf561e7cb03"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/compile-01.stderr.log",
+      "bytes": 177,
+      "sha256": "666a0c8b2886ad2fb1c50ef3b2960b9eb7e018e0ede788e8161924e3e34b9646"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/compile-01.stdout.log",
+      "bytes": 1231,
+      "sha256": "891b63c8b487730e76631d19ba64f91a3cda4891af4802aa952b33d0f435ae9c"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/compile.ps1",
+      "bytes": 501,
+      "sha256": "c99cb6d1340258a47fc9359490beaec9881f8b3f736ae882937adfb425c2cb43"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/fmt-01.json",
+      "bytes": 440,
+      "sha256": "0f314afde0e61233411b18d51372ec4433d46f1516e31ae1cec68316f6586170"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/fmt-01.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/fmt-01.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/fmt.ps1",
+      "bytes": 81,
+      "sha256": "6766fdce5d3716ac62a85b863fd3527ec0fb3c73e4a0f09c800b3a941aeb0b71"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/preimages.json",
+      "bytes": 3669,
+      "sha256": "fb1f3d2bc2a60d1b3eefb91deef1247d3e38d4c1e5c16ae1d9ecf5ee158212aa"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/pure-01.capture.json",
+      "bytes": 2706930,
+      "sha256": "67fc881a46184ce472fbb43f863379c764b97ba4e0e36f117c3e4636789d289d"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/pure-01.expected.json",
+      "bytes": 1292197,
+      "sha256": "8e6dd49c7eabc736c19da15fc4e2aa152214a245e488c8d5fcb11e4325cf6532"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/pure-01.json",
+      "bytes": 473,
+      "sha256": "7e135b62acfc597c884bdb64ce14bffdd960bbf71e5cb99d4936d1291701ecb5"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/pure-01.stderr.log",
+      "bytes": 85,
+      "sha256": "53067c7c5b29a1a8c40c26f8a2a36d4f66d872106b98ab636372e56f10671fd8"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/pure-01.stdout.log",
+      "bytes": 4258,
+      "sha256": "a6a2b09f60bcd2d1b002c1cf0a86c23bfeebba4a2b89ba72422443672159acb3"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/pure.ps1",
+      "bytes": 1921,
+      "sha256": "944074f7fa6c46af279d4096d5c6ffcd6264e3fe83c352247c54ccf0a5d0aed7"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9b-01/test-selection.json",
+      "bytes": 1008,
+      "sha256": "bfb25aa27d0881f213772e43a90e8bf108ac5bb71be451de58fb1bc7616598ab"
+    }
+  ]
+}

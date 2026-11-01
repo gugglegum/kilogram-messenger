@@ -7,6 +7,8 @@ use std::collections::{BTreeMap, BTreeSet};
 #[cfg(test)]
 #[path = "migration_s54_block2_tests.rs"]
 mod block2_tests;
+#[path = "migration_s54_catchup.rs"]
+mod catchup;
 #[path = "migration_s54_control.rs"]
 mod control;
 #[path = "migration_s54_early.rs"]

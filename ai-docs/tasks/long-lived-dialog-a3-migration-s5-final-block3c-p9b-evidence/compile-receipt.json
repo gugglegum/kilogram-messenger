@@ -1,0 +1,17 @@
+{
+  "step": "compile-01",
+  "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3c-p9b-01\\compile.ps1",
+    "-Capture",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3c-p9b-01\\compile-01.capture.json"
+  ],
+  "actual_child_exit_code": 0,
+  "exit_code": 0,
+  "elapsed_seconds": 86.9319802,
+  "cleanup_verified": true,
+  "error": null
+}

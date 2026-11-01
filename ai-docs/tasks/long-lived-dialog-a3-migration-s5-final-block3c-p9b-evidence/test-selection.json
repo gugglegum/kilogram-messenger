@@ -1,0 +1,21 @@
+{
+  "filter": "s54_p9b_",
+  "skip": [],
+  "expected_names": [
+    "s54_p9b_owned_entry_rejects_phase_process_request_and_pending_substitution",
+    "s54_p9b_barrier_requires_actual_end_drain_and_rejects_overshoot",
+    "s54_p9b_actual_work_closes_once_and_requires_observed256",
+    "s54_p9b_histories_keep_one_original_b640_difference_and_lane_order",
+    "s54_p9b_ack_checks_every_historical_and_offline_source",
+    "s54_p9b_replay_requires_new_binding_request_same_payload_and_owner",
+    "s54_p9b_held_schedule_requires_atomic_selector_clear_and_ack_suppression",
+    "s54_p9b_page_barrier_rejects_stale_process_nonce_source_and_wrong_target",
+    "s54_p9b_retained_ordinal_rejects_request_id_cipher_source_body_and_chain_mismatch",
+    "s54_p9b_terminal_metadata_excludes_mutable_native_and_c2_zero_state",
+    "s54_p9b_saved_receipt_digest_rejects_changed_bytes_encoding_and_batch"
+  ],
+  "network": false,
+  "process": false,
+  "enrollment": false,
+  "private_fixtures": false
+}

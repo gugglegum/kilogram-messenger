@@ -1,0 +1,63 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification-scale' without executing them...
+frozen_artifacts_verified=True
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-runtime2_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+WARNING: Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+isolated_test_order=AfterAggregate
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 73 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+running 11 tests
+test live_l1::handoff::final_p5::catchup::tests::s54_p9b_ack_checks_every_historical_and_offline_source ... ok
+test live_l1::handoff::final_p5::catchup::tests::s54_p9b_actual_work_closes_once_and_requires_observed256 ... ok
+test live_l1::handoff::final_p5::catchup::tests::s54_p9b_barrier_requires_actual_end_drain_and_rejects_overshoot ... ok
+test live_l1::handoff::final_p5::catchup::tests::s54_p9b_held_schedule_requires_atomic_selector_clear_and_ack_suppression ... ok
+test live_l1::handoff::final_p5::catchup::tests::s54_p9b_histories_keep_one_original_b640_difference_and_lane_order ... ok
+test live_l1::handoff::final_p5::catchup::tests::s54_p9b_owned_entry_rejects_phase_process_request_and_pending_substitution ... ok
+test live_l1::handoff::final_p5::catchup::tests::s54_p9b_page_barrier_rejects_stale_process_nonce_source_and_wrong_target ... ok
+test live_l1::handoff::final_p5::catchup::tests::s54_p9b_replay_requires_new_binding_request_same_payload_and_owner ... ok
+test live_l1::handoff::final_p5::offline::retained::tests::s54_p9b_retained_ordinal_rejects_request_id_cipher_source_body_and_chain_mismatch ... ok
+test live_l1::handoff::final_p5::offline::retained::tests::s54_p9b_saved_receipt_digest_rejects_changed_bytes_encoding_and_batch ... ok
+test live_l1::handoff::final_p5::offline::retained::tests::s54_p9b_terminal_metadata_excludes_mutable_native_and_c2_zero_state ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 131 filtered out; finished in 0.04s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+cache_status=skipped_explicitly
+status=passed
+isolated_test_count=0
