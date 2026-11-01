@@ -1,0 +1,36 @@
+{
+  "classification": "s53-full-inventory-admission-r29",
+  "schema_version": 1,
+  "case": "F-s53-fresh-history-regression-01",
+  "attempt": "F-s53-fresh-history-regression-01-attempt-01",
+  "run": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-fresh-history-regression-01-attempt-01",
+  "inventory_identity": "S5.3/integrated/F-s53-fresh-history-regression-01-attempt-01/c2fdc982e13676ad4bf5b48ac4a65767479cc5bc293d3bcfaca518c6e9e8fa77",
+  "baseline": "64c2359788ead360314793e47741adacb83b8d4f",
+  "binding": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-history-01.binding.candidate.json",
+    "bytes": 116900,
+    "sha256": "c2fdc982e13676ad4bf5b48ac4a65767479cc5bc293d3bcfaca518c6e9e8fa77"
+  },
+  "expected_artifacts": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-01.expected-artifacts.candidate.json",
+    "bytes": 1286369,
+    "sha256": "1292d8f5d90d0a2e492ab3d9fd3200086225c13f8c6628dcfd6aa017efb39e73"
+  },
+  "serializer": "powershell-json-depth30-pretty-utf8-no-bom-no-final-newline-r29",
+  "maximum_bytes": 2097152,
+  "activation_sha256_placeholder": "0000000000000000000000000000000000000000000000000000000000000000",
+  "candidate_bytes": 115714,
+  "candidate_sha256": "a7a72ca07f67400e941aac9247743ed8a2ac9e3c36c4a2ccd85c0de261e62650",
+  "row_counts": {
+    "sources": 536,
+    "images": 8,
+    "runtime_dependencies": 2,
+    "prerequisites": 0
+  },
+  "row_array_sha256": {
+    "sources": "61cfd47aabe7a47c5a46171c0f4880810de5e81a89456a62b82344a30ed0512f",
+    "images": "8943f2964bfc060d80610dabe37dfc04c68faabcc9b1ed71b037f993f5d44c7c",
+    "runtime_dependencies": "29538c92b21df73a459341bb2663026d33c2c078d00486d506af5fee9872855a",
+    "prerequisites": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  }
+}

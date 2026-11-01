@@ -1,0 +1,68 @@
+{
+  "classification": "smoke successor gate PASS after actual final native exit0",
+  "actual_invocation": "202dae",
+  "actual_final_return": "857d5b",
+  "actual_exit_code": 0,
+  "case_exit": 0,
+  "outer_exit": 0,
+  "counts": {
+    "completion": 1,
+    "named": 1,
+    "cache_skip": 1,
+    "native_marker": 1,
+    "passed": 1
+  },
+  "native_marker": "S4_SMOKE_PASS real_processes=2 contexts=2 text=24 genesis=4 offline_text=8 restarts=both history=readable",
+  "marker_count": 1,
+  "fixture": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\smoke-j63TuZ",
+  "starts": [
+    27940,
+    55624,
+    12596,
+    11028
+  ],
+  "exits": [
+    55624,
+    27940,
+    12596,
+    11028
+  ],
+  "owned_pid_absence": [
+    {
+      "pid": 27940,
+      "present": false
+    },
+    {
+      "pid": 55624,
+      "present": false
+    },
+    {
+      "pid": 12596,
+      "present": false
+    },
+    {
+      "pid": 11028,
+      "present": false
+    }
+  ],
+  "cleanup_verified": true,
+  "outer_elapsed": 49.5605646,
+  "inventory_sha256": "a3c5dc7310119f75e84ac252699579ef4be31d011864439ffb7054c11840c0c7",
+  "runtime_dependencies": [
+    {
+      "role": "metadata-shell",
+      "path": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "bytes": 301368,
+      "sha256": "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139"
+    },
+    {
+      "role": "runtime2-memory-shell",
+      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "bytes": 495616,
+      "sha256": "60c9b29843624dd8af6b6a7b26147753be6aeef65098b9a503cc50850afe410f"
+    }
+  ],
+  "history_case_may_start": true,
+  "resolved_fixture": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\a3-s4\\process\\smoke-j63TuZ",
+  "fixture_extractor_note": "Libtest prefixes fixture with test name; gate02 corrects only the derivative extraction, original evidence unchanged."
+}

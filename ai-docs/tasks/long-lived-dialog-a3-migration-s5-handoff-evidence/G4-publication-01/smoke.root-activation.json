@@ -1,0 +1,80 @@
+{
+  "classification": "root-approved-integration-allocation",
+  "allocation_id": "s53-integrated-g4-fresh-01",
+  "activated": true,
+  "baseline": "64c2359788ead360314793e47741adacb83b8d4f",
+  "source_head": "8b3237a593c529d55af9a556fa44ad3f7a704a7c",
+  "binding_sha256": "cbf3d06e34ce96fbdbc5a6dfc5bca0451ef98e373dae5c7ac5b159ee5b580d42",
+  "execution_mode": "NativeToken",
+  "stop_on_first_failure": true,
+  "require_actual_outer_return_before_successor": true,
+  "proof_producer_thread_id": "01a164ec-589c-7b41-bc34-3ba158d1f22b",
+  "proof_contract_sha256": "a27c857d21fc62d4900509a76f3b9bf0c0cc5d92e100e95905cb158cd750c232",
+  "active_limits_seconds": {
+    "P": 0,
+    "F": 285,
+    "C": 0
+  },
+  "carried_actual_seconds": {
+    "P": 0,
+    "F": 2766.7316168,
+    "C": 10097.0614366
+  },
+  "allocation_ceiling_seconds": {
+    "P": 0,
+    "F": 4000,
+    "C": 20000
+  },
+  "runtime_dependencies": [
+    {
+      "role": "metadata-shell",
+      "path": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "bytes": 301368,
+      "sha256": "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139"
+    },
+    {
+      "role": "runtime2-memory-shell",
+      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "bytes": 495616,
+      "sha256": "60c9b29843624dd8af6b6a7b26147753be6aeef65098b9a503cc50850afe410f"
+    }
+  ],
+  "cases": [
+    {
+      "controller_seconds": 240,
+      "binding": "G4-fresh-01.binding.candidate.json",
+      "native_marker": "S4_SMOKE_PASS real_processes=2 contexts=2 text=24 genesis=4 offline_text=8 restarts=both history=readable",
+      "loss": null,
+      "selector": "a3_s4_process_smoke_fresh_offline_restart_readable",
+      "expected_count": 1,
+      "whole_seconds": 285,
+      "image": "target/verification-scale/deps/kilogram-cli-test-runtime2_process-tests.exe",
+      "build_profile": "verification-scale",
+      "package": "kilogram-cli",
+      "assertion_envelope": false,
+      "source": "apps/kilogram-cli/tests/runtime2_process.rs",
+      "work_seconds": 260,
+      "case": "F-s53-fresh-regression-01",
+      "attempt": "F-s53-fresh-regression-01-attempt-01",
+      "inventory_admission": {
+        "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-fresh-regression-01-attempt-01.inventory-admission.json",
+        "bytes": 1849,
+        "sha256": "07ebf358df987cb50f40bf87bf4782dabafa73315bb3495e14ce8bca01b9fb07"
+      }
+    }
+  ],
+  "inventory_max_bytes": 2097152,
+  "expected_artifacts_sha256": "1292d8f5d90d0a2e492ab3d9fd3200086225c13f8c6628dcfd6aa017efb39e73",
+  "artifact_acceptance": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-fresh-root-admission-verification-01.json",
+    "bytes": 3323,
+    "sha256": "c98f0376f8ccb68128a71ea863728c405688f80c8916d146eda309287272c7f6"
+  },
+  "task": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-accepted-runtime-task-01.md",
+    "bytes": 3769,
+    "sha256": "388c548d54010f43aad3322f3b3daaba51c941330da20bf6a98a23ef34e3a5cb"
+  },
+  "executor": "01a1653c-0154-7611-8e8c-044fbe1e4d7a; GPT-6.1 Sol High; no Fast",
+  "scope": "One existing fresh S4 regression; sequential G4 task condition and stop on first failure apply. Fresh owned accounts only, exact native marker plus actual return and cleanup; no historical private fixture."
+}

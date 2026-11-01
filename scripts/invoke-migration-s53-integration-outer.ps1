@@ -21,9 +21,10 @@ if($Case -ceq 'F-s53-capacity-recovery-r2-01'){
     if($head.status -cne 'verified_match' -or $allocation[0].build_profile -cne 'verification-scale' -or $activation.expected_artifacts_sha256 -cne $binding.expected_artifacts.sha256){throw 'Current G2 HEAD and frozen scale outer allocation required.'}
 }
 . (Join-Path $PSScriptRoot 'migration-s53-runtime-dependencies.ps1')
-if(@($binding.runtime_dependencies).Count -ne 1 -or @($activation.runtime_dependencies).Count -ne 1){throw 'Exactly one reviewed shell dependency required.'}
 $shell=Get-KilogramS53ShellDependency -Executable $ShellExecutable -Expected $binding.runtime_dependencies[0] -RequireCurrentHost
 Assert-KilogramS53ShellIdentity $shell $activation.runtime_dependencies[0]
+$runtimeDependencies=Get-KilogramS53RuntimeDependencies $Case $workspace $shell $binding.runtime_dependencies
+Assert-KilogramS53RuntimeDependencies $Case $runtimeDependencies $activation.runtime_dependencies
 $limit=$allocation[0].whole_seconds
 $outerPath=Join-Path $evidence ($Attempt+'.outer.json')
 if(Test-Path -LiteralPath $outerPath){throw 'Immutable outer attempt exists.'}
@@ -47,7 +48,7 @@ finally{try{$deadline.CleanupChildren(3000);$cleanup=@($deadline.Children()).Cou
 try{
     $deadline.CheckWork()
     $null=Get-KilogramS53ShellDependency -Executable $shell.path -Expected $shell -RequireCurrentHost
-    $receipt=@{classification='independent outer process outcome; actual final tool return still required';case=$Case;attempt=$Attempt;binding_sha256=$bindingHash;activation_sha256=$ActivationSha256;runtime_dependencies=@($shell);child_runner_exit_code=$childCode;outer_exit_code=$code;case_record_sha256=$caseHash;input_inventory_sha256=$inputHash;cleanup_verified=$cleanup;owned_children_after_cleanup=if($cleanup){0}else{$null};elapsed_seconds=$watch.Elapsed.TotalSeconds;whole_seconds=$limit;error=$errorText}
+    $receipt=@{classification='independent outer process outcome; actual final tool return still required';case=$Case;attempt=$Attempt;binding_sha256=$bindingHash;activation_sha256=$ActivationSha256;runtime_dependencies=@($runtimeDependencies);child_runner_exit_code=$childCode;outer_exit_code=$code;case_record_sha256=$caseHash;input_inventory_sha256=$inputHash;cleanup_verified=$cleanup;owned_children_after_cleanup=if($cleanup){0}else{$null};elapsed_seconds=$watch.Elapsed.TotalSeconds;whole_seconds=$limit;error=$errorText}
     $raw=[Text.UTF8Encoding]::new($false).GetBytes((ConvertTo-Json -InputObject $receipt -Depth 8));$file=[IO.File]::Open($outerPath,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read)
     try{$file.Write($raw,0,$raw.Length);$file.Flush($true)}finally{$file.Dispose()}
     $deadline.CheckWork();$deadline.Finish()

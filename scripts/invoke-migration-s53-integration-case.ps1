@@ -235,9 +235,10 @@ Assert-KilogramS53G2Policy $Case $binding
 Assert-KilogramS53G3Policy $Case $binding
 if($activation.classification -cne 'root-approved-integration-allocation' -or $activation.activated -ne $true -or $activation.binding_sha256 -cne $bindingHash -or $activation.baseline -cne $baseline -or $activation.execution_mode -cne 'NativeToken' -or $activation.stop_on_first_failure -ne $true -or $activation.require_actual_outer_return_before_successor -ne $true){throw 'Inactive/unbound root allocation.'}
 if($activation.allocation_id -cnotmatch '^s53-integrated-[a-z0-9-]+$'){throw 'Allocation identity.'}
-if(@($binding.runtime_dependencies).Count -ne 1 -or @($activation.runtime_dependencies).Count -ne 1){throw 'Exactly one reviewed shell dependency required.'}
 $shell=Get-KilogramS53ShellDependency -Executable $ShellExecutable -Expected $binding.runtime_dependencies[0] -RequireCurrentHost
 Assert-KilogramS53ShellIdentity $shell $activation.runtime_dependencies[0]
+$runtimeDependencies=Get-KilogramS53RuntimeDependencies $Case $workspace $shell $binding.runtime_dependencies
+Assert-KilogramS53RuntimeDependencies $Case $runtimeDependencies $activation.runtime_dependencies
 $proofContract=Join-Path $workspace 'ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-predecessor-proof-r2.md'
 if($activation.proof_producer_thread_id -cne '01a164ec-589c-7b41-bc34-3ba158d1f22b' -or $activation.proof_contract_sha256 -cne (Hash $proofContract)){throw 'Root-owned actual-return producer contract required.'}
 foreach($group in @('active_limits_seconds','carried_actual_seconds','allocation_ceiling_seconds')){foreach($set in @('C','F','P')){
@@ -250,7 +251,7 @@ if($policy.Count -ne 1 -or $allocated.Count -ne 1){throw 'Case not uniquely acti
 $policy=$policy[0];$allocated=$allocated[0]
 Assert-KilogramS53G3FrozenAllocation $workspace $Case $binding $allocated $activation
 $buildProfile='verification';$frozenArguments=@{}
-if($Case -cin @('F-s53-capacity-recovery-r2-01','F-s53-two-c-routes-integrated-01','F-s53-b-before-alpn2-two-c-01')){
+if($Case -cin @('F-s53-capacity-recovery-r2-01','F-s53-two-c-routes-integrated-01','F-s53-b-before-alpn2-two-c-01','F-s53-fresh-regression-01','F-s53-fresh-history-regression-01')){
     if($policy.build_profile -cne 'verification-scale' -or $allocated.build_profile -cne 'verification-scale' -or $activation.expected_artifacts_sha256 -cne $binding.expected_artifacts.sha256){throw 'Frozen G2 scale allocation/profile identity required.'}
     $buildProfile='verification-scale'
     $frozenArguments=@{ExpectedArtifactsManifest=(Join-Path $workspace $binding.expected_artifacts.path);ExpectedArtifactsSha256=$binding.expected_artifacts.sha256;CargoTarget='x86_64-pc-windows-msvc';StableArtifactsDirectory=(Join-Path $workspace 'target/verification-scale/deps')}
@@ -366,11 +367,12 @@ try{
     if($LASTEXITCODE -ne 0){throw 'Compile-only pre-run staging failed.'}
     Verify-Rows $binding.inputs;Verify-Rows $binding.images
     $null=Get-KilogramS53ShellDependency -Executable $shell.path -Expected $shell -RequireCurrentHost
+    $null=Get-KilogramS53RuntimeDependencies $Case $workspace $shell $binding.runtime_dependencies
     $inventoryAdmissionEvidence.phase='placeholder_candidate'
     Assert-KilogramS53CasePrerequisites -Case $Case -Predecessors $predecessors -Prerequisites $prerequisites -Workspace $workspace
     if((Hash $bindingPath) -cne $bindingHash){throw 'Binding changed before complete candidate construction.'}
     $inventoryBindingRow=[ordered]@{path=[IO.Path]::GetRelativePath($workspace,$bindingPath).Replace('\','/');bytes=(Get-Item -LiteralPath $bindingPath).Length;sha256=$bindingHash}
-    $inventoryArguments=@{Case=$Case;Attempt=$Attempt;Workspace=$workspace;Binding=$binding;BindingHash=$bindingHash;Shell=$shell;Predecessors=$predecessors;Prerequisites=$prerequisites}
+    $inventoryArguments=@{Case=$Case;Attempt=$Attempt;Workspace=$workspace;Binding=$binding;BindingHash=$bindingHash;Shell=$runtimeDependencies;Predecessors=$predecessors;Prerequisites=$prerequisites}
     $placeholderCandidate=New-KilogramS53InventoryEnvelope @inventoryArguments -ActivationSha256 ('0'*64)
     if($placeholderCandidate.Value['run'] -cne $run -or $placeholderCandidate.Value['inventory_identity'] -cne $identity -or $placeholderCandidate.InventoryPath -cne $inputPath){throw 'Derived complete candidate context differs from adapter.'}
     $inventoryAdmissionEvidence.phase='receipt_before_publication'
@@ -433,6 +435,10 @@ try{
     $raw=Get-Content -LiteralPath $log -Raw
     $counts=@{named=[regex]::Matches($raw,('(?m)^test '+[regex]::Escape($policy.selector)+' \.\.\.')).Count;passed=[regex]::Matches($raw,'(?m)^test result: ok\. 1 passed; 0 failed; 0 ignored;').Count;completion=[regex]::Matches($raw,'(?m)^status=passed\r?$').Count;cache_skip=[regex]::Matches($raw,'(?m)^cache_status=skipped_explicitly\r?$').Count}
     if($wrapperExit -ne 0 -or $counts.named -ne 1 -or $counts.passed -ne 1 -or $counts.completion -ne 1 -or $counts.cache_skip -ne 1){throw 'Exact named1/0, wrapper completion and explicit cache-skip required.'}
+    if($null -ne (Get-KilogramS53G4Policy $Case)){
+        $counts.native_marker=[regex]::Matches($raw,('(?m)^'+[regex]::Escape($policy.native_marker)+'\r?$')).Count
+        if($counts.native_marker -ne 1){throw 'Exact native S4 success marker required.'}
+    }
     $assertionPath=Join-Path $run 'assertions.json'
     # Fresh S4 has its original independently bounded assertion/log controller.
     if($policy.assertion_envelope){
@@ -470,6 +476,7 @@ finally{
         if($Case -ceq 'F-s53-exhausted-integrated-01' -and (Hash $manifest) -cne $allocated.exhausted_manifest_sha256){throw 'Public replica prerequisite changed.'}
         Verify-Rows $binding.inputs;Verify-Rows $binding.images;Verify-Rows $predecessors
         $null=Get-KilogramS53ShellDependency -Executable $shell.path -Expected $shell -RequireCurrentHost
+    $null=Get-KilogramS53RuntimeDependencies $Case $workspace $shell $binding.runtime_dependencies
         $baselineAfter=Baseline
         if($baselineAfter.status -cne 'verified_match'){throw ('Baseline after is '+$baselineAfter.status+': '+$baselineAfter.error)}
         $verified=$inventoryFinalErrors.Count -eq 0
@@ -477,7 +484,7 @@ finally{
 }
 try{
     if(-not $cleanup -or -not $verified -or $deadline.WorkExpired -or $timer.Elapsed.TotalSeconds -ge $policy.work_seconds){$code=1;$failure+='; expired work or incomplete cleanup/verification'}
-    $record=@{case=$Case;attempt=$Attempt;classification='whole-contributing-runner; independent actual outer return still required';exit_code=$code;error=$failure;elapsed_lower_bound_seconds=$timer.Elapsed.TotalSeconds;selector=$policy.selector;expected_count=1;counts=$counts;binding_sha256=$bindingHash;activation_sha256=$ActivationSha256;runtime_dependencies=@($shell);inventory_sha256=$inputHash;assertions_sha256=$assertionHash;wrapper_returned=$returned;wrapper_exit_code=$wrapperExit;baseline_before=$baselineBefore;baseline_after=$baselineAfter;sources_images_verified_after=$verified;owned_children_after_cleanup=if($cleanup){0}else{$null};cleanup_verified=$cleanup;work_seconds=$policy.work_seconds;whole_seconds=$policy.whole_seconds;run=$run;predecessor_actual_charges=$charged;inventory_admission=$inventoryAdmissionEvidence;rule='Root records actual outer return in a later distinct tool call, reconciles all time once, and preserves failed attempts.'}
+    $record=@{case=$Case;attempt=$Attempt;classification='whole-contributing-runner; independent actual outer return still required';exit_code=$code;error=$failure;elapsed_lower_bound_seconds=$timer.Elapsed.TotalSeconds;selector=$policy.selector;expected_count=1;counts=$counts;binding_sha256=$bindingHash;activation_sha256=$ActivationSha256;runtime_dependencies=@($runtimeDependencies);inventory_sha256=$inputHash;assertions_sha256=$assertionHash;wrapper_returned=$returned;wrapper_exit_code=$wrapperExit;baseline_before=$baselineBefore;baseline_after=$baselineAfter;sources_images_verified_after=$verified;owned_children_after_cleanup=if($cleanup){0}else{$null};cleanup_verified=$cleanup;work_seconds=$policy.work_seconds;whole_seconds=$policy.whole_seconds;run=$run;predecessor_actual_charges=$charged;inventory_admission=$inventoryAdmissionEvidence;rule='Root records actual outer return in a later distinct tool call, reconciles all time once, and preserves failed attempts.'}
     Write-NewJson $recordPath $record
     if($deadline.WorkExpired -or $timer.Elapsed.TotalSeconds -ge $policy.work_seconds){throw 'Deadline during terminal writes; raw record is not a whole PASS.'}
     $deadline.Finish()

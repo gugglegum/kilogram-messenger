@@ -1,0 +1,20 @@
+[
+  {
+    "test_selectors_executed": 0,
+    "runtime_dependency_count": 2,
+    "sha256": "4b55c0cc4dae59474cd7fd6c9ea12986d0374b4a78b30a053ade57b9797a4835",
+    "images": 8,
+    "bytes": 115731,
+    "synthetic_workspace": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\g4-preparation-01\\inventory-roundtrip-01",
+    "case": "F-s53-fresh-regression-01"
+  },
+  {
+    "test_selectors_executed": 0,
+    "runtime_dependency_count": 2,
+    "sha256": "bd8b0114b1086f677ee4f684d6f7b5fb57f351112d8f108eb274c431db8d0d29",
+    "images": 8,
+    "bytes": 115763,
+    "synthetic_workspace": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\g4-preparation-01\\inventory-roundtrip-01",
+    "case": "F-s53-fresh-history-regression-01"
+  }
+]

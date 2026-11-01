@@ -1,0 +1,33 @@
+{
+  "classification": "G4 independent known Node PID absence after both actual final native returns",
+  "smoke_actual_final": "857d5b",
+  "history_actual_final": "d5e502",
+  "known_node_pids": [
+    {
+      "pid": 11028,
+      "present": false
+    },
+    {
+      "pid": 12596,
+      "present": false
+    },
+    {
+      "pid": 27940,
+      "present": false
+    },
+    {
+      "pid": 39632,
+      "present": false
+    },
+    {
+      "pid": 55624,
+      "present": false
+    },
+    {
+      "pid": 58732,
+      "present": false
+    }
+  ],
+  "all_kilogram_processes": [],
+  "review_sha256": "aa19072ad566703c5ed558b767d4661c677a76d554bfc9518d938f4824f5ff0f"
+}

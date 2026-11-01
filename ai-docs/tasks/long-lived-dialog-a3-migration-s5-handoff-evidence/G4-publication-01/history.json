@@ -1,0 +1,112 @@
+{
+  "counts": {
+    "completion": 1,
+    "native_marker": 1,
+    "passed": 1,
+    "cache_skip": 1,
+    "named": 1
+  },
+  "owned_children_after_cleanup": 0,
+  "activation_sha256": "5a264c48149865fbe234cde610616b9695e0c930996867a73214113615a29734",
+  "baseline_before": {
+    "status": "verified_match",
+    "executable_path": "C:\\Program Files\\Git\\cmd\\git.exe",
+    "revision": "8b3237a593c529d55af9a556fa44ad3f7a704a7c",
+    "exit_code": 0,
+    "stdout": "8b3237a593c529d55af9a556fa44ad3f7a704a7c\n",
+    "stderr": "",
+    "stdout_state": "captured",
+    "stderr_state": "captured",
+    "timed_out": false,
+    "process_started": true,
+    "process_exited": true,
+    "process_tree_kill_requested": false,
+    "cleanup_verified": true,
+    "timeout_milliseconds": 4993,
+    "cleanup_timeout_milliseconds": 1000,
+    "error": null,
+    "elapsed_seconds": 0.0630139
+  },
+  "assertions_sha256": null,
+  "work_seconds": 140,
+  "exit_code": 0,
+  "inventory_sha256": "87b588cb13c30c062c5ea59e337e6459ba9e8003968ae17d774845ce8c8ac95a",
+  "inventory_admission": {
+    "receipt": {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/F-s53-fresh-history-regression-01-attempt-01.inventory-admission.json",
+      "bytes": 1883,
+      "sha256": "2be5a87273e36d4df5e50f189b5bee8f001766c9e95723961e32e0caae22e0ef"
+    },
+    "maximum_bytes": 2097152,
+    "placeholder_candidate_bytes": 115714,
+    "placeholder_candidate_sha256": "a7a72ca07f67400e941aac9247743ed8a2ac9e3c36c4a2ccd85c0de261e62650",
+    "actual_inventory_bytes": 115714,
+    "actual_inventory_sha256": "87b588cb13c30c062c5ea59e337e6459ba9e8003968ae17d774845ce8c8ac95a",
+    "pointer_shape_validated": true,
+    "receipt_validated_before_publish": true,
+    "receipt_validated_before_run": true,
+    "receipt_validated_after_cleanup": true,
+    "pending_created": true,
+    "pending_validated": true,
+    "published": true,
+    "inventory_validated_before_run": true,
+    "inventory_validated_after_cleanup": true,
+    "run_reached": true,
+    "phase": "functional_assertions_completed",
+    "failure_phase": null,
+    "final_validation_errors": []
+  },
+  "binding_sha256": "c2fdc982e13676ad4bf5b48ac4a65767479cc5bc293d3bcfaca518c6e9e8fa77",
+  "elapsed_lower_bound_seconds": 27.9063612,
+  "predecessor_actual_charges": {
+    "F": 0.0,
+    "C": 0.0,
+    "P": 0.0
+  },
+  "classification": "whole-contributing-runner; independent actual outer return still required",
+  "expected_count": 1,
+  "wrapper_returned": true,
+  "selector": "a3_s4_component_ipc_history_escaped_byte_budget_no_cursor_skip",
+  "sources_images_verified_after": true,
+  "error": null,
+  "baseline_after": {
+    "status": "verified_match",
+    "executable_path": "C:\\Program Files\\Git\\cmd\\git.exe",
+    "revision": "8b3237a593c529d55af9a556fa44ad3f7a704a7c",
+    "exit_code": 0,
+    "stdout": "8b3237a593c529d55af9a556fa44ad3f7a704a7c\n",
+    "stderr": "",
+    "stdout_state": "captured",
+    "stderr_state": "captured",
+    "timed_out": false,
+    "process_started": true,
+    "process_exited": true,
+    "process_tree_kill_requested": false,
+    "cleanup_verified": true,
+    "timeout_milliseconds": 4994,
+    "cleanup_timeout_milliseconds": 1000,
+    "error": null,
+    "elapsed_seconds": 0.0812451
+  },
+  "rule": "Root records actual outer return in a later distinct tool call, reconciles all time once, and preserves failed attempts.",
+  "cleanup_verified": true,
+  "wrapper_exit_code": 0,
+  "case": "F-s53-fresh-history-regression-01",
+  "attempt": "F-s53-fresh-history-regression-01-attempt-01",
+  "run": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s53-integrated\\F-s53-fresh-history-regression-01-attempt-01",
+  "runtime_dependencies": [
+    {
+      "role": "metadata-shell",
+      "path": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "bytes": 301368,
+      "sha256": "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139"
+    },
+    {
+      "role": "runtime2-memory-shell",
+      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "bytes": 495616,
+      "sha256": "60c9b29843624dd8af6b6a7b26147753be6aeef65098b9a503cc50850afe410f"
+    }
+  ],
+  "whole_seconds": 160
+}

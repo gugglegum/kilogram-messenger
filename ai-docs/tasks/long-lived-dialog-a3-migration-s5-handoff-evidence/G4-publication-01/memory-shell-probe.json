@@ -1,0 +1,25 @@
+{
+  "classification": "bounded non-network G4 memory-query dependency probe",
+  "shell": {
+    "role": "metadata-shell",
+    "path": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+    "bytes": 301368,
+    "sha256": "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139"
+  },
+  "memory_shell": {
+    "role": "runtime2-memory-shell",
+    "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "bytes": 495616,
+    "sha256": "60c9b29843624dd8af6b6a7b26147753be6aeef65098b9a503cc50850afe410f"
+  },
+  "actual_executable": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+  "queried_private_bytes": 86667264,
+  "owned_probe_pid": 39788,
+  "actual_exit_code": 0,
+  "job_membership_verified": true,
+  "elapsed_seconds": 0.7241627,
+  "test_selectors_executed": 0,
+  "coverage": "Runtime query is synchronous without local timeout; existing runtime case/outer jobs bound and reap inherited child. Probe used the same bare executable and no-profile/noninteractive flags.",
+  "cleanup_verified": true,
+  "owned_children_after_cleanup": 0
+}

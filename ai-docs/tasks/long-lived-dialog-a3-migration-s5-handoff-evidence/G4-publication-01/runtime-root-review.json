@@ -1,0 +1,421 @@
+{
+  "classification": "G4 runtime independently rechecked and accepted by root",
+  "cases": [
+    {
+      "case": "F-s53-fresh-regression-01",
+      "attempt": "F-s53-fresh-regression-01-attempt-01",
+      "selector": "a3_s4_process_smoke_fresh_offline_restart_readable",
+      "actual_invocation_chunk": "202dae",
+      "actual_final_chunk": "857d5b",
+      "actual_session": 97220,
+      "actual_exit_code": 0,
+      "native_marker": "S4_SMOKE_PASS real_processes=2 contexts=2 text=24 genesis=4 offline_text=8 restarts=both history=readable",
+      "fixture": ".tmp\\a3-s4\\process\\smoke-j63TuZ",
+      "starts": [
+        {
+          "pid": 27940,
+          "profile": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\smoke-j63TuZ\\profile1.json",
+          "stderr": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\smoke-j63TuZ\\profile1.1.stderr.log"
+        },
+        {
+          "pid": 55624,
+          "profile": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\smoke-j63TuZ\\profile0.json",
+          "stderr": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\smoke-j63TuZ\\profile0.1.stderr.log"
+        },
+        {
+          "pid": 12596,
+          "profile": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\smoke-j63TuZ\\profile1.json",
+          "stderr": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\smoke-j63TuZ\\profile1.2.stderr.log"
+        },
+        {
+          "pid": 11028,
+          "profile": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\smoke-j63TuZ\\profile0.json",
+          "stderr": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\smoke-j63TuZ\\profile0.2.stderr.log"
+        }
+      ],
+      "exits": [
+        {
+          "pid": 55624,
+          "kill": true,
+          "exit_code": 1
+        },
+        {
+          "pid": 27940,
+          "kill": true,
+          "exit_code": 1
+        },
+        {
+          "pid": 12596,
+          "kill": false,
+          "exit_code": 0
+        },
+        {
+          "pid": 11028,
+          "kill": false,
+          "exit_code": 0
+        }
+      ],
+      "memory_sample_count": 8,
+      "max_private_bytes": 6590464,
+      "outer_elapsed_charge_once": "49.5605646",
+      "runtime_dependencies": [
+        {
+          "role": "metadata-shell",
+          "path": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+          "bytes": 301368,
+          "sha256": "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139"
+        },
+        {
+          "role": "runtime2-memory-shell",
+          "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "bytes": 495616,
+          "sha256": "60c9b29843624dd8af6b6a7b26147753be6aeef65098b9a503cc50850afe410f"
+        }
+      ],
+      "source_count": 536,
+      "image_count": 8,
+      "outcomes": {
+        "completion": 1,
+        "named": 1,
+        "cache_skip": 1,
+        "native_marker": 1,
+        "passed": 1
+      },
+      "artifact_pins": [
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-regression-01-attempt-01.root-activation.json",
+          "bytes": 3503,
+          "sha256": "80cebf8013171c2e601b397f5c08850e2b9ebe4589d77fa89ea2db41e40e5e99"
+        },
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-regression-01-attempt-01.inventory-admission.json",
+          "bytes": 1849,
+          "sha256": "07ebf358df987cb50f40bf87bf4782dabafa73315bb3495e14ce8bca01b9fb07"
+        },
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-regression-01-attempt-01.outer.json",
+          "bytes": 1327,
+          "sha256": "9cc63e96d3ea9506266bea705fbc13c41344dc9ca0f3ce67cc97592bde6e1452"
+        },
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-regression-01-attempt-01.json",
+          "bytes": 4323,
+          "sha256": "d822c2c7bc5ef74336d4b0d3db7cc24179dfca705fbbc251bc1202ee31c2c649"
+        },
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-regression-01-attempt-01.inputs.json",
+          "bytes": 115682,
+          "sha256": "a3c5dc7310119f75e84ac252699579ef4be31d011864439ffb7054c11840c0c7"
+        },
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-regression-01-attempt-01.log",
+          "bytes": 13508,
+          "sha256": "bbe554c0153ec3eb4bd564c1ab90963a157854939ad217276840aff12c5e68af"
+        },
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-regression-01-attempt-01.compile-artifacts.json",
+          "bytes": 2695274,
+          "sha256": "e6e0b24977cbbbc8a631a3b9be55fd2a7a37f115f96809f13c508333d6d2c0b1"
+        },
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-regression-01-attempt-01.run-artifacts.json",
+          "bytes": 2695274,
+          "sha256": "640f612319f376d5fe6da0e1e3c7df72a60257f52f2c285015ffc3e91e48576b"
+        },
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-regression-01-attempt-01.compile.log",
+          "bytes": 1316,
+          "sha256": "6c64fb707661de569d9228a1a9c0d9c15b9cb828a683583d91a4fdf5e3106fe1"
+        }
+      ],
+      "process_log_pins": [
+        {
+          "path": "apps\\kilogram-cli\\..\\..\\.tmp\\a3-s4\\process\\smoke-j63TuZ\\profile1.1.stderr.log",
+          "bytes": 20599,
+          "sha256": "3e2db0f612190329e63c696f363c199ac58706958aeb5a4f082607f61da044d9"
+        },
+        {
+          "path": "apps\\kilogram-cli\\..\\..\\.tmp\\a3-s4\\process\\smoke-j63TuZ\\profile0.1.stderr.log",
+          "bytes": 15084,
+          "sha256": "df5fb7776b2f9e6bdf61612536598f07b968b44d14d083bd89671cb69141e9e9"
+        },
+        {
+          "path": "apps\\kilogram-cli\\..\\..\\.tmp\\a3-s4\\process\\smoke-j63TuZ\\profile1.2.stderr.log",
+          "bytes": 2438,
+          "sha256": "4698da7499e63b154ff6aa7ebe70467c08cb7de4ccf75ea83a60cce151d8fd4f"
+        },
+        {
+          "path": "apps\\kilogram-cli\\..\\..\\.tmp\\a3-s4\\process\\smoke-j63TuZ\\profile0.2.stderr.log",
+          "bytes": 6298,
+          "sha256": "4d861848b027446fcc01696c3ab36eb698686ad0178975598af56aa0110e3be0"
+        },
+        {
+          "path": "apps\\kilogram-cli\\..\\..\\.tmp\\a3-s4\\process\\smoke-j63TuZ\\profile1.1.stdout.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "apps\\kilogram-cli\\..\\..\\.tmp\\a3-s4\\process\\smoke-j63TuZ\\profile0.1.stdout.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "apps\\kilogram-cli\\..\\..\\.tmp\\a3-s4\\process\\smoke-j63TuZ\\profile1.2.stdout.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "apps\\kilogram-cli\\..\\..\\.tmp\\a3-s4\\process\\smoke-j63TuZ\\profile0.2.stdout.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "public_final_nodes": [
+        {
+          "node": 0,
+          "contexts": [
+            {
+              "slot": 0,
+              "context": "3a9a306b2ee5e0bf6a72b0fc48c28a2eef8b7f674cca0651dacb9b48a36d5525",
+              "role": 0,
+              "sid": "rE+GzQzNogTKIig3xmjynAYgdzXWYymVKYNNdxnkvl8",
+              "active": true,
+              "counts": {
+                "debt": 0,
+                "pending": 0,
+                "queued": 0,
+                "receipts": [
+                  12,
+                  4
+                ],
+                "sources": 18
+              }
+            },
+            {
+              "slot": 1,
+              "context": "27d1b1207269977bd8e9f2310a0a2bf4c0cfbbfd29f80ae48399f499a0379dab",
+              "role": 0,
+              "sid": "K179DWD8LFqqoNupOD+88lGLn+/f7SkF3eRQiVmN9Xc",
+              "active": true,
+              "counts": {
+                "debt": 0,
+                "pending": 0,
+                "queued": 0,
+                "receipts": [
+                  4,
+                  4
+                ],
+                "sources": 10
+              }
+            }
+          ]
+        },
+        {
+          "node": 1,
+          "contexts": [
+            {
+              "slot": 0,
+              "context": "3a9a306b2ee5e0bf6a72b0fc48c28a2eef8b7f674cca0651dacb9b48a36d5525",
+              "role": 1,
+              "sid": "rE+GzQzNogTKIig3xmjynAYgdzXWYymVKYNNdxnkvl8",
+              "active": true,
+              "counts": {
+                "debt": 0,
+                "pending": 0,
+                "queued": 0,
+                "receipts": [
+                  12,
+                  4
+                ],
+                "sources": 18
+              }
+            },
+            {
+              "slot": 1,
+              "context": "27d1b1207269977bd8e9f2310a0a2bf4c0cfbbfd29f80ae48399f499a0379dab",
+              "role": 1,
+              "sid": "K179DWD8LFqqoNupOD+88lGLn+/f7SkF3eRQiVmN9Xc",
+              "active": true,
+              "counts": {
+                "debt": 0,
+                "pending": 0,
+                "queued": 0,
+                "receipts": [
+                  4,
+                  4
+                ],
+                "sources": 10
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "case": "F-s53-fresh-history-regression-01",
+      "attempt": "F-s53-fresh-history-regression-01-attempt-01",
+      "selector": "a3_s4_component_ipc_history_escaped_byte_budget_no_cursor_skip",
+      "actual_invocation_chunk": "7f5ee7",
+      "actual_final_chunk": "d5e502",
+      "actual_session": 20956,
+      "actual_exit_code": 0,
+      "native_marker": "S4_HISTORY_BYTE_BUDGET_PASS real_text=6 bytes_per_text=4096 escaped_JSON_page_cap=49152 pages_per_peer=6 exact_cursor_no_skip=true",
+      "fixture": ".tmp\\a3-s4\\process\\history-byte-budget-yPDeY7",
+      "starts": [
+        {
+          "pid": 39632,
+          "profile": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\history-byte-budget-yPDeY7\\profile0.json",
+          "stderr": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\history-byte-budget-yPDeY7\\profile0.1.stderr.log"
+        },
+        {
+          "pid": 58732,
+          "profile": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\history-byte-budget-yPDeY7\\profile1.json",
+          "stderr": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\../..\\.tmp/a3-s4/process\\history-byte-budget-yPDeY7\\profile1.1.stderr.log"
+        }
+      ],
+      "exits": [
+        {
+          "pid": 39632,
+          "kill": false,
+          "exit_code": 0
+        },
+        {
+          "pid": 58732,
+          "kill": false,
+          "exit_code": 0
+        }
+      ],
+      "memory_sample_count": 2,
+      "max_private_bytes": 5804032,
+      "outer_elapsed_charge_once": "29.0309233",
+      "runtime_dependencies": [
+        {
+          "role": "metadata-shell",
+          "path": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+          "bytes": 301368,
+          "sha256": "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139"
+        },
+        {
+          "role": "runtime2-memory-shell",
+          "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+          "bytes": 495616,
+          "sha256": "60c9b29843624dd8af6b6a7b26147753be6aeef65098b9a503cc50850afe410f"
+        }
+      ],
+      "source_count": 536,
+      "image_count": 8,
+      "outcomes": {
+        "completion": 1,
+        "native_marker": 1,
+        "passed": 1,
+        "cache_skip": 1,
+        "named": 1
+      },
+      "artifact_pins": [
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-history-regression-01-attempt-01.root-activation.json",
+          "bytes": 3570,
+          "sha256": "5a264c48149865fbe234cde610616b9695e0c930996867a73214113615a29734"
+        },
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-history-regression-01-attempt-01.inventory-admission.json",
+          "bytes": 1883,
+          "sha256": "2be5a87273e36d4df5e50f189b5bee8f001766c9e95723961e32e0caae22e0ef"
+        },
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-history-regression-01-attempt-01.outer.json",
+          "bytes": 1343,
+          "sha256": "91bf837487ecde6a56570d4bc74bd28ad3e849eef5695a0a209a0ba8100bf849"
+        },
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-history-regression-01-attempt-01.json",
+          "bytes": 4367,
+          "sha256": "9be3611f76f6935b0ee0f47a28057439840b21f1330459ada89831bb5e01027b"
+        },
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-history-regression-01-attempt-01.inputs.json",
+          "bytes": 115714,
+          "sha256": "87b588cb13c30c062c5ea59e337e6459ba9e8003968ae17d774845ce8c8ac95a"
+        },
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-history-regression-01-attempt-01.log",
+          "bytes": 4541,
+          "sha256": "974282f0c17d2232c70781a276b95f4ae2199991658c15d02a3673713dc9f065"
+        },
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-history-regression-01-attempt-01.compile-artifacts.json",
+          "bytes": 2695274,
+          "sha256": "a39a235b9f5e7168578a5be7f5e7ed6657a45fbfc96495f8ae4efbdddc28316a"
+        },
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-history-regression-01-attempt-01.run-artifacts.json",
+          "bytes": 2695274,
+          "sha256": "062c957b6e085ff4ddbdf73ba0df5e1cd2656a04b9e11fdb2c6552a34a86d7bb"
+        },
+        {
+          "path": "ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\F-s53-fresh-history-regression-01-attempt-01.compile.log",
+          "bytes": 1316,
+          "sha256": "bc981808ee4f11ac9ee2a1e925cc1f812fe91524bbdde0f3a486f6cc9b79c82f"
+        }
+      ],
+      "process_log_pins": [
+        {
+          "path": "apps\\kilogram-cli\\..\\..\\.tmp\\a3-s4\\process\\history-byte-budget-yPDeY7\\profile0.1.stderr.log",
+          "bytes": 7941,
+          "sha256": "3aa8657957a8c9a9a292d7a5c547082d67e695d6c1dc6d564646ae6c756fa474"
+        },
+        {
+          "path": "apps\\kilogram-cli\\..\\..\\.tmp\\a3-s4\\process\\history-byte-budget-yPDeY7\\profile1.1.stderr.log",
+          "bytes": 7508,
+          "sha256": "7adafaddb9d65b8856af3e0b9a6fc62701a4de109ba20fd2f8d127bae643266e"
+        },
+        {
+          "path": "apps\\kilogram-cli\\..\\..\\.tmp\\a3-s4\\process\\history-byte-budget-yPDeY7\\profile0.1.stdout.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        {
+          "path": "apps\\kilogram-cli\\..\\..\\.tmp\\a3-s4\\process\\history-byte-budget-yPDeY7\\profile1.1.stdout.log",
+          "bytes": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        }
+      ],
+      "public_final_nodes": []
+    }
+  ],
+  "native_successor_gate": {
+    "path": ".tmp\\g4-preparation-01\\smoke-successor-gate-02.json",
+    "bytes": 2019,
+    "sha256": "41a0f93cbcb9fa8fbc25d07f783df1a277233059e9126f7bbc5725e7ffccb8b8"
+  },
+  "total_new_F": "78.5914879",
+  "limitations": "Existing native log/marker assertion contract, no managed assertions.json; no second private store/history reader, crash/stress/universal-SLA claim or publication.",
+  "S53_F_derived": "2845.3231047",
+  "combined_F_derived": "7561.6432536",
+  "known_node_pids": [
+    11028,
+    12596,
+    27940,
+    39632,
+    55624,
+    58732
+  ],
+  "head": "8b3237a593c529d55af9a556fa44ad3f7a704a7c",
+  "root_review_method": "Root inspected raw logs/case/outer records and tool outcomes; reviewed and reexecuted executor assertions under a distinct output filename. Original artifacts unchanged.",
+  "actual_app_execution_records": [
+    {
+      "tool_id": "exec-b5cc77b1-4605-468c-87d7-08887c4bf280",
+      "status": "completed",
+      "exit_code": 0,
+      "duration_ms": 50163
+    },
+    {
+      "tool_id": "exec-2e9a11b9-3494-4984-865a-3b6e10054c99",
+      "status": "completed",
+      "exit_code": 0,
+      "duration_ms": 29547
+    }
+  ],
+  "accounting_status": "Accepted here once: G4 F78.5914879; S5.3 F2845.3231047; combined F7561.6432536. Nested/app durations not charged again.",
+  "current_pid_check": "Root tool fe0063 observed no six known Node PIDs and no kilogram-* processes. Transient child coverage is job cleanup, not an individual PID audit."
+}

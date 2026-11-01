@@ -78,7 +78,53 @@ function Read-KilogramS53Baseline([string]$Workspace,[string]$Expected) {
     return $result
 }
 
+function Get-KilogramS53G4Policy([string]$Case) {
+    $p = switch -CaseSensitive ($Case) {
+        'F-s53-fresh-regression-01' { @{selector='a3_s4_process_smoke_fresh_offline_restart_readable';controller_seconds=240;work_seconds=260;whole_seconds=285;binding='G4-fresh-01.binding.candidate.json';native_marker='S4_SMOKE_PASS real_processes=2 contexts=2 text=24 genesis=4 offline_text=8 restarts=both history=readable'} }
+        'F-s53-fresh-history-regression-01' { @{selector='a3_s4_component_ipc_history_escaped_byte_budget_no_cursor_skip';controller_seconds=120;work_seconds=140;whole_seconds=160;binding='G4-history-01.binding.candidate.json';native_marker='S4_HISTORY_BYTE_BUDGET_PASS real_text=6 bytes_per_text=4096 escaped_JSON_page_cap=49152 pages_per_peer=6 exact_cursor_no_skip=true'} }
+        default { return $null }
+    }
+    $p.case=$Case;$p.expected_count=1;$p.build_profile='verification-scale';$p.package='kilogram-cli'
+    $p.image='target/verification-scale/deps/kilogram-cli-test-runtime2_process-tests.exe'
+    $p.source='apps/kilogram-cli/tests/runtime2_process.rs';$p.assertion_envelope=$false;$p.loss=$null;$p.activated=$false
+    return $p
+}
+function Get-KilogramS53RuntimeRoles([string]$Case) {
+    if($null -ne (Get-KilogramS53G4Policy $Case)){return @('metadata-shell','runtime2-memory-shell')}
+    return @('metadata-shell')
+}
+function Assert-KilogramS53G4Policy([string]$Case,$Binding) {
+    $wanted=Get-KilogramS53G4Policy $Case
+    if($null -eq $wanted){
+        $kind=if($Binding -is [Collections.IDictionary]){$Binding['classification']}elseif($Binding.PSObject.Properties['classification']){$Binding.classification}
+        if($kind -ceq 'g4-current-fresh-regression-candidate'){throw 'G4 binding cannot authorize another case.'}
+        return
+    }
+    if($Binding.classification -cne 'g4-current-fresh-regression-candidate' -or $Binding.baseline -cne '64c2359788ead360314793e47741adacb83b8d4f' -or
+       $Binding.source_head -cnotmatch '^[0-9a-f]{40}$' -or @($Binding.cases).Count -ne 1){throw 'Current single-case G4 binding required.'}
+    $p=$Binding.cases[0]
+    foreach($key in @('case','selector','controller_seconds','work_seconds','whole_seconds','expected_count','build_profile','package','image','source','assertion_envelope','native_marker','loss')){
+        if($p.$key -cne $wanted[$key]){throw ('Exact G4 policy differs: '+$key)}
+    }
+    if($Binding.expected_artifacts.path -cne 'ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-01.expected-artifacts.candidate.json' -or
+       $Binding.expected_artifacts.sha256 -cnotmatch '^[0-9a-f]{64}$'){throw 'G4 frozen artifacts required.'}
+    $g=$Binding.runtime_graph
+    if($g.harness_count -ne 6 -or $g.profile -cne 'verification-scale' -or $g.target -cne 'x86_64-pc-windows-msvc' -or
+       (@($g.packages|Sort-Object)-join ',') -cne 'kilogram-cli,kilogram-transport-iroh'){throw 'Exact six-harness G4 graph required.'}
+}
+function Assert-KilogramS53G4FrozenAllocation([string]$Workspace,[string]$Case,$Binding,$Allocation,$Activation) {
+    Assert-KilogramS53G4Policy $Case $Binding
+    $p=Get-KilogramS53G4Policy $Case;if($null -eq $p){return}
+    $head=Read-KilogramS53CaseBaseline $Workspace $Case $Binding
+    if($head.status -cne 'verified_match' -or -not $head.cleanup_verified -or $Allocation.selector -cne $p.selector -or
+       $Allocation.work_seconds -ne $p.work_seconds -or $Allocation.whole_seconds -ne $p.whole_seconds -or
+       $Allocation.build_profile -cne 'verification-scale' -or $Activation.expected_artifacts_sha256 -cne $Binding.expected_artifacts.sha256){throw 'Current frozen G4 allocation required.'}
+    . (Join-Path $PSScriptRoot 'cargo-frozen-artifacts.ps1')
+    $m=Read-KilogramFrozenManifest (Join-Path $Workspace $Binding.expected_artifacts.path) $Binding.expected_artifacts.sha256 6
+    Assert-KilogramS53G3RuntimeGraph $m
+}
 function Get-KilogramS53BindingName([string]$Case) {
+    $g4=Get-KilogramS53G4Policy $Case;if($null -ne $g4){return $g4.binding}
     if($Case -ceq 'F-s53-b-before-alpn2-two-c-01'){return 'B-start-02.binding.candidate.json'}
     if($Case -ceq 'F-s53-two-c-routes-integrated-01'){return 'G3-two-context-routes-03.binding.candidate.json'}
     if($Case -ceq 'F-s53-capacity-recovery-r2-01'){return 'G2-capacity-route-02.binding.candidate.json'}
@@ -144,6 +190,7 @@ function Assert-KilogramS53BStartFrozenAllocation([string]$Workspace,[string]$Ca
     Assert-KilogramS53G3RuntimeGraph $m
 }
 function Assert-KilogramS53G3Policy([string]$Case,$Binding) {
+    Assert-KilogramS53G4Policy $Case $Binding
     Assert-KilogramS53BStartPolicy $Case $Binding
     $g3='F-s53-two-c-routes-integrated-01'
     $kind='g3-only-current-two-context-routes-candidate'
@@ -172,6 +219,7 @@ function Assert-KilogramS53G3Policy([string]$Case,$Binding) {
     }
 }
 function Assert-KilogramS53G3FrozenAllocation([string]$Workspace,[string]$Case,$Binding,$Allocation,$Activation) {
+    Assert-KilogramS53G4FrozenAllocation $Workspace $Case $Binding $Allocation $Activation
     Assert-KilogramS53BStartFrozenAllocation $Workspace $Case $Binding $Allocation $Activation
     Assert-KilogramS53G3Policy $Case $Binding
     if($Case -cne 'F-s53-two-c-routes-integrated-01'){return}
@@ -199,13 +247,18 @@ function Read-KilogramS53CaseBaseline([string]$Workspace,[string]$Case,$Binding)
     Assert-KilogramS53G2Policy $Case $Binding
     Assert-KilogramS53G3Policy $Case $Binding
     $expected='64c2359788ead360314793e47741adacb83b8d4f'
-    if($Case -cin @('F-s53-exhausted-integrated-01','F-s53-capacity-recovery-r2-01','F-s53-two-c-routes-integrated-01','F-s53-b-before-alpn2-two-c-01')){
+    if($Case -cin @('F-s53-exhausted-integrated-01','F-s53-capacity-recovery-r2-01','F-s53-two-c-routes-integrated-01','F-s53-b-before-alpn2-two-c-01','F-s53-fresh-regression-01','F-s53-fresh-history-regression-01')){
         if($Binding.source_head -isnot [string] -or $Binding.source_head -cnotmatch '^[0-9a-f]{40}$'){throw 'Exact current case source HEAD required.'}
         $expected=$Binding.source_head
     }
     Read-KilogramS53Baseline -Workspace $Workspace -Expected $expected
 }
 function Get-KilogramS53ImageRoles([string]$Case) {
+    if($null -ne (Get-KilogramS53G4Policy $Case)){
+        'target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe'
+        @(Get-KilogramS53ImageRoles 'F-s53-b-before-alpn2-two-c-01'|Where-Object {$_ -like 'target/verification-scale/deps/*' -or $_ -ceq 'target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe'})
+        return
+    }
     @(
         'target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe',
         'target/compatibility/long-lived-dialog-migration/kilogram-cli.exe',
@@ -333,7 +386,7 @@ function New-KilogramS53InventoryEnvelope {
         $map = & $members $Value "$Kind row" $fields
         if (-not (& $integralLength $map['bytes']) -or $map['sha256'] -isnot [string] -or $map['sha256'] -cnotmatch '\A[0-9a-f]{64}\z') { throw "Invalid $Kind byte length or SHA256." }
         $full = & $pathKey $map['path'] ($Kind -ceq 'shell')
-        if ($Kind -ceq 'shell' -and ($map['role'] -isnot [string] -or $map['role'] -cne 'metadata-shell' -or -not [IO.Path]::IsPathFullyQualified($map['path']))) { throw 'One absolute metadata-shell role is required.' }
+        if ($Kind -ceq 'shell' -and ($map['role'] -isnot [string] -or $map['role'] -cnotin @(Get-KilogramS53RuntimeRoles $Case) -or -not [IO.Path]::IsPathFullyQualified($map['path']))) { throw 'Reviewed absolute case dependency role is required.' }
         if ($Kind -ceq 'prerequisite' -and ($map['classification'] -isnot [string] -or $map['classification'] -cne 'root-allocated public replica manifest; no preparation performed by adapter')) { throw 'Invalid prerequisite role.' }
         if ($allPaths.ContainsKey($full)) {
             $prior = $allPaths[$full]
@@ -366,11 +419,15 @@ function New-KilogramS53InventoryEnvelope {
         if (-not $requiredImages.Remove($checked.Row['path'])) { throw 'Unknown or duplicate image role.' }
         $imageRows.Add($checked.Row)
     }
-    if ($requiredImages.Count -ne 0 -or $bound['runtime_dependencies'].Count -ne 1) { throw 'Incomplete image or runtime roles.' }
-    $expectedShell = & $rowValue $bound['runtime_dependencies'][0] 'shell'
-    $actualShell = & $rowValue $Shell 'shell'
-    foreach ($field in @('role', 'path', 'bytes', 'sha256')) {
-        if ($actualShell.Row[$field] -cne $expectedShell.Row[$field]) { throw 'Reviewed shell tuple mismatch.' }
+    $roles=@(Get-KilogramS53RuntimeRoles $Case);$actualDependencies=@($Shell)
+    if ($requiredImages.Count -ne 0 -or $bound['runtime_dependencies'].Count -ne $roles.Count -or $actualDependencies.Count -ne $roles.Count) { throw 'Incomplete image or runtime roles.' }
+    $dependencyRows=[Collections.Generic.List[object]]::new()
+    for($i=0;$i -lt $roles.Count;$i++){
+        $expectedShell=& $rowValue $bound['runtime_dependencies'][$i] 'shell'
+        $actualShell=& $rowValue $actualDependencies[$i] 'shell'
+        if($expectedShell.Row['role'] -cne $roles[$i] -or $actualShell.Row['role'] -cne $roles[$i]){throw 'Ordered runtime dependency roles differ.'}
+        foreach($field in @('role','path','bytes','sha256')){if($actualShell.Row[$field] -cne $expectedShell.Row[$field]){throw 'Reviewed dependency tuple mismatch.'}}
+        $dependencyRows.Add($actualShell.Row)
     }
     $prerequisiteRows = [Collections.Generic.List[object]]::new()
     $prerequisitePaths = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
@@ -394,7 +451,7 @@ function New-KilogramS53InventoryEnvelope {
         activation_sha256 = $ActivationSha256
         sources = $sourceRows.ToArray()
         images = $imageRows.ToArray()
-        runtime_dependencies = @($actualShell.Row)
+        runtime_dependencies = $dependencyRows.ToArray()
         prerequisites = $prerequisiteRows.ToArray()
         execution_mode_declared = 'NativeToken'
         token_introspection = $false
@@ -443,12 +500,14 @@ function Assert-KilogramS53WrittenInventory {
     }
     if ($value['sources'] -isnot [Array] -or $value['sources'].Count -eq 0 -or
         $value['images'] -isnot [Array] -or
-        $value['runtime_dependencies'] -isnot [Array] -or $value['runtime_dependencies'].Count -ne 1 -or
+        $value['runtime_dependencies'] -isnot [Array] -or $value['runtime_dependencies'].Count -ne @(Get-KilogramS53RuntimeRoles $value['case']).Count -or
         $value['prerequisites'] -isnot [Array]) { throw 'Prepared inventory arrays differ.' }
     if ($value['case'] -isnot [string] -or $value['case'] -cnotmatch '\A[CF]-s53-[a-z0-9-]+-01\z' -or
         $value['attempt'] -isnot [string] -or $value['attempt'] -cnotmatch ('\A' + [regex]::Escape($value['case']) + '-attempt-[0-9]{2}\z') -or
         $value['binding_sha256'] -isnot [string] -or $value['binding_sha256'] -cnotmatch '\A[0-9a-f]{64}\z' -or
         $value['activation_sha256'] -isnot [string] -or $value['activation_sha256'] -cnotmatch '\A[0-9a-f]{64}\z') { throw 'Invalid prepared inventory context.' }
+    $roles=@(Get-KilogramS53RuntimeRoles $value['case'])
+    for($i=0;$i -lt $roles.Count;$i++){if($value['runtime_dependencies'][$i].role -cne $roles[$i]){throw 'Prepared dependency order differs.'}}
     Assert-KilogramS53ImageRoles $value['case'] $value['images']
     if($value['case'] -cin @('F-s53-capacity-recovery-r2-01','F-s53-two-c-routes-integrated-01','F-s53-b-before-alpn2-two-c-01') -and $value['prerequisites'].Count -ne 0){throw 'G2/G3 require zero prerequisites.'}
     $run = [IO.Path]::Combine($Envelope.Workspace, '.tmp', 'migration-s53-integrated', $value['attempt'])

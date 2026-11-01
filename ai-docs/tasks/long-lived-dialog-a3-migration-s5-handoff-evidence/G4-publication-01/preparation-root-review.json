@@ -1,0 +1,42 @@
+{
+  "classification": "root accepted G4 preparation; runtime pending",
+  "source_head": "8b3237a593c529d55af9a556fa44ad3f7a704a7c",
+  "bindings": [
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-fresh-01.binding.candidate.json",
+      "bytes": 116853,
+      "sha256": "cbf3d06e34ce96fbdbc5a6dfc5bca0451ef98e373dae5c7ac5b159ee5b580d42"
+    },
+    {
+      "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/G4-history-01.binding.candidate.json",
+      "bytes": 116900,
+      "sha256": "c2fdc982e13676ad4bf5b48ac4a65767479cc5bc293d3bcfaca518c6e9e8fa77"
+    }
+  ],
+  "unique_files_checked": 559,
+  "sources_per_case": 536,
+  "images_per_case": 8,
+  "runtime_dependencies": [
+    {
+      "role": "metadata-shell",
+      "path": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "bytes": 301368,
+      "sha256": "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139"
+    },
+    {
+      "role": "runtime2-memory-shell",
+      "path": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+      "bytes": 495616,
+      "sha256": "60c9b29843624dd8af6b6a7b26147753be6aeef65098b9a503cc50850afe410f"
+    }
+  ],
+  "compiler_sources": 523,
+  "compiler_units": 501,
+  "harnesses": 6,
+  "preimages": 12,
+  "actual_verification_tool": "exec-c0cba1c3-d446-42a6-b4f4-13b170d77f0c",
+  "actual_verification_exit_code": 0,
+  "actual_probe_tool": "exec-ca7bdba4-2f12-4225-9757-8479abfc4a16",
+  "actual_probe_exit_code": 0,
+  "limits": "Two existing selector contracts unchanged; synchronous shell calls bounded by independent case/outer job, not Tokio timeout. No process test run yet."
+}
