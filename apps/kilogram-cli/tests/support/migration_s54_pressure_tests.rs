@@ -304,7 +304,7 @@ fn s54_p8_pending_decoder_rejects_alias_wrong_role_and_stale_commit() -> Result<
 fn s54_p8_ack_pause_is_nonempty_bound_and_not_retirement_or_native() -> Result<()> {
     for reply in [false, true] {
         let (mut d, mut o, mut p) = decoder(0)?;
-        let f = json!({"context":state::hex(&[3;32]),"binding":state::hex(&[5;32]),"lease_generation":6,"request":"01010101010101010101010101010101","query_reply":reply,"receipt_count":1,"saved_receipts_digest":state::hex(&[9;32])});
+        let f = json!({"context":state::hex(&[3;32]),"binding":state::hex(&[5;32]),"lease_generation":6,"request":"01010101010101010101010101010101","query_reply":reply,"receipt_count":1,"saved_receipts_digest":state::hex(&[9;32]),"lane":1,"hold_ack_from":null,"receipts":[[2,2,1,640,state::hex(&[9;32]),state::hex(&[8;32])]]});
         line(&mut d, &mut o, &mut p, "ack", f.clone())?;
         for key in [
             "receipt_count",

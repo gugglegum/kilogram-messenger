@@ -1,0 +1,13 @@
+{
+  "manifest_sha256": "49469f5e7d2045ec3608e0bec044a6842558922ddf4eea6f19c5210a8967a485",
+  "verified_file_checks": 675,
+  "source_inputs": 548,
+  "compile_units": 501,
+  "fresh_units": 501,
+  "final_tests": 18,
+  "carried_tests": 9,
+  "carry_aggregate_still_failed": true,
+  "head": "9e2b1ced63a90d0e8bcae9978942e4c573d78f8d",
+  "index_empty": true,
+  "scope_verified": true
+}

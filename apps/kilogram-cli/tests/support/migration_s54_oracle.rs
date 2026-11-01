@@ -436,10 +436,81 @@ fn whole_packet_total(
 #[derive(Default)]
 pub(super) struct Pages {
     total: u64,
+    owner_totals: BTreeMap<old::Id, u64>,
+    current: BTreeMap<old::Id, Incarnation>,
     last_local: BTreeMap<Incarnation, u64>,
     operations: BTreeSet<([u8; 32], [u8; 32])>,
 }
+#[derive(Clone, Copy, Debug)]
+pub(super) struct PageBaseline {
+    owner: old::Id,
+    total: u64,
+}
 impl Pages {
+    fn register(&mut self, key: Incarnation, new_start: bool) -> Result<()> {
+        ensure!(
+            key.pid > 0 && key.owner != [0; 32] && key.nonce != [0; 32],
+            "actual page owner/incarnation identity"
+        );
+        if self.last_local.contains_key(&key) {
+            ensure!(!new_start, "reused page incarnation start");
+            return Ok(());
+        }
+        ensure!(
+            self.last_local.len() < 32 && !self.last_local.keys().any(|k| k.nonce == key.nonce),
+            "bounded unique page nonce/source/PID"
+        );
+        self.last_local.insert(key, 0);
+        self.current.insert(key.owner, key);
+        self.owner_totals.entry(key.owner).or_insert(0);
+        Ok(())
+    }
+    pub(super) fn start(&mut self, key: Incarnation) -> Result<()> {
+        self.register(key, true)
+    }
+    fn known(&self, key: Incarnation) -> Result<u64> {
+        ensure!(
+            self.last_local.contains_key(&key) && self.current.get(&key.owner) == Some(&key),
+            "unknown page incarnation"
+        );
+        self.owner_totals
+            .get(&key.owner)
+            .copied()
+            .context("unknown page source")
+    }
+    pub(super) fn owner_total(&self, key: Incarnation) -> Result<u64> {
+        self.known(key)
+    }
+    pub(super) fn baseline(&self, key: Incarnation) -> Result<PageBaseline> {
+        Ok(PageBaseline {
+            owner: key.owner,
+            total: self.known(key)?,
+        })
+    }
+    pub(super) fn phase_total(&self, key: Incarnation, base: PageBaseline) -> Result<u64> {
+        ensure!(base.owner == key.owner, "page baseline source mismatch");
+        self.known(key)?
+            .checked_sub(base.total)
+            .context("page baseline regression")
+    }
+    pub(super) fn phase_local_target(
+        &self,
+        key: Incarnation,
+        base: PageBaseline,
+        target: u64,
+    ) -> Result<u64> {
+        let progress = self.phase_total(key, base)?;
+        ensure!(
+            target > progress
+                && target <= 256
+                && base.total.checked_add(target).is_some_and(|n| n <= 256),
+            "bounded future owner phase target"
+        );
+        target
+            .checked_sub(progress)
+            .and_then(|left| left.checked_add(*self.last_local.get(&key)?))
+            .context("local page target overflow")
+    }
     pub(super) fn accepted(
         &mut self,
         key: Incarnation,
@@ -458,9 +529,16 @@ impl Pages {
             "S54 normal page ordering"
         );
         ensure!(
-            self.operations.insert((key.owner, operation)),
+            !self.operations.contains(&(key.owner, operation)),
             "replayed page cannot advance interruption"
         );
+        self.register(key, false)?;
+        let next = self
+            .known(key)?
+            .checked_add(1)
+            .context("owner page total overflow")?;
+        self.operations.insert((key.owner, operation));
+        self.owner_totals.insert(key.owner, next);
         self.last_local.insert(key, local);
         self.total += 1;
         Ok(())

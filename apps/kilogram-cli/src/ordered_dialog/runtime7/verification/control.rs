@@ -36,6 +36,7 @@ pub(crate) struct Schedule {
     pub pause_after_normal_page: Option<u64>,
     #[serde(default)]
     pub hold_ack: bool,
+    pub hold_ack_from: Option<u64>,
     pub max_pause_ms: u64,
     pub retry_live: Option<super::retry::Request>,
 }
@@ -46,6 +47,13 @@ impl Schedule {
             "S54 debug control bound/release"
         );
         let s: Self = serde_json::from_slice(raw)?;
+        ensure!(
+            s.hold_ack_from.is_none_or(|n| s.phase == Phase::CatchUp
+                && s.hold_ack
+                && s.lane == 1
+                && (1..=4096).contains(&n)),
+            "S54 targeted ACK CatchUp/B/bound"
+        );
         ensure!(
             s.source64_after.is_none_or(|n| s.phase == Phase::Pressure
                 && s.hold_source64

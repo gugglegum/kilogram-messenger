@@ -9,9 +9,12 @@ use std::{
     time::{Duration, Instant},
 };
 mod control;
+mod receipts;
 mod selection;
 use control::{Location, Phase, Schedule};
 use selection::AcceptedHead;
+#[cfg(test)]
+mod receipts_tests;
 pub(super) mod retry;
 #[cfg(test)]
 mod tests;
@@ -189,22 +192,12 @@ impl Observer {
 fn counters(s: &owner::Stats7) -> Json {
     json!({"encrypt":s.committed_encrypt,"decrypt":s.committed_decrypt,"attempts":s.packet_attempts,"aborted":s.aborted_packet_calls,"ambiguous":s.ambiguous_packet_calls,"accounts":s.account_constructors,"outbound":s.outbound_constructors,"inbound":s.inbound_constructors})
 }
+#[cfg(test)]
 fn ack_count(
     kind: kilogram_protocol::ordered_dialog_v2::FrameKind,
     body: &wire::Value,
 ) -> Result<Option<usize>> {
-    use kilogram_protocol::ordered_dialog_v2 as v2;
-    if kind != v2::FrameKind::AckBatch {
-        return Ok(None);
-    }
-    let f = body.fields(8)?;
-    ensure!(f[4].uint()? < 2, "S54 receipt lane");
-    let items = v2::tagged_items(&f[6], 1024)?;
-    ensure!(
-        items.len() <= 16 && items.iter().all(|i| matches!(i.format, 1 | 2)),
-        "S54 actual bounded tagged receipts"
-    );
-    Ok((!items.is_empty()).then_some(items.len()))
+    Ok(receipts::AckContents::parse(kind, body)?.map(|a| a.receipts.len()))
 }
 pub(super) struct Page {
     pub binding: Id,
@@ -420,12 +413,36 @@ impl Owner7 {
         if !self.verification.enabled() || frame.body().kind() != FrameKind::AckBatch {
             return Ok(None);
         }
-        let Some(count) = ack_count(frame.body().kind(), frame.body().value())? else {
+        let context = self.spec(c)?.c;
+        let role = self.role(c)? as u8;
+        let Some(plan) = self.verification.schedule(context, role)? else {
             return Ok(None);
         };
-        let f = frame.body().value().fields(8)?;
+        if !plan.hold_ack {
+            return Ok(None);
+        }
+        let Some(contents) =
+            receipts::AckContents::parse(frame.body().kind(), frame.body().value())?
+        else {
+            return Ok(None);
+        };
+        if !contents.matches(plan.hold_ack_from, role, query_reply) {
+            return Ok(None);
+        }
         let lease = self.check_existing_lease(c, frame.binding())?;
-        self.verification.pause(self.spec(c)?.c, self.role(c)? as u8, PauseKind::Ack, json!({"context":state::hex(&self.spec(c)?.c),"binding":state::hex(&frame.binding()),"lease_generation":lease.generation,"request":state::hex(&frame.request()),"query_reply":query_reply,"receipt_count":count,"saved_receipts_digest":blake3::hash(&wire::encode(&f[6],16*1024)?).to_hex().to_string()}))
+        self.verification.pause(
+            context,
+            role,
+            PauseKind::Ack,
+            contents.facts(
+                context,
+                frame.binding(),
+                lease.generation,
+                frame.request(),
+                query_reply,
+                plan.hold_ack_from,
+            ),
+        )
     }
     pub(super) fn observe_native(&mut self, c: u8, report: db::CommitReport) -> Result<()> {
         if !self.verification.enabled() {

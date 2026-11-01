@@ -439,14 +439,17 @@ fn s54_ack_gate_covers_push_and_query_reply_but_never_empty_or_malformed_ack() -
             wire::b([1; 32]),
             wire::b([2; 32]),
             wire::b([3; 32]),
-            wire::b(b"SID"),
+            wire::b("A".repeat(43).as_bytes()),
             wire::u(0),
             wire::a([]),
             items,
             wire::a([]),
         ])
     };
-    let one = wire::a([wire::a([wire::u(1), wire::b([9; 16])])]);
+    let one = wire::a([wire::a([
+        wire::u(1),
+        wire::b(receipts_tests::r1(24, [9; 32], 0)?),
+    ])]);
     ensure!(
         ack_count(K::AckBatch, &body(one))? == Some(1),
         "actual nonempty tagged ACK"

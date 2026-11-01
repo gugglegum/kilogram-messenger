@@ -1,0 +1,408 @@
+{
+  "classification": "Root independent P9A source/static/pure review; real cancellation/resend pending P9B",
+  "root_check_command": "e1da17",
+  "app_execution_ids": {
+    "clippy": "exec-62515672-2878-4419-a228-1473a7a25cff",
+    "compile": "exec-755eb367-062d-4354-b447-9b46dafbacc6",
+    "pure": "exec-87008583-3c4e-4c72-8b2d-90ad13585481",
+    "fmt": "exec-22bd8e6c-a5ff-47a3-b9a9-02898afbcd0d",
+    "prior_failed_aggregate": "exec-33fc46d6-f9e6-4060-8789-af0352545a05"
+  },
+  "normal_cli_unit": {
+    "package_id": "path+file:///E:/AI-Projects/kilogram-p2p-messenger/apps/kilogram-cli#0.1.0",
+    "package": "kilogram-cli",
+    "kind": [
+      "bin"
+    ],
+    "target": "kilogram-cli",
+    "features": [
+      "default"
+    ],
+    "profile": {
+      "opt_level": "3",
+      "debuginfo": "line-tables-only",
+      "debug_assertions": true,
+      "overflow_checks": true,
+      "test": false
+    },
+    "filenames": [
+      "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\x86_64-pc-windows-msvc\\verification-scale\\kilogram_cli.pdb",
+      "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\x86_64-pc-windows-msvc\\verification-scale\\kilogram-cli.exe"
+    ],
+    "executable": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\x86_64-pc-windows-msvc\\verification-scale\\kilogram-cli.exe",
+    "class": "runtime-target",
+    "fresh": true
+  },
+  "artifacts": [
+    {
+      "path": "target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe",
+      "bytes": 50473984,
+      "sha256": "f5322cfc26b93ab7a431a474d7f33e9ff805a3e1a3df98fb1d0f84185794dcb9"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 50781696,
+      "sha256": "1992cef4b4b6b2b18bb67ce80c94fb4c751ea3715626146936c44bdb619c4d57"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 32656384,
+      "sha256": "2fcbfb6529fad0f156cbed869ea0455e864119dcecef94eba508aa06e588762f"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 16601600,
+      "sha256": "4fedca5de5cf0139f9ea897cf720cf5b25236ffab14537b8dcc2eab747b4a3ca"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 23695360,
+      "sha256": "4a08ce3de743241c720ec3bf25425c75b8efa695a03780fe1f74e1e7109f2a98"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+      "bytes": 19419648,
+      "sha256": "f5822cd40225a7ac12dbc2c58264439b8e3c5d4b4d20cf87309b9aa28f2023ad"
+    },
+    {
+      "path": "target/verification-scale/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+      "bytes": 22317056,
+      "sha256": "552cc6c23452ad50c94b65391e33df462b89e14551c7eac51304e55872788cf0"
+    }
+  ],
+  "carried9_runtime": {
+    "same_final_library": {
+      "package": "kilogram-cli",
+      "kind": "lib",
+      "target": "kilogram_cli",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 32656384,
+      "sha256": "2fcbfb6529fad0f156cbed869ea0455e864119dcecef94eba508aa06e588762f",
+      "profile": "verification-scale"
+    },
+    "same5_runtime_sources": [
+      {
+        "path": "apps\\kilogram-cli\\src\\ordered_dialog\\runtime7\\verification.rs",
+        "bytes": 16773,
+        "archive": ".tmp\\s54-block3c-p9a-02\\preimages\\apps\\kilogram-cli\\src\\ordered_dialog\\runtime7\\verification.rs",
+        "sha256": "68ec7af6a2ff391cfe725dbf408eeb5de63a7708c8531f325a258b55095f364e"
+      },
+      {
+        "path": "apps\\kilogram-cli\\src\\ordered_dialog\\runtime7\\verification\\control.rs",
+        "bytes": 7941,
+        "archive": ".tmp\\s54-block3c-p9a-02\\preimages\\apps\\kilogram-cli\\src\\ordered_dialog\\runtime7\\verification\\control.rs",
+        "sha256": "6dce344b8d953a5198bc393375a499bf5aca5f6ee40b63eb19e1d196a8cb2e64"
+      },
+      {
+        "path": "apps\\kilogram-cli\\src\\ordered_dialog\\runtime7\\verification\\tests.rs",
+        "bytes": 18631,
+        "archive": ".tmp\\s54-block3c-p9a-02\\preimages\\apps\\kilogram-cli\\src\\ordered_dialog\\runtime7\\verification\\tests.rs",
+        "sha256": "fd7f801eb7a693e774f64d32a1d8b3d9435af688ea2f21ff0dc95d87fdfe929f"
+      },
+      {
+        "path": "apps\\kilogram-cli\\src\\ordered_dialog\\runtime7\\verification\\receipts.rs",
+        "bytes": 4601,
+        "archive": ".tmp\\s54-block3c-p9a-02\\preimages\\apps\\kilogram-cli\\src\\ordered_dialog\\runtime7\\verification\\receipts.rs",
+        "sha256": "f147a4d368df3c1eefb92e1c96a732b93ee8286695d73e5aa0d1a64526e5f182"
+      },
+      {
+        "path": "apps\\kilogram-cli\\src\\ordered_dialog\\runtime7\\verification\\receipts_tests.rs",
+        "bytes": 7912,
+        "archive": ".tmp\\s54-block3c-p9a-02\\preimages\\apps\\kilogram-cli\\src\\ordered_dialog\\runtime7\\verification\\receipts_tests.rs",
+        "sha256": "c8400a229bd4cd332267a6b90bff9ceb0778f02c4974ebec08685a01771e6055"
+      }
+    ],
+    "stdout": {
+      "path": ".tmp/s54-block3c-p9a-01/pure-01.stdout.log",
+      "bytes": 10278,
+      "sha256": "ff61d4d5041f25ce39c9958c905c01381297490db9128a6301ee98b09698edcc"
+    },
+    "capture": {
+      "path": ".tmp/s54-block3c-p9a-01/pure-01.capture.json",
+      "bytes": 2704694,
+      "sha256": "e46d7362d965e81bf79076cb84e009f5fed8ca772271ddde90a9b8e9de4b1f77"
+    },
+    "prior_aggregate_exit": 1,
+    "classification": "Only exact9 PASS runtime group reused; failed aggregate stays failed"
+  },
+  "evidence": [
+    {
+      "path": ".tmp/s54-block3c-p9a-01/check.ps1",
+      "bytes": 2625,
+      "sha256": "736afb0671870b6eef1cbb84d44445800617d0b47474badc758dc48ab1a3c6ac"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/clippy-01.json",
+      "bytes": 447,
+      "sha256": "297088cac7fd5bd65b6d29eb34f69644f25dd7c8b3fb3beac36c08820554ba9a"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/clippy-01.stderr.log",
+      "bytes": 177,
+      "sha256": "a731acac5e923ad83852d73b0991dc4bffd7406e130e9c81024e3d8185e255ec"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/clippy-01.stdout.log",
+      "bytes": 80,
+      "sha256": "be691fa37eaeda442136e7b3e68a041648dfc4f6e34263cc84b13ce8b6d90e2d"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/clippy-02.json",
+      "bytes": 446,
+      "sha256": "ede7cb16e1d5e3b0f1e53012e87122f629afb99209653e0647f5f168905fba6f"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/clippy-02.stderr.log",
+      "bytes": 176,
+      "sha256": "33c52a1d229f488c316118f91f306a5c54128043599cf14a41adbc791ca4889d"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/clippy-02.stdout.log",
+      "bytes": 80,
+      "sha256": "be691fa37eaeda442136e7b3e68a041648dfc4f6e34263cc84b13ce8b6d90e2d"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/clippy.ps1",
+      "bytes": 452,
+      "sha256": "d733c593562844918a0409934a7a7e57307dedcefb661057e4a9e0e139de5c70"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/compile-01.capture.json",
+      "bytes": 2704645,
+      "sha256": "c54348c64a3f77f6c741b937c6502d6dbc9b27aac72a7a2bcd61ae57cbfb2af5"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/compile-01.json",
+      "bytes": 566,
+      "sha256": "b52ee11eb56b88e8aa70042e39e7e328e366b89dab2d22fbd2e12d549583ef52"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/compile-01.stderr.log",
+      "bytes": 177,
+      "sha256": "aea401cd275d43693df0aab53fc6c37ade3a2520dd01c254047319017d410fee"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/compile-01.stdout.log",
+      "bytes": 1231,
+      "sha256": "891b63c8b487730e76631d19ba64f91a3cda4891af4802aa952b33d0f435ae9c"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/compile.ps1",
+      "bytes": 495,
+      "sha256": "455b0b89f2ddf1ef770eb1154a254cdb706aa4715f35026a5ac9a93075b63f1e"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/decoder-tail.py",
+      "bytes": 4766,
+      "sha256": "c62aa51581cabc90967f5ce55447da9a0eb80855fdcc3e01595f54cec9d49800"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/fixtures.py",
+      "bytes": 994,
+      "sha256": "9950c3ebac36f0d46786c24a772361d57cd4d121d90d3bd44f19191889dd69cf"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/fmt-check.ps1",
+      "bytes": 2715,
+      "sha256": "2c5006f2805e52b604f6787dffda9ce82dce4149b5e5b5a89f416cee76b6fa14"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/fmt.ps1",
+      "bytes": 78,
+      "sha256": "47462a1afb9438e43a9c94a0f3b478371f77d4e604978504aed00affb9602869"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/preimages.json",
+      "bytes": 4973,
+      "sha256": "1626971a219ad7be6ce1a9762e04a399afc224feb8c314846caa9330cf42318b"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/pure-01.capture.json",
+      "bytes": 2704694,
+      "sha256": "e46d7362d965e81bf79076cb84e009f5fed8ca772271ddde90a9b8e9de4b1f77"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/pure-01.expected.json",
+      "bytes": 1291079,
+      "sha256": "09aef9b6df412c2fa0cb51ed0852875305ee29b8ec99a3cb689363ae95715ba6"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/pure-01.json",
+      "bytes": 490,
+      "sha256": "a3b692b182924a14decc2ee89a624b97b354ab0ba44340b0d8025297f723cf6b"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/pure-01.stderr.log",
+      "bytes": 1085,
+      "sha256": "4c7caf4519fa5679ac403f0d2e68564e3ea97339f4b39c0c3ddd4766a798eb64"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/pure-01.stdout.log",
+      "bytes": 10278,
+      "sha256": "ff61d4d5041f25ce39c9958c905c01381297490db9128a6301ee98b09698edcc"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/pure.ps1",
+      "bytes": 1921,
+      "sha256": "15247c766cc80f5f0ca2a7122f836593f3db83b5e143a30c378678b28238cb44"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/test-selection-run.json",
+      "bytes": 8031,
+      "sha256": "21afda302673ab3ee54e31ee832bcef5a83d76de828a680e963192b358694120"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-01/test-selection.py",
+      "bytes": 2524,
+      "sha256": "62b42c7adc954f24304e3c6306e40d1985779cd40defccda8358e7e393330f83"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/check.ps1",
+      "bytes": 2625,
+      "sha256": "af19acbf21fd634f569e9c48e5d7e163d75868c8d52f6f6c67424bf7e4a7addf"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/clippy-01.json",
+      "bytes": 446,
+      "sha256": "5d57a5f7b14796767c330bb2ef3b8b511ce45dc84c105cdbf2289979606de226"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/clippy-01.stderr.log",
+      "bytes": 176,
+      "sha256": "14a5729f8b695d03760feb4e51b68ed543c75963d7c1664395302be6a78a8e12"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/clippy-01.stdout.log",
+      "bytes": 80,
+      "sha256": "be691fa37eaeda442136e7b3e68a041648dfc4f6e34263cc84b13ce8b6d90e2d"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/clippy.ps1",
+      "bytes": 452,
+      "sha256": "d733c593562844918a0409934a7a7e57307dedcefb661057e4a9e0e139de5c70"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/compile-01.capture.json",
+      "bytes": 2704635,
+      "sha256": "32de41a54e3db3e5dcde7bd10a90c2feddc5288c38036f389bcf4178aea0ee9f"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/compile-01.json",
+      "bytes": 565,
+      "sha256": "21bca4846802de7b85882460a106bfbd56eb77f5c1910ee9326a17c46fcd3f7b"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/compile-01.stderr.log",
+      "bytes": 177,
+      "sha256": "9da1456db578b0a831d06bb3e6d9fe34690b8f1c5b91b18a54266d24988a7df4"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/compile-01.stdout.log",
+      "bytes": 1231,
+      "sha256": "891b63c8b487730e76631d19ba64f91a3cda4891af4802aa952b33d0f435ae9c"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/compile.ps1",
+      "bytes": 495,
+      "sha256": "455b0b89f2ddf1ef770eb1154a254cdb706aa4715f35026a5ac9a93075b63f1e"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/final-selection.py",
+      "bytes": 793,
+      "sha256": "e23051ec2246d318c2c50ba57924d6d9af8e4ac6798f0e0e6c96880426bf4299"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/fmt-01.json",
+      "bytes": 439,
+      "sha256": "82e9357a67246e58ac5e7bc04475c79f54a0c7e46debc1540ee22494f8d3a235"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/fmt-01.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/fmt-01.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/fmt-check.ps1",
+      "bytes": 2715,
+      "sha256": "9df1fb8ec73cb80b9132f67b8ee0206b0844fc8066ce3f9d25cb031808d424ad"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/fmt.ps1",
+      "bytes": 78,
+      "sha256": "47462a1afb9438e43a9c94a0f3b478371f77d4e604978504aed00affb9602869"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/preimages.json",
+      "bytes": 6361,
+      "sha256": "05d5e37e2a5ed865f3661cfee89d4b995e612229833b63bfb07c4ed0cd36fc84"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/pure-01.capture.json",
+      "bytes": 2704694,
+      "sha256": "220317a64e3aa3d6751ef9bf92321b94c312005e14258cf625345a461642986b"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/pure-01.expected.json",
+      "bytes": 1291079,
+      "sha256": "a6eeacdaffda337f9a9bc907e7c7b47e3d9e468f609226a8805824aa16370348"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/pure-01.json",
+      "bytes": 473,
+      "sha256": "44df4670df2120729b7f4a1d4a8bcab0f254dd12073cd07718e66f00e73c779e"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/pure-01.stderr.log",
+      "bytes": 85,
+      "sha256": "bc9bd43a8c52e54a8d5cc14083b25c18358e619b024e576badc0afaabcea2942"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/pure-01.stdout.log",
+      "bytes": 10657,
+      "sha256": "ae7fdd42c9f9d4ead01764c4ace52ca9d846f9955bebf34a94f7d89adee2137c"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/pure.ps1",
+      "bytes": 1923,
+      "sha256": "eafad5fa9d52cf0c292076159e6f8dafdfd11dc2bcb9803dbe5cd8f2aa74c3c2"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/review.py",
+      "bytes": 6750,
+      "sha256": "0e9937849202eff8e4590b0eafa81ff9eab0491a3d22aa63ebf60fefe7c3e282"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/test-selection-final.json",
+      "bytes": 8738,
+      "sha256": "ef70287215ee7a094ea296f840b3b074b7bd1d43226e8465b59fe43a897e4593"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/test-selection-run.json",
+      "bytes": 8031,
+      "sha256": "21afda302673ab3ee54e31ee832bcef5a83d76de828a680e963192b358694120"
+    },
+    {
+      "path": ".tmp/s54-block3c-p9a-02/test-selection.py",
+      "bytes": 2524,
+      "sha256": "62b42c7adc954f24304e3c6306e40d1985779cd40defccda8358e7e393330f83"
+    }
+  ],
+  "root_checks": {
+    "manifest_sha256": "49469f5e7d2045ec3608e0bec044a6842558922ddf4eea6f19c5210a8967a485",
+    "verified_file_checks": 675,
+    "source_inputs": 548,
+    "compile_units": 501,
+    "fresh_units": 501,
+    "final_tests": 18,
+    "carried_tests": 9,
+    "carry_aggregate_still_failed": true,
+    "head": "9e2b1ced63a90d0e8bcae9978942e4c573d78f8d",
+    "index_empty": true,
+    "scope_verified": true
+  }
+}

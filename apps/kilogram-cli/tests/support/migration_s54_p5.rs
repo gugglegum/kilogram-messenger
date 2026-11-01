@@ -17,6 +17,9 @@ mod observations;
 mod offline;
 #[path = "migration_s54_oracle.rs"]
 mod oracle;
+#[cfg(test)]
+#[path = "migration_s54_p9a_tests.rs"]
+mod p9a_tests;
 #[path = "migration_s54_pressure.rs"]
 mod pressure;
 #[path = "migration_s54_source.rs"]

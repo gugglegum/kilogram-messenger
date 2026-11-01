@@ -1,4 +1,5 @@
 //! Typed bounded non-Native facts from existing debug hooks.
+use super::types::{AckArm, Stamp, fields, id, number};
 use super::*;
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub(crate) struct Pending {
@@ -8,19 +9,6 @@ pub(crate) struct Pending {
     pub event: old::Id,
     pub generation: u64,
     pub operation: old::Id,
-}
-fn number(f: &Value, k: &str) -> Result<u64> {
-    f[k].as_u64().context("actual observation integer")
-}
-fn id(f: &Value, k: &str) -> Result<old::Id> {
-    state::parse_id(f[k].as_str().context("actual observation ID")?)
-}
-fn fields(f: &Value, n: usize) -> Result<()> {
-    ensure!(
-        f.as_object().is_some_and(|o| o.len() == n),
-        "exact bounded fact schema"
-    );
-    Ok(())
 }
 impl Decoder {
     pub fn marker(&self, marker: &Value) -> Result<()> {
@@ -136,31 +124,23 @@ impl Decoder {
     pub fn current_head(&self, context: u8) -> Option<(old::Id, u64, u64)> {
         self.heads.get(&context).copied()
     }
-    pub(super) fn page_facts(&mut self, kind: &str, f: &Value) -> Result<()> {
-        fields(f, 11)?;
+    pub fn incarnation(&self) -> Result<oracle::Incarnation> {
+        ensure!(!self.final_seen, "live observation incarnation");
+        self.key.context("actual start required")
+    }
+    fn stamp(&self, sequence: u64) -> Result<Stamp> {
+        Ok(Stamp {
+            incarnation: self.incarnation()?,
+            sequence,
+            line: self.lines,
+        })
+    }
+    pub(super) fn page_facts(&mut self, kind: &str, f: &Value, sequence: u64) -> Result<()> {
         self.bound_head(f)?;
-        let start = number(f, "start")?;
-        let end = number(f, "end")?;
-        let new = number(f, "new_sources")?;
-        let head = f["head"]
-            .as_bool()
-            .context("explicit head classification")?;
+        let c = self.context_index(f)?;
+        let row = PageObservation::parse(f, self.stamp(sequence)?, c)?;
         ensure!(
-            start > 0
-                && end > start
-                && end - start <= 16
-                && new <= end - start
-                && (!head || end - start == 1)
-                && number(f, "generation")? > 0
-                && number(f, "lease_generation")? > 0,
-            "actual bounded page"
-        );
-        id(f, "operation")?;
-        if !f["grant"].is_null() {
-            id(f, "grant")?;
-        }
-        ensure!(
-            kind == match (head, new > 0) {
+            kind == match (row.head, row.new_sources > 0) {
                 (true, true) => "head_page",
                 (true, false) => "replayed_head_page",
                 (false, true) => "normal_page",
@@ -168,36 +148,146 @@ impl Decoder {
             },
             "page novelty/head classification"
         );
+        if kind == "head_page" && c == 0 {
+            self.head_page = Some(row.clone());
+            self.first_tail = None;
+        }
         if kind == "normal_page" {
-            let c = self.context_index(f)?;
-            self.normal_pages.insert(c, (f.clone(), false));
+            ensure!(row.local_page > 0, "forward normal page number");
+            if self.first_tail.is_none()
+                && self.head_page.as_ref().is_some_and(|h| {
+                    h.context == c
+                        && h.binding == row.binding
+                        && h.lease_generation == row.lease_generation
+                        && h.stamp.line < row.stamp.line
+                })
+            {
+                self.first_tail = Some(row.clone());
+            }
+            self.normal_pages.insert(c, (row, false));
         }
         Ok(())
     }
-    pub(super) fn page_barrier(&mut self, f: &Value) -> Result<()> {
+    pub(super) fn page_barrier(&mut self, f: &Value, sequence: u64) -> Result<()> {
         self.bound_head(f)?;
         let c = self.context_index(f)?;
+        let stamp = self.stamp(sequence)?;
         let (actual, seen) = self
             .normal_pages
             .get_mut(&c)
             .context("barrier requires actual prior forward normal_page")?;
         ensure!(
-            actual == f && !*seen,
+            actual.facts() == f
+                && actual.stamp.incarnation == stamp.incarnation
+                && actual.stamp.sequence == sequence
+                && actual.stamp.line < stamp.line
+                && !*seen,
             "stale/duplicate/foreign page barrier"
         );
         *seen = true;
+        let mut row = actual.clone();
+        row.stamp = stamp;
+        self.page_pause = Some(row);
         Ok(())
     }
-    pub(super) fn ack(&mut self, f: &Value) -> Result<()> {
-        fields(f, 7)?;
-        self.bound_head(f)?;
+    pub fn paused_page(&self) -> Option<&PageObservation> {
+        self.page_pause.as_ref()
+    }
+    pub fn accepted_head_page(&self) -> Option<&PageObservation> {
+        self.head_page.as_ref()
+    }
+    pub fn first_tail_after_head(&self) -> Option<&PageObservation> {
+        self.first_tail.as_ref()
+    }
+    fn pause_marker(&self, marker: &Value, kind: &str, stamp: Stamp, facts: &Value) -> Result<()> {
+        let key = self.incarnation()?;
         ensure!(
-            (1..=16).contains(&number(f, "receipt_count")?) && f["query_reply"].is_boolean(),
-            "actual nonempty bounded ACK push/query reply"
+            serde_json::to_vec(marker)?.len() <= 4096
+                && marker.as_object().is_some_and(|m| m.len() == 6)
+                && marker["kind"] == kind
+                && stamp.incarnation == key
+                && marker["pid"] == key.pid
+                && marker["owner"] == state::hex(&key.owner)
+                && marker["incarnation"] == state::hex(&key.nonce)
+                && marker["sequence"] == stamp.sequence
+                && stamp.sequence <= self.sequence
+                && marker["facts"] == *facts,
+            "same actual bounded decoded pause marker"
         );
-        source::parse_request_id(f["request"].as_str().context("actual ACK request")?)?;
-        id(f, "saved_receipts_digest")?;
-        self.ack_pause = Some(f.clone());
+        self.bound_head(facts)
+    }
+    pub fn page_marker(&self, marker: &Value) -> Result<()> {
+        let row = self
+            .page_pause
+            .as_ref()
+            .context("actual page barrier required")?;
+        self.pause_marker(marker, "page", row.stamp, row.facts())
+    }
+    pub fn arm_ack(
+        &mut self,
+        context: u8,
+        binding: old::Id,
+        generation: u64,
+        from: Option<u64>,
+    ) -> Result<()> {
+        ensure!(
+            context < 2
+                && generation > 0
+                && self
+                    .heads
+                    .get(&context)
+                    .is_some_and(|(b, g, _)| *b == binding && *g == generation)
+                && from.is_none_or(|n| self.role == 1 && (1..=4096).contains(&n)),
+            "ACK arm actual current context/binding/generation/selector"
+        );
+        self.ack_arm = Some(AckArm {
+            stamp: self.stamp(self.sequence)?,
+            context,
+            binding,
+            generation,
+            from,
+        });
+        self.ack_pause = None;
         Ok(())
+    }
+    pub(super) fn ack(&mut self, f: &Value, sequence: u64) -> Result<()> {
+        self.bound_head(f)?;
+        let row =
+            AckObservation::parse(f, self.stamp(sequence)?, self.context_index(f)?, self.role)?;
+        if let Some(arm) = self.ack_arm {
+            ensure!(
+                arm.stamp.incarnation == row.stamp.incarnation
+                    && arm.stamp.line < row.stamp.line
+                    && arm.context == row.context
+                    && arm.binding == row.binding
+                    && arm.generation == row.lease_generation
+                    && arm.from == row.from,
+                "ACK matches current armed interval"
+            );
+            ensure!(
+                row.from.is_none() || self.ack_pause.is_none(),
+                "one targeted ACK per arm"
+            );
+        } else {
+            ensure!(row.from.is_none(), "targeted ACK must be armed");
+        }
+        ensure!(
+            self.last_ack_request
+                .is_none_or(|(_, request)| request != row.request),
+            "old ACK request cannot satisfy a fresh observation"
+        );
+        self.last_ack_request = Some((row.binding, row.request));
+        self.ack_pause = Some(row);
+        Ok(())
+    }
+    pub fn paused_ack(&self) -> Option<&AckObservation> {
+        self.ack_pause.as_ref()
+    }
+    pub fn ack_marker(&self, marker: &Value) -> Result<()> {
+        let row = self
+            .ack_pause
+            .as_ref()
+            .context("actual ACK pause required")?;
+        self.pause_marker(marker, "ack", row.stamp, row.facts())
     }
 }

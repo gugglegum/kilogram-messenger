@@ -3,7 +3,10 @@ use super::*;
 use std::io::{Read, Seek, SeekFrom};
 #[path = "migration_s54_pause_observations.rs"]
 mod pauses;
+#[path = "migration_s54_observation_types.rs"]
+mod types;
 pub(super) use pauses::Pending;
+pub(super) use types::{AckObservation, PageObservation};
 
 pub(super) fn stats(raw: &Value) -> Result<oracle::Counts> {
     let get = |key: &str| {
@@ -40,8 +43,13 @@ pub(super) struct Decoder {
     pub source64: Option<Value>,
     source_expected: Option<Value>,
     heads: BTreeMap<u8, (old::Id, u64, u64)>,
-    normal_pages: BTreeMap<u8, (Value, bool)>,
-    pub ack_pause: Option<Value>,
+    normal_pages: BTreeMap<u8, (PageObservation, bool)>,
+    page_pause: Option<PageObservation>,
+    head_page: Option<PageObservation>,
+    first_tail: Option<PageObservation>,
+    pub ack_pause: Option<AckObservation>,
+    ack_arm: Option<types::AckArm>,
+    last_ack_request: Option<(old::Id, [u8; 16])>,
     pub max_packet_delta: u64,
     current_head: Option<(old::Id, u64)>,
     retry_expected: Option<(u64, u64, old::Id, old::Id)>,
@@ -68,7 +76,12 @@ impl Decoder {
             source_expected: None,
             heads: BTreeMap::new(),
             normal_pages: BTreeMap::new(),
+            page_pause: None,
+            head_page: None,
+            first_tail: None,
             ack_pause: None,
+            ack_arm: None,
+            last_ack_request: None,
             max_packet_delta: 0,
             current_head: None,
             retry_expected: None,
@@ -153,6 +166,7 @@ impl Decoder {
                 "unique zero start observation"
             );
             ops.start(key)?;
+            pages.start(key)?;
             self.key = Some(key);
             return Ok(());
         }
@@ -282,7 +296,7 @@ impl Decoder {
                 self.live_retry_complete = Some(facts.clone());
             }
             "normal_page" | "head_page" | "replayed_head_page" | "replayed_page" => {
-                self.page_facts(kind, facts)?;
+                self.page_facts(kind, facts, sequence)?;
                 if facts["context"] == self.contexts[0] {
                     let normal = kind == "normal_page";
                     let new = facts["new_sources"]
@@ -299,8 +313,8 @@ impl Decoder {
                 }
             }
             "source64" => self.source_pause(facts)?,
-            "page" => self.page_barrier(facts)?,
-            "ack" => self.ack(facts)?,
+            "page" => self.page_barrier(facts, sequence)?,
+            "ack" => self.ack(facts, sequence)?,
             _ => anyhow::bail!("unknown actual S54 observation kind"),
         }
         Ok(())
