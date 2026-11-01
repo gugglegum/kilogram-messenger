@@ -6,6 +6,122 @@ fn rows(after: Option<u64>) -> Vec<(u64, Id)> {
     let start = after.unwrap_or(0) + 1;
     (start..start + 32).map(|n| (n, [n as u8; 32])).collect()
 }
+#[test]
+fn s54_p8_selector_schema_preserves_absence_and_rejects_wrong_phase_role_bounds() -> Result<()> {
+    ensure!(
+        Schedule::parse(&serde_json::to_vec(&schedule())?, true)?
+            .source64_after
+            .is_none(),
+        "absent preserves first-debt selection"
+    );
+    let mut s = schedule();
+    s["source64_after"] = 385.into();
+    ensure!(
+        Schedule::parse(&serde_json::to_vec(&s)?, true)?.source64_after == Some(385),
+        "narrow pressure selector"
+    );
+    for (key, value) in [
+        ("lane", json!(1)),
+        ("phase", json!("mixed")),
+        ("hold_source64", json!(false)),
+        ("source64_after", json!(0)),
+        ("source64_after", json!(4033)),
+        ("source64_after", json!(u64::MAX)),
+    ] {
+        let mut bad = s.clone();
+        bad[key] = value;
+        ensure!(
+            Schedule::parse(&serde_json::to_vec(&bad)?, true).is_err(),
+            "reject {key}"
+        );
+    }
+    Ok(())
+}
+#[test]
+fn s54_p8_actual_successor_pages_reserve_first_and_release_on_cancel() -> Result<()> {
+    let w = window();
+    let mut cursors = Vec::new();
+    let held = select64(
+        &w,
+        0,
+        Some(385),
+        |after| {
+            ensure!(w.snapshot().1 == [64, 0], "reserve before reads");
+            cursors.push(after);
+            Ok(rows(after))
+        },
+        |_, _| Ok(()),
+    )?;
+    ensure!(
+        cursors == [Some(385), Some(417)]
+            && held.ids.first().map(|r| r.0) == Some(386)
+            && held.ids.last().map(|r| r.0) == Some(449),
+        "two actual successor32 pages"
+    );
+    let other = w.reserve(1, 64)?;
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    drop(rx);
+    drop(tx.send(held));
+    ensure!(
+        w.snapshot().1 == [0, 64],
+        "cancel same permit without stealing C2 share"
+    );
+    drop(other);
+    Ok(())
+}
+#[test]
+fn s54_p8_successor_gap_and_second_page_failure_drop_same_reservation() -> Result<()> {
+    let w = window();
+    for gap in [false, true] {
+        ensure!(
+            select64(
+                &w,
+                0,
+                Some(385),
+                |after| {
+                    if after == Some(417) {
+                        anyhow::bail!("actual second read failed")
+                    };
+                    let mut p = rows(after);
+                    if gap {
+                        p[7].0 += 1;
+                    }
+                    Ok(p)
+                },
+                |_, _| Ok(())
+            )
+            .is_err(),
+            "no padded/replaced refs"
+        );
+        ensure!(
+            w.snapshot().1 == [0, 0],
+            "every selection failure releases quota"
+        );
+    }
+    Ok(())
+}
+#[test]
+fn s54_p8_selector_requires_genuine_prior_head_same_scope_binding_generation() -> Result<()> {
+    let h = AcceptedHead {
+        context: [1; 32],
+        binding: [2; 32],
+        generation: 7,
+        received: 385,
+    };
+    h.check([1; 32], [2; 32], 7, 385)?;
+    for (c, b, g, n) in [
+        ([3; 32], [2; 32], 7, 385),
+        ([1; 32], [3; 32], 7, 385),
+        ([1; 32], [2; 32], 8, 385),
+        ([1; 32], [2; 32], 7, 384),
+    ] {
+        ensure!(
+            h.check(c, b, g, n).is_err(),
+            "wrong actual Head cannot authorize selected window"
+        );
+    }
+    Ok(())
+}
 fn window() -> Arc<window::RefWindow2> {
     window::RefWindow2::new(&[0, 1])
 }
@@ -106,6 +222,7 @@ fn s54_real64_share_is_owned_before_either_read_and_other_share_is_independent()
     let held = select64(
         &w,
         0,
+        None,
         |after| {
             ensure!(w.snapshot().1[0] == 64, "reserve before first metadata");
             reads.push(after);
@@ -137,6 +254,7 @@ fn s54_busy64_never_calls_reader_or_spins_in_owner() -> Result<()> {
         select64(
             &w,
             0,
+            None,
             |after| {
                 reads += 1;
                 Ok(rows(after))
@@ -158,6 +276,7 @@ fn s54_partial_duplicate_wrong_context_and_read_errors_release_same_permit() -> 
         select64(
             &w,
             0,
+            None,
             |after| {
                 let mut p = rows(after);
                 p.pop();
@@ -172,6 +291,7 @@ fn s54_partial_duplicate_wrong_context_and_read_errors_release_same_permit() -> 
         select64(
             &w,
             0,
+            None,
             |after| {
                 let mut p = rows(after);
                 p[1].1 = p[0].1;
@@ -186,6 +306,7 @@ fn s54_partial_duplicate_wrong_context_and_read_errors_release_same_permit() -> 
         select64(
             &w,
             0,
+            None,
             |after| Ok(rows(after)),
             |_, _| anyhow::bail!("immutable source belongs to another C")
         )
@@ -193,7 +314,14 @@ fn s54_partial_duplicate_wrong_context_and_read_errors_release_same_permit() -> 
         "source/context verifier refusal"
     );
     ensure!(
-        select64(&w, 0, |_| anyhow::bail!("read failure"), |_, _| Ok(())).is_err(),
+        select64(
+            &w,
+            0,
+            None,
+            |_| anyhow::bail!("read failure"),
+            |_, _| Ok(())
+        )
+        .is_err(),
         "reader failure"
     );
     ensure!(w.snapshot().1 == [0, 0], "all paths drop permit");
@@ -202,7 +330,7 @@ fn s54_partial_duplicate_wrong_context_and_read_errors_release_same_permit() -> 
 #[test]
 fn s54_cancelled_owner_reply_drops_selection_without_leaking_quota() -> Result<()> {
     let w = window();
-    let held = select64(&w, 0, |after| Ok(rows(after)), |_, _| Ok(()))?;
+    let held = select64(&w, 0, None, |after| Ok(rows(after)), |_, _| Ok(()))?;
     let (tx, rx) = tokio::sync::oneshot::channel();
     drop(rx);
     drop(tx.send(held));
@@ -215,7 +343,7 @@ fn s54_cancelled_owner_reply_drops_selection_without_leaking_quota() -> Result<(
 #[tokio::test]
 async fn s54_async_retention_cancellation_drops_real_references() -> Result<()> {
     let w = window();
-    let held = select64(&w, 0, |after| Ok(rows(after)), |_, _| Ok(()))?;
+    let held = select64(&w, 0, None, |after| Ok(rows(after)), |_, _| Ok(()))?;
     let task = tokio::spawn(async move {
         let _held = held;
         std::future::pending::<()>().await;
@@ -244,8 +372,11 @@ fn s54_page_observations_classify_head_replay_and_pause_only_after_progress() ->
         sequence: 0,
         pages: [0; 2],
         last_page: [None; 2],
+        heads: [None; 2],
     };
     let page = |new_sources, head| Page {
+        binding: [5; 32],
+        lease_generation: 6,
         start: if head { 385 } else { 386 },
         end: if head { 386 } else { 402 },
         new_sources,
@@ -350,6 +481,7 @@ fn s54_ack_gate_covers_push_and_query_reply_but_never_empty_or_malformed_ack() -
         sequence: 0,
         pages: [0; 2],
         last_page: [None; 2],
+        heads: [None; 2],
     };
     for query_reply in [false, true] {
         let pause = o
@@ -383,6 +515,7 @@ fn s54_absent_control_has_no_file_wait_marker_or_page_side_effect() -> Result<()
         sequence: 0,
         pages: [0; 2],
         last_page: [None; 2],
+        heads: [None; 2],
     };
     ensure!(
         !o.enabled() && o.schedule([1; 32], 0)?.is_none(),
@@ -394,6 +527,8 @@ fn s54_absent_control_has_no_file_wait_marker_or_page_side_effect() -> Result<()
             [1; 32],
             0,
             Page {
+                binding: [5; 32],
+                lease_generation: 6,
                 start: 1,
                 end: 17,
                 new_sources: 16,
@@ -431,12 +566,13 @@ async fn s54_pressure_wait_releases_actual_selection_on_control_release_and_conn
             sequence: 0,
             pages: [0; 2],
             last_page: [None; 2],
+            heads: [None; 2],
         };
         let pause = o
             .pause([1; 32], 0, PauseKind::Source64, json!({"count":64}))?
             .context("actual pause")?;
         let w = window();
-        let held = select64(&w, 0, |after| Ok(rows(after)), |_, _| Ok(()))?;
+        let held = select64(&w, 0, None, |after| Ok(rows(after)), |_, _| Ok(()))?;
         let (tx, rx) = tokio::sync::oneshot::channel::<()>();
         let task = tokio::spawn(async move {
             let _held = held;

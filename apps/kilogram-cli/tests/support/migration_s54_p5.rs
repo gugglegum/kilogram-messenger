@@ -17,6 +17,8 @@ mod observations;
 mod offline;
 #[path = "migration_s54_oracle.rs"]
 mod oracle;
+#[path = "migration_s54_pressure.rs"]
+mod pressure;
 #[path = "migration_s54_source.rs"]
 mod source;
 #[path = "migration_s54_transition.rs"]

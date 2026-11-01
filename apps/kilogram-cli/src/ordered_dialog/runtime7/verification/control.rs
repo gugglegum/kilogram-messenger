@@ -26,6 +26,7 @@ pub(crate) struct Schedule {
     pub phase: Phase,
     #[serde(default)]
     pub hold_source64: bool,
+    pub source64_after: Option<u64>,
     #[serde(default)]
     pub hold_ordinals: Vec<u64>,
     #[serde(default)]
@@ -45,6 +46,14 @@ impl Schedule {
             "S54 debug control bound/release"
         );
         let s: Self = serde_json::from_slice(raw)?;
+        ensure!(
+            s.source64_after.is_none_or(|n| s.phase == Phase::Pressure
+                && s.hold_source64
+                && s.lane == 0
+                && (1..=4032).contains(&n)
+                && n.checked_add(64).is_some()),
+            "S54 successor selector Pressure/A/bound"
+        );
         if let Some(request) = &s.retry_live {
             request.validate()?;
             ensure!(

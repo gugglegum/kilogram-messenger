@@ -312,8 +312,14 @@ impl Owner7 {
             let lease = self.check_existing_lease(c, binding)?;
             let context = self.spec(c)?.c;
             let pre_q = self.repo()?.existing_state(c)?.q.is_none() && view.q.is_none();
-            self.verification
-                .head(context, binding, lease.generation, pre_q);
+            self.verification.head(
+                c,
+                context,
+                binding,
+                lease.generation,
+                pre_q,
+                f[5].fields(2)?[0].uint()?,
+            );
         }
         Ok(())
     }
@@ -700,6 +706,8 @@ impl Owner7 {
             return Ok(None);
         }
         let page = verification::Page {
+            binding,
+            lease_generation: self.check_existing_lease(c, binding)?.generation,
             start,
             end,
             new_sources,

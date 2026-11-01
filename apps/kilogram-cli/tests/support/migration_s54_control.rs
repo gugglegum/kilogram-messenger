@@ -99,6 +99,9 @@ pub(super) fn waited_pair(running: [bool; 2], stopped: [bool; 2]) -> Result<()> 
 pub(super) fn interval10(start: Instant, whole: Instant) -> Instant {
     (start + Duration::from_secs(10)).min(whole)
 }
+pub(super) fn request(owner: usize, context: usize, number: u16) -> Result<oracle::Request> {
+    oracle::Request::new(context.try_into()?, owner.try_into()?, number)
+}
 pub(super) struct Controller {
     pub origin: OldOrigin,
     pub controls: [Controls; 2],
@@ -437,10 +440,13 @@ impl Controller {
         self.check()
     }
     pub fn send(&mut self, owner: usize, number: u16) -> Result<Value> {
+        self.send_context(owner, 0, number)
+    }
+    pub fn send_context(&mut self, owner: usize, context: usize, number: u16) -> Result<Value> {
         self.check()?;
-        let request = oracle::Request::new(0, owner as u8, number)?;
+        let request = request(owner, context, number)?;
         let raw = self
-            .view(owner, 0)?
+            .view(owner, context)?
             .send(request.numeric(), &request.body())?;
         let result: Value = serde_json::from_str(&raw)?;
         if let Some(previous) = self.requests.get(&request) {

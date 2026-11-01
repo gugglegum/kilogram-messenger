@@ -9,7 +9,9 @@ use std::{
     time::{Duration, Instant},
 };
 mod control;
+mod selection;
 use control::{Location, Phase, Schedule};
+use selection::AcceptedHead;
 pub(super) mod retry;
 #[cfg(test)]
 mod tests;
@@ -21,6 +23,7 @@ pub(super) struct Observer {
     sequence: u64,
     pages: [u64; 2],
     last_page: [Option<(u64, Id)>; 2],
+    heads: [Option<AcceptedHead>; 2],
 }
 impl Observer {
     pub fn new(root: &Path, owner: Id) -> Result<Self> {
@@ -39,6 +42,7 @@ impl Observer {
             sequence: 0,
             pages: [0; 2],
             last_page: [None; 2],
+            heads: [None; 2],
         };
         if value.enabled() {
             eprintln!(
@@ -98,9 +102,23 @@ impl Observer {
             );
         }
     }
-    pub fn head(&self, context: Id, binding: Id, generation: u64, pre_q: bool) {
+    pub fn head(
+        &mut self,
+        slot: u8,
+        context: Id,
+        binding: Id,
+        generation: u64,
+        pre_q: bool,
+        received: u64,
+    ) {
         if self.enabled() {
-            eprintln!("s54_observation {}", self.envelope("validated_head", json!({"context":state::hex(&context),"binding":state::hex(&binding),"lease_generation":generation,"pre_q":pre_q})));
+            self.heads[usize::from(slot)] = Some(AcceptedHead {
+                context,
+                binding,
+                generation,
+                received,
+            });
+            eprintln!("s54_observation {}", self.envelope("validated_head", json!({"context":state::hex(&context),"binding":state::hex(&binding),"lease_generation":generation,"pre_q":pre_q,"received":received})));
         }
     }
     pub fn pending(&self, context: Id, role: u8, n: u64, id: Id, report: db::CommitReport) {
@@ -156,7 +174,7 @@ impl Observer {
                 .context("S54 page overflow")?;
         }
         let number = self.pages[c as usize];
-        let facts = json!({"context":state::hex(&context),"local_page":number,"head":page.head,"grant":page.grant.map(|id|state::hex(&id)),"start":page.start,"end":page.end,"new_sources":page.new_sources,"generation":page.generation,"operation":state::hex(&page.operation)});
+        let facts = json!({"context":state::hex(&context),"binding":state::hex(&page.binding),"lease_generation":page.lease_generation,"local_page":number,"head":page.head,"grant":page.grant.map(|id|state::hex(&id)),"start":page.start,"end":page.end,"new_sources":page.new_sources,"generation":page.generation,"operation":state::hex(&page.operation)});
         let event = self.envelope(kind, facts.clone());
         Ok(Some(PageNotice {
             event,
@@ -189,6 +207,8 @@ fn ack_count(
     Ok((!items.is_empty()).then_some(items.len()))
 }
 pub(super) struct Page {
+    pub binding: Id,
+    pub lease_generation: u64,
     pub start: u64,
     pub end: u64,
     pub new_sources: u64,
@@ -280,6 +300,7 @@ pub(super) struct Selection64 {
 fn select64(
     window: &Arc<window::RefWindow2>,
     c: u8,
+    first_after: Option<u64>,
     mut read: impl FnMut(Option<u64>) -> Result<Vec<(u64, Id)>>,
     mut verify: impl FnMut(u64, Id) -> Result<()>,
 ) -> Result<Selection64> {
@@ -287,7 +308,7 @@ fn select64(
     let permit = window.reserve(c, 64)?;
     let mut ids = Vec::with_capacity(64);
     let mut distinct = BTreeSet::new();
-    let mut after = None;
+    let mut after = first_after;
     for _ in 0..2 {
         let rows = read(after)?;
         ensure!(rows.len() == 32, "S54 requires two actual debt pages32");
@@ -295,6 +316,10 @@ fn select64(
             ensure!(
                 after.is_none_or(|previous| n > previous) && distinct.insert(id),
                 "S54 debt order/duplicate"
+            );
+            ensure!(
+                first_after.is_none() || after.and_then(|p| p.checked_add(1)) == Some(n),
+                "S54 exact successor source sequence"
             );
             verify(n, id)?;
             ids.push((n, id));
@@ -324,7 +349,12 @@ impl Owner7 {
         if !plan.hold_source64 {
             return Ok(None);
         }
-        self.check_existing_lease(c, binding)?;
+        let lease = self.check_existing_lease(c, binding)?;
+        if let Some(after) = plan.source64_after {
+            self.verification.heads[usize::from(c)]
+                .context("S54 genuinely accepted peer Head required")?
+                .check(context, binding, lease.generation, after)?;
+        }
         ensure!(
             self.enabled.len() == 2
                 && self.repo()?.existing_state(c)?.mode == store::ExistingMode::Active,
@@ -336,7 +366,21 @@ impl Owner7 {
         let mut selected = select64(
             &window,
             c,
-            |after| Ok(owner.borrow_mut().repo()?.debt_page(c, after, 32)?),
+            plan.source64_after,
+            |after| {
+                let mut o = owner.borrow_mut();
+                if let Some(start) = plan.source64_after
+                    && after == Some(start)
+                {
+                    // This metadata record is dropped before retaining any successor.
+                    // The real64 permit was already acquired by select64.
+                    ensure!(
+                        o.repo()?.debt_page(c, None, 1)?.first().map(|r| r.0) == Some(start),
+                        "S54 selector actual lowest debt"
+                    );
+                }
+                Ok(o.repo()?.debt_page(c, after, 32)?)
+            },
             |n, id| {
                 let mut o = owner.borrow_mut();
                 let raw = o
@@ -358,11 +402,16 @@ impl Owner7 {
             },
         )?;
         let o = owner.into_inner();
-        selected.pause = o.verification.pause(context, role, PauseKind::Source64, json!({"context":state::hex(&context),"count":selected.ids.len(),"ids_digest":blake3::hash(&serde_json::to_vec(&selected.ids)?).to_hex().to_string()}))?;
+        let current = o.check_existing_lease(c, binding)?;
+        ensure!(
+            current.generation == lease.generation,
+            "S54 same selection lease"
+        );
+        selected.pause = o.verification.pause(context, role, PauseKind::Source64, json!({"context":state::hex(&context),"binding":state::hex(&binding),"lease_generation":current.generation,"after":plan.source64_after,"first":selected.ids.first().map(|r|r.0),"last":selected.ids.last().map(|r|r.0),"count":selected.ids.len(),"ids_digest":blake3::hash(&serde_json::to_vec(&selected.ids)?).to_hex().to_string()}))?;
         Ok(Some(selected))
     }
     pub(super) fn verification_ack(
-        &self,
+        &mut self,
         c: u8,
         frame: &kilogram_protocol::ordered_dialog_v2::ParsedFrame2,
         query_reply: bool,
@@ -375,7 +424,8 @@ impl Owner7 {
             return Ok(None);
         };
         let f = frame.body().value().fields(8)?;
-        self.verification.pause(self.spec(c)?.c, self.role(c)? as u8, PauseKind::Ack, json!({"context":state::hex(&self.spec(c)?.c),"binding":state::hex(&frame.binding()),"request":state::hex(&frame.request()),"query_reply":query_reply,"receipt_count":count,"saved_receipts_digest":blake3::hash(&wire::encode(&f[6],16*1024)?).to_hex().to_string()}))
+        let lease = self.check_existing_lease(c, frame.binding())?;
+        self.verification.pause(self.spec(c)?.c, self.role(c)? as u8, PauseKind::Ack, json!({"context":state::hex(&self.spec(c)?.c),"binding":state::hex(&frame.binding()),"lease_generation":lease.generation,"request":state::hex(&frame.request()),"query_reply":query_reply,"receipt_count":count,"saved_receipts_digest":blake3::hash(&wire::encode(&f[6],16*1024)?).to_hex().to_string()}))
     }
     pub(super) fn observe_native(&mut self, c: u8, report: db::CommitReport) -> Result<()> {
         if !self.verification.enabled() {

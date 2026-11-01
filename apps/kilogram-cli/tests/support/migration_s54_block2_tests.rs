@@ -41,7 +41,7 @@ fn s54_b2_actual_envelope_start_commit_pending_head_and_final_decode() -> Result
     start(&mut d, &mut o, &mut p)?;
     d.line(&native(1, 7, 2), &mut o, &mut p, &mut heads)?;
     d.line(&event("saved_pending",1,json!({"context":state::hex(&[3;32]),"role":1,"ordinal":25,"event":state::hex(&[9;32]),"generation":8,"operation":state::hex(&[8;32])})),&mut o,&mut p,&mut heads)?;
-    d.line(&event("validated_head",1,json!({"context":state::hex(&[3;32]),"binding":state::hex(&[5;32]),"lease_generation":6,"pre_q":true})),&mut o,&mut p,&mut heads)?;
+    d.line(&event("validated_head",1,json!({"context":state::hex(&[3;32]),"binding":state::hex(&[5;32]),"lease_generation":6,"pre_q":true,"received":16})),&mut o,&mut p,&mut heads)?;
     ensure!(
         heads == 1 && d.pending.contains(&[9; 32]),
         "actual pending and pre-Q witnesses wired"
@@ -357,7 +357,7 @@ fn retry_head() -> String {
     event(
         "validated_head",
         0,
-        json!({"context":state::hex(&[3;32]),"binding":state::hex(&[5;32]),"lease_generation":6,"pre_q":false}),
+        json!({"context":state::hex(&[3;32]),"binding":state::hex(&[5;32]),"lease_generation":6,"pre_q":false,"received":16}),
     )
 }
 fn retry_facts() -> Value {
