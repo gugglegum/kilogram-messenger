@@ -1,0 +1,17 @@
+{
+  "format_version": 1,
+  "tests": [
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::admission::tests::s54_admission_valid_public_binding_has_real_blake3_but_no_runtime_capability"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::admission::tests::s54_owned_states_claim_once_and_revalidate_without_fresh_reuse"
+    }
+  ]
+}

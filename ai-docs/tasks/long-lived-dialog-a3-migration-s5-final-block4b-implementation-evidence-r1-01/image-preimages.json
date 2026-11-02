@@ -1,0 +1,56 @@
+[
+  {
+    "package": "kilogram-cli",
+    "kind": "bin",
+    "target": "kilogram-cli",
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+    "bytes": 50785280,
+    "sha256": "8886785ae37cb0fd4f5aa27828f1b39dcc269991c55c899bd53bdd4e0eb75088",
+    "profile": "verification-scale"
+  },
+  {
+    "package": "kilogram-cli",
+    "kind": "lib",
+    "target": "kilogram_cli",
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+    "bytes": 32753152,
+    "sha256": "442c6cfe7eb70d3786262fc9eef9ac0f5c811e30e916b0df262ada1acf69184a",
+    "profile": "verification-scale"
+  },
+  {
+    "package": "kilogram-cli",
+    "kind": "test",
+    "target": "migration_s5_process",
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+    "bytes": 21247488,
+    "sha256": "1c65e6fcf2c37efb878f5d3f8ccbb5a385d60343f6f91fcca906e2f493cd5ce4",
+    "profile": "verification-scale"
+  },
+  {
+    "package": "kilogram-cli",
+    "kind": "test",
+    "target": "runtime2_process",
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+    "bytes": 23689728,
+    "sha256": "8eca44daa41d1ba117c108732e0c1ebc0e41ac688ee14ac70bb6d2210c1914cd",
+    "profile": "verification-scale"
+  },
+  {
+    "package": "kilogram-transport-iroh",
+    "kind": "lib",
+    "target": "kilogram_transport_iroh",
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+    "bytes": 19419648,
+    "sha256": "f5822cd40225a7ac12dbc2c58264439b8e3c5d4b4d20cf87309b9aa28f2023ad",
+    "profile": "verification-scale"
+  },
+  {
+    "package": "kilogram-transport-iroh",
+    "kind": "test",
+    "target": "local_relay_transport",
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+    "bytes": 22317056,
+    "sha256": "552cc6c23452ad50c94b65391e33df462b89e14551c7eac51304e55872788cf0",
+    "profile": "verification-scale"
+  }
+]

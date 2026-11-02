@@ -1,0 +1,8 @@
+at Require, E:\AI-Projects\kilogram-p2p-messenger\scripts\test-migration-s54-whole.ps1: line 13
+at <ScriptBlock>, E:\AI-Projects\kilogram-p2p-messenger\scripts\test-migration-s54-whole.ps1: line 137
+at <ScriptBlock>, E:\AI-Projects\kilogram-p2p-messenger\.tmp\s54-block4b-01\powershell-tests.ps1: line 7
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\test-migration-s54-whole.ps1:13
+Line |
+  13 |  : ction Require([bool]$Value,[string]$Why){if(-not $Value){throw $Why}}
+     |                                                             ~~~~~~~~~~
+     | Actual nonzero process outcomes.

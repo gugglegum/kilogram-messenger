@@ -187,7 +187,7 @@ pub(super) fn pin(p: &Pin, cap: usize) -> Result<Vec<u8>> {
 pub(super) fn document<T: DeserializeOwned>(p: &Pin, cap: usize) -> Result<T> {
     json(&pin(p, cap)?, cap)
 }
-pub(super) const HELPERS: [&str; 9] = [
+pub(super) const HELPERS: [&str; 14] = [
     "scripts/run-cargo-tests-stable.ps1",
     "scripts/cargo-frozen-artifacts.ps1",
     "scripts/cargo-resource-policy.ps1",
@@ -197,6 +197,11 @@ pub(super) const HELPERS: [&str; 9] = [
     "scripts/migration-s5-l1-test-result.ps1",
     "scripts/invoke-migration-s54-whole.ps1",
     "scripts/test-migration-s54-admission.ps1",
+    "scripts/migration-s54-outer.ps1",
+    "scripts/test-migration-s54-whole.ps1",
+    "apps/kilogram-cli/tests/support/migration_s54_outer_fixture.ps1",
+    "scripts/migration-s54-preparation.ps1",
+    "scripts/test-migration-s54-repair.ps1",
 ];
 pub(super) const EMBEDDED: [&str; 3] = [
     "apps/kilogram-cli/tests/support/migration_s54_capture_fixture.ps1",
@@ -258,7 +263,9 @@ pub(super) fn sources(root: &Path) -> Result<Vec<PathBuf>> {
     }
     for name in HELPERS {
         ensure!(root.join(name).is_file(), "required S54 helper source");
-        out.push(root.join(name));
+        if !out.contains(&root.join(name)) {
+            out.push(root.join(name));
+        }
     }
     // The two scripts are found by the apps walk; the one exact historical
     // public JSON is added directly, never by walking ai-docs or history.

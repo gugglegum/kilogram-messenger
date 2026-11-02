@@ -1,6 +1,11 @@
 [CmdletBinding()]
-param([ValidateSet('Unavailable','Prepare','Run')][string]$Action='Unavailable')
-# Slice A: public inspection/preparation functions only. Dot-source does no IO.
+param(
+    [ValidateSet('Unavailable','Prepare','Run')][string]$Action='Unavailable',
+    [string]$InventorySha256,
+    [string]$ActivationSha256,
+    [string]$PreparationRunId
+)
+# Dot-source defines policy/outer functions only. Actions are explicit.
 Set-StrictMode -Version Latest
 . (Join-Path $PSScriptRoot 'cargo-frozen-artifacts.ps1')
 function Get-S54Sha([byte[]]$Bytes) { [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($Bytes)).ToLowerInvariant() }
@@ -196,7 +201,7 @@ function New-S54Policy([string]$FixtureRoot) {
     $workspace=Split-Path -Parent $PSScriptRoot
     if($FixtureRoot){
         $root=Get-S54Path $FixtureRoot
-        if(-not $root.StartsWith((Join-Path $workspace '.tmp/s54-block4a-r1-01/rust-public-fixtures/') ,[StringComparison]::OrdinalIgnoreCase)){throw 'S54 public fixture root only.'}
+        if(-not $root.StartsWith((Join-Path $workspace '.tmp/s54-block4b-r1-01/rust-public-fixtures/') ,[StringComparison]::OrdinalIgnoreCase)){throw 'S54 public fixture root only.'}
         $resolution=@('pwsh.exe','powershell.exe','git.exe','rustup.exe','cargo.exe','rustc.exe')|ForEach-Object {[ordered]@{name=$_;path=(Join-Path $root "tools/$_")}}
         return @{Root=$root;Scope='public_schema_fixture_only';Configs=@((Join-Path $root '.cargo/config'));Resolutions=@($resolution);
             Legacy=@{bytes=([Text.Encoding]::UTF8.GetByteCount('public fixture image legacy-cli'));sha256=(Get-S54Sha ([Text.Encoding]::UTF8.GetBytes('public fixture image legacy-cli')))};
@@ -290,14 +295,14 @@ function Assert-S54Compiler($I,$Policy,$Capture,[bool]$Normal) {
         if($bytes.Length -ne $pin.bytes -or (Get-S54Sha $bytes) -cne $pin.sha256){throw 'S54 actual compiler executable bytes.'}
     }
 }
-function Assert-S54Inventory($I,$Policy) {
+function Assert-S54Inventory($I,$Policy,[string]$State='Fresh',$Owner=$null) {
     Assert-S54Wire $I 'Inventory'
     $id=$I.identity;$root=$Policy.Root
     if($I.schema -ne 1 -or $I.classification -cne 'bound_s54_whole_inventory' -or $id.case -cne $script:S54Case -or $id.attempt -cne $script:S54Attempt -or $id.selector -cne $script:S54Selector -or $id.run_id -cnotmatch '^[0-9a-f]{64}$' -or $id.run_id -ceq ('0'*64)){throw 'S54 required identity.'}
     Assert-S54Equal $I.deadline @{controller=2350;work=2375;outer=2400;origin='owned_launch';clock='windows_tick_count64'}
     Assert-S54SamePath $id.workspace $root;Assert-S54SamePath $id.run (Join-Path $root ".tmp/migration-s54-integrated/$script:S54Attempt")
     foreach($n in @('activation','launch','capture')){Assert-S54SamePath $id[$n] (Join-Path $id.run "$n.json")};Assert-S54SamePath $id.output (Join-Path $id.run 'assertions.json')
-    foreach($e in Get-ChildItem -LiteralPath $id.run -Force){$null=Get-S54Path $e.FullName;if($e.Name -cnotin @('inputs.json','activation.json','launch.json','capture.json')){throw 'S54 reused/dirty run.'}}
+    Assert-S54Directory $I $Policy $State $Owner
     $public=Join-Path $root ".tmp/migration-s54-public-evidence/$script:S54Attempt"
     foreach($pair in @(@($I.compiler.normal,'normal.json'),@($I.compiler.tests,'tests.json'),@($I.compiler.frozen_manifest,'frozen.json'),@($I.selection.isolated,'isolated.json'),@($I.selection.list,'list.txt'))){Assert-S54SamePath $pair[0].path (Join-Path $public $pair[1])}
     if($I.source.s53_product -cne '1f404b54ebce47ae3b52eaeb6855e30f3b8f3309' -or $I.source.closure_publication -cne '20418e41e4c486158fdc30b0c9f857750432e25e' -or $I.source.implementation -cnotmatch '^[0-9a-f]{40}$' -or $I.source.observed_head -cne $I.source.implementation){throw 'S54 source revision roles.'}
@@ -349,12 +354,13 @@ function New-S54InventoryBytes($Specification,$Policy) {
     $bytes=[Text.UTF8Encoding]::new($false).GetBytes((ConvertTo-Json -InputObject $Specification -Depth 100 -Compress))
     if($bytes.Length -gt 2097152){throw 'S54 required inventory cap.'};return ,$bytes
 }
-function Test-S54Admission($Inputs,$Policy) {
+function Test-S54Admission($Inputs,$Policy,[string]$State='Fresh',$Owner=$null) {
     if($Inputs -isnot [Collections.IDictionary] -or $Inputs.Count -ne 4){throw 'S54 exact input pin set.'}
     foreach($n in @('inventory','activation','launch','capture')){Assert-S54SamePath $Inputs[$n].path (Join-Path $Policy.Root ".tmp/migration-s54-integrated/$script:S54Attempt/$(if($n -ceq 'inventory'){'inputs.json'}else{"$n.json"})")}
-    $raw=Read-S54Pin $Inputs.inventory 2097152;$i=ConvertFrom-S54Strict $raw 2097152;Assert-S54Inventory $i $Policy
+    $raw=Read-S54Pin $Inputs.inventory 2097152;$i=ConvertFrom-S54Strict $raw 2097152;Assert-S54Inventory $i $Policy -State $State -Owner $Owner
     $a=Read-S54Json $Inputs.activation 16384;$l=Read-S54Json $Inputs.launch 16384;$c=Read-S54Json $Inputs.capture 4096
     Assert-S54Wire $a 'Activation';Assert-S54Wire $l 'Launch';Assert-S54Wire $c 'Capture'
+    if($State -cne 'Fresh'){Assert-S54StartedBinding $i $Inputs $Owner $c}
     foreach($n in @('inventory','activation','launch','capture')){Assert-S54SamePath $Inputs[$n].path (Join-Path $i.identity.run $(if($n -ceq 'inventory'){'inputs.json'}else{"$n.json"}))}
     if($a.schema -ne 1 -or $a.classification -cne 'root_s54_whole_activation' -or $a.case -cne $i.identity.case -or $a.attempt -cne $i.identity.attempt -or $a.run_id -cne $i.identity.run_id -or $a.selector -cne $i.identity.selector -or $a.run -cne $i.identity.run -or $a.implementation -cne $i.source.implementation -or $a.execution_mode -cne 'NativeToken' -or $a.retry -cne 'root_reallocation_only'){throw 'S54 external activation identity.'}
     Assert-S54PinEqual $a.inventory $Inputs.inventory;Assert-S54Equal $a.deadline $i.deadline
@@ -400,13 +406,17 @@ $script:S54Schema=@{
  Activation=@{schema='u';classification='s';inventory='Pin';case='s';attempt='s';run_id='s';run='p';selector='s';implementation='s';execution_mode='s';deadline='Deadline';not_before_utc_ms='u';not_after_utc_ms='u';retry='s'}
  Launch=@{schema='u';classification='s';inventory='Pin';activation='Pin';capture='Pin';case='s';attempt='s';run_id='s';run='p';owner_pid='u';launcher_pid='u';start_tick_ms='u';start_utc_ms='u';controller_tick_ms='u';work_tick_ms='u';outer_tick_ms='u'}
  Capture=@{version='u';attempt='s';owner_pid='u';launcher_pid='u';harness_path='p';whole_utc_ms='u'}
+ Started=@{version='u';classification='s';case='s';attempt='s';run_id='s';selector='s';inventory='Pin';activation='Pin';owner_pid='u';nonce='s'}
+ Claim=@{version='u';classification='s';case='s';attempt='s';run_id='s';owner_pid='u';launcher_pid='u';harness_pid='u';nonce='s';inventory_sha256='s';launch_sha256='s'}
+ ClockReply=@{version='u';classification='s';case='s';attempt='s';run_id='s';owner_pid='u';launcher_pid='u';harness_pid='u';nonce='s';inventory_sha256='s';launch_sha256='s';request_sha256='s';origin_tick_ms='u';sampled_tick_ms='u';remaining_controller_ms='u'}
+ FunctionalMarker=@{version='u';classification='s';whole_attempt_verdict='s';case='s';attempt='s';run_id='s';selector='s';inventory_sha256='s';inventory_blake3='s';assertions_sha256='s';assertions_bytes='u'}
  IsolatedEntry=@{package='s';target='s';kind='s';name='s'}
  Isolated=@{format_version='u';tests='aIsolatedEntry'}
 }
 $script:S54Case='P-s54-whole-resumed-l1-01'
 $script:S54Attempt=$script:S54Case+'-attempt-01'
 $script:S54Selector='live_l1::handoff::final_p5::s54_continuous_whole_resumed_l1_p5_public'
-$script:S54Helpers=@('scripts/run-cargo-tests-stable.ps1','scripts/cargo-frozen-artifacts.ps1','scripts/cargo-resource-policy.ps1','scripts/migration-s5-l1-deadline.ps1','scripts/migration-s53-metadata.ps1','scripts/migration-s53-runtime-dependencies.ps1','scripts/migration-s5-l1-test-result.ps1','scripts/invoke-migration-s54-whole.ps1','scripts/test-migration-s54-admission.ps1')
+$script:S54Helpers=@('scripts/run-cargo-tests-stable.ps1','scripts/cargo-frozen-artifacts.ps1','scripts/cargo-resource-policy.ps1','scripts/migration-s5-l1-deadline.ps1','scripts/migration-s53-metadata.ps1','scripts/migration-s53-runtime-dependencies.ps1','scripts/migration-s5-l1-test-result.ps1','scripts/invoke-migration-s54-whole.ps1','scripts/test-migration-s54-admission.ps1','scripts/migration-s54-outer.ps1','scripts/test-migration-s54-whole.ps1','apps/kilogram-cli/tests/support/migration_s54_outer_fixture.ps1','scripts/migration-s54-preparation.ps1','scripts/test-migration-s54-repair.ps1')
 $script:S54Embedded=@('apps/kilogram-cli/tests/support/migration_s54_capture_fixture.ps1','apps/kilogram-cli/tests/support/migration_s54_memory_fixture.ps1','ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/P2-s53-exhausted-M1.candidate.json')
 $script:S54Images=@(
  @{role='legacy-cli';path='target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe';package='';kind='';target=''},
@@ -419,4 +429,15 @@ $script:S54Images=@(
  @{role='stable-iroh-lib';path='target/verification-scale/deps/kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe';package='kilogram-transport-iroh';kind='lib';target='kilogram_transport_iroh'},
  @{role='stable-iroh-relay';path='target/verification-scale/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe';package='kilogram-transport-iroh';kind='test';target='local_relay_transport'}
 )
-if($MyInvocation.InvocationName -ne '.') {throw 'Slice A: actual preparation, activation, safe original clock and whole execution are unavailable until Slice B.'}
+. (Join-Path $PSScriptRoot 'migration-s54-outer.ps1')
+. (Join-Path $PSScriptRoot 'migration-s54-preparation.ps1')
+if($MyInvocation.InvocationName -ne '.') {
+    switch($Action) {
+        'Run' {Invoke-S54Whole -InventorySha256 $InventorySha256 -ActivationSha256 $ActivationSha256}
+        'Prepare' {
+            if($PreparationRunId -cnotmatch '^[0-9a-f]{64}$' -or $PreparationRunId -ceq ('0'*64)){throw 'S54 requires an explicit root preparation identity.'}
+            Invoke-S54Preparation $PreparationRunId
+        }
+        default {throw 'S54 requires an explicit reviewed Prepare or externally activated Run action.'}
+    }
+}

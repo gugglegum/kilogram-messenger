@@ -1,0 +1,20 @@
+{
+  "classification": "public exact embedded inputs captured before build",
+  "inputs": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_capture_fixture.ps1",
+      "bytes": 2014,
+      "sha256": "33ffc127bf4b3bb0ed2fb512865e47b3f8e4c06478ed3e4fa5bf2b98a83dbe67"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_memory_fixture.ps1",
+      "bytes": 230,
+      "sha256": "295d607e6689338502ada80d5e98efd291a01cfaea7a4b32c5569e0fbe18bd4e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\P2-s53-exhausted-M1.candidate.json",
+      "bytes": 23116,
+      "sha256": "788076595dbebdfc7157731609d4a1c1ce613e78821c4d866bded41f16e50c77"
+    }
+  ]
+}

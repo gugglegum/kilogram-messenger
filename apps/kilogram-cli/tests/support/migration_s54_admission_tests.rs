@@ -18,10 +18,13 @@ fn s54_admission_valid_public_binding_has_real_blake3_but_no_runtime_capability(
             && facts.facts()["inventory_blake3"] == blake3::hash(&raw).to_hex().to_string(),
         "real SHA256/BLAKE3 of same bytes"
     );
-    ensure!(runtime_unavailable().is_err(), "no Slice A runtime opt-in");
+    ensure!(
+        runtime::require_production(&f.policy).is_err(),
+        "public fixture cannot create runtime capability"
+    );
     if let Some(path) = std::env::var_os("KILOGRAM_S54_ADMISSION_FIXTURE_EXPORT") {
         let path = PathBuf::from(path);
-        let owned = workspace().join(".tmp/s54-block4a-r1-01").canonicalize()?;
+        let owned = workspace().join(".tmp/s54-block4b-r1-01").canonicalize()?;
         ensure!(
             files::path(path.parent().context("export parent")?, false)?.starts_with(owned),
             "owned public export path"
@@ -503,5 +506,102 @@ fn s54_admission_embedded_inputs_and_compiler_dependencies_are_closed() -> Resul
         );
         println!("embedded_refusal={name};reason={error}");
     }
+    Ok(())
+}
+#[test]
+fn s54_owned_states_claim_once_and_revalidate_without_fresh_reuse() -> Result<()> {
+    let f = Fixture::new()?;
+    let i: Inventory = files::json(&serde_json::to_vec(&f.inventory)?, 2 * MIB)?;
+    let run = &i.identity.run;
+    let started = Started {
+        version: 1,
+        classification: "s54_exclusive_attempt".into(),
+        case: CASE.into(),
+        attempt: ATTEMPT.into(),
+        run_id: i.identity.run_id.clone(),
+        selector: SELECTOR.into(),
+        inventory: f.input.inventory.clone(),
+        activation: f.input.activation.clone(),
+        owner_pid: 100,
+        nonce: "c".repeat(64),
+    };
+    std::fs::write(run.join("started.json"), serde_json::to_vec(&started)?)?;
+    ensure!(f.inspect().is_err(), "started is never fresh/reusable");
+    inspect_state(&f.policy, &f.input, Directory::BeforeNative(&started))?;
+    let claim = Claim {
+        version: 1,
+        classification: "s54_native_started".into(),
+        case: CASE.into(),
+        attempt: ATTEMPT.into(),
+        run_id: i.identity.run_id.clone(),
+        owner_pid: 100,
+        launcher_pid: 101,
+        harness_pid: 102,
+        nonce: started.nonce.clone(),
+        inventory_sha256: f.input.inventory.sha256.clone(),
+        launch_sha256: f.input.launch.sha256.clone(),
+    };
+    let path = run.join("native-started.json");
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)?;
+    std::io::Write::write_all(&mut file, &serde_json::to_vec(&claim)?)?;
+    drop(file);
+    ensure!(
+        std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+            .is_err(),
+        "exclusive native claim cannot be reused"
+    );
+    ensure!(
+        inspect_state(&f.policy, &f.input, Directory::BeforeNative(&started)).is_err(),
+        "launch state cannot restart after native claim"
+    );
+    std::fs::create_dir(run.join("p5-origin"))?;
+    std::fs::write(
+        run.join("command-0000.stdout.log"),
+        b"public sanitized fixture output",
+    )?;
+    std::fs::write(run.join("memory-observer-final.json"), b"{}")?;
+    inspect_state(&f.policy, &f.input, Directory::Owned(&started, &claim))?;
+    for name in ["native-stdout.protocol.log", "native-stderr.protocol.log"] {
+        let transcript = run.join(name);
+        std::fs::write(&transcript, b"public protocol-only fixture\n")?;
+        inspect_state(&f.policy, &f.input, Directory::Owned(&started, &claim))?;
+        ensure!(
+            f.inspect().is_err(),
+            "transcript never makes an attempt fresh"
+        );
+        std::fs::OpenOptions::new()
+            .write(true)
+            .open(&transcript)?
+            .set_len((MIB + 1) as u64)?;
+        ensure!(
+            inspect_state(&f.policy, &f.input, Directory::Owned(&started, &claim)).is_err(),
+            "exact transcript byte cap"
+        );
+        std::fs::remove_file(&transcript)?;
+        std::fs::create_dir(&transcript)?;
+        ensure!(
+            inspect_state(&f.policy, &f.input, Directory::Owned(&started, &claim)).is_err(),
+            "transcript role cannot be a directory"
+        );
+        std::fs::remove_dir(&transcript)?;
+        std::fs::write(&transcript, b"public protocol-only fixture\n")?;
+    }
+    let mut wrong = started.clone();
+    wrong.owner_pid = 999;
+    ensure!(
+        inspect_state(&f.policy, &f.input, Directory::Owned(&wrong, &claim)).is_err(),
+        "owner binding survives post-start output"
+    );
+    std::fs::write(run.join("unexpected.json"), b"{}")?;
+    ensure!(
+        inspect_state(&f.policy, &f.input, Directory::Owned(&started, &claim)).is_err(),
+        "owned is still a closed directory state"
+    );
     Ok(())
 }

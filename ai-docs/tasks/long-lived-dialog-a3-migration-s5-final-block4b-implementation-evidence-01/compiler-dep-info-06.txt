@@ -1,0 +1,5 @@
+E:\AI-Projects\kilogram-p2p-messenger\target\x86_64-pc-windows-msvc\verification-scale\deps\local_relay_transport-97b8d8ce272d54cb.d: crates\kilogram-transport-iroh\tests\local_relay_transport.rs
+
+E:\AI-Projects\kilogram-p2p-messenger\target\x86_64-pc-windows-msvc\verification-scale\deps\local_relay_transport-97b8d8ce272d54cb.exe: crates\kilogram-transport-iroh\tests\local_relay_transport.rs
+
+crates\kilogram-transport-iroh\tests\local_relay_transport.rs:

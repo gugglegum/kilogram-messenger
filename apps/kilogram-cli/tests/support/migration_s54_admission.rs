@@ -1,4 +1,4 @@
-//! Slice A public schema/binding inspection only. No runtime admission capability.
+//! Public schema inspection and opaque production admission. Facts are not a capability.
 use super::*;
 #[path = "migration_s54_admission_schema.rs"]
 mod schema;
@@ -112,6 +112,7 @@ impl Policy {
         })
     }
 }
+#[derive(Clone)]
 pub(super) struct Inputs {
     pub inventory: Pin,
     pub activation: Pin,
@@ -120,7 +121,14 @@ pub(super) struct Inputs {
 }
 pub(super) struct Inspection {
     facts: Value,
+    inventory: Inventory,
+    launch: Launch,
+    capture: Capture,
+    blake3: String,
 }
+#[path = "migration_s54_admission_runtime.rs"]
+mod runtime;
+pub(super) use runtime::AdmittedRun;
 impl Inspection {
     pub fn facts(&self) -> &Value {
         &self.facts
@@ -128,9 +136,6 @@ impl Inspection {
 }
 pub(super) fn inspect(input: &Inputs) -> Result<Inspection> {
     inspect_with(&Policy::production()?, input)
-}
-pub(super) fn runtime_unavailable() -> Result<()> {
-    anyhow::bail!("Slice B safe original-clock/selector/outer connection is not implemented")
 }
 fn same_pin(a: &Pin, b: &Pin) -> Result<()> {
     files::same(&a.path, &b.path)?;
@@ -491,6 +496,15 @@ fn runtime(p: &Policy, r: &Runtime) -> Result<()> {
     Ok(())
 }
 fn fresh(p: &Policy, i: &Identity) -> Result<()> {
+    directory(p, i, Directory::Fresh)
+}
+#[derive(Clone, Copy)]
+enum Directory<'a> {
+    Fresh,
+    BeforeNative(&'a Started),
+    Owned(&'a Started, &'a Claim),
+}
+fn directory(p: &Policy, i: &Identity, state: Directory<'_>) -> Result<()> {
     ensure!(
         i.case == CASE && i.attempt == ATTEMPT && i.selector == SELECTOR,
         "exact S54 case/attempt/selector"
@@ -514,16 +528,82 @@ fn fresh(p: &Policy, i: &Identity) -> Result<()> {
     for e in std::fs::read_dir(&i.run)? {
         let e = e?;
         files::regular(&e.path())?;
+        let name = e.file_name();
+        let name = name.to_str().context("owned run filename")?;
+        let basic = [
+            "inputs.json",
+            "activation.json",
+            "launch.json",
+            "capture.json",
+        ]
+        .contains(&name);
+        let owned = match state {
+            Directory::Fresh => false,
+            Directory::BeforeNative(_) => name == "started.json",
+            Directory::Owned(_, claim) => {
+                [
+                    "started.json",
+                    "native-started.json",
+                    "clock-request.json",
+                    "clock-reply.json",
+                    "assertions.json",
+                    "memory-observer-final.json",
+                    "memory-observer-abort.json",
+                ]
+                .contains(&name)
+                    || name == format!("join-{}.json", claim.harness_pid)
+                    || name == format!("permit-{}.json", claim.harness_pid)
+                    || (["native-stdout.protocol.log", "native-stderr.protocol.log"]
+                        .contains(&name)
+                        && e.path().is_file()
+                        && e.metadata()?.len() <= MIB as u64)
+                    || (name == "p5-origin" && e.path().is_dir())
+                    || runtime::command_log_name(name)
+            }
+        };
+        ensure!(basic || owned, "dirty/reused attempt directory");
+    }
+    if let Directory::BeforeNative(started) | Directory::Owned(started, _) = state {
+        let actual: Started = files::json(
+            &files::read(&i.run.join("started.json"), 16 * 1024)?,
+            16 * 1024,
+        )?;
         ensure!(
-            [
-                "inputs.json",
-                "activation.json",
-                "launch.json",
-                "capture.json"
-            ]
-            .iter()
-            .any(|n| e.file_name() == *n),
-            "dirty/reused attempt directory"
+            &actual == started
+                && actual.case == i.case
+                && actual.attempt == i.attempt
+                && actual.run_id == i.run_id
+                && actual.selector == i.selector
+                && actual.version == 1
+                && actual.classification == "s54_exclusive_attempt",
+            "owner-bound started claim"
+        );
+        files::digest(&actual.nonce, 64)?;
+        ensure!(
+            actual.nonce != "0".repeat(64) && actual.owner_pid > 0,
+            "started nonce/owner"
+        );
+    }
+    if let Directory::Owned(started, claim) = state {
+        let actual: Claim = files::json(
+            &files::read(&i.run.join("native-started.json"), 16 * 1024)?,
+            16 * 1024,
+        )?;
+        ensure!(
+            &actual == claim
+                && claim.version == 1
+                && claim.classification == "s54_native_started"
+                && claim.case == i.case
+                && claim.attempt == i.attempt
+                && claim.run_id == i.run_id
+                && claim.owner_pid == started.owner_pid
+                && claim.nonce == started.nonce
+                && claim.inventory_sha256 == started.inventory.sha256
+                && claim.launcher_pid > 0
+                && claim.harness_pid > 0
+                && claim.harness_pid != claim.owner_pid
+                && claim.harness_pid != claim.launcher_pid,
+            "same exclusive native claim at revalidation"
         );
     }
     Ok(())
@@ -579,6 +659,9 @@ fn references(p: &Policy, i: &Inventory) -> Result<()> {
     Ok(())
 }
 fn inspect_with(p: &Policy, input: &Inputs) -> Result<Inspection> {
+    inspect_state(p, input, Directory::Fresh)
+}
+fn inspect_state(p: &Policy, input: &Inputs, state: Directory<'_>) -> Result<Inspection> {
     let run = p.root.join(".tmp/migration-s54-integrated").join(ATTEMPT);
     for (pin, name) in [
         (&input.inventory, "inputs.json"),
@@ -598,7 +681,10 @@ fn inspect_with(p: &Policy, input: &Inputs) -> Result<Inspection> {
         "S54 inventory schema"
     );
     deadline(&i.deadline)?;
-    fresh(p, &i.identity)?;
+    match state {
+        Directory::Fresh => fresh(p, &i.identity)?,
+        _ => directory(p, &i.identity, state)?,
+    }
     references(p, &i)?;
     source_check(p, &i.source)?;
     images(p, &i)?;
@@ -627,6 +713,22 @@ fn inspect_with(p: &Policy, input: &Inputs) -> Result<Inspection> {
     );
     same_pin(&a.inventory, &input.inventory)?;
     files::same(&a.run, &i.identity.run)?;
+    if let Directory::BeforeNative(started) | Directory::Owned(started, _) = state {
+        same_pin(&started.inventory, &input.inventory)?;
+        same_pin(&started.activation, &input.activation)?;
+        ensure!(
+            started.owner_pid == l.owner_pid && started.owner_pid == c.owner_pid,
+            "actual launch owner matches claim"
+        );
+    }
+    if let Directory::Owned(_, claim) = state {
+        ensure!(
+            claim.launch_sha256 == input.launch.sha256
+                && claim.launcher_pid == c.launcher_pid
+                && (p.fixture || claim.harness_pid == std::process::id()),
+            "native original launch/harness binding"
+        );
+    }
     let now = u64::try_from(
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)?
@@ -697,11 +799,16 @@ fn inspect_with(p: &Policy, input: &Inputs) -> Result<Inspection> {
     ] {
         files::pin(pin, 2 * MIB)?;
     }
+    let inventory_blake3 = blake3::hash(&raw).to_hex().to_string();
     Ok(Inspection {
         facts: json!({"classification":if p.fixture{"public_schema_fixture_only"}else{"slice_a_schema_inspection_only"},
         "inventory_sha256":files::sha(&raw),"inventory_blake3":blake3::hash(&raw).to_hex().to_string(),
         "case":i.identity.case,"attempt":i.identity.attempt,"run_id":i.identity.run_id,
-        "clock":"numeric binding only; Slice B safe monotonic acquisition unavailable",
+        "clock":"inspection only; production runtime requires original owner rendezvous",
         "whole_attempt_verdict":"not_established"}),
+        inventory: i,
+        launch: l,
+        capture: c,
+        blake3: inventory_blake3,
     })
 }

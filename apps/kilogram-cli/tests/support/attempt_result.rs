@@ -35,6 +35,22 @@ pub(super) fn persist_before_tail<T>(
     envelope: &Envelope<'_>,
     tail: impl FnOnce() -> Result<T>,
 ) -> Result<T> {
+    persist(path, envelope, None, tail)
+}
+pub(super) fn persist_bounded_before_tail<T>(
+    path: &Path,
+    envelope: &Envelope<'_>,
+    cap: usize,
+    tail: impl FnOnce() -> Result<T>,
+) -> Result<T> {
+    persist(path, envelope, Some(cap), tail)
+}
+fn persist<T>(
+    path: &Path,
+    envelope: &Envelope<'_>,
+    cap: Option<usize>,
+    tail: impl FnOnce() -> Result<T>,
+) -> Result<T> {
     ensure!(
         !envelope.case.is_empty() && envelope.run.is_absolute() && envelope.output == path,
         "assertion snapshot case/run/output identity"
@@ -45,12 +61,17 @@ pub(super) fn persist_before_tail<T>(
         "case":envelope.case,"run":envelope.run,"output":envelope.output,
         "provenance":envelope.provenance,"observations":envelope.observations,
     });
+    let raw = serde_json::to_vec_pretty(&snapshot)?;
+    ensure!(
+        cap.is_none_or(|limit| raw.len() <= limit),
+        "bounded assertion snapshot before durable write"
+    );
     let mut file = OpenOptions::new()
         .write(true)
         .create_new(true)
         .open(path)
         .context("create assertion snapshot without overwriting")?;
-    serde_json::to_writer_pretty(&mut file, &snapshot)?;
+    file.write_all(&raw)?;
     file.flush()?;
     file.sync_all()?;
     drop(file);
@@ -198,6 +219,45 @@ mod tests {
         ensure!(
             read_closed(&output)? == *seen.borrow(),
             "snapshot changed after tail failure"
+        );
+        Ok(())
+    }
+    #[test]
+    fn s54_bounded_assertion_refuses_before_create_and_retains_closed_bytes_on_tail_failure()
+    -> Result<()> {
+        let base = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("../../.tmp/s54-block4b-01/assertion-public-fixtures");
+        std::fs::create_dir_all(&base)?;
+        let run = tempfile::Builder::new()
+            .prefix("bounded-")
+            .tempdir_in(base)?
+            .keep();
+        let output = run.join("public-assertions.json");
+        let provenance = Provenance::OpaqueStandaloneFixture;
+        let observations = json!({"public_fixture":"x".repeat(4096)});
+        let e = envelope(&run, &output, &provenance, &observations);
+        let called = Cell::new(false);
+        ensure!(
+            persist_bounded_before_tail(&output, &e, 128, || {
+                called.set(true);
+                Ok(())
+            })
+            .is_err()
+                && !called.get()
+                && !output.exists(),
+            "cap rejection precedes file creation and tail"
+        );
+        let seen = std::cell::RefCell::new(Vec::new());
+        let result: Result<()> = persist_bounded_before_tail(&output, &e, 16384, || {
+            let raw = read_closed(&output)?;
+            check_snapshot(&raw, &e)?;
+            *seen.borrow_mut() = raw;
+            Err(ExpectedTailFailure.into())
+        });
+        ensure!(
+            result.err().is_some_and(|e| e.is::<ExpectedTailFailure>())
+                && read_closed(&output)? == *seen.borrow(),
+            "tail failure retains synced closed fixture; never emits a runtime marker"
         );
         Ok(())
     }

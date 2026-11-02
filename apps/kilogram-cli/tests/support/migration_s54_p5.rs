@@ -52,6 +52,24 @@ mod source;
 #[path = "migration_s54_transition.rs"]
 mod transition;
 
+/// The single dormant real whole selector. All admission/one-use/clock inputs
+/// must succeed before Controller::new can create any original profile/state.
+#[test]
+#[ignore = "requires the exclusive externally activated S54 whole attempt"]
+fn s54_continuous_whole_resumed_l1_p5_public() -> Result<()> {
+    let admitted = admission::AdmittedRun::load()?;
+    let _deadline = s53_deadline::Guard::enter_original(admitted.run(), admitted.origin())?;
+    let _memory_input = memory_scope::InputGuard::install(admitted.memory_input()?)?;
+    let first = early::p0_to_p6(admitted.run(), admitted.until())?;
+    let seventh = offline::p7(first)?;
+    let eighth = pressure::p8(seventh)?;
+    let ninth = catchup::p9(eighth)?;
+    let tenth_a = handoff::p10a(ninth)?;
+    let tenth_b = relay::p10b(tenth_a)?;
+    let completed = final_phase::p11(tenth_b)?;
+    admitted.persist(&completed)
+}
+
 struct OldOrigin {
     pair: Pair,
     contexts: [String; 2],

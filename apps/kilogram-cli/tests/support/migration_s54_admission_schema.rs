@@ -122,5 +122,28 @@ wire!(Launch {
     pub controller_tick_ms: u64, pub work_tick_ms: u64, pub outer_tick_ms: u64,
 });
 wire!(Capture { pub version: u32, pub attempt: String, pub owner_pid: u32, pub launcher_pid: u32, pub harness_path: PathBuf, pub whole_utc_ms: u64 });
+wire!(Started {
+    pub version: u32, pub classification: String, pub case: String, pub attempt: String,
+    pub run_id: String, pub selector: String, pub inventory: Pin, pub activation: Pin,
+    pub owner_pid: u32, pub nonce: String,
+});
+wire!(Claim {
+    pub version: u32, pub classification: String, pub case: String, pub attempt: String,
+    pub run_id: String, pub owner_pid: u32, pub launcher_pid: u32, pub harness_pid: u32,
+    pub nonce: String, pub inventory_sha256: String, pub launch_sha256: String,
+});
+wire!(ClockReply {
+    pub version: u32, pub classification: String, pub case: String, pub attempt: String,
+    pub run_id: String, pub owner_pid: u32, pub launcher_pid: u32, pub harness_pid: u32,
+    pub nonce: String, pub inventory_sha256: String, pub launch_sha256: String,
+    pub request_sha256: String, pub origin_tick_ms: u64, pub sampled_tick_ms: u64,
+    pub remaining_controller_ms: u64,
+});
+wire!(FunctionalMarker {
+    pub version: u32, pub classification: String, pub whole_attempt_verdict: String,
+    pub case: String, pub attempt: String, pub run_id: String, pub selector: String,
+    pub inventory_sha256: String, pub inventory_blake3: String,
+    pub assertions_sha256: String, pub assertions_bytes: u64,
+});
 wire!(IsolatedEntry { pub package: String, pub target: String, pub kind: String, pub name: String });
 wire!(Isolated { pub format_version: u32, pub tests: Vec<IsolatedEntry> });

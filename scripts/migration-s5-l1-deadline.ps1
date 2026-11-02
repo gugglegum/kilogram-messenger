@@ -30,14 +30,29 @@ public sealed class KilogramS5Deadline {
     [DllImport("kernel32.dll", SetLastError=true)] static extern bool TerminateJobObject(IntPtr j,uint code);
     [DllImport("kernel32.dll", SetLastError=true)] static extern bool TerminateProcess(IntPtr p,uint code);
     [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
+    [DllImport("kernel32.dll")] static extern ulong GetTickCount64();
     readonly IntPtr job; readonly int owner;
     readonly ManualResetEvent stop = new ManualResetEvent(false);
     readonly Thread workThread, wholeThread;
     volatile bool expired; bool finished;
+    readonly bool original;
     public readonly double WorkSeconds, WholeSeconds;
-    public bool WorkExpired { get { return expired; } }
-    public KilogramS5Deadline(double workSeconds,double wholeSeconds) {
+    public readonly long OriginalTick, WorkTick, WholeTick;
+    public static long TickNow() { return checked((long)GetTickCount64()); }
+    int Remaining(long cutoff) { return (int)Math.Min(Int32.MaxValue,Math.Max(0,cutoff-TickNow())); }
+    public int RemainingWholeMilliseconds { get { return Remaining(WholeTick); } }
+    public bool WorkExpired { get { return expired || (original && Remaining(WorkTick)==0); } }
+    public KilogramS5Deadline(double workSeconds,double wholeSeconds)
+        : this(workSeconds,wholeSeconds,TickNow(),false) {}
+    public KilogramS5Deadline(double workSeconds,double wholeSeconds,long originalTick)
+        : this(workSeconds,wholeSeconds,originalTick,true) {}
+    KilogramS5Deadline(double workSeconds,double wholeSeconds,long originalTick,bool useOriginal) {
         if(workSeconds<=0 || wholeSeconds<=workSeconds) throw new ArgumentException("deadline order");
+        original=useOriginal; OriginalTick=originalTick;
+        WorkTick=checked(originalTick+(long)(workSeconds*1000));
+        WholeTick=checked(originalTick+(long)(wholeSeconds*1000));
+        if(original && (originalTick<=0 || originalTick>TickNow() || Remaining(WorkTick)==0))
+            throw new TimeoutException("invalid/expired original deadline");
         WorkSeconds=workSeconds; WholeSeconds=wholeSeconds; owner=Process.GetCurrentProcess().Id;
         job=CreateJobObject(IntPtr.Zero,null);
         if(job==IntPtr.Zero) throw new Win32Exception();
@@ -49,18 +64,19 @@ public sealed class KilogramS5Deadline {
             int e=Marshal.GetLastWin32Error(); CloseHandle(job); throw new Win32Exception(e);
         }
         workThread=new Thread(()=>{
-            if(!stop.WaitOne(TimeSpan.FromSeconds(workSeconds))) {
+            if(!stop.WaitOne(original?TimeSpan.FromMilliseconds(Remaining(WorkTick)):TimeSpan.FromSeconds(workSeconds))) {
                 expired=true;
                 while(!stop.WaitOne(50)) { try { KillChildren(); } catch {} }
             }
         });
         wholeThread=new Thread(()=>{
-            if(!stop.WaitOne(TimeSpan.FromSeconds(wholeSeconds))) TerminateJobObject(job,124);
+            if(!stop.WaitOne(original?TimeSpan.FromMilliseconds(Remaining(WholeTick)):TimeSpan.FromSeconds(wholeSeconds))) TerminateJobObject(job,124);
         });
         workThread.IsBackground=true; wholeThread.IsBackground=true;
         wholeThread.Start(); workThread.Start();
     }
-    public void CheckWork() { if(expired) throw new TimeoutException("whole-attempt work cutoff; cleanup reserve active"); }
+    public void CheckWork() { if(expired || (original && Remaining(WorkTick)==0)) throw new TimeoutException("whole-attempt work cutoff; cleanup reserve active"); }
+    public void CheckWhole() { if(original && Remaining(WholeTick)==0) throw new TimeoutException("original outer cutoff"); }
     public void VerifyChild(Process p) {
         bool member;
         if(p.Id==owner || !IsProcessInJob(p.Handle,job,out member) || !member)
@@ -94,14 +110,20 @@ public sealed class KilogramS5Deadline {
     }
     public void CleanupChildren(int milliseconds) {
         var watch=Stopwatch.StartNew();
-        while(Children().Length!=0 && watch.ElapsedMilliseconds<milliseconds) { KillChildren(); Thread.Sleep(20); }
+        while(Children().Length!=0 && watch.ElapsedMilliseconds<milliseconds && (!original || Remaining(WholeTick)>0)) { KillChildren(); Thread.Sleep(20); }
         if(Children().Length!=0) throw new TimeoutException("owned child cleanup did not finish");
     }
     public void Finish() {
         if(finished) return;
+        CheckWhole();
         if(Children().Length!=0) throw new InvalidOperationException("owned children still live");
         // The independent whole deadline stays armed through case/ledger writes.
-        stop.Set(); workThread.Join(); wholeThread.Join();
+        stop.Set();
+        if(original) {
+            if(!workThread.Join(Remaining(WholeTick)) || !wholeThread.Join(Remaining(WholeTick)))
+                throw new TimeoutException("original watchdog join cutoff");
+            CheckWhole();
+        } else { workThread.Join(); wholeThread.Join(); }
         var limits=new Extended();
         if(!SetInformationJobObject(job,9,ref limits,(uint)Marshal.SizeOf(typeof(Extended)))) throw new Win32Exception();
         CloseHandle(job); stop.Dispose(); finished=true;

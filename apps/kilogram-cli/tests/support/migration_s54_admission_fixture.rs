@@ -31,7 +31,7 @@ fn profile(test: bool) -> Value {
 }
 impl Fixture {
     pub fn new() -> Result<Self> {
-        let base = workspace().join(".tmp/s54-block4a-r1-01/rust-public-fixtures");
+        let base = workspace().join(".tmp/s54-block4b-r1-01/rust-public-fixtures");
         std::fs::create_dir_all(&base)?;
         let root = tempfile::Builder::new()
             .prefix("public-")

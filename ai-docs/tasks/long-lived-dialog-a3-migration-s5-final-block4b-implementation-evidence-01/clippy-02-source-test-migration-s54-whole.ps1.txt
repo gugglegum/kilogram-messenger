@@ -1,0 +1,132 @@
+[CmdletBinding()]
+param([Parameter(Mandatory)][string]$FixtureIndex,[Parameter(Mandatory)][string]$EvidenceDirectory)
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1')
+$workspace=Split-Path -Parent $PSScriptRoot
+$evidence=Get-S54Path $EvidenceDirectory
+if(-not $evidence.StartsWith((Join-Path $workspace '.tmp/s54-block4b-01/'),[StringComparison]::OrdinalIgnoreCase)){throw 'S54 B public check directory.'}
+$index=ConvertFrom-S54Strict (Read-S54Public $FixtureIndex 16384) 16384
+if($index.classification -cne 'public_schema_fixture_only'){throw 'S54 B public fixture export required.'}
+$policy=New-S54Policy -FixtureRoot $index.root;$inputs=$index.inputs
+$i=Read-S54Json $inputs.inventory 2097152;$results=[Collections.Generic.List[object]]::new()
+function Require([bool]$Value,[string]$Why){if(-not $Value){throw $Why}}
+function Refuses([string]$Name,[scriptblock]$Test,[string]$Pattern){
+    $message=$null;try{$null=& $Test}catch{$message=$_.Exception.Message}
+    Require ($null -ne $message) "Expected refusal $Name"
+    if($Pattern){Require ($message -match $Pattern) "Wrong refusal ${Name}: $message"}
+    $results.Add(@{name=$Name;expected_refusal=$true;reason=$message})
+}
+function Copy-Public($Value){ConvertFrom-S54Strict ([Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $Value -Depth 100 -Compress))) 8388608}
+$facts=Test-S54Admission $inputs $policy
+Require ($facts.classification -ceq 'public_schema_fixture_only') 'No public policy runtime capability.'
+$results.Add(@{name='final public schema baseline';passed=$true})
+# Actual stable script boundary with forbidden compiler/copy sentinels. Every
+# malformed opt-in must refuse before default Cargo/resource/list/cache lanes.
+$script:forbidden=0
+function cargo {$script:forbidden++;throw 'FORBIDDEN runtime compiler call'}
+function Copy-Item {$script:forbidden++;throw 'FORBIDDEN runtime copy call'}
+$runner=Join-Path $PSScriptRoot 'run-cargo-tests-stable.ps1'
+Refuses 'frozen missing inputs before compiler' {& $runner -FrozenExecutionOnly} 'exclusive|required'
+Refuses 'cross-mode hash before compiler' {& $runner -S54InventorySha256 ('a'*64)} 'exclusive|required'
+$valid=@{FrozenExecutionOnly=$true;S54InventorySha256=('a'*64);S54ActivationSha256=('b'*64);S54LaunchSha256=('c'*64);S54CaptureSha256=('d'*64)}
+foreach($key in @('Filter','SkipTest','CargoFeatures','Package','Profile','CargoTarget','BuildEvidencePath','IsolatedTestsFile','Run','NoCapture','SkipCacheStatus')){
+    $bad=Copy-Public $valid;$bad[$key]=if($key -cin @('Run','NoCapture','SkipCacheStatus')){$true}elseif($key -cin @('Package','SkipTest','CargoFeatures')){@('not-admitted')}else{'not-admitted'}
+    Refuses "incompatible runtime option/$key" {& $runner @bad} 'exclusive|incompatible'
+}
+Require ($script:forbidden -eq 0) 'Frozen refusals invoked compiler/copy.'
+Remove-Item Function:cargo;Remove-Item Function:Copy-Item
+Refuses 'missing whole external activation before setup' {& (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1') -Action Run} 'external.*required'
+Refuses 'missing preparation identity before setup' {& (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1') -Action Prepare} 'explicit root preparation identity'
+Refuses 'wrong four input hashes' {Get-S54Inputs @{inventory=('0'*64);activation=('0'*64);launch=('0'*64);capture=('0'*64)} $policy} 'externally bound'
+# The per-invocation parser accepts split nocapture diagnostics, then rejects
+# exact cardinality/order/prefix/digest mistakes. These are in-memory public
+# strings; no P marker/envelope is emitted by a fixture process.
+$public=@{identity=@{case='public-format-fixture';attempt='public-format';run_id=('e'*64);selector='public_fixture::format'}}
+$publicInputs=@{inventory=@{sha256=('1'*64)}}
+$assertion=@{Pin=@{sha256=('2'*64);bytes=123};Value=@{provenance=@{blake3=('3'*64)}}}
+$native='S54_FUNCTIONAL '+(ConvertTo-Json -InputObject (New-S54Marker $public $publicInputs $assertion 'functional_assertions_completed') -Compress)
+$wrapper='S54_FROZEN_COMPLETED '+(ConvertTo-Json -InputObject (New-S54Marker $public $publicInputs $assertion 's54_frozen_execution_completed') -Compress)
+$lines=@('running 1 test','test public_fixture::format ... diagnostic on same named line','public diagnostic',$native,'ok','test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.01s',$wrapper)
+$validText=($lines -join "`n")+"`n"
+$layout=Assert-S54NativeOutput $validText '' $public $publicInputs $assertion
+Require ($layout.native_passed -eq 1 -and $layout.wrapper_markers -eq 1) 'Split nocapture layout.'
+$results.Add(@{name='exact public native invocation with split diagnostics';passed=$true})
+foreach($case in @('wrong_name','prefix_name','duplicate_name','missing_native','duplicate_native','wrong_digest','missing_wrapper','extra_aggregate','bad_summary','marker_before_test','marker_on_stderr','partial_result')){
+    $text=$validText;$err=''
+    switch($case){
+        'wrong_name' {$text=$text.Replace('test public_fixture::format ...','test public_fixture::wrong ...')}
+        'prefix_name' {$text=$text.Replace('test public_fixture::format ...','test public_fixture::format_extra ...')}
+        'duplicate_name' {$text=$text.Replace('public diagnostic',"test public_fixture::format ...`npublic diagnostic")}
+        'missing_native' {$text=$text.Replace($native,'public no-marker')}
+        'duplicate_native' {$text=$text.Replace($native,"$native`n$native")}
+        'wrong_digest' {$text=$text.Replace(('2'*64),('4'*64))}
+        'missing_wrapper' {$text=$text.Replace($wrapper,'public no-wrapper')}
+        'extra_aggregate' {$text+="running 0 tests`n"}
+        'bad_summary' {$text=$text.Replace('1 passed; 0 failed','0 passed; 1 failed')}
+        'marker_before_test' {$text="$native`n"+$text.Replace($native,'public removed')}
+        'marker_on_stderr' {$err=$native}
+        'partial_result' {$text=$text.Replace('test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 5 filtered out; finished in 0.01s','partial native result')}
+    }
+    Refuses "native exact refusal/$case" {Assert-S54NativeOutput $text $err $public $publicInputs $assertion} 'S54'
+}
+# Pre-start and owned revalidation use the same actual policy, never a global
+# arbitrary-file exemption. Only this fake root is mutated; no private state.
+$started=@{version=1;classification='s54_exclusive_attempt';case=$i.identity.case;attempt=$i.identity.attempt;run_id=$i.identity.run_id;selector=$i.identity.selector;inventory=$inputs.inventory;activation=$inputs.activation;owner_pid=100;nonce=('c'*64)}
+$startedPath=Join-Path $i.identity.run 'started.json';$claimPath=Join-Path $i.identity.run 'native-started.json'
+$null=Write-S54New $startedPath $started 16384
+$owner=@{Started=$started;Claim=$null}
+Refuses 'started never fresh or reusable' {Test-S54Admission $inputs $policy} 'dirty/reused'
+$null=Test-S54Admission $inputs $policy -State Launched -Owner $owner
+$results.Add(@{name='bound launched state admits without native/profile setup';passed=$true})
+$claim=@{version=1;classification='s54_native_started';case=$i.identity.case;attempt=$i.identity.attempt;run_id=$i.identity.run_id;owner_pid=100;launcher_pid=101;harness_pid=102;nonce=$started.nonce;inventory_sha256=$inputs.inventory.sha256;launch_sha256=$inputs.launch.sha256}
+$null=Write-S54New $claimPath $claim 16384;$owner.Claim=$claim
+Refuses 'exclusive native claim cannot overwrite' {Write-S54New $claimPath $claim 16384} 'exists|already|существует'
+# The duplicate claim's pending bytes are evidence of the expected refusal;
+# remove only that exact public test file before the next distinct assertion.
+Remove-Item -LiteralPath ($claimPath+'.pending')
+Refuses 'launched state cannot restart native' {Test-S54Admission $inputs $policy -State Launched -Owner $owner} 'dirty/reused'
+$ownedDir=Join-Path $i.identity.run 'p5-origin';$null=New-Item -ItemType Directory -Path $ownedDir -ErrorAction Stop
+$commandPath=Join-Path $i.identity.run 'command-0000.stdout.log';[IO.File]::WriteAllText($commandPath,'public sanitized command fixture')
+$null=Test-S54Admission $inputs $policy -State Owned -Owner $owner
+$results.Add(@{name='owned state revalidates after legitimate bound outputs';passed=$true})
+$badOwner=Copy-Public $owner;$badOwner.Started.owner_pid=999
+Refuses 'post-start wrong owner' {Test-S54Admission $inputs $policy -State Owned -Owner $badOwner} 'identity|structured|capture owner'
+$unexpected=Join-Path $i.identity.run 'unadmitted.json';[IO.File]::WriteAllText($unexpected,'public fixture')
+Refuses 'post-start unknown output rejected' {Test-S54Admission $inputs $policy -State Owned -Owner $owner} 'dirty/reused'
+Remove-Item -LiteralPath $unexpected,$commandPath,$claimPath,$startedPath
+Remove-Item -LiteralPath $ownedDir
+$null=Test-S54Admission $inputs $policy
+# One finite benign fixture implementation covers actual owner/handle/Job/wait
+# and EOF decisions. Public fixture modes cannot enter production factories.
+Initialize-S54Output
+$fixture=Join-Path $workspace 'apps/kilogram-cli/tests/support/migration_s54_outer_fixture.ps1'
+$fixturePin=Get-S54Pin $fixture 65536
+$shell=[Diagnostics.Process]::GetCurrentProcess().MainModule.FileName;$shellPin=Get-S54Pin $shell 134217728
+foreach($mode in @('normal','nonzero','delayed','timeout','eof','linger','cleanup')){
+    $null=Read-S54Pin $fixturePin 65536;$null=Read-S54Pin $shellPin 134217728
+    $root=Join-Path $evidence "benign-$mode"
+    $p=New-S54Process $shell @('-NoProfile','-NonInteractive','-File',$fixture,'-Role','Owner','-Mode',$mode,'-Root',$root)
+    $end=[Environment]::TickCount64+40000
+    try {
+        if(-not $p.Start()){throw 'Benign owner process start.'}
+        $output=[KilogramS54Output]::new($p)
+        while(-not $p.WaitForExit(0) -or -not $output.Eof){if([Environment]::TickCount64 -ge $end -or $output.Failed){throw 'Benign owner bounded wait/EOF.'};Start-Sleep -Milliseconds 10}
+        if($p.ExitCode -ne 0){[IO.File]::WriteAllText((Join-Path $evidence "$mode.public.stderr.log"),$output.Stderr);throw "Benign actual owner exit $($p.ExitCode) for $mode"}
+        $record=ConvertFrom-S54Strict (Read-S54Public (Join-Path $root 'fixture-result.json') 65536) 65536
+        Require ($record.classification -ceq 'public_benign_fixture_only' -and $record.whole_attempt_verdict -ceq 'not_established') 'Fixture result cannot claim P.'
+        if($mode -cne 'delayed'){
+            Require $record.containment_teardown_verified "Actual owned containment for $mode"
+            Require (($record.actual_outer_decision -ceq 'passed') -eq ($mode -ceq 'normal')) "Actual fixture outcome for $mode"
+            Require ($record.clock_membership_served -and $record.a7_membership_served) "Actual known handle and A7 rendezvous for $mode"
+            if($mode -ceq 'nonzero'){Require ($record.process_outcomes.harness.code -eq 7 -and $record.process_outcomes.launcher.code -eq 7) 'Actual nonzero process outcomes.'}
+            if($mode -cin @('linger','cleanup')){Require ($record.process_outcomes.harness.code -eq 0 -and $record.cleanup.forced) 'Successful native wait cannot erase a lingering owned child.'}
+        }else{Require $record.original_delayed_constructor_refused 'Delayed constructor original time charged.'}
+        $results.Add(@{name="actual benign owner/$mode";passed=$true;owner_pid=$p.Id;actual_waited=$true;actual_exit_code=$p.ExitCode;bounded_eof=$output.Eof;result=$record})
+    }finally{
+        if(-not $p.HasExited){$p.Kill();while(-not $p.WaitForExit(0) -and [Environment]::TickCount64 -lt $end){Start-Sleep -Milliseconds 5}}
+        $p.Dispose()
+    }
+}
+$null=Write-S54New (Join-Path $evidence 'whole-public-results.json') @{classification='Slice B public metadata and deliberately benign process checks only';count=$results.Count;checks=@($results);whole_attempt_verdict='not_established';production_attempt_started=$false} 262144
+Write-Output ('s54_b_public_check_count='+$results.Count)

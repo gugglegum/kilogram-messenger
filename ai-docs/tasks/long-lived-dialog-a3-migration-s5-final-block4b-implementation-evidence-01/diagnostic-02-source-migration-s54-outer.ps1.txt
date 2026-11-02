@@ -1,0 +1,499 @@
+# Narrow S54 outer/IPC helpers. Dot-source defines functions only.
+function Initialize-S54Output {
+    if('KilogramS54Output' -as [type]){return}
+    Add-Type -TypeDefinition @'
+using System;
+using System.IO;
+using System.Text;
+using System.Threading;
+using System.Diagnostics;
+public sealed class KilogramS54Output {
+    sealed class Reader {
+        readonly MemoryStream data=new MemoryStream(); readonly Stream stream;
+        public readonly Thread Thread; public volatile bool Eof,Failed,Overflow;
+        public Reader(Stream input) {
+            stream=input; Thread=new Thread(Read); Thread.IsBackground=true; Thread.Start();
+        }
+        void Read() {
+            try {
+                byte[] b=new byte[4096]; int n;
+                while((n=stream.Read(b,0,b.Length))!=0) {
+                    lock(data) {
+                        if(data.Length+n>1048576) { Overflow=true; return; }
+                        data.Write(b,0,n);
+                    }
+                }
+                Eof=true;
+            } catch { Failed=true; }
+        }
+        public byte[] Bytes() { lock(data) { return data.ToArray(); } }
+        public string Text() {
+            if(!Eof || Failed || Overflow || !Thread.Join(0)) throw new InvalidOperationException("bounded output not complete");
+            return new UTF8Encoding(false,true).GetString(Bytes());
+        }
+    }
+    readonly Reader stdout,stderr;
+    public KilogramS54Output(Process p) {
+        stdout=new Reader(p.StandardOutput.BaseStream); stderr=new Reader(p.StandardError.BaseStream);
+    }
+    public bool Eof { get { return stdout.Eof && stderr.Eof && stdout.Thread.Join(0) && stderr.Thread.Join(0); } }
+    public bool Failed { get { return stdout.Failed || stderr.Failed || stdout.Overflow || stderr.Overflow; } }
+    public string Stdout { get { return stdout.Text(); } }
+    public string Stderr { get { return stderr.Text(); } }
+    public byte[] StdoutBytes { get { return stdout.Bytes(); } }
+    public byte[] StderrBytes { get { return stderr.Bytes(); } }
+}
+'@
+}
+function Write-S54New([string]$Path,$Value,[long]$Cap=524288) {
+    $raw=[Text.UTF8Encoding]::new($false).GetBytes((ConvertTo-Json -InputObject $Value -Depth 100 -Compress))
+    if($raw.Length -gt $Cap){throw 'S54 durable output bound.'}
+    $pending=$Path+'.pending'
+    $file=[IO.File]::Open($pending,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::None)
+    try{$file.Write($raw,0,$raw.Length);$file.Flush($true)}finally{$file.Dispose()}
+    # File.Move without overwrite publishes only closed, synced bytes. An
+    # interrupted pending file is retained and makes this attempt non-reusable.
+    [IO.File]::Move($pending,$Path)
+    return Get-S54Pin $Path $Cap
+}
+function Get-S54Inputs($Hashes,$Policy) {
+    if($Hashes.Count -ne 4){throw 'S54 four required input hashes.'}
+    $out=@{};$run=Join-Path $Policy.Root ".tmp/migration-s54-integrated/$script:S54Attempt"
+    foreach($name in @('inventory','activation','launch','capture')){
+        if($Hashes[$name] -cnotmatch '^[0-9a-f]{64}$'){throw 'S54 required input digest.'}
+        $file=if($name -ceq 'inventory'){'inputs.json'}else{"$name.json"}
+        $cap=if($name -ceq 'inventory'){2097152}elseif($name -ceq 'capture'){4096}else{16384}
+        $pin=Get-S54Pin (Join-Path $run $file) $cap
+        if($pin.sha256 -cne $Hashes[$name]){throw 'S54 externally bound input bytes.'};$out[$name]=$pin
+    }
+    return $out
+}
+function Get-S54OwnerFiles($I) {
+    $started=ConvertFrom-S54Strict (Read-S54Public (Join-Path $I.identity.run 'started.json') 16384) 16384
+    Assert-S54Wire $started 'Started'
+    $claim=$null;$path=Join-Path $I.identity.run 'native-started.json'
+    if(Test-Path -LiteralPath $path){$claim=ConvertFrom-S54Strict (Read-S54Public $path 16384) 16384;Assert-S54Wire $claim 'Claim'}
+    return @{Started=$started;Claim=$claim}
+}
+function Assert-S54Directory($I,$Policy,[string]$State,$Owner) {
+    $run=$I.identity.run
+    if($State -cnotin @('Fresh','Launched','Owned')){throw 'S54 explicit directory admission state.'}
+    if($State -cne 'Fresh'){
+        if($null -eq $Owner){throw 'S54 owner-bound directory input required.'}
+        Assert-S54Wire $Owner.Started 'Started';$s=$Owner.Started
+        if($s.version -ne 1 -or $s.classification -cne 's54_exclusive_attempt' -or $s.case -cne $I.identity.case -or $s.attempt -cne $I.identity.attempt -or $s.run_id -cne $I.identity.run_id -or $s.selector -cne $I.identity.selector -or $s.owner_pid -le 0 -or $s.nonce -cnotmatch '^[0-9a-f]{64}$' -or $s.nonce -ceq ('0'*64)){throw 'S54 exclusive owner claim identity.'}
+        Assert-S54Equal $s (Get-S54OwnerFiles $I).Started
+        if($State -ceq 'Owned'){
+            Assert-S54Wire $Owner.Claim 'Claim';$n=$Owner.Claim
+            if($n.version -ne 1 -or $n.classification -cne 's54_native_started' -or $n.case -cne $s.case -or $n.attempt -cne $s.attempt -or $n.run_id -cne $s.run_id -or $n.owner_pid -ne $s.owner_pid -or $n.nonce -cne $s.nonce -or $n.launcher_pid -le 0 -or $n.harness_pid -le 0 -or $n.harness_pid -eq $n.owner_pid -or $n.harness_pid -eq $n.launcher_pid){throw 'S54 native exclusive claim identity.'}
+            Assert-S54Equal $n (Get-S54OwnerFiles $I).Claim
+        }
+    }
+    foreach($e in Get-ChildItem -LiteralPath $run -Force){
+        $null=Get-S54Path $e.FullName
+        $ok=$e.Name -cin @('inputs.json','activation.json','launch.json','capture.json')
+        if($State -cne 'Fresh'){$ok=$ok -or $e.Name -ceq 'started.json'}
+        if($State -ceq 'Owned'){
+            $ok=$ok -or $e.Name -cin @('native-started.json','clock-request.json','clock-reply.json','assertions.json','memory-observer-final.json','memory-observer-abort.json',"join-$($Owner.Claim.harness_pid).json","permit-$($Owner.Claim.harness_pid).json")
+            $ok=$ok -or ($e.Name -ceq 'p5-origin' -and $e.PSIsContainer)
+            $ok=$ok -or (-not $e.PSIsContainer -and $e.Name -cmatch '^command-[0-9]{4,5}\.(stdout|stderr)\.log$' -and $e.Length -le 1048576)
+        }
+        if(-not $ok){throw 'S54 dirty/reused run for this admission state.'}
+    }
+}
+function Assert-S54StartedBinding($I,$Inputs,$Owner,$Capture) {
+    Assert-S54PinEqual $Owner.Started.inventory $Inputs.inventory
+    Assert-S54PinEqual $Owner.Started.activation $Inputs.activation
+    if($Owner.Started.owner_pid -ne $Capture.owner_pid){throw 'S54 started/actual capture owner.'}
+    if($null -ne $Owner.Claim){
+        if($Owner.Claim.inventory_sha256 -cne $Inputs.inventory.sha256 -or $Owner.Claim.launch_sha256 -cne $Inputs.launch.sha256 -or $Owner.Claim.launcher_pid -ne $Capture.launcher_pid){throw 'S54 native original input/launcher binding.'}
+    }
+}
+function Assert-S54FrozenOptionSet($Bound) {
+    $expected=@('FrozenExecutionOnly','S54InventorySha256','S54ActivationSha256','S54LaunchSha256','S54CaptureSha256')
+    if($Bound.Count -ne $expected.Count){throw 'S54 frozen execution options are exclusive.'}
+    foreach($name in $Bound.Keys){if($name -cnotin $expected){throw 'S54 incompatible compiler/filter/aggregate/cache option.'}}
+    if(-not $Bound.FrozenExecutionOnly){throw 'S54 frozen execution required.'}
+}
+function Assert-S54FrozenArguments($Bound) {
+    Assert-S54FrozenOptionSet $Bound
+    foreach($name in @('S54InventorySha256','S54ActivationSha256','S54LaunchSha256','S54CaptureSha256')){if($Bound[$name] -cnotmatch '^[0-9a-f]{64}$'){throw 'S54 frozen required digest.'}}
+}
+function Resolve-S54LaunchMaterialization($Bound,$Policy) {
+    if($Bound.S54LaunchSha256 -cne 'pending' -and $Bound.S54CaptureSha256 -cne 'pending'){return}
+    if($Bound.S54LaunchSha256 -cne 'pending' -or $Bound.S54CaptureSha256 -cne 'pending' -or $Bound.S54InventorySha256 -cnotmatch '^[0-9a-f]{64}$' -or $Bound.S54ActivationSha256 -cnotmatch '^[0-9a-f]{64}$'){throw 'S54 original launch materialization binding.'}
+    $run=Join-Path $Policy.Root ".tmp/migration-s54-integrated/$script:S54Attempt"
+    Assert-S54SamePath $env:KILOGRAM_S54_WAIT_RUN $run
+    if($env:KILOGRAM_S54_WAIT_NONCE -cnotmatch '^[0-9a-f]{64}$' -or $env:KILOGRAM_S54_WAIT_OUTER_TICK -cnotmatch '^[0-9]{1,18}$'){throw 'S54 required bounded owner wait.'}
+    $started=ConvertFrom-S54Strict (Read-S54Public (Join-Path $run 'started.json') 16384) 16384;Assert-S54Wire $started 'Started'
+    if($started.nonce -cne $env:KILOGRAM_S54_WAIT_NONCE -or $started.inventory.sha256 -cne $Bound.S54InventorySha256 -or $started.activation.sha256 -cne $Bound.S54ActivationSha256){throw 'S54 owner wait nonce/input binding.'}
+    $end=[Math]::Min([long]$env:KILOGRAM_S54_WAIT_OUTER_TICK,[Environment]::TickCount64+10000)
+    foreach($name in @('launch','capture')){
+        $path=Join-Path $run "$name.json"
+        while(-not (Test-Path -LiteralPath $path)){if([Environment]::TickCount64 -ge $end){throw 'S54 original launch materialization cutoff.'};Start-Sleep -Milliseconds 5}
+        if([Environment]::TickCount64 -ge $end){throw 'S54 original launch materialization cutoff.'}
+        $key=if($name -ceq 'launch'){'S54LaunchSha256'}else{'S54CaptureSha256'};$Bound[$key]=(Get-S54Pin $path 16384).sha256
+    }
+}
+function Get-S54Assertion($I,$Inputs) {
+    $pin=Get-S54Pin $I.identity.output 524288;$a=Read-S54Json $pin 524288
+    $keys=@($a.Keys|Sort-Object);Assert-S54Equal $keys @('case','classification','observations','output','provenance','run','whole_attempt_verdict')
+    if($a.classification -cne 'functional_assertions_completed' -or $a.whole_attempt_verdict -cne 'not_established' -or $a.case -cne $I.identity.case){throw 'S54 functional envelope authority.'}
+    Assert-S54SamePath $a.run $I.identity.run;Assert-S54SamePath $a.output $I.identity.output
+    Assert-S54Equal @($a.provenance.Keys|Sort-Object) @('blake3','identity','kind','path')
+    if($a.provenance.kind -cne 'bound_pre_run_inventory' -or $a.provenance.identity -cne $I.identity.run_id -or $a.provenance.blake3 -cnotmatch '^[0-9a-f]{64}$' -or $a.observations.classification -cne 'P11 functional phase only' -or $a.observations.capture_attempt -cne $I.identity.attempt){throw 'S54 original functional provenance.'}
+    Assert-S54SamePath $a.provenance.path $Inputs.inventory.path
+    return @{Pin=$pin;Value=$a}
+}
+function New-S54Marker($I,$Inputs,$Assertion,[string]$Classification) {
+    return [ordered]@{version=1;classification=$Classification;whole_attempt_verdict='not_established';case=$I.identity.case;attempt=$I.identity.attempt;run_id=$I.identity.run_id;selector=$I.identity.selector;inventory_sha256=$Inputs.inventory.sha256;inventory_blake3=$Assertion.Value.provenance.blake3;assertions_sha256=$Assertion.Pin.sha256;assertions_bytes=$Assertion.Pin.bytes}
+}
+function Get-S54Invocation([string]$Stdout,[string]$Selector,[string]$NativePrefix,[string]$WrapperPrefix) {
+    $lines=@($Stdout -split '\r?\n');$selector=[regex]::Escape($Selector)
+    if(@($lines|Where-Object {$_ -ceq 'running 1 test'}).Count -ne 1 -or @($lines|Where-Object {$_ -cmatch '^running [0-9]+ tests?$'}).Count -ne 1){throw 'S54 exact one native invocation.'}
+    $starts=@();$summaries=@();$oks=@();$native=@();$wrapper=@()
+    for($n=0;$n -lt $lines.Count;$n++){
+        $line=$lines[$n]
+        if($line -cmatch '^test .+ \.\.\.'){if($line -cnotmatch "^test $selector \.\.\.(\s+.*)?$"){throw 'S54 wrong/duplicate native selector.'};$starts+=,$n}
+        if($line -ceq 'ok'){$oks+=,$n}
+        if($line.StartsWith('test result:',[StringComparison]::Ordinal)){
+            if($line -cnotmatch '^test result: ok\. 1 passed; 0 failed; 0 ignored; 0 measured; [0-9]+ filtered out; finished in [0-9.]+s$'){throw 'S54 exact one-pass native summary.'};$summaries+=,$n
+        }
+        if($line.StartsWith($NativePrefix,[StringComparison]::Ordinal)){$native+=,$n}
+        if($line.StartsWith($WrapperPrefix,[StringComparison]::Ordinal)){$wrapper+=,$n}
+    }
+    if($starts.Count -ne 1 -or $summaries.Count -ne 1 -or $oks.Count -ne 1 -or $native.Count -ne 1 -or $wrapper.Count -ne 1 -or -not ($starts[0] -lt $native[0] -and $native[0] -lt $oks[0] -and $oks[0] -lt $summaries[0] -and $summaries[0] -lt $wrapper[0])){throw 'S54 complete per-invocation result/marker order.'}
+    return @{Lines=$lines;Native=$native[0];Wrapper=$wrapper[0]}
+}
+function Assert-S54NativeOutput([string]$Stdout,[string]$Stderr,$I,$Inputs,$Assertion) {
+    $layout=Get-S54Invocation $Stdout $I.identity.selector 'S54_FUNCTIONAL' 'S54_FROZEN_COMPLETED'
+    $lines=$layout.Lines;$native=@($layout.Native);$wrapper=@($layout.Wrapper)
+    foreach($row in @(@($native[0],'S54_FUNCTIONAL ','functional_assertions_completed'),@($wrapper[0],'S54_FROZEN_COMPLETED ','s54_frozen_execution_completed'))){
+        $line=$lines[$row[0]];if(-not $line.StartsWith($row[1],[StringComparison]::Ordinal)){throw 'S54 full marker line prefix.'}
+        $marker=ConvertFrom-S54Strict ([Text.Encoding]::UTF8.GetBytes($line.Substring($row[1].Length))) 16384
+        Assert-S54Wire $marker 'FunctionalMarker';Assert-S54Equal $marker (New-S54Marker $I $Inputs $Assertion $row[2])
+    }
+    if($Stderr -cmatch '(?m)^test result:|^S54_FUNCTIONAL|^S54_FROZEN_COMPLETED'){throw 'S54 marker on wrong stream.'}
+    return @{native_invocations=1;native_passed=1;native_failed=0;native_markers=1;wrapper_markers=1}
+}
+function Invoke-S54FrozenExecution($Bound) {
+    Assert-S54FrozenOptionSet $Bound
+    Push-Location -LiteralPath (Split-Path -Parent $PSScriptRoot)
+    try {
+    $policy=New-S54Policy
+    Resolve-S54LaunchMaterialization $Bound $policy
+    Assert-S54FrozenArguments $Bound
+    $hashes=@{inventory=$Bound.S54InventorySha256;activation=$Bound.S54ActivationSha256;launch=$Bound.S54LaunchSha256;capture=$Bound.S54CaptureSha256}
+    $inputs=Get-S54Inputs $hashes $policy
+    $i=Read-S54Json $inputs.inventory 2097152;$owner=Get-S54OwnerFiles $i
+    $null=Test-S54Admission $inputs $policy -State Launched -Owner $owner
+    $capture=Read-S54Json $inputs.capture 4096
+    if($capture.launcher_pid -ne $PID -or [Diagnostics.Process]::GetCurrentProcess().PriorityClass -ne [Diagnostics.ProcessPriorityClass]::BelowNormal){throw 'S54 actual launcher identity/priority.'}
+    Assert-S54SamePath ([Diagnostics.Process]::GetCurrentProcess().MainModule.FileName) $i.runtime.metadata_shell.path
+    $harness=@($i.images|Where-Object role -CEQ 'stable-migration')[0].pin
+    foreach($pair in @(@('INVENTORY',$inputs.inventory),@('ACTIVATION',$inputs.activation),@('LAUNCH',$inputs.launch),@('CAPTURE',$inputs.capture))){[Environment]::SetEnvironmentVariable(('KILOGRAM_S54_'+$pair[0]+'_SHA256'),$pair[1].sha256,'Process')}
+    $env:KILOGRAM_S54_CAPTURE_ADMISSION=$inputs.capture.path
+    # This branch has no compiler, metadata, list, cache, copy or aggregate call.
+    $launch=Read-S54Json $inputs.launch 16384
+    $native=Invoke-S54SingleExecutable $harness @($script:S54Selector,'--exact','--ignored','--nocapture','--test-threads=1') ([long]$launch.work_tick_ms)
+    [Console]::Out.Write($native.stdout);[Console]::Error.Write($native.stderr)
+    if($native.code -ne 0){throw 'S54 frozen native process failed.'}
+    $owner=Get-S54OwnerFiles $i;$null=Test-S54Admission $inputs $policy -State Owned -Owner $owner
+    $a=Get-S54Assertion $i $inputs
+    Write-Output ('S54_FROZEN_COMPLETED '+(ConvertTo-Json -InputObject (New-S54Marker $i $inputs $a 's54_frozen_execution_completed') -Depth 20 -Compress))
+    } finally {Pop-Location}
+}
+function Register-S54KnownHarness($Session,[uint32]$PidValue) {
+    if($null -ne $Session.Harness){if($Session.Harness.Id -ne $PidValue){throw 'S54 second harness refused.'};return}
+    $process=[Diagnostics.Process]::GetProcessById([int]$PidValue)
+    try {
+        $Session.Job.VerifyChild($process)
+        if($process.HasExited -or $process.StartTime.ToUniversalTime() -lt $Session.Launcher.StartTime.ToUniversalTime()){throw 'S54 actual harness lifetime.'}
+        Assert-S54SamePath $process.MainModule.FileName $Session.ExpectedHarness.path
+        $null=Read-S54Pin $Session.ExpectedHarness 134217728
+        if($process.PriorityClass -ne [Diagnostics.ProcessPriorityClass]::BelowNormal){throw 'S54 actual harness priority.'}
+        $Session.Harness=$process;$process=$null;$Session.HandleVerified=$true
+    }finally{if($null -ne $process){$process.Dispose()}}
+}
+function Invoke-S54OwnerRendezvous($Session) {
+    $run=$Session.I.identity.run;$request=Join-Path $run 'clock-request.json'
+    if(-not $Session.ClockSent -and (Test-Path -LiteralPath $request)){
+        $owner=Get-S54OwnerFiles $Session.I;$claim=$owner.Claim
+        Assert-S54Wire $claim 'Claim'
+        try{$reqPin=Get-S54Pin $request 16384}catch{
+            $errorValue=$_.Exception.GetBaseException()
+            if($errorValue -is [IO.IOException] -and ($errorValue.HResult -band 65535) -in @(32,33)){return}
+            throw
+        }
+        $req=Read-S54Json $reqPin 16384;Assert-S54Wire $req 'Claim'
+        $expected=@{};foreach($key in $claim.Keys){$expected[$key]=$claim[$key]};$expected.classification='s54_clock_request'
+        Assert-S54Equal $req $expected
+        if($claim.version -ne 1 -or $claim.classification -cne 's54_native_started' -or $claim.case -cne $Session.I.identity.case -or $claim.attempt -cne $Session.I.identity.attempt -or $claim.run_id -cne $Session.I.identity.run_id -or $claim.nonce -cne $Session.Started.nonce -or $claim.owner_pid -ne $PID -or $claim.launcher_pid -ne $Session.Launcher.Id -or $claim.inventory_sha256 -cne $Session.Inputs.inventory.sha256 -or $claim.launch_sha256 -cne $Session.Inputs.launch.sha256){throw 'S54 clock request original owner/input binding.'}
+        Register-S54KnownHarness $Session $claim.harness_pid
+        $Session.Job.VerifyChild($Session.Harness);$Session.Job.CheckWork()
+        $sample=[KilogramS5Deadline]::TickNow();$end=$Session.ControllerTick
+        if($sample -lt $Session.OriginTick -or $sample -ge $end){throw 'S54 expired original controller sample.'}
+        $reply=@{};foreach($key in $req.Keys){$reply[$key]=$req[$key]}
+        $reply.classification='s54_original_clock_reply';$reply.request_sha256=$reqPin.sha256
+        $reply.origin_tick_ms=$Session.OriginTick;$reply.sampled_tick_ms=$sample;$reply.remaining_controller_ms=$end-$sample
+        Assert-S54Wire $reply 'ClockReply'
+        $Session.ClockReply=Write-S54New (Join-Path $run 'clock-reply.json') $reply 16384
+        $Session.ClockRequest=$reqPin;$Session.NativeClaim=Get-S54Pin (Join-Path $run 'native-started.json') 16384
+        $Session.ClockSent=$true
+    }
+    if($Session.ClockSent -and -not $Session.JoinSent){
+        $request=Join-Path $run "join-$($Session.Harness.Id).json"
+        if(Test-Path -LiteralPath $request){
+            $pin=Get-S54Pin $request 4096;$row=Read-S54Json $pin 4096
+            Assert-S54Equal @($row.Keys|Sort-Object) @('attempt','harness_pid','membership_verified','nonce','owner_pid')
+            if($row.attempt -cne $Session.I.identity.attempt -or $row.owner_pid -ne $PID -or $row.harness_pid -ne $Session.Harness.Id -or $row.membership_verified -isnot [bool] -or $row.membership_verified -or $row.nonce -isnot [string] -or $row.nonce.Length -gt 80){throw 'S54 A7 request binding.'}
+            $Session.Job.CheckWork();$Session.Job.VerifyChild($Session.Harness)
+            $row.membership_verified=$true
+            $Session.Permit=Write-S54New (Join-Path $run "permit-$($Session.Harness.Id).json") $row 4096
+            $Session.Join=$pin;$Session.JoinSent=$true
+        }
+    }
+}
+function Wait-S54OwnedProcesses($Session) {
+    $nativeExitTick=$null
+    while($true){
+        $Session.Job.CheckWork();Invoke-S54OwnerRendezvous $Session
+        if($Session.Output.Failed){throw 'S54 bounded output transport failed.'}
+        if($Session.Launcher.HasExited){
+            if(-not $Session.Launcher.WaitForExit(0)){throw 'S54 actual launcher wait failure.'}
+            $Session.LauncherWaited=$true
+            if($Session.Launcher.ExitCode -ne 0){throw 'S54 actual launcher nonzero.'}
+            if(-not $Session.HandleVerified -or -not $Session.ClockSent -or -not $Session.JoinSent){throw 'S54 required actual harness admission absent.'}
+        }
+        # Windows console teardown may briefly outlive the native process.
+        # Allow at most one second of natural settlement, still charged to the
+        # original CheckWork bound. No process is exempted or force-cleaned to
+        # obtain success: both waited exits, EOF and zero children are required.
+        if($null -ne $Session.Harness -and $Session.Harness.HasExited){
+            if(-not $Session.Harness.WaitForExit(0)){throw 'S54 actual harness wait failure.'}
+            $Session.HarnessWaited=$true
+            if($Session.Harness.ExitCode -ne 0){throw 'S54 actual harness nonzero.'}
+            if($null -eq $nativeExitTick){$nativeExitTick=[KilogramS5Deadline]::TickNow()}
+            if($Session.LauncherWaited -and $Session.ClockSent -and $Session.JoinSent -and $Session.Output.Eof -and @($Session.Job.Children()).Count -eq 0){return}
+            if([KilogramS5Deadline]::TickNow()-$nativeExitTick -ge 1000){throw 'S54 unexpected survivor/EOF after bounded natural settlement.'}
+        }
+        Start-Sleep -Milliseconds 5
+    }
+}
+function New-S54Process([string]$Exe,[string[]]$Arguments) {
+    $p=[Diagnostics.Process]::new();$p.StartInfo.FileName=$Exe;$p.StartInfo.UseShellExecute=$false
+    $p.StartInfo.CreateNoWindow=$true;$p.StartInfo.WindowStyle=[Diagnostics.ProcessWindowStyle]::Hidden
+    $p.StartInfo.WorkingDirectory=Split-Path -Parent $PSScriptRoot
+    $p.StartInfo.RedirectStandardOutput=$true;$p.StartInfo.RedirectStandardError=$true
+    foreach($arg in $Arguments){$null=$p.StartInfo.ArgumentList.Add($arg)}
+    return $p
+}
+function Invoke-S54SingleExecutable($Pin,[string[]]$Arguments,[long]$WorkTick) {
+    # Production supplies only the admitted migration pin and literal selector.
+    # The public test calls this leaf with a benign pinned PowerShell owner.
+    $null=Read-S54Pin $Pin 134217728
+    Initialize-S54Output
+    if([Environment]::TickCount64 -ge $WorkTick){throw 'S54 frozen original work cutoff.'}
+    $p=New-S54Process $Pin.path $Arguments
+    try {
+        if(-not $p.Start()){throw 'S54 frozen executable start.'}
+        $output=[KilogramS54Output]::new($p)
+        while(-not $p.WaitForExit(0) -or -not $output.Eof){
+            if([Environment]::TickCount64 -ge $WorkTick){throw 'S54 frozen original work cutoff.'}
+            if($output.Failed){throw 'S54 frozen bounded output transport.'}
+            Start-Sleep -Milliseconds 5
+        }
+        if([Environment]::TickCount64 -ge $WorkTick){throw 'S54 frozen original work cutoff.'}
+        $null=Read-S54Pin $Pin 134217728
+        return @{pid=$p.Id;code=$p.ExitCode;stdout=$output.Stdout;stderr=$output.Stderr;waited=$true;eof=$output.Eof;invocations=1;argv=$Arguments}
+    }finally{$p.Dispose()}
+}
+function Get-S54Failure($Session,$Job) {
+    if($Job.WorkExpired){return 'original_work_cutoff'}
+    if($null -ne $Session){
+        if($Session.Output.Failed){return 'bounded_output_transport'}
+        if($Session.Launcher.HasExited -and $Session.Launcher.ExitCode -ne 0){return 'launcher_nonzero'}
+        if($null -ne $Session.Harness -and $Session.Harness.HasExited -and $Session.Harness.ExitCode -ne 0){return 'harness_nonzero'}
+        if(@($Job.Children()).Count -gt 0 -and ($Session.Launcher.HasExited -or ($null -ne $Session.Harness -and $Session.Harness.HasExited))){return 'unexpected_survivor_or_eof'}
+    }
+    return 'validation_or_admission_failed'
+}
+function Close-S54Owned($Job,[int]$Budget=3000) {
+    $before=@();$after=@();$verified=$false;$forced=$false;$failed=$false
+    try {
+        $before=@($Job.Children());$forced=$before.Count -ne 0
+        if($forced){$Job.CleanupChildren([Math]::Min($Budget,$Job.RemainingWholeMilliseconds))}
+        $after=@($Job.Children());$verified=$after.Count -eq 0
+    }catch{$failed=$true;try{$after=@($Job.Children())}catch{}}
+    return @{before=$before;after=$after;verified=$verified;forced=$forced;failed=$failed}
+}
+function Get-S54KnownOutcomes($Session) {
+    $result=@{launcher=$null;harness=$null}
+    foreach($role in @('Launcher','Harness')){
+        $p=$Session[$role]
+        if($null -ne $p){
+            $exited=$p.HasExited;$waited=$false;$code=$null
+            if($exited){$waited=$p.WaitForExit(0);if($waited){$code=$p.ExitCode;$Session[$role+'Waited']=$true}}
+            $result[$role.ToLowerInvariant()]=@{pid=$p.Id;exited=$exited;waited=$waited;code=$code}
+        }
+    }
+    return $result
+}
+function Assert-S54PreStart($I,$Inputs,$Policy) {
+    Assert-S54Inventory $I $Policy
+    foreach($n in @('launch.json','capture.json','started.json','native-started.json','outer-result.json')){if(Test-Path -LiteralPath (Join-Path $I.identity.run $n)){throw 'S54 attempt already launched or reused.'}}
+    $a=Read-S54Json $Inputs.activation 16384;Assert-S54Wire $a 'Activation'
+    Assert-S54PinEqual $a.inventory $Inputs.inventory;Assert-S54Equal $a.deadline $I.deadline
+    Assert-S54SamePath $Inputs.activation.path $I.identity.activation;Assert-S54SamePath $a.run $I.identity.run
+    $now=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    if($a.schema -ne 1 -or $a.classification -cne 'root_s54_whole_activation' -or $a.case -cne $I.identity.case -or $a.attempt -cne $I.identity.attempt -or $a.run_id -cne $I.identity.run_id -or $a.selector -cne $I.identity.selector -or $a.implementation -cne $I.source.implementation -or $a.execution_mode -cne 'NativeToken' -or $a.retry -cne 'root_reallocation_only' -or $a.not_before_utc_ms -ge $a.not_after_utc_ms -or $now -lt $a.not_before_utc_ms -or $now -ge $a.not_after_utc_ms){throw 'S54 required external activation before launch.'}
+}
+function Invoke-S54Whole([string]$InventorySha256,[string]$ActivationSha256) {
+    # Do not allocate a claim, process, profile or Job on an absent input call.
+    if($InventorySha256 -cnotmatch '^[0-9a-f]{64}$' -or $ActivationSha256 -cnotmatch '^[0-9a-f]{64}$'){throw 'S54 explicit externally activated input hashes required.'}
+    $origin=[Environment]::TickCount64;$startUtc=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+    . (Join-Path $PSScriptRoot 'migration-s5-l1-deadline.ps1')
+    $job=[KilogramS5Deadline]::new(2375,2400,[long]$origin)
+    $session=$null;$launcher=$null;$claimed=$false;$passed=$false;$cleanup=$false;$failure=$null;$record=$null;$resultPin=$null
+    $beforeCleanup=@();$afterCleanup=@();$forced=$false;$locationPushed=$false
+    try {
+        [Diagnostics.Process]::GetCurrentProcess().PriorityClass=[Diagnostics.ProcessPriorityClass]::BelowNormal
+        Initialize-S54Output
+        Push-Location -LiteralPath (Split-Path -Parent $PSScriptRoot);$locationPushed=$true
+        $policy=New-S54Policy;$run=Join-Path $policy.Root ".tmp/migration-s54-integrated/$script:S54Attempt"
+        $inputs=@{inventory=(Get-S54Pin (Join-Path $run 'inputs.json') 2097152);activation=(Get-S54Pin (Join-Path $run 'activation.json') 16384)}
+        if($inputs.inventory.sha256 -cne $InventorySha256 -or $inputs.activation.sha256 -cne $ActivationSha256){throw 'S54 pre-start external input digest.'}
+        $i=Read-S54Json $inputs.inventory 2097152;Assert-S54PreStart $i $inputs $policy
+        Assert-S54SamePath ([Diagnostics.Process]::GetCurrentProcess().MainModule.FileName) $i.runtime.metadata_shell.path
+        $job.CheckWork()
+        $nonce=[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32)).ToLowerInvariant()
+        $started=@{version=1;classification='s54_exclusive_attempt';case=$i.identity.case;attempt=$i.identity.attempt;run_id=$i.identity.run_id;selector=$i.identity.selector;inventory=$inputs.inventory;activation=$inputs.activation;owner_pid=$PID;nonce=$nonce}
+        Assert-S54Wire $started 'Started';$startedPin=Write-S54New (Join-Path $run 'started.json') $started 16384;$claimed=$true
+        # C/L bind actual launcher PID. The child waits only for this original
+        # bounded materialization; it performs no setup before all four pins.
+        $launcher=New-S54Process $i.runtime.metadata_shell.path @('-NoProfile','-NonInteractive','-File',(Join-Path $PSScriptRoot 'run-cargo-tests-stable.ps1'),'-FrozenExecutionOnly','-S54InventorySha256',$inputs.inventory.sha256,'-S54ActivationSha256',$inputs.activation.sha256,'-S54LaunchSha256','pending','-S54CaptureSha256','pending')
+        $launcher.StartInfo.Environment['KILOGRAM_S54_WAIT_RUN']=$run
+        $launcher.StartInfo.Environment['KILOGRAM_S54_WAIT_OUTER_TICK']=[string]($origin+2400000)
+        $launcher.StartInfo.Environment['KILOGRAM_S54_WAIT_NONCE']=$nonce
+        if(-not $launcher.Start()){throw 'S54 launcher failed to start.'};$job.VerifyChild($launcher)
+        $harness=@($i.images|Where-Object role -CEQ 'stable-migration')[0].pin
+        $session=@{Job=$job;I=$i;Inputs=$inputs;Started=$started;StartedPin=$startedPin;Launcher=$launcher;Harness=$null;ExpectedHarness=$harness;Output=([KilogramS54Output]::new($launcher));OriginTick=$origin;ControllerTick=($origin+2350000);ClockSent=$false;JoinSent=$false;HandleVerified=$false;LauncherWaited=$false;HarnessWaited=$false;ClockRequest=$null;ClockReply=$null;NativeClaim=$null;Join=$null;Permit=$null}
+        $c=@{version=1;attempt=$i.identity.attempt;owner_pid=$PID;launcher_pid=$launcher.Id;harness_path=$harness.path;whole_utc_ms=($startUtc+2400000)}
+        Assert-S54Wire $c 'Capture';$inputs.capture=Write-S54New $i.identity.capture $c 4096
+        $l=@{schema=1;classification='s54_original_launch_binding';inventory=$inputs.inventory;activation=$inputs.activation;capture=$inputs.capture;case=$i.identity.case;attempt=$i.identity.attempt;run_id=$i.identity.run_id;run=$run;owner_pid=$PID;launcher_pid=$launcher.Id;start_tick_ms=$origin;start_utc_ms=$startUtc;controller_tick_ms=($origin+2350000);work_tick_ms=($origin+2375000);outer_tick_ms=($origin+2400000)}
+        Assert-S54Wire $l 'Launch';$inputs.launch=Write-S54New $i.identity.launch $l 16384
+        Wait-S54OwnedProcesses $session
+        $job.CheckWork()
+        $assertion=Get-S54Assertion $i $inputs
+        $layout=Assert-S54NativeOutput $session.Output.Stdout $session.Output.Stderr $i $inputs $assertion
+        $owner=Get-S54OwnerFiles $i;$null=Test-S54Admission $inputs $policy -State Owned -Owner $owner
+        foreach($p in @($startedPin,$session.NativeClaim,$session.ClockRequest,$session.ClockReply,$session.Join,$session.Permit)){$null=Read-S54Pin $p 16384}
+        $job.CheckWork();if(@($job.Children()).Count){throw 'S54 unexpected survivor after final validation.'}
+        $passed=$true
+        $record=@{classification='s54_outer_observations';case=$i.identity.case;attempt=$i.identity.attempt;run_id=$i.identity.run_id;selector=$i.identity.selector;inputs=$inputs;assertions=$assertion.Pin;native_layout=$layout;launcher=@{pid=$launcher.Id;waited=$session.LauncherWaited;code=$launcher.ExitCode};harness=@{pid=$session.Harness.Id;waited=$session.HarnessWaited;code=$session.Harness.ExitCode;image=$harness;actual_job_handle_verified=$session.HandleVerified};output=@{stdout_bytes=$session.Output.StdoutBytes.Length;stdout_sha256=(Get-S54Sha $session.Output.StdoutBytes);stderr_bytes=$session.Output.StderrBytes.Length;stderr_sha256=(Get-S54Sha $session.Output.StderrBytes);bounded_eof=$session.Output.Eof};origin_tick_ms=$origin;controller_tick_ms=($origin+2350000);work_tick_ms=($origin+2375000);outer_tick_ms=($origin+2400000)}
+    }catch{$failure=Get-S54Failure $session $job;$passed=$false}
+    finally {
+        $closed=Close-S54Owned $job 3000;$beforeCleanup=$closed.before;$afterCleanup=$closed.after;$forced=$closed.forced;$cleanup=$closed.verified
+        if($forced -or -not $cleanup){$passed=$false}
+        if($closed.failed){$failure='cleanup_failed'}elseif(-not $cleanup){$failure='cleanup_unresolved'}
+        if($null -eq $session -and $null -ne $launcher){
+            # A created known handle must also be contained if membership/setup
+            # verification failed before a full session could be installed.
+            try{if(-not $launcher.HasExited){$passed=$false;$forced=$true;$launcher.Kill()};while(-not $launcher.WaitForExit(0)){if($job.RemainingWholeMilliseconds -le 0){throw 'known launcher cleanup cutoff'};Start-Sleep -Milliseconds 5}}catch{$cleanup=$false;$passed=$false}
+        }
+        if($claimed){
+            try {
+                $job.CheckWhole()
+                if($passed){$job.CheckWork()}
+                if($null -eq $record){$record=@{classification='s54_outer_observations';case=$i.identity.case;attempt=$i.identity.attempt;run_id=$i.identity.run_id;selector=$i.identity.selector;inputs=$inputs;origin_tick_ms=$origin}}
+                if($null -ne $session){$record.process_outcomes=Get-S54KnownOutcomes $session;$record.bounded_output_eof=$session.Output.Eof;$record.output_transport_failed=$session.Output.Failed}
+                $record.outer_checks=if($passed -and $cleanup -and -not $forced){'passed'}else{'failed'}
+                $record.whole_attempt_verdict='not_established';$record.actual_desktop_return='pending'
+                $record.failure=$failure;$record.forced_cleanup=$forced;$record.cleanup_verified=$cleanup;$record.owned_before_cleanup=$beforeCleanup;$record.owned_after_cleanup=$afterCleanup
+                $record.work_expired=$job.WorkExpired
+                $record.checks_observed_tick_ms=[KilogramS5Deadline]::TickNow()
+                $resultPin=Write-S54New (Join-Path $i.identity.run 'outer-result.json') $record 524288
+                # A persistence overrun cannot acquire a successful actual tool
+                # return. The durable record never claims that future return.
+                if($passed){$job.CheckWork()}
+            }catch{$passed=$false}
+        }
+        if($null -ne $session){if($null -ne $session.Harness){$session.Harness.Dispose()}}
+        if($null -ne $launcher){$launcher.Dispose()}
+        if($cleanup){try{$job.Finish()}catch{$passed=$false}}
+        if($locationPushed){Pop-Location}
+    }
+    if(-not $passed -or $null -eq $resultPin){throw 'S54 outer checks failed; retained attempt is not reusable.'}
+    Write-Output ('S54_OUTER_RECORDED '+(ConvertTo-Json -InputObject $resultPin -Compress))
+}
+function Assert-S54PublishedSources($Policy) {
+    $paths=Get-S54SourcePaths $Policy.Root
+    $tracked=@(& git -C $Policy.Root ls-files);if($LASTEXITCODE -ne 0){throw 'S54 published source enumeration.'}
+    $set=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach($name in $tracked){$null=$set.Add($name.Replace('\','/'))}
+    foreach($path in $paths){$rel=[IO.Path]::GetRelativePath($Policy.Root,$path).Replace('\','/');if(-not $set.Contains($rel)){throw 'S54 preparation requires published source closure.'}}
+    $dirty=@(& git -C $Policy.Root diff --name-only HEAD);if($LASTEXITCODE -ne 0){throw 'S54 published source diff.'}
+    foreach($name in $dirty){if(Test-S54Relevant $name){throw 'S54 preparation refuses unpublished relevant changes.'}}
+    return ,$paths
+}
+function Invoke-S54Preparation([string]$RunId) {
+    if($RunId -cnotmatch '^[0-9a-f]{64}$' -or $RunId -ceq ('0'*64)){throw 'S54 root preparation identity.'}
+    Push-Location -LiteralPath (Split-Path -Parent $PSScriptRoot)
+    try {
+    $policy=New-S54Policy
+    Assert-S54SamePath ([Diagnostics.Process]::GetCurrentProcess().MainModule.FileName) @($policy.Resolutions|Where-Object name -CEQ 'pwsh.exe')[0].path
+    # No normal/current-build hash loop: source must already be published, and
+    # final production preparation is a separately dispatched operator action.
+    $sourcePaths=Assert-S54PublishedSources $policy
+    $head=(& git -C $policy.Root rev-parse HEAD);if($LASTEXITCODE -ne 0 -or $head -cnotmatch '^[0-9a-f]{40}$'){throw 'S54 preparation source head.'}
+    $run=Join-Path $policy.Root ".tmp/migration-s54-integrated/$script:S54Attempt"
+    $public=Join-Path $policy.Root ".tmp/migration-s54-public-evidence/$script:S54Attempt"
+    foreach($path in @($run,$public)){$null=Get-S54Path $path -AllowMissing;if(Test-Path -LiteralPath $path){throw 'S54 preparation does not retry/repair an existing attempt.'}}
+    [Diagnostics.Process]::GetCurrentProcess().PriorityClass=[Diagnostics.ProcessPriorityClass]::BelowNormal
+    $env:CARGO_NET_OFFLINE='true'
+    $null=New-Item -ItemType Directory -Path $run -ErrorAction Stop
+    $null=New-Item -ItemType Directory -Path $public -ErrorAction Stop
+    $embeddedBefore=Get-S54EmbeddedSnapshot $policy.Root
+    $null=Write-S54New (Join-Path $public 'embedded-before.json') @{classification='exact public compiler inputs before both preparation builds';inputs=$embeddedBefore} 65536
+    $before=Get-KilogramFrozenBuildInputs -Workspace $policy.Root -Profile verification-scale -Target x86_64-pc-windows-msvc -Package @('kilogram-cli','kilogram-transport-iroh') -CargoFeatures @()
+    $normalArgs=@('build','--package','kilogram-cli','--bin','kilogram-cli','--profile','verification-scale','--target','x86_64-pc-windows-msvc','--jobs','2','--offline','--locked','--message-format=json-render-diagnostics')
+    $raw=@(& cargo @normalArgs);if($LASTEXITCODE -ne 0){throw 'S54 preparation normal compiler failed.'}
+    $after=Get-KilogramFrozenBuildInputs -Workspace $policy.Root -Profile verification-scale -Target x86_64-pc-windows-msvc -Package @('kilogram-cli','kilogram-transport-iroh') -CargoFeatures @()
+    Assert-KilogramFrozenInputs $before $after
+    $units=@(Get-KilogramCompilerUnits -Lines $raw -Workspace $policy.Root -Target x86_64-pc-windows-msvc -Profile verification-scale -PackageNames $before.package_names)
+    $normal=@($units|Where-Object {$_.package -ceq 'kilogram-cli' -and $_.target -ceq 'kilogram-cli' -and (@($_.kind)-join ',') -ceq 'bin' -and -not $_.profile.test -and $_.executable})
+    if($normal.Count -ne 1){throw 'S54 one actual non-test normal compiler image.'}
+    $fixed=Join-Path $policy.Root $script:S54Images[1].path
+    $null=[IO.Directory]::CreateDirectory((Split-Path -Parent $fixed));$null=Get-S54Path $fixed -AllowMissing
+    Copy-Item -LiteralPath $normal[0].executable -Destination $fixed -Force
+    $pin=Get-S54Pin $fixed 134217728
+    $normalCapture=@{classification='nonexecuting-normal-cli-compiler-provenance';profile='verification-scale';target='x86_64-pc-windows-msvc';expected_manifest_sha256=$null;build_inputs_before=$before;build_inputs_after=$after;units=$units;raw_compiler_artifact_json=@($raw|Where-Object {$_ -match '^\s*\{"reason":"compiler-artifact"'});stable_artifacts=@(@{package='kilogram-cli';kind='bin';target='kilogram-cli';path=$pin.path;bytes=$pin.bytes;sha256=$pin.sha256;profile='verification-scale'});frozen_guard_verified=$false}
+    $normalPin=Write-S54New (Join-Path $public 'normal.json') $normalCapture 8388608
+    & (Join-Path $PSScriptRoot 'run-cargo-tests-stable.ps1') -Package @('kilogram-cli','kilogram-transport-iroh') -Profile verification-scale -CargoJobs 2 -SkipCacheStatus -CargoTarget x86_64-pc-windows-msvc -StableArtifactsDirectory (Join-Path $policy.Root 'target/verification-scale/deps') -BuildEvidencePath (Join-Path $public 'tests.json')
+    if($LASTEXITCODE -ne 0){throw 'S54 preparation stable compilation failed.'}
+    $testsPin=Get-S54Pin (Join-Path $public 'tests.json') 8388608;$tests=Read-S54Json $testsPin 8388608
+    Assert-KilogramFrozenInputs $before $tests.build_inputs_before;Assert-KilogramFrozenInputs $before $tests.build_inputs_after
+    $embeddedAfter=Get-S54EmbeddedSnapshot $policy.Root
+    for($n=0;$n -lt $embeddedBefore.Count;$n++){Assert-S54PinEqual $embeddedBefore[$n] $embeddedAfter[$n]}
+    $depInfo=Get-S54DepInfoPins $tests $false
+    $source=@($sourcePaths|ForEach-Object {Get-S54Pin $_ 8388608})
+    Assert-S54EmbeddedDependencies $policy.Root $depInfo $source
+    $null=Assert-S54PublishedSources $policy
+    if((& git -C $policy.Root rev-parse HEAD) -cne $head){throw 'S54 head changed during preparation.'}
+    $frozen=@{format_version=1;classification='frozen-scale-test-artifacts';profile='verification-scale';target='x86_64-pc-windows-msvc';stable_directory=(Join-Path $policy.Root 'target/verification-scale/deps');build_inputs=$tests.build_inputs_before;units_identity=@(Get-KilogramFrozenUnitIdentity $tests.units);artifacts=$tests.stable_artifacts}
+    $frozenPin=Write-S54New (Join-Path $public 'frozen.json') $frozen 4194304
+    $images=@($script:S54Images|ForEach-Object {@{role=$_.role;pin=(Get-S54Pin (Join-Path $policy.Root $_.path) 134217728)}})
+    $harness=@($images|Where-Object role -CEQ 'stable-migration')[0].pin
+    $list=@(& $harness.path '--list' '--format' 'terse');if($LASTEXITCODE -ne 0 -or @($list|Where-Object {$_ -ceq ($script:S54Selector+': test')}).Count -ne 1){throw 'S54 preparation exact named selector cardinality.'}
+    $listPath=Join-Path $public 'list.txt';$listRaw=[Text.UTF8Encoding]::new($false).GetBytes(($list -join "`n")+"`n")
+    $file=[IO.File]::Open($listPath,[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read);try{$file.Write($listRaw,0,$listRaw.Length);$file.Flush($true)}finally{$file.Dispose()}
+    $isolated=Write-S54New (Join-Path $public 'isolated.json') @{format_version=1;tests=@(@{package='kilogram-cli';kind='test';target='migration_s5_process';name=$script:S54Selector})} 65536
+    $workers=if($env:TOKIO_WORKER_THREADS){[long]::Parse($env:TOKIO_WORKER_THREADS)}else{[Environment]::ProcessorCount}
+    $resolved=@($policy.Resolutions);$meta=@($resolved|Where-Object name -CEQ 'pwsh.exe')[0].path;$memory=@($resolved|Where-Object name -CEQ 'powershell.exe')[0].path
+    $i=@{schema=1;classification='bound_s54_whole_inventory';identity=@{case=$script:S54Case;attempt=$script:S54Attempt;selector=$script:S54Selector;run_id=$RunId;workspace=$policy.Root;run=$run;output=(Join-Path $run 'assertions.json');activation=(Join-Path $run 'activation.json');launch=(Join-Path $run 'launch.json');capture=(Join-Path $run 'capture.json')};deadline=@{controller=2350;work=2375;outer=2400;origin='owned_launch';clock='windows_tick_count64'};source=@{s53_product='1f404b54ebce47ae3b52eaeb6855e30f3b8f3309';closure_publication='20418e41e4c486158fdc30b0c9f857750432e25e';implementation=$head;observed_head=$head;files=$source};compiler=@{normal=$normalPin;tests=$testsPin;frozen_manifest=$frozenPin;normal_argv=$normalArgs;tests_argv=@('test','--package','kilogram-cli','--package','kilogram-transport-iroh','--profile','verification-scale','--target','x86_64-pc-windows-msvc','--jobs','2','--offline','--locked','--no-run','--message-format=json-render-diagnostics');embedded=@{before=$embeddedBefore;after=$embeddedAfter;dep_info=$depInfo}};images=$images;runtime=@{metadata_shell=(Get-S54Pin $meta 134217728);memory_shell=(Get-S54Pin $memory 134217728);resolutions=$resolved;environment=@(Get-KilogramFrozenEnvironment -Entries @(Get-ChildItem Env:));configs=$before.configs;workers=@{present=($null -ne $env:TOKIO_WORKER_THREADS);value=$env:TOKIO_WORKER_THREADS;available=[Environment]::ProcessorCount;effective=$workers};cargo_jobs=2;priority='BelowNormal';offline=$true;locked=$true;skip_cache=$true;architecture='x64'};selection=@{isolated=$isolated;list=(Get-S54Pin $listPath 1048576);harness_ref='stable-migration';named=1;native_markers=1;wrapper_markers=1;aggregates=0}}
+    $raw=New-S54InventoryBytes $i $policy
+    $file=[IO.File]::Open((Join-Path $run 'inputs.json'),[IO.FileMode]::CreateNew,[IO.FileAccess]::Write,[IO.FileShare]::Read)
+    try{$file.Write($raw,0,$raw.Length);$file.Flush($true)}finally{$file.Dispose()}
+    Write-Output ('S54_PREPARED '+(ConvertTo-Json -InputObject (Get-S54Pin (Join-Path $run 'inputs.json') 2097152) -Compress))
+    } finally {Pop-Location}
+}

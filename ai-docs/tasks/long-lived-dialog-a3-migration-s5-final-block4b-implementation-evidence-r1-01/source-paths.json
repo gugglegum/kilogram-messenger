@@ -1,0 +1,21 @@
+[
+  "apps/kilogram-cli/tests/support/attempt_result.rs",
+  "apps/kilogram-cli/tests/support/migration_s53_deadline.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_admission.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_admission_files.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_admission_fixture.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_admission_schema.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_admission_tests.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_admission_runtime.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_capture_admission.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_p5.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_outer_fixture.ps1",
+  "scripts/invoke-migration-s54-whole.ps1",
+  "scripts/migration-s5-l1-deadline.ps1",
+  "scripts/run-cargo-tests-stable.ps1",
+  "scripts/test-migration-s54-admission.ps1",
+  "scripts/migration-s54-outer.ps1",
+  "scripts/test-migration-s54-whole.ps1",
+  "scripts/migration-s54-preparation.ps1",
+  "scripts/test-migration-s54-repair.ps1"
+]

@@ -1,0 +1,35 @@
+{
+  "classification": "Executor binding to actual completed native tool returns for focused checks; not a production attempt",
+  "calls": [
+    {
+      "step": "fmt-09",
+      "session": 40716,
+      "final_chunk": "b83acf",
+      "actual_tool_exit": 0
+    },
+    {
+      "step": "clippy-08",
+      "session": null,
+      "final_chunk": "7b8fae",
+      "actual_tool_exit": 0
+    },
+    {
+      "step": "compile-06",
+      "session": 28689,
+      "final_chunk": "de0750",
+      "actual_tool_exit": 0
+    },
+    {
+      "step": "pure-06",
+      "session": 96604,
+      "final_chunk": "48eaad",
+      "actual_tool_exit": 0
+    },
+    {
+      "step": "powershell-04",
+      "session": 96242,
+      "final_chunk": "85460e",
+      "actual_tool_exit": 0
+    }
+  ]
+}

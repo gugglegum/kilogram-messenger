@@ -1,0 +1,30 @@
+E:\AI-Projects\kilogram-p2p-messenger\target\x86_64-pc-windows-msvc\verification-scale\deps\kilogram_cli-82926ce18c79ae28.d: apps\kilogram-cli\src\main.rs apps\kilogram-cli\src\ordered2_cli.rs apps\kilogram-cli\src\ordered3_cli.rs apps\kilogram-cli\src\ordered_cli.rs apps\kilogram-cli\src\ordered_ingress.rs apps\kilogram-cli\src\ordered_ingress_tests.rs apps\kilogram-cli\src\publication_conflict_ceremony.rs apps\kilogram-cli\src\recovery_discovery.rs apps\kilogram-cli\src\recovery_link.rs apps\kilogram-cli\src\recovery_plan.rs apps\kilogram-cli\src\recovery_platform.rs apps\kilogram-cli\src\recovery_qr.rs apps\kilogram-cli\src\recovery_scheduler.rs apps\kilogram-cli\src\runtime_endpoint_announcement.rs apps\kilogram-cli\src\runtime_mailbox.rs apps\kilogram-cli\src\runtime_own_device_automation.rs apps\kilogram-cli\src\runtime_own_device_discovery.rs apps\kilogram-cli\src\runtime_own_device_roster.rs apps\kilogram-cli\src\runtime_publication.rs apps\kilogram-cli\src\runtime_publication_conflict.rs apps\kilogram-cli\src\runtime_publication_resolution.rs apps\kilogram-cli\src\runtime_queue.rs apps\kilogram-cli\src\runtime_ticket_automation.rs apps\kilogram-cli\src\runtime_ticket_checkpoint.rs
+
+E:\AI-Projects\kilogram-p2p-messenger\target\x86_64-pc-windows-msvc\verification-scale\deps\kilogram_cli-82926ce18c79ae28.exe: apps\kilogram-cli\src\main.rs apps\kilogram-cli\src\ordered2_cli.rs apps\kilogram-cli\src\ordered3_cli.rs apps\kilogram-cli\src\ordered_cli.rs apps\kilogram-cli\src\ordered_ingress.rs apps\kilogram-cli\src\ordered_ingress_tests.rs apps\kilogram-cli\src\publication_conflict_ceremony.rs apps\kilogram-cli\src\recovery_discovery.rs apps\kilogram-cli\src\recovery_link.rs apps\kilogram-cli\src\recovery_plan.rs apps\kilogram-cli\src\recovery_platform.rs apps\kilogram-cli\src\recovery_qr.rs apps\kilogram-cli\src\recovery_scheduler.rs apps\kilogram-cli\src\runtime_endpoint_announcement.rs apps\kilogram-cli\src\runtime_mailbox.rs apps\kilogram-cli\src\runtime_own_device_automation.rs apps\kilogram-cli\src\runtime_own_device_discovery.rs apps\kilogram-cli\src\runtime_own_device_roster.rs apps\kilogram-cli\src\runtime_publication.rs apps\kilogram-cli\src\runtime_publication_conflict.rs apps\kilogram-cli\src\runtime_publication_resolution.rs apps\kilogram-cli\src\runtime_queue.rs apps\kilogram-cli\src\runtime_ticket_automation.rs apps\kilogram-cli\src\runtime_ticket_checkpoint.rs
+
+apps\kilogram-cli\src\main.rs:
+apps\kilogram-cli\src\ordered2_cli.rs:
+apps\kilogram-cli\src\ordered3_cli.rs:
+apps\kilogram-cli\src\ordered_cli.rs:
+apps\kilogram-cli\src\ordered_ingress.rs:
+apps\kilogram-cli\src\ordered_ingress_tests.rs:
+apps\kilogram-cli\src\publication_conflict_ceremony.rs:
+apps\kilogram-cli\src\recovery_discovery.rs:
+apps\kilogram-cli\src\recovery_link.rs:
+apps\kilogram-cli\src\recovery_plan.rs:
+apps\kilogram-cli\src\recovery_platform.rs:
+apps\kilogram-cli\src\recovery_qr.rs:
+apps\kilogram-cli\src\recovery_scheduler.rs:
+apps\kilogram-cli\src\runtime_endpoint_announcement.rs:
+apps\kilogram-cli\src\runtime_mailbox.rs:
+apps\kilogram-cli\src\runtime_own_device_automation.rs:
+apps\kilogram-cli\src\runtime_own_device_discovery.rs:
+apps\kilogram-cli\src\runtime_own_device_roster.rs:
+apps\kilogram-cli\src\runtime_publication.rs:
+apps\kilogram-cli\src\runtime_publication_conflict.rs:
+apps\kilogram-cli\src\runtime_publication_resolution.rs:
+apps\kilogram-cli\src\runtime_queue.rs:
+apps\kilogram-cli\src\runtime_ticket_automation.rs:
+apps\kilogram-cli\src\runtime_ticket_checkpoint.rs:
+
+# env-dep:CARGO_PKG_VERSION=0.1.0

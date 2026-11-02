@@ -1,0 +1,3 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2

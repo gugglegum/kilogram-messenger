@@ -1,0 +1,70 @@
+{
+  "after": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_capture_fixture.ps1",
+      "bytes": 2014,
+      "sha256": "33ffc127bf4b3bb0ed2fb512865e47b3f8e4c06478ed3e4fa5bf2b98a83dbe67"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_memory_fixture.ps1",
+      "bytes": 230,
+      "sha256": "295d607e6689338502ada80d5e98efd291a01cfaea7a4b32c5569e0fbe18bd4e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\P2-s53-exhausted-M1.candidate.json",
+      "bytes": 23116,
+      "sha256": "788076595dbebdfc7157731609d4a1c1ce613e78821c4d866bded41f16e50c77"
+    }
+  ],
+  "before": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_capture_fixture.ps1",
+      "bytes": 2014,
+      "sha256": "33ffc127bf4b3bb0ed2fb512865e47b3f8e4c06478ed3e4fa5bf2b98a83dbe67"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_memory_fixture.ps1",
+      "bytes": 230,
+      "sha256": "295d607e6689338502ada80d5e98efd291a01cfaea7a4b32c5569e0fbe18bd4e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\P2-s53-exhausted-M1.candidate.json",
+      "bytes": 23116,
+      "sha256": "788076595dbebdfc7157731609d4a1c1ce613e78821c4d866bded41f16e50c77"
+    }
+  ],
+  "normal_cli_built": false,
+  "dep_info": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\x86_64-pc-windows-msvc\\verification-scale\\deps\\kilogram_cli-82926ce18c79ae28.d",
+      "bytes": 3565,
+      "sha256": "e420352fc3f7434ad519ddfacecda4ac77582e54ae308c2fbcabd7b84866c9b4"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\x86_64-pc-windows-msvc\\verification-scale\\deps\\kilogram_cli-6a43a4ff22adccd3.d",
+      "bytes": 13253,
+      "sha256": "c165664a63d656d2948c60987e8d295694aea9bd8ed85314b9d5d34685812583"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\x86_64-pc-windows-msvc\\verification-scale\\deps\\migration_s5_process-a413b7866385f42c.d",
+      "bytes": 23395,
+      "sha256": "63e99ff853094c7faf265149d062d22a9a2fd30e40bc4574c38184b0157fa1f1"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\x86_64-pc-windows-msvc\\verification-scale\\deps\\runtime2_process-7e801b4093dc31df.d",
+      "bytes": 1635,
+      "sha256": "0a33dc513f6339d30458eb472fa8798e8a0d173124ceee33f7904aee9557c4d4"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\x86_64-pc-windows-msvc\\verification-scale\\deps\\kilogram_transport_iroh-96fe75b8c18397b0.d",
+      "bytes": 684,
+      "sha256": "86438b4779a884c6ed6d09fb0fea0b0415662095e5c4f6287bc434634c5b5283"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\x86_64-pc-windows-msvc\\verification-scale\\deps\\local_relay_transport-97b8d8ce272d54cb.d",
+      "bytes": 459,
+      "sha256": "1911b4d9741e988253da00b2b816d5029af6b166d0d40fd0498913171aa83360"
+    }
+  ],
+  "classification": "public exact embedded inputs before/after frozen-run build and six selected rustc dep-info pins"
+}

@@ -33,6 +33,21 @@ fn read<T: serde::de::DeserializeOwned>(path: &Path) -> Result<T> {
     ensure!(raw.len() <= 4096, "capture admission cap");
     serde_json::from_slice(&raw).map_err(|_| anyhow::anyhow!("capture admission schema"))
 }
+fn containment(
+    utc_end: u64,
+    utc_now: u128,
+    now: Instant,
+    original: Option<Instant>,
+) -> Result<Instant> {
+    if let Some(original) = original {
+        ensure!(now < original, "expired original capture containment");
+        return Ok(original);
+    }
+    ensure!(u128::from(utc_end) > utc_now, "expired capture containment");
+    let remaining = u64::try_from(u128::from(utc_end) - utc_now)?;
+    now.checked_add(Duration::from_millis(remaining))
+        .context("legacy capture containment overflow")
+}
 impl Admission {
     pub(super) fn load(until: Instant) -> Result<(Self, Instant)> {
         let path = std::env::var_os("KILOGRAM_S54_CAPTURE_ADMISSION")
@@ -60,12 +75,14 @@ impl Admission {
             "capture admission binding"
         );
         let now = SystemTime::now().duration_since(UNIX_EPOCH)?.as_millis();
-        ensure!(
-            u128::from(admission.whole_utc_ms) > now,
-            "expired capture containment"
-        );
-        let remaining = u64::try_from(u128::from(admission.whole_utc_ms) - now)?;
-        let whole = Instant::now() + Duration::from_millis(remaining);
+        // S54's verified monotonic bridge is authoritative; legacy callers
+        // retain their original UTC-derived containment without this opt-in.
+        let whole = containment(
+            admission.whole_utc_ms,
+            now,
+            Instant::now(),
+            s53_deadline::original_containment(),
+        )?;
         let until = until.min(whole);
         let nonce = format!("{}-{now}", std::process::id());
         let parent = path.parent().context("capture admission parent")?;
@@ -79,10 +96,16 @@ impl Admission {
             membership_verified: false,
         };
         let raw = serde_json::to_vec(&permit)?;
-        let mut file = std::fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(request)?;
+        let mut options = std::fs::OpenOptions::new();
+        options.write(true).create_new(true);
+        #[cfg(windows)]
+        if s53_deadline::original_containment().is_some() {
+            use std::os::windows::fs::OpenOptionsExt;
+            // Only original S54: the owner must never read a partial join.
+            // Historical callers retain their existing sharing behavior.
+            options.share_mode(0);
+        }
+        let mut file = options.open(request)?;
         use std::io::Write;
         file.write_all(&raw)?;
         drop(file);
@@ -106,5 +129,35 @@ impl Admission {
             }
             std::thread::sleep(Duration::from_millis(10));
         }
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn s54_original_capture_clamp_ignores_wall_jumps_without_resetting_legacy() -> Result<()> {
+        let now = Instant::now();
+        let original = now + Duration::from_secs(30);
+        ensure!(
+            containment(100000, 1, now, Some(original))? == original,
+            "backward wall clock cannot extend original"
+        );
+        ensure!(
+            containment(1, u128::MAX, now, Some(original))? == original,
+            "forward wall clock cannot replace original"
+        );
+        ensure!(
+            containment(100000, 1, now, Some(now)).is_err(),
+            "expired monotonic containment cannot revive"
+        );
+        ensure!(
+            containment(2000, 1000, now, None)? == now + Duration::from_secs(1),
+            "legacy path remains relative to its original API"
+        );
+        ensure!(
+            containment(1000, 2000, now, None).is_err(),
+            "legacy UTC expiry still refuses"
+        );
+        Ok(())
     }
 }

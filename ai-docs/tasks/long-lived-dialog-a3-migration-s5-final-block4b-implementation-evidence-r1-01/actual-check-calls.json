@@ -1,0 +1,35 @@
+{
+  "classification": "Actual completed native tool returns for R1 focused checks; not production authority",
+  "calls": [
+    {
+      "step": "fmt-02",
+      "session": 42307,
+      "final_chunk": "559c66",
+      "actual_tool_exit": 0
+    },
+    {
+      "step": "clippy-02",
+      "session": 58302,
+      "final_chunk": "cd6aad",
+      "actual_tool_exit": 0
+    },
+    {
+      "step": "compile-02",
+      "session": 71173,
+      "final_chunk": "4aea30",
+      "actual_tool_exit": 0
+    },
+    {
+      "step": "pure-02",
+      "session": 35441,
+      "final_chunk": "cbca56",
+      "actual_tool_exit": 0
+    },
+    {
+      "step": "powershell-01",
+      "session": 39645,
+      "final_chunk": "dd5762",
+      "actual_tool_exit": 0
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+    Finished `verification-scale` profile [optimized + debuginfo] target(s) in 0.97s
+Error: owned public export path
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:344
+Line |
+ 344 |  :             throw "Isolated stable test failed with exit code ${testE :
+     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Isolated stable test failed with exit code 101:
+     | live_l1::handoff::final_p5::admission::tests::s54_admission_valid_public_binding_has_real_blake3_but_no_runtime_capability

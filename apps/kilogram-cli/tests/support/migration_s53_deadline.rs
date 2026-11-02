@@ -5,6 +5,7 @@ use std::{cell::RefCell, process::Output};
 struct Scope {
     origin: Instant,
     deadline: Instant,
+    containment: Option<Instant>,
     local: Option<Instant>,
     run: PathBuf,
     next: u64,
@@ -19,6 +20,34 @@ impl Guard {
             *scope = Some(Scope {
                 origin,
                 deadline: origin + Duration::from_secs(seconds),
+                containment: None,
+                local: None,
+                run: run.into(),
+                next: 0,
+            });
+            Ok(Self)
+        })
+    }
+    /// S54 alone: a conservative original origin, never reply/startup time.
+    /// Controller and observer stop at2350; capture cleanup cannot exceed2400.
+    pub(super) fn enter_original(run: &Path, origin: Instant) -> Result<Self> {
+        let now = Instant::now();
+        let deadline = origin
+            .checked_add(Duration::from_secs(2350))
+            .context("original controller overflow")?;
+        let whole = origin
+            .checked_add(Duration::from_secs(2400))
+            .context("original outer overflow")?;
+        ensure!(
+            origin <= now && now < deadline,
+            "expired/future original controller origin"
+        );
+        SCOPE.with_borrow_mut(|scope| {
+            ensure!(scope.is_none(), "one absolute managed controller scope");
+            *scope = Some(Scope {
+                origin,
+                deadline,
+                containment: Some(whole),
                 local: None,
                 run: run.into(),
                 next: 0,
@@ -84,12 +113,15 @@ pub(super) fn capture_bound() -> Result<CaptureBound> {
         s.next += 1;
         Ok(CaptureBound {
             work: effective(s),
-            whole: s.deadline,
+            whole: s.containment.unwrap_or(s.deadline),
             out: s.run.join(format!("command-{sequence:04}.stdout.log")),
             err: s.run.join(format!("command-{sequence:04}.stderr.log")),
             sequence,
         })
     })
+}
+pub(super) fn original_containment() -> Option<Instant> {
+    SCOPE.with_borrow(|scope| scope.as_ref().and_then(|s| s.containment))
 }
 pub(super) fn capture_deadline() -> Result<Instant> {
     check()?;
@@ -219,5 +251,44 @@ fn b_start_deadline_expired_bound_cannot_spawn_or_revive() -> Result<()> {
     drop(outer);
     assert!(check().is_err());
     assert!(Phase::until(Instant::now() + Duration::from_secs(60)).is_err());
+    Ok(())
+}
+#[test]
+fn s54_original_scope_charges_startup_and_preserves_observer_and_containment_origins() -> Result<()>
+{
+    let origin = Instant::now() - Duration::from_secs(12);
+    let _guard = Guard::enter_original(Path::new("unused-original-clock-public-test"), origin)?;
+    let context = observer_context()?;
+    ensure!(
+        context.origin == origin && context.whole == origin + Duration::from_secs(2350),
+        "same original observer/controller bound"
+    );
+    let capture = capture_bound()?;
+    ensure!(
+        capture.work == context.whole && capture.whole == origin + Duration::from_secs(2400),
+        "capture cleanup stays inside original outer bound"
+    );
+    ensure!(
+        original_containment() == Some(capture.whole),
+        "explicit S54-only containment"
+    );
+    Ok(())
+}
+#[test]
+fn s54_original_scope_expiry_does_not_create_a_new_budget() -> Result<()> {
+    let now = Instant::now();
+    ensure!(
+        Guard::enter_original(Path::new("unused"), now + Duration::from_secs(1)).is_err(),
+        "no future origin"
+    );
+    ensure!(
+        Guard::enter_original(Path::new("unused"), now - Duration::from_secs(2351)).is_err(),
+        "late startup cannot revive controller"
+    );
+    let _legacy = Guard::enter(Path::new("unused"), 60)?;
+    ensure!(
+        original_containment().is_none(),
+        "legacy constructor behavior remains separate"
+    );
     Ok(())
 }

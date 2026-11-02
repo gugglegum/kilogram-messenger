@@ -1,0 +1,68 @@
+[
+  {
+    "path": "apps/kilogram-cli/tests/support/migration_s54_p5.rs",
+    "bytes": 5227,
+    "sha256": "cfab08b1390a68eeb333707b43ea85900f13a9a43bf13c59aabcfe1882140ed5",
+    "classification": "published normalized Git bytes"
+  },
+  {
+    "path": "apps/kilogram-cli/tests/support/migration_s54_admission.rs",
+    "bytes": 22974,
+    "sha256": "019c2a0f4cea653e8efa50f0cbb7879c254c64a6d4d042112ea5ae0388df2597",
+    "classification": "published normalized Git bytes"
+  },
+  {
+    "path": "apps/kilogram-cli/tests/support/migration_s54_admission_schema.rs",
+    "bytes": 6662,
+    "sha256": "ab9c0eb75cc6ad2acfe92200d601b47bbf46f37b6bb95874006d19ac5e282d5a",
+    "classification": "published normalized Git bytes"
+  },
+  {
+    "path": "apps/kilogram-cli/tests/support/migration_s54_admission_files.rs",
+    "bytes": 11935,
+    "sha256": "5d3e051c15ce71f918ec3f247b7855849a8322e99b57ee8901b3ca56440d48f2",
+    "classification": "published normalized Git bytes"
+  },
+  {
+    "path": "apps/kilogram-cli/tests/support/migration_s54_admission_tests.rs",
+    "bytes": 20902,
+    "sha256": "856cec0dc234a680d0b04e0cbd6a01139fd8094d7862f81d518c90f69cc419f7",
+    "classification": "published normalized Git bytes"
+  },
+  {
+    "path": "apps/kilogram-cli/tests/support/migration_s53_deadline.rs",
+    "bytes": 7481,
+    "sha256": "fb4462613840c9b299e0a495b06afdad6595640c790be1cca46c0a60bb6c711a",
+    "classification": "published normalized Git bytes"
+  },
+  {
+    "path": "apps/kilogram-cli/tests/support/migration_s54_capture_admission.rs",
+    "bytes": 4513,
+    "sha256": "9a9e9d07ece0d16c0d9d442997eab7b51afae9571c4ec7f5d65f4dc77175bc09",
+    "classification": "published normalized Git bytes"
+  },
+  {
+    "path": "scripts/migration-s5-l1-deadline.ps1",
+    "bytes": 6038,
+    "sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45",
+    "classification": "published normalized Git bytes"
+  },
+  {
+    "path": "scripts/run-cargo-tests-stable.ps1",
+    "bytes": 14816,
+    "sha256": "c16df34557a668821e5aca0b67a1dadebcf6de2cfff5178958bff621c3e3fbe0",
+    "classification": "published normalized Git bytes"
+  },
+  {
+    "path": "scripts/invoke-migration-s54-whole.ps1",
+    "bytes": 42774,
+    "sha256": "2679f523451505e03e0da3fb536eb7981f1135e037a32fd3d4d7beba2a7d0621",
+    "classification": "published normalized Git bytes"
+  },
+  {
+    "path": "scripts/test-migration-s54-admission.ps1",
+    "bytes": 15055,
+    "sha256": "3e0bcedd552b61c419bb7d459552e099a698cac1f1330c8aa7037d280f93fa5d",
+    "classification": "published normalized Git bytes"
+  }
+]

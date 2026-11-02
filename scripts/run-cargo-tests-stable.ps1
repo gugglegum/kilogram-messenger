@@ -18,11 +18,37 @@ param(
     [string]$ExpectedArtifactsSha256,
     [string]$BuildEvidencePath,
     [string]$CargoTarget,
-    [string]$StableArtifactsDirectory
+    [string]$StableArtifactsDirectory,
+    [switch]$FrozenExecutionOnly,
+    [string]$S54InventorySha256,
+    [string]$S54ActivationSha256,
+    [string]$S54LaunchSha256,
+    [string]$S54CaptureSha256,
+    [object]$S54PreparationGuard
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+
+# This opt-in returns before every historical compiler/resource/list/cache lane.
+if ($PSBoundParameters.ContainsKey('FrozenExecutionOnly') -or
+    @($PSBoundParameters.Keys | Where-Object { $_ -like 'S54*' -and $_ -cne 'S54PreparationGuard' }).Count) {
+    $frozenArguments=@{};foreach($key in $PSBoundParameters.Keys){$frozenArguments[$key]=$PSBoundParameters[$key]}
+    . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1')
+    Invoke-S54FrozenExecution $frozenArguments
+    return
+}
+if ($PSBoundParameters.ContainsKey('S54PreparationGuard')) {
+    . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1')
+    Assert-S54ImageGuard $S54PreparationGuard (Split-Path -Parent $PSScriptRoot)
+    if ($Run -or $NormalProcessPriority -or $Profile -cne 'verification-scale' -or
+        $CargoJobs -ne 2 -or $CargoTarget -cne 'x86_64-pc-windows-msvc' -or
+        -not $SkipCacheStatus -or $CargoFeatures.Count -or $Filter -or $SkipTest.Count -or
+        $IsolatedTestsFile -or $ExpectedArtifactsManifest -or $ExpectedArtifactsSha256 -or
+        -not $BuildEvidencePath -or $StableArtifactsDirectory -cne (Join-Path (Split-Path -Parent $PSScriptRoot) 'target/verification-scale/deps')) { throw 'S54 guard requires the exact preparation compile-only lane.' }
+    Assert-S54Equal $Package @('kilogram-cli','kilogram-transport-iroh')
+    if (@($S54PreparationGuard.Entries | Where-Object Staged).Count -ne 1 -or -not $S54PreparationGuard.Entries[0].Staged) { throw 'S54 guarded normal image must precede stable staging.' }
+}
 
 function Complete-CacheStatus {
     if ($SkipCacheStatus) {
@@ -158,7 +184,11 @@ foreach ($entry in $artifactsByExecutable.GetEnumerator()) {
         $stablePath = Join-Path $StableArtifactsDirectory "$stableStem.exe"
     }
 
-    Copy-Item -LiteralPath $sourcePath -Destination $stablePath -Force
+    if ($null -ne $S54PreparationGuard) {
+        $null=Copy-S54PreparedImage $S54PreparationGuard $sourcePath $stablePath
+    } else {
+        Copy-Item -LiteralPath $sourcePath -Destination $stablePath -Force
+    }
     $stableArtifacts += [PSCustomObject]@{
         Package = $packageName
         Kind = $targetKind
@@ -168,6 +198,7 @@ foreach ($entry in $artifactsByExecutable.GetEnumerator()) {
 }
 
 $stableArtifacts = @($stableArtifacts | Sort-Object Package, Kind, Target, Path -Unique)
+if ($null -ne $S54PreparationGuard) { Complete-S54ImageStage $S54PreparationGuard }
 # This guard precedes BOTH the compile-only return and every --list/Run branch.
 # -Run compiles/stages again, so validating only in its caller is insufficient.
 if ($frozenOptIn) {

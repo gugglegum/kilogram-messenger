@@ -1,0 +1,7 @@
+E:\AI-Projects\kilogram-p2p-messenger\target\x86_64-pc-windows-msvc\verification-scale\deps\kilogram_transport_iroh-96fe75b8c18397b0.d: crates\kilogram-transport-iroh\src\lib.rs crates\kilogram-transport-iroh\src\ordered.rs crates\kilogram-transport-iroh\src\ordered2.rs
+
+E:\AI-Projects\kilogram-p2p-messenger\target\x86_64-pc-windows-msvc\verification-scale\deps\kilogram_transport_iroh-96fe75b8c18397b0.exe: crates\kilogram-transport-iroh\src\lib.rs crates\kilogram-transport-iroh\src\ordered.rs crates\kilogram-transport-iroh\src\ordered2.rs
+
+crates\kilogram-transport-iroh\src\lib.rs:
+crates\kilogram-transport-iroh\src\ordered.rs:
+crates\kilogram-transport-iroh\src\ordered2.rs:

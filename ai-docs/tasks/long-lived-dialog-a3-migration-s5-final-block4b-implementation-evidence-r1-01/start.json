@@ -1,0 +1,9 @@
+{
+  "baseline": "603ab5437e45d329d3618b0b4ee148e5453f93be",
+  "r0_paths": 441,
+  "r0_raw": 3477142,
+  "review": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4b-root-review-r1.md",
+    "sha256": "f09da94266ba860b237afe57659e4c47e885eff44b981064c144302f6fce5042"
+  }
+}

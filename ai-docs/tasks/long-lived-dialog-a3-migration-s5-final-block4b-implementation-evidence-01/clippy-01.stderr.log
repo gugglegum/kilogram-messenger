@@ -1,0 +1,152 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error[E0609]: no field `cargo_jobs` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:448:11
+    |
+448 |         r.cargo_jobs == 2
+    |           ^^^^^^^^^^ unknown field
+
+error[E0609]: no field `priority` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:449:18
+    |
+449 |             && r.priority == "BelowNormal"
+    |                  ^^^^^^^^ unknown field
+
+error[E0609]: no field `offline` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:450:18
+    |
+450 |             && r.offline
+    |                  ^^^^^^^ unknown field
+
+error[E0609]: no field `locked` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:451:18
+    |
+451 |             && r.locked
+    |                  ^^^^^^ unknown field
+
+error[E0609]: no field `skip_cache` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:452:18
+    |
+452 |             && r.skip_cache
+    |                  ^^^^^^^^^^ unknown field
+
+error[E0609]: no field `architecture` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:453:18
+    |
+453 |             && r.architecture == "x64",
+    |                  ^^^^^^^^^^^^ unknown field
+
+error[E0609]: no field `resolutions` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:457:11
+    |
+457 |         r.resolutions.len() == p.resolutions.len(),
+    |           ^^^^^^^^^^^ unknown field
+
+error[E0609]: no field `resolutions` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:460:21
+    |
+460 |     for (a, b) in r.resolutions.iter().zip(&p.resolutions) {
+    |                     ^^^^^^^^^^^ unknown field
+
+error[E0609]: no field `metadata_shell` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:464:20
+    |
+464 |     files::same(&r.metadata_shell.path, &p.resolutions[0].path)?;
+    |                    ^^^^^^^^^^^^^^ unknown field
+
+error[E0609]: no field `memory_shell` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:465:20
+    |
+465 |     files::same(&r.memory_shell.path, &p.resolutions[1].path)?;
+    |                    ^^^^^^^^^^^^ unknown field
+
+error[E0609]: no field `memory_shell` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:468:16
+    |
+468 |             &r.memory_shell.path,
+    |                ^^^^^^^^^^^^ unknown field
+
+error[E0609]: no field `metadata_shell` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:472:20
+    |
+472 |     for pin in [&r.metadata_shell, &r.memory_shell] {
+    |                    ^^^^^^^^^^^^^^ unknown field
+
+error[E0609]: no field `memory_shell` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:472:39
+    |
+472 |     for pin in [&r.metadata_shell, &r.memory_shell] {
+    |                                       ^^^^^^^^^^^^ unknown field
+
+error[E0609]: no field `environment` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:479:18
+    |
+479 |     env_check(&r.environment)?;
+    |                  ^^^^^^^^^^^ unknown field
+
+error[E0609]: no field `configs` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:480:33
+    |
+480 |     config_check(&p.configs, &r.configs)?;
+    |                                 ^^^^^^^ unknown field
+
+error[E0609]: no field `workers` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:489:11
+    |
+489 |         r.workers.present == actual.is_some()
+    |           ^^^^^^^ unknown field
+
+error[E0609]: no field `workers` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:490:18
+    |
+490 |             && r.workers.value == actual
+    |                  ^^^^^^^ unknown field
+
+error[E0609]: no field `workers` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:491:18
+    |
+491 |             && r.workers.available == available
+    |                  ^^^^^^^ unknown field
+
+error[E0609]: no field `workers` on type `&live_l1::handoff::final_p5::admission::runtime::Runtime`
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:492:18
+    |
+492 |             && r.workers.effective == effective
+    |                  ^^^^^^^ unknown field
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:687:16
+    |
+687 |     runtime(p, &i.runtime)?;
+    |     -------    ^^^^^^^^^^ expected `Runtime`, found a different `Runtime`
+    |     |
+    |     arguments to this function are incorrect
+    |
+    = note: `Runtime` and `Runtime` have similar names, but are actually distinct types
+note: `Runtime` is defined in module `crate::live_l1::handoff::final_p5::admission::schema` of the current crate
+   --> apps\kilogram-cli\tests\support\migration_s54_admission_schema.rs:13:9
+    |
+ 13 |           pub(in super::super) struct $name { $($fields)* }
+    |           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+...
+ 96 | / wire!(Runtime {
+ 97 | |     pub metadata_shell: Pin, pub memory_shell: Pin, pub resolutions: Vec<Resolution>,
+ 98 | |     pub environment: Vec<Environment>, pub configs: Vec<Config>, pub workers: Workers,
+ 99 | |     pub cargo_jobs: u32, pub priority: String, pub offline: bool, pub locked: bool,
+100 | |     pub skip_cache: bool, pub architecture: String,
+101 | | });
+    | |__- in this macro invocation
+note: `Runtime` is defined in module `crate::live_l1::handoff::final_p5::admission::runtime` of the current crate
+   --> apps\kilogram-cli\tests\support\migration_s54_admission_runtime.rs:6:1
+    |
+  6 | pub(in super::super) struct Runtime {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+note: function defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:446:4
+    |
+446 | fn runtime(p: &Policy, r: &Runtime) -> Result<()> {
+    |    ^^^^^^^             -----------
+    = note: this error originates in the macro `wire` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+Some errors have detailed explanations: E0308, E0609.
+For more information about an error, try `rustc --explain E0308`.
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 20 previous errors

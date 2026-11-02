@@ -13,7 +13,7 @@ $a=ConvertFrom-S54Strict $baseline.activation 16384
 $l=ConvertFrom-S54Strict $baseline.launch 16384
 $c=ConvertFrom-S54Strict $baseline.capture 4096
 $evidence=Get-S54Path $EvidenceDirectory
-if(-not $evidence.StartsWith((Join-Path (Split-Path -Parent $PSScriptRoot) '.tmp/s54-block4a-r1-01/'),[StringComparison]::OrdinalIgnoreCase)){throw 'Owned check evidence only.'}
+if(-not $evidence.StartsWith((Join-Path (Split-Path -Parent $PSScriptRoot) '.tmp/s54-block4b-r1-01/'),[StringComparison]::OrdinalIgnoreCase)){throw 'Owned check evidence only.'}
 $results=[Collections.Generic.List[object]]::new()
 function Require([bool]$Condition,[string]$Message){if(-not $Condition){throw $Message}}
 function Refuses([string]$Name,[scriptblock]$Test,[string]$Pattern) {
@@ -190,8 +190,8 @@ try {
     $reparse=Join-Path (Split-Path -Parent $PSScriptRoot) '.tmp/s54-block4a-01/reparse-public-fixture/alias'
     Require (Test-Path -LiteralPath $reparse) 'Required owned reparse fixture.'
     Refuses 'actual junction ancestor' {Get-S54Path $reparse}
-    Refuses 'Run remains unavailable' {& (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1') -Action Run}
-    Refuses 'Prepare remains unavailable' {& (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1') -Action Prepare}
+    Refuses 'Run missing external bindings refuses before setup' {& (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1') -Action Run}
+    Refuses 'Prepare missing explicit root identity refuses before setup' {& (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1') -Action Prepare}
     $final=Test-S54Admission $inputs $policy
     Require ($final.classification -ceq 'public_schema_fixture_only') 'Fixture restored after negative cases.'
     $record=[ordered]@{classification='public schema/policy checks only; no process/profile/network fixture';count=$results.Count;checks=@($results);whole_attempt_verdict='not_established'}
