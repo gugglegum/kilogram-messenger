@@ -1,0 +1,49 @@
+{
+  "expected_names": [
+    "live_l1::handoff::final_p5::control::normal::tests::s54_p11a5_last_actual_normal_pair_excludes_empty_stale_killed_and_foreign_outcomes",
+    "live_l1::handoff::final_p5::offline::retained::terminal_tests::s54_p11a5_terminal_p7_bridge_rejects_changed_anchor_and_retained_commitments",
+    "live_l1::handoff::final_p5::offline::tests::s54_p7_native_comparison_accepts_outer_rewrap_but_rejects_changed_content",
+    "live_l1::handoff::final_p5::offline::tests::s54_p7_reopen_rejects_each_native_attempt_effect_or_constructor",
+    "live_l1::handoff::final_p5::reader::checkpoint::tests::s54_p11a6_cut_content_commits_stored_pickles_guard_and_reservation_not_outer_seal",
+    "live_l1::handoff::final_p5::reader::checkpoint::tests::s54_p11a6_real_caps_pointer_full_aad_and_ciphertext_authentication_fail_closed",
+    "live_l1::handoff::final_p5::reader::checkpoint::tests::s54_p11a6_real_open_requires_b_consumed_original_tuple_and_a_none",
+    "live_l1::handoff::final_p5::reader::checkpoint::tests::s54_p11a6_real_private_discriminators_pickles_guard_role_and_lanes_are_checked",
+    "live_l1::handoff::final_p5::reader::checkpoint::tests::s54_p11a6_real_restore_both_roles_asymmetric_guard_and_zero_reader_calls",
+    "live_l1::handoff::final_p5::reader::checkpoint::tests::s54_p11a6_real_restored_account_sid_and_all_public_keys_must_match",
+    "live_l1::handoff::final_p5::reader::checkpoint::tests::s54_p11a6_role_relative_guard_predicate_handles_asymmetric_frontiers",
+    "live_l1::handoff::final_p5::reader::tests::s54_p11a5_actual_a3_projection_request_and_b640_gates",
+    "live_l1::handoff::final_p5::reader::tests::s54_p11a5_both_active_original_control_scope_is_required",
+    "live_l1::handoff::final_p5::reader::tests::s54_p11a5_exact_root_counts_exclude_all_relevant_distant_extras",
+    "live_l1::handoff::final_p5::reader::tests::s54_p11a5_history_must_match_original_projection_and_verified_receipt",
+    "live_l1::handoff::final_p5::reader::tests::s54_p11a5_original_ready_slot_mapping_rejects_foreign_and_duplicate_owner",
+    "live_l1::handoff::final_p5::reader::tests::s54_p11a5_terminal_next_and_repair_obligations_cannot_be_hidden",
+    "live_l1::handoff::final_p5::source::terminal_tests::s54_p11a5_original_legacy_sources_and_saved_receipts_are_immutable",
+    "live_l1::handoff::final_p5::source::terminal_tests::s54_p11a6_legacy_native_identity_checks_original_sid_and_all_three_session_keys"
+  ],
+  "new_names": [
+    "s54_p11a6_cut_content_commits_stored_pickles_guard_and_reservation_not_outer_seal",
+    "s54_p11a6_legacy_native_identity_checks_original_sid_and_all_three_session_keys",
+    "s54_p11a6_real_caps_pointer_full_aad_and_ciphertext_authentication_fail_closed",
+    "s54_p11a6_real_open_requires_b_consumed_original_tuple_and_a_none",
+    "s54_p11a6_real_private_discriminators_pickles_guard_role_and_lanes_are_checked",
+    "s54_p11a6_real_restore_both_roles_asymmetric_guard_and_zero_reader_calls",
+    "s54_p11a6_real_restored_account_sid_and_all_public_keys_must_match",
+    "s54_p11a6_role_relative_guard_predicate_handles_asymmetric_frontiers"
+  ],
+  "affected_names": [
+    "s54_p11a5_actual_a3_projection_request_and_b640_gates",
+    "s54_p11a5_both_active_original_control_scope_is_required",
+    "s54_p11a5_exact_root_counts_exclude_all_relevant_distant_extras",
+    "s54_p11a5_history_must_match_original_projection_and_verified_receipt",
+    "s54_p11a5_last_actual_normal_pair_excludes_empty_stale_killed_and_foreign_outcomes",
+    "s54_p11a5_original_legacy_sources_and_saved_receipts_are_immutable",
+    "s54_p11a5_original_ready_slot_mapping_rejects_foreign_and_duplicate_owner",
+    "s54_p11a5_terminal_next_and_repair_obligations_cannot_be_hidden",
+    "s54_p11a5_terminal_p7_bridge_rejects_changed_anchor_and_retained_commitments",
+    "s54_p7_native_comparison_accepts_outer_rewrap_but_rejects_changed_content",
+    "s54_p7_reopen_rejects_each_native_attempt_effect_or_constructor"
+  ],
+  "real_crypto_tests": 6,
+  "all_tests_isolated": true,
+  "rationale": "Six ephemeral crypto setups run each in a separate process, as do the pure Native/Legacy gates and11 directly affected A5/P7 checks. Compact prefix skips select zero aggregate tests; no accepted-stage replay or real storage fixture."
+}

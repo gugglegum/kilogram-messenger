@@ -41,6 +41,30 @@ pub(super) struct Legacy {
     pub source_id: old::Id,
 }
 impl Legacy {
+    pub fn terminal_native(&self, index: usize, sid: &str, keys: &[old::Id; 3]) -> Result<()> {
+        let ctx = self
+            .contexts
+            .get(index)
+            .context("original Native logical context")?;
+        let head = old::decode(&ctx.head, 2048)?;
+        let fields = head.fields(13)?;
+        ensure!(
+            fields[0].uint()? == 1
+                && fields[1].fixed::<32>()? == ctx.c
+                && fields[11]
+                    .option()?
+                    .context("original Native SID")?
+                    .text()?
+                    == sid
+                && ctx.keys.len() == 3
+                && keys
+                    .iter()
+                    .zip(&ctx.keys)
+                    .all(|(actual, original)| state::hex(actual) == *original),
+            "original immutable Native SID and all three session keys including base key"
+        );
+        Ok(())
+    }
     pub fn terminal_identity(
         &self,
         node: &Node,

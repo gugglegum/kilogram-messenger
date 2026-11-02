@@ -219,6 +219,7 @@ pub(super) fn read(s: &mut control::Controller, input: Input<'_>) -> Result<Owne
     let mut proofs = Vec::new();
     let mut selected = Vec::new();
     let mut metadata = Vec::new();
+    let mut heads = Vec::new();
     for c in 0..2 {
         tick(&mut s.relay, s.until)?;
         let slot = slots[c];
@@ -228,8 +229,9 @@ pub(super) fn read(s: &mut control::Controller, input: Input<'_>) -> Result<Owne
             spec.c == contexts[c] && spec.role(profile.device.parse()?)? == owner as u64,
             "original actual Spec role"
         );
+        let head_raw = repo.head(slot)?;
         let head = Head::parse(
-            &repo.head(slot)?,
+            &head_raw,
             contexts[c],
             spec.cert_refs()?[owner],
             owner as u64,
@@ -340,6 +342,7 @@ pub(super) fn read(s: &mut control::Controller, input: Input<'_>) -> Result<Owne
         proofs.push(proof);
         selected.push(selection);
         metadata.push(meta);
+        heads.push((head_raw, head));
     }
     let mut graph = graph::Graph::new(
         [&origins[0], &origins[1]],
@@ -483,6 +486,7 @@ pub(super) fn read(s: &mut control::Controller, input: Input<'_>) -> Result<Owne
     witness_hash.update(&ack.digest);
     let graph = graph.finish()?;
     let mut histories = Vec::new();
+    let mut native = Vec::new();
     for c in 0..2 {
         let tails = metadata[c]
             .tails
@@ -497,6 +501,31 @@ pub(super) fn read(s: &mut control::Controller, input: Input<'_>) -> Result<Owne
                 .try_into()
                 .map_err(|_| anyhow::anyhow!("two actual tails"))?,
         )?;
+        tick(&mut s.relay, s.until)?;
+        let snapshot = repo.snapshot(slots[c])?;
+        ensure!(
+            snapshot.head == heads[c].0,
+            "same already-verified actual Head before Native checkpoint"
+        );
+        native.push(checkpoint::read(checkpoint::Input {
+            material: &material,
+            source: repo.source_id(),
+            head: &heads[c].1,
+            origin: &origins[c],
+            selected: &selected[c],
+            snapshot: &snapshot,
+            meta: &metadata[c],
+            graph: &graph.contexts[c],
+            original,
+            migration,
+            context: c,
+            live: &public[c]["native"],
+        })?);
+        tick(&mut s.relay, s.until)?;
+    }
+    // Original witnesses are no longer borrowed when Controller checks run
+    // during history paging; the same repository/lock remains owned throughout.
+    for c in 0..2 {
         histories.push(history(
             s,
             &mut repo,
@@ -531,6 +560,9 @@ pub(super) fn read(s: &mut control::Controller, input: Input<'_>) -> Result<Owne
             .try_into()
             .map_err(|_| anyhow::anyhow!("two actual histories"))?,
         witnesses: *witness_hash.finalize().as_bytes(),
+        native: native
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("two Native contexts at the same owner opening"))?,
     };
     drop(repo);
     s.check()?;

@@ -1,0 +1,8 @@
+    Finished `verification-scale` profile [optimized + debuginfo] target(s) in 1.00s
+Error: same SID/keys cannot hide changed stored account pickle bytes
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:313
+Line |
+ 313 |  :             throw "Isolated stable test failed with exit code ${testE :
+     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Isolated stable test failed with exit code 101:
+     | live_l1::handoff::final_p5::reader::checkpoint::tests::s54_p11a6_cut_content_commits_stored_pickles_guard_and_reservation_not_outer_seal

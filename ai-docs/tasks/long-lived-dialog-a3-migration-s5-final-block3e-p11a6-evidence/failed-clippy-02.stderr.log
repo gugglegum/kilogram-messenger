@@ -1,0 +1,16 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: type `live_l1::handoff::final_p5::reader::checkpoint::Checkpoint` is more private than the item `live_l1::handoff::final_p5::reader::Owner::native`
+  --> apps\kilogram-cli\tests\support\migration_s54_reader.rs:41:5
+   |
+41 |     pub native: [checkpoint::Checkpoint; 2],
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ field `live_l1::handoff::final_p5::reader::Owner::native` is reachable at visibility `pub(in crate::live_l1::handoff::final_p5)`
+   |
+note: but type `live_l1::handoff::final_p5::reader::checkpoint::Checkpoint` is only usable at visibility `pub(in crate::live_l1::handoff::final_p5::reader)`
+  --> apps\kilogram-cli\tests\support\migration_s54_native_checkpoint.rs:73:1
+   |
+73 | pub(super) struct Checkpoint {
+   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   = note: `-D private-interfaces` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(private_interfaces)]`
+
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 1 previous error

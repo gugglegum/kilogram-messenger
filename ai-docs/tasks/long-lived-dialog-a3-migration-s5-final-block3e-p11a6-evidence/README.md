@@ -1,0 +1,13 @@
+# P11A6 Native checkpoint evidence
+
+Baseline8d4773ad5fe1b72cbb21d5f57fe045e6f654af6e. Dormant extension at the same A5 owner opening; actual seal/restore core tested in memory, no actual profile/repository/private fixture/runtime scenario or phase composition/commit/push.
+
+- executor-review.json pins7 sources,19 actual final PASS names/isolated processes,11 bounded command receipts,14 preimages (10images+4sources),all failed source/helper revisions and the actual failed pure01 migration EXE. Failed pure01 was5PASS/1FAIL; final pure02 all19PASS.
+- provenance.json binds final report/source/raw captures/independent manifests/inventory/current586 compiler inputs/501fresh units/frozen guard and the exact source premises. compiler-source-inputs.json is the full586-file hash inventory.
+- Native fixtures create only ephemeral account/session/device material and a minimal local handshake before the zero-reader bracket. Synthetic scope/guard metadata is labelled; it is not original-export authentication or a real store. Every selected check runs separately via the stable harness; aggregates0.
+- A requires no reservation; B requires original consumed Offer/Grant/OTK tuple1. Actual restore binds account curve/SID/all3keys and role-relative asymmetric guard. Cut identity hashes actual stored private payload/pickles/guard/reservation; outer seal/native generation diagnostics are separate. No cross-owner/P7 private-content equality.
+- Failed Clippy01 iterator/borrow issues and actual helper argv retained;02 private-interface visibility retained. Pure01's erroneous re-snapshot-change expectation and actual EXE are preserved. Explicit pickle key/byte change fixes only fixture; checkpoint conditions unchanged. Both full compile captures retained; final sources checked again after edits.
+- Reproduce in a fresh base with updated immutable capture names: project-edition format, strict literal lint, compile without Run, wait for capture, derive frozen manifest/test inventory, then IsolatedTestsFile with compact skips selecting aggregate0. Jobs2/BelowNormal/offline/locked/fixed EXEs; watchdogs compile1190/1200,Clippy590/600,pure/fmt230/240.
+- Raw captures/EXE-source preimages/failed revisions stay .tmp/s54-block3e-p11a6-01. Validation helper pins are separate; mutable documentation generators are excluded from historical validation-input pins. Final artifact/provenance/manifest pins are recorded after generation.
+
+Actual profile/original-export/store integration remains source-reviewed/compiled; whole Cut1/restart/Cut2/live-authority/Frozen23/memory/sanitizer/runner feasibility remains pending. Old P7 A-only predicate and product writer/schema/config unchanged.

@@ -4,6 +4,8 @@ use db::migration7::live1 as store;
 use kilogram_cli::ordered_dialog::{handshake::Spec, state::Head};
 use kilogram_protocol::ordered_dialog_v2 as v2;
 use zeroize::Zeroizing;
+#[path = "migration_s54_native_checkpoint.rs"]
+mod checkpoint;
 #[path = "migration_s54_reader_gates.rs"]
 mod gates;
 #[path = "migration_s54_reader_owner.rs"]
@@ -36,6 +38,7 @@ pub(super) struct Owner {
     pub last_commit: old::Id,
     pub history: [old::Id; 2],
     pub witnesses: old::Id,
+    pub native: [checkpoint::Checkpoint; 2],
 }
 pub(super) struct Cut {
     pub owners: [Owner; 2],
@@ -48,6 +51,9 @@ impl Cut {
                 "same original owner identity/mapping and immutable cut content"
             );
             a.graph.same(&b.graph)?;
+            for (first, second) in a.native.iter().zip(&b.native) {
+                first.same_content(second)?;
+            }
         }
         Ok(())
     }
