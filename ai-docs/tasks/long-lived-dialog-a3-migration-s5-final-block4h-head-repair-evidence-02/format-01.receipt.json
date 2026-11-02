@@ -1,0 +1,52 @@
+{
+  "owner_pid": 1724,
+  "original_path_sha256": "32afa634aa3fe135e1ae545834facb755758a036d57f369377b3455a99075f88",
+  "actual_handle_job_membership_verified": true,
+  "work_expired": false,
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\work.ps1",
+    "-Step",
+    "format-01"
+  ],
+  "production_Run_F_P_executed": false,
+  "whole_seconds": 600,
+  "elapsed_seconds": 10.2464684,
+  "exit_code": 0,
+  "bounded_stdout_stderr_eof": true,
+  "classification": "bounded Block4H source checks; no historical image replacement/production allocation/runtime",
+  "effective_path_sha256": "b27e052877463bc883e77849d2511124a10d9331d76cebf9cc7f8d29281d6313",
+  "actual_child_exit_code": 0,
+  "cleanup_reserve_seconds": 30,
+  "error": null,
+  "reader_failed": false,
+  "work_seconds": 570,
+  "step": "format-01",
+  "original_tick_ms": 505880828,
+  "child_started_utc": "2026-11-02T21:43:07.7789668Z",
+  "whole_attempt_verdict": "not_established",
+  "stdout": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\format-01.stdout.log",
+    "bytes": 68,
+    "sha256": "6622a9bd9c059f574248825ef4329be78aaa889336490b5be7f31246c0dacb80"
+  },
+  "actual_child_waited": true,
+  "child_pid": 69188,
+  "executable": "C:/Users/Paul/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe",
+  "stderr": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\format-01.stderr.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cleanup": {
+    "failed": false,
+    "before": [],
+    "after": [],
+    "verified": true,
+    "forced": false
+  },
+  "process_local_rust_bin": "C:\\Users\\Paul\\.rustup\\toolchains\\1.98.0-x86_64-pc-windows-msvc\\bin",
+  "persistent_environment_changed": false
+}

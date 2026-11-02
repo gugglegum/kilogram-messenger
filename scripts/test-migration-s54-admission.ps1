@@ -1,9 +1,200 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$FixtureIndex,[Parameter(Mandatory)][string]$EvidenceDirectory,[switch]$CompilerIndexOnly,[switch]$PathOnly)
+param([Parameter(Mandatory)][string]$FixtureIndex,[Parameter(Mandatory)][string]$EvidenceDirectory,[switch]$CompilerIndexOnly,[switch]$PathOnly,[switch]$HeadOnly)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1')
 $index=ConvertFrom-S54Strict (Read-S54Public $FixtureIndex 16384) 16384
+if($HeadOnly){
+    $workspace=Split-Path -Parent $PSScriptRoot;$evidence=Get-S54Path $EvidenceDirectory
+    if(-not $evidence.StartsWith((Join-Path $workspace '.tmp/s54-block4h-head-repair-01/'),[StringComparison]::OrdinalIgnoreCase) -or $index.classification -cne 'fresh_public_HEAD_checks'){throw 'Owned fresh HEAD checks required.'}
+    $checks=[Collections.Generic.List[object]]::new();$roots=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    $global:HHeadReads=[Collections.Generic.List[object]]::new();$global:HHeadFault='';$global:HHeadFaultPath=''
+    $global:HHeadRealRead=(Get-Item Function:Read-S54Public).ScriptBlock
+    $global:HHeadReal=(Get-Item Function:Get-S54SourceHead).ScriptBlock
+    function Require-Head([bool]$Value,[string]$Name,$Detail=$null){if(-not $Value){throw $Name};$checks.Add(@{name=$Name;passed=$true;detail=$Detail})}
+    function Owned-HeadPath([string]$Root,[string]$Relative){
+        if(-not $roots.Contains($Root)){throw 'Only roots minted in this test may be written.'}
+        $p=Get-S54Path (Join-Path $Root $Relative) -AllowMissing
+        if(-not $p.StartsWith($Root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'Owned HEAD fixture write only.'};return $p
+    }
+    function Write-HeadFile([string]$Root,[string]$Relative,$Data){
+        $p=Owned-HeadPath $Root $Relative;$parent=Split-Path -Parent $p
+        $null=[IO.Directory]::CreateDirectory($parent);$p=Owned-HeadPath $Root $Relative
+        [byte[]]$raw=[byte[]]::new(0)
+        if($Data -is [byte[]]){$raw=$Data}else{$raw=[Text.Encoding]::UTF8.GetBytes([string]$Data)}
+        [IO.File]::WriteAllBytes($p,$raw);return $p
+    }
+    function New-HeadCase([string]$Name,$Head,$Loose=$null,$Packed=$null){
+        $p=Get-S54Path (Join-Path $evidence $Name) -AllowMissing
+        if(-not $p.StartsWith($evidence+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or (Test-Path -LiteralPath $p)){throw 'Fresh HEAD root required.'}
+        $null=New-Item -ItemType Directory -Path $p;$null=$roots.Add($p)
+        $null=Write-HeadFile $p '.git/HEAD' $Head
+        if($null -ne $Loose){$null=Write-HeadFile $p '.git/refs/heads/master' $Loose}
+        if($null -ne $Packed){$null=Write-HeadFile $p '.git/packed-refs' $Packed}
+        return $p
+    }
+    function Read-S54Public([string]$Path,[long]$Cap){
+        $global:HHeadReads.Add(@{path=$Path;cap=$Cap})
+        if([string]::Equals([IO.Path]::GetFullPath($Path),$global:HHeadFaultPath,[StringComparison]::OrdinalIgnoreCase)){
+            if($global:HHeadFault -ceq 'read-denied'){throw [UnauthorizedAccessException]::new('injected HEAD read denied')}
+            if($global:HHeadFault -ceq 'read-io'){throw [IO.IOException]::new('injected HEAD read IO failure')}
+            if($global:HHeadFault -ceq 'appearing-loose'){$global:HHeadFault='';$null=Write-HeadFile $global:HHeadMutationRoot '.git/refs/heads/master' 'malformed appearing loose'}
+        }
+        $value=& $global:HHeadRealRead $Path $Cap;return ,$value
+    }
+    function Invoke-HeadCheck([string]$Name,[string]$Root,[string]$Expected,[string]$ErrorPattern='',[switch]$NoPacked,[scriptblock]$Reader=$global:HHeadReal){
+        $global:HHeadReads.Clear();$value=$null;$why=$null
+        try{$value=& $Reader $Root}catch{$why=$_.Exception.Message}
+        $pass=if($ErrorPattern){$null -ne $why -and $why -match $ErrorPattern}else{$null -eq $why -and $value -ceq $Expected}
+        $packedReads=@($global:HHeadReads|Where-Object {$_.path.EndsWith('packed-refs',[StringComparison]::Ordinal)}).Count
+        Require-Head ($pass -and (-not $NoPacked -or $packedReads -eq 0)) $Name @{value=$value;error=$why;packed_reads=$packedReads;read_caps=@($global:HHeadReads|ForEach-Object {$_.cap}|Sort-Object -Unique);instrumented_reads=$true}
+    }
+    $a='a'*40;$b='b'*40;$sym='ref: refs/heads/master';$record=$a+' refs/heads/master'
+    try{
+        Invoke-HeadCheck 'detached trim' (New-HeadCase 'detached' (" `r`n"+$a+" `n")) $a
+        Invoke-HeadCheck 'loose valid' (New-HeadCase 'loose' $sym $a) $a -NoPacked
+        Invoke-HeadCheck 'loose wins over stale packed' (New-HeadCase 'loose-wins' $sym $a ($b+' refs/heads/master')) $a -NoPacked
+        Invoke-HeadCheck 'packed valid with missing parent dirs' (New-HeadCase 'packed' $sym $null ($record+"`n")) $a
+        Invoke-HeadCheck 'branch subpath' (New-HeadCase 'subpath' 'ref: refs/heads/topic/branch' $null ($a+' refs/heads/topic/branch')) $a
+        $lines=@('# pack-refs with: peeled sorted','# refs/heads/master',('^'+$b),($b+' refs/tags/v1'),($b+' refs/heads/MASTER'),$record)
+        Invoke-HeadCheck 'comments peeled unrelated case-different refs ignored' (New-HeadCase 'comments' $sym $null ($lines -join "`n")) $a
+        foreach($row in @(@('short',('a'*39)),@('long',('a'*41)),@('uppercase',('A'*40)),@('bad-hex',('g'*40)),@('empty',''),@('symbolic-chain','ref: refs/heads/other'))){
+            Invoke-HeadCheck ('present malformed loose never falls back/'+$row[0]) (New-HeadCase ('bad-loose-'+$row[0]) $sym $row[1] $record) '' 'source HEAD digest' -NoPacked
+        }
+        foreach($row in @(@('detached-short',('a'*39)),@('detached-upper',('A'*40)),@('detached-long',('a'*41)))){Invoke-HeadCheck $row[0] (New-HeadCase $row[0] $row[1]) '' 'source HEAD digest'}
+        foreach($row in @(
+            @('missing-packed',$null,'missing public path'),@('no-match',($b+' refs/heads/other'),'exact packed'),
+            @('case-only',($a+' refs/heads/MASTER'),'exact packed'),@('duplicate',($record+"`n"+$record),'exact packed'),
+            @('malformed-duplicate',($record+"`nnot-a-digest refs/heads/master"),'exact packed'),
+            @('empty-digest-duplicate',($record+"`n refs/heads/master"),'exact packed'),@('invalid-packed-digest','invalid refs/heads/master','source HEAD digest')
+        )){Invoke-HeadCheck $row[0] (New-HeadCase $row[0] $sym $null $row[1]) '' $row[2]}
+        Invoke-HeadCheck 'HEAD 4096 accepted after trim' (New-HeadCase 'HEAD-cap' ((' '*4056)+$a)) $a
+        Invoke-HeadCheck 'HEAD over cap' (New-HeadCase 'HEAD-over-cap' (' '*4097)) '' 'public file bound'
+        Invoke-HeadCheck 'loose 4096 accepted after trim' (New-HeadCase 'loose-cap' $sym ((' '*4056)+$a)) $a -NoPacked
+        Invoke-HeadCheck 'loose over cap refuses packed fallback' (New-HeadCase 'loose-over-cap' $sym (' '*4097) $record) '' 'public file bound' -NoPacked
+        $packedAtCap='#'+('x'*(1048576-($record.Length+3)))+"`n"+$record+"`n"
+        Require-Head ([Text.Encoding]::UTF8.GetByteCount($packedAtCap) -eq 1048576) 'packed cap fixture exact byte count'
+        Invoke-HeadCheck 'packed at cap' (New-HeadCase 'packed-cap' $sym $null $packedAtCap) $a
+        Invoke-HeadCheck 'packed over cap' (New-HeadCase 'packed-over-cap' $sym $null ($packedAtCap+'x')) '' 'public file bound'
+        Invoke-HeadCheck 'invalid UTF8 HEAD' (New-HeadCase 'utf8-head' ([byte[]]@(255))) '' 'UTF|translate|Unable|decode'
+        Invoke-HeadCheck 'invalid UTF8 loose does not fall back' (New-HeadCase 'utf8-loose' $sym ([byte[]]@(255)) $record) '' 'UTF|translate|Unable|decode' -NoPacked
+        Invoke-HeadCheck 'invalid UTF8 packed' (New-HeadCase 'utf8-packed' $sym $null ([byte[]]@(255))) '' 'UTF|translate|Unable|decode'
+        foreach($ref in @('refs/tags/master','refs/heads/','refs/heads/topic/','refs/heads//topic','refs/heads/../master','refs/heads/./master','refs/heads/master:stream','refs/heads/topic\branch','C:/external')){
+            $name='bad-ref-'+$checks.Count
+            Invoke-HeadCheck $name (New-HeadCase $name ('ref: '+$ref) $null $record) '' 'HEAD ref|absolute path/components' -NoPacked
+        }
+        $directory=New-HeadCase 'loose-directory' $sym $null $record
+        $null=New-Item -ItemType Directory -Path (Owned-HeadPath $directory '.git/refs/heads/master')
+        Invoke-HeadCheck 'loose directory refuses packed' $directory '' 'nonreparse file' -NoPacked
+        $worktree=New-HeadCase 'gitdir-file' $a
+        $gitDir=Get-S54Path (Join-Path $worktree '.git');$heldGit=Owned-HeadPath $worktree 'git-held'
+        [IO.Directory]::Move($gitDir,$heldGit);$null=Write-HeadFile $worktree '.git' 'gitdir: C:/not-supported'
+        Invoke-HeadCheck 'external gitdir file unsupported without following' $worktree '' 'Git directory required' -NoPacked
+        $packedDirectory=New-HeadCase 'packed-directory' $sym
+        $null=New-Item -ItemType Directory -Path (Owned-HeadPath $packedDirectory '.git/packed-refs')
+        Invoke-HeadCheck 'packed directory is fatal' $packedDirectory '' 'public file bound'
+        foreach($dangling in @($false,$true)){
+            $r=New-HeadCase ('reparse-'+$dangling) $sym $null $record
+            $target=Owned-HeadPath $r 'target';$null=New-Item -ItemType Directory -Path $target
+            $loose=Owned-HeadPath $r '.git/refs/heads/master';$null=[IO.Directory]::CreateDirectory((Split-Path -Parent $loose));$null=Owned-HeadPath $r '.git/refs/heads/master'
+            $null=New-Item -ItemType Junction -Path $loose -Target $target
+            if($dangling){$held=Owned-HeadPath $r 'target-held';$null=Get-S54Path $target;[IO.Directory]::Move($target,$held)}
+            Invoke-HeadCheck ('real loose reparse/dangling='+$dangling) $r '' 'reparse' -NoPacked
+        }
+        function Get-HeadAttributes([string]$Path){
+            if([string]::Equals($Path,$global:HHeadFaultPath,[StringComparison]::OrdinalIgnoreCase)){
+                if($global:HHeadFault -ceq 'attribute-denied'){throw [UnauthorizedAccessException]::new('injected attributes denied')}
+                if($global:HHeadFault -ceq 'attribute-io'){throw [IO.IOException]::new('injected attributes IO failure')}
+            };return [IO.File]::GetAttributes($Path)
+        }
+        $attributeReader=[ScriptBlock]::Create($global:HHeadReal.ToString().Replace('[IO.File]::GetAttributes($Path)','(Get-HeadAttributes $Path)'))
+        foreach($fault in @('attribute-denied','attribute-io','read-denied','read-io')){
+            $r=New-HeadCase $fault $sym $a $record;$global:HHeadFault=$fault;$global:HHeadFaultPath=[IO.Path]::GetFullPath((Join-Path $r '.git/refs/heads/master'))
+            Invoke-HeadCheck ('injected loose failure fatal/'+$fault) $r '' 'injected' -NoPacked -Reader $attributeReader
+        }
+        $r=New-HeadCase 'false-exists-denied' $sym $a $record;$global:HHeadFault='attribute-denied';$global:HHeadFaultPath=[IO.Path]::GetFullPath((Join-Path $r '.git/refs/heads/master'))
+        function Test-Path {
+            param([string]$LiteralPath)
+            if([string]::Equals([IO.Path]::GetFullPath($LiteralPath),$global:HHeadFaultPath,[StringComparison]::OrdinalIgnoreCase)){return $false}
+            Microsoft.PowerShell.Management\Test-Path -LiteralPath $LiteralPath
+        }
+        try{Invoke-HeadCheck 'injected Test-Path false plus denied attributes cannot authorize fallback' $r '' 'injected' -NoPacked -Reader $attributeReader}
+        finally{Remove-Item Function:Test-Path}
+        foreach($fault in @('read-denied','read-io')){
+            $r=New-HeadCase ('packed-'+$fault) $sym $null $record;$global:HHeadFault=$fault;$global:HHeadFaultPath=[IO.Path]::GetFullPath((Join-Path $r '.git/packed-refs'))
+            Invoke-HeadCheck ('injected packed failure fatal/'+$fault) $r '' 'injected'
+        }
+        $global:HHeadFault=''
+        $r=New-HeadCase 'between-calls' $sym $a $record
+        Invoke-HeadCheck 'fresh first loose' $r $a -NoPacked
+        $null=Write-HeadFile $r '.git/refs/heads/master' $b
+        Invoke-HeadCheck 'fresh second loose no cache' $r $b -NoPacked
+        $r=New-HeadCase 'between-packed-calls' $sym $null $record
+        Invoke-HeadCheck 'fresh first packed' $r $a
+        $null=Write-HeadFile $r '.git/packed-refs' ($b+' refs/heads/master')
+        Invoke-HeadCheck 'fresh second packed no cache' $r $b
+        $null=Write-HeadFile $r '.git/refs/heads/master' 'bad'
+        Invoke-HeadCheck 'new malformed loose defeats formerly valid packed' $r '' 'source HEAD digest' -NoPacked
+        $r=New-HeadCase 'appearing-loose' $sym $null $record;$global:HHeadMutationRoot=$r;$global:HHeadFault='appearing-loose';$global:HHeadFaultPath=[IO.Path]::GetFullPath((Join-Path $r '.git/packed-refs'))
+        Invoke-HeadCheck 'loose appears during packed read refuses' $r '' 'appeared during packed'
+        $global:HHeadFault=''
+        # Real admission on a newly constructed public F fixture; never F02 data.
+        $f=Read-S54Json (Get-S54Pin $index.Fixture 16384) 16384
+        if($f.root -cne $index.owned_root -or -not (Split-Path -Leaf $f.root).StartsWith('index-headrepair-',[StringComparison]::Ordinal)){throw 'Exact fresh admission fixture ownership required.'}
+        $null=$roots.Add($f.root);$i=Read-S54Json $f.inputs.inventory 2097152
+        $branch='refs/heads/branch/subpath'
+        $null=Write-HeadFile $f.root '.git/HEAD' ('ref: '+$branch)
+        $null=Write-HeadFile $f.root '.git/packed-refs' ($i.source.observed_head+' '+$branch+"`n")
+        Set-S54Purpose FeasibilityF
+        $policy=New-S54Policy -FixtureRoot $f.root
+        $facts=Test-S54Admission $f.inputs $policy
+        Require-Head ($facts.classification -ceq 'public_schema_fixture_only' -and $i.identity.attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-03') 'actual complete PS public packed F03 admission'
+        $i.source.observed_head=$b;$i.source.implementation=$b;$why=$null
+        try{Assert-S54Inventory $i $policy}catch{$why=$_.Exception.Message}
+        Require-Head ($why -match 'S54 actual HEAD') 'actual PS admission refuses wrong observed packed HEAD' $why
+        foreach($suffix in @('01','02')){
+            $i.identity.attempt=$i.identity.case+'-attempt-'+$suffix;$why=$null
+            try{Assert-S54Inventory $i $policy}catch{$why=$_.Exception.Message}
+            Require-Head ($why -match 'required identity') ('actual inventory refuses consumed F'+$suffix) $why
+        }
+        # Early real preparation function, isolated prerequisite/test-only intercepts.
+        $earlyRoots=@((New-HeadCase 'early-malformed' 'bad'),(New-HeadCase 'early-mismatch' $b),(New-HeadCase 'early-control' $a))
+        $savedPolicy=(Get-Item Function:New-S54Policy).ScriptBlock;$savedPublished=(Get-Item Function:Assert-S54PublishedSources).ScriptBlock
+        $savedGuard=(Get-Item Function:New-S54ImageGuard).ScriptBlock;$savedCompile=(Get-Item Function:Invoke-S54CompileStage).ScriptBlock
+        function New-S54Policy {return @{Root=$global:HHeadEarlyRoot;Resolutions=@(@{name='pwsh.exe';path=[Diagnostics.Process]::GetCurrentProcess().MainModule.FileName})}}
+        function Assert-S54PublishedSources {return ,@()}
+        function git {$global:LASTEXITCODE=0;return $a}
+        function New-Item {$global:HHeadReservations++;throw 'H_FORBIDDEN_RESERVATION'}
+        function New-S54ImageGuard {$global:HHeadGuards++;throw 'H_FORBIDDEN_GUARD'}
+        function Invoke-S54CompileStage {$global:HHeadCompiles++;throw 'H_FORBIDDEN_COMPILE'}
+        try{
+            for($n=0;$n -lt 3;$n++){
+                $global:HHeadEarlyRoot=$earlyRoots[$n];$global:HHeadReservations=0;$global:HHeadGuards=0;$global:HHeadCompiles=0;$why=$null
+                try{Invoke-S54Preparation ('c'*64)}catch{$why=$_.Exception.Message}
+                $expected=if($n -eq 0){'source HEAD digest'}elseif($n -eq 1){'preparation actual HEAD differs'}else{'H_FORBIDDEN_RESERVATION'}
+                Require-Head ($why -match $expected -and $global:HHeadReservations -eq $(if($n -eq 2){1}else{0}) -and $global:HHeadGuards -eq 0 -and $global:HHeadCompiles -eq 0 -and -not (Test-Path -LiteralPath (Join-Path $earlyRoots[$n] '.tmp'))) ('early prerequisite before actual mutation/'+$n) @{error=$why;intercepted_reservations=$global:HHeadReservations;guard_calls=$global:HHeadGuards;compile_calls=$global:HHeadCompiles;isolated_policy=$true}
+            }
+        }finally{
+            Set-Item Function:New-S54Policy $savedPolicy;Set-Item Function:Assert-S54PublishedSources $savedPublished
+            Set-Item Function:New-S54ImageGuard $savedGuard;Set-Item Function:Invoke-S54CompileStage $savedCompile
+            Remove-Item Function:git,Function:New-Item
+        }
+        $realHead=Get-S54SourceHead $workspace;$gitHead=& git -C $workspace rev-parse HEAD
+        Require-Head ($LASTEXITCODE -eq 0 -and $realHead -ceq $gitHead) 'read-only real checkout HEAD agrees with Git'
+        $out=Get-S54Path (Join-Path $evidence 'head-results.json') -AllowMissing
+        if(-not $out.StartsWith($evidence+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or (Test-Path -LiteralPath $out)){throw 'Fresh HEAD results required.'}
+        Write-KilogramFrozenJson $out @{classification='focused HEAD/early-prerequisite/F03 public admission only';count=$checks.Count;checks=@($checks);fixture_roots=@($roots);production_prepare=$false;real_git_modified=$false;runtime='not_established'}
+        Write-Output ('head_checks='+$checks.Count)
+    }finally{
+        Set-Item Function:Read-S54Public $global:HHeadRealRead;$global:HHeadFault=''
+        if(-not (Test-Path -LiteralPath (Join-Path $evidence 'head-results.json'))){
+            $partial=Get-S54Path (Join-Path $evidence 'head-partial.json') -AllowMissing
+            if(-not $partial.StartsWith($evidence+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or (Test-Path -LiteralPath $partial)){throw 'Fresh owned partial HEAD result required.'}
+            Write-KilogramFrozenJson $partial @{classification='partial HEAD cases before failed invocation; not passed suite';count=$checks.Count;checks=@($checks)}
+        }
+    }
+    return
+}
 if($PathOnly){
     $evidence=Get-S54Path $EvidenceDirectory
     $workspace=Split-Path -Parent $PSScriptRoot
@@ -250,7 +441,7 @@ if($CompilerIndexOnly){
             $ctx=Case-Index $name;Reset-Index $ctx $ctx.normal
             $facts=Test-S54Admission $ctx.inputs $ctx.policy
             Require-Index ($facts.classification -ceq 'public_schema_fixture_only') "full public admission/$name"
-            Require-Index ($ctx.i.identity.attempt -ceq (Get-S54Purpose $(if($name -ceq 'positive-F'){'FeasibilityF'}else{'WholeP'})).Attempt) "fixed F02/P01/$name"
+            Require-Index ($ctx.i.identity.attempt -ceq (Get-S54Purpose $(if($name -ceq 'positive-F'){'FeasibilityF'}else{'WholeP'})).Attempt) "fixed F03/P01/$name"
         }
         $ctx=Case-Index 'case-separator';$cap=$ctx.normal
         for($n=0;$n -lt $cap.raw_compiler_artifact_json.Count;$n++){

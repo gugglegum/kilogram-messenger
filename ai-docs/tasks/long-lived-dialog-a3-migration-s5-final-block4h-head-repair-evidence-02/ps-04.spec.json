@@ -1,0 +1,241 @@
+{
+  "environment": [
+    {
+      "name": "AR",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "ARFLAGS",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CARGO_HOME",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CARGO_INCREMENTAL",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CARGO_NET_OFFLINE",
+      "present": true,
+      "value_sha256": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b"
+    },
+    {
+      "name": "CC",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CFLAGS",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CXX",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CXXFLAGS",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "INCLUDE",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "LIB",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "LIBPATH",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "PATH",
+      "present": true,
+      "value_sha256": "f2cb8ccdec5684217d6216cc31889021372fae7451c49482644268d748c2ac6a"
+    },
+    {
+      "name": "RUST_LOG",
+      "present": true,
+      "value_sha256": "aa63925edf225e26d79eca9cebc7639de6dfe576d2d9e4183e162f99e38be7ee"
+    },
+    {
+      "name": "RUSTUP_HOME",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "RUSTUP_TOOLCHAIN",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "VCTOOLSINSTALLDIR",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "VSINSTALLDIR",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "WINDOWSSDKDIR",
+      "present": false,
+      "value_sha256": null
+    }
+  ],
+  "P": {
+    "ActivationClass": "root_s54_whole_activation",
+    "Native": "S54_FUNCTIONAL",
+    "Name": "WholeP",
+    "Namespace": "migration-s54-integrated",
+    "PublicNamespace": "migration-s54-public-evidence",
+    "Origin": "p5-origin",
+    "ObservationsClass": "P11 functional phase only",
+    "Case": "P-s54-whole-resumed-l1-01",
+    "WrapperClass": "s54_frozen_execution_completed",
+    "Attempt": "P-s54-whole-resumed-l1-01-attempt-01",
+    "Wrapper": "S54_FROZEN_COMPLETED",
+    "InventoryClass": "bound_s54_whole_inventory",
+    "FunctionalClass": "functional_assertions_completed",
+    "Selector": "live_l1::handoff::final_p5::s54_continuous_whole_resumed_l1_p5_public",
+    "OuterClass": "s54_outer_observations",
+    "Deadline": {
+      "clock": "windows_tick_count64",
+      "work": 2375,
+      "controller": 2350,
+      "origin": "owned_launch",
+      "outer": 2400
+    }
+  },
+  "embedded": [
+    "apps/kilogram-cli/tests/support/migration_s54_capture_fixture.ps1",
+    "apps/kilogram-cli/tests/support/migration_s54_memory_fixture.ps1",
+    "ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/P2-s53-exhausted-M1.candidate.json"
+  ],
+  "helpers": [
+    "scripts/run-cargo-tests-stable.ps1",
+    "scripts/cargo-frozen-artifacts.ps1",
+    "scripts/cargo-resource-policy.ps1",
+    "scripts/migration-s5-l1-deadline.ps1",
+    "scripts/migration-s53-metadata.ps1",
+    "scripts/migration-s53-runtime-dependencies.ps1",
+    "scripts/migration-s5-l1-test-result.ps1",
+    "scripts/invoke-migration-s54-whole.ps1",
+    "scripts/test-migration-s54-admission.ps1",
+    "scripts/migration-s54-outer.ps1",
+    "scripts/test-migration-s54-whole.ps1",
+    "apps/kilogram-cli/tests/support/migration_s54_outer_fixture.ps1",
+    "scripts/migration-s54-preparation.ps1",
+    "scripts/test-migration-s54-repair.ps1",
+    "scripts/test-migration-s54-feasibility.ps1",
+    "scripts/test-migration-s54-preparation-order.ps1"
+  ],
+  "workers": {
+    "value": null,
+    "present": false,
+    "effective": 24,
+    "available": 24
+  },
+  "F": {
+    "ActivationClass": "root_s54_feasibility_activation",
+    "Native": "S54_FEASIBILITY_FUNCTIONAL",
+    "Name": "FeasibilityF",
+    "Namespace": "migration-s54-feasibility",
+    "PublicNamespace": "migration-s54-feasibility-public-evidence",
+    "Origin": "f-origin",
+    "ObservationsClass": "F feasibility functional only",
+    "Case": "F-s54-mixed-hooks-feasibility-01",
+    "WrapperClass": "s54_feasibility_frozen_execution_completed",
+    "Attempt": "F-s54-mixed-hooks-feasibility-01-attempt-03",
+    "Wrapper": "S54_FEASIBILITY_FROZEN_COMPLETED",
+    "InventoryClass": "bound_s54_feasibility_inventory",
+    "FunctionalClass": "feasibility_assertions_completed",
+    "Selector": "live_l1::handoff::final_p5::feasibility::s54_short_mixed_hooks_feasibility_public",
+    "OuterClass": "s54_feasibility_outer_observations",
+    "Deadline": {
+      "clock": "windows_tick_count64",
+      "work": 480,
+      "controller": 450,
+      "origin": "owned_launch",
+      "outer": 510
+    }
+  },
+  "images": [
+    {
+      "kind": "",
+      "package": "",
+      "role": "legacy-cli",
+      "path": "target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe",
+      "target": ""
+    },
+    {
+      "kind": "bin",
+      "package": "kilogram-cli",
+      "role": "current-cli",
+      "path": "target/compatibility/long-lived-dialog-migration/kilogram-cli.exe",
+      "target": "kilogram-cli"
+    },
+    {
+      "kind": "",
+      "package": "",
+      "role": "relay",
+      "path": "target/compatibility/long-lived-dialog-runtime/kilogram-relay.exe",
+      "target": ""
+    },
+    {
+      "kind": "bin",
+      "package": "kilogram-cli",
+      "role": "stable-cli-bin",
+      "path": "target/verification-scale/deps/kilogram-cli-bin-kilogram-cli-tests.exe",
+      "target": "kilogram-cli"
+    },
+    {
+      "kind": "lib",
+      "package": "kilogram-cli",
+      "role": "stable-cli-lib",
+      "path": "target/verification-scale/deps/kilogram-cli-lib-kilogram_cli-tests.exe",
+      "target": "kilogram_cli"
+    },
+    {
+      "kind": "test",
+      "package": "kilogram-cli",
+      "role": "stable-migration",
+      "path": "target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+      "target": "migration_s5_process"
+    },
+    {
+      "kind": "test",
+      "package": "kilogram-cli",
+      "role": "stable-runtime2",
+      "path": "target/verification-scale/deps/kilogram-cli-test-runtime2_process-tests.exe",
+      "target": "runtime2_process"
+    },
+    {
+      "kind": "lib",
+      "package": "kilogram-transport-iroh",
+      "role": "stable-iroh-lib",
+      "path": "target/verification-scale/deps/kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+      "target": "kilogram_transport_iroh"
+    },
+    {
+      "kind": "test",
+      "package": "kilogram-transport-iroh",
+      "role": "stable-iroh-relay",
+      "path": "target/verification-scale/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+      "target": "local_relay_transport"
+    }
+  ]
+}

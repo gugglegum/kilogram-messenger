@@ -1,0 +1,15 @@
+{
+  "profile": "verification",
+  "frozen_opt_in": false,
+  "CargoTarget": false,
+  "StableArtifactsDirectory": false,
+  "BuildEvidencePath": false,
+  "S54PreparationGuard": false,
+  "process_CARGO_TARGET_DIR": "unset",
+  "explicit_cargo_test_target_dir": "target/s54-head-source-checks",
+  "stable_runtime_path": "target/s54-head-source-checks/verification/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+  "method": "process-local cargo function forwards test argv plus --target-dir; metadata only adds --offline; guarded Copy-Item confines all runner copies to new slot",
+  "direct_cargo_test_execution": false,
+  "compile_only_then_exact_selectors": true,
+  "aggregate_tests": "all name characters skipped; zero selected"
+}

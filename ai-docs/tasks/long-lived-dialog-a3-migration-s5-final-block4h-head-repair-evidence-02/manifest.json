@@ -1,0 +1,1208 @@
+{
+  "classification": "byte-exact H source-check exports; no captures/images/fixture trees copied",
+  "baseline": "d62a525eca008adfe0e2784645db4e8871986acd",
+  "file_count": 100,
+  "raw_bytes": 856403,
+  "files": [
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\baseline.json",
+        "bytes": 146383,
+        "sha256": "d4d46deb80061c6557b543e5799e070b0c8cfc6560d2922e8aec99e791d546dc"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\baseline.json",
+        "bytes": 146383,
+        "sha256": "d4d46deb80061c6557b543e5799e070b0c8cfc6560d2922e8aec99e791d546dc"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\compile-01-work.ps1.txt",
+        "bytes": 6054,
+        "sha256": "f39cd31e616e50e911d4b565d5eb928d50112996a0813460e85a1cc8460ed2b5"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\compile-01-work.ps1.txt",
+        "bytes": 6054,
+        "sha256": "f39cd31e616e50e911d4b565d5eb928d50112996a0813460e85a1cc8460ed2b5"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\compile-01.cargo.json",
+        "bytes": 178,
+        "sha256": "cc5dab0c45df7ff4ffeb132a8711fb42a6a55a62bf5e001f94c8bc065c1866fc"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\compile-01.cargo.json",
+        "bytes": 178,
+        "sha256": "cc5dab0c45df7ff4ffeb132a8711fb42a6a55a62bf5e001f94c8bc065c1866fc"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\compile-01.receipt.json",
+        "bytes": 2000,
+        "sha256": "1af4ec05db4361d082d01429bdbb218b2eabca1dc1e30ee9b01907c7287a7bd4"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\compile-01.receipt.json",
+        "bytes": 2000,
+        "sha256": "1af4ec05db4361d082d01429bdbb218b2eabca1dc1e30ee9b01907c7287a7bd4"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\compile-01.stderr.log",
+        "bytes": 365,
+        "sha256": "7878103a73bf7374f329ad3d681622eb4fb982915cf806975d2d0000bba10025"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\compile-01.stderr.log",
+        "bytes": 365,
+        "sha256": "7878103a73bf7374f329ad3d681622eb4fb982915cf806975d2d0000bba10025"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\compile-01.stdout.log",
+        "bytes": 80,
+        "sha256": "be691fa37eaeda442136e7b3e68a041648dfc4f6e34263cc84b13ce8b6d90e2d"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\compile-01.stdout.log",
+        "bytes": 80,
+        "sha256": "be691fa37eaeda442136e7b3e68a041648dfc4f6e34263cc84b13ce8b6d90e2d"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\compile-02.cargo.json",
+        "bytes": 2461,
+        "sha256": "3f1eb58ea00ef64ff3a09ad5f464292a0c41cc1815b09e5fb7f2082dc967b033"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\compile-02.cargo.json",
+        "bytes": 2461,
+        "sha256": "3f1eb58ea00ef64ff3a09ad5f464292a0c41cc1815b09e5fb7f2082dc967b033"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\compile-02.images.json",
+        "bytes": 1239,
+        "sha256": "2ef8d889be352652dafd494755e5e4aef417e0fa7ab15af1471778b2d24190c2"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\compile-02.images.json",
+        "bytes": 1239,
+        "sha256": "2ef8d889be352652dafd494755e5e4aef417e0fa7ab15af1471778b2d24190c2"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\compile-02.preservation.json",
+        "bytes": 23553,
+        "sha256": "a6eb01f7e3ef389d03e2a209ada5736c6f86c5193ecf9e8f842d0ed5938f5cef"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\compile-02.preservation.json",
+        "bytes": 23553,
+        "sha256": "a6eb01f7e3ef389d03e2a209ada5736c6f86c5193ecf9e8f842d0ed5938f5cef"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\compile-02.receipt.json",
+        "bytes": 2007,
+        "sha256": "9845876ab2f926b70bc1a170c42fa3ed54eb12b49b2094e96d3a216683b39cb3"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\compile-02.receipt.json",
+        "bytes": 2007,
+        "sha256": "9845876ab2f926b70bc1a170c42fa3ed54eb12b49b2094e96d3a216683b39cb3"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\compile-02.stderr.log",
+        "bytes": 14842,
+        "sha256": "59f3c0417d99e2a971946cafdf79f7e87d8647b158cab1cf4adc5d9282acb2c4"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\compile-02.stderr.log",
+        "bytes": 14842,
+        "sha256": "59f3c0417d99e2a971946cafdf79f7e87d8647b158cab1cf4adc5d9282acb2c4"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\compile-02.stdout.log",
+        "bytes": 1014,
+        "sha256": "3eb24cd608b20d3e39eaea25d5fe9c8b3de3522ec91c66519f4e11114f7ce6fc"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\compile-02.stdout.log",
+        "bytes": 1014,
+        "sha256": "3eb24cd608b20d3e39eaea25d5fe9c8b3de3522ec91c66519f4e11114f7ce6fc"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\export-01.failed.json",
+        "bytes": 396,
+        "sha256": "1bedf3739c0c66116ccf9713d700fb1e5a2ea4636e94aef03682a9d94921d4b1"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\export-01.failed.json",
+        "bytes": 396,
+        "sha256": "1bedf3739c0c66116ccf9713d700fb1e5a2ea4636e94aef03682a9d94921d4b1"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\format-01.preservation.json",
+        "bytes": 23553,
+        "sha256": "a019ff2e2a14f106b5e15c5344434eaa7205a5b412a4408a4fcd8d779419a2c0"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\format-01.preservation.json",
+        "bytes": 23553,
+        "sha256": "a019ff2e2a14f106b5e15c5344434eaa7205a5b412a4408a4fcd8d779419a2c0"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\format-01.receipt.json",
+        "bytes": 1975,
+        "sha256": "f076645c11f46cae208b75f071e15496832225e9d985e5ee7c216c044b133358"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\format-01.receipt.json",
+        "bytes": 1975,
+        "sha256": "f076645c11f46cae208b75f071e15496832225e9d985e5ee7c216c044b133358"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\format-01.result.json",
+        "bytes": 450,
+        "sha256": "f3403acc11dbaf1a4b5ace29bd9c7b9af226fc4e53ef63ea96c967494dd4e66f"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\format-01.result.json",
+        "bytes": 450,
+        "sha256": "f3403acc11dbaf1a4b5ace29bd9c7b9af226fc4e53ef63ea96c967494dd4e66f"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\format-01.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\format-01.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\format-01.stdout.log",
+        "bytes": 68,
+        "sha256": "6622a9bd9c059f574248825ef4329be78aaa889336490b5be7f31246c0dacb80"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\format-01.stdout.log",
+        "bytes": 68,
+        "sha256": "6622a9bd9c059f574248825ef4329be78aaa889336490b5be7f31246c0dacb80"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\harness-option-review.json",
+        "bytes": 735,
+        "sha256": "681055964cf262b4093f81616381fff3a334f87fb41a02b5b81bcb4db05951e2"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\harness-option-review.json",
+        "bytes": 735,
+        "sha256": "681055964cf262b4093f81616381fff3a334f87fb41a02b5b81bcb4db05951e2"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\isolated-tests.json",
+        "bytes": 791,
+        "sha256": "9bebe08f713c7a35922993fb23fc00487bb2fba63b61fe351a494b040ea79530"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\isolated-tests.json",
+        "bytes": 791,
+        "sha256": "9bebe08f713c7a35922993fb23fc00487bb2fba63b61fe351a494b040ea79530"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\make-fixtures.py",
+        "bytes": 10226,
+        "sha256": "b735be9908cb205687ebb834c00f1cc28fadb4d712f6ad8499435f92b5ea74b0"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\make-fixtures.py",
+        "bytes": 10226,
+        "sha256": "b735be9908cb205687ebb834c00f1cc28fadb4d712f6ad8499435f92b5ea74b0"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\owner.ps1",
+        "bytes": 5216,
+        "sha256": "ebc1e3c0c432cbbba6a5bb4cb4f3d128c7166749a2c46d92c2bfaa5712feb340"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\owner.ps1",
+        "bytes": 5216,
+        "sha256": "ebc1e3c0c432cbbba6a5bb4cb4f3d128c7166749a2c46d92c2bfaa5712feb340"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-01-test-script.ps1.txt",
+        "bytes": 59303,
+        "sha256": "a0a56ac3f4da556dfad17b715063f92fbaac874d3d731928b8a8c370116a1195"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-01-test-script.ps1.txt",
+        "bytes": 59303,
+        "sha256": "a0a56ac3f4da556dfad17b715063f92fbaac874d3d731928b8a8c370116a1195"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-01.construction.json",
+        "bytes": 418,
+        "sha256": "a7348130106b9340b36ef629382dd1ebba73b148fb59e8793bb6deb2c57c983c"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-01.construction.json",
+        "bytes": 418,
+        "sha256": "a7348130106b9340b36ef629382dd1ebba73b148fb59e8793bb6deb2c57c983c"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-01.fixture-set.json",
+        "bytes": 612,
+        "sha256": "7b0ea84de2d8871b62c24b3b2ffd9ce07e02970d97c59ee161bb94c38ecec1e9"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-01.fixture-set.json",
+        "bytes": 612,
+        "sha256": "7b0ea84de2d8871b62c24b3b2ffd9ce07e02970d97c59ee161bb94c38ecec1e9"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-01.head-index.json",
+        "bytes": 324,
+        "sha256": "fdb1d7ba0c80bfe7bd1b41f98574c38b7e49e7cfc404ec9823da22b5306cae3a"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-01.head-index.json",
+        "bytes": 324,
+        "sha256": "fdb1d7ba0c80bfe7bd1b41f98574c38b7e49e7cfc404ec9823da22b5306cae3a"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-01.positive-F.fixture-index.json",
+        "bytes": 1490,
+        "sha256": "c0ebffccd01d9407134a0737811f7998ab58a9045c437b2308f3051108ad54a9"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-01.positive-F.fixture-index.json",
+        "bytes": 1490,
+        "sha256": "c0ebffccd01d9407134a0737811f7998ab58a9045c437b2308f3051108ad54a9"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-01.positive-P.fixture-index.json",
+        "bytes": 1458,
+        "sha256": "4a4deb37686e059142902a997db14322607cb7bb7de121759f40d2f717af87f0"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-01.positive-P.fixture-index.json",
+        "bytes": 1458,
+        "sha256": "4a4deb37686e059142902a997db14322607cb7bb7de121759f40d2f717af87f0"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-01.receipt.json",
+        "bytes": 1977,
+        "sha256": "11964949f280083e22fb5b05411382c0a1c480fcf8ad396bc396665884fa48ad"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-01.receipt.json",
+        "bytes": 1977,
+        "sha256": "11964949f280083e22fb5b05411382c0a1c480fcf8ad396bc396665884fa48ad"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-01.spec.json",
+        "bytes": 7236,
+        "sha256": "becea6f46a05a579b9078b9bf74a57177ddb350ac10db76006b908f122012a37"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-01.spec.json",
+        "bytes": 7236,
+        "sha256": "becea6f46a05a579b9078b9bf74a57177ddb350ac10db76006b908f122012a37"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-01.stderr.log",
+        "bytes": 398,
+        "sha256": "d7e2c63df8df5473ba77fa407bc4ef7ba564eb456e448ccdcc805e8343f249bc"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-01.stderr.log",
+        "bytes": 398,
+        "sha256": "d7e2c63df8df5473ba77fa407bc4ef7ba564eb456e448ccdcc805e8343f249bc"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-01.stdout.log",
+        "bytes": 36,
+        "sha256": "7440e6a10ca59cd485b1e8f5137c635935ca945d6123a6bf446b0e94122042d5"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-01.stdout.log",
+        "bytes": 36,
+        "sha256": "7440e6a10ca59cd485b1e8f5137c635935ca945d6123a6bf446b0e94122042d5"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-02.construction.json",
+        "bytes": 418,
+        "sha256": "fc42c03b8a6fa766be7b4197e2d338b684877671ea8076a4d126ad09ff864005"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-02.construction.json",
+        "bytes": 418,
+        "sha256": "fc42c03b8a6fa766be7b4197e2d338b684877671ea8076a4d126ad09ff864005"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-02.fixture-set.json",
+        "bytes": 612,
+        "sha256": "3ad35e3817ca4a3c5e84bcec41efe4ca55c7cd6e1e6511ad5941c9bd409848e1"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-02.fixture-set.json",
+        "bytes": 612,
+        "sha256": "3ad35e3817ca4a3c5e84bcec41efe4ca55c7cd6e1e6511ad5941c9bd409848e1"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-02.head-index.json",
+        "bytes": 324,
+        "sha256": "3e1171bb722cc96375f6a39341567d84594830d2589773c15063dff8a3b1a463"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-02.head-index.json",
+        "bytes": 324,
+        "sha256": "3e1171bb722cc96375f6a39341567d84594830d2589773c15063dff8a3b1a463"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-02.positive-F.fixture-index.json",
+        "bytes": 1490,
+        "sha256": "3bd7de48306b021094592e8525d073c10a8c3523218dbb86af2fa76e3e3ef7d1"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-02.positive-F.fixture-index.json",
+        "bytes": 1490,
+        "sha256": "3bd7de48306b021094592e8525d073c10a8c3523218dbb86af2fa76e3e3ef7d1"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-02.positive-P.fixture-index.json",
+        "bytes": 1458,
+        "sha256": "4685db9e9929a7e29003b9262d0727bd8de56ea68d11df189158f6b510f36d30"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-02.positive-P.fixture-index.json",
+        "bytes": 1458,
+        "sha256": "4685db9e9929a7e29003b9262d0727bd8de56ea68d11df189158f6b510f36d30"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-02.preservation.json",
+        "bytes": 23553,
+        "sha256": "1e913ba9b39eb9f52b73b9615d5f7fc31e3fe0abbe939d7ff22ff08b4219a652"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-02.preservation.json",
+        "bytes": 23553,
+        "sha256": "1e913ba9b39eb9f52b73b9615d5f7fc31e3fe0abbe939d7ff22ff08b4219a652"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-02.receipt.json",
+        "bytes": 1961,
+        "sha256": "f9ee1a12e1dfb65e00ff767892ec5000c1120207bff99ab27f63621155660dc3"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-02.receipt.json",
+        "bytes": 1961,
+        "sha256": "f9ee1a12e1dfb65e00ff767892ec5000c1120207bff99ab27f63621155660dc3"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-02.spec.json",
+        "bytes": 7236,
+        "sha256": "50d52ce81744c1e6f0cf02844c121515568e78d33402ff5fd959ca3feab36386"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-02.spec.json",
+        "bytes": 7236,
+        "sha256": "50d52ce81744c1e6f0cf02844c121515568e78d33402ff5fd959ca3feab36386"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-02.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-02.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-02.stdout.log",
+        "bytes": 177,
+        "sha256": "14c818c1a24a7fb88616d172aedea55b9b2cd69928f17b19973d51bcdfa92dc1"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-02.stdout.log",
+        "bytes": 177,
+        "sha256": "14c818c1a24a7fb88616d172aedea55b9b2cd69928f17b19973d51bcdfa92dc1"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-02.summary.json",
+        "bytes": 844,
+        "sha256": "2c58b4d08cf459ba328ac3200c72ab07d04b376f03c6a0fbc5aff24625decc02"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-02.summary.json",
+        "bytes": 844,
+        "sha256": "2c58b4d08cf459ba328ac3200c72ab07d04b376f03c6a0fbc5aff24625decc02"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-03-test-script.ps1.txt",
+        "bytes": 61290,
+        "sha256": "6794311c50bb23006303e9beb09ff16cc6f9f77b6857309a44984fe4c7d9c596"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-03-test-script.ps1.txt",
+        "bytes": 61290,
+        "sha256": "6794311c50bb23006303e9beb09ff16cc6f9f77b6857309a44984fe4c7d9c596"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-03.construction.json",
+        "bytes": 418,
+        "sha256": "2f7148a495ffa9233854b1efc230bc822eb87cc8f9b7e22cb08979bd3b0d64d5"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-03.construction.json",
+        "bytes": 418,
+        "sha256": "2f7148a495ffa9233854b1efc230bc822eb87cc8f9b7e22cb08979bd3b0d64d5"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-03.fixture-set.json",
+        "bytes": 612,
+        "sha256": "94c87a380565bcb8ba8bb265763b56293d6a632cb751a44a5a5d6bd6b5cc0990"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-03.fixture-set.json",
+        "bytes": 612,
+        "sha256": "94c87a380565bcb8ba8bb265763b56293d6a632cb751a44a5a5d6bd6b5cc0990"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-03.head-index.json",
+        "bytes": 324,
+        "sha256": "93273023f3a96ba28239a2228c9cd9a893b482df700a987d327c90399b2c6644"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-03.head-index.json",
+        "bytes": 324,
+        "sha256": "93273023f3a96ba28239a2228c9cd9a893b482df700a987d327c90399b2c6644"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-03.positive-F.fixture-index.json",
+        "bytes": 1490,
+        "sha256": "e01ee45baae58bf00d8d90905f723dc7f793b97e1a585cd5956e9a05862662b4"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-03.positive-F.fixture-index.json",
+        "bytes": 1490,
+        "sha256": "e01ee45baae58bf00d8d90905f723dc7f793b97e1a585cd5956e9a05862662b4"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-03.positive-P.fixture-index.json",
+        "bytes": 1458,
+        "sha256": "affbb7c8c58fc4e9f069d37735384238c984c11b02b9ab4019a637094fcde2db"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-03.positive-P.fixture-index.json",
+        "bytes": 1458,
+        "sha256": "affbb7c8c58fc4e9f069d37735384238c984c11b02b9ab4019a637094fcde2db"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-03.receipt.json",
+        "bytes": 1978,
+        "sha256": "257da9f3cac97ac5906e3228f17852edb02b55faa879e0d4da1c82a0b8db50c8"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-03.receipt.json",
+        "bytes": 1978,
+        "sha256": "257da9f3cac97ac5906e3228f17852edb02b55faa879e0d4da1c82a0b8db50c8"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-03.spec.json",
+        "bytes": 7236,
+        "sha256": "2907f73dc136069c00dd5e730f46ec144d95271a6474b90ef6b5781b52942ec9"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-03.spec.json",
+        "bytes": 7236,
+        "sha256": "2907f73dc136069c00dd5e730f46ec144d95271a6474b90ef6b5781b52942ec9"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-03.stderr.log",
+        "bytes": 382,
+        "sha256": "78c2bdf73a6952ba96e1fb1e553f0b7bcc6dec647e12004108e84f5fa3497467"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-03.stderr.log",
+        "bytes": 382,
+        "sha256": "78c2bdf73a6952ba96e1fb1e553f0b7bcc6dec647e12004108e84f5fa3497467"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-03.stdout.log",
+        "bytes": 36,
+        "sha256": "7440e6a10ca59cd485b1e8f5137c635935ca945d6123a6bf446b0e94122042d5"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-03.stdout.log",
+        "bytes": 36,
+        "sha256": "7440e6a10ca59cd485b1e8f5137c635935ca945d6123a6bf446b0e94122042d5"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04.construction.json",
+        "bytes": 418,
+        "sha256": "b7b0d32f750b43fd8da63fbb6ebc1ca9d89058f85c9c1dd23500e8f6209c3f63"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-04.construction.json",
+        "bytes": 418,
+        "sha256": "b7b0d32f750b43fd8da63fbb6ebc1ca9d89058f85c9c1dd23500e8f6209c3f63"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04.fixture-set.json",
+        "bytes": 612,
+        "sha256": "398ae7f4eff5da57c2fab9e038a155aac30ed72ec5f8758cc5f12abd343cc18c"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-04.fixture-set.json",
+        "bytes": 612,
+        "sha256": "398ae7f4eff5da57c2fab9e038a155aac30ed72ec5f8758cc5f12abd343cc18c"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04.head-index.json",
+        "bytes": 324,
+        "sha256": "34960d08251d1f27da89ca398be144fe1e147e2194e1e17a73c4f4b342588930"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-04.head-index.json",
+        "bytes": 324,
+        "sha256": "34960d08251d1f27da89ca398be144fe1e147e2194e1e17a73c4f4b342588930"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04.positive-F.fixture-index.json",
+        "bytes": 1490,
+        "sha256": "b6134627f30c99c640370ff1747ca4d5770bca5c93b580fbd5c4a9bc5377f49c"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-04.positive-F.fixture-index.json",
+        "bytes": 1490,
+        "sha256": "b6134627f30c99c640370ff1747ca4d5770bca5c93b580fbd5c4a9bc5377f49c"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04.positive-P.fixture-index.json",
+        "bytes": 1458,
+        "sha256": "956f492b8d0df061d7960e6090c129a72d0acba084e5fbee724486fd49a31d12"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-04.positive-P.fixture-index.json",
+        "bytes": 1458,
+        "sha256": "956f492b8d0df061d7960e6090c129a72d0acba084e5fbee724486fd49a31d12"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04.preservation.json",
+        "bytes": 23553,
+        "sha256": "44882eac3cc9fb5be0a08a68274bee89aed4199fb51980917314174848618386"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-04.preservation.json",
+        "bytes": 23553,
+        "sha256": "44882eac3cc9fb5be0a08a68274bee89aed4199fb51980917314174848618386"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04.receipt.json",
+        "bytes": 1961,
+        "sha256": "aca47894697b024fb8fa9a39d69ecd3403ffd407288c1e2c98faf2086a388b15"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-04.receipt.json",
+        "bytes": 1961,
+        "sha256": "aca47894697b024fb8fa9a39d69ecd3403ffd407288c1e2c98faf2086a388b15"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04.spec.json",
+        "bytes": 7236,
+        "sha256": "2ee3600e2cbd59a84df43be26173f4f621b3492e3c71814b0a879ccab075732b"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-04.spec.json",
+        "bytes": 7236,
+        "sha256": "2ee3600e2cbd59a84df43be26173f4f621b3492e3c71814b0a879ccab075732b"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-04.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04.stdout.log",
+        "bytes": 177,
+        "sha256": "e5156c5b3f49a4faff5ca75cf3b3a694c69b122230dbf4b43915635046af6e7e"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-04.stdout.log",
+        "bytes": 177,
+        "sha256": "e5156c5b3f49a4faff5ca75cf3b3a694c69b122230dbf4b43915635046af6e7e"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04.summary.json",
+        "bytes": 844,
+        "sha256": "466067f8e3f806385f95502dd0579c5fb5606217802d929ba87de4e8bebbae19"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-04.summary.json",
+        "bytes": 844,
+        "sha256": "466067f8e3f806385f95502dd0579c5fb5606217802d929ba87de4e8bebbae19"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-05.construction.json",
+        "bytes": 418,
+        "sha256": "958d1f3fca06c1ba1878503e322f1168a4701f40f6a1a9df63a8b11496878098"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-05.construction.json",
+        "bytes": 418,
+        "sha256": "958d1f3fca06c1ba1878503e322f1168a4701f40f6a1a9df63a8b11496878098"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-05.fixture-set.json",
+        "bytes": 612,
+        "sha256": "28b6a299241824375cd5e4b927bc96465bb9b41929c978da5510a60a7d41b6bd"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-05.fixture-set.json",
+        "bytes": 612,
+        "sha256": "28b6a299241824375cd5e4b927bc96465bb9b41929c978da5510a60a7d41b6bd"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-05.head-index.json",
+        "bytes": 324,
+        "sha256": "8fcd7cb4c553d2b9d0127801bcabd1fc7cbe2d045fde329893a8037f5cbe19a3"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-05.head-index.json",
+        "bytes": 324,
+        "sha256": "8fcd7cb4c553d2b9d0127801bcabd1fc7cbe2d045fde329893a8037f5cbe19a3"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-05.positive-F.fixture-index.json",
+        "bytes": 1490,
+        "sha256": "d6cdd2afc5d6dd16e6c362ef7c50f48a47aa5907f4de7761beca8178aa0a49ee"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-05.positive-F.fixture-index.json",
+        "bytes": 1490,
+        "sha256": "d6cdd2afc5d6dd16e6c362ef7c50f48a47aa5907f4de7761beca8178aa0a49ee"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-05.positive-P.fixture-index.json",
+        "bytes": 1458,
+        "sha256": "f2c740cd4e7e95da21454bf52c8f28d1440ffee5cffd20ad231b85ab5eeb0136"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-05.positive-P.fixture-index.json",
+        "bytes": 1458,
+        "sha256": "f2c740cd4e7e95da21454bf52c8f28d1440ffee5cffd20ad231b85ab5eeb0136"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-05.preservation.json",
+        "bytes": 23553,
+        "sha256": "64791adaf2e51b43eb14dac282b3199fbbe78101cbafb925124a7003af3e3a52"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-05.preservation.json",
+        "bytes": 23553,
+        "sha256": "64791adaf2e51b43eb14dac282b3199fbbe78101cbafb925124a7003af3e3a52"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-05.receipt.json",
+        "bytes": 1961,
+        "sha256": "1eae262de7f2e0cf552d619f18783afd9c4a085794e6a60d1228d2695b17437a"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-05.receipt.json",
+        "bytes": 1961,
+        "sha256": "1eae262de7f2e0cf552d619f18783afd9c4a085794e6a60d1228d2695b17437a"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-05.spec.json",
+        "bytes": 7236,
+        "sha256": "34a5cf703e6a093deac0d2deb082d0e8904b7bd05acc5f98370ae39a924bd7f3"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-05.spec.json",
+        "bytes": 7236,
+        "sha256": "34a5cf703e6a093deac0d2deb082d0e8904b7bd05acc5f98370ae39a924bd7f3"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-05.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-05.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-05.stdout.log",
+        "bytes": 177,
+        "sha256": "f5bb062fd898266390a02aa8a341c77b14d13c64ce798ac523ad25c5fb21dc56"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-05.stdout.log",
+        "bytes": 177,
+        "sha256": "f5bb062fd898266390a02aa8a341c77b14d13c64ce798ac523ad25c5fb21dc56"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-05.summary.json",
+        "bytes": 844,
+        "sha256": "56aecc36b51c09a64ced9d9d32597bb539996b5dfac98be93b0028dbd187d7b5"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-05.summary.json",
+        "bytes": 844,
+        "sha256": "56aecc36b51c09a64ced9d9d32597bb539996b5dfac98be93b0028dbd187d7b5"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-checks.ps1",
+        "bytes": 2309,
+        "sha256": "f417cc1911b44aef78bd738e7cdc5a6910c56b2036e908faa966036f3a22a4e3"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-checks.ps1",
+        "bytes": 2309,
+        "sha256": "f417cc1911b44aef78bd738e7cdc5a6910c56b2036e908faa966036f3a22a4e3"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\rust-01.cargo.json",
+        "bytes": 2461,
+        "sha256": "9f0e5d04b4a26c9ed5418549a849651ee3494fbb30db0fdb1c260e0022c16139"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\rust-01.cargo.json",
+        "bytes": 2461,
+        "sha256": "9f0e5d04b4a26c9ed5418549a849651ee3494fbb30db0fdb1c260e0022c16139"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\rust-01.images.json",
+        "bytes": 2006,
+        "sha256": "dd0a0ee4abee0d42b04b4272ad602a4c4b76856370ffc8d5ffb150c3b188857b"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\rust-01.images.json",
+        "bytes": 2006,
+        "sha256": "dd0a0ee4abee0d42b04b4272ad602a4c4b76856370ffc8d5ffb150c3b188857b"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\rust-01.preservation.json",
+        "bytes": 23553,
+        "sha256": "540168a64c7c66a96b6e288ed00ef97d1512463fc4b760740abce4fa413079b0"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\rust-01.preservation.json",
+        "bytes": 23553,
+        "sha256": "540168a64c7c66a96b6e288ed00ef97d1512463fc4b760740abce4fa413079b0"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\rust-01.receipt.json",
+        "bytes": 1971,
+        "sha256": "76c1a297429996eb7e46be085b3e8d65981432bb588d51dce7e5ed539add6503"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\rust-01.receipt.json",
+        "bytes": 1971,
+        "sha256": "76c1a297429996eb7e46be085b3e8d65981432bb588d51dce7e5ed539add6503"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\rust-01.stderr.log",
+        "bytes": 81,
+        "sha256": "f11277ba4dab93ff0adb18edf84c4b2eb02183d9c2b9befec69d072463f5865d"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\rust-01.stderr.log",
+        "bytes": 81,
+        "sha256": "f11277ba4dab93ff0adb18edf84c4b2eb02183d9c2b9befec69d072463f5865d"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\rust-01.stdout.log",
+        "bytes": 5584,
+        "sha256": "cf79b2b3161bb5bfb70ff7b7927c6f2ab33eca25c3850e5333db31c26e66ef8b"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\rust-01.stdout.log",
+        "bytes": 5584,
+        "sha256": "cf79b2b3161bb5bfb70ff7b7927c6f2ab33eca25c3850e5333db31c26e66ef8b"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\seal-01.preservation.json",
+        "bytes": 23553,
+        "sha256": "502eac3fd22d6bf448a6f12c22f5753ef3dbbd0bc89bac8be9934d5d2ffb2eed"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\seal-01.preservation.json",
+        "bytes": 23553,
+        "sha256": "502eac3fd22d6bf448a6f12c22f5753ef3dbbd0bc89bac8be9934d5d2ffb2eed"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\seal-01.receipt.json",
+        "bytes": 1970,
+        "sha256": "6af9104c1436616edbfcfa4f9b5933a6761d21879399a55b1de366e1b87b93a4"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\seal-01.receipt.json",
+        "bytes": 1970,
+        "sha256": "6af9104c1436616edbfcfa4f9b5933a6761d21879399a55b1de366e1b87b93a4"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\seal-01.result.json",
+        "bytes": 132867,
+        "sha256": "54430c22d19b2c9a787414cf8b95cd0d36835e6087f0e1172c58132497fade02"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\seal-01.result.json",
+        "bytes": 132867,
+        "sha256": "54430c22d19b2c9a787414cf8b95cd0d36835e6087f0e1172c58132497fade02"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\seal-01.stderr.log",
+        "bytes": 276,
+        "sha256": "8db3aa95813c0793a11b8f178df89d4d511d9bc94fb17b78f2ba6cc17eb58ffc"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\seal-01.stderr.log",
+        "bytes": 276,
+        "sha256": "8db3aa95813c0793a11b8f178df89d4d511d9bc94fb17b78f2ba6cc17eb58ffc"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\seal-01.stdout.log",
+        "bytes": 66,
+        "sha256": "68f968a77c9888b580e00b19d67ed4fcb26e8f42992f7867b71a1feff49839ad"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\seal-01.stdout.log",
+        "bytes": 66,
+        "sha256": "68f968a77c9888b580e00b19d67ed4fcb26e8f42992f7867b71a1feff49839ad"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\source-diff.patch",
+        "bytes": 34131,
+        "sha256": "b2ad4e9a794d00aad52bb359de2cae4cc5be46d37af337ca8e10270e7a2b81c6"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\source-diff.patch",
+        "bytes": 34131,
+        "sha256": "b2ad4e9a794d00aad52bb359de2cae4cc5be46d37af337ca8e10270e7a2b81c6"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\target-ownership.json",
+        "bytes": 213,
+        "sha256": "0a1770ed1d3522ef9a1925fa96aa37076e706440eb200fa51fd995c8a78ecf57"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\target-ownership.json",
+        "bytes": 213,
+        "sha256": "0a1770ed1d3522ef9a1925fa96aa37076e706440eb200fa51fd995c8a78ecf57"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\work.ps1",
+        "bytes": 8505,
+        "sha256": "7830a64c3983805d3d362c5d3db6287153729b17b8eb2aef45b4b13da5e69dd9"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\work.ps1",
+        "bytes": 8505,
+        "sha256": "7830a64c3983805d3d362c5d3db6287153729b17b8eb2aef45b4b13da5e69dd9"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-02\\head\\head-results.json",
+        "bytes": 24162,
+        "sha256": "b82d875c1142121277bf6fadc5b15c5674272abb58ae00bad381609fb665c18a"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-02\\head\\head-results.json",
+        "bytes": 24162,
+        "sha256": "b82d875c1142121277bf6fadc5b15c5674272abb58ae00bad381609fb665c18a"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-02\\purpose\\result.json",
+        "bytes": 2823,
+        "sha256": "f33e4266a7a6515a25c140bbef7b8619df8d38b8d4222bb3432a010bf847529d"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-02\\purpose\\result.json",
+        "bytes": 2823,
+        "sha256": "f33e4266a7a6515a25c140bbef7b8619df8d38b8d4222bb3432a010bf847529d"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-02\\order\\result.json",
+        "bytes": 4583,
+        "sha256": "f8886fb45439a46bcc941e3f9976324b0119543c3b76a09719bb41e55ea54fbf"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-02\\order\\result.json",
+        "bytes": 4583,
+        "sha256": "f8886fb45439a46bcc941e3f9976324b0119543c3b76a09719bb41e55ea54fbf"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-03\\head\\head-partial.json",
+        "bytes": 12151,
+        "sha256": "100682d39ae6c918425a088143234c41da5a36f5e8b9c1291a7366427707aa7b"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-03\\head\\head-partial.json",
+        "bytes": 12151,
+        "sha256": "100682d39ae6c918425a088143234c41da5a36f5e8b9c1291a7366427707aa7b"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\head-results.json",
+        "bytes": 25457,
+        "sha256": "8edacc55bc1af367fb58847a1343a3ba6993093537ab56bd57b396afc7959c69"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-04\\head\\head-results.json",
+        "bytes": 25457,
+        "sha256": "8edacc55bc1af367fb58847a1343a3ba6993093537ab56bd57b396afc7959c69"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\purpose\\result.json",
+        "bytes": 2823,
+        "sha256": "d3f9ac83ee361d637deea9e0ff05caf4fc5227959ff907a8e5cd888f811f122f"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-04\\purpose\\result.json",
+        "bytes": 2823,
+        "sha256": "d3f9ac83ee361d637deea9e0ff05caf4fc5227959ff907a8e5cd888f811f122f"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\order\\result.json",
+        "bytes": 4583,
+        "sha256": "6e303d97b18947bd285e357785b95fba6e3d464c900fea5d0eb263da54b2465a"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-04\\order\\result.json",
+        "bytes": 4583,
+        "sha256": "6e303d97b18947bd285e357785b95fba6e3d464c900fea5d0eb263da54b2465a"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-05\\head\\head-results.json",
+        "bytes": 26588,
+        "sha256": "736209f8fb493b47808c8cdd800a1367b01d3896b1ffb0445cb1d7712c476d33"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-05\\head\\head-results.json",
+        "bytes": 26588,
+        "sha256": "736209f8fb493b47808c8cdd800a1367b01d3896b1ffb0445cb1d7712c476d33"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-05\\purpose\\result.json",
+        "bytes": 2823,
+        "sha256": "d3f9ac83ee361d637deea9e0ff05caf4fc5227959ff907a8e5cd888f811f122f"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-05\\purpose\\result.json",
+        "bytes": 2823,
+        "sha256": "d3f9ac83ee361d637deea9e0ff05caf4fc5227959ff907a8e5cd888f811f122f"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-05\\order\\result.json",
+        "bytes": 4583,
+        "sha256": "a3143d3a51196e20420eac3bf11788e48c82524e9b4f079b0cdc17f56e566f82"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4h-head-repair-evidence-02\\ps-05\\order\\result.json",
+        "bytes": 4583,
+        "sha256": "a3143d3a51196e20420eac3bf11788e48c82524e9b4f079b0cdc17f56e566f82"
+      }
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+fresh_from_scratch_fixture_cases=2
+head_checks=64
+public_F_checks=29;exit_code=0
+preparation_order_checks=35
+ps-04=passed;historical_images_preserved=true;production=false

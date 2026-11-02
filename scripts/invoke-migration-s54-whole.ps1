@@ -73,6 +73,46 @@ function ConvertFrom-S54Strict([byte[]]$Bytes,[long]$Cap) {
     }finally{$doc.Dispose()}
 }
 function Read-S54Json($Pin,[long]$Cap) {return ,(ConvertFrom-S54Strict (Read-S54Pin $Pin $Cap) $Cap)}
+function Get-S54SourceHead([string]$Root) {
+    $ErrorActionPreference='Stop'
+    $git=Get-S54Path (Join-Path $Root '.git')
+    if(-not (Get-Item -LiteralPath $git -Force).PSIsContainer){throw 'S54 Git directory required.'}
+    $utf8=[Text.UTF8Encoding]::new($false,$true)
+    $value=$utf8.GetString((Read-S54Public (Join-Path $git 'HEAD') 4096)).Trim()
+    if($value.StartsWith('ref: ',[StringComparison]::Ordinal)){
+        $reference=$value.Substring(5)
+        if(-not $reference.StartsWith('refs/heads/',[StringComparison]::Ordinal) -or $reference.Length -le 11 -or $reference.EndsWith('/') -or $reference.Contains('//') -or $reference.Contains('..') -or $reference -match '[:\\]'){throw 'S54 HEAD ref.'}
+        $loose=Get-S54Path (Join-Path $git $reference) -AllowMissing
+        if(-not $loose.StartsWith($git+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'S54 HEAD ref confinement.'}
+        $absent={param([string]$Path)
+            try{$attributes=[IO.File]::GetAttributes($Path)}
+            catch [IO.FileNotFoundException]{return $true}
+            catch [IO.DirectoryNotFoundException]{return $true}
+            if($attributes -band ([IO.FileAttributes]::Directory -bor [IO.FileAttributes]::ReparsePoint)){throw 'S54 loose HEAD must be a nonreparse file.'}
+            return $false
+        }
+        if(-not (& $absent $loose)){
+            $value=$utf8.GetString((Read-S54Public $loose 4096)).Trim()
+        }else{
+            # Only precise not-found results authorize packed lookup. Other IO
+            # failures, including denied attributes/reads, remain fatal.
+            $null=Get-S54Path $loose -AllowMissing
+            $packed=$utf8.GetString((Read-S54Public (Join-Path $git 'packed-refs') 1048576))
+            if(-not (& $absent $loose)){throw 'S54 loose HEAD appeared during packed read.'}
+            $null=Get-S54Path $loose -AllowMissing
+            $records=@(foreach($line in ($packed -split '\r?\n')){
+                if($line.StartsWith('#',[StringComparison]::Ordinal) -or $line.StartsWith('^',[StringComparison]::Ordinal)){continue}
+                $split=$line.IndexOf(' ')
+                if($split -ge 0 -and [string]::Equals($line.Substring($split+1),$reference,[StringComparison]::Ordinal)){$line.Substring(0,$split)}
+            })
+            # Count before validating digests: malformed duplicates still count.
+            if($records.Count -ne 1){throw 'S54 exact packed source HEAD.'}
+            $value=$records[0]
+        }
+    }
+    if($value -cnotmatch '^[0-9a-f]{40}$'){throw 'S54 source HEAD digest.'}
+    return $value
+}
 function Assert-S54Wire($Value,[string]$Type) {
     $shape=$script:S54Schema[$Type]
     if($null -eq $shape -or $Value -isnot [Collections.IDictionary] -or $Value.Count -ne $shape.Count){throw "S54 closed object $Type."}
@@ -209,7 +249,7 @@ function Assert-S54Embedded($I,$Policy,$Tests) {
 function Get-S54Purpose([ValidateSet('WholeP','FeasibilityF')][string]$Name='WholeP') {
     $f=$Name -ceq 'FeasibilityF'
     $case=if($f){'F-s54-mixed-hooks-feasibility-01'}else{'P-s54-whole-resumed-l1-01'}
-    return @{Name=$Name;Case=$case;Attempt=($case+$(if($f){'-attempt-02'}else{'-attempt-01'}));
+    return @{Name=$Name;Case=$case;Attempt=($case+$(if($f){'-attempt-03'}else{'-attempt-01'}));
         Selector=$(if($f){'live_l1::handoff::final_p5::feasibility::s54_short_mixed_hooks_feasibility_public'}else{'live_l1::handoff::final_p5::s54_continuous_whole_resumed_l1_p5_public'});
         Namespace=$(if($f){'migration-s54-feasibility'}else{'migration-s54-integrated'});
         PublicNamespace=$(if($f){'migration-s54-feasibility-public-evidence'}else{'migration-s54-public-evidence'});
@@ -358,8 +398,7 @@ function Assert-S54Inventory($I,$Policy,[string]$State='Fresh',$Owner=$null) {
     $public=Join-Path $root ".tmp/$($script:S54PolicyPurpose.PublicNamespace)/$script:S54Attempt"
     foreach($pair in @(@($I.compiler.normal,'normal.json'),@($I.compiler.tests,'tests.json'),@($I.compiler.frozen_manifest,'frozen.json'),@($I.selection.isolated,'isolated.json'),@($I.selection.list,'list.txt'))){Assert-S54SamePath $pair[0].path (Join-Path $public $pair[1])}
     if($I.source.s53_product -cne '1f404b54ebce47ae3b52eaeb6855e30f3b8f3309' -or $I.source.closure_publication -cne '20418e41e4c486158fdc30b0c9f857750432e25e' -or $I.source.implementation -cnotmatch '^[0-9a-f]{40}$' -or $I.source.observed_head -cne $I.source.implementation){throw 'S54 source revision roles.'}
-    $head=[Text.Encoding]::UTF8.GetString((Read-S54Public (Join-Path $root '.git/HEAD') 4096)).Trim()
-    if($head.StartsWith('ref: ')){$ref=$head.Substring(5);if(-not $ref.StartsWith('refs/heads/') -or $ref.Contains('..')){throw 'S54 HEAD ref.'};$head=[Text.Encoding]::UTF8.GetString((Read-S54Public (Join-Path $root ".git/$ref") 4096)).Trim()}
+    $head=Get-S54SourceHead $root
     if($head -cne $I.source.observed_head){throw 'S54 actual HEAD.'}
     $actual=Get-S54SourcePaths $root;$pins=@($I.source.files|ForEach-Object {Get-S54Path $_.path})
     Assert-S54Equal @($actual|Sort-Object) @($pins|Sort-Object)

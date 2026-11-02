@@ -1,0 +1,45 @@
+{
+  "classification": "separate stable source-check artifacts only",
+  "images": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\s54-head-source-checks\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 72190976,
+      "sha256": "c8870d640eee2d1b9a708110885b696b6149767fefd6d6742c6ec45c5a4260b5"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\s54-head-source-checks\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 49567744,
+      "sha256": "bc78024d767a3f65228e5517061c20ed6e1b4bc99d4afe3d794d13d3d3c5722b"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\s54-head-source-checks\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 34786816,
+      "sha256": "92468de679eff1e81263deb09d7ee67478bb9a2f64de5e66d709ce6f260ed64a"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\s54-head-source-checks\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 37422080,
+      "sha256": "9ef872cbb8ed299fbe1e8efed74618ced4450b5e29969575be6ca8a6de71ae96"
+    }
+  ],
+  "exact_selectors": [
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::admission::tests::s54_admission_valid_public_binding_has_real_blake3_but_no_runtime_capability"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::admission::tests::s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substitution"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::feasibility::tests::s54_f_closed_purpose_rejects_cross_case_selector_attempt_and_keeps_p_limits"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "runtime": "not_established",
+  "purpose": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\purpose\\result.json",
+    "bytes": 2823,
+    "sha256": "d3f9ac83ee361d637deea9e0ff05caf4fc5227959ff907a8e5cd888f811f122f"
+  },
+  "head": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\head-results.json",
+    "bytes": 25457,
+    "sha256": "8edacc55bc1af367fb58847a1343a3ba6993093537ab56bd57b396afc7959c69"
+  },
+  "historical_fixtures_written": false,
+  "actual_production_Prepare": false,
+  "order": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\order\\result.json",
+    "bytes": 4583,
+    "sha256": "6e303d97b18947bd285e357785b95fba6e3d464c900fea5d0eb263da54b2465a"
+  }
+}

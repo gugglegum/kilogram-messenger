@@ -601,6 +601,7 @@ function Invoke-S54Preparation([string]$RunId) {
     # final production preparation is a separately dispatched operator action.
     $sourcePaths=Assert-S54PublishedSources $policy
     $head=(& git -C $policy.Root rev-parse HEAD);if($LASTEXITCODE -ne 0 -or $head -cnotmatch '^[0-9a-f]{40}$'){throw 'S54 preparation source head.'}
+    if((Get-S54SourceHead $policy.Root) -cne $head){throw 'S54 preparation actual HEAD differs.'}
     $run=Join-Path $policy.Root ".tmp/$($script:S54PolicyPurpose.Namespace)/$script:S54Attempt"
     $public=Join-Path $policy.Root ".tmp/$($script:S54PolicyPurpose.PublicNamespace)/$script:S54Attempt"
     foreach($path in @($run,$public)){$null=Get-S54Path $path -AllowMissing;if(Test-Path -LiteralPath $path){throw 'S54 preparation does not retry/repair an existing attempt.'}}

@@ -1,0 +1,415 @@
+diff --git a/apps/kilogram-cli/tests/support/migration_s54_admission_tests.rs b/apps/kilogram-cli/tests/support/migration_s54_admission_tests.rs
+index b82ac8fb..782c4b16 100644
+--- a/apps/kilogram-cli/tests/support/migration_s54_admission_tests.rs
++++ b/apps/kilogram-cli/tests/support/migration_s54_admission_tests.rs
+@@ -656,7 +656,7 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
+             }
+             _ => {
+                 f.inventory["identity"]["attempt"] =
+-                    "F-s54-mixed-hooks-feasibility-01-attempt-03".into()
++                    "F-s54-mixed-hooks-feasibility-01-attempt-02".into()
+             }
+         }
+         f.seal()?;
+diff --git a/apps/kilogram-cli/tests/support/migration_s54_feasibility_tests.rs b/apps/kilogram-cli/tests/support/migration_s54_feasibility_tests.rs
+index 6087fc0d..4d04227c 100644
+--- a/apps/kilogram-cli/tests/support/migration_s54_feasibility_tests.rs
++++ b/apps/kilogram-cli/tests/support/migration_s54_feasibility_tests.rs
+@@ -19,7 +19,7 @@ fn rows(last: [u16; 2]) -> Result<Vec<Value>> {
+ #[test]
+ fn s54_f_closed_purpose_rejects_cross_case_selector_attempt_and_keeps_p_limits() -> Result<()> {
+     ensure!(
+-        Purpose::FeasibilityF.attempt() == "F-s54-mixed-hooks-feasibility-01-attempt-02"
++        Purpose::FeasibilityF.attempt() == "F-s54-mixed-hooks-feasibility-01-attempt-03"
+             && Purpose::WholeP.attempt() == "P-s54-whole-resumed-l1-01-attempt-01"
+             && Purpose::identity(
+                 Purpose::FeasibilityF.case(),
+@@ -27,7 +27,16 @@ fn s54_f_closed_purpose_rejects_cross_case_selector_attempt_and_keeps_p_limits()
+                 Purpose::FeasibilityF.selector(),
+             )
+             .is_err(),
+-        "consumed F01 refused; closed F02/P01"
++        "consumed F01 refused; closed F03/P01"
++    );
++    ensure!(
++        Purpose::identity(
++            Purpose::FeasibilityF.case(),
++            "F-s54-mixed-hooks-feasibility-01-attempt-02",
++            Purpose::FeasibilityF.selector(),
++        )
++        .is_err(),
++        "consumed F02 refused"
+     );
+     for p in [Purpose::WholeP, Purpose::FeasibilityF] {
+         ensure!(
+diff --git a/apps/kilogram-cli/tests/support/migration_s54_purpose.rs b/apps/kilogram-cli/tests/support/migration_s54_purpose.rs
+index c03b32e3..6ba825f2 100644
+--- a/apps/kilogram-cli/tests/support/migration_s54_purpose.rs
++++ b/apps/kilogram-cli/tests/support/migration_s54_purpose.rs
+@@ -16,7 +16,7 @@ impl Purpose {
+     pub(super) fn attempt(self) -> String {
+         let suffix = match self {
+             Self::WholeP => "01",
+-            Self::FeasibilityF => "02",
++            Self::FeasibilityF => "03",
+         };
+         format!("{}-attempt-{suffix}", self.case())
+     }
+diff --git a/scripts/invoke-migration-s54-whole.ps1 b/scripts/invoke-migration-s54-whole.ps1
+index 84eeeb17..3140c24d 100644
+--- a/scripts/invoke-migration-s54-whole.ps1
++++ b/scripts/invoke-migration-s54-whole.ps1
+@@ -73,6 +73,46 @@ function ConvertFrom-S54Strict([byte[]]$Bytes,[long]$Cap) {
+     }finally{$doc.Dispose()}
+ }
+ function Read-S54Json($Pin,[long]$Cap) {return ,(ConvertFrom-S54Strict (Read-S54Pin $Pin $Cap) $Cap)}
++function Get-S54SourceHead([string]$Root) {
++    $ErrorActionPreference='Stop'
++    $git=Get-S54Path (Join-Path $Root '.git')
++    if(-not (Get-Item -LiteralPath $git -Force).PSIsContainer){throw 'S54 Git directory required.'}
++    $utf8=[Text.UTF8Encoding]::new($false,$true)
++    $value=$utf8.GetString((Read-S54Public (Join-Path $git 'HEAD') 4096)).Trim()
++    if($value.StartsWith('ref: ',[StringComparison]::Ordinal)){
++        $reference=$value.Substring(5)
++        if(-not $reference.StartsWith('refs/heads/',[StringComparison]::Ordinal) -or $reference.Length -le 11 -or $reference.EndsWith('/') -or $reference.Contains('//') -or $reference.Contains('..') -or $reference -match '[:\\]'){throw 'S54 HEAD ref.'}
++        $loose=Get-S54Path (Join-Path $git $reference) -AllowMissing
++        if(-not $loose.StartsWith($git+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'S54 HEAD ref confinement.'}
++        $absent={param([string]$Path)
++            try{$attributes=[IO.File]::GetAttributes($Path)}
++            catch [IO.FileNotFoundException]{return $true}
++            catch [IO.DirectoryNotFoundException]{return $true}
++            if($attributes -band ([IO.FileAttributes]::Directory -bor [IO.FileAttributes]::ReparsePoint)){throw 'S54 loose HEAD must be a nonreparse file.'}
++            return $false
++        }
++        if(-not (& $absent $loose)){
++            $value=$utf8.GetString((Read-S54Public $loose 4096)).Trim()
++        }else{
++            # Only precise not-found results authorize packed lookup. Other IO
++            # failures, including denied attributes/reads, remain fatal.
++            $null=Get-S54Path $loose -AllowMissing
++            $packed=$utf8.GetString((Read-S54Public (Join-Path $git 'packed-refs') 1048576))
++            if(-not (& $absent $loose)){throw 'S54 loose HEAD appeared during packed read.'}
++            $null=Get-S54Path $loose -AllowMissing
++            $records=@(foreach($line in ($packed -split '\r?\n')){
++                if($line.StartsWith('#',[StringComparison]::Ordinal) -or $line.StartsWith('^',[StringComparison]::Ordinal)){continue}
++                $split=$line.IndexOf(' ')
++                if($split -ge 0 -and [string]::Equals($line.Substring($split+1),$reference,[StringComparison]::Ordinal)){$line.Substring(0,$split)}
++            })
++            # Count before validating digests: malformed duplicates still count.
++            if($records.Count -ne 1){throw 'S54 exact packed source HEAD.'}
++            $value=$records[0]
++        }
++    }
++    if($value -cnotmatch '^[0-9a-f]{40}$'){throw 'S54 source HEAD digest.'}
++    return $value
++}
+ function Assert-S54Wire($Value,[string]$Type) {
+     $shape=$script:S54Schema[$Type]
+     if($null -eq $shape -or $Value -isnot [Collections.IDictionary] -or $Value.Count -ne $shape.Count){throw "S54 closed object $Type."}
+@@ -209,7 +249,7 @@ function Assert-S54Embedded($I,$Policy,$Tests) {
+ function Get-S54Purpose([ValidateSet('WholeP','FeasibilityF')][string]$Name='WholeP') {
+     $f=$Name -ceq 'FeasibilityF'
+     $case=if($f){'F-s54-mixed-hooks-feasibility-01'}else{'P-s54-whole-resumed-l1-01'}
+-    return @{Name=$Name;Case=$case;Attempt=($case+$(if($f){'-attempt-02'}else{'-attempt-01'}));
++    return @{Name=$Name;Case=$case;Attempt=($case+$(if($f){'-attempt-03'}else{'-attempt-01'}));
+         Selector=$(if($f){'live_l1::handoff::final_p5::feasibility::s54_short_mixed_hooks_feasibility_public'}else{'live_l1::handoff::final_p5::s54_continuous_whole_resumed_l1_p5_public'});
+         Namespace=$(if($f){'migration-s54-feasibility'}else{'migration-s54-integrated'});
+         PublicNamespace=$(if($f){'migration-s54-feasibility-public-evidence'}else{'migration-s54-public-evidence'});
+@@ -358,8 +398,7 @@ function Assert-S54Inventory($I,$Policy,[string]$State='Fresh',$Owner=$null) {
+     $public=Join-Path $root ".tmp/$($script:S54PolicyPurpose.PublicNamespace)/$script:S54Attempt"
+     foreach($pair in @(@($I.compiler.normal,'normal.json'),@($I.compiler.tests,'tests.json'),@($I.compiler.frozen_manifest,'frozen.json'),@($I.selection.isolated,'isolated.json'),@($I.selection.list,'list.txt'))){Assert-S54SamePath $pair[0].path (Join-Path $public $pair[1])}
+     if($I.source.s53_product -cne '1f404b54ebce47ae3b52eaeb6855e30f3b8f3309' -or $I.source.closure_publication -cne '20418e41e4c486158fdc30b0c9f857750432e25e' -or $I.source.implementation -cnotmatch '^[0-9a-f]{40}$' -or $I.source.observed_head -cne $I.source.implementation){throw 'S54 source revision roles.'}
+-    $head=[Text.Encoding]::UTF8.GetString((Read-S54Public (Join-Path $root '.git/HEAD') 4096)).Trim()
+-    if($head.StartsWith('ref: ')){$ref=$head.Substring(5);if(-not $ref.StartsWith('refs/heads/') -or $ref.Contains('..')){throw 'S54 HEAD ref.'};$head=[Text.Encoding]::UTF8.GetString((Read-S54Public (Join-Path $root ".git/$ref") 4096)).Trim()}
++    $head=Get-S54SourceHead $root
+     if($head -cne $I.source.observed_head){throw 'S54 actual HEAD.'}
+     $actual=Get-S54SourcePaths $root;$pins=@($I.source.files|ForEach-Object {Get-S54Path $_.path})
+     Assert-S54Equal @($actual|Sort-Object) @($pins|Sort-Object)
+diff --git a/scripts/migration-s54-outer.ps1 b/scripts/migration-s54-outer.ps1
+index 0437527a..d66461eb 100644
+--- a/scripts/migration-s54-outer.ps1
++++ b/scripts/migration-s54-outer.ps1
+@@ -601,6 +601,7 @@ function Invoke-S54Preparation([string]$RunId) {
+     # final production preparation is a separately dispatched operator action.
+     $sourcePaths=Assert-S54PublishedSources $policy
+     $head=(& git -C $policy.Root rev-parse HEAD);if($LASTEXITCODE -ne 0 -or $head -cnotmatch '^[0-9a-f]{40}$'){throw 'S54 preparation source head.'}
++    if((Get-S54SourceHead $policy.Root) -cne $head){throw 'S54 preparation actual HEAD differs.'}
+     $run=Join-Path $policy.Root ".tmp/$($script:S54PolicyPurpose.Namespace)/$script:S54Attempt"
+     $public=Join-Path $policy.Root ".tmp/$($script:S54PolicyPurpose.PublicNamespace)/$script:S54Attempt"
+     foreach($path in @($run,$public)){$null=Get-S54Path $path -AllowMissing;if(Test-Path -LiteralPath $path){throw 'S54 preparation does not retry/repair an existing attempt.'}}
+diff --git a/scripts/test-migration-s54-admission.ps1 b/scripts/test-migration-s54-admission.ps1
+index 75edfffc..be8f5d81 100644
+--- a/scripts/test-migration-s54-admission.ps1
++++ b/scripts/test-migration-s54-admission.ps1
+@@ -1,9 +1,200 @@
+ [CmdletBinding()]
+-param([Parameter(Mandatory)][string]$FixtureIndex,[Parameter(Mandatory)][string]$EvidenceDirectory,[switch]$CompilerIndexOnly,[switch]$PathOnly)
++param([Parameter(Mandatory)][string]$FixtureIndex,[Parameter(Mandatory)][string]$EvidenceDirectory,[switch]$CompilerIndexOnly,[switch]$PathOnly,[switch]$HeadOnly)
+ Set-StrictMode -Version Latest
+ $ErrorActionPreference='Stop'
+ . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1')
+ $index=ConvertFrom-S54Strict (Read-S54Public $FixtureIndex 16384) 16384
++if($HeadOnly){
++    $workspace=Split-Path -Parent $PSScriptRoot;$evidence=Get-S54Path $EvidenceDirectory
++    if(-not $evidence.StartsWith((Join-Path $workspace '.tmp/s54-block4h-head-repair-01/'),[StringComparison]::OrdinalIgnoreCase) -or $index.classification -cne 'fresh_public_HEAD_checks'){throw 'Owned fresh HEAD checks required.'}
++    $checks=[Collections.Generic.List[object]]::new();$roots=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
++    $global:HHeadReads=[Collections.Generic.List[object]]::new();$global:HHeadFault='';$global:HHeadFaultPath=''
++    $global:HHeadRealRead=(Get-Item Function:Read-S54Public).ScriptBlock
++    $global:HHeadReal=(Get-Item Function:Get-S54SourceHead).ScriptBlock
++    function Require-Head([bool]$Value,[string]$Name,$Detail=$null){if(-not $Value){throw $Name};$checks.Add(@{name=$Name;passed=$true;detail=$Detail})}
++    function Owned-HeadPath([string]$Root,[string]$Relative){
++        if(-not $roots.Contains($Root)){throw 'Only roots minted in this test may be written.'}
++        $p=Get-S54Path (Join-Path $Root $Relative) -AllowMissing
++        if(-not $p.StartsWith($Root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'Owned HEAD fixture write only.'};return $p
++    }
++    function Write-HeadFile([string]$Root,[string]$Relative,$Data){
++        $p=Owned-HeadPath $Root $Relative;$parent=Split-Path -Parent $p
++        $null=[IO.Directory]::CreateDirectory($parent);$p=Owned-HeadPath $Root $Relative
++        [byte[]]$raw=[byte[]]::new(0)
++        if($Data -is [byte[]]){$raw=$Data}else{$raw=[Text.Encoding]::UTF8.GetBytes([string]$Data)}
++        [IO.File]::WriteAllBytes($p,$raw);return $p
++    }
++    function New-HeadCase([string]$Name,$Head,$Loose=$null,$Packed=$null){
++        $p=Get-S54Path (Join-Path $evidence $Name) -AllowMissing
++        if(-not $p.StartsWith($evidence+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or (Test-Path -LiteralPath $p)){throw 'Fresh HEAD root required.'}
++        $null=New-Item -ItemType Directory -Path $p;$null=$roots.Add($p)
++        $null=Write-HeadFile $p '.git/HEAD' $Head
++        if($null -ne $Loose){$null=Write-HeadFile $p '.git/refs/heads/master' $Loose}
++        if($null -ne $Packed){$null=Write-HeadFile $p '.git/packed-refs' $Packed}
++        return $p
++    }
++    function Read-S54Public([string]$Path,[long]$Cap){
++        $global:HHeadReads.Add(@{path=$Path;cap=$Cap})
++        if([string]::Equals([IO.Path]::GetFullPath($Path),$global:HHeadFaultPath,[StringComparison]::OrdinalIgnoreCase)){
++            if($global:HHeadFault -ceq 'read-denied'){throw [UnauthorizedAccessException]::new('injected HEAD read denied')}
++            if($global:HHeadFault -ceq 'read-io'){throw [IO.IOException]::new('injected HEAD read IO failure')}
++            if($global:HHeadFault -ceq 'appearing-loose'){$global:HHeadFault='';$null=Write-HeadFile $global:HHeadMutationRoot '.git/refs/heads/master' 'malformed appearing loose'}
++        }
++        $value=& $global:HHeadRealRead $Path $Cap;return ,$value
++    }
++    function Invoke-HeadCheck([string]$Name,[string]$Root,[string]$Expected,[string]$ErrorPattern='',[switch]$NoPacked,[scriptblock]$Reader=$global:HHeadReal){
++        $global:HHeadReads.Clear();$value=$null;$why=$null
++        try{$value=& $Reader $Root}catch{$why=$_.Exception.Message}
++        $pass=if($ErrorPattern){$null -ne $why -and $why -match $ErrorPattern}else{$null -eq $why -and $value -ceq $Expected}
++        $packedReads=@($global:HHeadReads|Where-Object {$_.path.EndsWith('packed-refs',[StringComparison]::Ordinal)}).Count
++        Require-Head ($pass -and (-not $NoPacked -or $packedReads -eq 0)) $Name @{value=$value;error=$why;packed_reads=$packedReads;read_caps=@($global:HHeadReads|ForEach-Object {$_.cap}|Sort-Object -Unique);instrumented_reads=$true}
++    }
++    $a='a'*40;$b='b'*40;$sym='ref: refs/heads/master';$record=$a+' refs/heads/master'
++    try{
++        Invoke-HeadCheck 'detached trim' (New-HeadCase 'detached' (" `r`n"+$a+" `n")) $a
++        Invoke-HeadCheck 'loose valid' (New-HeadCase 'loose' $sym $a) $a -NoPacked
++        Invoke-HeadCheck 'loose wins over stale packed' (New-HeadCase 'loose-wins' $sym $a ($b+' refs/heads/master')) $a -NoPacked
++        Invoke-HeadCheck 'packed valid with missing parent dirs' (New-HeadCase 'packed' $sym $null ($record+"`n")) $a
++        Invoke-HeadCheck 'branch subpath' (New-HeadCase 'subpath' 'ref: refs/heads/topic/branch' $null ($a+' refs/heads/topic/branch')) $a
++        $lines=@('# pack-refs with: peeled sorted','# refs/heads/master',('^'+$b),($b+' refs/tags/v1'),($b+' refs/heads/MASTER'),$record)
++        Invoke-HeadCheck 'comments peeled unrelated case-different refs ignored' (New-HeadCase 'comments' $sym $null ($lines -join "`n")) $a
++        foreach($row in @(@('short',('a'*39)),@('long',('a'*41)),@('uppercase',('A'*40)),@('bad-hex',('g'*40)),@('empty',''),@('symbolic-chain','ref: refs/heads/other'))){
++            Invoke-HeadCheck ('present malformed loose never falls back/'+$row[0]) (New-HeadCase ('bad-loose-'+$row[0]) $sym $row[1] $record) '' 'source HEAD digest' -NoPacked
++        }
++        foreach($row in @(@('detached-short',('a'*39)),@('detached-upper',('A'*40)),@('detached-long',('a'*41)))){Invoke-HeadCheck $row[0] (New-HeadCase $row[0] $row[1]) '' 'source HEAD digest'}
++        foreach($row in @(
++            @('missing-packed',$null,'missing public path'),@('no-match',($b+' refs/heads/other'),'exact packed'),
++            @('case-only',($a+' refs/heads/MASTER'),'exact packed'),@('duplicate',($record+"`n"+$record),'exact packed'),
++            @('malformed-duplicate',($record+"`nnot-a-digest refs/heads/master"),'exact packed'),
++            @('empty-digest-duplicate',($record+"`n refs/heads/master"),'exact packed'),@('invalid-packed-digest','invalid refs/heads/master','source HEAD digest')
++        )){Invoke-HeadCheck $row[0] (New-HeadCase $row[0] $sym $null $row[1]) '' $row[2]}
++        Invoke-HeadCheck 'HEAD 4096 accepted after trim' (New-HeadCase 'HEAD-cap' ((' '*4056)+$a)) $a
++        Invoke-HeadCheck 'HEAD over cap' (New-HeadCase 'HEAD-over-cap' (' '*4097)) '' 'public file bound'
++        Invoke-HeadCheck 'loose 4096 accepted after trim' (New-HeadCase 'loose-cap' $sym ((' '*4056)+$a)) $a -NoPacked
++        Invoke-HeadCheck 'loose over cap refuses packed fallback' (New-HeadCase 'loose-over-cap' $sym (' '*4097) $record) '' 'public file bound' -NoPacked
++        $packedAtCap='#'+('x'*(1048576-($record.Length+3)))+"`n"+$record+"`n"
++        Require-Head ([Text.Encoding]::UTF8.GetByteCount($packedAtCap) -eq 1048576) 'packed cap fixture exact byte count'
++        Invoke-HeadCheck 'packed at cap' (New-HeadCase 'packed-cap' $sym $null $packedAtCap) $a
++        Invoke-HeadCheck 'packed over cap' (New-HeadCase 'packed-over-cap' $sym $null ($packedAtCap+'x')) '' 'public file bound'
++        Invoke-HeadCheck 'invalid UTF8 HEAD' (New-HeadCase 'utf8-head' ([byte[]]@(255))) '' 'UTF|translate|Unable|decode'
++        Invoke-HeadCheck 'invalid UTF8 loose does not fall back' (New-HeadCase 'utf8-loose' $sym ([byte[]]@(255)) $record) '' 'UTF|translate|Unable|decode' -NoPacked
++        Invoke-HeadCheck 'invalid UTF8 packed' (New-HeadCase 'utf8-packed' $sym $null ([byte[]]@(255))) '' 'UTF|translate|Unable|decode'
++        foreach($ref in @('refs/tags/master','refs/heads/','refs/heads/topic/','refs/heads//topic','refs/heads/../master','refs/heads/./master','refs/heads/master:stream','refs/heads/topic\branch','C:/external')){
++            $name='bad-ref-'+$checks.Count
++            Invoke-HeadCheck $name (New-HeadCase $name ('ref: '+$ref) $null $record) '' 'HEAD ref|absolute path/components' -NoPacked
++        }
++        $directory=New-HeadCase 'loose-directory' $sym $null $record
++        $null=New-Item -ItemType Directory -Path (Owned-HeadPath $directory '.git/refs/heads/master')
++        Invoke-HeadCheck 'loose directory refuses packed' $directory '' 'nonreparse file' -NoPacked
++        $worktree=New-HeadCase 'gitdir-file' $a
++        $gitDir=Get-S54Path (Join-Path $worktree '.git');$heldGit=Owned-HeadPath $worktree 'git-held'
++        [IO.Directory]::Move($gitDir,$heldGit);$null=Write-HeadFile $worktree '.git' 'gitdir: C:/not-supported'
++        Invoke-HeadCheck 'external gitdir file unsupported without following' $worktree '' 'Git directory required' -NoPacked
++        $packedDirectory=New-HeadCase 'packed-directory' $sym
++        $null=New-Item -ItemType Directory -Path (Owned-HeadPath $packedDirectory '.git/packed-refs')
++        Invoke-HeadCheck 'packed directory is fatal' $packedDirectory '' 'public file bound'
++        foreach($dangling in @($false,$true)){
++            $r=New-HeadCase ('reparse-'+$dangling) $sym $null $record
++            $target=Owned-HeadPath $r 'target';$null=New-Item -ItemType Directory -Path $target
++            $loose=Owned-HeadPath $r '.git/refs/heads/master';$null=[IO.Directory]::CreateDirectory((Split-Path -Parent $loose));$null=Owned-HeadPath $r '.git/refs/heads/master'
++            $null=New-Item -ItemType Junction -Path $loose -Target $target
++            if($dangling){$held=Owned-HeadPath $r 'target-held';$null=Get-S54Path $target;[IO.Directory]::Move($target,$held)}
++            Invoke-HeadCheck ('real loose reparse/dangling='+$dangling) $r '' 'reparse' -NoPacked
++        }
++        function Get-HeadAttributes([string]$Path){
++            if([string]::Equals($Path,$global:HHeadFaultPath,[StringComparison]::OrdinalIgnoreCase)){
++                if($global:HHeadFault -ceq 'attribute-denied'){throw [UnauthorizedAccessException]::new('injected attributes denied')}
++                if($global:HHeadFault -ceq 'attribute-io'){throw [IO.IOException]::new('injected attributes IO failure')}
++            };return [IO.File]::GetAttributes($Path)
++        }
++        $attributeReader=[ScriptBlock]::Create($global:HHeadReal.ToString().Replace('[IO.File]::GetAttributes($Path)','(Get-HeadAttributes $Path)'))
++        foreach($fault in @('attribute-denied','attribute-io','read-denied','read-io')){
++            $r=New-HeadCase $fault $sym $a $record;$global:HHeadFault=$fault;$global:HHeadFaultPath=[IO.Path]::GetFullPath((Join-Path $r '.git/refs/heads/master'))
++            Invoke-HeadCheck ('injected loose failure fatal/'+$fault) $r '' 'injected' -NoPacked -Reader $attributeReader
++        }
++        $r=New-HeadCase 'false-exists-denied' $sym $a $record;$global:HHeadFault='attribute-denied';$global:HHeadFaultPath=[IO.Path]::GetFullPath((Join-Path $r '.git/refs/heads/master'))
++        function Test-Path {
++            param([string]$LiteralPath)
++            if([string]::Equals([IO.Path]::GetFullPath($LiteralPath),$global:HHeadFaultPath,[StringComparison]::OrdinalIgnoreCase)){return $false}
++            Microsoft.PowerShell.Management\Test-Path -LiteralPath $LiteralPath
++        }
++        try{Invoke-HeadCheck 'injected Test-Path false plus denied attributes cannot authorize fallback' $r '' 'injected' -NoPacked -Reader $attributeReader}
++        finally{Remove-Item Function:Test-Path}
++        foreach($fault in @('read-denied','read-io')){
++            $r=New-HeadCase ('packed-'+$fault) $sym $null $record;$global:HHeadFault=$fault;$global:HHeadFaultPath=[IO.Path]::GetFullPath((Join-Path $r '.git/packed-refs'))
++            Invoke-HeadCheck ('injected packed failure fatal/'+$fault) $r '' 'injected'
++        }
++        $global:HHeadFault=''
++        $r=New-HeadCase 'between-calls' $sym $a $record
++        Invoke-HeadCheck 'fresh first loose' $r $a -NoPacked
++        $null=Write-HeadFile $r '.git/refs/heads/master' $b
++        Invoke-HeadCheck 'fresh second loose no cache' $r $b -NoPacked
++        $r=New-HeadCase 'between-packed-calls' $sym $null $record
++        Invoke-HeadCheck 'fresh first packed' $r $a
++        $null=Write-HeadFile $r '.git/packed-refs' ($b+' refs/heads/master')
++        Invoke-HeadCheck 'fresh second packed no cache' $r $b
++        $null=Write-HeadFile $r '.git/refs/heads/master' 'bad'
++        Invoke-HeadCheck 'new malformed loose defeats formerly valid packed' $r '' 'source HEAD digest' -NoPacked
++        $r=New-HeadCase 'appearing-loose' $sym $null $record;$global:HHeadMutationRoot=$r;$global:HHeadFault='appearing-loose';$global:HHeadFaultPath=[IO.Path]::GetFullPath((Join-Path $r '.git/packed-refs'))
++        Invoke-HeadCheck 'loose appears during packed read refuses' $r '' 'appeared during packed'
++        $global:HHeadFault=''
++        # Real admission on a newly constructed public F fixture; never F02 data.
++        $f=Read-S54Json (Get-S54Pin $index.Fixture 16384) 16384
++        if($f.root -cne $index.owned_root -or -not (Split-Path -Leaf $f.root).StartsWith('index-headrepair-',[StringComparison]::Ordinal)){throw 'Exact fresh admission fixture ownership required.'}
++        $null=$roots.Add($f.root);$i=Read-S54Json $f.inputs.inventory 2097152
++        $branch='refs/heads/branch/subpath'
++        $null=Write-HeadFile $f.root '.git/HEAD' ('ref: '+$branch)
++        $null=Write-HeadFile $f.root '.git/packed-refs' ($i.source.observed_head+' '+$branch+"`n")
++        Set-S54Purpose FeasibilityF
++        $policy=New-S54Policy -FixtureRoot $f.root
++        $facts=Test-S54Admission $f.inputs $policy
++        Require-Head ($facts.classification -ceq 'public_schema_fixture_only' -and $i.identity.attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-03') 'actual complete PS public packed F03 admission'
++        $i.source.observed_head=$b;$i.source.implementation=$b;$why=$null
++        try{Assert-S54Inventory $i $policy}catch{$why=$_.Exception.Message}
++        Require-Head ($why -match 'S54 actual HEAD') 'actual PS admission refuses wrong observed packed HEAD' $why
++        foreach($suffix in @('01','02')){
++            $i.identity.attempt=$i.identity.case+'-attempt-'+$suffix;$why=$null
++            try{Assert-S54Inventory $i $policy}catch{$why=$_.Exception.Message}
++            Require-Head ($why -match 'required identity') ('actual inventory refuses consumed F'+$suffix) $why
++        }
++        # Early real preparation function, isolated prerequisite/test-only intercepts.
++        $earlyRoots=@((New-HeadCase 'early-malformed' 'bad'),(New-HeadCase 'early-mismatch' $b),(New-HeadCase 'early-control' $a))
++        $savedPolicy=(Get-Item Function:New-S54Policy).ScriptBlock;$savedPublished=(Get-Item Function:Assert-S54PublishedSources).ScriptBlock
++        $savedGuard=(Get-Item Function:New-S54ImageGuard).ScriptBlock;$savedCompile=(Get-Item Function:Invoke-S54CompileStage).ScriptBlock
++        function New-S54Policy {return @{Root=$global:HHeadEarlyRoot;Resolutions=@(@{name='pwsh.exe';path=[Diagnostics.Process]::GetCurrentProcess().MainModule.FileName})}}
++        function Assert-S54PublishedSources {return ,@()}
++        function git {$global:LASTEXITCODE=0;return $a}
++        function New-Item {$global:HHeadReservations++;throw 'H_FORBIDDEN_RESERVATION'}
++        function New-S54ImageGuard {$global:HHeadGuards++;throw 'H_FORBIDDEN_GUARD'}
++        function Invoke-S54CompileStage {$global:HHeadCompiles++;throw 'H_FORBIDDEN_COMPILE'}
++        try{
++            for($n=0;$n -lt 3;$n++){
++                $global:HHeadEarlyRoot=$earlyRoots[$n];$global:HHeadReservations=0;$global:HHeadGuards=0;$global:HHeadCompiles=0;$why=$null
++                try{Invoke-S54Preparation ('c'*64)}catch{$why=$_.Exception.Message}
++                $expected=if($n -eq 0){'source HEAD digest'}elseif($n -eq 1){'preparation actual HEAD differs'}else{'H_FORBIDDEN_RESERVATION'}
++                Require-Head ($why -match $expected -and $global:HHeadReservations -eq $(if($n -eq 2){1}else{0}) -and $global:HHeadGuards -eq 0 -and $global:HHeadCompiles -eq 0 -and -not (Test-Path -LiteralPath (Join-Path $earlyRoots[$n] '.tmp'))) ('early prerequisite before actual mutation/'+$n) @{error=$why;intercepted_reservations=$global:HHeadReservations;guard_calls=$global:HHeadGuards;compile_calls=$global:HHeadCompiles;isolated_policy=$true}
++            }
++        }finally{
++            Set-Item Function:New-S54Policy $savedPolicy;Set-Item Function:Assert-S54PublishedSources $savedPublished
++            Set-Item Function:New-S54ImageGuard $savedGuard;Set-Item Function:Invoke-S54CompileStage $savedCompile
++            Remove-Item Function:git,Function:New-Item
++        }
++        $realHead=Get-S54SourceHead $workspace;$gitHead=& git -C $workspace rev-parse HEAD
++        Require-Head ($LASTEXITCODE -eq 0 -and $realHead -ceq $gitHead) 'read-only real checkout HEAD agrees with Git'
++        $out=Get-S54Path (Join-Path $evidence 'head-results.json') -AllowMissing
++        if(-not $out.StartsWith($evidence+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or (Test-Path -LiteralPath $out)){throw 'Fresh HEAD results required.'}
++        Write-KilogramFrozenJson $out @{classification='focused HEAD/early-prerequisite/F03 public admission only';count=$checks.Count;checks=@($checks);fixture_roots=@($roots);production_prepare=$false;real_git_modified=$false;runtime='not_established'}
++        Write-Output ('head_checks='+$checks.Count)
++    }finally{
++        Set-Item Function:Read-S54Public $global:HHeadRealRead;$global:HHeadFault=''
++        if(-not (Test-Path -LiteralPath (Join-Path $evidence 'head-results.json'))){
++            $partial=Get-S54Path (Join-Path $evidence 'head-partial.json') -AllowMissing
++            if(-not $partial.StartsWith($evidence+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or (Test-Path -LiteralPath $partial)){throw 'Fresh owned partial HEAD result required.'}
++            Write-KilogramFrozenJson $partial @{classification='partial HEAD cases before failed invocation; not passed suite';count=$checks.Count;checks=@($checks)}
++        }
++    }
++    return
++}
+ if($PathOnly){
+     $evidence=Get-S54Path $EvidenceDirectory
+     $workspace=Split-Path -Parent $PSScriptRoot
+@@ -250,7 +441,7 @@ if($CompilerIndexOnly){
+             $ctx=Case-Index $name;Reset-Index $ctx $ctx.normal
+             $facts=Test-S54Admission $ctx.inputs $ctx.policy
+             Require-Index ($facts.classification -ceq 'public_schema_fixture_only') "full public admission/$name"
+-            Require-Index ($ctx.i.identity.attempt -ceq (Get-S54Purpose $(if($name -ceq 'positive-F'){'FeasibilityF'}else{'WholeP'})).Attempt) "fixed F02/P01/$name"
++            Require-Index ($ctx.i.identity.attempt -ceq (Get-S54Purpose $(if($name -ceq 'positive-F'){'FeasibilityF'}else{'WholeP'})).Attempt) "fixed F03/P01/$name"
+         }
+         $ctx=Case-Index 'case-separator';$cap=$ctx.normal
+         for($n=0;$n -lt $cap.raw_compiler_artifact_json.Count;$n++){
+diff --git a/scripts/test-migration-s54-feasibility.ps1 b/scripts/test-migration-s54-feasibility.ps1
+index dae91398..f9d3a8b7 100644
+--- a/scripts/test-migration-s54-feasibility.ps1
++++ b/scripts/test-migration-s54-feasibility.ps1
+@@ -5,7 +5,7 @@ $ErrorActionPreference='Stop'
+ . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1')
+ $workspace=Split-Path -Parent $PSScriptRoot
+ $evidence=Get-S54Path $EvidenceDirectory
+-$owned=@('.tmp/s54-block4c-implementation-01/','.tmp/s54-block4d-preparation-order-repair-01/')
++$owned=@('.tmp/s54-block4c-implementation-01/','.tmp/s54-block4d-preparation-order-repair-01/','.tmp/s54-block4h-head-repair-01/')
+ if(-not @($owned|Where-Object {$evidence.StartsWith((Join-Path $workspace $_),[StringComparison]::OrdinalIgnoreCase)}).Count){throw 'Fresh owned public F checks only.'}
+ $checks=[Collections.Generic.List[object]]::new()
+ function Require([bool]$Value,[string]$Name){if(-not $Value){throw $Name};$checks.Add(@{name=$Name;passed=$true})}
+@@ -26,13 +26,15 @@ try {
+     Require ((Get-KilogramFrozenApplicationPath $name) -ceq (Join-Path $two $name)) 'single candidate remains scalar'
+ }finally{$env:PATH=$beforePath}
+ $p=Get-S54Purpose WholeP;$f=Get-S54Purpose FeasibilityF
+-Require ($f.Attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-02' -and $p.Attempt -ceq 'P-s54-whole-resumed-l1-01-attempt-01') 'closed F02/P01 binding'
++Require ($f.Attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-03' -and $p.Attempt -ceq 'P-s54-whole-resumed-l1-01-attempt-01') 'closed F03/P01 binding'
+ Require ($p.Deadline.controller -eq 2350 -and $p.Deadline.work -eq 2375 -and $p.Deadline.outer -eq 2400) 'P original deadline unchanged'
+ Require ($f.Deadline.controller -eq 450 -and $f.Deadline.work -eq 480 -and $f.Deadline.outer -eq 510) 'F fixed deadline'
+ Reject 'closed purpose rejects invented limits' {Get-S54Purpose arbitrary}
+ $i=@{identity=@{case=$f.Case;attempt=$f.Attempt;selector=$f.Selector;run_id=('a'*64)}}
+ $old=@{identity=@{case=$f.Case;attempt=($f.Case+'-attempt-01');selector=$f.Selector;run_id=('a'*64)}}
+ Reject 'consumed F01 rejected by actual output policy' {Get-S54OutputPurpose $old}
++$old.identity.attempt=$f.Case+'-attempt-02'
++Reject 'consumed F02 rejected by actual output policy' {Get-S54OutputPurpose $old}
+ $inputs=@{inventory=@{sha256=('b'*64)}}
+ $assertion=@{Pin=@{sha256=('c'*64);bytes=123};Value=@{provenance=@{blake3=('d'*64)}}}
+ $native=$f.Native+' '+(ConvertTo-Json -InputObject (New-S54Marker $i $inputs $assertion $f.FunctionalClass) -Compress)
+diff --git a/scripts/test-migration-s54-preparation-order.ps1 b/scripts/test-migration-s54-preparation-order.ps1
+index 5128dc14..e77beaec 100644
+--- a/scripts/test-migration-s54-preparation-order.ps1
++++ b/scripts/test-migration-s54-preparation-order.ps1
+@@ -5,7 +5,7 @@ $ErrorActionPreference='Stop'
+ . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
+ $workspace=Split-Path -Parent $PSScriptRoot
+ $evidence=Get-S54Path $EvidenceDirectory
+-if(-not $evidence.StartsWith((Join-Path $workspace '.tmp/s54-block4d-preparation-order-repair-01/'),[StringComparison]::OrdinalIgnoreCase)){throw 'Fresh owned preparation-order checks only.'}
++if(-not @('.tmp/s54-block4d-preparation-order-repair-01/','.tmp/s54-block4h-head-repair-01/'|Where-Object {$evidence.StartsWith((Join-Path $workspace $_),[StringComparison]::OrdinalIgnoreCase)}).Count){throw 'Fresh owned preparation-order checks only.'}
+ $checks=[Collections.Generic.List[object]]::new()
+ function Require([bool]$Value,[string]$Name){if(-not $Value){throw $Name};$checks.Add(@{name=$Name;passed=$true})}
+ function Reject([string]$Name,[scriptblock]$Action,[string]$Pattern){
+@@ -94,8 +94,8 @@ Require ($index.classification -ceq 'public_schema_fixture_only') 'public fixtur
+ $policy=New-S54Policy -FixtureRoot $index.root
+ $i=Read-S54Json $index.inputs.inventory 2097152
+ Assert-S54Inventory $i $policy
+-Require ($i.identity.attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-02') 'actual PS inventory admits F02'
+-foreach($suffix in @('01','03')){
++Require ($i.identity.attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-03') 'actual PS inventory admits F03'
++foreach($suffix in @('01','02')){
+     $i.identity.attempt=$i.identity.case+'-attempt-'+$suffix
+     Reject "actual PS inventory refuses F$suffix" {Assert-S54Inventory $i $policy} 'required identity'
+ }
+@@ -107,5 +107,5 @@ $pindex=Read-S54Json (Get-S54Pin $PFixtureIndex 16384) 16384
+ $pi=Read-S54Json $pindex.inputs.inventory 2097152
+ Assert-S54Inventory $pi (New-S54Policy -FixtureRoot $pindex.root)
+ Require ($pi.identity.attempt -ceq 'P-s54-whole-resumed-l1-01-attempt-01') 'actual PS inventory retains P01'
+-Write-KilogramFrozenJson (Join-Path $evidence 'result.json') @{classification='public shared preparation-order and F02 admission regression; no compiler/runtime/network';checks=@($checks);count=$checks.Count;whole_attempt_verdict='not_established'}
++Write-KilogramFrozenJson (Join-Path $evidence 'result.json') @{classification='public shared preparation-order and F03 admission regression; no compiler/runtime/network';checks=@($checks);count=$checks.Count;whole_attempt_verdict='not_established'}
+ Write-Output ('preparation_order_checks='+$checks.Count)

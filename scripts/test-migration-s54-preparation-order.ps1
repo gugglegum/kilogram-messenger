@@ -5,7 +5,7 @@ $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
 $workspace=Split-Path -Parent $PSScriptRoot
 $evidence=Get-S54Path $EvidenceDirectory
-if(-not $evidence.StartsWith((Join-Path $workspace '.tmp/s54-block4d-preparation-order-repair-01/'),[StringComparison]::OrdinalIgnoreCase)){throw 'Fresh owned preparation-order checks only.'}
+if(-not @('.tmp/s54-block4d-preparation-order-repair-01/','.tmp/s54-block4h-head-repair-01/'|Where-Object {$evidence.StartsWith((Join-Path $workspace $_),[StringComparison]::OrdinalIgnoreCase)}).Count){throw 'Fresh owned preparation-order checks only.'}
 $checks=[Collections.Generic.List[object]]::new()
 function Require([bool]$Value,[string]$Name){if(-not $Value){throw $Name};$checks.Add(@{name=$Name;passed=$true})}
 function Reject([string]$Name,[scriptblock]$Action,[string]$Pattern){
@@ -94,8 +94,8 @@ Require ($index.classification -ceq 'public_schema_fixture_only') 'public fixtur
 $policy=New-S54Policy -FixtureRoot $index.root
 $i=Read-S54Json $index.inputs.inventory 2097152
 Assert-S54Inventory $i $policy
-Require ($i.identity.attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-02') 'actual PS inventory admits F02'
-foreach($suffix in @('01','03')){
+Require ($i.identity.attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-03') 'actual PS inventory admits F03'
+foreach($suffix in @('01','02')){
     $i.identity.attempt=$i.identity.case+'-attempt-'+$suffix
     Reject "actual PS inventory refuses F$suffix" {Assert-S54Inventory $i $policy} 'required identity'
 }
@@ -107,5 +107,5 @@ $pindex=Read-S54Json (Get-S54Pin $PFixtureIndex 16384) 16384
 $pi=Read-S54Json $pindex.inputs.inventory 2097152
 Assert-S54Inventory $pi (New-S54Policy -FixtureRoot $pindex.root)
 Require ($pi.identity.attempt -ceq 'P-s54-whole-resumed-l1-01-attempt-01') 'actual PS inventory retains P01'
-Write-KilogramFrozenJson (Join-Path $evidence 'result.json') @{classification='public shared preparation-order and F02 admission regression; no compiler/runtime/network';checks=@($checks);count=$checks.Count;whole_attempt_verdict='not_established'}
+Write-KilogramFrozenJson (Join-Path $evidence 'result.json') @{classification='public shared preparation-order and F03 admission regression; no compiler/runtime/network';checks=@($checks);count=$checks.Count;whole_attempt_verdict='not_established'}
 Write-Output ('preparation_order_checks='+$checks.Count)

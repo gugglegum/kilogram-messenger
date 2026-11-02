@@ -1,0 +1,57 @@
+{
+  "process_CARGO_TARGET_DIR_present": false,
+  "cargo_calls": [
+    {
+      "executable": "C:\\Users\\Paul\\.rustup\\toolchains\\1.98.0-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+      "argv": [
+        "metadata",
+        "--manifest-path",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\Cargo.toml",
+        "--locked",
+        "--no-deps",
+        "--format-version",
+        1,
+        "--offline"
+      ]
+    },
+    {
+      "executable": "C:\\Users\\Paul\\.rustup\\toolchains\\1.98.0-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+      "argv": [
+        "test",
+        "--manifest-path",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\Cargo.toml",
+        "--locked",
+        "--jobs",
+        2,
+        "--profile",
+        "verification",
+        "--no-run",
+        "--message-format=json-render-diagnostics",
+        "--package",
+        "kilogram-cli",
+        "--offline",
+        "--target-dir",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\s54-head-source-checks"
+      ]
+    }
+  ],
+  "target": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\s54-head-source-checks",
+  "copies": [
+    {
+      "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\s54-head-source-checks\\verification\\deps\\kilogram_cli-9c278430cf338bb9.exe",
+      "destination": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\s54-head-source-checks\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe"
+    },
+    {
+      "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\s54-head-source-checks\\verification\\deps\\migration_s5_process-1095c6c52d2f00c4.exe",
+      "destination": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\s54-head-source-checks\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe"
+    },
+    {
+      "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\s54-head-source-checks\\verification\\deps\\runtime2_process-c67507fa40c47539.exe",
+      "destination": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\s54-head-source-checks\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe"
+    },
+    {
+      "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\s54-head-source-checks\\verification\\deps\\kilogram_cli-d6dca195279471af.exe",
+      "destination": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\s54-head-source-checks\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe"
+    }
+  ]
+}

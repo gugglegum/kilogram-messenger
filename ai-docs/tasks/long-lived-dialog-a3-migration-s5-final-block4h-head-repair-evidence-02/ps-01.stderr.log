@@ -1,0 +1,5 @@
+test-migration-s54-admission.ps1: E:\AI-Projects\kilogram-p2p-messenger\.tmp\s54-block4h-head-repair-01\ps-checks.ps1:15
+Line |
+  15 |  & (Join-Path $root 'scripts/test-migration-s54-admission.ps1') -HeadO :
+     |  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Exception calling "WriteAllBytes" with "2" argument(s): "Value cannot be null. (Parameter 'bytes')"

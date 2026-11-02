@@ -1,0 +1,862 @@
+{
+  "count": 64,
+  "fixture_roots": [
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\detached",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\loose",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\loose-wins",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\packed",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\subpath",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\comments",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\bad-loose-short",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\bad-loose-long",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\bad-loose-uppercase",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\bad-loose-bad-hex",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\bad-loose-empty",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\bad-loose-symbolic-chain",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\detached-short",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\detached-upper",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\detached-long",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\missing-packed",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\no-match",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\case-only",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\duplicate",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\malformed-duplicate",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\empty-digest-duplicate",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\invalid-packed-digest",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\HEAD-cap",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\HEAD-over-cap",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\loose-cap",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\loose-over-cap",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\packed-cap",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\packed-over-cap",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\utf8-head",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\utf8-loose",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\utf8-packed",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\bad-ref-32",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\bad-ref-33",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\bad-ref-34",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\bad-ref-35",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\bad-ref-36",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\bad-ref-37",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\loose-directory",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\gitdir-file",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\packed-directory",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\reparse-False",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\reparse-True",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\attribute-denied",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\attribute-io",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\read-denied",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\read-io",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\false-exists-denied",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\packed-read-denied",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\packed-read-io",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\between-calls",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\between-packed-calls",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\appearing-loose",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-headrepair-ps-04-positive-F",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\early-malformed",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\early-mismatch",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4h-head-repair-01\\ps-04\\head\\early-control"
+  ],
+  "production_prepare": false,
+  "classification": "focused HEAD/early-prerequisite/F03 public admission only",
+  "checks": [
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": null,
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "detached trim",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": null,
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "loose valid",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": null,
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "loose wins over stale packed",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": null,
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "packed valid with missing parent dirs",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": null,
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "branch subpath",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": null,
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "comments peeled unrelated case-different refs ignored",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 source HEAD digest.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "present malformed loose never falls back/short",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 source HEAD digest.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "present malformed loose never falls back/long",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 source HEAD digest.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "present malformed loose never falls back/uppercase",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 source HEAD digest.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "present malformed loose never falls back/bad-hex",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 source HEAD digest.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "present malformed loose never falls back/empty",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 source HEAD digest.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "present malformed loose never falls back/symbolic-chain",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 source HEAD digest.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "detached-short",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 source HEAD digest.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "detached-upper",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 source HEAD digest.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "detached-long",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 missing public path.",
+        "value": null,
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "missing-packed",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 exact packed source HEAD.",
+        "value": null,
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "no-match",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 exact packed source HEAD.",
+        "value": null,
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "case-only",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 exact packed source HEAD.",
+        "value": null,
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "duplicate",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 exact packed source HEAD.",
+        "value": null,
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "malformed-duplicate",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 exact packed source HEAD.",
+        "value": null,
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "empty-digest-duplicate",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 source HEAD digest.",
+        "value": null,
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "invalid-packed-digest",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": null,
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "HEAD 4096 accepted after trim",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 public file bound.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "HEAD over cap",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": null,
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "loose 4096 accepted after trim",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 public file bound.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "loose over cap refuses packed fallback",
+      "passed": true
+    },
+    {
+      "detail": null,
+      "name": "packed cap fixture exact byte count",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": null,
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "packed at cap",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 public file bound.",
+        "value": null,
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "packed over cap",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "Exception calling \"GetString\" with \"1\" argument(s): \"Unable to translate bytes [FF] at index 0 from specified code page to Unicode.\"",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "invalid UTF8 HEAD",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "Exception calling \"GetString\" with \"1\" argument(s): \"Unable to translate bytes [FF] at index 0 from specified code page to Unicode.\"",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "invalid UTF8 loose does not fall back",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "Exception calling \"GetString\" with \"1\" argument(s): \"Unable to translate bytes [FF] at index 0 from specified code page to Unicode.\"",
+        "value": null,
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "invalid UTF8 packed",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 HEAD ref.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "bad-ref-32",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 HEAD ref.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "bad-ref-33",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 absolute path/components.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "bad-ref-34",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 HEAD ref.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "bad-ref-35",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 HEAD ref.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "bad-ref-36",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 HEAD ref.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "bad-ref-37",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 loose HEAD must be a nonreparse file.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "loose directory refuses packed",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 Git directory required.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": []
+      },
+      "name": "external gitdir file unsupported without following",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 public file bound.",
+        "value": null,
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "packed directory is fatal",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 reparse ancestor.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "real loose reparse/dangling=False",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 reparse ancestor.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "real loose reparse/dangling=True",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "injected attributes denied",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "injected loose failure fatal/attribute-denied",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "injected attributes IO failure",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "injected loose failure fatal/attribute-io",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "injected HEAD read denied",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "injected loose failure fatal/read-denied",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "injected HEAD read IO failure",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "injected loose failure fatal/read-io",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "injected attributes denied",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "injected Test-Path false plus denied attributes cannot authorize fallback",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "injected HEAD read denied",
+        "value": null,
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "injected packed failure fatal/read-denied",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "injected HEAD read IO failure",
+        "value": null,
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "injected packed failure fatal/read-io",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": null,
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "fresh first loose",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": null,
+        "value": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "fresh second loose no cache",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": null,
+        "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "fresh first packed",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": null,
+        "value": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "fresh second packed no cache",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 source HEAD digest.",
+        "value": null,
+        "packed_reads": 0,
+        "read_caps": [
+          4096
+        ]
+      },
+      "name": "new malformed loose defeats formerly valid packed",
+      "passed": true
+    },
+    {
+      "detail": {
+        "instrumented_reads": true,
+        "error": "S54 loose HEAD appeared during packed read.",
+        "value": null,
+        "packed_reads": 1,
+        "read_caps": [
+          4096,
+          1048576
+        ]
+      },
+      "name": "loose appears during packed read refuses",
+      "passed": true
+    },
+    {
+      "detail": null,
+      "name": "actual complete PS public packed F03 admission",
+      "passed": true
+    },
+    {
+      "detail": "S54 actual HEAD.",
+      "name": "actual PS admission refuses wrong observed packed HEAD",
+      "passed": true
+    },
+    {
+      "detail": "S54 required identity.",
+      "name": "actual inventory refuses consumed F01",
+      "passed": true
+    },
+    {
+      "detail": "S54 required identity.",
+      "name": "actual inventory refuses consumed F02",
+      "passed": true
+    },
+    {
+      "detail": {
+        "guard_calls": 0,
+        "isolated_policy": true,
+        "error": "S54 source HEAD digest.",
+        "compile_calls": 0,
+        "intercepted_reservations": 0
+      },
+      "name": "early prerequisite before actual mutation/0",
+      "passed": true
+    },
+    {
+      "detail": {
+        "guard_calls": 0,
+        "isolated_policy": true,
+        "error": "S54 preparation actual HEAD differs.",
+        "compile_calls": 0,
+        "intercepted_reservations": 0
+      },
+      "name": "early prerequisite before actual mutation/1",
+      "passed": true
+    },
+    {
+      "detail": {
+        "guard_calls": 0,
+        "isolated_policy": true,
+        "error": "H_FORBIDDEN_RESERVATION",
+        "compile_calls": 0,
+        "intercepted_reservations": 1
+      },
+      "name": "early prerequisite before actual mutation/2",
+      "passed": true
+    },
+    {
+      "detail": null,
+      "name": "read-only real checkout HEAD agrees with Git",
+      "passed": true
+    }
+  ],
+  "runtime": "not_established",
+  "real_git_modified": false
+}

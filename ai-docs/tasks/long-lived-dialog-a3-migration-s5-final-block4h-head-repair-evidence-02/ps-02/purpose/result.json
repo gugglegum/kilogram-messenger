@@ -1,0 +1,122 @@
+{
+  "classification": "pure public F boundary checks; no messenger/compiler/profile/network",
+  "checks": [
+    {
+      "name": "two real Application resolutions",
+      "passed": true
+    },
+    {
+      "name": "scalar first Application matches invocation",
+      "passed": true
+    },
+    {
+      "name": "selected content identity is distinct",
+      "passed": true
+    },
+    {
+      "name": "single candidate remains scalar",
+      "passed": true
+    },
+    {
+      "name": "closed F03/P01 binding",
+      "passed": true
+    },
+    {
+      "name": "P original deadline unchanged",
+      "passed": true
+    },
+    {
+      "name": "F fixed deadline",
+      "passed": true
+    },
+    {
+      "name": "closed purpose rejects invented limits",
+      "passed": true
+    },
+    {
+      "name": "consumed F01 rejected by actual output policy",
+      "passed": true
+    },
+    {
+      "name": "consumed F02 rejected by actual output policy",
+      "passed": true
+    },
+    {
+      "name": "actual F marker parser accepts exact fixed grammar",
+      "passed": true
+    },
+    {
+      "name": "F rejects P marker",
+      "passed": true
+    },
+    {
+      "name": "F rejects extra foreign P marker",
+      "passed": true
+    },
+    {
+      "name": "F rejects marker on stderr",
+      "passed": true
+    },
+    {
+      "name": "F rejects zero invocation",
+      "passed": true
+    },
+    {
+      "name": "F rejects incomplete wrapper",
+      "passed": true
+    },
+    {
+      "name": "P rejects F output",
+      "passed": true
+    },
+    {
+      "name": "F output identity cannot use P selector",
+      "passed": true
+    },
+    {
+      "name": "fixed F leaf option set",
+      "passed": true
+    },
+    {
+      "name": "leaf cross-purpose rejected before setup",
+      "passed": true
+    },
+    {
+      "name": "historical P leaf option set unchanged",
+      "passed": true
+    },
+    {
+      "name": "actual frozen leaf reaches pinned-input refusal/WholeP : S54 missing public path.",
+      "passed": true
+    },
+    {
+      "name": "actual frozen leaf reaches pinned-input refusal/FeasibilityF : S54 missing public path.",
+      "passed": true
+    },
+    {
+      "name": "actual F/P frozen leaf never reached compiler/copy",
+      "passed": true
+    },
+    {
+      "name": "parse/cargo-frozen-artifacts.ps1",
+      "passed": true
+    },
+    {
+      "name": "parse/run-cargo-tests-stable.ps1",
+      "passed": true
+    },
+    {
+      "name": "parse/invoke-migration-s54-whole.ps1",
+      "passed": true
+    },
+    {
+      "name": "parse/migration-s54-outer.ps1",
+      "passed": true
+    },
+    {
+      "name": "parse/test-migration-s54-feasibility.ps1",
+      "passed": true
+    }
+  ],
+  "exit_code": 0
+}

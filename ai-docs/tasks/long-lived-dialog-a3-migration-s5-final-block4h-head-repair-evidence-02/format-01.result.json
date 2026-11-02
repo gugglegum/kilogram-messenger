@@ -1,0 +1,9 @@
+{
+  "scoped_rustfmt": true,
+  "protected_images_and_history_preserved": true,
+  "files": [
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_purpose.rs",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_feasibility_tests.rs",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_admission_tests.rs"
+  ]
+}

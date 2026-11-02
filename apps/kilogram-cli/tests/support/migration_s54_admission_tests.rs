@@ -656,7 +656,7 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
             }
             _ => {
                 f.inventory["identity"]["attempt"] =
-                    "F-s54-mixed-hooks-feasibility-01-attempt-03".into()
+                    "F-s54-mixed-hooks-feasibility-01-attempt-02".into()
             }
         }
         f.seal()?;

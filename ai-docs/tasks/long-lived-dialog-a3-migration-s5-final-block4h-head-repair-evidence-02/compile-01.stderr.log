@@ -1,0 +1,5 @@
+run-cargo-tests-stable.ps1: E:\AI-Projects\kilogram-p2p-messenger\.tmp\s54-block4h-head-repair-01\work.ps1:56
+Line |
+  56 |          & (Join-Path $root 'scripts/run-cargo-tests-stable.ps1') @a
+     |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | The variable '$script:HCargoCalls' cannot be retrieved because it has not been set.

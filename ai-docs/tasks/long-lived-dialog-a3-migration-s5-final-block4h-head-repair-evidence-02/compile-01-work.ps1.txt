@@ -1,0 +1,66 @@
+param([Parameter(Mandatory)][string]$Step)
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+$root=(Get-Location).Path
+. (Join-Path $root 'scripts/invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
+$base=Get-S54Path (Join-Path $root '.tmp/s54-block4h-head-repair-01')
+$baseline=Read-S54Json (Get-S54Pin (Join-Path $base 'baseline.json') 1048576) 1048576
+$changed=@('scripts/invoke-migration-s54-whole.ps1','scripts/migration-s54-outer.ps1','scripts/test-migration-s54-admission.ps1','scripts/test-migration-s54-feasibility.ps1','scripts/test-migration-s54-preparation-order.ps1','apps/kilogram-cli/tests/support/migration_s54_purpose.rs','apps/kilogram-cli/tests/support/migration_s54_feasibility_tests.rs','apps/kilogram-cli/tests/support/migration_s54_admission_tests.rs')
+function Write-H([string]$Name,$Value){
+    $p=Get-S54Path (Join-Path $base $Name) -AllowMissing
+    if(-not $p.StartsWith($base+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or (Test-Path -LiteralPath $p)){throw 'Fresh canonical owned H output.'};Write-KilogramFrozenJson $p $Value
+}
+function Assert-HProtected {
+    if((& git rev-parse HEAD) -cne $baseline.head -or @(& git diff --cached --name-only).Count){throw 'Baseline HEAD/index changed.'}
+    foreach($p in @($baseline.navigation)+@($baseline.protected_pins)){$null=Read-S54Pin $p 134217728}
+    foreach($p in $baseline.source_pins){if([IO.Path]::GetRelativePath($root,$p.path).Replace('\','/') -cnotin $changed){$null=Read-S54Pin $p 8388608}}
+    foreach($p in @($baseline.F01_run,$baseline.F02_run)){if(@(Get-ChildItem -LiteralPath $p -Force).Count){throw 'Historical failed run changed.'}}
+    foreach($p in @('.tmp/migration-s54-feasibility/F-s54-mixed-hooks-feasibility-01-attempt-03','.tmp/migration-s54-feasibility-public-evidence/F-s54-mixed-hooks-feasibility-01-attempt-03','.tmp/migration-s54-integrated/P-s54-whole-resumed-l1-01-attempt-01','.tmp/migration-s54-public-evidence/P-s54-whole-resumed-l1-01-attempt-01')){if(Test-Path -LiteralPath $p){throw 'No F03/P allocation permitted.'}}
+}
+Assert-HProtected
+if($Step -like 'format-*'){
+    $files=@($changed|Where-Object {$_.EndsWith('.rs')}|ForEach-Object {Join-Path $root $_})
+    & rustfmt --edition 2024 @files;if($LASTEXITCODE){throw 'Scoped formatting failed.'}
+    & rustfmt --edition 2024 --check @files;if($LASTEXITCODE){throw 'Scoped formatting check failed.'}
+    Write-H ($Step+'.result.json') @{scoped_rustfmt=$true;files=$files;protected_images_and_history_preserved=$true}
+}elseif($Step -like 'compile-*' -or $Step -like 'rust-*'){
+    if($env:CARGO_TARGET_DIR){throw 'No inherited cargo target override is admitted to policy unit tests.'}
+    $script:HTarget=Get-S54Path (Join-Path $root 'target/s54-head-source-checks') -AllowMissing
+    $ownership=Join-Path $base 'target-ownership.json'
+    if(-not (Test-Path $ownership)){
+        if(Test-Path $script:HTarget){throw 'Non-production source-check slot must be fresh.'}
+        Write-H 'target-ownership.json' @{path=$script:HTarget;head=$baseline.head;purpose='exclusive new H source-check slot; not historical'}
+    }else{$own=Read-S54Json (Get-S54Pin $ownership 4096) 4096;if($own.path -cne $script:HTarget){throw 'Stable slot ownership differs.'}}
+    $script:HCargo=(Get-Command cargo.exe -CommandType Application|Select-Object -First 1).Source
+    Assert-S54SamePath $script:HCargo 'C:/Users/Paul/.rustup/toolchains/1.98.0-x86_64-pc-windows-msvc/bin/cargo.exe'
+    $script:HCargoCalls=[Collections.Generic.List[object]]::new();$script:HCopies=[Collections.Generic.List[object]]::new()
+    function cargo {
+        $forward=@($args)+@('--offline')
+        if($forward[0] -ceq 'test'){$forward+=@('--target-dir',$script:HTarget)}
+        $script:HCargoCalls.Add(@{executable=$script:HCargo;argv=$forward})
+        & $script:HCargo @forward
+    }
+    function Copy-Item {
+        param([string]$LiteralPath,[string]$Destination,[switch]$Force)
+        $src=Get-S54Path $LiteralPath;$dst=Get-S54Path $Destination -AllowMissing
+        foreach($p in @($src,$dst)){if(-not $p.StartsWith($script:HTarget+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'Source-check runner copy escaped dedicated slot.'}}
+        $script:HCopies.Add(@{source=$src;destination=$dst})
+        Microsoft.PowerShell.Management\Copy-Item -LiteralPath $src -Destination $dst -Force:$Force
+    }
+    try{
+        $a=@{Package=@('kilogram-cli');Profile='verification';CargoJobs=2;SkipCacheStatus=$true}
+        if($Step -like 'rust-*'){
+            $a.Run=$true;$a.NoCapture=$true;$a.IsolatedTestsFile=Join-Path $base 'isolated-tests.json';$a.IsolatedTestOrder='BeforeAggregate'
+            $a.SkipTest=@([char[]](48..57)+[char[]](65..90)+[char[]](97..122)+[char]'_'|ForEach-Object {[string]$_})
+        }
+        & (Join-Path $root 'scripts/run-cargo-tests-stable.ps1') @a
+        if($LASTEXITCODE){throw 'Actual stable runner failed.'}
+    }finally{Write-H ($Step+'.cargo.json') @{cargo_calls=@($script:HCargoCalls);copies=@($script:HCopies);target=$script:HTarget;process_CARGO_TARGET_DIR_present=($null -ne [Environment]::GetEnvironmentVariable('CARGO_TARGET_DIR','Process'))}}
+    $pins=@(Get-ChildItem -LiteralPath (Join-Path $script:HTarget 'verification/deps') -Filter 'kilogram-cli-*-tests.exe' -File|ForEach-Object {Get-S54Pin $_.FullName 134217728})
+    Write-H ($Step+'.images.json') @{classification='separate stable source-check artifacts only';images=$pins;exact_selectors=$(if($Step -like 'rust-*'){@(Read-S54Json (Get-S54Pin (Join-Path $base 'isolated-tests.json') 16384) 16384).tests}else{@()})}
+}elseif($Step -like 'ps-*'){
+    . (Join-Path $base 'ps-checks.ps1')
+}else{throw 'Unknown H step.'}
+Assert-HProtected
+Write-H ($Step+'.preservation.json') @{head=(& git rev-parse HEAD);index_empty=$true;navigation_preserved=$true;protected_pins=$baseline.protected_pins;historical_F01_F02_and_images_unchanged=$true;production_F03_P_absent=$true}
+Write-Output ($Step+'=passed;historical_images_preserved=true;production=false')
