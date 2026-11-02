@@ -1,0 +1,24 @@
+[
+  {
+    "capture": "normal",
+    "units": 447,
+    "raw_messages": 447,
+    "workspace_messages": 28,
+    "membership_queries": 56,
+    "source_count": 517,
+    "source_rows_scanned": 28952,
+    "Get_S54Path_membership_calls": 57904,
+    "unique_query_paths": 55
+  },
+  {
+    "capture": "tests",
+    "units": 501,
+    "raw_messages": 501,
+    "workspace_messages": 36,
+    "membership_queries": 72,
+    "source_count": 517,
+    "source_rows_scanned": 37224,
+    "Get_S54Path_membership_calls": 74448,
+    "unique_query_paths": 61
+  }
+]

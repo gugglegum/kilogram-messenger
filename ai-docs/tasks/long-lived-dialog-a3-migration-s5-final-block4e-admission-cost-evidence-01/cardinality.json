@@ -1,0 +1,28 @@
+[
+  {
+    "workspace_messages": 28,
+    "graph_nodes": 524,
+    "membership_queries": 56,
+    "name": "normal",
+    "membership_GetS54Path_calls": 57904,
+    "unique_query_paths": 55,
+    "packages": 524,
+    "source_count": 517,
+    "units": 447,
+    "raw_messages": 447,
+    "membership_source_rows": 28952
+  },
+  {
+    "workspace_messages": 36,
+    "graph_nodes": 524,
+    "membership_queries": 72,
+    "name": "tests",
+    "membership_GetS54Path_calls": 74448,
+    "unique_query_paths": 61,
+    "packages": 524,
+    "source_count": 517,
+    "units": 501,
+    "raw_messages": 501,
+    "membership_source_rows": 37224
+  }
+]

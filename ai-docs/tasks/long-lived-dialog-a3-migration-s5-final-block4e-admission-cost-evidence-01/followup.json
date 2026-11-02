@@ -1,0 +1,10 @@
+{
+  "runtime": false,
+  "accepted_source_unchanged": true,
+  "images_checked": 9,
+  "classification": "surrounding full embedded predicate plus ignored public index prototype; no compiler pair replay",
+  "source_count": 517,
+  "full_AssertS54Embedded_seconds": 14.3219312,
+  "full_embedded_includes_dependency_predicate": true,
+  "public_prototype_seconds": 0.4834382
+}

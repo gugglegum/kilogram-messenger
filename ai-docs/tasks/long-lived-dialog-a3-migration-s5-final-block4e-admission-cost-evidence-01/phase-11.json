@@ -1,0 +1,5 @@
+{
+  "seconds": 0.0232761,
+  "passed": true,
+  "name": "probe: index queries with fresh live query path checks"
+}

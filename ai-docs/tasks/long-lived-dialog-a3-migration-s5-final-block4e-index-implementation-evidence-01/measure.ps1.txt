@@ -1,0 +1,42 @@
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+$root=(Get-Location).Path;$base=Join-Path $root '.tmp/s54-block4e-index-implementation-01'
+. (Join-Path $root 'scripts/invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
+$policy=New-S54Policy;$root=$policy.Root
+$old=Read-S54Json (Get-S54Pin (Join-Path $root '.tmp/s54-block4d-preparation-order-repair-01/compile-02.result.json') 1048576) 1048576
+$normal=Read-S54Json $old.normal 8388608;$tests=Read-S54Json $old.tests 8388608
+$paths=Get-S54SourcePaths $root;$fresh=@($paths|ForEach-Object {Get-S54Pin $_ 8388608})
+$changed=@('scripts/invoke-migration-s54-whole.ps1','scripts/test-migration-s54-admission.ps1')
+foreach($name in $changed){
+    if($name -cnotin $script:S54Helpers -or $name -cin $script:S54Helpers[0..2]){throw 'Reviewed helper-only dependency scope required.'}
+    foreach($capture in @($normal,$tests)){if(@($capture.build_inputs_before.source_inputs|Where-Object path -CEQ $name).Count){throw 'Actual compiler input changed; rebuilding would require review.'}}
+}
+foreach($p in $old.sources){if([IO.Path]::GetRelativePath($root,$p.path).Replace('\','/') -cnotin $changed){$null=Read-S54Pin $p 8388608}}
+foreach($p in @($old.normal,$old.tests)+@($old.test_origins_after)+@($old.test_dep_info_after)+@($old.normal_origins)+@($old.normal_dep_info)){$null=Read-S54Pin $p 134217728}
+foreach($r in $old.images){$null=Read-S54Pin $r.pin 134217728}
+$proof=@{source=@{files=$fresh};images=$old.images;runtime=@{environment=$normal.build_inputs_before.environment;configs=$normal.build_inputs_before.configs;resolutions=$policy.Resolutions}}
+Write-KilogramFrozenJson (Join-Path $base 'measure-01.before.json') @{classification='fresh candidate source proof; retained genuine serialized captures unchanged';sources=$fresh;normal=$old.normal;tests=$old.tests;images=$old.images;changed_helpers=$changed;compiler_rebuild_needed=$false;compiler_function_file=(Get-Item Function:Assert-S54Compiler).ScriptBlock.File;path_function_file=(Get-Item Function:Get-S54Path).ScriptBlock.File;instrumented=$false}
+$times=[Collections.Generic.List[object]]::new()
+foreach($role in @('normal','tests')){
+    $capture=if($role -ceq 'normal'){$normal}else{$tests}
+    $timer=[Diagnostics.Stopwatch]::StartNew();$passed=$false
+    try{Assert-S54Compiler $proof $policy $capture ($role -ceq 'normal');$passed=$true}
+    finally{$timer.Stop();$row=@{role=$role;seconds=$timer.Elapsed.TotalSeconds;passed=$passed};$times.Add($row);Write-KilogramFrozenJson (Join-Path $base ('measure-01.'+$role+'.json')) $row}
+}
+$timer=[Diagnostics.Stopwatch]::StartNew()
+$before=Read-S54Json (Get-S54Pin (Join-Path $root '.tmp/s54-block4d-preparation-order-repair-01/compile-public-02/embedded-before.json') 65536) 65536
+$proof.compiler=@{embedded=@{before=$before.inputs;after=$old.embedded_after;dep_info=$old.test_dep_info_after}}
+Assert-S54Embedded $proof $policy $tests
+$timer.Stop();$embeddedSeconds=$timer.Elapsed.TotalSeconds
+foreach($p in $fresh){$null=Read-S54Pin $p 8388608}
+foreach($p in @($old.normal,$old.tests)+@($old.test_origins_after)+@($old.test_dep_info_after)+@($old.normal_origins)+@($old.normal_dep_info)){$null=Read-S54Pin $p 134217728}
+foreach($r in $old.images){$null=Read-S54Pin $r.pin 134217728}
+$baseline=Read-S54Json (Get-S54Pin (Join-Path $base 'baseline.json') 16384) 16384
+foreach($p in $baseline.navigation){$null=Read-S54Pin $p 8388608}
+if((& git rev-parse HEAD) -cne $baseline.head -or @(& git diff --cached --name-only).Count){throw 'Original HEAD/index must remain unchanged.'}
+foreach($path in @('.tmp/migration-s54-feasibility/F-s54-mixed-hooks-feasibility-01-attempt-02','.tmp/migration-s54-feasibility-public-evidence/F-s54-mixed-hooks-feasibility-01-attempt-02','.tmp/migration-s54-integrated/P-s54-whole-resumed-l1-01-attempt-01','.tmp/migration-s54-public-evidence/P-s54-whole-resumed-l1-01-attempt-01')){if(Test-Path (Join-Path $root $path)){throw 'No production directories authorized.'}}
+$rows=@(Get-CimInstance Win32_Process -Property ProcessId,ExecutablePath -OperationTimeoutSec 3 -ErrorAction Stop)
+$imagePaths=@($old.images|ForEach-Object {$_.pin.path});$active=@($rows|Where-Object {$_.ExecutablePath -and $_.ExecutablePath -in $imagePaths}|ForEach-Object {@{pid=$_.ProcessId;path=$_.ExecutablePath}})
+if($active.Count){throw 'Unexpected exact image process; no process stopped.'}
+Write-KilogramFrozenJson (Join-Path $base 'measure-01.result.json') @{classification='one uninstrumented candidate compiler pair on retained actual captures; no production inventory/runtime';head=$baseline.head;timings=@($times);pair_seconds=($times[0].seconds+$times[1].seconds);full_embedded_seconds=$embeddedSeconds;source_count=$fresh.Count;images=$old.images;normal=$old.normal;tests=$old.tests;source_and_capture_pins_unchanged_during_measurement=$true;fresh_candidate_context=$true;compiler_rebuild_needed=$false;instrumented=$false;native_process_inventory_succeeded=$true;active_exact_images=$active;runtime='not_established'}
+Write-Output 'candidate_compiler_pair_measurement=passed;compiler_rebuild=false;runtime=false'

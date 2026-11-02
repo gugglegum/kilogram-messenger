@@ -1,0 +1,78 @@
+param([Parameter(Mandatory)][ValidateSet('measure-01')][string]$Step)
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+$workspace=(Get-Location).Path
+$base=Join-Path $workspace '.tmp/s54-block4e-admission-cost-01'
+$old=Join-Path $workspace '.tmp/s54-block4d-preparation-order-repair-01'
+. (Join-Path $workspace 'scripts/invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
+$phases=[Collections.Generic.List[object]]::new()
+function Phase([string]$Name,[scriptblock]$Action) {
+    $timer=[Diagnostics.Stopwatch]::StartNew();$passed=$false
+    try {& $Action;$passed=$true}finally{
+        $timer.Stop();$phases.Add(@{name=$Name;seconds=$timer.Elapsed.TotalSeconds;passed=$passed})
+        $path=Join-Path $base ('phase-{0:d2}.json' -f $phases.Count)
+        Write-KilogramFrozenJson $path $phases[$phases.Count-1]
+    }
+}
+$policy=New-S54Policy;$root=$policy.Root
+$baseline=Read-S54Json (Get-S54Pin (Join-Path $base 'baseline.json') 16384) 16384
+function Preserve-Inputs {
+    if((& git rev-parse HEAD) -cne $baseline.head -or @(& git diff --cached --name-only).Count){throw 'HEAD/index changed during read-only measurement.'}
+    foreach($p in $baseline.navigation){$null=Read-S54Pin $p 8388608}
+    $current=Get-S54SourcePaths $root
+    Assert-S54Equal @($current|Sort-Object) @($script:context.sources|ForEach-Object {$_.path}|Sort-Object)
+    foreach($p in $script:context.sources){$null=Read-S54Pin $p 8388608}
+    foreach($row in $script:context.images){$null=Read-S54Pin $row.pin 134217728}
+    foreach($p in @($script:stage.normal,$script:stage.tests)+@($script:stage.test_origins_before)+@($script:stage.test_dep_info_before)+@($script:stage.normal_origins)+@($script:stage.normal_dep_info)){$null=Read-S54Pin $p 134217728}
+    $failed=Read-S54Json (Get-S54Pin (Join-Path $workspace 'ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-f-preparation-report-01.pins.json') 65536) 65536
+    foreach($p in @($failed.administration)+@($failed.public_artifacts)){$null=Read-S54Pin $p 134217728}
+    foreach($path in @('.tmp/migration-s54-feasibility/F-s54-mixed-hooks-feasibility-01-attempt-02','.tmp/migration-s54-feasibility-public-evidence/F-s54-mixed-hooks-feasibility-01-attempt-02','.tmp/migration-s54-integrated/P-s54-whole-resumed-l1-01-attempt-01','.tmp/migration-s54-public-evidence/P-s54-whole-resumed-l1-01-attempt-01')){if(Test-Path (Join-Path $root $path)){throw 'Production directory appeared.'}}
+}
+Phase 'load retained proof context and stage result' {
+    $script:context=Read-S54Json (Get-S54Pin (Join-Path $old 'compile-02.result.json') 1048576) 1048576
+    $script:stage=Read-S54Json (Get-S54Pin (Join-Path $old 'compile-02.stage-result.json') 16384) 16384
+}
+Phase 'before: live source/capture/image/origin/dep-info/navigation/failed-F01 pins' {Preserve-Inputs}
+Phase 'strict read and parse normal capture' {$script:normal=Read-S54Json $stage.normal 8388608}
+Phase 'strict read and parse tests capture' {$script:tests=Read-S54Json $stage.tests 8388608}
+$proof=@{source=@{files=$context.sources};images=$context.images;runtime=@{environment=$normal.build_inputs_before.environment;configs=$normal.build_inputs_before.configs;resolutions=$policy.Resolutions}}
+# Unmodified production predicates: no proxy/wrapper/breakpoint in their calls.
+Phase 'Assert-S54Compiler normal (unmodified reference, one call)' {Assert-S54Compiler $proof $policy $normal $true}
+Phase 'Assert-S54Compiler tests (unmodified reference, one call)' {Assert-S54Compiler $proof $policy $tests $false}
+Phase 'embedded dependency validation, canonical root' {Assert-S54EmbeddedDependencies $root $stage.test_dep_info_after $context.sources}
+Phase 'frozen normal/tests input equality' {Assert-KilogramFrozenInputs $normal.build_inputs_before $tests.build_inputs_before}
+
+$cardinality=@()
+foreach($entry in @(@{name='normal';capture=$normal},@{name='tests';capture=$tests})){
+    $cap=$entry.capture
+    $messages=@($cap.raw_compiler_artifact_json|ForEach-Object {ConvertFrom-Json -InputObject $_ -AsHashtable -Depth 128})
+    $local=@($messages|Where-Object {([IO.Path]::GetFullPath($_.manifest_path)).StartsWith($root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)})
+    $queries=@($local|ForEach-Object {$_.manifest_path;$_.target.src_path})
+    $cardinality+=@{name=$entry.name;source_count=$context.sources.Count;units=$cap.units.Count;raw_messages=$messages.Count;workspace_messages=$local.Count;membership_queries=$queries.Count;membership_source_rows=($queries.Count*$context.sources.Count);membership_GetS54Path_calls=($queries.Count*$context.sources.Count*2);unique_query_paths=@($queries|Sort-Object -Unique).Count;packages=$cap.build_inputs_before.package_names.Count;graph_nodes=$cap.build_inputs_before.resolved_graph.Count}
+}
+Write-KilogramFrozenJson (Join-Path $base 'cardinality.json') $cardinality
+# Small separate operation probe, not a second compiler-predicate invocation.
+$all=@($normal.raw_compiler_artifact_json|ForEach-Object {ConvertFrom-Json -InputObject $_ -AsHashtable -Depth 128})
+$local=@($all|Where-Object {([IO.Path]::GetFullPath($_.manifest_path)).StartsWith($root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)})
+$queries=@($local[0].manifest_path,$local[0].target.src_path,$local[$local.Count-1].manifest_path,$local[$local.Count-1].target.src_path)
+$naive=@();$indexed=@();$map=$null
+Phase 'probe: original membership expression, four retained queries' {
+    $script:naive=@($queries|ForEach-Object {
+        $query=$_
+        @($context.sources|Where-Object {[string]::Equals((Get-S54Path $_.path),(Get-S54Path $query),[StringComparison]::OrdinalIgnoreCase)}).Count -gt 0
+    })
+}
+Phase 'probe: fresh canonical membership index build (one source pass)' {
+    $script:map=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach($p in $context.sources){if(-not $map.Add((Get-S54Path $p.path))){throw 'Duplicate canonical source in probe.'}}
+}
+Phase 'probe: index queries with fresh live query path checks' {$script:indexed=@($queries|ForEach-Object {$map.Contains((Get-S54Path $_))})}
+Assert-S54Equal $naive $indexed
+Phase 'probe: final fresh source pin/reparse pass (not cached security observations)' {foreach($p in $context.sources){$null=Read-S54Pin $p 8388608}}
+Phase 'after: live source/capture/image/origin/dep-info/navigation/failed-F01 pins' {Preserve-Inputs}
+$rows=@(Get-CimInstance Win32_Process -Property ProcessId,ExecutablePath -OperationTimeoutSec 3 -ErrorAction Stop)
+$imagePaths=@($context.images|ForEach-Object {$_.pin.path})
+$active=@($rows|Where-Object {$_.ExecutablePath -and $_.ExecutablePath -in $imagePaths}|ForEach-Object {@{pid=$_.ProcessId;path=$_.ExecutablePath}})
+if($active.Count){throw 'Unexpected exact image process; no process stopped.'}
+Write-KilogramFrozenJson (Join-Path $base 'measurement.json') @{classification='one unmodified real compiler pair plus bounded separate read-only probes; no production admission/runtime';head=$baseline.head;phases=@($phases);cardinality=$cardinality;prototype_comparison=@{query_count=$queries.Count;original_results=$naive;indexed_results=$indexed;security_checks_cached=$false};normal=$stage.normal;tests=$stage.tests;source_count=$context.sources.Count;image_count=$context.images.Count;native_process_inventory_succeeded=$true;active_exact_images=$active;before_after_pins_unchanged=$true;production_F02_P01_directories_absent=$true;runtime_admission_duration='not_established'}
+Write-Output 'one_reference_normal_tests_measurement=complete;production_runtime=false'

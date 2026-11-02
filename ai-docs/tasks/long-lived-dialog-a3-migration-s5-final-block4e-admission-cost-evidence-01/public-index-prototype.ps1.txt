@@ -1,0 +1,52 @@
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+$root=(Get-Location).Path
+$base=Join-Path $root '.tmp/s54-block4e-admission-cost-01'
+. (Join-Path $root 'scripts/invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
+$fixture=Join-Path $base 'public-index-fixture-01';$null=New-Item -ItemType Directory -Path $fixture -ErrorAction Stop
+$checks=[Collections.Generic.List[object]]::new()
+function Require([bool]$Value,[string]$Name){if(-not $Value){throw $Name};$checks.Add(@{name=$Name;passed=$true})}
+function Reject([string]$Name,[scriptblock]$Action,[string]$Pattern){$why=$null;try{$null=& $Action}catch{$why=$_.Exception.Message};Require ($null -ne $why -and $why -match $Pattern) "$Name : $why"}
+function Index($Pins){
+    $map=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach($p in $Pins){$null=Read-S54Pin $p 4096;if(-not $map.Add((Get-S54Path $p.path))){throw 'Duplicate canonical source.'}}
+    return ,$map
+}
+function Query($Map,[string]$Path){$Map.Contains((Get-S54Path $Path))}
+function FreshTail($Pins){foreach($p in $Pins){$null=Read-S54Pin $p 4096}}
+function Original($Pins,[string]$Path){@($Pins|Where-Object {[string]::Equals((Get-S54Path $_.path),(Get-S54Path $Path),[StringComparison]::OrdinalIgnoreCase)}).Count -gt 0}
+function Case([string]$Name){$path=Join-Path $fixture $Name;$null=New-Item -ItemType Directory -Path $path -ErrorAction Stop;return $path}
+$case=Case 'stable';$a=Join-Path $case 'a.bin';$b=Join-Path $case 'b.bin';$foreign=Join-Path $case 'foreign.bin'
+foreach($p in @($a,$b,$foreign)){[IO.File]::WriteAllText($p,'public fixture bytes only')}
+$pins=@((Get-S54Pin $a 4096),(Get-S54Pin $b 4096));$map=Index $pins
+$queries=@($a,$a.ToUpperInvariant(),$b.Replace('\','/'),$foreign)
+$expected=@($true,$true,$true,$false)
+for($n=0;$n -lt $queries.Count;$n++){Require ((Original $pins $queries[$n]) -eq $expected[$n] -and (Query $map $queries[$n]) -eq $expected[$n]) "equivalent original/index membership/$n"}
+FreshTail $pins;Require $true 'fresh source tail passes stable snapshot'
+Reject 'duplicate canonical source refused' {Index @($pins[0],$pins[0])} 'Duplicate canonical source'
+
+$case=Case 'content-mutation';$p=Join-Path $case 'source.bin';[IO.File]::WriteAllText($p,'public before bytes');$pin=Get-S54Pin $p 4096;$map=Index @($pin)
+[IO.File]::WriteAllText($p,'public changed bytes')
+Require ((Query $map $p) -and (Original @($pin) $p)) 'membership alone is not source-content authority'
+Reject 'content mutation refused by fresh tail' {FreshTail @($pin)} 'public pin mismatch'
+
+$case=Case 'missing-after-index';$p=Join-Path $case 'source.bin';[IO.File]::WriteAllText($p,'public original');$pin=Get-S54Pin $p 4096;$map=Index @($pin)
+if(-not ([IO.Path]::GetFullPath($p)).StartsWith($fixture+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'Owned fixture deletion only.'}
+[IO.File]::Delete($p)
+Reject 'missing query refused fresh after index' {Query $map $p} 'missing public path'
+Reject 'original missing query also refused' {Original @($pin) $p} 'missing public path'
+Reject 'missing source refused by final fresh tail' {FreshTail @($pin)} 'missing public path'
+
+$case=Case 'ancestor-reparse-after-index';$live=Join-Path $case 'live';$held=Join-Path $case 'held'
+$null=New-Item -ItemType Directory -Path $live -ErrorAction Stop;$p=Join-Path $live 'source.bin';[IO.File]::WriteAllText($p,'public reparse fixture');$pin=Get-S54Pin $p 4096;$map=Index @($pin)
+foreach($target in @($live,$held)){
+    $full=Get-S54Path $target -AllowMissing
+    if(-not $full.StartsWith($fixture+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'Owned public fixture move only.'}
+}
+[IO.Directory]::Move($live,$held)
+$null=New-Item -ItemType Junction -Path $live -Target $held -ErrorAction Stop
+Reject 'query detects new reparse ancestor after index' {Query $map $p} 'reparse ancestor'
+Reject 'original query also detects reparse' {Original @($pin) $p} 'reparse ancestor'
+Reject 'source tail detects new reparse ancestor' {FreshTail @($pin)} 'reparse ancestor'
+Write-KilogramFrozenJson (Join-Path $base 'public-index-prototype.json') @{classification='ignored public membership prototype only; not production optimization/admission';checks=@($checks);count=$checks.Count;index_authority='pure membership strings only';live_checks='fresh source pin/path before index; fresh query path per decision; fresh source pin/path at tail';source_changes=$false;runtime=$false}
+Write-Output ('public_index_prototype_checks='+$checks.Count)

@@ -1,0 +1,1634 @@
+[
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\baseline.json",
+      "bytes": 706,
+      "sha256": "126aceb3323ac08cbeeb39aea51002c75798d0febc3f3d95185a0eaf163d08fb"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\baseline.json",
+      "bytes": 706,
+      "sha256": "126aceb3323ac08cbeeb39aea51002c75798d0febc3f3d95185a0eaf163d08fb"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\clone-fixtures.py",
+      "bytes": 5356,
+      "sha256": "0ac3ccc2a3e27d867e060b5c530ab6577a6356524b906319460737884c5d2d52"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\clone-fixtures.py.txt",
+      "bytes": 5356,
+      "sha256": "0ac3ccc2a3e27d867e060b5c530ab6577a6356524b906319460737884c5d2d52"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01-clone-fixtures.py.txt",
+      "bytes": 4516,
+      "sha256": "ee8f6969ba033fd36be8c518c812bdcd0c0d0773ed18160e06a8be79a625c2ef"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01-clone-fixtures.py.txt",
+      "bytes": 4516,
+      "sha256": "ee8f6969ba033fd36be8c518c812bdcd0c0d0773ed18160e06a8be79a625c2ef"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01-public-restoration.json",
+      "bytes": 7458,
+      "sha256": "e27f71a99b7bf42b0838437491b87d29fc40a9844c64265817fbbfb80d92d684"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01-public-restoration.json",
+      "bytes": 7458,
+      "sha256": "e27f71a99b7bf42b0838437491b87d29fc40a9844c64265817fbbfb80d92d684"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01-work.ps1.txt",
+      "bytes": 1021,
+      "sha256": "83a3f06ce96b18760462daccdfe4badb1082ac4926962cbe1e75a95f9059a06d"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01-work.ps1.txt",
+      "bytes": 1021,
+      "sha256": "83a3f06ce96b18760462daccdfe4badb1082ac4926962cbe1e75a95f9059a06d"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.after-last-query-content.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "49245765dd0f282a1c87a4312663c7c19f13ea066bbef248ec0087d69560b769"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.after-last-query-content.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "49245765dd0f282a1c87a4312663c7c19f13ea066bbef248ec0087d69560b769"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.after-last-query-embedded.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "4446d1ec217efe2530bd144c26c1d3feb5e3d38754c04dcf917aecc11b825f63"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.after-last-query-embedded.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "4446d1ec217efe2530bd144c26c1d3feb5e3d38754c04dcf917aecc11b825f63"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.after-last-query-missing.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "6319dbc47e9baed8576a0198c1cdeb5e1720fe8dcad2c03f88cbf045a522e089"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.after-last-query-missing.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "6319dbc47e9baed8576a0198c1cdeb5e1720fe8dcad2c03f88cbf045a522e089"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.after-last-query-reparse.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "7c5e89338d632da7f9969605bd168c68fafedfe5128a3b9b8ac227f763f4a1c7"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.after-last-query-reparse.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "7c5e89338d632da7f9969605bd168c68fafedfe5128a3b9b8ac227f763f4a1c7"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.capture.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "3fc5697043432421415790cfe9b2a136a1a1acb4e3f0644ecbcd73b26c442e48"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.capture.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "3fc5697043432421415790cfe9b2a136a1a1acb4e3f0644ecbcd73b26c442e48"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.case-separator.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "1923a1dfde713add1e3756dd5bf448bc11fd1a490299b87b1d69b04be92bcc27"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.case-separator.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "1923a1dfde713add1e3756dd5bf448bc11fd1a490299b87b1d69b04be92bcc27"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.config.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "4c8f47122e2489887ca16384a05a942b55e8022d308c08c0e2d0a7a833946f92"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.config.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "4c8f47122e2489887ca16384a05a942b55e8022d308c08c0e2d0a7a833946f92"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.duplicate.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "4671041b7be977171b12099ee0f55f10cf8bb25d3cd5395c718d7eee580eb5ed"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.duplicate.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "4671041b7be977171b12099ee0f55f10cf8bb25d3cd5395c718d7eee580eb5ed"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.environment.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "586374e7c18ae4f223d30b23f0d916a03132e763b58b1ce735bb234d50ea6330"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.environment.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "586374e7c18ae4f223d30b23f0d916a03132e763b58b1ce735bb234d50ea6330"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.environment.json",
+      "bytes": 1821,
+      "sha256": "32cb89e0164bc1710e28104be1a39b56b9ee3dda0e5625b08ee487555b41adf8"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.environment.json",
+      "bytes": 1821,
+      "sha256": "32cb89e0164bc1710e28104be1a39b56b9ee3dda0e5625b08ee487555b41adf8"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.F01.fixture-index.json",
+      "bytes": 1388,
+      "sha256": "ff9d02c84cd6cf5cfb17b758b9f2c910f01d46b4902651bb4601fb387584eff9"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.F01.fixture-index.json",
+      "bytes": 1388,
+      "sha256": "ff9d02c84cd6cf5cfb17b758b9f2c910f01d46b4902651bb4601fb387584eff9"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.fixture-set.json",
+      "bytes": 4640,
+      "sha256": "0bff84c30c44f959a9b189733c7c65c48c6b18a372b46efd8ae19fcc50b6dfcd"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.fixture-set.json",
+      "bytes": 4640,
+      "sha256": "0bff84c30c44f959a9b189733c7c65c48c6b18a372b46efd8ae19fcc50b6dfcd"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.foreign-selector.fixture-index.json",
+      "bytes": 1388,
+      "sha256": "385dd2d56d546c6fd24acc5d859b327c09353cc1d76bac74a7bb8cd28926c9bf"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.foreign-selector.fixture-index.json",
+      "bytes": 1388,
+      "sha256": "385dd2d56d546c6fd24acc5d859b327c09353cc1d76bac74a7bb8cd28926c9bf"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.foreign.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "3e830548d953a0a8e6e1db3a145152ffd6f0854ccce6390d4e3009790beeab8f"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.foreign.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "3e830548d953a0a8e6e1db3a145152ffd6f0854ccce6390d4e3009790beeab8f"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.graph.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "e2947f3bab45b2dd53c19492347b38e27dbcdc64d34d7d1830532f8636c6f31e"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.graph.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "e2947f3bab45b2dd53c19492347b38e27dbcdc64d34d7d1830532f8636c6f31e"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.malformed.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "bb5fe2db4d9bbfdc08dfcb7893659b5cec3ae049f43502929a46d95e065e6a22"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.malformed.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "bb5fe2db4d9bbfdc08dfcb7893659b5cec3ae049f43502929a46d95e065e6a22"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.origin.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "5f7fc7df47977303008b6e4e04fd71939c06d2ea4899d277325453cfaa199fc2"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.origin.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "5f7fc7df47977303008b6e4e04fd71939c06d2ea4899d277325453cfaa199fc2"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.positive-F.fixture-index.json",
+      "bytes": 1388,
+      "sha256": "702d33e4f11a1794c0e2ccd8e02ed9ba1b5d656cbee5c9bed7aaa6e52d754a39"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.positive-F.fixture-index.json",
+      "bytes": 1388,
+      "sha256": "702d33e4f11a1794c0e2ccd8e02ed9ba1b5d656cbee5c9bed7aaa6e52d754a39"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.positive-P.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "6b33fbe48f37b2ba8518e72e9e1d2ba848f15a54257ad7b615c7432418af025a"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.positive-P.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "6b33fbe48f37b2ba8518e72e9e1d2ba848f15a54257ad7b615c7432418af025a"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.profile.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "64aac3e69b03353ad5e55a2d0f9fd7a2e37cd972649381bec6408654c9cd0031"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.profile.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "64aac3e69b03353ad5e55a2d0f9fd7a2e37cd972649381bec6408654c9cd0031"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.queried-content-index.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "79d0c12dc142b228c732c109a044f9fbc680dc758ad6e303a74570d6ded6f7c7"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.queried-content-index.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "79d0c12dc142b228c732c109a044f9fbc680dc758ad6e303a74570d6ded6f7c7"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.queried-missing-query.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "2f761fe08c432ef4917732a45d5d7dc837f065c031f3cdc7b6787f92dc015168"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.queried-missing-query.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "2f761fe08c432ef4917732a45d5d7dc837f065c031f3cdc7b6787f92dc015168"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.queried-reparse-query.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "5fabc6b72dd4fcc82fc4df425255c44609ab2cdb0ccbd0af837d484719a9c17b"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.queried-reparse-query.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "5fabc6b72dd4fcc82fc4df425255c44609ab2cdb0ccbd0af837d484719a9c17b"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.raw.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "e0e318e90b41115cc53a0d4b7ad9261df2aee261e304062e00762f518c1746f5"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.raw.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "e0e318e90b41115cc53a0d4b7ad9261df2aee261e304062e00762f518c1746f5"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.receipt.json",
+      "bytes": 2008,
+      "sha256": "665b140db21b00f5673ad34d3cc543a27939f444f5a38a02db1e8793ae3a7e93"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.receipt.json",
+      "bytes": 2008,
+      "sha256": "665b140db21b00f5673ad34d3cc543a27939f444f5a38a02db1e8793ae3a7e93"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.source-set.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "4e354a156eaf841e8e27439d1de0f638946ae24635b6d0fcf0cc3d1ef482cdd9"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.source-set.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "4e354a156eaf841e8e27439d1de0f638946ae24635b6d0fcf0cc3d1ef482cdd9"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.stderr.log",
+      "bytes": 306,
+      "sha256": "b3c18ff966c242f92cd1610812791a55c848dcfe4b7e07cba83837a9837311b0"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.stderr.log",
+      "bytes": 306,
+      "sha256": "b3c18ff966c242f92cd1610812791a55c848dcfe4b7e07cba83837a9837311b0"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.stdout.log",
+      "bytes": 31,
+      "sha256": "27d597a61039d1dcc747cfe393d175040d56e28f2c143fe570b6742bdb76f087"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.stdout.log",
+      "bytes": 31,
+      "sha256": "27d597a61039d1dcc747cfe393d175040d56e28f2c143fe570b6742bdb76f087"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.tool.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "19801e7bcdfc82b8788290a7d09edec6fdf91a73fcf840cd09d0defd9646336f"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.tool.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "19801e7bcdfc82b8788290a7d09edec6fdf91a73fcf840cd09d0defd9646336f"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.unit.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "3ddf33d76e271c8fd2c68a703ed47e02221e27dc27d7696d4449e306b365fc83"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.unit.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "3ddf33d76e271c8fd2c68a703ed47e02221e27dc27d7696d4449e306b365fc83"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.unqueried-content-index.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "021957b098bf7169b1a617034cd48e4e7c656ba072ed34cc3667174838dc8f2f"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.unqueried-content-index.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "021957b098bf7169b1a617034cd48e4e7c656ba072ed34cc3667174838dc8f2f"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.unqueried-missing-index.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "da9fb268718c77f52a17c13422dc9bd64a7505257218c5222cbb9bdb3c1671fd"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.unqueried-missing-index.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "da9fb268718c77f52a17c13422dc9bd64a7505257218c5222cbb9bdb3c1671fd"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01.unqueried-reparse-index.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "f3d2ae1ab99a35dde35c240c55a7ca1562f8cfe61c747d9941aec82c600a9201"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-01.unqueried-reparse-index.fixture-index.json",
+      "bytes": 1356,
+      "sha256": "f3d2ae1ab99a35dde35c240c55a7ca1562f8cfe61c747d9941aec82c600a9201"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02-test-script.ps1.txt",
+      "bytes": 29732,
+      "sha256": "0e5c463b2e2fe02887ace8af3134f808113e4816a9ea5f5ee0de250b99f09f7b"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02-test-script.ps1.txt",
+      "bytes": 29732,
+      "sha256": "0e5c463b2e2fe02887ace8af3134f808113e4816a9ea5f5ee0de250b99f09f7b"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.after-last-query-content.fixture-index.json",
+      "bytes": 1498,
+      "sha256": "e1deb3664e94826310097cc7c43baf55fe5404399d68d4ac0c56944a95c97a0d"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.after-last-query-content.fixture-index.json",
+      "bytes": 1498,
+      "sha256": "e1deb3664e94826310097cc7c43baf55fe5404399d68d4ac0c56944a95c97a0d"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.after-last-query-embedded.fixture-index.json",
+      "bytes": 1503,
+      "sha256": "fe8baa4fc000b4ec66c8e900995fadc0d2bdb5539736212a1cb7de7f5cca21d4"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.after-last-query-embedded.fixture-index.json",
+      "bytes": 1503,
+      "sha256": "fe8baa4fc000b4ec66c8e900995fadc0d2bdb5539736212a1cb7de7f5cca21d4"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.after-last-query-missing.fixture-index.json",
+      "bytes": 1498,
+      "sha256": "321b25a54864e257ee56aff5633f0403e272be72abe09a8b683e459776b2c8db"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.after-last-query-missing.fixture-index.json",
+      "bytes": 1498,
+      "sha256": "321b25a54864e257ee56aff5633f0403e272be72abe09a8b683e459776b2c8db"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.after-last-query-reparse.fixture-index.json",
+      "bytes": 1498,
+      "sha256": "9d2c0e56f707b44e10ebdc5225c424f6822d3c69b58bcb0431600bf4e29cdf9f"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.after-last-query-reparse.fixture-index.json",
+      "bytes": 1498,
+      "sha256": "9d2c0e56f707b44e10ebdc5225c424f6822d3c69b58bcb0431600bf4e29cdf9f"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.capture.fixture-index.json",
+      "bytes": 1413,
+      "sha256": "b8a9f1d259e46bf6a903ab9445296019972026586e86156986b61f0387fffa54"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.capture.fixture-index.json",
+      "bytes": 1413,
+      "sha256": "b8a9f1d259e46bf6a903ab9445296019972026586e86156986b61f0387fffa54"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.case-separator.fixture-index.json",
+      "bytes": 1448,
+      "sha256": "b312278ffb84e1a76d40a139c4691406ac0c96b18887f83b3ea08c8112b51d27"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.case-separator.fixture-index.json",
+      "bytes": 1448,
+      "sha256": "b312278ffb84e1a76d40a139c4691406ac0c96b18887f83b3ea08c8112b51d27"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.config.fixture-index.json",
+      "bytes": 1408,
+      "sha256": "8c91335a608e45c95e95a4c701beb4019ff91f48678e8e5085f2932a5fb964b6"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.config.fixture-index.json",
+      "bytes": 1408,
+      "sha256": "8c91335a608e45c95e95a4c701beb4019ff91f48678e8e5085f2932a5fb964b6"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.duplicate.fixture-index.json",
+      "bytes": 1423,
+      "sha256": "67d607fc107355ea6a7ea54c515a1b157acbf0f23dbbac4743c2de197d5c23c7"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.duplicate.fixture-index.json",
+      "bytes": 1423,
+      "sha256": "67d607fc107355ea6a7ea54c515a1b157acbf0f23dbbac4743c2de197d5c23c7"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.environment.fixture-index.json",
+      "bytes": 1433,
+      "sha256": "95c6c44b993367904241e133e73b707e4701d86358c3acf2f7b762d68ea6bbfa"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.environment.fixture-index.json",
+      "bytes": 1433,
+      "sha256": "95c6c44b993367904241e133e73b707e4701d86358c3acf2f7b762d68ea6bbfa"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.environment.json",
+      "bytes": 1821,
+      "sha256": "32cb89e0164bc1710e28104be1a39b56b9ee3dda0e5625b08ee487555b41adf8"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.environment.json",
+      "bytes": 1821,
+      "sha256": "32cb89e0164bc1710e28104be1a39b56b9ee3dda0e5625b08ee487555b41adf8"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.F01.fixture-index.json",
+      "bytes": 1425,
+      "sha256": "836251c330d72e7a68f31c72f5edb4522a45281165c5162383e1fd6d1eb3cbe6"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.F01.fixture-index.json",
+      "bytes": 1425,
+      "sha256": "836251c330d72e7a68f31c72f5edb4522a45281165c5162383e1fd6d1eb3cbe6"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.fixture-set.json",
+      "bytes": 4640,
+      "sha256": "e07ef805e1ffbe7e64ed1a708c591261b6acb31623842d484df5e82e26b8354d"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.fixture-set.json",
+      "bytes": 4640,
+      "sha256": "e07ef805e1ffbe7e64ed1a708c591261b6acb31623842d484df5e82e26b8354d"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.foreign-selector.fixture-index.json",
+      "bytes": 1490,
+      "sha256": "5824d7eab525f0f774333c069499686a653d371649881f654bda9469e65dbe23"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.foreign-selector.fixture-index.json",
+      "bytes": 1490,
+      "sha256": "5824d7eab525f0f774333c069499686a653d371649881f654bda9469e65dbe23"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.foreign.fixture-index.json",
+      "bytes": 1413,
+      "sha256": "093fca884bc32b3b410366ee47b7c34aad836042ef5f5e24e268af0d400659f5"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.foreign.fixture-index.json",
+      "bytes": 1413,
+      "sha256": "093fca884bc32b3b410366ee47b7c34aad836042ef5f5e24e268af0d400659f5"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.graph.fixture-index.json",
+      "bytes": 1403,
+      "sha256": "28224f23bf26770634eff1086dc6ace8ac0d9bb3fd347c520a78c9be0f0cec5a"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.graph.fixture-index.json",
+      "bytes": 1403,
+      "sha256": "28224f23bf26770634eff1086dc6ace8ac0d9bb3fd347c520a78c9be0f0cec5a"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.malformed.fixture-index.json",
+      "bytes": 1423,
+      "sha256": "295b0139141d4e14b02cfe553d8386501f123b41df465abbc39a1b53ac7f6210"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.malformed.fixture-index.json",
+      "bytes": 1423,
+      "sha256": "295b0139141d4e14b02cfe553d8386501f123b41df465abbc39a1b53ac7f6210"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.origin.fixture-index.json",
+      "bytes": 1408,
+      "sha256": "a5dcaff872d266b2825b31351c0eacd16dd52522b3092eb287478d249652c041"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.origin.fixture-index.json",
+      "bytes": 1408,
+      "sha256": "a5dcaff872d266b2825b31351c0eacd16dd52522b3092eb287478d249652c041"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.positive-F.fixture-index.json",
+      "bytes": 1460,
+      "sha256": "63d836170945dc7dc2210acd9e3714fd79638da56b0396be0ff24af40eb539c9"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.positive-F.fixture-index.json",
+      "bytes": 1460,
+      "sha256": "63d836170945dc7dc2210acd9e3714fd79638da56b0396be0ff24af40eb539c9"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.positive-P.fixture-index.json",
+      "bytes": 1428,
+      "sha256": "e879e935459ef943fc4a4ef02e5d8e50cc046100072df287a82b025ba7e2398f"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.positive-P.fixture-index.json",
+      "bytes": 1428,
+      "sha256": "e879e935459ef943fc4a4ef02e5d8e50cc046100072df287a82b025ba7e2398f"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.profile.fixture-index.json",
+      "bytes": 1413,
+      "sha256": "4a21bd08066ca44902e6b61ad4ee3c5ef6d68743611ebc9cb8677809e375e5dd"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.profile.fixture-index.json",
+      "bytes": 1413,
+      "sha256": "4a21bd08066ca44902e6b61ad4ee3c5ef6d68743611ebc9cb8677809e375e5dd"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.queried-content-index.fixture-index.json",
+      "bytes": 1483,
+      "sha256": "f2cbec2a8dbfcaac647b136d8fafdb074a56d5d6d046632d2e12d2b45eacfb0d"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.queried-content-index.fixture-index.json",
+      "bytes": 1483,
+      "sha256": "f2cbec2a8dbfcaac647b136d8fafdb074a56d5d6d046632d2e12d2b45eacfb0d"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.queried-missing-query.fixture-index.json",
+      "bytes": 1483,
+      "sha256": "ca1a9e98718b610dd89789f5fe2da3bd3b786e6dc8528b590d03013fe8854942"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.queried-missing-query.fixture-index.json",
+      "bytes": 1483,
+      "sha256": "ca1a9e98718b610dd89789f5fe2da3bd3b786e6dc8528b590d03013fe8854942"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.queried-reparse-query.fixture-index.json",
+      "bytes": 1483,
+      "sha256": "53174d85bacf7cbeb7f01d10b0e9ea9b32fab524e27ce42b78593636af62cfa5"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.queried-reparse-query.fixture-index.json",
+      "bytes": 1483,
+      "sha256": "53174d85bacf7cbeb7f01d10b0e9ea9b32fab524e27ce42b78593636af62cfa5"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.raw.fixture-index.json",
+      "bytes": 1393,
+      "sha256": "e805f40e22824cdeb56d0e295a631346bc08d3458d23cc9edab871b6ef8f198e"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.raw.fixture-index.json",
+      "bytes": 1393,
+      "sha256": "e805f40e22824cdeb56d0e295a631346bc08d3458d23cc9edab871b6ef8f198e"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.receipt.json",
+      "bytes": 2009,
+      "sha256": "9fb9811fbe595a983e50626592111a8f110afe9c1e708555d958e5dcaeec393d"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.receipt.json",
+      "bytes": 2009,
+      "sha256": "9fb9811fbe595a983e50626592111a8f110afe9c1e708555d958e5dcaeec393d"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.source-set.fixture-index.json",
+      "bytes": 1428,
+      "sha256": "ca48eeb9c625f0a56e282ba2b8326bce39e3432c3b3a1915daec5e8fc3aff5a5"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.source-set.fixture-index.json",
+      "bytes": 1428,
+      "sha256": "ca48eeb9c625f0a56e282ba2b8326bce39e3432c3b3a1915daec5e8fc3aff5a5"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.stderr.log",
+      "bytes": 324,
+      "sha256": "6dd345808fc81f99c83b0d8273d64aa1fa6e94146238e464c41e398917bc3a33"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.stderr.log",
+      "bytes": 324,
+      "sha256": "6dd345808fc81f99c83b0d8273d64aa1fa6e94146238e464c41e398917bc3a33"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.stdout.log",
+      "bytes": 31,
+      "sha256": "27d597a61039d1dcc747cfe393d175040d56e28f2c143fe570b6742bdb76f087"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.stdout.log",
+      "bytes": 31,
+      "sha256": "27d597a61039d1dcc747cfe393d175040d56e28f2c143fe570b6742bdb76f087"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.tool.fixture-index.json",
+      "bytes": 1398,
+      "sha256": "5dd2dadd092c6916d79cd8beb3cc19dbdb9a8e2b4ece4e075c799b6ea1a267a3"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.tool.fixture-index.json",
+      "bytes": 1398,
+      "sha256": "5dd2dadd092c6916d79cd8beb3cc19dbdb9a8e2b4ece4e075c799b6ea1a267a3"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.unit.fixture-index.json",
+      "bytes": 1398,
+      "sha256": "aac96714e603d05e25622ed776bbff450efd1dca8079d99098a3612cc6627548"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.unit.fixture-index.json",
+      "bytes": 1398,
+      "sha256": "aac96714e603d05e25622ed776bbff450efd1dca8079d99098a3612cc6627548"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.unqueried-content-index.fixture-index.json",
+      "bytes": 1493,
+      "sha256": "4eda4247a4c835c8db72f788e0fd7bd4231bcb5dd846868ed3c0a75630aada7f"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.unqueried-content-index.fixture-index.json",
+      "bytes": 1493,
+      "sha256": "4eda4247a4c835c8db72f788e0fd7bd4231bcb5dd846868ed3c0a75630aada7f"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.unqueried-missing-index.fixture-index.json",
+      "bytes": 1493,
+      "sha256": "ddd87b038a79c33346d58b016c1bfd419d220cfc5c604c44e1f1fdd335b5f0a5"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.unqueried-missing-index.fixture-index.json",
+      "bytes": 1493,
+      "sha256": "ddd87b038a79c33346d58b016c1bfd419d220cfc5c604c44e1f1fdd335b5f0a5"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.unqueried-reparse-index.fixture-index.json",
+      "bytes": 1493,
+      "sha256": "8a5f5cbad73598bb8c6237c217295d23ba11e79cd5e5f1e86b48efad293a8968"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-02.unqueried-reparse-index.fixture-index.json",
+      "bytes": 1493,
+      "sha256": "8a5f5cbad73598bb8c6237c217295d23ba11e79cd5e5f1e86b48efad293a8968"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.after-last-query-content.fixture-index.json",
+      "bytes": 1498,
+      "sha256": "7c09b74a64e0c4041a99e190c711f6ae72bdfd815107f1412873578aa7933c59"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.after-last-query-content.fixture-index.json",
+      "bytes": 1498,
+      "sha256": "7c09b74a64e0c4041a99e190c711f6ae72bdfd815107f1412873578aa7933c59"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.after-last-query-embedded.fixture-index.json",
+      "bytes": 1503,
+      "sha256": "e73e3894266f77162030e80b3aef546276becfbdb31f44b99bf143c4e1818f97"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.after-last-query-embedded.fixture-index.json",
+      "bytes": 1503,
+      "sha256": "e73e3894266f77162030e80b3aef546276becfbdb31f44b99bf143c4e1818f97"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.after-last-query-missing.fixture-index.json",
+      "bytes": 1498,
+      "sha256": "211c5dcc93f1e8d8c0daab5578892b971c928c762dd3288d31908327fee85540"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.after-last-query-missing.fixture-index.json",
+      "bytes": 1498,
+      "sha256": "211c5dcc93f1e8d8c0daab5578892b971c928c762dd3288d31908327fee85540"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.after-last-query-reparse.fixture-index.json",
+      "bytes": 1498,
+      "sha256": "5c892016468259299e99ded003b13b38ed2d324633737cd6d088c0ac99a38a4c"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.after-last-query-reparse.fixture-index.json",
+      "bytes": 1498,
+      "sha256": "5c892016468259299e99ded003b13b38ed2d324633737cd6d088c0ac99a38a4c"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.capture.fixture-index.json",
+      "bytes": 1413,
+      "sha256": "c0961031903a36b03f4df2174b2dd382e300b8b1151495b96135e6bcc1d20017"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.capture.fixture-index.json",
+      "bytes": 1413,
+      "sha256": "c0961031903a36b03f4df2174b2dd382e300b8b1151495b96135e6bcc1d20017"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.case-separator.fixture-index.json",
+      "bytes": 1448,
+      "sha256": "3a6118bc8d27bbe324dfb6a3c253210c841f03c8a270d70f0390beb585cd3bf7"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.case-separator.fixture-index.json",
+      "bytes": 1448,
+      "sha256": "3a6118bc8d27bbe324dfb6a3c253210c841f03c8a270d70f0390beb585cd3bf7"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.config.fixture-index.json",
+      "bytes": 1408,
+      "sha256": "ccd7a4e7885a6b89620b8a9fe632c81d169fd5b204e889e31f7f7c8a02cae231"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.config.fixture-index.json",
+      "bytes": 1408,
+      "sha256": "ccd7a4e7885a6b89620b8a9fe632c81d169fd5b204e889e31f7f7c8a02cae231"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.duplicate.fixture-index.json",
+      "bytes": 1423,
+      "sha256": "6abc7b4713766b18ff736782ec9939a02f891a0f3c30ea052a524ff42e28a9a8"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.duplicate.fixture-index.json",
+      "bytes": 1423,
+      "sha256": "6abc7b4713766b18ff736782ec9939a02f891a0f3c30ea052a524ff42e28a9a8"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.environment.fixture-index.json",
+      "bytes": 1433,
+      "sha256": "c46130a0459d480ccbfd40d38b59aa41689a12ceacc51324662f4dbdc4a845ed"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.environment.fixture-index.json",
+      "bytes": 1433,
+      "sha256": "c46130a0459d480ccbfd40d38b59aa41689a12ceacc51324662f4dbdc4a845ed"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.environment.json",
+      "bytes": 1821,
+      "sha256": "32cb89e0164bc1710e28104be1a39b56b9ee3dda0e5625b08ee487555b41adf8"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.environment.json",
+      "bytes": 1821,
+      "sha256": "32cb89e0164bc1710e28104be1a39b56b9ee3dda0e5625b08ee487555b41adf8"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.F01.fixture-index.json",
+      "bytes": 1425,
+      "sha256": "cdc6a9b9a66a92f0cd1dafa136f8b542f186e246c39a1fafae72f2b1d0f5a831"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.F01.fixture-index.json",
+      "bytes": 1425,
+      "sha256": "cdc6a9b9a66a92f0cd1dafa136f8b542f186e246c39a1fafae72f2b1d0f5a831"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.fixture-set.json",
+      "bytes": 4640,
+      "sha256": "6e17cd31e7156842b512f4260aff65d8bcf5dc2c32ea0fefa28f4d9287ed4201"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.fixture-set.json",
+      "bytes": 4640,
+      "sha256": "6e17cd31e7156842b512f4260aff65d8bcf5dc2c32ea0fefa28f4d9287ed4201"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.foreign-selector.fixture-index.json",
+      "bytes": 1490,
+      "sha256": "54f44a8548e0311e88c4798cedf508d855203c9e91b780dc5482142654ca47f1"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.foreign-selector.fixture-index.json",
+      "bytes": 1490,
+      "sha256": "54f44a8548e0311e88c4798cedf508d855203c9e91b780dc5482142654ca47f1"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.foreign.fixture-index.json",
+      "bytes": 1413,
+      "sha256": "80b514693e772f651aed76b8e7086cfd9b6652c9fb5d49021c56a3c5723859fb"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.foreign.fixture-index.json",
+      "bytes": 1413,
+      "sha256": "80b514693e772f651aed76b8e7086cfd9b6652c9fb5d49021c56a3c5723859fb"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.graph.fixture-index.json",
+      "bytes": 1403,
+      "sha256": "8d61a3da3e8a2b6776ff04038f9f17eb7d3a2158580be820801dcc0bb619dc6d"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.graph.fixture-index.json",
+      "bytes": 1403,
+      "sha256": "8d61a3da3e8a2b6776ff04038f9f17eb7d3a2158580be820801dcc0bb619dc6d"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.malformed.fixture-index.json",
+      "bytes": 1423,
+      "sha256": "fece1d7b0b0af1da77f4cf168f32099e16baa8c30f7931f84838444b48a54211"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.malformed.fixture-index.json",
+      "bytes": 1423,
+      "sha256": "fece1d7b0b0af1da77f4cf168f32099e16baa8c30f7931f84838444b48a54211"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.origin.fixture-index.json",
+      "bytes": 1408,
+      "sha256": "473217f446afc1a120ec9c6e69d1415c9bacc81e7352634e08fba587d63ec12f"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.origin.fixture-index.json",
+      "bytes": 1408,
+      "sha256": "473217f446afc1a120ec9c6e69d1415c9bacc81e7352634e08fba587d63ec12f"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.positive-F.fixture-index.json",
+      "bytes": 1460,
+      "sha256": "07196eaebd0343ee96abd7f982a42301ddd216207e1920d8b85791cfe5f55b2b"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.positive-F.fixture-index.json",
+      "bytes": 1460,
+      "sha256": "07196eaebd0343ee96abd7f982a42301ddd216207e1920d8b85791cfe5f55b2b"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.positive-P.fixture-index.json",
+      "bytes": 1428,
+      "sha256": "d9f2b556695112ceb868e45e91e8cd30824efe68b98a49780cd3e7a1ee226f70"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.positive-P.fixture-index.json",
+      "bytes": 1428,
+      "sha256": "d9f2b556695112ceb868e45e91e8cd30824efe68b98a49780cd3e7a1ee226f70"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.profile.fixture-index.json",
+      "bytes": 1413,
+      "sha256": "d2d5ad4bf64e9ade2c9ad09c0c8077d31d5ebcc3cc4a762187933d68c4252b4c"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.profile.fixture-index.json",
+      "bytes": 1413,
+      "sha256": "d2d5ad4bf64e9ade2c9ad09c0c8077d31d5ebcc3cc4a762187933d68c4252b4c"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.queried-content-index.fixture-index.json",
+      "bytes": 1483,
+      "sha256": "912354f81b1de1320dc083fa0fb082ec0a8d6095d0be512f37bb2c8b851ae552"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.queried-content-index.fixture-index.json",
+      "bytes": 1483,
+      "sha256": "912354f81b1de1320dc083fa0fb082ec0a8d6095d0be512f37bb2c8b851ae552"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.queried-missing-query.fixture-index.json",
+      "bytes": 1483,
+      "sha256": "06aa2300cac22e1bbb3d024617d3492c6246881d3ad01688e14fddc5ab3ed316"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.queried-missing-query.fixture-index.json",
+      "bytes": 1483,
+      "sha256": "06aa2300cac22e1bbb3d024617d3492c6246881d3ad01688e14fddc5ab3ed316"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.queried-reparse-query.fixture-index.json",
+      "bytes": 1483,
+      "sha256": "44051aa062668d5d32258d932e37e312381409319fb5094abee5e82bed332ffc"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.queried-reparse-query.fixture-index.json",
+      "bytes": 1483,
+      "sha256": "44051aa062668d5d32258d932e37e312381409319fb5094abee5e82bed332ffc"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.raw.fixture-index.json",
+      "bytes": 1393,
+      "sha256": "5182c4c821189b40d157715d3a1f34f57e9e7a9df9a0e1801c2c391a84345abb"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.raw.fixture-index.json",
+      "bytes": 1393,
+      "sha256": "5182c4c821189b40d157715d3a1f34f57e9e7a9df9a0e1801c2c391a84345abb"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.receipt.json",
+      "bytes": 1990,
+      "sha256": "97825db803bbec082bb5d46ed74dab7e6a2bba118a1166810fb1f37703f57aed"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.receipt.json",
+      "bytes": 1990,
+      "sha256": "97825db803bbec082bb5d46ed74dab7e6a2bba118a1166810fb1f37703f57aed"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.source-set.fixture-index.json",
+      "bytes": 1428,
+      "sha256": "2e85fa774c63e6abcf86e6c2507257a50bd55be38a523929680e7985346230c5"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.source-set.fixture-index.json",
+      "bytes": 1428,
+      "sha256": "2e85fa774c63e6abcf86e6c2507257a50bd55be38a523929680e7985346230c5"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.stdout.log",
+      "bytes": 57,
+      "sha256": "766080af346fc959b39cdc92c31e47192945384af14ca59ec4726e5b20c49d7c"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.stdout.log",
+      "bytes": 57,
+      "sha256": "766080af346fc959b39cdc92c31e47192945384af14ca59ec4726e5b20c49d7c"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.tool.fixture-index.json",
+      "bytes": 1398,
+      "sha256": "5f2cd27d4aa57b4185f01adfde7df5d686ca1fd7adc27904b34bd5e286c4766f"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.tool.fixture-index.json",
+      "bytes": 1398,
+      "sha256": "5f2cd27d4aa57b4185f01adfde7df5d686ca1fd7adc27904b34bd5e286c4766f"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.unit.fixture-index.json",
+      "bytes": 1398,
+      "sha256": "ec218acc2f36157c0a97699a87eae7a071a6e11530c91de3cce7935cdafe8c7e"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.unit.fixture-index.json",
+      "bytes": 1398,
+      "sha256": "ec218acc2f36157c0a97699a87eae7a071a6e11530c91de3cce7935cdafe8c7e"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.unqueried-content-index.fixture-index.json",
+      "bytes": 1493,
+      "sha256": "4535313d131358fc53d6a511950daeaefdacae2b8aac341f5d64da8e475dd400"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.unqueried-content-index.fixture-index.json",
+      "bytes": 1493,
+      "sha256": "4535313d131358fc53d6a511950daeaefdacae2b8aac341f5d64da8e475dd400"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.unqueried-missing-index.fixture-index.json",
+      "bytes": 1493,
+      "sha256": "9731a52bdce0c23b2bbad7eb2626e807c41ff06173c8d7a461b553b0df3a566c"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.unqueried-missing-index.fixture-index.json",
+      "bytes": 1493,
+      "sha256": "9731a52bdce0c23b2bbad7eb2626e807c41ff06173c8d7a461b553b0df3a566c"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03.unqueried-reparse-index.fixture-index.json",
+      "bytes": 1493,
+      "sha256": "1ab0daa3219e778bcee92ea833f3c14b05e1d520f36b720dd1bc84a78c833467"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.unqueried-reparse-index.fixture-index.json",
+      "bytes": 1493,
+      "sha256": "1ab0daa3219e778bcee92ea833f3c14b05e1d520f36b720dd1bc84a78c833467"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\measure-01.before.json",
+      "bytes": 129060,
+      "sha256": "163100c7b6a71f195fa3c30eef3d04f76605ce158f7746e9d04ea3c7e69f504a"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\measure-01.before.json",
+      "bytes": 129060,
+      "sha256": "163100c7b6a71f195fa3c30eef3d04f76605ce158f7746e9d04ea3c7e69f504a"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\measure-01.normal.json",
+      "bytes": 71,
+      "sha256": "1e536dd3a7d0cd403a21e5b951855aee068f946a28bcc9423b8818eafcfb9572"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\measure-01.normal.json",
+      "bytes": 71,
+      "sha256": "1e536dd3a7d0cd403a21e5b951855aee068f946a28bcc9423b8818eafcfb9572"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\measure-01.receipt.json",
+      "bytes": 1993,
+      "sha256": "36af25ca4baea0c9873e13aeea7652f93cfbe30bae2708814906e79d07df0a8d"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\measure-01.receipt.json",
+      "bytes": 1993,
+      "sha256": "36af25ca4baea0c9873e13aeea7652f93cfbe30bae2708814906e79d07df0a8d"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\measure-01.result.json",
+      "bytes": 4231,
+      "sha256": "a15d9b8d8103c9214883297722f3daff5fb310aef6b1435a866f64b14eaba793"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\measure-01.result.json",
+      "bytes": 4231,
+      "sha256": "a15d9b8d8103c9214883297722f3daff5fb310aef6b1435a866f64b14eaba793"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\measure-01.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\measure-01.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\measure-01.stdout.log",
+      "bytes": 81,
+      "sha256": "56a9f22ce62c6ed81bf8247b6f8667ab61a9484aa5462655cbaaf62c7ecfe63c"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\measure-01.stdout.log",
+      "bytes": 81,
+      "sha256": "56a9f22ce62c6ed81bf8247b6f8667ab61a9484aa5462655cbaaf62c7ecfe63c"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\measure-01.tests.json",
+      "bytes": 70,
+      "sha256": "5f7076daa3e032eb6dfa36d8cdc1d7ccdc79050c45b8cc3f8c4ea0b7fdc81576"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\measure-01.tests.json",
+      "bytes": 70,
+      "sha256": "5f7076daa3e032eb6dfa36d8cdc1d7ccdc79050c45b8cc3f8c4ea0b7fdc81576"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\measure.ps1",
+      "bytes": 5099,
+      "sha256": "82c41bb1afbbf409ed00c49fd8838696dd899c0af5e6c54a2443a61dd772c5b4"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\measure.ps1.txt",
+      "bytes": 5099,
+      "sha256": "82c41bb1afbbf409ed00c49fd8838696dd899c0af5e6c54a2443a61dd772c5b4"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\owner.ps1",
+      "bytes": 4554,
+      "sha256": "acda7a9af4bb97666646c5fedb0e58f05f29107393076a8d1c37a211147c6dff"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\owner.ps1.txt",
+      "bytes": 4554,
+      "sha256": "acda7a9af4bb97666646c5fedb0e58f05f29107393076a8d1c37a211147c6dff"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\seal-01-seal.ps1.txt",
+      "bytes": 4119,
+      "sha256": "4f27f41050db6ae65af1271ffdc4d4d5b6458082cf01637d8f0b510ba1ddd609"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\seal-01-seal.ps1.txt",
+      "bytes": 4119,
+      "sha256": "4f27f41050db6ae65af1271ffdc4d4d5b6458082cf01637d8f0b510ba1ddd609"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\seal-01-work.ps1.txt",
+      "bytes": 1155,
+      "sha256": "0497a755335e742d3e9aa2a8c69ea4317ee07a1017a74d26d3980fcbcb32120f"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\seal-01-work.ps1.txt",
+      "bytes": 1155,
+      "sha256": "0497a755335e742d3e9aa2a8c69ea4317ee07a1017a74d26d3980fcbcb32120f"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\seal-01.receipt.json",
+      "bytes": 1996,
+      "sha256": "c6d05573400c6f4e9de2677fcfee475599c439188d4d80284464725bec5a5895"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\seal-01.receipt.json",
+      "bytes": 1996,
+      "sha256": "c6d05573400c6f4e9de2677fcfee475599c439188d4d80284464725bec5a5895"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\seal-01.stderr.log",
+      "bytes": 232,
+      "sha256": "afe9232029c520872a675bc14fbfae1af3be45ef3edacd7626fe5bf61e9cf124"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\seal-01.stderr.log",
+      "bytes": 232,
+      "sha256": "afe9232029c520872a675bc14fbfae1af3be45ef3edacd7626fe5bf61e9cf124"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\seal-01.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\seal-01.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\seal-02.receipt.json",
+      "bytes": 1980,
+      "sha256": "5ce0abf26b00ef612922165ae0bac7d8a26736654e5fc9246ad6fb73588ecf84"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\seal-02.receipt.json",
+      "bytes": 1980,
+      "sha256": "5ce0abf26b00ef612922165ae0bac7d8a26736654e5fc9246ad6fb73588ecf84"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\seal-02.stderr.log",
+      "bytes": 121,
+      "sha256": "0e421c90466cc817e37fa3d6434ce20780a42aaf5fc06472e37e8ba98259e495"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\seal-02.stderr.log",
+      "bytes": 121,
+      "sha256": "0e421c90466cc817e37fa3d6434ce20780a42aaf5fc06472e37e8ba98259e495"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\seal-02.stdout.log",
+      "bytes": 60,
+      "sha256": "fe711b74cf436b2db21917cf6edfa96c7f20983b24eec5b231c28e99f1dbb58c"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\seal-02.stdout.log",
+      "bytes": 60,
+      "sha256": "fe711b74cf436b2db21917cf6edfa96c7f20983b24eec5b231c28e99f1dbb58c"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\seal.json",
+      "bytes": 5131,
+      "sha256": "0275c70f1be4b460b3ef43aa193c4c0b045516eb7472ae95651f7201ecbe08dc"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\seal.json",
+      "bytes": 5131,
+      "sha256": "0275c70f1be4b460b3ef43aa193c4c0b045516eb7472ae95651f7201ecbe08dc"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\seal.ps1",
+      "bytes": 4168,
+      "sha256": "08ee399595fa083cf6f7127b23b964b932b5a36632e3a0bfc221f845ad842611"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\seal.ps1.txt",
+      "bytes": 4168,
+      "sha256": "08ee399595fa083cf6f7127b23b964b932b5a36632e3a0bfc221f845ad842611"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\work.ps1",
+      "bytes": 1185,
+      "sha256": "b290ef284e632cbffe29d9157d813731e7695915b42f34362e7b8bfe2248bd2c"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\work.ps1.txt",
+      "bytes": 1185,
+      "sha256": "b290ef284e632cbffe29d9157d813731e7695915b42f34362e7b8bfe2248bd2c"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01-escaped-public-writes\\F-activation.json",
+      "bytes": 1123,
+      "sha256": "ffb6c442a1986e3592b6e9d6bf6d32e8dc1b939b0b7bf92584967f9e6c0a09a3"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\failed-escaped-public-F-activation.json",
+      "bytes": 1123,
+      "sha256": "ffb6c442a1986e3592b6e9d6bf6d32e8dc1b939b0b7bf92584967f9e6c0a09a3"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01-escaped-public-writes\\F-capture.json",
+      "bytes": 331,
+      "sha256": "b9eaf3409750eb7325cf5a6135d390a997d7ea71cdacfe45934bc090497128f1"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\failed-escaped-public-F-capture.json",
+      "bytes": 331,
+      "sha256": "b9eaf3409750eb7325cf5a6135d390a997d7ea71cdacfe45934bc090497128f1"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01-escaped-public-writes\\F-inventory.json",
+      "bytes": 18829,
+      "sha256": "cb9d66ac64c16fef624f305712457f02585eae179e425a4d0296f3ec15e98076"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\failed-escaped-public-F-inventory.json",
+      "bytes": 18829,
+      "sha256": "cb9d66ac64c16fef624f305712457f02585eae179e425a4d0296f3ec15e98076"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01-escaped-public-writes\\F-launch.json",
+      "bytes": 1496,
+      "sha256": "0a601980ceeeae7a76c3721766a308863b636f4009ccdd54e9a046dea45634a4"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\failed-escaped-public-F-launch.json",
+      "bytes": 1496,
+      "sha256": "0a601980ceeeae7a76c3721766a308863b636f4009ccdd54e9a046dea45634a4"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01-escaped-public-writes\\P-activation.json",
+      "bytes": 1078,
+      "sha256": "049f2de53976a686dca765b4685fadbbb331a53bdcdfc2e6237682015da8024f"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\failed-escaped-public-P-activation.json",
+      "bytes": 1078,
+      "sha256": "049f2de53976a686dca765b4685fadbbb331a53bdcdfc2e6237682015da8024f"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01-escaped-public-writes\\P-capture.json",
+      "bytes": 324,
+      "sha256": "66e53a2dc49fa471379495802d35e39dfa2995d8caa7720146e3e6e3449c2432"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\failed-escaped-public-P-capture.json",
+      "bytes": 324,
+      "sha256": "66e53a2dc49fa471379495802d35e39dfa2995d8caa7720146e3e6e3449c2432"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01-escaped-public-writes\\P-inventory.json",
+      "bytes": 18665,
+      "sha256": "42a71b60c26906ef12318485b82fe1e273ce9608bc3aaa7df11aba79d478fbfe"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\failed-escaped-public-P-inventory.json",
+      "bytes": 18665,
+      "sha256": "42a71b60c26906ef12318485b82fe1e273ce9608bc3aaa7df11aba79d478fbfe"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-01-escaped-public-writes\\P-launch.json",
+      "bytes": 1453,
+      "sha256": "a7ef6618b899c35a42cbf7715b5df5e5e383f2140bfa41ce242d40803dc1a1cf"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\failed-escaped-public-P-launch.json",
+      "bytes": 1453,
+      "sha256": "a7ef6618b899c35a42cbf7715b5df5e5e383f2140bfa41ce242d40803dc1a1cf"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\block4d-order-repair-01\\P-fixture-index.json",
+      "bytes": 1348,
+      "sha256": "bd7fb224d72851903efc73c1a5b20b2e12b5c4ae6e24cefdc4a27eeebb5c1b00"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\original-public-template-P-index.json",
+      "bytes": 1348,
+      "sha256": "bd7fb224d72851903efc73c1a5b20b2e12b5c4ae6e24cefdc4a27eeebb5c1b00"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\block4d-order-repair-01\\F-fixture-index.json",
+      "bytes": 1380,
+      "sha256": "5da0b76a321d010d1d30a2ea29e4afa1eb423841235165c31ef28777686dfa6a"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\original-public-template-F-index.json",
+      "bytes": 1380,
+      "sha256": "5da0b76a321d010d1d30a2ea29e4afa1eb423841235165c31ef28777686dfa6a"
+    }
+  },
+  {
+    "original": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-03\\compiler-index-results.json",
+      "bytes": 15338,
+      "sha256": "351b68274b8c19c9377a10a5e80b75db7750d89a5dc5a0ded40482bb9010aa14"
+    },
+    "copy": {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-index-implementation-evidence-01\\focused-03.compiler-index-results.json",
+      "bytes": 15338,
+      "sha256": "351b68274b8c19c9377a10a5e80b75db7750d89a5dc5a0ded40482bb9010aa14"
+    }
+  }
+]

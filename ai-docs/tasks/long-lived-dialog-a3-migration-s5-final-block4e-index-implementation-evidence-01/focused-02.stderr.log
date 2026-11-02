@@ -1,0 +1,5 @@
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\test-migration-s54-admission.ps1:12
+Line |
+  12 |  : Index([bool]$Value,[string]$Name){if(-not $Value){throw $Name};$check :
+     |                                                      ~~~~~~~~~~~
+     | retained inventory boundary/config : S54 config presence.

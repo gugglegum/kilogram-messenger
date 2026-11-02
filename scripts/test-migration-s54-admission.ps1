@@ -1,9 +1,182 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$FixtureIndex,[Parameter(Mandatory)][string]$EvidenceDirectory)
+param([Parameter(Mandatory)][string]$FixtureIndex,[Parameter(Mandatory)][string]$EvidenceDirectory,[switch]$CompilerIndexOnly)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1')
 $index=ConvertFrom-S54Strict (Read-S54Public $FixtureIndex 16384) 16384
+if($CompilerIndexOnly){
+    $evidence=Get-S54Path $EvidenceDirectory
+    $workspace=Split-Path -Parent $PSScriptRoot
+    if(-not $evidence.StartsWith((Join-Path $workspace '.tmp/s54-block4e-index-implementation-01/'),[StringComparison]::OrdinalIgnoreCase) -or $index.classification -cne 'public_compiler_index_fixture_set'){throw 'Fresh owned compiler-index fixtures only.'}
+    $checks=[Collections.Generic.List[object]]::new()
+    function Require-Index([bool]$Value,[string]$Name){if(-not $Value){throw $Name};$checks.Add(@{name=$Name;passed=$true})}
+    function Refuse-Index([string]$Name,[scriptblock]$Action,[string]$Pattern){
+        $why=$null;try{$null=& $Action}catch{$why=$_.Exception.Message}
+        Require-Index ($null -ne $why -and $why -match $Pattern) "$Name : $why"
+    }
+    function Case-Index([string]$Name){
+        $row=@($index.cases|Where-Object name -CEQ $Name)
+        if($row.Count -ne 1){throw "One fresh fixture required: $Name"}
+        $f=Read-S54Json (Get-S54Pin $row[0].index 16384) 16384
+        if($f.classification -cne 'public_schema_fixture_only'){throw 'Public fixture scope required.'}
+        $p=New-S54Policy -FixtureRoot $f.root
+        if(-not (Split-Path -Leaf $p.Root).StartsWith('index-',[StringComparison]::Ordinal)){throw 'Fresh index fixture root required.'}
+        $i=Read-S54Json $f.inputs.inventory 2097152
+        Set-S54Purpose $(if($i.identity.case -ceq (Get-S54Purpose FeasibilityF).Case){'FeasibilityF'}else{'WholeP'})
+        return @{root=$p.Root;policy=$p;i=$i;inputs=$f.inputs;normal=(Read-S54Json $i.compiler.normal 8388608);tests=(Read-S54Json $i.compiler.tests 8388608)}
+    }
+    $invoke=Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1'
+    $matches=@(Select-String -LiteralPath $invoke -SimpleMatch '$sourceIndex.Contains((Get-S54Path $path))')
+    Require-Index ($matches.Count -eq 1) 'one production membership decision site'
+    $script:IndexQueryLine=$matches[0].LineNumber;$script:IndexInvokePath=$invoke
+    $script:IndexRealPath=(Get-Item Function:Get-S54Path).ScriptBlock
+    $script:IndexRealRead=(Get-Item Function:Read-S54Pin).ScriptBlock
+    $script:IndexRealBuild=(Get-Item Function:New-S54CompilerSourceIndex).ScriptBlock
+    $script:IndexRealTail=(Get-Item Function:Assert-S54CompilerSourcesFresh).ScriptBlock
+    $script:IndexMaps=[Collections.Generic.List[object]]::new()
+    $script:IndexBuilding=$false;$script:IndexTailChecking=$false
+    function Reset-Index($Context,$Capture,[string]$Trigger='',[string]$Mutation=''){
+        $script:IndexContext=$Context;$script:IndexTrigger=$Trigger;$script:IndexMutation=$Mutation;$script:IndexMutated=$false
+        $script:IndexBuilding=$false;$script:IndexTailChecking=$false
+        $script:IndexCounts=@{build_calls=0;source_paths=0;queries=0;tail_calls=0;tail_reads=0;caps=@();tail_paths=@()}
+        $script:IndexExpectedQueries=0
+        foreach($line in $Capture.raw_compiler_artifact_json){
+            $v=ConvertFrom-Json -InputObject $line -AsHashtable
+            if(([IO.Path]::GetFullPath($v.manifest_path)).StartsWith($Context.root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){$script:IndexExpectedQueries+=2}
+        }
+    }
+    function Mutate-Index {
+        $ctx=$script:IndexContext
+        $queried=Join-Path $ctx.root 'apps/kilogram-cli/tests/support/migration_s54_p5.rs'
+        $helper=Join-Path $ctx.root 'scripts/migration-s54-outer.ps1'
+        $path=if($script:IndexMutation -like 'queried-*'){$queried}elseif($script:IndexMutation -eq 'embedded-content'){Join-Path $ctx.root $script:S54Embedded[2]}else{$helper}
+        $full=Get-S54Path $path
+        if(-not $full.StartsWith($ctx.root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'Owned public source mutation only.'}
+        $script:IndexMutated=$true
+        if($script:IndexMutation -like '*content'){[IO.File]::WriteAllText($full,'changed public fixture source bytes')}
+        elseif($script:IndexMutation -like '*missing'){[IO.File]::Delete($full)}
+        elseif($script:IndexMutation -like '*reparse'){
+            $live=Get-S54Path (Split-Path -Parent $full);$held=Get-S54Path ($live+'-held') -AllowMissing
+            foreach($target in @($live,$held)){if(-not $target.StartsWith($ctx.root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'Owned public directory move only.'}}
+            [IO.Directory]::Move($live,$held);$null=New-Item -ItemType Junction -Path $live -Target $held -ErrorAction Stop
+        }else{throw 'Closed test mutation kind.'}
+    }
+    # Isolated test-process instrumentation. Production has no mutation hooks.
+    function Get-S54Path([string]$Path,[switch]$AllowMissing){
+        if($script:IndexBuilding){$script:IndexCounts.source_paths++}
+        elseif($MyInvocation.ScriptName -ieq $script:IndexInvokePath -and $MyInvocation.ScriptLineNumber -eq $script:IndexQueryLine){
+            $script:IndexCounts.queries++
+            if($script:IndexTrigger -ceq 'query' -and -not $script:IndexMutated -and [string]::Equals([IO.Path]::GetFullPath($Path),(Join-Path $script:IndexContext.root 'apps/kilogram-cli/tests/support/migration_s54_p5.rs'),[StringComparison]::OrdinalIgnoreCase)){Mutate-Index}
+        }
+        & $script:IndexRealPath $Path -AllowMissing:$AllowMissing
+    }
+    function Read-S54Pin($Pin,[long]$Cap){
+        if($script:IndexTailChecking){$script:IndexCounts.tail_reads++;$script:IndexCounts.caps+=,$Cap;$script:IndexCounts.tail_paths+=,$Pin.path}
+        & $script:IndexRealRead $Pin $Cap
+    }
+    function New-S54CompilerSourceIndex($Sources){
+        $script:IndexCounts.build_calls++;$script:IndexBuilding=$true
+        try{$value=& $script:IndexRealBuild $Sources}finally{$script:IndexBuilding=$false}
+        $script:IndexMaps.Add($value)
+        if($script:IndexTrigger -ceq 'index' -and -not $script:IndexMutated){Mutate-Index}
+        return ,$value
+    }
+    function Assert-S54CompilerSourcesFresh($Sources){
+        $script:IndexCounts.tail_calls++
+        if($script:IndexTrigger -ceq 'tail' -and -not $script:IndexMutated){
+            Require-Index ($script:IndexCounts.queries -eq $script:IndexExpectedQueries) 'mutation occurs after final membership query'
+            Mutate-Index
+        }
+        $script:IndexTailChecking=$true
+        try{& $script:IndexRealTail $Sources}finally{$script:IndexTailChecking=$false}
+    }
+    $indexChecksComplete=$false
+    try {
+        $ctx=Case-Index 'positive-P'
+        foreach($role in @('normal','tests')){
+            $cap=$ctx[$role];Reset-Index $ctx $cap
+            Assert-S54Compiler $ctx.i $ctx.policy $cap ($role -ceq 'normal')
+            $n=$ctx.i.source.files.Count;$counts=$script:IndexCounts
+            Require-Index ($counts.build_calls -eq 1 -and $counts.source_paths -eq $n -and $counts.queries -eq $script:IndexExpectedQueries -and $counts.tail_calls -eq 1 -and $counts.tail_reads -eq $n) "linear source+query+tail observation count/$role"
+            Require-Index (@($counts.caps|Where-Object {$_ -ne 8388608}).Count -eq 0) "unchanged source cap/$role"
+            Assert-S54Equal @($counts.tail_paths|Sort-Object) @($ctx.i.source.files|ForEach-Object {$_.path}|Sort-Object)
+            $checks.Add(@{name="actual compiler positive/$role";passed=$true;source_count=$n;query_count=$counts.queries;counts=$counts})
+        }
+        Require-Index (-not [object]::ReferenceEquals($script:IndexMaps[0],$script:IndexMaps[1])) 'normal/tests own distinct local indexes'
+        foreach($name in @('positive-P','positive-F')){
+            $ctx=Case-Index $name;Reset-Index $ctx $ctx.normal
+            $facts=Test-S54Admission $ctx.inputs $ctx.policy
+            Require-Index ($facts.classification -ceq 'public_schema_fixture_only') "full public admission/$name"
+            Require-Index ($ctx.i.identity.attempt -ceq (Get-S54Purpose $(if($name -ceq 'positive-F'){'FeasibilityF'}else{'WholeP'})).Attempt) "fixed F02/P01/$name"
+        }
+        $ctx=Case-Index 'case-separator';$cap=$ctx.normal
+        for($n=0;$n -lt $cap.raw_compiler_artifact_json.Count;$n++){
+            $v=ConvertFrom-Json -InputObject $cap.raw_compiler_artifact_json[$n] -AsHashtable
+            $v.target.src_path=$v.target.src_path.ToUpperInvariant().Replace('\','/')
+            $cap.raw_compiler_artifact_json[$n]=ConvertTo-Json -InputObject $v -Depth 100 -Compress
+        }
+        Reset-Index $ctx $cap;Assert-S54Compiler $ctx.i $ctx.policy $cap $true;Require-Index $true 'actual compiler case/separator membership parity'
+        $ctx=Case-Index 'duplicate';$pin=@($ctx.i.source.files|Where-Object {$_.path -ieq (Join-Path $ctx.root 'scripts/migration-s54-outer.ps1')})[0]
+        $extra=ConvertFrom-S54Strict ([Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $pin -Compress))) 4096
+        $extra.path=$extra.path.ToUpperInvariant().Replace('\','/');$ctx.i.source.files+=,$extra
+        Reset-Index $ctx $ctx.normal;Refuse-Index 'canonical duplicate compiler source' {Assert-S54Compiler $ctx.i $ctx.policy $ctx.normal $true} 'duplicate canonical compiler source'
+        $ctx=Case-Index 'foreign';$cap=$ctx.normal;$foreign=Join-Path $ctx.root 'apps/unadmitted.rs';[IO.File]::WriteAllText($foreign,'public unadmitted target')
+        $v=ConvertFrom-Json -InputObject $cap.raw_compiler_artifact_json[0] -AsHashtable;$v.target.src_path=$foreign;$cap.raw_compiler_artifact_json[0]=ConvertTo-Json $v -Depth 100 -Compress
+        Reset-Index $ctx $cap;Refuse-Index 'unadmitted workspace target' {Assert-S54Compiler $ctx.i $ctx.policy $cap $true} 'workspace compiler target belongs to admitted live sources'
+        foreach($case in @(
+            @('queried-content-index','index','queried-content','public pin mismatch'),
+            @('queried-missing-query','query','queried-missing','missing public path'),
+            @('queried-reparse-query','query','queried-reparse','reparse ancestor'),
+            @('unqueried-content-index','index','unqueried-content','public pin mismatch'),
+            @('unqueried-missing-index','index','unqueried-missing','missing public path'),
+            @('unqueried-reparse-index','index','unqueried-reparse','reparse ancestor'),
+            @('after-last-query-content','tail','unqueried-content','public pin mismatch'),
+            @('after-last-query-missing','tail','unqueried-missing','missing public path'),
+            @('after-last-query-reparse','tail','unqueried-reparse','reparse ancestor'),
+            @('after-last-query-embedded','tail','embedded-content','public pin mismatch')
+        )){
+            $ctx=Case-Index $case[0];Reset-Index $ctx $ctx.normal $case[1] $case[2]
+            Refuse-Index $case[0] {Assert-S54Compiler $ctx.i $ctx.policy $ctx.normal $true} $case[3]
+            Require-Index $script:IndexMutated ("deterministic mutation reached/"+$case[0])
+        }
+        foreach($name in @('malformed','profile','graph','raw','unit','tool','origin')){
+            $ctx=Case-Index $name;$cap=$ctx.normal;$pattern=$null
+            switch($name){
+                'malformed' {$cap.unknown=$true;$pattern='closed object CompilerCapture|unknown field CompilerCapture'}
+                'profile' {$cap.profile='verification';$pattern='compiler role/profile'}
+                'graph' {foreach($x in @($cap.build_inputs_before,$cap.build_inputs_after)){$x.package_names=@($x.package_names|Select-Object -Skip 1)};$pattern='complete package graph'}
+                'raw' {$v=ConvertFrom-Json $cap.raw_compiler_artifact_json[0] -AsHashtable;$v.reason='foreign';$cap.raw_compiler_artifact_json[0]=ConvertTo-Json $v -Depth 100 -Compress;$pattern='actual known compiler-artifact'}
+                'unit' {$cap.units[0].features=@('invented');$pattern='exact structured identity|duplicate compiler unit'}
+                'tool' {[IO.File]::WriteAllText($cap.build_inputs_before.tools[0].path,'changed public tool');$pattern='compiler tool/shim bytes'}
+                'origin' {$u=@($cap.units|Where-Object {$_.executable -and -not $_.profile.test -and $_.package -ceq 'kilogram-cli'})[0];[IO.File]::WriteAllText($u.executable,'changed public compiler image');$pattern='actual compiler executable bytes'}
+            }
+            Reset-Index $ctx $cap;Refuse-Index "retained compiler refusal/$name" {Assert-S54Compiler $ctx.i $ctx.policy $cap $true} $pattern
+        }
+        foreach($name in @('config','environment','capture','source-set','F01','foreign-selector')){
+            $ctx=Case-Index $name;$pattern=$null;$full=$false
+            switch($name){
+                'config' {[IO.File]::WriteAllText($ctx.i.runtime.configs[0].path,'changed public config');$pattern='config presence|config identity/override'}
+                'environment' {$ctx.i.runtime.environment[0].value_sha256=('f'*64);$pattern='exact structured identity'}
+                'capture' {[IO.File]::AppendAllText($ctx.inputs.capture.path,' ');$pattern='public pin mismatch';$full=$true}
+                'source-set' {[IO.File]::WriteAllText((Join-Path $ctx.root 'apps/new-source.rs'),'public new source');$pattern='exact structured identity'}
+                'F01' {$ctx.i.identity.attempt='F-s54-mixed-hooks-feasibility-01-attempt-01';$pattern='required identity'}
+                'foreign-selector' {$ctx.i.identity.selector=(Get-S54Purpose WholeP).Selector;$pattern='required identity'}
+            }
+            Reset-Index $ctx $ctx.normal
+            Refuse-Index "retained inventory boundary/$name" {if($full){Test-S54Admission $ctx.inputs $ctx.policy}else{Assert-S54Inventory $ctx.i $ctx.policy}} $pattern
+        }
+        Write-KilogramFrozenJson (Join-Path $evidence 'compiler-index-results.json') @{classification='real shared compiler/index/tail regressions on fresh public fixtures; no runtime capability';count=$checks.Count;checks=@($checks);instrumented=$true;timing_evidence=$false;production_runtime=$false}
+        $indexChecksComplete=$true
+        Write-Output ('compiler_index_checks='+$checks.Count)
+    }finally{
+        if(-not $indexChecksComplete){Write-KilogramFrozenJson (Join-Path $evidence 'compiler-index-partial.json') @{classification='partial checks before failed focused invocation; not a passed matrix';count=$checks.Count;checks=@($checks);instrumented=$true;production_runtime=$false}}
+        Set-Item Function:Get-S54Path $script:IndexRealPath
+        Set-Item Function:Read-S54Pin $script:IndexRealRead
+        Set-Item Function:New-S54CompilerSourceIndex $script:IndexRealBuild
+        Set-Item Function:Assert-S54CompilerSourcesFresh $script:IndexRealTail
+    }
+    return
+}
 if($index.classification -cne 'public_schema_fixture_only'){throw 'Only exported public fixture is supported.'}
 $policy=New-S54Policy -FixtureRoot $index.root
 $inputs=$index.inputs

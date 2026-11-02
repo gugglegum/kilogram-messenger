@@ -1,0 +1,95 @@
+from pathlib import Path
+import hashlib, json, shutil, time, sys
+
+w = Path.cwd()
+b = w / '.tmp/s54-block4e-index-implementation-01'
+step = sys.argv[1]
+environment = json.loads(Path(sys.argv[2]).read_text(encoding='utf-8-sig'))
+allowed = w / '.tmp/s54-block4b-r1-01/rust-public-fixtures'
+cases = ['positive-P', 'positive-F', 'case-separator', 'duplicate', 'foreign',
+         'queried-content-index', 'queried-missing-query', 'queried-reparse-query',
+         'unqueried-content-index', 'unqueried-missing-index', 'unqueried-reparse-index',
+         'after-last-query-content', 'after-last-query-missing', 'after-last-query-reparse',
+         'after-last-query-embedded', 'malformed', 'profile', 'graph', 'raw', 'unit',
+         'tool', 'origin', 'config', 'environment', 'capture', 'source-set', 'F01', 'foreign-selector']
+templates = {}
+for purpose in ['P', 'F']:
+    p = w / f'.tmp/s54-block4b-r1-01/block4d-order-repair-01/{purpose}-fixture-index.json'
+    templates[purpose] = json.loads(p.read_text(encoding='utf-8-sig'))
+def pin(p):
+    data = p.read_bytes()
+    return {'path': str(p), 'bytes': len(data), 'sha256': hashlib.sha256(data).hexdigest()}
+def save(p, d):
+    p.write_text(json.dumps(d, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
+rows = []
+for name in cases:
+    purpose = 'F' if name in ['positive-F', 'F01', 'foreign-selector'] else 'P'
+    template = templates[purpose]
+    old = Path(template['root'])
+    new = allowed / ('index-' + step + '-' + name)
+    assert new.parent.resolve() == allowed.resolve() and not new.exists()
+    assert old.resolve().parent == allowed.resolve()
+    shutil.copytree(old, new)
+    def text(s):
+        return s.replace(str(old).replace('\\', '\\\\'), str(new).replace('\\', '\\\\')).replace(str(old), str(new)).replace(old.as_posix(), new.as_posix())
+    def rebase(v):
+        if isinstance(v, dict): return {k: rebase(x) for k, x in v.items()}
+        if isinstance(v, list): return [rebase(x) for x in v]
+        if isinstance(v, str): return text(v)
+        return v
+    for p in new.rglob('*'):
+        if not p.is_file(): continue
+        raw = p.read_bytes()
+        try: s = raw.decode('utf-8-sig')
+        except UnicodeError: continue
+        try: data = json.loads(s)
+        except ValueError:
+            changed = text(s)
+            if changed != s: p.write_text(changed, encoding='utf-8')
+        else:
+            data = rebase(data)
+            if isinstance(data, dict) and 'build_inputs_before' in data:
+                data['build_inputs_before']['environment'] = environment
+                data['build_inputs_after']['environment'] = environment
+            if isinstance(data, dict) and 'build_inputs' in data:
+                data['build_inputs']['environment'] = environment
+            save(p, data)
+    index = rebase(template)
+    inventory_path = Path(index['inputs']['inventory']['path'])
+    i = json.loads(inventory_path.read_text(encoding='utf-8'))
+    i['runtime']['environment'] = environment
+    def repin(v):
+        if isinstance(v, list): return [repin(x) for x in v]
+        if isinstance(v, dict):
+            v = {k: repin(x) for k, x in v.items()}
+            if set(v) == {'path', 'bytes', 'sha256'}: return pin(Path(v['path']))
+        return v
+    i = repin(i)
+    save(inventory_path, i)
+    a_path = Path(index['inputs']['activation']['path'])
+    c_path = Path(index['inputs']['capture']['path'])
+    l_path = Path(index['inputs']['launch']['path'])
+    a = json.loads(a_path.read_text(encoding='utf-8'))
+    c = json.loads(c_path.read_text(encoding='utf-8'))
+    l = json.loads(l_path.read_text(encoding='utf-8'))
+    now = int(time.time() * 1000) - 1000
+    a['not_before_utc_ms'] = now - 1000
+    a['not_after_utc_ms'] = now + 3600000
+    a['inventory'] = pin(inventory_path)
+    l['start_utc_ms'] = now
+    c['whole_utc_ms'] = now + i['deadline']['outer'] * 1000
+    save(a_path, a)
+    save(c_path, c)
+    l['inventory'] = pin(inventory_path)
+    l['activation'] = pin(a_path)
+    l['capture'] = pin(c_path)
+    save(l_path, l)
+    index['inputs'] = {key: pin(Path(value['path'])) for key, value in index['inputs'].items()}
+    p = b / (step + '.' + name + '.fixture-index.json')
+    assert not p.exists()
+    save(p, index)
+    rows.append({'name': name, 'index': str(p)})
+manifest = b / (step + '.fixture-set.json')
+assert not manifest.exists()
+save(manifest, {'classification': 'public_compiler_index_fixture_set', 'cases': rows})
+print('fresh_public_fixture_cases=' + str(len(rows)))

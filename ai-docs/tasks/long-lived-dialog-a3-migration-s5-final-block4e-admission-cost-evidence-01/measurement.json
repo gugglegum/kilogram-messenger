@@ -1,0 +1,132 @@
+{
+  "prototype_comparison": {
+    "original_results": [
+      true,
+      true,
+      true,
+      true
+    ],
+    "security_checks_cached": false,
+    "indexed_results": [
+      true,
+      true,
+      true,
+      true
+    ],
+    "query_count": 4
+  },
+  "runtime_admission_duration": "not_established",
+  "head": "77eb8c52e5cb73bd29f8bade2808e360650ddccc",
+  "before_after_pins_unchanged": true,
+  "tests": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-public-02\\tests.json",
+    "bytes": 2729983,
+    "sha256": "b738255100a4350b3f671aa49b2c13cc43adbaed17e5918b85975c43d8928a83"
+  },
+  "classification": "one unmodified real compiler pair plus bounded separate read-only probes; no production admission/runtime",
+  "phases": [
+    {
+      "seconds": 0.1833431,
+      "passed": true,
+      "name": "load retained proof context and stage result"
+    },
+    {
+      "seconds": 10.2980477,
+      "passed": true,
+      "name": "before: live source/capture/image/origin/dep-info/navigation/failed-F01 pins"
+    },
+    {
+      "seconds": 1.1885661,
+      "passed": true,
+      "name": "strict read and parse normal capture"
+    },
+    {
+      "seconds": 1.1070516,
+      "passed": true,
+      "name": "strict read and parse tests capture"
+    },
+    {
+      "seconds": 168.3909899,
+      "passed": true,
+      "name": "Assert-S54Compiler normal (unmodified reference, one call)"
+    },
+    {
+      "seconds": 202.2003099,
+      "passed": true,
+      "name": "Assert-S54Compiler tests (unmodified reference, one call)"
+    },
+    {
+      "seconds": 3.9593399,
+      "passed": true,
+      "name": "embedded dependency validation, canonical root"
+    },
+    {
+      "seconds": 0.0145711,
+      "passed": true,
+      "name": "frozen normal/tests input equality"
+    },
+    {
+      "seconds": 8.8097155,
+      "passed": true,
+      "name": "probe: original membership expression, four retained queries"
+    },
+    {
+      "seconds": 1.2932121,
+      "passed": true,
+      "name": "probe: fresh canonical membership index build (one source pass)"
+    },
+    {
+      "seconds": 0.0232761,
+      "passed": true,
+      "name": "probe: index queries with fresh live query path checks"
+    },
+    {
+      "seconds": 4.7046243,
+      "passed": true,
+      "name": "probe: final fresh source pin/reparse pass (not cached security observations)"
+    },
+    {
+      "seconds": 9.0984137,
+      "passed": true,
+      "name": "after: live source/capture/image/origin/dep-info/navigation/failed-F01 pins"
+    }
+  ],
+  "native_process_inventory_succeeded": true,
+  "cardinality": [
+    {
+      "workspace_messages": 28,
+      "graph_nodes": 524,
+      "membership_queries": 56,
+      "name": "normal",
+      "membership_GetS54Path_calls": 57904,
+      "unique_query_paths": 55,
+      "packages": 524,
+      "source_count": 517,
+      "units": 447,
+      "raw_messages": 447,
+      "membership_source_rows": 28952
+    },
+    {
+      "workspace_messages": 36,
+      "graph_nodes": 524,
+      "membership_queries": 72,
+      "name": "tests",
+      "membership_GetS54Path_calls": 74448,
+      "unique_query_paths": 61,
+      "packages": 524,
+      "source_count": 517,
+      "units": 501,
+      "raw_messages": 501,
+      "membership_source_rows": 37224
+    }
+  ],
+  "production_F02_P01_directories_absent": true,
+  "active_exact_images": [],
+  "source_count": 517,
+  "image_count": 9,
+  "normal": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-public-02\\normal.json",
+    "bytes": 1765600,
+    "sha256": "85aedde6f0bbe580751f5195c66f5250c8660a2ec96a5bc74297fbaa9a5b232c"
+  }
+}

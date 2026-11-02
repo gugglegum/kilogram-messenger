@@ -1,0 +1,110 @@
+{
+  "images": [
+    {
+      "role": "legacy-cli",
+      "pin": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-baseline\\kilogram-cli.exe",
+        "bytes": 61531648,
+        "sha256": "d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1"
+      }
+    },
+    {
+      "role": "current-cli",
+      "pin": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-migration\\kilogram-cli.exe",
+        "bytes": 50413056,
+        "sha256": "9d9b5da5badf500a004299a8d8cfda8ab8eb6a89c7bea18fbbc89a5e1f032065"
+      }
+    },
+    {
+      "role": "relay",
+      "pin": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-runtime\\kilogram-relay.exe",
+        "bytes": 10460160,
+        "sha256": "cf9d029cebf1d04745c90a9712401d70e823ecf4af5a082fe7269649df358e5e"
+      }
+    },
+    {
+      "role": "stable-cli-bin",
+      "pin": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+        "bytes": 50785280,
+        "sha256": "8886785ae37cb0fd4f5aa27828f1b39dcc269991c55c899bd53bdd4e0eb75088"
+      }
+    },
+    {
+      "role": "stable-cli-lib",
+      "pin": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+        "bytes": 32753152,
+        "sha256": "442c6cfe7eb70d3786262fc9eef9ac0f5c811e30e916b0df262ada1acf69184a"
+      }
+    },
+    {
+      "role": "stable-migration",
+      "pin": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+        "bytes": 21587968,
+        "sha256": "92946d588687ca11054943c0418622fe1473985f743162576052393c2394f32d"
+      }
+    },
+    {
+      "role": "stable-runtime2",
+      "pin": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+        "bytes": 23689728,
+        "sha256": "8eca44daa41d1ba117c108732e0c1ebc0e41ac688ee14ac70bb6d2210c1914cd"
+      }
+    },
+    {
+      "role": "stable-iroh-lib",
+      "pin": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+        "bytes": 19419648,
+        "sha256": "f5822cd40225a7ac12dbc2c58264439b8e3c5d4b4d20cf87309b9aa28f2023ad"
+      }
+    },
+    {
+      "role": "stable-iroh-relay",
+      "pin": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+        "bytes": 22317056,
+        "sha256": "552cc6c23452ad50c94b65391e33df462b89e14551c7eac51304e55872788cf0"
+      }
+    }
+  ],
+  "head": "77eb8c52e5cb73bd29f8bade2808e360650ddccc",
+  "instrumented": false,
+  "timings": [
+    {
+      "role": "normal",
+      "seconds": 43.3115812,
+      "passed": true
+    },
+    {
+      "role": "tests",
+      "seconds": 42.2578516,
+      "passed": true
+    }
+  ],
+  "normal": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-public-02\\normal.json",
+    "bytes": 1765600,
+    "sha256": "85aedde6f0bbe580751f5195c66f5250c8660a2ec96a5bc74297fbaa9a5b232c"
+  },
+  "runtime": "not_established",
+  "pair_seconds": 85.5694328,
+  "native_process_inventory_succeeded": true,
+  "full_embedded_seconds": 11.9621168,
+  "active_exact_images": [],
+  "source_and_capture_pins_unchanged_during_measurement": true,
+  "tests": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-public-02\\tests.json",
+    "bytes": 2729983,
+    "sha256": "b738255100a4350b3f671aa49b2c13cc43adbaed17e5918b85975c43d8928a83"
+  },
+  "fresh_candidate_context": true,
+  "classification": "one uninstrumented candidate compiler pair on retained actual captures; no production inventory/runtime",
+  "source_count": 517,
+  "compiler_rebuild_needed": false
+}

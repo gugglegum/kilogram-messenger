@@ -252,6 +252,16 @@ function New-S54Policy([string]$FixtureRoot) {
         Legacy=@{bytes=61531648;sha256='d9b7ff82469211390df3b084f52e42414e780897253396ace9886c00824793b1'};
         Relay=@{bytes=10460160;sha256='cf9d029cebf1d04745c90a9712401d70e823ecf4af5a082fe7269649df358e5e'}}
 }
+function New-S54CompilerSourceIndex($Sources) {
+    # Membership names only; this call owns the index and every path is fresh.
+    $index=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    foreach($p in $Sources){if(-not $index.Add((Get-S54Path $p.path))){throw 'S54 duplicate canonical compiler source.'}}
+    return ,$index
+}
+function Assert-S54CompilerSourcesFresh($Sources) {
+    # The index never authorizes bytes or a stale filesystem observation.
+    foreach($p in $Sources){$null=Read-S54Pin $p 8388608}
+}
 function Assert-S54Compiler($I,$Policy,$Capture,[bool]$Normal) {
     Assert-S54Wire $Capture 'CompilerCapture'
     if($Capture.classification -cne $(if($Normal){'nonexecuting-normal-cli-compiler-provenance'}else{'nonexecuting-compiler-artifact-provenance'}) -or $Capture.profile -cne 'verification-scale' -or $Capture.target -cne 'x86_64-pc-windows-msvc'){throw 'S54 compiler role/profile.'}
@@ -287,6 +297,7 @@ function Assert-S54Compiler($I,$Policy,$Capture,[bool]$Normal) {
         }
     }
     if($Capture.units.Count -eq 0 -or $Capture.units.Count -ne $Capture.raw_compiler_artifact_json.Count){throw 'S54 complete compiler artifact/units evidence.'}
+    $sourceIndex=New-S54CompilerSourceIndex $I.source.files
     $prefix=(Get-S54Path (Join-Path $Policy.Root 'target/x86_64-pc-windows-msvc/verification-scale') -AllowMissing)+[IO.Path]::DirectorySeparatorChar
     foreach($line in $Capture.raw_compiler_artifact_json){
         $message=ConvertFrom-S54Strict ([Text.Encoding]::UTF8.GetBytes($line)) 131072;Assert-S54Wire $message 'CargoArtifact'
@@ -297,7 +308,7 @@ function Assert-S54Compiler($I,$Policy,$Capture,[bool]$Normal) {
         foreach($f in $message.filenames){if(-not $names.Add((Get-S54Path $f -AllowMissing))){throw 'S54 unique compiler output paths.'}}
         $manifest=Get-S54Path $message.manifest_path;$null=Get-S54Path $message.target.src_path
         if($manifest.StartsWith($Policy.Root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){
-            foreach($path in @($message.manifest_path,$message.target.src_path)){if(-not @($I.source.files|Where-Object {[string]::Equals((Get-S54Path $_.path),(Get-S54Path $path),[StringComparison]::OrdinalIgnoreCase)}).Count){throw 'S54 workspace compiler target belongs to admitted live sources.'}}
+            foreach($path in @($message.manifest_path,$message.target.src_path)){if(-not $sourceIndex.Contains((Get-S54Path $path))){throw 'S54 workspace compiler target belongs to admitted live sources.'}}
         }
         $runtime=@($message.filenames|Where-Object {(Get-S54Path $_ -AllowMissing).StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)}).Count -gt 0 -and -not @($message.target.kind|Where-Object {$_ -cin @('custom-build','proc-macro')}).Count
         if($runtime -and ($message.profile.opt_level -cne '3' -or -not $message.profile.debug_assertions -or -not $message.profile.overflow_checks -or $message.profile.debuginfo -isnot [string] -or $message.profile.debuginfo -cne 'line-tables-only')){throw 'S54 runtime opt3/debug/overflow profile.'}
@@ -326,6 +337,7 @@ function Assert-S54Compiler($I,$Policy,$Capture,[bool]$Normal) {
         if(-not (Get-S54Path $u[0].executable).StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)){throw 'S54 compiler executable target/profile path.'}
         Assert-S54CompilerImageBytes $u[0].executable $pin
     }
+    Assert-S54CompilerSourcesFresh $I.source.files
 }
 function Assert-S54Inventory($I,$Policy,[string]$State='Fresh',$Owner=$null) {
     Assert-S54Wire $I 'Inventory'

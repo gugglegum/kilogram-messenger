@@ -1,0 +1,52 @@
+{
+  "error": "Actual child exit 1",
+  "stderr": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.stderr.log",
+    "bytes": 324,
+    "sha256": "6dd345808fc81f99c83b0d8273d64aa1fa6e94146238e464c41e398917bc3a33"
+  },
+  "actual_child_exit_code": 1,
+  "work_expired": false,
+  "effective_path_sha256": "b27e052877463bc883e77849d2511124a10d9331d76cebf9cc7f8d29281d6313",
+  "exit_code": 1,
+  "process_local_rust_bin": "C:\\Users\\Paul\\.rustup\\toolchains\\1.98.0-x86_64-pc-windows-msvc\\bin",
+  "child_pid": 51528,
+  "work_seconds": 570,
+  "actual_child_waited": true,
+  "step": "focused-02",
+  "original_path_sha256": "32afa634aa3fe135e1ae545834facb755758a036d57f369377b3455a99075f88",
+  "actual_handle_job_membership_verified": true,
+  "bounded_stdout_stderr_eof": true,
+  "reader_failed": false,
+  "executable": "C:/Users/Paul/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe",
+  "classification": "bounded membership-index verification; no builds/staging/production/runtime",
+  "whole_seconds": 600,
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\work.ps1",
+    "-Step",
+    "focused-02"
+  ],
+  "cleanup_reserve_seconds": 30,
+  "stdout": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-index-implementation-01\\focused-02.stdout.log",
+    "bytes": 31,
+    "sha256": "27d597a61039d1dcc747cfe393d175040d56e28f2c143fe570b6742bdb76f087"
+  },
+  "cleanup": {
+    "after": [],
+    "failed": false,
+    "verified": true,
+    "forced": false,
+    "before": []
+  },
+  "original_tick_ms": 497608968,
+  "production_Run_F_P_executed": false,
+  "owner_pid": 63864,
+  "whole_attempt_verdict": "not_established",
+  "persistent_environment_changed": false,
+  "elapsed_seconds": 47.0703258,
+  "child_started_utc": "2026-11-02T19:25:15.7309984Z"
+}

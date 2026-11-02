@@ -1,0 +1,5 @@
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\test-migration-s54-admission.ps1:23
+Line |
+  23 |  : ingComparison]::Ordinal)){throw 'Fresh index fixture root required.'}
+     |                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Fresh index fixture root required.

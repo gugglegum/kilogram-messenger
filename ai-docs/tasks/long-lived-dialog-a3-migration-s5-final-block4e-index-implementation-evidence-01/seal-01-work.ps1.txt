@@ -1,0 +1,17 @@
+param([Parameter(Mandatory)][string]$Step)
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+$root=(Get-Location).Path;$base=Join-Path $root '.tmp/s54-block4e-index-implementation-01'
+. (Join-Path $root 'scripts/invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
+if($Step -ceq 'measure-01'){& (Join-Path $base 'measure.ps1');exit 0}
+if($Step -ceq 'seal-01'){& (Join-Path $base 'seal.ps1');exit 0}
+if($Step -like 'focused-*'){
+    $envPath=Join-Path $base ($Step+'.environment.json')
+    Write-KilogramFrozenJson $envPath @(Get-KilogramFrozenEnvironment -Entries @(Get-ChildItem Env:))
+    & 'C:/Users/Paul/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/python.exe' (Join-Path $base 'clone-fixtures.py') $Step $envPath
+    if($LASTEXITCODE){throw 'Fresh public fixture clone failed.'}
+    $evidence=Join-Path $base $Step;$null=New-Item -ItemType Directory -Path $evidence -ErrorAction Stop
+    & (Join-Path $root 'scripts/test-migration-s54-admission.ps1') -CompilerIndexOnly -FixtureIndex (Join-Path $base ($Step+'.fixture-set.json')) -EvidenceDirectory $evidence
+    exit 0
+}
+throw 'Unknown bounded implementation check.'

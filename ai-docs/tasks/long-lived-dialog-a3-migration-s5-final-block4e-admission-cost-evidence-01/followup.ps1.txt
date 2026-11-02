@@ -1,0 +1,24 @@
+param([Parameter(Mandatory)][ValidateSet('followup-01')][string]$Step)
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+$root=(Get-Location).Path;$base=Join-Path $root '.tmp/s54-block4e-admission-cost-01'
+. (Join-Path $root 'scripts/invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
+$policy=New-S54Policy;$root=$policy.Root
+$c=Read-S54Json (Get-S54Pin (Join-Path $root '.tmp/s54-block4d-preparation-order-repair-01/compile-02.result.json') 1048576) 1048576
+$tests=Read-S54Json $c.tests 8388608
+$before=Read-S54Json (Get-S54Pin (Join-Path $root '.tmp/s54-block4d-preparation-order-repair-01/compile-public-02/embedded-before.json') 65536) 65536
+$proof=@{source=@{files=$c.sources};compiler=@{embedded=@{before=$before.inputs;after=$c.embedded_after;dep_info=$c.test_dep_info_after}}}
+$timer=[Diagnostics.Stopwatch]::StartNew()
+Assert-S54Embedded $proof $policy $tests
+$timer.Stop()
+$embeddedSeconds=$timer.Elapsed.TotalSeconds
+foreach($p in $c.sources){$null=Read-S54Pin $p 8388608}
+foreach($image in $c.images){$null=Read-S54Pin $image.pin 134217728}
+$baseline=Read-S54Json (Get-S54Pin (Join-Path $base 'baseline.json') 16384) 16384
+foreach($pin in $baseline.navigation){$null=Read-S54Pin $pin 8388608}
+if((& git rev-parse HEAD) -cne $baseline.head -or @(& git diff --cached --name-only).Count){throw 'Read-only source invariant.'}
+$timer=[Diagnostics.Stopwatch]::StartNew()
+& (Join-Path $base 'public-index-prototype.ps1')
+$timer.Stop()
+Write-KilogramFrozenJson (Join-Path $base 'followup.json') @{classification='surrounding full embedded predicate plus ignored public index prototype; no compiler pair replay';full_AssertS54Embedded_seconds=$embeddedSeconds;full_embedded_includes_dependency_predicate=$true;public_prototype_seconds=$timer.Elapsed.TotalSeconds;source_count=$c.sources.Count;images_checked=$c.images.Count;accepted_source_unchanged=$true;runtime=$false}
+Write-Output 'full_embedded_and_public_index_followup=passed;compiler_pair_replayed=false'

@@ -1,0 +1,35 @@
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+$root=(Get-Location).Path;$base=Join-Path $root '.tmp/s54-block4e-index-implementation-01'
+. (Join-Path $root 'scripts/invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
+$baseline=Read-S54Json (Get-S54Pin (Join-Path $base 'baseline.json') 16384) 16384
+$before=Read-S54Json (Get-S54Pin (Join-Path $base 'measure-01.before.json') 1048576) 1048576
+$current=Get-S54SourcePaths $root
+Assert-S54Equal @($current|Sort-Object) @($before.sources|ForEach-Object {$_.path}|Sort-Object)
+foreach($p in $before.sources){$null=Read-S54Pin $p 8388608}
+foreach($p in @($before.normal,$before.tests)){$null=Read-S54Pin $p 8388608}
+foreach($p in $before.images.pin){$null=Read-S54Pin $p 134217728}
+foreach($p in $baseline.navigation){$null=Read-S54Pin $p 8388608}
+if((& git rev-parse HEAD) -cne $baseline.head -or @(& git diff --cached --name-only).Count){throw 'Original HEAD/index preservation.'}
+$dirty=@(& git diff --name-only)
+$allowed=@('ai-docs/README.md','ai-docs/chat-coordination.md','ai-docs/next-stage-plan.md','scripts/invoke-migration-s54-whole.ps1','scripts/test-migration-s54-admission.ps1')
+Assert-S54Equal @($dirty|Sort-Object) @($allowed|Sort-Object)
+$cost=Read-S54Json (Get-S54Pin (Join-Path $root 'ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-report-01.pins.json') 65536) 65536
+$null=Read-S54Pin $cost.report 1048576
+foreach($row in $cost.evidence_copies){$null=Read-S54Pin $row.original 1048576;$null=Read-S54Pin $row.copy 1048576}
+$failed=Read-S54Json (Get-S54Pin (Join-Path $root 'ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-f-preparation-report-01.pins.json') 65536) 65536
+foreach($p in @($failed.administration)+@($failed.public_artifacts)){$null=Read-S54Pin $p 134217728}
+foreach($purpose in @('P','F')){
+    $old=Read-S54Json (Get-S54Pin (Join-Path $root ".tmp/s54-block4b-r1-01/block4d-order-repair-01/$purpose-fixture-index.json") 16384) 16384
+    foreach($p in $old.inputs.Values){$null=Read-S54Pin $p 2097152}
+}
+foreach($path in @('.tmp/migration-s54-feasibility/F-s54-mixed-hooks-feasibility-01-attempt-02','.tmp/migration-s54-feasibility-public-evidence/F-s54-mixed-hooks-feasibility-01-attempt-02','.tmp/migration-s54-integrated/P-s54-whole-resumed-l1-01-attempt-01','.tmp/migration-s54-public-evidence/P-s54-whole-resumed-l1-01-attempt-01')){if(Test-Path (Join-Path $root $path)){throw 'Production F02/P01 directories must remain absent.'}}
+$rows=@(Get-CimInstance Win32_Process -Property ProcessId,ExecutablePath -OperationTimeoutSec 3 -ErrorAction Stop)
+$paths=@($before.images.pin.path);$active=@($rows|Where-Object {$_.ExecutablePath -and $_.ExecutablePath -in $paths}|ForEach-Object {@{pid=$_.ProcessId;path=$_.ExecutablePath}})
+if($active.Count){throw 'Unexpected exact image process; no process stopped.'}
+foreach($path in @('scripts/invoke-migration-s54-whole.ps1','scripts/test-migration-s54-admission.ps1')){
+    $tokens=$null;$errors=$null;$null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $root $path),[ref]$tokens,[ref]$errors)
+    if($errors.Count){throw "Source parse failure: $path"}
+}
+Write-KilogramFrozenJson (Join-Path $base 'seal.json') @{classification='membership-index implementation final source/evidence preservation';head=$baseline.head;index_empty=$true;source_count=$current.Count;candidate_sources=@($before.sources|Where-Object {([IO.Path]::GetRelativePath($root,$_.path).Replace('\','/')) -cin @('scripts/invoke-migration-s54-whole.ps1','scripts/test-migration-s54-admission.ps1')});source_pins_unchanged_since_measurement=$true;normal=$before.normal;tests=$before.tests;images=$before.images;old_cost_evidence_copies_preserved=$cost.evidence_copies.Count;failed_F01_pins_preserved=(@($failed.administration).Count+@($failed.public_artifacts).Count);eight_original_public_fixture_pins_restored=$true;navigation=$baseline.navigation;native_process_inventory_succeeded=$true;active_exact_images=$active;production_directories_absent=$true;runtime='not_established'}
+Write-Output 'implementation_source_and_old_evidence_preservation=passed'

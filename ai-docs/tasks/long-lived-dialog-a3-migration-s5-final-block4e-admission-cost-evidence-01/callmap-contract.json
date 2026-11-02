@@ -1,0 +1,42 @@
+{
+  "classification": "source-proved call counts; sample-equivalent cost estimates are not runtime measurements",
+  "head": "77eb8c52e5cb73bd29f8bade2808e360650ddccc",
+  "runtime_PS_inventory_validations_success_path": 4,
+  "runtime_PS_compiler_calls": 8,
+  "preparation_PS_inventory_validations": 1,
+  "preparation_outside_T0": true,
+  "runtime_Rust_inspections_success_path": 3,
+  "runtime_Rust_compiler_capture_checks": 6,
+  "PS_pairs_before_native": 2,
+  "PS_pairs_after_native": 2,
+  "measured_pair_seconds": 370.5912998,
+  "two_pre_native_pairs_sample_equivalent_seconds": 741.1825996,
+  "four_runtime_pairs_sample_equivalent_seconds": 1482.3651992,
+  "Rust_duration": "not_measured",
+  "runtime_admission_duration": "not_measured",
+  "indexed_full_compiler_duration": "not_measured",
+  "patch_functions": [
+    "Assert-S54Compiler",
+    "new local source membership/index and fresh-source-tail helpers in same PS file"
+  ],
+  "patch_source_file": "scripts/invoke-migration-s54-whole.ps1",
+  "index_lifetime": "one compiler invocation only; no cross-process/role/authority cache",
+  "live_schedule": [
+    "retain existing inventory source enumeration and source Read-S54Pin loop",
+    "fresh Get-S54Path for each source when constructing index",
+    "fresh Get-S54Path for every workspace manifest/src membership query",
+    "new final Read-S54Pin of every admitted source on successful compiler return",
+    "retain all other compiler/raw/profile/graph/unit/tool/image/config/environment/output/clock/ownership checks at existing sites"
+  ],
+  "regressions": [
+    "positive real serialized normal/tests and unchanged outputs",
+    "F02/P01/cross-purpose and existing negative compiler schema/profile/graph/raw/role parity",
+    "unadmitted workspace target remains refused",
+    "OrdinalIgnoreCase and canonical separator membership parity; canonical duplicate refusal",
+    "missing/changed/reparse queried source after index rejected",
+    "unqueried source mutation/reparse after index rejected at fresh tail",
+    "tool/image/config/capture drift still refused by original live checks",
+    "deterministic O(source+queries) observation count excluding retained raw validation; no wall-time mirror test",
+    "fresh one-pair actual measurement after implementation before any F allocation"
+  ]
+}

@@ -1,0 +1,27 @@
+param([Parameter(Mandatory)][ValidateSet('seal-01')][string]$Step)
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+$root=(Get-Location).Path;$base=Join-Path $root '.tmp/s54-block4e-admission-cost-01'
+. (Join-Path $root 'scripts/invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
+$baseline=Read-S54Json (Get-S54Pin (Join-Path $base 'baseline.json') 16384) 16384
+$contextPin=Get-S54Pin (Join-Path $root '.tmp/s54-block4d-preparation-order-repair-01/compile-02.result.json') 1048576
+$c=Read-S54Json $contextPin 1048576
+$paths=Get-S54SourcePaths $root
+Assert-S54Equal @($paths|Sort-Object) @($c.sources|ForEach-Object {$_.path}|Sort-Object)
+foreach($p in $c.sources){$null=Read-S54Pin $p 8388608}
+foreach($r in $c.images){$null=Read-S54Pin $r.pin 134217728}
+foreach($p in @($c.normal,$c.tests)+@($c.test_origins_after)+@($c.test_dep_info_after)+@($c.normal_origins)+@($c.normal_dep_info)){$null=Read-S54Pin $p 134217728}
+foreach($p in $baseline.navigation){$null=Read-S54Pin $p 8388608}
+if((& git rev-parse HEAD) -cne $baseline.head -or @(& git diff --cached --name-only).Count){throw 'Original HEAD/index must remain unchanged.'}
+$dirty=@(& git diff --name-only)
+Assert-S54Equal @($dirty|Sort-Object) @(@('ai-docs/README.md','ai-docs/chat-coordination.md','ai-docs/next-stage-plan.md')|Sort-Object)
+$old=Read-S54Json (Get-S54Pin (Join-Path $root 'ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-f-preparation-report-01.pins.json') 65536) 65536
+foreach($p in @($old.administration)+@($old.public_artifacts)){$null=Read-S54Pin $p 134217728}
+foreach($path in @('.tmp/migration-s54-feasibility/F-s54-mixed-hooks-feasibility-01-attempt-02','.tmp/migration-s54-feasibility-public-evidence/F-s54-mixed-hooks-feasibility-01-attempt-02','.tmp/migration-s54-integrated/P-s54-whole-resumed-l1-01-attempt-01','.tmp/migration-s54-public-evidence/P-s54-whole-resumed-l1-01-attempt-01')){if(Test-Path (Join-Path $root $path)){throw 'No production directory is authorized.'}}
+$rows=@(Get-CimInstance Win32_Process -Property ProcessId,ExecutablePath -OperationTimeoutSec 3 -ErrorAction Stop)
+$imagePaths=@($c.images|ForEach-Object {$_.pin.path})
+$active=@($rows|Where-Object {$_.ExecutablePath -and $_.ExecutablePath -in $imagePaths}|ForEach-Object {@{pid=$_.ProcessId;path=$_.ExecutablePath}})
+if($active.Count){throw 'Unexpected exact image process; no process stopped.'}
+$sourceRefs=@('scripts/invoke-migration-s54-whole.ps1','scripts/migration-s54-outer.ps1','apps/kilogram-cli/tests/support/migration_s54_admission.rs','apps/kilogram-cli/tests/support/migration_s54_admission_runtime.rs','apps/kilogram-cli/tests/support/migration_s54_admission_compiler.rs','apps/kilogram-cli/tests/support/migration_s54_admission_files.rs','apps/kilogram-cli/tests/support/migration_s54_feasibility.rs','apps/kilogram-cli/tests/support/attempt_result.rs')|ForEach-Object {Get-S54Pin (Join-Path $root $_) 8388608}
+Write-KilogramFrozenJson (Join-Path $base 'seal.json') @{classification='final read-only admission-cost evidence preservation';head=$baseline.head;index_empty=$true;navigation_pins=$baseline.navigation;current_relevant_sources=$paths.Count;source_context=$contextPin;callmap_source_refs=@($sourceRefs);normal=$c.normal;tests=$c.tests;images=$c.images;test_origins=$c.test_origins_after;normal_origins=$c.normal_origins;selected_dep_info=$c.test_dep_info_after;failed_F01_pins_preserved=(@($old.administration).Count+@($old.public_artifacts).Count);accepted_source_unchanged=$true;native_process_inventory_succeeded=$true;active_exact_images=$active;production_F02_P01_directories_absent=$true;runtime='not_established'}
+Write-Output 'admission_cost_preservation_sealed=true;accepted_source_unchanged=true'

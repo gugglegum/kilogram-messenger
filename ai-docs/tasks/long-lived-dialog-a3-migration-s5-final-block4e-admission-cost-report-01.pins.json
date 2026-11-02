@@ -1,0 +1,525 @@
+{
+  "classification": "Block4E read-only review submission pins, not implementation candidate",
+  "head": "77eb8c52e5cb73bd29f8bade2808e360650ddccc",
+  "report": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-report-01.md",
+    "bytes": 11359,
+    "sha256": "b8beda53d90288e257fa7083ef8c47483f6332784992f4783b94806e50c47541"
+  },
+  "evidence_copies": [
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\baseline.json",
+        "bytes": 706,
+        "sha256": "419d2c60a9f188332bded773f28d718e69a42135ceb295702a593f4e8b44c531"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\baseline.json",
+        "bytes": 706,
+        "sha256": "419d2c60a9f188332bded773f28d718e69a42135ceb295702a593f4e8b44c531"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\callmap-contract.json",
+        "bytes": 2350,
+        "sha256": "36e43f2366be382fed87b9f719fdfa8f74a2cb2e910e2214fbeb08db220ab47a"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\callmap-contract.json",
+        "bytes": 2350,
+        "sha256": "36e43f2366be382fed87b9f719fdfa8f74a2cb2e910e2214fbeb08db220ab47a"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\cardinality.json",
+        "bytes": 654,
+        "sha256": "a7c0cc481277d4a61d29745625cc7df9b84fd66fd33588421794ac2f9b0128ac"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\cardinality.json",
+        "bytes": 654,
+        "sha256": "a7c0cc481277d4a61d29745625cc7df9b84fd66fd33588421794ac2f9b0128ac"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\followup-01.receipt.json",
+        "bytes": 1990,
+        "sha256": "db01b19d0b6a9c8448cffdb192012a2cc6c66c142d7dc843a6f2d1881530ca5e"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\followup-01.receipt.json",
+        "bytes": 1990,
+        "sha256": "db01b19d0b6a9c8448cffdb192012a2cc6c66c142d7dc843a6f2d1881530ca5e"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\followup-01.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\followup-01.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\followup-01.stdout.log",
+        "bytes": 111,
+        "sha256": "d0690d790cce710d551f56a907a8d7ddaf25125bb234dfa5b19bdbd091592ab9"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\followup-01.stdout.log",
+        "bytes": 111,
+        "sha256": "d0690d790cce710d551f56a907a8d7ddaf25125bb234dfa5b19bdbd091592ab9"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\followup-owner.ps1.txt",
+        "bytes": 4604,
+        "sha256": "5d7ccb42652df75b110840a073ab9363e952aa10763e7f34c65d8726bfd968be"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\followup-owner.ps1.txt",
+        "bytes": 4604,
+        "sha256": "5d7ccb42652df75b110840a073ab9363e952aa10763e7f34c65d8726bfd968be"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\followup.json",
+        "bytes": 380,
+        "sha256": "2c9a69cd41a3b934815f4d53fac75d1f499b645e449b59605235d1da4075420e"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\followup.json",
+        "bytes": 380,
+        "sha256": "2c9a69cd41a3b934815f4d53fac75d1f499b645e449b59605235d1da4075420e"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\followup.ps1",
+        "bytes": 1981,
+        "sha256": "7bf50215e5ba5600713ac4efc3d018a3a9d8a5e340aa238e462afe167787f36a"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\followup.ps1.txt",
+        "bytes": 1981,
+        "sha256": "7bf50215e5ba5600713ac4efc3d018a3a9d8a5e340aa238e462afe167787f36a"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\measure-01.receipt.json",
+        "bytes": 1982,
+        "sha256": "c246f0194010152e04d0de5491d779989d6c9492dcd85d4a39554a7a3a402231"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\measure-01.receipt.json",
+        "bytes": 1982,
+        "sha256": "c246f0194010152e04d0de5491d779989d6c9492dcd85d4a39554a7a3a402231"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\measure-01.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\measure-01.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\measure-01.stdout.log",
+        "bytes": 74,
+        "sha256": "c110c11069568bd6609728cb52c357e05339757f2ae20d84bd64ff2013868c72"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\measure-01.stdout.log",
+        "bytes": 74,
+        "sha256": "c110c11069568bd6609728cb52c357e05339757f2ae20d84bd64ff2013868c72"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\measurement.json",
+        "bytes": 3811,
+        "sha256": "38e663e918b9dad4598de05e13e71af3600f9cb037e0e80abb5254929247cb8f"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\measurement.json",
+        "bytes": 3811,
+        "sha256": "38e663e918b9dad4598de05e13e71af3600f9cb037e0e80abb5254929247cb8f"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\owner.ps1",
+        "bytes": 4644,
+        "sha256": "a51f8c59ba6c63ac35b8552cc5f052e077a5cebd8269ddd89d86003cf5c8de5d"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\owner.ps1.txt",
+        "bytes": 4644,
+        "sha256": "a51f8c59ba6c63ac35b8552cc5f052e077a5cebd8269ddd89d86003cf5c8de5d"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\phase-01.json",
+        "bytes": 108,
+        "sha256": "ea15d4878e0514a42c8e800a918984f7d2bf1bf9d8fd4deb4b289bfb13f972ef"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\phase-01.json",
+        "bytes": 108,
+        "sha256": "ea15d4878e0514a42c8e800a918984f7d2bf1bf9d8fd4deb4b289bfb13f972ef"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\phase-02.json",
+        "bytes": 141,
+        "sha256": "3d91e0a1875099eadf9416ea3f6d2b19563c26d4567ec7d7c1a8c4e01d910621"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\phase-02.json",
+        "bytes": 141,
+        "sha256": "3d91e0a1875099eadf9416ea3f6d2b19563c26d4567ec7d7c1a8c4e01d910621"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\phase-03.json",
+        "bytes": 100,
+        "sha256": "05e46d014a8fd313125e8e16b220d3dc79a4c0c470ebd37b6687524234706e43"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\phase-03.json",
+        "bytes": 100,
+        "sha256": "05e46d014a8fd313125e8e16b220d3dc79a4c0c470ebd37b6687524234706e43"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\phase-04.json",
+        "bytes": 99,
+        "sha256": "1f70b7d96e0763a1ad3ec7b7517a174a55a8cb3c303f66a883dd23435a3975ed"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\phase-04.json",
+        "bytes": 99,
+        "sha256": "1f70b7d96e0763a1ad3ec7b7517a174a55a8cb3c303f66a883dd23435a3975ed"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\phase-05.json",
+        "bytes": 124,
+        "sha256": "d1b7a07556381d5d66bcf9f330c30a08e5b864cd5a161df6a9389d55d02cb98b"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\phase-05.json",
+        "bytes": 124,
+        "sha256": "d1b7a07556381d5d66bcf9f330c30a08e5b864cd5a161df6a9389d55d02cb98b"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\phase-06.json",
+        "bytes": 123,
+        "sha256": "c6d55e110135daea649650f8dce9963d188f8831896f16da7e0e3f4d23be9198"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\phase-06.json",
+        "bytes": 123,
+        "sha256": "c6d55e110135daea649650f8dce9963d188f8831896f16da7e0e3f4d23be9198"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\phase-07.json",
+        "bytes": 110,
+        "sha256": "bc4976893834ab5c0c04060dcaac19643ecec08d63a921307e9a1cf9d06a4b7e"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\phase-07.json",
+        "bytes": 110,
+        "sha256": "bc4976893834ab5c0c04060dcaac19643ecec08d63a921307e9a1cf9d06a4b7e"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\phase-08.json",
+        "bytes": 98,
+        "sha256": "fe07811c4649d331935eb30b24a1716aaa122c65f56b4fa4f65b84803a566dd9"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\phase-08.json",
+        "bytes": 98,
+        "sha256": "fe07811c4649d331935eb30b24a1716aaa122c65f56b4fa4f65b84803a566dd9"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\phase-09.json",
+        "bytes": 124,
+        "sha256": "05e75b6d85999df7978c43a564a10c7c141fbe1d01557d3a35ceed6344484168"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\phase-09.json",
+        "bytes": 124,
+        "sha256": "05e75b6d85999df7978c43a564a10c7c141fbe1d01557d3a35ceed6344484168"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\phase-10.json",
+        "bytes": 127,
+        "sha256": "9b0d1d6a53693c5073a8cefdf48e0a109e6d71d63b8682b0b91f16336b767865"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\phase-10.json",
+        "bytes": 127,
+        "sha256": "9b0d1d6a53693c5073a8cefdf48e0a109e6d71d63b8682b0b91f16336b767865"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\phase-11.json",
+        "bytes": 118,
+        "sha256": "639f99c83a69ee3730141d07d78dc5a4923fb918f12a4e89619adb155956de56"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\phase-11.json",
+        "bytes": 118,
+        "sha256": "639f99c83a69ee3730141d07d78dc5a4923fb918f12a4e89619adb155956de56"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\phase-12.json",
+        "bytes": 141,
+        "sha256": "617c7500bb809746f4087d5e3ef768ace56326a2ae501cf3bf3dd04dce4e5a34"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\phase-12.json",
+        "bytes": 141,
+        "sha256": "617c7500bb809746f4087d5e3ef768ace56326a2ae501cf3bf3dd04dce4e5a34"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\phase-13.json",
+        "bytes": 139,
+        "sha256": "54a1bd27c8d268217ecc87eabd1767edd5b60b45e15214324a6d5c3f5f79d023"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\phase-13.json",
+        "bytes": 139,
+        "sha256": "54a1bd27c8d268217ecc87eabd1767edd5b60b45e15214324a6d5c3f5f79d023"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\public-index-prototype.json",
+        "bytes": 1909,
+        "sha256": "2929f6f4f9a46512d45aedbe68a29b548e6cb31b90e01721951a0c76757f719d"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\public-index-prototype.json",
+        "bytes": 1909,
+        "sha256": "2929f6f4f9a46512d45aedbe68a29b548e6cb31b90e01721951a0c76757f719d"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\public-index-prototype.ps1",
+        "bytes": 4614,
+        "sha256": "499597e411809cf84b3202ac8bbf5159361b341c29874452721e5e1f889f3717"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\public-index-prototype.ps1.txt",
+        "bytes": 4614,
+        "sha256": "499597e411809cf84b3202ac8bbf5159361b341c29874452721e5e1f889f3717"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\reference-owner.ps1.txt",
+        "bytes": 4528,
+        "sha256": "bcf52415153442accd59f28436d5124b673ed0b695d0e68fb487951fa1f20415"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\reference-owner.ps1.txt",
+        "bytes": 4528,
+        "sha256": "bcf52415153442accd59f28436d5124b673ed0b695d0e68fb487951fa1f20415"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\reference-work.ps1.txt",
+        "bytes": 7579,
+        "sha256": "0c1ab034d3cae63e4e3839d20649e563f36f088472598879ab65e2e5fbfe797c"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\reference-work.ps1.txt",
+        "bytes": 7579,
+        "sha256": "0c1ab034d3cae63e4e3839d20649e563f36f088472598879ab65e2e5fbfe797c"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\seal-01.receipt.json",
+        "bytes": 1971,
+        "sha256": "501aa7209fb3de28e39003cf8257c9efc87a2937af6c14217bae3f2f2270e197"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\seal-01.receipt.json",
+        "bytes": 1971,
+        "sha256": "501aa7209fb3de28e39003cf8257c9efc87a2937af6c14217bae3f2f2270e197"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\seal-01.stderr.log",
+        "bytes": 121,
+        "sha256": "0e421c90466cc817e37fa3d6434ce20780a42aaf5fc06472e37e8ba98259e495"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\seal-01.stderr.log",
+        "bytes": 121,
+        "sha256": "0e421c90466cc817e37fa3d6434ce20780a42aaf5fc06472e37e8ba98259e495"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\seal-01.stdout.log",
+        "bytes": 72,
+        "sha256": "56c79bd3f00b882faedba5c5c99315fb5f65394fb9b4128e8fe69490e2f1825b"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\seal-01.stdout.log",
+        "bytes": 72,
+        "sha256": "56c79bd3f00b882faedba5c5c99315fb5f65394fb9b4128e8fe69490e2f1825b"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\seal.json",
+        "bytes": 10438,
+        "sha256": "15b1e01db825eef0c2bbb455fad36c5768a91c3712baf959dd79086e066262e9"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\seal.json",
+        "bytes": 10438,
+        "sha256": "15b1e01db825eef0c2bbb455fad36c5768a91c3712baf959dd79086e066262e9"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\seal.ps1",
+        "bytes": 3720,
+        "sha256": "3a4c8882bf11b1f0b6c571270bc21541877bc4531bf7caa853a7d1c4f8804755"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\seal.ps1.txt",
+        "bytes": 3720,
+        "sha256": "3a4c8882bf11b1f0b6c571270bc21541877bc4531bf7caa853a7d1c4f8804755"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\static-membership-counts.json",
+        "bytes": 562,
+        "sha256": "277d146d1fb487f27efd0bbf0783147614f83c74497ab0d4d1a2d9cec0cbfc81"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\static-membership-counts.json",
+        "bytes": 562,
+        "sha256": "277d146d1fb487f27efd0bbf0783147614f83c74497ab0d4d1a2d9cec0cbfc81"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\work.ps1",
+        "bytes": 7579,
+        "sha256": "0c1ab034d3cae63e4e3839d20649e563f36f088472598879ab65e2e5fbfe797c"
+      },
+      "copy": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4e-admission-cost-evidence-01\\work.ps1.txt",
+        "bytes": 7579,
+        "sha256": "0c1ab034d3cae63e4e3839d20649e563f36f088472598879ab65e2e5fbfe797c"
+      }
+    }
+  ],
+  "retained_source_context": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-02.result.json",
+    "bytes": 138392,
+    "sha256": "22c2d76626f67ea103b57b1be28854e9f602bac2072842d3ad576d78164da314"
+  },
+  "callmap_source_refs": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+      "bytes": 47394,
+      "sha256": "62337727fa913b5f4d4e474d49056db819ee488cb766f78c38b8135af1d77e2e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s54-outer.ps1",
+      "bytes": 55165,
+      "sha256": "c93d4b96c81c7b6fc36f1330056ffa6133fcd90ae5fd8f5cda7b94d7242bc65d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_admission.rs",
+      "bytes": 27844,
+      "sha256": "b788efff444db1887c040fba2e0760055e94a5c2942e736960c7f5716c339d6d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_admission_runtime.rs",
+      "bytes": 18481,
+      "sha256": "544a6d0c56876f4c450484eed28beefe61531e7f0b195bb9b51a247dda2f782b"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_admission_compiler.rs",
+      "bytes": 18873,
+      "sha256": "3f9d92b7deac877acba3db36f015128981251f2d8b3023f963f84300ae1373da"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_admission_files.rs",
+      "bytes": 12345,
+      "sha256": "df65ef05b549c3cc0ae73ff7e0d7f8f3a9a16acaa4d4975e39cbd16acb082c26"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_feasibility.rs",
+      "bytes": 27541,
+      "sha256": "ec2ec6edec46a061a28f3aada3a1c2a9449dee3feed132dd1e3adb06647db47d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\attempt_result.rs",
+      "bytes": 11886,
+      "sha256": "845e70e260af7b13d92af669661cdec866a26f2018758797ca8ffd3ed872c703"
+    }
+  ],
+  "retained_normal": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-public-02\\normal.json",
+    "bytes": 1765600,
+    "sha256": "85aedde6f0bbe580751f5195c66f5250c8660a2ec96a5bc74297fbaa9a5b232c"
+  },
+  "retained_tests": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-public-02\\tests.json",
+    "bytes": 2729983,
+    "sha256": "b738255100a4350b3f671aa49b2c13cc43adbaed17e5918b85975c43d8928a83"
+  },
+  "runtime": "not_established"
+}

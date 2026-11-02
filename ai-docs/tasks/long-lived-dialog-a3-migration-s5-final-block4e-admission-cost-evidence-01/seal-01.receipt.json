@@ -1,0 +1,52 @@
+{
+  "production_Run_F_P_executed": false,
+  "whole_seconds": 1200,
+  "reader_failed": false,
+  "stdout": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\seal-01.stdout.log",
+    "bytes": 72,
+    "sha256": "56c79bd3f00b882faedba5c5c99315fb5f65394fb9b4128e8fe69490e2f1825b"
+  },
+  "effective_path_sha256": "b27e052877463bc883e77849d2511124a10d9331d76cebf9cc7f8d29281d6313",
+  "work_expired": false,
+  "actual_child_waited": true,
+  "exit_code": 0,
+  "error": null,
+  "whole_attempt_verdict": "not_established",
+  "actual_handle_job_membership_verified": true,
+  "step": "seal-01",
+  "child_started_utc": "2026-11-02T19:02:08.3118365Z",
+  "process_local_rust_bin": "C:\\Users\\Paul\\.rustup\\toolchains\\1.98.0-x86_64-pc-windows-msvc\\bin",
+  "bounded_stdout_stderr_eof": true,
+  "stderr": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\seal-01.stderr.log",
+    "bytes": 121,
+    "sha256": "0e421c90466cc817e37fa3d6434ce20780a42aaf5fc06472e37e8ba98259e495"
+  },
+  "owner_pid": 65584,
+  "cleanup_reserve_seconds": 30,
+  "executable": "C:/Users/Paul/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe",
+  "original_path_sha256": "32afa634aa3fe135e1ae545834facb755758a036d57f369377b3455a99075f88",
+  "persistent_environment_changed": false,
+  "classification": "bounded read-only admission-cost measurement; no builds/staging/production/runtime",
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4e-admission-cost-01\\seal.ps1",
+    "-Step",
+    "seal-01"
+  ],
+  "actual_child_exit_code": 0,
+  "original_tick_ms": 496221562,
+  "elapsed_seconds": 11.4928543,
+  "child_pid": 55864,
+  "work_seconds": 1170,
+  "cleanup": {
+    "failed": false,
+    "verified": true,
+    "before": [],
+    "forced": false,
+    "after": []
+  }
+}

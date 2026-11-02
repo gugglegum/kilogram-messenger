@@ -1,0 +1,66 @@
+{
+  "source_changes": false,
+  "index_authority": "pure membership strings only",
+  "count": 14,
+  "classification": "ignored public membership prototype only; not production optimization/admission",
+  "runtime": false,
+  "live_checks": "fresh source pin/path before index; fresh query path per decision; fresh source pin/path at tail",
+  "checks": [
+    {
+      "passed": true,
+      "name": "equivalent original/index membership/0"
+    },
+    {
+      "passed": true,
+      "name": "equivalent original/index membership/1"
+    },
+    {
+      "passed": true,
+      "name": "equivalent original/index membership/2"
+    },
+    {
+      "passed": true,
+      "name": "equivalent original/index membership/3"
+    },
+    {
+      "passed": true,
+      "name": "fresh source tail passes stable snapshot"
+    },
+    {
+      "passed": true,
+      "name": "duplicate canonical source refused : Duplicate canonical source."
+    },
+    {
+      "passed": true,
+      "name": "membership alone is not source-content authority"
+    },
+    {
+      "passed": true,
+      "name": "content mutation refused by fresh tail : S54 public pin mismatch."
+    },
+    {
+      "passed": true,
+      "name": "missing query refused fresh after index : S54 missing public path."
+    },
+    {
+      "passed": true,
+      "name": "original missing query also refused : S54 missing public path."
+    },
+    {
+      "passed": true,
+      "name": "missing source refused by final fresh tail : S54 missing public path."
+    },
+    {
+      "passed": true,
+      "name": "query detects new reparse ancestor after index : S54 reparse ancestor."
+    },
+    {
+      "passed": true,
+      "name": "original query also detects reparse : S54 reparse ancestor."
+    },
+    {
+      "passed": true,
+      "name": "source tail detects new reparse ancestor : S54 reparse ancestor."
+    }
+  ]
+}

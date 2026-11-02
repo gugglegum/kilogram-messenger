@@ -1,0 +1,63 @@
+param([ValidateSet('measure-01','followup-01','seal-01')][string]$Step='measure-01')
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+$workspace='E:/AI-Projects/kilogram-p2p-messenger'
+$base=Join-Path $workspace '.tmp/s54-block4e-admission-cost-01'
+$shell='C:/Users/Paul/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe'
+$runId='781ded2ab918d9f46b99394c3e7a912e174d7ab922f31622cad3333cdbbd1cc8'
+Set-Location $workspace
+if(Test-Path -LiteralPath (Join-Path $base "$Step.receipt.json")){throw 'Administrative receipt is immutable.'}
+. (Join-Path $workspace 'scripts/cargo-frozen-artifacts.ps1')
+$env:KILOGRAM_BLOCK4D_ORIGINAL_PATH_SHA256=Get-KilogramFrozenDigest $env:PATH
+$env:PATH='C:\Users\Paul\.rustup\toolchains\1.98.0-x86_64-pc-windows-msvc\bin'+[IO.Path]::PathSeparator+$env:PATH
+$env:CARGO_NET_OFFLINE='true'
+[Diagnostics.Process]::GetCurrentProcess().PriorityClass=[Diagnostics.ProcessPriorityClass]::BelowNormal
+$work=switch($Step){'measure-01'{'work.ps1'}'followup-01'{'followup.ps1'}'seal-01'{'seal.ps1'}}
+$argv=@('-NoProfile','-NonInteractive','-File',(Join-Path $base $work),'-Step',$Step)
+$origin=[Environment]::TickCount64
+. (Join-Path $workspace 'scripts/migration-s5-l1-deadline.ps1')
+. (Join-Path $workspace 'scripts/invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
+Initialize-S54Output
+$limits=@(1170,1200)
+$job=[KilogramS5Deadline]::new([int]$limits[0],[int]$limits[1],[long]$origin)
+$watch=[Diagnostics.Stopwatch]::StartNew()
+$process=New-S54Process $shell $argv
+$output=$null;$code=1;$nativeCode=$null;$waited=$false;$errorText=$null;$verified=$false;$closed=$null
+$stdout=[byte[]]@();$stderr=[byte[]]@();$eof=$false;$readerFailed=$false;$childPid=$null;$childStart=$null
+try {
+    if(-not $process.Start()){throw 'Preparation administration child failed to start.'}
+    $job.VerifyChild($process);$verified=$true;$childPid=$process.Id;$childStart=$process.StartTime.ToUniversalTime().ToString('o')
+    $output=[KilogramS54Output]::new($process)
+    while(-not $process.WaitForExit(0) -or -not $output.Eof){
+        $job.CheckWork();if($output.Failed){throw 'Bounded administration output failed.'};Start-Sleep -Milliseconds 20
+    }
+    $job.CheckWork();$waited=$process.WaitForExit(0);$nativeCode=$process.ExitCode
+    if($nativeCode -ne 0){throw "Actual child exit $nativeCode"}
+    $code=0
+}catch{$errorText=$_.Exception.Message}
+finally {
+    $closed=Close-S54Owned $job ([Math]::Min(30000,$job.RemainingWholeMilliseconds))
+    if(-not $closed.verified -or $closed.failed){$code=1}
+    if($null -ne $output){
+        $until=[Math]::Min([Environment]::TickCount64+3000,[Environment]::TickCount64+$job.RemainingWholeMilliseconds)
+        while(-not $output.Eof -and -not $output.Failed -and [Environment]::TickCount64 -lt $until){Start-Sleep -Milliseconds 5}
+        $stdout=$output.StdoutBytes;$stderr=$output.StderrBytes;$eof=$output.Eof;$readerFailed=$output.Failed
+    }
+    if($process.HasExited){$waited=$process.WaitForExit(0);$nativeCode=$process.ExitCode}
+    [IO.File]::WriteAllBytes((Join-Path $base "$Step.stdout.log"),$stdout)
+    [IO.File]::WriteAllBytes((Join-Path $base "$Step.stderr.log"),$stderr)
+    if(-not $eof -or $readerFailed){$code=1}
+    $receipt=@{classification='bounded read-only admission-cost measurement; no builds/staging/production/runtime';step=$Step;executable=$shell;argv=$argv;
+        owner_pid=$PID;child_pid=$childPid;child_started_utc=$childStart;actual_handle_job_membership_verified=$verified;
+        actual_child_waited=$waited;actual_child_exit_code=$nativeCode;exit_code=$code;elapsed_seconds=$watch.Elapsed.TotalSeconds;
+        original_tick_ms=$origin;work_seconds=$limits[0];whole_seconds=$limits[1];cleanup_reserve_seconds=($limits[1]-$limits[0]);
+        work_expired=$job.WorkExpired;bounded_stdout_stderr_eof=$eof;reader_failed=$readerFailed;
+        stdout=(Get-S54Pin (Join-Path $base "$Step.stdout.log") 1048576);stderr=(Get-S54Pin (Join-Path $base "$Step.stderr.log") 1048576);
+        cleanup=$closed;error=$errorText;process_local_rust_bin='C:\Users\Paul\.rustup\toolchains\1.98.0-x86_64-pc-windows-msvc\bin';
+        original_path_sha256=$env:KILOGRAM_BLOCK4D_ORIGINAL_PATH_SHA256;effective_path_sha256=(Get-KilogramFrozenDigest $env:PATH);
+        persistent_environment_changed=$false;production_Run_F_P_executed=$false;whole_attempt_verdict='not_established'}
+    Write-KilogramFrozenJson (Join-Path $base "$Step.receipt.json") $receipt
+    $process.Dispose();$job.CheckWhole();$job.Finish()
+}
+$receipt|ConvertTo-Json -Depth 8
+exit $code
