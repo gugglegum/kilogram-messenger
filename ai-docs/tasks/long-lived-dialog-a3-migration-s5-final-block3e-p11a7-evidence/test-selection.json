@@ -1,0 +1,17 @@
+{
+  "expected_names": [
+    "s54_capture::tests::s54_capture_transform_original_nested_and_safe_errors",
+    "s54_capture::tests::s54_capture_scope_sequence_restore_and_pending_is_permanent_failure",
+    "s54_capture::tests::s54_capture_log_collisions_and_writer_io_never_use_raw_fallback",
+    "s54_capture::tests::s54_capture_actual_valid",
+    "s54_capture::tests::s54_capture_actual_pressure",
+    "s54_capture::tests::s54_capture_actual_malformed",
+    "s54_capture::tests::s54_capture_actual_invalid_utf8",
+    "s54_capture::tests::s54_capture_actual_nonzero",
+    "s54_capture::tests::s54_capture_actual_stdout_overflow",
+    "s54_capture::tests::s54_capture_actual_stderr_overflow",
+    "s54_capture::tests::s54_capture_actual_stall",
+    "s53_deadline::b_start_deadline_nested_minimum_restores_without_reset",
+    "s53_deadline::b_start_deadline_expired_bound_cannot_spawn_or_revive"
+  ]
+}

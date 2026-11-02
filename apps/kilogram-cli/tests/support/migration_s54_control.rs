@@ -134,6 +134,8 @@ pub(super) struct Controller {
     pub pre_q_heads: [u64; 2],
     pub outcomes: Vec<Value>,
     pub old_overlap: Vec<Value>,
+    // Last field: retained through Controller::drop and other field destruction.
+    _capture: s54_capture::Guard,
 }
 impl Drop for Controller {
     fn drop(&mut self) {
@@ -184,6 +186,7 @@ impl Controller {
             Instant::now() < until,
             "future continuous absolute deadline"
         );
+        let capture = s54_capture::Guard::enter(until)?;
         let origin = OldOrigin::create(parent)?;
         let controls = [
             Controls::new(&origin.pair.base, &origin.contexts[0], 0)?,
@@ -210,6 +213,7 @@ impl Controller {
             pre_q_heads: [0; 2],
             outcomes: vec![],
             old_overlap: vec![],
+            _capture: capture,
         })
     }
     pub fn check(&mut self) -> Result<()> {

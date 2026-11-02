@@ -1,0 +1,120 @@
+{
+  "step": "pure-01",
+  "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a7-01\\pure.ps1",
+    "-Step",
+    "pure-01"
+  ],
+  "actual_child_exit_code": 0,
+  "exit_code": 0,
+  "elapsed_seconds": 42.4583668,
+  "cleanup_verified": true,
+  "error": null,
+  "outer_job_owner_pid": 60772,
+  "actual_launcher_membership_verified": true,
+  "work_expired": false,
+  "members_before_cleanup": [],
+  "members_after_cleanup": [],
+  "capture_harness_membership": [
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a7-01\\pure-01.admission\\join-69816.json",
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "launcher_pid": 61732,
+      "harness_pid": 69816,
+      "harness_start_utc": "2026-11-02T01:30:04.4544398Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "ae6a10b65a014a8f7c8fbe9a4ffdbc63fb81165b648ff2a7d19563fae8875163",
+      "actual_handle_membership_verified": true,
+      "nonce": "69816-1793583004473"
+    },
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a7-01\\pure-01.admission\\join-68000.json",
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "launcher_pid": 61732,
+      "harness_pid": 68000,
+      "harness_start_utc": "2026-11-02T01:30:05.6907556Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "ae6a10b65a014a8f7c8fbe9a4ffdbc63fb81165b648ff2a7d19563fae8875163",
+      "actual_handle_membership_verified": true,
+      "nonce": "68000-1793583005710"
+    },
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a7-01\\pure-01.admission\\join-30304.json",
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "launcher_pid": 61732,
+      "harness_pid": 30304,
+      "harness_start_utc": "2026-11-02T01:30:08.5583442Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "ae6a10b65a014a8f7c8fbe9a4ffdbc63fb81165b648ff2a7d19563fae8875163",
+      "actual_handle_membership_verified": true,
+      "nonce": "30304-1793583008576"
+    },
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a7-01\\pure-01.admission\\join-67156.json",
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "launcher_pid": 61732,
+      "harness_pid": 67156,
+      "harness_start_utc": "2026-11-02T01:30:09.4683907Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "ae6a10b65a014a8f7c8fbe9a4ffdbc63fb81165b648ff2a7d19563fae8875163",
+      "actual_handle_membership_verified": true,
+      "nonce": "67156-1793583009485"
+    },
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a7-01\\pure-01.admission\\join-44024.json",
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "launcher_pid": 61732,
+      "harness_pid": 44024,
+      "harness_start_utc": "2026-11-02T01:30:10.4251334Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "ae6a10b65a014a8f7c8fbe9a4ffdbc63fb81165b648ff2a7d19563fae8875163",
+      "actual_handle_membership_verified": true,
+      "nonce": "44024-1793583010442"
+    },
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a7-01\\pure-01.admission\\join-16540.json",
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "launcher_pid": 61732,
+      "harness_pid": 16540,
+      "harness_start_utc": "2026-11-02T01:30:11.3798316Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "ae6a10b65a014a8f7c8fbe9a4ffdbc63fb81165b648ff2a7d19563fae8875163",
+      "actual_handle_membership_verified": true,
+      "nonce": "16540-1793583011397"
+    },
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a7-01\\pure-01.admission\\join-68916.json",
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "launcher_pid": 61732,
+      "harness_pid": 68916,
+      "harness_start_utc": "2026-11-02T01:30:16.4305640Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "ae6a10b65a014a8f7c8fbe9a4ffdbc63fb81165b648ff2a7d19563fae8875163",
+      "actual_handle_membership_verified": true,
+      "nonce": "68916-1793583016447"
+    },
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a7-01\\pure-01.admission\\join-64696.json",
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "launcher_pid": 61732,
+      "harness_pid": 64696,
+      "harness_start_utc": "2026-11-02T01:30:21.4483223Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "ae6a10b65a014a8f7c8fbe9a4ffdbc63fb81165b648ff2a7d19563fae8875163",
+      "actual_handle_membership_verified": true,
+      "nonce": "64696-1793583021467"
+    }
+  ]
+}

@@ -266,7 +266,7 @@ impl Managed {
         )
     }
 }
-fn public_fingerprints(value: &mut Value) -> Result<()> {
+pub(super) fn public_fingerprints(value: &mut Value) -> Result<()> {
     match value {
         Value::Object(object) => {
             if let Some(keys) = object.remove("keys") {

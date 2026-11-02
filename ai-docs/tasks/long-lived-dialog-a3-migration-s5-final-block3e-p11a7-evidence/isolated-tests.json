@@ -1,0 +1,83 @@
+{
+  "format_version": 1,
+  "tests": [
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_capture::tests::s54_capture_transform_original_nested_and_safe_errors"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_capture::tests::s54_capture_scope_sequence_restore_and_pending_is_permanent_failure"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_capture::tests::s54_capture_log_collisions_and_writer_io_never_use_raw_fallback"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_capture::tests::s54_capture_actual_valid"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_capture::tests::s54_capture_actual_pressure"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_capture::tests::s54_capture_actual_malformed"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_capture::tests::s54_capture_actual_invalid_utf8"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_capture::tests::s54_capture_actual_nonzero"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_capture::tests::s54_capture_actual_stdout_overflow"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_capture::tests::s54_capture_actual_stderr_overflow"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_capture::tests::s54_capture_actual_stall"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s53_deadline::b_start_deadline_nested_minimum_restores_without_reset"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s53_deadline::b_start_deadline_expired_bound_cannot_spawn_or_revive"
+    }
+  ]
+}

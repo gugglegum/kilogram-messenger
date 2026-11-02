@@ -4,6 +4,8 @@
 mod live_l1;
 #[path = "support/migration_s53_deadline.rs"]
 mod s53_deadline;
+#[path = "support/migration_s54_capture.rs"]
+mod s54_capture;
 use anyhow::{Context, Result, ensure};
 use kilogram_cli::ordered_dialog::handshake::Credentials;
 use serde_json::{Value, json};
@@ -96,6 +98,9 @@ fn rejected(exe: &Path, args: &[String]) -> Result<String> {
     Ok(error)
 }
 fn json_cli(exe: &Path, args: &[String]) -> Result<Value> {
+    if let Some(result) = s54_capture::intercept(exe, args) {
+        return result;
+    }
     Ok(serde_json::from_str(&cli(exe, args)?)?)
 }
 fn copy_tree(from: &Path, to: &Path) -> Result<()> {

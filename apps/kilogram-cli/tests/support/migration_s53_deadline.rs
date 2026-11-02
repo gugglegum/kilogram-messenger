@@ -65,6 +65,37 @@ pub(super) fn check() -> Result<()> {
         Ok(())
     })
 }
+/// Reserve a status slot without changing the legacy output path or deadline.
+pub(super) struct CaptureBound {
+    pub work: Instant,
+    pub whole: Instant,
+    pub out: PathBuf,
+    pub err: PathBuf,
+    pub sequence: u64,
+}
+pub(super) fn capture_bound() -> Result<CaptureBound> {
+    check()?;
+    SCOPE.with_borrow_mut(|scope| {
+        let s = scope.as_mut().context("status requires managed deadline")?;
+        let sequence = s.next;
+        s.next += 1;
+        Ok(CaptureBound {
+            work: effective(s),
+            whole: s.deadline,
+            out: s.run.join(format!("command-{sequence:04}.stdout.log")),
+            err: s.run.join(format!("command-{sequence:04}.stderr.log")),
+            sequence,
+        })
+    })
+}
+pub(super) fn capture_deadline() -> Result<Instant> {
+    check()?;
+    SCOPE.with_borrow(|scope| {
+        Ok(effective(
+            scope.as_ref().context("status requires managed deadline")?,
+        ))
+    })
+}
 pub(super) fn output(command: &mut Command) -> Result<Output> {
     check()?;
     let bound = SCOPE.with_borrow_mut(|scope| {

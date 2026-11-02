@@ -1,0 +1,410 @@
+[
+  {
+    "mode": "valid",
+    "pid": 56588,
+    "directory": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/valid-69816-1793583004472556700",
+    "result": {
+      "actual": {
+        "attempt": "pure-01",
+        "capture": {
+          "classification": "success",
+          "cleanup_pending": false,
+          "code": 0,
+          "exit_observed": true,
+          "io_error": null,
+          "kill_error": null,
+          "kill_requested": false,
+          "parse_column": null,
+          "parse_line": null,
+          "pid": 56588,
+          "stderr_bytes": 19,
+          "stderr_eof": true,
+          "stdout_bytes": 95,
+          "stdout_eof": true,
+          "waited": true
+        },
+        "containment_owner_pid": 60772,
+        "harness_pid": 69816,
+        "sequence": 0
+      },
+      "classification": "synthetic capture only; outer cleanup receipt required",
+      "elapsed_seconds": 1.2125525,
+      "expected": "success",
+      "mode": "valid"
+    },
+    "raw_files": [
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/valid-69816-1793583004472556700/case-result.json",
+        "bytes": 519,
+        "sha256": "db6aa7a1a9a168bfcbb1570a08551820eaca386f4205ae823ef2ec44ea41bda7"
+      },
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/valid-69816-1793583004472556700/command-0000.stderr.log",
+        "bytes": 371,
+        "sha256": "913c0c6365f2a3c7a31115eed4570dec67ad42623e73304eb6a6bf11e86cd912"
+      },
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/valid-69816-1793583004472556700/command-0000.stdout.log",
+        "bytes": 196,
+        "sha256": "3943cae204b10708d975985a247c49de19dcb40f53ff89a9d3b08d01cb235e14"
+      }
+    ]
+  },
+  {
+    "mode": "pressure",
+    "pid": 61804,
+    "directory": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/pressure-68000-1793583005710433300",
+    "result": {
+      "actual": {
+        "attempt": "pure-01",
+        "capture": {
+          "classification": "success",
+          "cleanup_pending": false,
+          "code": 0,
+          "exit_observed": true,
+          "io_error": null,
+          "kill_error": null,
+          "kill_requested": false,
+          "parse_column": null,
+          "parse_line": null,
+          "pid": 61804,
+          "stderr_bytes": 524307,
+          "stderr_eof": true,
+          "stdout_bytes": 524396,
+          "stdout_eof": true,
+          "waited": true
+        },
+        "containment_owner_pid": 60772,
+        "harness_pid": 68000,
+        "sequence": 0
+      },
+      "classification": "synthetic capture only; outer cleanup receipt required",
+      "elapsed_seconds": 2.8420378,
+      "expected": "success",
+      "mode": "pressure"
+    },
+    "raw_files": [
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/pressure-68000-1793583005710433300/case-result.json",
+        "bytes": 530,
+        "sha256": "7842baf6c00093b99fb622c0c6db115521ec4a5f4541582dfdacb7ed8f582e2c"
+      },
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/pressure-68000-1793583005710433300/command-0000.stderr.log",
+        "bytes": 379,
+        "sha256": "937cc9698e3a63b5211d47dc5068fb6fd10e3c40121720b67c632eeb8528c5a0"
+      },
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/pressure-68000-1793583005710433300/command-0000.stdout.log",
+        "bytes": 524497,
+        "sha256": "870a067c88470dfdb6d80e96361ca6f317685093ba27eb89ada17255bcf6fcfa"
+      }
+    ]
+  },
+  {
+    "mode": "malformed",
+    "pid": 59140,
+    "directory": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/malformed-30304-1793583008575498100",
+    "result": {
+      "actual": {
+        "attempt": "pure-01",
+        "capture": {
+          "classification": "invalid_json",
+          "cleanup_pending": false,
+          "code": 0,
+          "exit_observed": true,
+          "io_error": null,
+          "kill_error": null,
+          "kill_requested": false,
+          "parse_column": 29,
+          "parse_line": 1,
+          "pid": 59140,
+          "stderr_bytes": 19,
+          "stderr_eof": true,
+          "stdout_bytes": 29,
+          "stdout_eof": true,
+          "waited": true
+        },
+        "containment_owner_pid": 60772,
+        "harness_pid": 30304,
+        "sequence": 0
+      },
+      "classification": "synthetic capture only; outer cleanup receipt required",
+      "elapsed_seconds": 0.8865903,
+      "expected": "invalid_json",
+      "mode": "malformed"
+    },
+    "raw_files": [
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/malformed-30304-1793583008575498100/case-result.json",
+        "bytes": 528,
+        "sha256": "6e369f8b5c151b65e1c21b64815b5576c70c12b01721f455c35617fa230c014d"
+      },
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/malformed-30304-1793583008575498100/command-0000.stderr.log",
+        "bytes": 371,
+        "sha256": "6621298df10866501297667a6d00042a3546a4dd42eff55c23224a3c99d79f4d"
+      },
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/malformed-30304-1793583008575498100/command-0000.stdout.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  {
+    "mode": "invalid-utf8",
+    "pid": 33144,
+    "directory": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/invalid-utf8-67156-1793583009485386200",
+    "result": {
+      "actual": {
+        "attempt": "pure-01",
+        "capture": {
+          "classification": "invalid_utf8",
+          "cleanup_pending": false,
+          "code": 0,
+          "exit_observed": true,
+          "io_error": null,
+          "kill_error": null,
+          "kill_requested": false,
+          "parse_column": null,
+          "parse_line": null,
+          "pid": 33144,
+          "stderr_bytes": 19,
+          "stderr_eof": true,
+          "stdout_bytes": 3,
+          "stdout_eof": true,
+          "waited": true
+        },
+        "containment_owner_pid": 60772,
+        "harness_pid": 67156,
+        "sequence": 0
+      },
+      "classification": "synthetic capture only; outer cleanup receipt required",
+      "elapsed_seconds": 0.9343907,
+      "expected": "invalid_utf8",
+      "mode": "invalid-utf8"
+    },
+    "raw_files": [
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/invalid-utf8-67156-1793583009485386200/case-result.json",
+        "bytes": 535,
+        "sha256": "3690190ed06df520a1f2fd455253f2e94b513795dbe1ef27089eb80e98e738cd"
+      },
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/invalid-utf8-67156-1793583009485386200/command-0000.stderr.log",
+        "bytes": 375,
+        "sha256": "99e8cb24daf3796e879cb98b109237dc405c3d3e3d6911f93fe3746903601bde"
+      },
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/invalid-utf8-67156-1793583009485386200/command-0000.stdout.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  {
+    "mode": "nonzero",
+    "pid": 65928,
+    "directory": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/nonzero-44024-1793583010442009300",
+    "result": {
+      "actual": {
+        "attempt": "pure-01",
+        "capture": {
+          "classification": "nonzero_exit",
+          "cleanup_pending": false,
+          "code": 17,
+          "exit_observed": true,
+          "io_error": null,
+          "kill_error": null,
+          "kill_requested": false,
+          "parse_column": null,
+          "parse_line": null,
+          "pid": 65928,
+          "stderr_bytes": 19,
+          "stderr_eof": true,
+          "stdout_bytes": 95,
+          "stdout_eof": true,
+          "waited": true
+        },
+        "containment_owner_pid": 60772,
+        "harness_pid": 44024,
+        "sequence": 0
+      },
+      "classification": "synthetic capture only; outer cleanup receipt required",
+      "elapsed_seconds": 0.9322681,
+      "expected": "nonzero_exit",
+      "mode": "nonzero"
+    },
+    "raw_files": [
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/nonzero-44024-1793583010442009300/case-result.json",
+        "bytes": 532,
+        "sha256": "90bec7bb637666c06652cf128b22f1ae756128d3078fe5457b9571e0ab609120"
+      },
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/nonzero-44024-1793583010442009300/command-0000.stderr.log",
+        "bytes": 377,
+        "sha256": "b76431e636c69e3a58e870a50c0417fa58f28f17e5813458918d02be2a9b4a9b"
+      },
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/nonzero-44024-1793583010442009300/command-0000.stdout.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  {
+    "mode": "stdout-overflow",
+    "pid": 60040,
+    "directory": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/stdout-overflow-16540-1793583011397075000",
+    "result": {
+      "actual": {
+        "attempt": "pure-01",
+        "capture": {
+          "classification": "stdout_cap",
+          "cleanup_pending": false,
+          "code": 1,
+          "exit_observed": true,
+          "io_error": null,
+          "kill_error": null,
+          "kill_requested": true,
+          "parse_column": null,
+          "parse_line": null,
+          "pid": 60040,
+          "stderr_bytes": 19,
+          "stderr_eof": true,
+          "stdout_bytes": 1122304,
+          "stdout_eof": true,
+          "waited": true
+        },
+        "containment_owner_pid": 60772,
+        "harness_pid": 16540,
+        "sequence": 0
+      },
+      "classification": "synthetic capture only; outer cleanup receipt required",
+      "elapsed_seconds": 5.0264587,
+      "expected": "stdout_cap",
+      "mode": "stdout-overflow"
+    },
+    "raw_files": [
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/stdout-overflow-16540-1793583011397075000/case-result.json",
+        "bytes": 539,
+        "sha256": "1bbe07e77ca9b8be44487ff2461998381cf8d4543e87ab8a0fabb2d13527ed9e"
+      },
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/stdout-overflow-16540-1793583011397075000/command-0000.stderr.log",
+        "bytes": 378,
+        "sha256": "ebc88909337dc75bee5602d41932f2d6125a1e6a33e0846050bc56f00360811c"
+      },
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/stdout-overflow-16540-1793583011397075000/command-0000.stdout.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  {
+    "mode": "stderr-overflow",
+    "pid": 9600,
+    "directory": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/stderr-overflow-68916-1793583016447138500",
+    "result": {
+      "actual": {
+        "attempt": "pure-01",
+        "capture": {
+          "classification": "stderr_cap",
+          "cleanup_pending": false,
+          "code": 1,
+          "exit_observed": true,
+          "io_error": null,
+          "kill_error": null,
+          "kill_requested": true,
+          "parse_column": null,
+          "parse_line": null,
+          "pid": 9600,
+          "stderr_bytes": 1114131,
+          "stderr_eof": true,
+          "stdout_bytes": 0,
+          "stdout_eof": true,
+          "waited": true
+        },
+        "containment_owner_pid": 60772,
+        "harness_pid": 68916,
+        "sequence": 0
+      },
+      "classification": "synthetic capture only; outer cleanup receipt required",
+      "elapsed_seconds": 4.9945006,
+      "expected": "stderr_cap",
+      "mode": "stderr-overflow"
+    },
+    "raw_files": [
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/stderr-overflow-68916-1793583016447138500/case-result.json",
+        "bytes": 537,
+        "sha256": "c7d83a752cb50b12fdf3c6712e9be482a682c78f41c27998c10ffdf3fee3b64b"
+      },
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/stderr-overflow-68916-1793583016447138500/command-0000.stderr.log",
+        "bytes": 376,
+        "sha256": "60c665b71371cc7b98beff35aa1af26b9aece063f9ef5a7bd53c68c138009490"
+      },
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/stderr-overflow-68916-1793583016447138500/command-0000.stdout.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  },
+  {
+    "mode": "stall",
+    "pid": 12476,
+    "directory": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/stall-64696-1793583021467396900",
+    "result": {
+      "actual": {
+        "attempt": "pure-01",
+        "capture": {
+          "classification": "deadline",
+          "cleanup_pending": false,
+          "code": 1,
+          "exit_observed": true,
+          "io_error": null,
+          "kill_error": null,
+          "kill_requested": true,
+          "parse_column": null,
+          "parse_line": null,
+          "pid": 12476,
+          "stderr_bytes": 19,
+          "stderr_eof": true,
+          "stdout_bytes": 0,
+          "stdout_eof": true,
+          "waited": true
+        },
+        "containment_owner_pid": 60772,
+        "harness_pid": 64696,
+        "sequence": 0
+      },
+      "classification": "synthetic capture only; outer cleanup receipt required",
+      "elapsed_seconds": 8.0595576,
+      "expected": "deadline",
+      "mode": "stall"
+    },
+    "raw_files": [
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/stall-64696-1793583021467396900/case-result.json",
+        "bytes": 519,
+        "sha256": "6c14c322eabd9ce2339fdc8897aa0bcc8e99efe563b60f7455104f6e5f8d8a9d"
+      },
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/stall-64696-1793583021467396900/command-0000.stderr.log",
+        "bytes": 370,
+        "sha256": "ef0c96d7a7e514d63297834adb81c78731152cbee02986ae1767f299c1d483fd"
+      },
+      {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a7-capture-tests/stall-64696-1793583021467396900/command-0000.stdout.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    ]
+  }
+]

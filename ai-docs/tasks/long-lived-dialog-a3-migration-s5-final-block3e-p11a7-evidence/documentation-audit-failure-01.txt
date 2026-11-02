@@ -1,0 +1,6 @@
+First documentation/integrity generator invocation failed before producing review.json:
+KeyError: 'bytes' at review.py:9, while checking compiler build_inputs_after.source_inputs.
+That existing inventory provides path+sha256, not bytes. The corrected generator always
+compares SHA256 and compares bytes only where the receipt actually supplies it.
+No Rust/test/fixture/validation-helper input changed; no test rerun is justified.
+The original documentation generator is preserved as review-generator-01.py.

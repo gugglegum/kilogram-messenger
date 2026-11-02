@@ -1,0 +1,15 @@
+# P11A7 root acceptance — 2026-11-02
+
+Accepted for scoped publication on parent `4d40bb3f5e21fb5e9108c3a702ccf8a10077153b`. No blocking source findings remain. This accepts opt-in status capture and its synthetic Windows verification, not integrated P11 or whole S5.4 execution.
+
+Reviewed the ten changed source/fixture files, routing before the legacy raw-output path, thread-affine non-reentrant scope, original deadline intersection, safe bounded named-pipe reads, capture-specific child ownership, immutable log creation, sanitize-before-first-write, safe error metadata, and pending-cleanup failure poisoning. Original JSON remains available in memory; only the transformed clone is written. Raw byte buffers use Zeroizing; serde values and OS buffers are not claimed to be wiped.
+
+The actual outer Windows Job wrapper verifies harness membership by process handle and binds its image/hash, attempt, PID and nonce before granting admission. A marker alone is not proof of containment. Local cleanup failure remains failure under the outer Job; it cannot become successful capture. Future whole-run admission must supply equivalent independently verified containment.
+
+Independent root audit `3c6553` verified 769 file pins, the exact 50-path candidate manifest, six actual desktop command receipts, compiler input equality (590 source inputs), 501 compiler units and 501 fresh test-run units, stable artifacts, preserved failed sources/preimages, and unchanged unrelated navigation files. The successful final format, strict Clippy and compile checks are confirmed. Initial Clippy failed with native exit 101 and was repaired; that evidence remains preserved. Compile cleanup observed one remaining Job member before cleanup and none afterward; this is not reported as initially empty.
+
+All 13 isolated tests passed; six aggregate invocations selected zero tests. Eight real synthetic children covered valid JSON, simultaneous stream pressure, malformed JSON, invalid UTF-8, nonzero exit, both stream caps and timeout. Their case records match actual invocation output, actual harness membership, admission joins/permits and durable files. All eight confirmed exit, wait and both EOFs with cleanup_pending=false; sentinel/raw keys are absent from durable command logs. Pure wrapper completed in 42.4583668 seconds with verified empty Job after cleanup.
+
+The unconfirmed-kill branch is deterministic state injection, not a deliberately unkillable process. Early Controller wiring and real messenger status routing are source-reviewed/compiled only. No messenger profiles, private fixture, networking, memory observer, integrated P11 or whole S5.4 run was executed. Those later gates remain open.
+
+Publish only the separately pinned allowlist: accepted candidate files, original task, this review and root verification. Preserve unrelated navigation edits and ignored raw evidence. No source changes or redundant reruns are requested before publication. Root will verify exact parent, committed file set/blobs and remote SHA after the executor callback.

@@ -1,0 +1,11 @@
+# P11A7 evidence
+
+Dormant S54-only status capture, baseline4d40bb3f5e21fb5e9108c3a702ccf8a10077153b. Actual Windows named-pipe transport on8 benign pinned PowerShell children,13 isolated PASS and aggregate0. No messenger/profile/store/key/network/whole S54. Review before publication.
+
+executor-review.json and provenance.json bind sources/inputs/images/actual selectors/receipts; compiler-source-inputs.json holds590 current compiler inputs. Synthetic-cases.json has all8 actual safe facts and hashes of retained raw command files. Admission-bindings.json preserves the actual join/permit/intent records and raw hashes; pure01.json records independent ancestor HANDLE membership and actual return/empty job. Environment/JSON alone is not claimed as runtime containment proof.
+
+Validation helpers were frozen before actual tests. Historical wrapper revision applies to fmt01/clippy01/fmt02/clippy02; the current wrapper applies to compile01/pure01. Failed Clippy01 had one closure mutability compile error. Its17 source/helper inputs and all15 preimages (10images+5sources) remain pinned under .tmp/s54-block3e-p11a7-01. The earlier gap and root decision are candidate documents outside this directory. Documentation generators are mutable, excluded from historical validation pins; the corrected audit still checks all provided SHA256s.
+
+Reproduce in a fresh ignored base and update helper base/step/capture paths, then format, strict lint, compile-only, freeze manifest/helper/fixture pins and execute exact isolated selectors through the stable runner under the existing independently armed Job owner with actual membership rendezvous. Shell is fixed/pinned; no PATH resolution/new EXE target/fixture framing stripping. Preserve failed attempts. Historical review.py requires the retained raw base and exact baseline; it is not a standalone fresh-worktree benchmark.
+
+All raw captures/expected manifest/inventory/command outputs/preimage EXEs/failed sources remain at their pinned local paths. Raw log EOF blank lines are evidence-only exceptions; do not rewrite them. Synthetic pending-kill behavior uses pure state injection; actual unkillable-child and future whole-run integration were not exercised. No commit/push in this slice before root acceptance.

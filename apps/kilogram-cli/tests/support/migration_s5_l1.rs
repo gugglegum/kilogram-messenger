@@ -17,6 +17,10 @@ mod policy;
 #[path = "migration_s5_l1_review1.rs"]
 mod review1;
 
+pub(super) fn status_fingerprints(value: &mut Value) -> Result<()> {
+    handoff::public_fingerprints(value)
+}
+
 struct Node {
     branch: Branch,
     profile: PathBuf,

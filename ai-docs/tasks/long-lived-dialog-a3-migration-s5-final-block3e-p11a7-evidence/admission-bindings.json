@@ -1,0 +1,241 @@
+[
+  {
+    "raw": {
+      "version": 1,
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "launcher_pid": 61732,
+      "harness_path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "whole_utc_ms": 1793583229681
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/admission.json",
+      "bytes": 274,
+      "sha256": "3ea98880b36ea438dd9cff796934e8eb850c0fdf900bd191bd7e93f46d8f0a76"
+    }
+  },
+  {
+    "raw": {
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "harness_pid": 16540,
+      "nonce": "16540-1793583011397",
+      "membership_verified": false
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/join-16540.json",
+      "bytes": 117,
+      "sha256": "5dbccb10a0939d1dfc5d924f2eeeb21f959f589738c1904ab1e88bd73c721443"
+    }
+  },
+  {
+    "raw": {
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "harness_pid": 30304,
+      "nonce": "30304-1793583008576",
+      "membership_verified": false
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/join-30304.json",
+      "bytes": 117,
+      "sha256": "930366b2b5c9c607b65aa86a938d1dc9597dc9d0fcf67983d6d54533b5158d49"
+    }
+  },
+  {
+    "raw": {
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "harness_pid": 44024,
+      "nonce": "44024-1793583010442",
+      "membership_verified": false
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/join-44024.json",
+      "bytes": 117,
+      "sha256": "ab44d9255056aa11eff8e78d847c8d5e00d9e77017df0448f428c5542339d76c"
+    }
+  },
+  {
+    "raw": {
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "harness_pid": 64696,
+      "nonce": "64696-1793583021467",
+      "membership_verified": false
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/join-64696.json",
+      "bytes": 117,
+      "sha256": "0423e14e3ce69227067be0dd6b312ea5028a4355231fa164ce04da7c062718f1"
+    }
+  },
+  {
+    "raw": {
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "harness_pid": 67156,
+      "nonce": "67156-1793583009485",
+      "membership_verified": false
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/join-67156.json",
+      "bytes": 117,
+      "sha256": "9de0e60743236092fecbea92742231c03183749982a0befd467442d600809f2f"
+    }
+  },
+  {
+    "raw": {
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "harness_pid": 68000,
+      "nonce": "68000-1793583005710",
+      "membership_verified": false
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/join-68000.json",
+      "bytes": 117,
+      "sha256": "54e132b5b4981d92768ec7b06879401c47681f67d3c1fc1ecb927f134d11f66c"
+    }
+  },
+  {
+    "raw": {
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "harness_pid": 68916,
+      "nonce": "68916-1793583016447",
+      "membership_verified": false
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/join-68916.json",
+      "bytes": 117,
+      "sha256": "26cae0bf812e48c795abbe1211ded9d6aface5f6458b76cb242907684de9de2d"
+    }
+  },
+  {
+    "raw": {
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "harness_pid": 69816,
+      "nonce": "69816-1793583004473",
+      "membership_verified": false
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/join-69816.json",
+      "bytes": 117,
+      "sha256": "470284a29e54bf36cffca9762439b56e075796094bab167371259e65e1448b32"
+    }
+  },
+  {
+    "raw": {
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "harness_pid": 16540,
+      "nonce": "16540-1793583011397",
+      "membership_verified": true
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/permit-16540.json",
+      "bytes": 143,
+      "sha256": "ee30c60b8b19be2df11489a4f248db05fbd888b59348bc15f7a0aecedde0df7d"
+    }
+  },
+  {
+    "raw": {
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "harness_pid": 30304,
+      "nonce": "30304-1793583008576",
+      "membership_verified": true
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/permit-30304.json",
+      "bytes": 143,
+      "sha256": "38bf45358ba3714e84ade73378cb195084bb89e3826ec6ef537a507037d9dd7f"
+    }
+  },
+  {
+    "raw": {
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "harness_pid": 44024,
+      "nonce": "44024-1793583010442",
+      "membership_verified": true
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/permit-44024.json",
+      "bytes": 143,
+      "sha256": "0e6c6bd9089176f0ddfe46ce324c7f682f5dc8a572d4310fd0976968ed5fbbf0"
+    }
+  },
+  {
+    "raw": {
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "harness_pid": 64696,
+      "nonce": "64696-1793583021467",
+      "membership_verified": true
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/permit-64696.json",
+      "bytes": 143,
+      "sha256": "a74a534c87e7d2045f92f84022ad27e660a935d2b52adc79e78e989e8ce97c99"
+    }
+  },
+  {
+    "raw": {
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "harness_pid": 67156,
+      "nonce": "67156-1793583009485",
+      "membership_verified": true
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/permit-67156.json",
+      "bytes": 143,
+      "sha256": "8daa19503caa395effdb8c58a32b2d0aad854d14d616ed8d48b12ad16fd1ffb3"
+    }
+  },
+  {
+    "raw": {
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "harness_pid": 68000,
+      "nonce": "68000-1793583005710",
+      "membership_verified": true
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/permit-68000.json",
+      "bytes": 143,
+      "sha256": "c8d073a86dbf34281d40516b0fb2eedade082589325d0cf8f0d9428e279f554c"
+    }
+  },
+  {
+    "raw": {
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "harness_pid": 68916,
+      "nonce": "68916-1793583016447",
+      "membership_verified": true
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/permit-68916.json",
+      "bytes": 143,
+      "sha256": "db80ecd27a977b24c1ecc6288d2654af0acf0b7f45e2fe7fead671e36661bd98"
+    }
+  },
+  {
+    "raw": {
+      "attempt": "pure-01",
+      "owner_pid": 60772,
+      "harness_pid": 69816,
+      "nonce": "69816-1793583004473",
+      "membership_verified": true
+    },
+    "pin": {
+      "path": ".tmp/s54-block3e-p11a7-01/pure-01.admission/permit-69816.json",
+      "bytes": 143,
+      "sha256": "9a15bc0a806104c5a9a16963245387d327f02a7a64b33cea614f01f2555528ab"
+    }
+  }
+]
