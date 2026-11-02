@@ -3,6 +3,7 @@
 use super::*;
 use sha2::{Digest, Sha256};
 use std::io::Read;
+#[derive(Clone)]
 pub(crate) struct Shell {
     path: PathBuf,
     bytes: u64,
@@ -18,7 +19,7 @@ impl Shell {
         s.verify()?;
         Ok(s)
     }
-    fn verify(&self) -> Result<()> {
+    pub(super) fn verify(&self) -> Result<()> {
         ensure!(
             cfg!(all(windows, target_pointer_width = "64")),
             "memory x64 Windows shell"

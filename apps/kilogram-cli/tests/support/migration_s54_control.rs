@@ -134,7 +134,8 @@ pub(super) struct Controller {
     pub pre_q_heads: [u64; 2],
     pub outcomes: Vec<Value>,
     pub old_overlap: Vec<Value>,
-    // Last field: retained through Controller::drop and other field destruction.
+    _memory: memory_scope::Guard,
+    // Last field: retained through observer/profile destruction.
     _capture: s54_capture::Guard,
 }
 impl Drop for Controller {
@@ -143,10 +144,12 @@ impl Drop for Controller {
         // It uses known owned handles only, never enumerates or kills by name.
         for (owner, run) in self.running.iter_mut().enumerate() {
             if let Some(mut owned) = run.take() {
+                memory_scope::dropping(&owned.child.0);
                 let pid = owned.child.0.id();
                 let _ = owned.child.0.kill();
                 let outcome = match owned.child.0.wait() {
                     Ok(exit) => {
+                        let _ = memory_scope::terminal(&owned.child.0, true, exit.code(), true);
                         json!({"owner":owner,"pid":pid,"waited":true,"success":exit.success(),"code":exit.code(),"normal_stop":owned.normal.as_ref().map(normal::Stop::facts),"counter_outcome":"unresolved until stopped-source review"})
                     }
                     Err(error) => {
@@ -171,6 +174,28 @@ impl Drop for Controller {
     }
 }
 impl Controller {
+    pub fn memory_diagnostics(&self) -> Result<Value> {
+        memory_scope::diagnostic()
+    }
+    pub fn finish_memory_coverage(&mut self) -> Result<Value> {
+        ensure!(
+            self.phases.complete() && self.relay_outcome.is_some(),
+            "memory final lifecycle boundary required"
+        );
+        self.stopped_reconciled()?;
+        // The live-relay gate already admitted this pair before relay closure.
+        // Recheck retained outcomes without reopening that lifecycle boundary.
+        let sources = [0, 1].map(|i| self.original[i].as_ref().map(|s| s.source_id));
+        normal::closed_pair(
+            self.last_normal.as_ref(),
+            &self.outcomes,
+            [
+                sources[0].context("original A")?,
+                sources[1].context("original B")?,
+            ],
+        )?;
+        memory_scope::finish_coverage()
+    }
     pub fn new(parent: &Path, until: Instant) -> Result<Self> {
         s53_deadline::check()?;
         let available = std::thread::available_parallelism()?.get();
@@ -187,6 +212,7 @@ impl Controller {
             "future continuous absolute deadline"
         );
         let capture = s54_capture::Guard::enter(until)?;
+        let memory = memory_scope::Guard::enter(parent, until)?;
         let origin = OldOrigin::create(parent)?;
         let controls = [
             Controls::new(&origin.pair.base, &origin.contexts[0], 0)?,
@@ -213,10 +239,12 @@ impl Controller {
             pre_q_heads: [0; 2],
             outcomes: vec![],
             old_overlap: vec![],
+            _memory: memory,
             _capture: capture,
         })
     }
     pub fn check(&mut self) -> Result<()> {
+        memory_scope::phase(self.phases.next.try_into()?)?;
         s53_deadline::check()?;
         ensure!(Instant::now() < self.until, "S54 same absolute deadline");
         if let Some(relay) = self.relay.as_mut() {
@@ -241,6 +269,10 @@ impl Controller {
                     &mut self.pages,
                     &mut self.pre_q_heads[owner],
                 )?;
+                if let Ok(key) = run.decoder.normal_identity() {
+                    memory_scope::bind_current(&run.child.0, key.owner, key.nonce)?;
+                }
+                memory_scope::progress(&mut run.child.0)?;
             }
         }
         Ok(())
@@ -343,7 +375,8 @@ impl Controller {
             )?))
             .stderr(Stdio::from(std::fs::File::create(&log)?));
         self.controls[owner].attach(&mut cmd, n.indexed);
-        let child = OwnedChild(cmd.spawn()?);
+        memory_scope::alias(&n.branch.state, &n.profile, &n.ipc, n.indexed)?;
+        let child = OwnedChild::spawn(&mut cmd)?;
         let pid = child.0.id();
         self.running[owner] = Some(Running {
             child,
@@ -367,7 +400,15 @@ impl Controller {
         self.reconcile_stop(owner)
     }
     pub fn kill_wait(&mut self, owner: usize) -> Result<()> {
-        self.check()?;
+        if let Err(error) = self.check() {
+            if let Some(run) = self.running.get_mut(owner).and_then(Option::as_mut)
+                && run.normal.is_none()
+                && memory_scope::observed(&run.child.0)
+            {
+                let _ = run.child.kill_wait();
+            }
+            return Err(error);
+        }
         self.last_normal = None;
         ensure!(
             self.running
@@ -383,7 +424,17 @@ impl Controller {
         let n = &self.origin.pair.nodes[owner];
         if n.indexed {
             // The last actual status is an outcome candidate, never an expected total.
-            self.counters[owner] = observations::stats(&n.status()?["stats"])?;
+            match n.status().and_then(|v| observations::stats(&v["stats"])) {
+                Ok(counts) => self.counters[owner] = counts,
+                Err(error) => {
+                    if let Some(run) = self.running[owner].as_mut()
+                        && memory_scope::observed(&run.child.0)
+                    {
+                        let _ = run.child.kill_wait();
+                    }
+                    return Err(error);
+                }
+            }
         }
         let run = self.running[owner]
             .as_mut()

@@ -6,11 +6,12 @@ mod live_l1;
 mod s53_deadline;
 #[path = "support/migration_s54_capture.rs"]
 mod s54_capture;
-#[allow(dead_code)] // A8a core; shared lifecycle wiring is the separate A8b gate.
+#[allow(dead_code)] // Required whole-run descriptor/composition remain gated.
 #[path = "support/migration_s54_memory.rs"]
 mod s54_memory;
 use anyhow::{Context, Result, ensure};
 use kilogram_cli::ordered_dialog::handshake::Credentials;
+use s54_memory::scope as memory_scope;
 use serde_json::{Value, json};
 use std::{
     path::{Path, PathBuf},
@@ -20,15 +21,47 @@ use std::{
 
 struct OwnedChild(Child);
 impl OwnedChild {
+    fn spawn(cmd: &mut Command) -> Result<Self> {
+        let prepared = memory_scope::prepare(cmd)?;
+        let mut child = Self(cmd.spawn()?);
+        if let Some(p) = prepared {
+            let actual = memory_scope::spawned(&child.0, p)?;
+            memory_scope::registered(&mut child.0, actual)?;
+        }
+        Ok(child)
+    }
+    #[cfg(test)]
+    fn spawn_memory_fixture(cmd: &mut Command, profile: &Path) -> Result<Self> {
+        let prepared = memory_scope::prepare_fixture(cmd, profile)?;
+        let mut child = Self(cmd.spawn()?);
+        let actual = memory_scope::spawned(&child.0, prepared)?;
+        memory_scope::registered(&mut child.0, actual)?;
+        Ok(child)
+    }
     fn alive(&mut self) -> Result<()> {
         ensure!(
             self.0.try_wait()?.is_none(),
             "child {} exited before parent kill",
             self.0.id()
         );
-        Ok(())
+        memory_scope::progress(&mut self.0)
     }
     fn kill_wait(&mut self) -> Result<()> {
+        if memory_scope::observed(&self.0) {
+            let observation = memory_scope::before_kill(&mut self.0);
+            let killed = self.0.kill();
+            if let Err(error) = killed
+                && self.0.try_wait()?.is_none()
+            {
+                return Err(error.into());
+            }
+            let exit = self.0.wait()?;
+            let closed = memory_scope::terminal(&self.0, true, exit.code(), false);
+            ensure!(!exit.success(), "actual parent kill exit");
+            observation?;
+            closed?;
+            return Ok(());
+        }
         self.alive()?;
         self.0.kill()?;
         let exit = self.0.wait()?;
@@ -38,8 +71,20 @@ impl OwnedChild {
 }
 impl Drop for OwnedChild {
     fn drop(&mut self) {
+        let observed = memory_scope::observed(&self.0);
+        if observed {
+            memory_scope::dropping(&self.0);
+        }
         let _ = self.0.kill();
-        let _ = self.0.wait();
+        let result = self.0.wait();
+        if observed {
+            let _ = memory_scope::terminal(
+                &self.0,
+                result.is_ok(),
+                result.ok().and_then(|s| s.code()),
+                true,
+            );
+        }
     }
 }
 fn workspace() -> PathBuf {
@@ -155,13 +200,22 @@ fn spawn(
     if let Some(path) = schedule {
         cmd.env("KILOGRAM_TEST_OD1_SCHEDULE", path);
     }
-    Ok(OwnedChild(cmd.spawn()?))
+    OwnedChild::spawn(&mut cmd)
 }
 fn wait_file(child: &mut OwnedChild, path: &Path, seconds: u64) -> Result<()> {
+    wait_file_servicing(child, path, seconds, || Ok(()))
+}
+fn wait_file_servicing(
+    child: &mut OwnedChild,
+    path: &Path,
+    seconds: u64,
+    mut service: impl FnMut() -> Result<()>,
+) -> Result<()> {
     let start = Instant::now();
     while !path.is_file() {
         s53_deadline::check()?;
         child.alive()?;
+        service()?;
         ensure!(
             start.elapsed() < Duration::from_secs(seconds),
             "marker deadline {}",
@@ -169,7 +223,8 @@ fn wait_file(child: &mut OwnedChild, path: &Path, seconds: u64) -> Result<()> {
         );
         std::thread::sleep(Duration::from_millis(20));
     }
-    child.alive()
+    child.alive()?;
+    service()
 }
 #[cfg(windows)]
 fn private_bytes(child: &Child) -> Result<u64> {
@@ -594,6 +649,9 @@ fn old_pair(base: &Path) -> Result<([OldNode; 2], String)> {
     )?;
     for node in &nodes {
         node.profile(&context)?;
+    }
+    for (owner, node) in nodes.iter().enumerate() {
+        memory_scope::owner(owner as u8, &node.state, &node.profile, &node.ipc, false)?;
     }
     Ok((nodes, context))
 }

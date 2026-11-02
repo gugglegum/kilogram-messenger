@@ -40,7 +40,7 @@ fn closed_outcome(c: &Closure, row: &Value, owner: usize) -> Result<()> {
     );
     Ok(())
 }
-fn closed_pair(
+pub(super) fn closed_pair(
     pair: Option<&[Closure; 2]>,
     outcomes: &[Value],
     sources: [old::Id; 2],
@@ -173,6 +173,7 @@ impl Controller {
             .context("original live normal handle")?;
         ensure!(run.normal.is_none(), "one normal request per incarnation");
         run.child.alive()?;
+        memory_scope::before_normal(&mut run.child.0)?;
         let key = run.decoder.incarnation()?;
         ensure!(
             key.pid == run.child.0.id()
@@ -229,6 +230,7 @@ impl Controller {
                     continue;
                 }
                 let exit = run.child.0.wait()?;
+                memory_scope::terminal(&run.child.0, true, exit.code(), false)?;
                 run.normal
                     .as_mut()
                     .context("requested normal child")?

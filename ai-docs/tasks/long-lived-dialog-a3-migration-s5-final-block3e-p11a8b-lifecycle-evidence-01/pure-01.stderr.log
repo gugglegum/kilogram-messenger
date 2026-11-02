@@ -1,0 +1,8 @@
+    Finished `verification-scale` profile [optimized + debuginfo] target(s) in 0.97s
+Error: memory observer failed/finished
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:313
+Line |
+ 313 |  :             throw "Isolated stable test failed with exit code ${testE :
+     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Isolated stable test failed with exit code 101:
+     | s54_memory::scope::tests::s54_memory_scope_restart_tickets_config_identity_and_each_candidate

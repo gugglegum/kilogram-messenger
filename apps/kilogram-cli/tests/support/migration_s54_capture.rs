@@ -68,6 +68,16 @@ fn healthy() -> Result<()> {
         Ok(())
     })
 }
+pub(super) fn admitted_attempt() -> Result<String> {
+    healthy()?;
+    CAPTURE.with_borrow(|s| {
+        Ok(s.as_ref()
+            .context("capture admission required")?
+            .admission
+            .attempt
+            .clone())
+    })
+}
 fn is_status(args: &[String]) -> bool {
     args.first().is_some_and(|s| s == "ordered")
         && args.get(1).is_some_and(|s| s == "status" || s == "status3")

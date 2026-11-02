@@ -311,8 +311,18 @@ impl Pair {
         let (old, c) = old_pair(&base)?;
         let mut a = spawn(&frozen(), &old[0].runtime(), &base, "old-a", None, None)?;
         let mut b = spawn(&frozen(), &old[1].runtime(), &base, "old-b", None, None)?;
-        wait_file(&mut a, &old[0].ipc, 15)?;
-        wait_file(&mut b, &old[1].ipc, 15)?;
+        wait_file_servicing(&mut a, &old[0].ipc, 15, || {
+            if memory_scope::active() {
+                b.alive()?;
+            }
+            Ok(())
+        })?;
+        wait_file_servicing(&mut b, &old[1].ipc, 15, || {
+            if memory_scope::active() {
+                a.alive()?;
+            }
+            Ok(())
+        })?;
         import_peer(&old[0], &old[1], &c)?;
         import_peer(&old[1], &old[0], &c)?;
         isolation::old_queue(&old[0], &c, 1)?;
@@ -349,10 +359,11 @@ impl Pair {
             "no overlapping Native runtime"
         );
         self.starts[role] += 1;
-        self.children[role] = Some(self.nodes[role].start_controlled(
+        self.children[role] = Some(self.nodes[role].start_controlled_servicing(
             &format!("live-{role}-{}", self.starts[role]),
             schedule,
             None,
+            self.children[1 - role].as_mut(),
         )?);
         Ok(())
     }
@@ -396,8 +407,17 @@ impl Pair {
             let node = &self.nodes[role];
             let peer = &self.nodes[1 - role];
             let locator = peer.locators.join(format!("{}.locator2", self.c));
-            if let Some(child) = self.children[1 - role].as_mut() {
-                wait_file(child, &locator, 15)?;
+            let [a, b] = &mut self.children;
+            let (child, peer) = if role == 1 { (a, b) } else { (b, a) };
+            if let Some(child) = child.as_mut() {
+                wait_file_servicing(child, &locator, 15, || {
+                    if memory_scope::active()
+                        && let Some(peer) = peer.as_mut()
+                    {
+                        peer.alive()?;
+                    }
+                    Ok(())
+                })?;
             } else {
                 ensure!(
                     locator.is_file(),

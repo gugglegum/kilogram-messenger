@@ -1,0 +1,122 @@
+[
+  {
+    "path": "apps/kilogram-cli/tests/migration_s5_process.rs",
+    "bytes": 48603,
+    "sha256": "b1945064892e14579462152b866b4ac1b2ed2d3c6ff9ca14cdacfeb56d45dca2",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/apps/kilogram-cli/tests/migration_s5_process.rs"
+  },
+  {
+    "path": "apps/kilogram-cli/tests/support/migration_s53_deadline.rs",
+    "bytes": 6955,
+    "sha256": "0a07e52f9ca0049b031b3864182686360d01311366943c8d490acc20969b8da9",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/apps/kilogram-cli/tests/support/migration_s53_deadline.rs"
+  },
+  {
+    "path": "apps/kilogram-cli/tests/support/migration_s54_capture.rs",
+    "bytes": 9289,
+    "sha256": "b6b2b1d23f7e1ea6445ffdd4ff16a9e90651a036297d857840881f7e131753b2",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/apps/kilogram-cli/tests/support/migration_s54_capture.rs"
+  },
+  {
+    "path": "apps/kilogram-cli/tests/support/migration_s5_l1.rs",
+    "bytes": 20721,
+    "sha256": "5a63652aac4ae65169fc50a14a98cd21a5f31f475e546b6494925fec1603b7b5",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/apps/kilogram-cli/tests/support/migration_s5_l1.rs"
+  },
+  {
+    "path": "apps/kilogram-cli/tests/support/migration_s54_control.rs",
+    "bytes": 20073,
+    "sha256": "12f7c4fe43f434bbe628fdd9546312592ec37fac019586228ced0e87c4ed17af",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/apps/kilogram-cli/tests/support/migration_s54_control.rs"
+  },
+  {
+    "path": "apps/kilogram-cli/tests/support/migration_s54_normal.rs",
+    "bytes": 14418,
+    "sha256": "9ee7695ccb667d80e5395a17178c07d501aff8d8c9cadd579129c20fdf99a689",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/apps/kilogram-cli/tests/support/migration_s54_normal.rs"
+  },
+  {
+    "path": "apps/kilogram-cli/tests/support/migration_s54_early.rs",
+    "bytes": 16888,
+    "sha256": "df2b314830d7598064610136c5b4d80ef951dccea1b0641faa9df8cc00958466",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/apps/kilogram-cli/tests/support/migration_s54_early.rs"
+  },
+  {
+    "path": "apps/kilogram-cli/tests/support/migration_s54_memory.rs",
+    "bytes": 21287,
+    "sha256": "ca08cfbd63aba22166388c5ed74892a2dcb7d815bdf3698577d94f5f28128fc1",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/apps/kilogram-cli/tests/support/migration_s54_memory.rs"
+  },
+  {
+    "path": "apps/kilogram-cli/tests/support/migration_s54_memory_query.rs",
+    "bytes": 3895,
+    "sha256": "4dac8d2e2715baa11340890a05bce6d116595990a57ac04c10e9c90621ecced4",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/apps/kilogram-cli/tests/support/migration_s54_memory_query.rs"
+  },
+  {
+    "path": "E:/AI-Projects/kilogram-p2p-messenger/target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe",
+    "bytes": 50476032,
+    "sha256": "e859cd1dcd026d6a1c1585afd559a5da80d7fa74f7a9cb6a7c8636d79cfaa152",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe"
+  },
+  {
+    "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-bin-kilogram-cli-tests.exe",
+    "bytes": 50785280,
+    "sha256": "8886785ae37cb0fd4f5aa27828f1b39dcc269991c55c899bd53bdd4e0eb75088",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-cli-bin-kilogram-cli-tests.exe"
+  },
+  {
+    "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-lib-kilogram_cli-tests.exe",
+    "bytes": 32650240,
+    "sha256": "bf93aeb36e1f03960ac33f36692564908f94a097eabde30cf34b88782171763d",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-cli-lib-kilogram_cli-tests.exe"
+  },
+  {
+    "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+    "bytes": 18025984,
+    "sha256": "52e605eb54fe026c5426ee2af5521afb32a0a3520a62668c3f0cbd4d17b1476e",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe"
+  },
+  {
+    "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-test-runtime2_process-tests.exe",
+    "bytes": 23689728,
+    "sha256": "8eca44daa41d1ba117c108732e0c1ebc0e41ac688ee14ac70bb6d2210c1914cd",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-cli-test-runtime2_process-tests.exe"
+  },
+  {
+    "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-state-lib-kilogram_state-tests.exe",
+    "bytes": 6963200,
+    "sha256": "39c466dc7e24302115244452082a35d9c1f5873865031d2c62cece26db0ed597",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-state-lib-kilogram_state-tests.exe"
+  },
+  {
+    "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-state-test-a3_s1_root_review-tests.exe",
+    "bytes": 4166144,
+    "sha256": "a55841b0a81f9a30202696524898cdcb39ae41ba98bd6135451b9ee919e87c9b",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-state-test-a3_s1_root_review-tests.exe"
+  },
+  {
+    "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-state-test-a3_s2_root_review-tests.exe",
+    "bytes": 4258304,
+    "sha256": "92aea441d23a37b332c7f7bb9c71e1f611687c14d1d7847f3bb18ae21d1adba8",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-state-test-a3_s2_root_review-tests.exe"
+  },
+  {
+    "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+    "bytes": 19419648,
+    "sha256": "f5822cd40225a7ac12dbc2c58264439b8e3c5d4b4d20cf87309b9aa28f2023ad",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe"
+  },
+  {
+    "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+    "bytes": 22317056,
+    "sha256": "552cc6c23452ad50c94b65391e33df462b89e14551c7eac51304e55872788cf0",
+    "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe"
+  },
+  {
+    "sha256": "3502acca69363b090fc898c2dfb3c2db9f66bfac147ef4b4157487b69b35f7b9",
+    "bytes": 330127,
+    "path": "apps/kilogram-cli/tests/support/migration_s53_handoff.rs",
+    "archive": ".tmp\\s54-block3e-p11a8b-01\\preimages\\apps\\kilogram-cli\\tests\\support\\migration_s53_handoff.rs"
+  }
+]

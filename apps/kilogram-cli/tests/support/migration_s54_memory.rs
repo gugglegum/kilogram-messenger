@@ -1,9 +1,11 @@
-//! A8a core only. No shared profile lifecycle/status hooks until A8b.
+//! Bounded ledger and A8b opt-in lifecycle integration; no whole runner.
 use super::*;
 use serde::Serialize;
 use std::sync::atomic::{AtomicU64, Ordering};
 #[path = "migration_s54_memory_query.rs"]
 pub(super) mod query;
+#[path = "migration_s54_memory_scope.rs"]
+pub(super) mod scope;
 #[path = "migration_s54_memory_tests.rs"]
 mod tests;
 
@@ -95,6 +97,8 @@ struct ObservedStats {
 }
 #[derive(Serialize)]
 struct Life {
+    #[serde(skip)]
+    handle_tag: Option<usize>,
     profile: Profile,
     binding: Option<Binding>,
     born_ms: u64,
@@ -233,6 +237,7 @@ impl Ledger {
                 pid: p.pid,
             };
             s.lives.push(Life {
+                handle_tag: None,
                 profile: p,
                 binding: None,
                 born_ms: at,
@@ -508,10 +513,47 @@ impl Ledger {
         child: &mut Child,
         shell: &query::Shell,
     ) -> Result<()> {
+        self.attach_handle(t, child)?;
         let a = self.begin_at(t, reason, phase, self.now_ms())?;
         let result = query::known(shell, child, t.pid);
         self.complete_at(a, self.now_ms(), result)?;
         self.checked(|s| s.accept_pending(t))
+    }
+    pub(super) fn with_origin(run: Id, ctx: &s53_deadline::ObserverContext) -> Result<Self> {
+        let span = u64::try_from(ctx.whole.duration_since(ctx.origin).as_millis())?;
+        let mut s = Self::new(run, span)?;
+        s.origin = ctx.origin;
+        Ok(s)
+    }
+    fn attach_handle(&mut self, t: Token, child: &mut Child) -> Result<()> {
+        self.checked(|s| {
+            let i = s.index(t)?;
+            ensure!(
+                child.id() == t.pid && child.try_wait()?.is_none(),
+                "memory original owned handle"
+            );
+            let tag = scope::handle_tag(child)?;
+            ensure!(
+                s.lives[i].handle_tag.is_none_or(|old| old == tag),
+                "memory foreign owned handle"
+            );
+            s.lives[i].handle_tag = Some(tag);
+            Ok(())
+        })
+    }
+    pub(super) fn live_checkpoint(&mut self, t: Token, child: &mut Child) -> Result<()> {
+        self.checked(|s| {
+            let i = s.index(t)?;
+            ensure!(
+                s.lives[i].start_ok
+                    && s.lives[i].handle_tag == Some(scope::handle_tag(child)?)
+                    && child.id() == t.pid
+                    && child.try_wait()?.is_none(),
+                "memory live Stats handle checkpoint"
+            );
+            ensure!(child.try_wait()?.is_none(), "memory checkpoint exit race");
+            s.accept_pending(t)
+        })
     }
     #[cfg(test)]
     fn injected_checkpoint(&mut self, t: Token) -> Result<()> {

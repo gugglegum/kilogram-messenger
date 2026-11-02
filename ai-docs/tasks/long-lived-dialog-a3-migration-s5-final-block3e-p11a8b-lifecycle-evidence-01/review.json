@@ -1,0 +1,1311 @@
+{
+  "classification": "P11A8b lifecycle integration for root review; no whole PASS or publication authorization",
+  "baseline": "25217816dd39ecd6023f824a1678750e003ff749",
+  "task": {
+    "path": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block3e-p11a8b-lifecycle-task-01.md",
+    "bytes": 7699,
+    "sha256": "7e7fc02158321ca1faa7f5940ef83f02cf82b24b4689496431654df13df72794"
+  },
+  "source": [
+    {
+      "path": "apps/kilogram-cli/tests/migration_s5_process.rs",
+      "bytes": 50698,
+      "sha256": "a739079140fee30cb995083495139680cba49e763634fdbf5509996fe03e7a50",
+      "git_blob": "06234a228f5715476d15a138cd4d1426ed0b66b4"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_deadline.rs",
+      "bytes": 7481,
+      "sha256": "fb4462613840c9b299e0a495b06afdad6595640c790be1cca46c0a60bb6c711a",
+      "git_blob": "52a0ff32bb8dce59eb16e183e09ccc58d4329e9f"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_capture.rs",
+      "bytes": 9537,
+      "sha256": "1a5410aecf110b929b58a78311d5740375badbf4e268f7f051de717c57e1ce21",
+      "git_blob": "704e0c4cc0d1dd8d009013cddeaa049b9ba969aa"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s5_l1.rs",
+      "bytes": 21412,
+      "sha256": "2eb00bc758af53604f76dedb7fa96a5cfe3e3dd14118f29ea39012fae3526cd2",
+      "git_blob": "4ca244f31287b205672d725f3143915fccc4e9cc"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_control.rs",
+      "bytes": 22295,
+      "sha256": "333a449d2aa2b366a462e9452ad3839a0d2e9f55bfca58e2b94bf2ddd3f2e247",
+      "git_blob": "9bd15befc9eaffd38dc3841b916851a9c7465012"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_normal.rs",
+      "bytes": 14566,
+      "sha256": "afbd46fd7064d45c8f5239fb3b4fac0646fe0db698ea8009b8f4ad7c9720d235",
+      "git_blob": "a47bb8769c9d8c6746a388313adaaa785d873e9b"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_early.rs",
+      "bytes": 16960,
+      "sha256": "4f7822e9a94bf139bc094fc03e4ef154d884d214cf8178e6fdedfe0442c1765a",
+      "git_blob": "7e7497930cbe16caadbaded9c74289efcf30bd15"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_memory.rs",
+      "bytes": 22901,
+      "sha256": "d594d7e8a93bc5ed8fcd2407ddcb48bc334e9ef1cb8103ae39b0f2777e144995",
+      "git_blob": "ae9cb033c7583a99cc3c35b53331a12934c2d4d8"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_memory_query.rs",
+      "bytes": 3923,
+      "sha256": "3e509df5833d680c907088dec15ef3d17730217e65f3c63ac0401746572f7555",
+      "git_blob": "63d4d5eda8a23607ba9807d7898043c2ad6265f4"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_memory_scope.rs",
+      "bytes": 25100,
+      "sha256": "bf716289040e696bf4aa991d6b0dc9ec7422fdadb741918f8e06b9e62d59638e",
+      "git_blob": "cc3181eb906a7129b48086d882d03d8e148cd265"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_memory_scope_tests.rs",
+      "bytes": 15429,
+      "sha256": "b238f424dfac31f5fa6d0f6f7bf60a8c98616d47d442993ff18c04bf63ba29be",
+      "git_blob": "63b8b314f1aaf071b9ea549152e769adba457ea3"
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s53_handoff.rs",
+      "bytes": 330785,
+      "sha256": "eb1574ccef880eceaac29e9a3bced9bbb4e924a4d651f910b41921903f0e1c95",
+      "git_blob": "6e8a64117bee98873f559a4a8ab8411f55e21945"
+    }
+  ],
+  "steps": [
+    {
+      "step": "fmt-06",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8b-01\\fmt.ps1"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 4.5349853,
+      "cleanup_verified": true,
+      "error": null,
+      "outer_job_owner_pid": 20968,
+      "actual_launcher_membership_verified": true,
+      "work_expired": false,
+      "members_before_cleanup": [],
+      "members_after_cleanup": [],
+      "capture_harness_membership": []
+    },
+    {
+      "step": "clippy-06",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8b-01\\clippy.ps1"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 12.0654344,
+      "cleanup_verified": true,
+      "error": null,
+      "outer_job_owner_pid": 66972,
+      "actual_launcher_membership_verified": true,
+      "work_expired": false,
+      "members_before_cleanup": [],
+      "members_after_cleanup": [],
+      "capture_harness_membership": []
+    },
+    {
+      "step": "compile-04",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8b-01\\compile.ps1",
+        "-Capture",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8b-01\\compile-04.capture.json"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 100.5247615,
+      "cleanup_verified": true,
+      "error": null,
+      "outer_job_owner_pid": 68928,
+      "actual_launcher_membership_verified": true,
+      "work_expired": false,
+      "members_before_cleanup": [
+        65172
+      ],
+      "members_after_cleanup": [],
+      "capture_harness_membership": []
+    },
+    {
+      "step": "pure-02",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8b-01\\pure.ps1",
+        "-Step",
+        "pure-02"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 25.00353,
+      "cleanup_verified": true,
+      "error": null,
+      "outer_job_owner_pid": 45716,
+      "actual_launcher_membership_verified": true,
+      "work_expired": false,
+      "members_before_cleanup": [],
+      "members_after_cleanup": [],
+      "capture_harness_membership": [
+        {
+          "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8b-01\\pure-02.admission\\join-16204.json",
+          "attempt": "pure-02",
+          "owner_pid": 45716,
+          "launcher_pid": 11896,
+          "harness_pid": 16204,
+          "harness_start_utc": "2026-11-02T04:37:02.1315000Z",
+          "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+          "sha256": "7efa5d24c51f9587dacbb6d79eb596dc5ad619fce358c5533f24272dec298353",
+          "actual_handle_membership_verified": true,
+          "nonce": "16204-1793594222149"
+        }
+      ]
+    }
+  ],
+  "selected_tests": [
+    "s54_memory::tests::s54_memory_cadence_boundaries_gaps_and_no_queries_while_closing",
+    "s54_memory::tests::s54_memory_identity_foreign_overlap_creation_ticks_and_late_setup_bind",
+    "s54_memory::tests::s54_memory_count_span_many_short_restarts_and_exact_full_bound",
+    "s54_memory::tests::s54_memory_failure_is_not_zero_missing_coverage_and_cleanup_stays_recordable",
+    "s54_memory::tests::s54_memory_stats_each_candidate_validated_before_pending_aggregation",
+    "s54_memory::tests::s54_memory_wire_schema_cap_and_safe_errors",
+    "s54_memory::tests::s54_memory_r1_late_stop_settles_missing_progress_and_exact_due_boundary",
+    "s54_memory::tests::s54_memory_r1_progress_then_late_stop_does_not_double_count",
+    "s54_memory::tests::s54_memory_r1_normal_closing_tail_is_separate_from_missed_slots",
+    "s54_memory::tests::s54_memory_r2_finalized_rows_summary_and_cleanup_are_immutable",
+    "s54_memory::scope::tests::s54_memory_scope_optout_and_required_input_absence_do_no_observation",
+    "s54_memory::scope::tests::s54_memory_scope_independent_spawn_coverage_and_late_setup_binding",
+    "s54_memory::scope::tests::s54_memory_scope_restart_tickets_config_identity_and_each_candidate",
+    "s54_memory::scope::tests::s54_memory_scope_bounded_lease_no_status_borrow_and_error_cleanup",
+    "s54_memory::scope::tests::s54_memory_scope_two_owner_cadence_normal_closing_and_duplicate_guards",
+    "s54_memory::scope::tests::s54_memory_scope_actual_shared_restart_status_checkpoint_and_failed_prekill",
+    "live_l1::handoff::final_p5::control::normal::tests::s54_p11a5_last_actual_normal_pair_excludes_empty_stale_killed_and_foreign_outcomes",
+    "live_l1::handoff::final_p5::control::normal::tests::s54_p11a1_expected_stop_preserves_key_and_original_minimum_deadline",
+    "live_l1::handoff::final_p5::control::normal::tests::s54_p11a1_only_requested_exit0_is_expected_and_acknowledgement_is_not_wait",
+    "live_l1::handoff::final_p5::control::normal::tests::s54_p11a1_either_exit_order_still_requires_both_waits_before_sources_and_reopen",
+    "s53_deadline::b_start_deadline_nested_minimum_restores_without_reset",
+    "s53_deadline::b_start_deadline_expired_bound_cannot_spawn_or_revive",
+    "s54_capture::tests::s54_capture_transform_original_nested_and_safe_errors",
+    "s54_capture::tests::s54_capture_scope_sequence_restore_and_pending_is_permanent_failure"
+  ],
+  "passed_selected_tests": 24,
+  "actual_fixture": {
+    "directory": "E:/AI-Projects/kilogram-p2p-messenger/.tmp/s54-p11a8b-fixtures/scope-9DpORv",
+    "source_nonce_stats": "injected, not authenticated original source evidence",
+    "facts": {
+      "actual_lifetimes": [
+        {
+          "aborted": false,
+          "alias": {
+            "current": true,
+            "ipc": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-p11a8b-fixtures\\scope-9DpORv\\state-0\\current.ipc",
+            "owner": 0,
+            "profile": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-p11a8b-fixtures\\scope-9DpORv\\state-0\\current.json",
+            "root": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-p11a8b-fixtures\\scope-9DpORv\\state-0"
+          },
+          "binding": {
+            "nonce": [
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1,
+              1
+            ],
+            "owner": 0,
+            "profile": [
+              252,
+              170,
+              121,
+              52,
+              146,
+              169,
+              249,
+              183,
+              134,
+              243,
+              9,
+              187,
+              122,
+              152,
+              53,
+              171,
+              1,
+              245,
+              115,
+              45,
+              237,
+              93,
+              254,
+              16,
+              185,
+              96,
+              253,
+              166,
+              156,
+              204,
+              167,
+              103
+            ],
+            "source": [
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10
+            ]
+          },
+          "code": 1,
+          "config": "76060655e495b515a9c730be7a34b0b54860e1dd9e5027355d7dd90e91c780ca",
+          "image": [
+            54,
+            42,
+            53,
+            108,
+            231,
+            240,
+            148,
+            14,
+            199,
+            79,
+            115,
+            168,
+            252,
+            44,
+            153,
+            10,
+            44,
+            194,
+            74,
+            56,
+            161,
+            28,
+            144,
+            187,
+            216,
+            236,
+            169,
+            71,
+            17,
+            10,
+            209,
+            57
+          ],
+          "stop": "Kill",
+          "tag": {
+            "pid": 65820
+          },
+          "token": {
+            "ledger": 1,
+            "ordinal": 0,
+            "pid": 65820
+          },
+          "waited": true
+        },
+        {
+          "aborted": false,
+          "alias": {
+            "current": true,
+            "ipc": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-p11a8b-fixtures\\scope-9DpORv\\state-0\\current.ipc",
+            "owner": 0,
+            "profile": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-p11a8b-fixtures\\scope-9DpORv\\state-0\\current.json",
+            "root": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-p11a8b-fixtures\\scope-9DpORv\\state-0"
+          },
+          "binding": {
+            "nonce": [
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2,
+              2
+            ],
+            "owner": 0,
+            "profile": [
+              252,
+              170,
+              121,
+              52,
+              146,
+              169,
+              249,
+              183,
+              134,
+              243,
+              9,
+              187,
+              122,
+              152,
+              53,
+              171,
+              1,
+              245,
+              115,
+              45,
+              237,
+              93,
+              254,
+              16,
+              185,
+              96,
+              253,
+              166,
+              156,
+              204,
+              167,
+              103
+            ],
+            "source": [
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10,
+              10
+            ]
+          },
+          "code": 1,
+          "config": "5d5153323162d6b06c199c34077385663b7e6ef9902db63179267b026100ef0d",
+          "image": [
+            54,
+            42,
+            53,
+            108,
+            231,
+            240,
+            148,
+            14,
+            199,
+            79,
+            115,
+            168,
+            252,
+            44,
+            153,
+            10,
+            44,
+            194,
+            74,
+            56,
+            161,
+            28,
+            144,
+            187,
+            216,
+            236,
+            169,
+            71,
+            17,
+            10,
+            209,
+            57
+          ],
+          "stop": "Kill",
+          "tag": {
+            "pid": 70104
+          },
+          "token": {
+            "ledger": 1,
+            "ordinal": 1,
+            "pid": 70104
+          },
+          "waited": true
+        }
+      ],
+      "actual_resident_spawns": 2,
+      "actual_terminal_outcomes": 2,
+      "classification": "memory observation only; whole-run admission/composition NOT implemented",
+      "coverage": {
+        "attempts": 4,
+        "coverage_valid": false,
+        "interpretation": "core sampled PrivateBytes and observed live Stats only; not terminal peaks or whole S54",
+        "lifetimes": 2,
+        "profiles": [
+          {
+            "binding": {
+              "nonce": [
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                1
+              ],
+              "owner": 0,
+              "profile": [
+                252,
+                170,
+                121,
+                52,
+                146,
+                169,
+                249,
+                183,
+                134,
+                243,
+                9,
+                187,
+                122,
+                152,
+                53,
+                171,
+                1,
+                245,
+                115,
+                45,
+                237,
+                93,
+                254,
+                16,
+                185,
+                96,
+                253,
+                166,
+                156,
+                204,
+                167,
+                103
+              ],
+              "source": [
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10
+              ]
+            },
+            "born_ms": 228,
+            "closed_ms": 5696,
+            "closing_tail_ms": 242,
+            "code": 1,
+            "creation_ticks": 639291910222528921,
+            "first_sample_end_ms": 517,
+            "last_sample_end_ms": 5684,
+            "last_sample_start_ms": 5454,
+            "max_conservative_query_gap_ms": 5226,
+            "missed_periodic_slots": 0,
+            "observed_stats": {
+              "first_ms": 517,
+              "last_ms": 519,
+              "maxima": {
+                "commit": 10,
+                "native": 10
+              }
+            },
+            "pending_stats": null,
+            "profile": {
+              "current": true,
+              "image": [
+                54,
+                42,
+                53,
+                108,
+                231,
+                240,
+                148,
+                14,
+                199,
+                79,
+                115,
+                168,
+                252,
+                44,
+                153,
+                10,
+                44,
+                194,
+                74,
+                56,
+                161,
+                28,
+                144,
+                187,
+                216,
+                236,
+                169,
+                71,
+                17,
+                10,
+                209,
+                57
+              ],
+              "owner": 0,
+              "pid": 65820,
+              "profile": [
+                252,
+                170,
+                121,
+                52,
+                146,
+                169,
+                249,
+                183,
+                134,
+                243,
+                9,
+                187,
+                122,
+                152,
+                53,
+                171,
+                1,
+                245,
+                115,
+                45,
+                237,
+                93,
+                254,
+                16,
+                185,
+                96,
+                253,
+                166,
+                156,
+                204,
+                167,
+                103
+              ]
+            },
+            "sampled_max_private_bytes": 28172288,
+            "stats_end_gap_ms": 5177,
+            "waited": true
+          },
+          {
+            "binding": {
+              "nonce": [
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2
+              ],
+              "owner": 0,
+              "profile": [
+                252,
+                170,
+                121,
+                52,
+                146,
+                169,
+                249,
+                183,
+                134,
+                243,
+                9,
+                187,
+                122,
+                152,
+                53,
+                171,
+                1,
+                245,
+                115,
+                45,
+                237,
+                93,
+                254,
+                16,
+                185,
+                96,
+                253,
+                166,
+                156,
+                204,
+                167,
+                103
+              ],
+              "source": [
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10,
+                10
+              ]
+            },
+            "born_ms": 5760,
+            "closed_ms": 6034,
+            "closing_tail_ms": 274,
+            "code": 1,
+            "creation_ticks": 639291910278485660,
+            "first_sample_end_ms": 6023,
+            "last_sample_end_ms": 6023,
+            "last_sample_start_ms": 5760,
+            "max_conservative_query_gap_ms": 274,
+            "missed_periodic_slots": 0,
+            "observed_stats": null,
+            "pending_stats": null,
+            "profile": {
+              "current": true,
+              "image": [
+                54,
+                42,
+                53,
+                108,
+                231,
+                240,
+                148,
+                14,
+                199,
+                79,
+                115,
+                168,
+                252,
+                44,
+                153,
+                10,
+                44,
+                194,
+                74,
+                56,
+                161,
+                28,
+                144,
+                187,
+                216,
+                236,
+                169,
+                71,
+                17,
+                10,
+                209,
+                57
+              ],
+              "owner": 0,
+              "pid": 70104,
+              "profile": [
+                252,
+                170,
+                121,
+                52,
+                146,
+                169,
+                249,
+                183,
+                134,
+                243,
+                9,
+                187,
+                122,
+                152,
+                53,
+                171,
+                1,
+                245,
+                115,
+                45,
+                237,
+                93,
+                254,
+                16,
+                185,
+                96,
+                253,
+                166,
+                156,
+                204,
+                167,
+                103
+              ]
+            },
+            "sampled_max_private_bytes": 26112000,
+            "stats_end_gap_ms": null,
+            "waited": true
+          }
+        ],
+        "run": [
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8,
+          8
+        ],
+        "span_ms": 40000
+      },
+      "finished": false,
+      "inventory": {
+        "bytes": 64,
+        "path": "\\\\?\\E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-p11a8b-fixtures\\scope-9DpORv\\inventory.json",
+        "sha256": "83b034d8da7af42c4e9be3311fa8e08989e2c748dc450eac0ff30d9d92d5d56f"
+      },
+      "original_lifetime_coverage_complete": false,
+      "query_attempts": 4,
+      "rows": [
+        {
+          "end_ms": 517,
+          "failed": false,
+          "phase": "Setup",
+          "reading": {
+            "bytes": 26341376,
+            "evidence": "WindowsChildBracket",
+            "pid": 65820,
+            "ticks": 639291910222528921
+          },
+          "reason": "Start",
+          "start_ms": 228,
+          "token": {
+            "ledger": 1,
+            "ordinal": 0,
+            "pid": 65820
+          }
+        },
+        {
+          "end_ms": 5454,
+          "failed": false,
+          "phase": "Setup",
+          "reading": {
+            "bytes": 28172288,
+            "evidence": "WindowsChildBracket",
+            "pid": 65820,
+            "ticks": 639291910222528921
+          },
+          "reason": "Progress",
+          "start_ms": 5231,
+          "token": {
+            "ledger": 1,
+            "ordinal": 0,
+            "pid": 65820
+          }
+        },
+        {
+          "end_ms": 5684,
+          "failed": false,
+          "phase": "Setup",
+          "reading": {
+            "bytes": 28172288,
+            "evidence": "WindowsChildBracket",
+            "pid": 65820,
+            "ticks": 639291910222528921
+          },
+          "reason": "BeforeStop",
+          "start_ms": 5454,
+          "token": {
+            "ledger": 1,
+            "ordinal": 0,
+            "pid": 65820
+          }
+        },
+        {
+          "end_ms": 6023,
+          "failed": false,
+          "phase": "Setup",
+          "reading": {
+            "bytes": 26112000,
+            "evidence": "WindowsChildBracket",
+            "pid": 70104,
+            "ticks": 639291910278485660
+          },
+          "reason": "Start",
+          "start_ms": 5760,
+          "token": {
+            "ledger": 1,
+            "ordinal": 1,
+            "pid": 70104
+          }
+        }
+      ],
+      "synthetic_fixture": true
+    },
+    "first_pid": 65820,
+    "second_pid": 70104,
+    "real_child_waits": true,
+    "no_per_status_ram_query": true
+  },
+  "stable_artifacts": [
+    {
+      "package": "kilogram-cli",
+      "kind": "bin",
+      "target": "kilogram-cli",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 50785280,
+      "sha256": "8886785ae37cb0fd4f5aa27828f1b39dcc269991c55c899bd53bdd4e0eb75088",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "lib",
+      "target": "kilogram_cli",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 32650240,
+      "sha256": "bf93aeb36e1f03960ac33f36692564908f94a097eabde30cf34b88782171763d",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 18150912,
+      "sha256": "7efa5d24c51f9587dacbb6d79eb596dc5ad619fce358c5533f24272dec298353",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "runtime2_process",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 23689728,
+      "sha256": "8eca44daa41d1ba117c108732e0c1ebc0e41ac688ee14ac70bb6d2210c1914cd",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-transport-iroh",
+      "kind": "lib",
+      "target": "kilogram_transport_iroh",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+      "bytes": 19419648,
+      "sha256": "f5822cd40225a7ac12dbc2c58264439b8e3c5d4b4d20cf87309b9aa28f2023ad",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-transport-iroh",
+      "kind": "test",
+      "target": "local_relay_transport",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+      "bytes": 22317056,
+      "sha256": "552cc6c23452ad50c94b65391e33df462b89e14551c7eac51304e55872788cf0",
+      "profile": "verification-scale"
+    }
+  ],
+  "compiler_images": [
+    {
+      "before": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe",
+        "bytes": 50476032,
+        "sha256": "e859cd1dcd026d6a1c1585afd559a5da80d7fa74f7a9cb6a7c8636d79cfaa152",
+        "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe"
+      },
+      "after": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/x86_64-pc-windows-msvc/verification-scale/kilogram-cli.exe",
+        "bytes": 50476032,
+        "sha256": "e859cd1dcd026d6a1c1585afd559a5da80d7fa74f7a9cb6a7c8636d79cfaa152"
+      }
+    },
+    {
+      "before": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-bin-kilogram-cli-tests.exe",
+        "bytes": 50785280,
+        "sha256": "8886785ae37cb0fd4f5aa27828f1b39dcc269991c55c899bd53bdd4e0eb75088",
+        "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-cli-bin-kilogram-cli-tests.exe"
+      },
+      "after": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-bin-kilogram-cli-tests.exe",
+        "bytes": 50785280,
+        "sha256": "8886785ae37cb0fd4f5aa27828f1b39dcc269991c55c899bd53bdd4e0eb75088"
+      }
+    },
+    {
+      "before": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-lib-kilogram_cli-tests.exe",
+        "bytes": 32650240,
+        "sha256": "bf93aeb36e1f03960ac33f36692564908f94a097eabde30cf34b88782171763d",
+        "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-cli-lib-kilogram_cli-tests.exe"
+      },
+      "after": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-lib-kilogram_cli-tests.exe",
+        "bytes": 32650240,
+        "sha256": "bf93aeb36e1f03960ac33f36692564908f94a097eabde30cf34b88782171763d"
+      }
+    },
+    {
+      "before": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+        "bytes": 18025984,
+        "sha256": "52e605eb54fe026c5426ee2af5521afb32a0a3520a62668c3f0cbd4d17b1476e",
+        "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe"
+      },
+      "after": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+        "bytes": 18150912,
+        "sha256": "7efa5d24c51f9587dacbb6d79eb596dc5ad619fce358c5533f24272dec298353"
+      }
+    },
+    {
+      "before": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-test-runtime2_process-tests.exe",
+        "bytes": 23689728,
+        "sha256": "8eca44daa41d1ba117c108732e0c1ebc0e41ac688ee14ac70bb6d2210c1914cd",
+        "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-cli-test-runtime2_process-tests.exe"
+      },
+      "after": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-test-runtime2_process-tests.exe",
+        "bytes": 23689728,
+        "sha256": "8eca44daa41d1ba117c108732e0c1ebc0e41ac688ee14ac70bb6d2210c1914cd"
+      }
+    },
+    {
+      "before": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-state-lib-kilogram_state-tests.exe",
+        "bytes": 6963200,
+        "sha256": "39c466dc7e24302115244452082a35d9c1f5873865031d2c62cece26db0ed597",
+        "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-state-lib-kilogram_state-tests.exe"
+      },
+      "after": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-state-lib-kilogram_state-tests.exe",
+        "bytes": 6963200,
+        "sha256": "39c466dc7e24302115244452082a35d9c1f5873865031d2c62cece26db0ed597"
+      }
+    },
+    {
+      "before": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-state-test-a3_s1_root_review-tests.exe",
+        "bytes": 4166144,
+        "sha256": "a55841b0a81f9a30202696524898cdcb39ae41ba98bd6135451b9ee919e87c9b",
+        "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-state-test-a3_s1_root_review-tests.exe"
+      },
+      "after": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-state-test-a3_s1_root_review-tests.exe",
+        "bytes": 4166144,
+        "sha256": "a55841b0a81f9a30202696524898cdcb39ae41ba98bd6135451b9ee919e87c9b"
+      }
+    },
+    {
+      "before": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-state-test-a3_s2_root_review-tests.exe",
+        "bytes": 4258304,
+        "sha256": "92aea441d23a37b332c7f7bb9c71e1f611687c14d1d7847f3bb18ae21d1adba8",
+        "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-state-test-a3_s2_root_review-tests.exe"
+      },
+      "after": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-state-test-a3_s2_root_review-tests.exe",
+        "bytes": 4258304,
+        "sha256": "92aea441d23a37b332c7f7bb9c71e1f611687c14d1d7847f3bb18ae21d1adba8"
+      }
+    },
+    {
+      "before": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+        "bytes": 19419648,
+        "sha256": "f5822cd40225a7ac12dbc2c58264439b8e3c5d4b4d20cf87309b9aa28f2023ad",
+        "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe"
+      },
+      "after": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+        "bytes": 19419648,
+        "sha256": "f5822cd40225a7ac12dbc2c58264439b8e3c5d4b4d20cf87309b9aa28f2023ad"
+      }
+    },
+    {
+      "before": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+        "bytes": 22317056,
+        "sha256": "552cc6c23452ad50c94b65391e33df462b89e14551c7eac51304e55872788cf0",
+        "archive": ".tmp/s54-block3e-p11a8b-01/preimages/target/verification-scale/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe"
+      },
+      "after": {
+        "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+        "bytes": 22317056,
+        "sha256": "552cc6c23452ad50c94b65391e33df462b89e14551c7eac51304e55872788cf0"
+      }
+    }
+  ],
+  "raw_build_pins": [
+    {
+      "path": ".tmp/s54-block3e-p11a8b-01/compile-04.capture.json",
+      "bytes": 2722275,
+      "sha256": "51fb4dd34a72374b3bb1968b13de1514ac49c8cae7518eb84b63fc35f8769b65"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a8b-01/pure-02.capture.json",
+      "bytes": 2722334,
+      "sha256": "7189eb2b03c33648a000e7b7090ac8c12fb30e93d80d16aa3923f9f3ac2cc592"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a8b-01/pure-02.expected.json",
+      "bytes": 1299899,
+      "sha256": "99da010701a51baa6d828b11ff024131761dcdb106dddf39e68f0137f3e2947a"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a8b-01/pure-02.inventory.json",
+      "bytes": 53296,
+      "sha256": "960b919eec4231623c9348912edaf0fe82c15cdcbfa80f0e20dedec0ddb7e608"
+    }
+  ],
+  "preserved_failed_image_and_source": [
+    {
+      "path": ".tmp/s54-block3e-p11a8b-01/pure-01.migration_s5_process.exe",
+      "bytes": 18244608,
+      "sha256": "e7be3b28ad530b2a2b535a4b7b26a5b53a47a3279aa51e6d404f562dff98289b"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a8b-01/pure-01.scope-tests.rs",
+      "bytes": 15157,
+      "sha256": "a76e20a3c31d4de69de4b7eb3e46aba515862485cf50233fe932fa236364df7a"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a8b-01/clippy-01.scope.rs",
+      "bytes": 24721,
+      "sha256": "cdccdd40f6c7b2dc03e64e5325cf9f28017112b75e94752bfb4faeda89977003"
+    },
+    {
+      "path": ".tmp/s54-block3e-p11a8b-01/clippy-01.scope-tests.rs",
+      "bytes": 15165,
+      "sha256": "0439dec0cf604d9b00a0a19a05d65ffadbb6cdf559d62a10129c52e7757e9c16"
+    }
+  ],
+  "navigation_unchanged": true,
+  "product_unchanged": true,
+  "whole_runner_gated": true,
+  "commit_push": false
+}

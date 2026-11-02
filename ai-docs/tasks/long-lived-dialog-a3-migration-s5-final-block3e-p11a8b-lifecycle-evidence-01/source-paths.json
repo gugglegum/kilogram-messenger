@@ -1,0 +1,14 @@
+[
+  "apps/kilogram-cli/tests/migration_s5_process.rs",
+  "apps/kilogram-cli/tests/support/migration_s53_deadline.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_capture.rs",
+  "apps/kilogram-cli/tests/support/migration_s5_l1.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_control.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_normal.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_early.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_memory.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_memory_query.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_memory_scope.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_memory_scope_tests.rs",
+  "apps/kilogram-cli/tests/support/migration_s53_handoff.rs"
+]

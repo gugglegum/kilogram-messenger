@@ -1,0 +1,1 @@
+{"attempt":"pure-02","capture":{"classification":"success","cleanup_pending":false,"code":0,"exit_observed":true,"io_error":null,"kill_error":null,"kill_requested":false,"parse_column":null,"parse_line":null,"pid":2692,"stderr_bytes":0,"stderr_eof":true,"stdout_bytes":57,"stdout_eof":true,"waited":true},"containment_owner_pid":45716,"harness_pid":16204,"sequence":0}

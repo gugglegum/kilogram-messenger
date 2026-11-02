@@ -1,0 +1,36 @@
+{
+  "step": "pure-02",
+  "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8b-01\\pure.ps1",
+    "-Step",
+    "pure-02"
+  ],
+  "actual_child_exit_code": 0,
+  "exit_code": 0,
+  "elapsed_seconds": 25.00353,
+  "cleanup_verified": true,
+  "error": null,
+  "outer_job_owner_pid": 45716,
+  "actual_launcher_membership_verified": true,
+  "work_expired": false,
+  "members_before_cleanup": [],
+  "members_after_cleanup": [],
+  "capture_harness_membership": [
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8b-01\\pure-02.admission\\join-16204.json",
+      "attempt": "pure-02",
+      "owner_pid": 45716,
+      "launcher_pid": 11896,
+      "harness_pid": 16204,
+      "harness_start_utc": "2026-11-02T04:37:02.1315000Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "7efa5d24c51f9587dacbb6d79eb596dc5ad619fce358c5533f24272dec298353",
+      "actual_handle_membership_verified": true,
+      "nonce": "16204-1793594222149"
+    }
+  ]
+}

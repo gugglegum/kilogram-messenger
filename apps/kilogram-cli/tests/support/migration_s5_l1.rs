@@ -177,6 +177,15 @@ impl Node {
         schedule: Option<&Path>,
         clock: Option<&Path>,
     ) -> Result<OwnedChild> {
+        self.start_controlled_servicing(name, schedule, clock, None)
+    }
+    fn start_controlled_servicing(
+        &self,
+        name: &str,
+        schedule: Option<&Path>,
+        clock: Option<&Path>,
+        mut peer: Option<&mut OwnedChild>,
+    ) -> Result<OwnedChild> {
         if self.ipc.exists() {
             std::fs::remove_file(&self.ipc)?;
         }
@@ -195,21 +204,31 @@ impl Node {
         if let Some(path) = clock {
             cmd.env("KILOGRAM_TEST_OD1_CLOCK_FILE", path);
         }
-        let mut child = OwnedChild(cmd.spawn()?);
-        wait_file(&mut child, &self.ipc, 15)
-            .with_context(|| format!("runtime startup logs at {}", self.branch.base.display()))?;
+        memory_scope::alias(&self.branch.state, &self.profile, &self.ipc, self.indexed)?;
+        let mut child = OwnedChild::spawn(&mut cmd)?;
+        wait_file_servicing(&mut child, &self.ipc, 15, || {
+            if memory_scope::active()
+                && let Some(peer) = peer.as_mut()
+            {
+                peer.alive()?;
+            }
+            Ok(())
+        })
+        .with_context(|| format!("runtime startup logs at {}", self.branch.base.display()))?;
         Ok(child)
     }
     fn status(&self) -> Result<Value> {
-        json_cli(
-            &self.exe(),
-            &[
-                "ordered".into(),
-                if self.indexed { "status3" } else { "status" }.into(),
-                "--ipc-file".into(),
-                text(&self.ipc),
-            ],
-        )
+        memory_scope::around_status(&self.profile, &self.ipc, self.indexed, || {
+            json_cli(
+                &self.exe(),
+                &[
+                    "ordered".into(),
+                    if self.indexed { "status3" } else { "status" }.into(),
+                    "--ipc-file".into(),
+                    text(&self.ipc),
+                ],
+            )
+        })
     }
     fn import(&self, peer: &Node) -> Result<()> {
         let mut args = vec![

@@ -1,0 +1,28 @@
+{
+  "expected_names": [
+    "s54_memory::tests::s54_memory_cadence_boundaries_gaps_and_no_queries_while_closing",
+    "s54_memory::tests::s54_memory_identity_foreign_overlap_creation_ticks_and_late_setup_bind",
+    "s54_memory::tests::s54_memory_count_span_many_short_restarts_and_exact_full_bound",
+    "s54_memory::tests::s54_memory_failure_is_not_zero_missing_coverage_and_cleanup_stays_recordable",
+    "s54_memory::tests::s54_memory_stats_each_candidate_validated_before_pending_aggregation",
+    "s54_memory::tests::s54_memory_wire_schema_cap_and_safe_errors",
+    "s54_memory::tests::s54_memory_r1_late_stop_settles_missing_progress_and_exact_due_boundary",
+    "s54_memory::tests::s54_memory_r1_progress_then_late_stop_does_not_double_count",
+    "s54_memory::tests::s54_memory_r1_normal_closing_tail_is_separate_from_missed_slots",
+    "s54_memory::tests::s54_memory_r2_finalized_rows_summary_and_cleanup_are_immutable",
+    "s54_memory::scope::tests::s54_memory_scope_optout_and_required_input_absence_do_no_observation",
+    "s54_memory::scope::tests::s54_memory_scope_independent_spawn_coverage_and_late_setup_binding",
+    "s54_memory::scope::tests::s54_memory_scope_restart_tickets_config_identity_and_each_candidate",
+    "s54_memory::scope::tests::s54_memory_scope_bounded_lease_no_status_borrow_and_error_cleanup",
+    "s54_memory::scope::tests::s54_memory_scope_two_owner_cadence_normal_closing_and_duplicate_guards",
+    "s54_memory::scope::tests::s54_memory_scope_actual_shared_restart_status_checkpoint_and_failed_prekill",
+    "live_l1::handoff::final_p5::control::normal::tests::s54_p11a5_last_actual_normal_pair_excludes_empty_stale_killed_and_foreign_outcomes",
+    "live_l1::handoff::final_p5::control::normal::tests::s54_p11a1_expected_stop_preserves_key_and_original_minimum_deadline",
+    "live_l1::handoff::final_p5::control::normal::tests::s54_p11a1_only_requested_exit0_is_expected_and_acknowledgement_is_not_wait",
+    "live_l1::handoff::final_p5::control::normal::tests::s54_p11a1_either_exit_order_still_requires_both_waits_before_sources_and_reopen",
+    "s53_deadline::b_start_deadline_nested_minimum_restores_without_reset",
+    "s53_deadline::b_start_deadline_expired_bound_cannot_spawn_or_revive",
+    "s54_capture::tests::s54_capture_transform_original_nested_and_safe_errors",
+    "s54_capture::tests::s54_capture_scope_sequence_restore_and_pending_is_permanent_failure"
+  ]
+}

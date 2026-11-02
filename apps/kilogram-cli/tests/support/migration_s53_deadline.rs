@@ -3,6 +3,7 @@
 use super::*;
 use std::{cell::RefCell, process::Output};
 struct Scope {
+    origin: Instant,
     deadline: Instant,
     local: Option<Instant>,
     run: PathBuf,
@@ -14,8 +15,10 @@ impl Guard {
     pub(super) fn enter(run: &Path, seconds: u64) -> Result<Self> {
         SCOPE.with_borrow_mut(|scope| {
             ensure!(scope.is_none(), "one absolute managed controller scope");
+            let origin = Instant::now();
             *scope = Some(Scope {
-                deadline: Instant::now() + Duration::from_secs(seconds),
+                origin,
+                deadline: origin + Duration::from_secs(seconds),
                 local: None,
                 run: run.into(),
                 next: 0,
@@ -94,6 +97,23 @@ pub(super) fn capture_deadline() -> Result<Instant> {
         Ok(effective(
             scope.as_ref().context("status requires managed deadline")?,
         ))
+    })
+}
+#[derive(Clone)]
+pub(super) struct ObserverContext {
+    pub origin: Instant,
+    pub whole: Instant,
+    pub run: PathBuf,
+}
+pub(super) fn observer_context() -> Result<ObserverContext> {
+    check()?;
+    SCOPE.with_borrow(|s| {
+        let s = s.as_ref().context("observer requires original deadline")?;
+        Ok(ObserverContext {
+            origin: s.origin,
+            whole: s.deadline,
+            run: s.run.clone(),
+        })
     })
 }
 pub(super) fn output(command: &mut Command) -> Result<Output> {

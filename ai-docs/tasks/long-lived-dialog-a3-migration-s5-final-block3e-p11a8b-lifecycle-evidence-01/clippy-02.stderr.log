@@ -1,0 +1,101 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: this `if` statement can be collapsed
+   --> apps\kilogram-cli\tests\support\migration_s54_control.rs:394:13
+    |
+394 | /             if let Some(run) = self.running.get_mut(owner).and_then(Option::as_mut) {
+395 | |                 if run.normal.is_none() && memory_scope::observed(&run.child.0) {
+396 | |                     let _ = run.child.kill_wait();
+397 | |                 }
+398 | |             }
+    | |_____________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+    = note: `-D clippy::collapsible-if` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+    |
+394 ~             if let Some(run) = self.running.get_mut(owner).and_then(Option::as_mut)
+395 ~                 && run.normal.is_none() && memory_scope::observed(&run.child.0) {
+396 |                     let _ = run.child.kill_wait();
+397 ~                 }
+    |
+
+error: this `if` statement can be collapsed
+   --> apps\kilogram-cli\tests\support\migration_s54_control.rs:419:21
+    |
+419 | /                     if let Some(run) = self.running[owner].as_mut() {
+420 | |                         if memory_scope::observed(&run.child.0) {
+421 | |                             let _ = run.child.kill_wait();
+422 | |                         }
+423 | |                     }
+    | |_____________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+419 ~                     if let Some(run) = self.running[owner].as_mut()
+420 ~                         && memory_scope::observed(&run.child.0) {
+421 |                             let _ = run.child.kill_wait();
+422 ~                         }
+    |
+
+error: this `if` statement can be collapsed
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:199:9
+    |
+199 | /         if let Some(mut s) = state {
+200 | |             if !s.finished {
+201 | |                 s.fail();
+202 | |                 let _ = s.write("memory-observer-abort.json");
+203 | |             }
+204 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+199 ~         if let Some(mut s) = state
+200 ~             && !s.finished {
+201 |                 s.fail();
+202 |                 let _ = s.write("memory-observer-abort.json");
+203 ~             }
+    |
+
+error: this `if` statement can be collapsed
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:408:9
+    |
+408 | /         if !self.raw[i].alias.current {
+409 | |             if let Some(source) = self.sources[usize::from(self.raw[i].alias.owner)] {
+410 | |                 self.bind_one(i, source, None)?;
+411 | |             }
+412 | |         }
+    | |_________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+help: collapse nested if block
+    |
+408 ~         if !self.raw[i].alias.current
+409 ~             && let Some(source) = self.sources[usize::from(self.raw[i].alias.owner)] {
+410 |                 self.bind_one(i, source, None)?;
+411 ~             }
+    |
+
+error: this `if` statement can be collapsed
+  --> apps\kilogram-cli\tests\migration_s5_process.rs:53:13
+   |
+53 | /             if let Err(error) = killed {
+54 | |                 if self.0.try_wait()?.is_none() {
+55 | |                     return Err(error.into());
+56 | |                 }
+57 | |             }
+   | |_____________^
+   |
+   = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+help: collapse nested if block
+   |
+53 ~             if let Err(error) = killed
+54 ~                 && self.0.try_wait()?.is_none() {
+55 |                     return Err(error.into());
+56 ~                 }
+   |
+
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 5 previous errors

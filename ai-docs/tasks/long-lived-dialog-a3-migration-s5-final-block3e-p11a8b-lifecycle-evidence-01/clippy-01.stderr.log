@@ -1,0 +1,432 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error[E0603]: function `before_normal` is private
+   --> apps\kilogram-cli\tests\support\migration_s54_normal.rs:176:23
+    |
+176 |         memory_scope::before_normal(&mut run.child.0)?;
+    |                       ^^^^^^^^^^^^^ private function
+    |
+note: the function `before_normal` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:678:1
+    |
+678 | pub(super) fn before_normal(child: &mut Child) -> Result<()> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `terminal` is private
+   --> apps\kilogram-cli\tests\support\migration_s54_normal.rs:233:31
+    |
+233 |                 memory_scope::terminal(&run.child.0, true, exit.code(), false)?;
+    |                               ^^^^^^^^ private function
+    |
+note: the function `terminal` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:681:1
+    |
+681 | / pub(super) fn terminal(
+682 | |     child: &Child,
+683 | |     waited: bool,
+684 | |     code: Option<i32>,
+...   |
+687 | |     eval(false, |s| s.terminal(child, waited, code, aborted)).map(|_| ())
+688 | | }
+    | |_^
+
+error[E0603]: struct `Guard` is private
+   --> apps\kilogram-cli\tests\support\migration_s54_control.rs:137:28
+    |
+137 |     _memory: memory_scope::Guard,
+    |                            ^^^^^ private struct
+    |
+note: the struct `Guard` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:158:1
+    |
+158 | pub(super) struct Guard(PhantomData<Rc<()>>);
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `dropping` is private
+   --> apps\kilogram-cli\tests\support\migration_s54_control.rs:147:31
+    |
+147 |                 memory_scope::dropping(&owned.child.0);
+    |                               ^^^^^^^^ private function
+    |
+note: the function `dropping` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:689:1
+    |
+689 | pub(super) fn dropping(child: &Child) {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `terminal` is private
+   --> apps\kilogram-cli\tests\support\migration_s54_control.rs:152:47
+    |
+152 |                         let _ = memory_scope::terminal(&owned.child.0, true, exit.code(), true);
+    |                                               ^^^^^^^^ private function
+    |
+note: the function `terminal` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:681:1
+    |
+681 | / pub(super) fn terminal(
+682 | |     child: &Child,
+683 | |     waited: bool,
+684 | |     code: Option<i32>,
+...   |
+687 | |     eval(false, |s| s.terminal(child, waited, code, aborted)).map(|_| ())
+688 | | }
+    | |_^
+
+error[E0603]: function `diagnostic` is private
+   --> apps\kilogram-cli\tests\support\migration_s54_control.rs:178:23
+    |
+178 |         memory_scope::diagnostic()
+    |                       ^^^^^^^^^^ private function
+    |
+note: the function `diagnostic` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:771:1
+    |
+771 | pub(super) fn diagnostic() -> Result<Value> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `finish_coverage` is private
+   --> apps\kilogram-cli\tests\support\migration_s54_control.rs:187:23
+    |
+187 |         memory_scope::finish_coverage()
+    |                       ^^^^^^^^^^^^^^^ private function
+    |
+note: the function `finish_coverage` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:774:1
+    |
+774 | pub(super) fn finish_coverage() -> Result<Value> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: struct `Guard` is private
+   --> apps\kilogram-cli\tests\support\migration_s54_control.rs:205:36
+    |
+205 |         let memory = memory_scope::Guard::enter(parent, until)?;
+    |                                    ^^^^^ private struct
+    |
+note: the struct `Guard` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:158:1
+    |
+158 | pub(super) struct Guard(PhantomData<Rc<()>>);
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `phase` is private
+   --> apps\kilogram-cli\tests\support\migration_s54_control.rs:237:23
+    |
+237 |         memory_scope::phase(self.phases.next.try_into()?)?;
+    |                       ^^^^^ private function
+    |
+note: the function `phase` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:703:1
+    |
+703 | pub(super) fn phase(n: u8) -> Result<()> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `bind_current` is private
+   --> apps\kilogram-cli\tests\support\migration_s54_control.rs:263:35
+    |
+263 |                     memory_scope::bind_current(&run.child.0, key.owner, key.nonce)?;
+    |                                   ^^^^^^^^^^^^ private function
+    |
+note: the function `bind_current` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:733:1
+    |
+733 | pub(super) fn bind_current(child: &Child, source: Id, nonce: Id) -> Result<()> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `progress` is private
+   --> apps\kilogram-cli\tests\support\migration_s54_control.rs:265:31
+    |
+265 |                 memory_scope::progress(&mut run.child.0)?;
+    |                               ^^^^^^^^ private function
+    |
+note: the function `progress` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:652:1
+    |
+652 | pub(super) fn progress(child: &mut Child) -> Result<()> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `alias` is private
+   --> apps\kilogram-cli\tests\support\migration_s54_control.rs:368:23
+    |
+368 |         memory_scope::alias(&n.branch.state, &n.profile, &n.ipc, n.indexed)?;
+    |                       ^^^^^ private function
+    |
+note: the function `alias` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:613:1
+    |
+613 | pub(super) fn alias(root: &Path, profile: &Path, ipc: &Path, current: bool) -> Result<()> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `observed` is private
+   --> apps\kilogram-cli\tests\support\migration_s54_control.rs:395:58
+    |
+395 |                 if run.normal.is_none() && memory_scope::observed(&run.child.0) {
+    |                                                          ^^^^^^^^ private function
+    |
+note: the function `observed` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:697:1
+    |
+697 | pub(super) fn observed(child: &Child) -> bool {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `observed` is private
+   --> apps\kilogram-cli\tests\support\migration_s54_control.rs:420:42
+    |
+420 |                         if memory_scope::observed(&run.child.0) {
+    |                                          ^^^^^^^^ private function
+    |
+note: the function `observed` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:697:1
+    |
+697 | pub(super) fn observed(child: &Child) -> bool {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `bind_legacy` is private
+   --> apps\kilogram-cli\tests\support\migration_s54_early.rs:154:27
+    |
+154 |             memory_scope::bind_legacy(owner as u8, witness.source_id)?;
+    |                           ^^^^^^^^^^^ private function
+    |
+note: the function `bind_legacy` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:712:1
+    |
+712 | pub(super) fn bind_legacy(owner: u8, source: Id) -> Result<()> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `alias` is private
+   --> apps\kilogram-cli\tests\support\migration_s5_l1.rs:198:23
+    |
+198 |         memory_scope::alias(&self.branch.state, &self.profile, &self.ipc, self.indexed)?;
+    |                       ^^^^^ private function
+    |
+note: the function `alias` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:613:1
+    |
+613 | pub(super) fn alias(root: &Path, profile: &Path, ipc: &Path, current: bool) -> Result<()> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `around_status` is private
+   --> apps\kilogram-cli\tests\support\migration_s5_l1.rs:205:23
+    |
+205 |         memory_scope::around_status(&self.profile, &self.ipc, self.indexed, || {
+    |                       ^^^^^^^^^^^^^ private function
+    |
+note: the function `around_status` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:749:1
+    |
+749 | / pub(super) fn around_status(
+750 | |     profile: &Path,
+751 | |     ipc: &Path,
+752 | |     current: bool,
+...   |
+769 | |     Ok(value)
+770 | | }
+    | |_^
+
+error[E0603]: function `prepare` is private
+   --> apps\kilogram-cli\tests\migration_s5_process.rs:25:38
+    |
+ 25 |         let prepared = memory_scope::prepare(cmd)?;
+    |                                      ^^^^^^^ private function
+    |
+note: the function `prepare` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:625:1
+    |
+625 | pub(super) fn prepare(cmd: &Command) -> Result<Option<Prepared>> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `spawned` is private
+   --> apps\kilogram-cli\tests\migration_s5_process.rs:28:40
+    |
+ 28 |             let actual = memory_scope::spawned(&child.0, p)?;
+    |                                        ^^^^^^^ private function
+    |
+note: the function `spawned` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:642:1
+    |
+642 | pub(super) fn spawned(child: &Child, p: Prepared) -> Result<usize> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `registered` is private
+   --> apps\kilogram-cli\tests\migration_s5_process.rs:29:27
+    |
+ 29 |             memory_scope::registered(&mut child.0, actual)?;
+    |                           ^^^^^^^^^^ private function
+    |
+note: the function `registered` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:645:1
+    |
+645 | pub(super) fn registered(child: &mut Child, i: usize) -> Result<()> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `prepare_fixture` is private
+   --> apps\kilogram-cli\tests\migration_s5_process.rs:35:38
+    |
+ 35 |         let prepared = memory_scope::prepare_fixture(cmd, profile)?;
+    |                                      ^^^^^^^^^^^^^^^ private function
+    |
+note: the function `prepare_fixture` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:665:1
+    |
+665 | pub(super) fn prepare_fixture(cmd: &Command, profile: &Path) -> Result<Prepared> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `spawned` is private
+   --> apps\kilogram-cli\tests\migration_s5_process.rs:37:36
+    |
+ 37 |         let actual = memory_scope::spawned(&child.0, prepared)?;
+    |                                    ^^^^^^^ private function
+    |
+note: the function `spawned` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:642:1
+    |
+642 | pub(super) fn spawned(child: &Child, p: Prepared) -> Result<usize> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `registered` is private
+   --> apps\kilogram-cli\tests\migration_s5_process.rs:38:23
+    |
+ 38 |         memory_scope::registered(&mut child.0, actual)?;
+    |                       ^^^^^^^^^^ private function
+    |
+note: the function `registered` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:645:1
+    |
+645 | pub(super) fn registered(child: &mut Child, i: usize) -> Result<()> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `progress` is private
+   --> apps\kilogram-cli\tests\migration_s5_process.rs:47:23
+    |
+ 47 |         memory_scope::progress(&mut self.0)
+    |                       ^^^^^^^^ private function
+    |
+note: the function `progress` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:652:1
+    |
+652 | pub(super) fn progress(child: &mut Child) -> Result<()> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `observed` is private
+   --> apps\kilogram-cli\tests\migration_s5_process.rs:50:26
+    |
+ 50 |         if memory_scope::observed(&self.0) {
+    |                          ^^^^^^^^ private function
+    |
+note: the function `observed` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:697:1
+    |
+697 | pub(super) fn observed(child: &Child) -> bool {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `before_kill` is private
+   --> apps\kilogram-cli\tests\migration_s5_process.rs:51:45
+    |
+ 51 |             let observation = memory_scope::before_kill(&mut self.0);
+    |                                             ^^^^^^^^^^^ private function
+    |
+note: the function `before_kill` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:675:1
+    |
+675 | pub(super) fn before_kill(child: &mut Child) -> Result<()> {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `terminal` is private
+   --> apps\kilogram-cli\tests\migration_s5_process.rs:59:40
+    |
+ 59 |             let closed = memory_scope::terminal(&self.0, true, exit.code(), false);
+    |                                        ^^^^^^^^ private function
+    |
+note: the function `terminal` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:681:1
+    |
+681 | / pub(super) fn terminal(
+682 | |     child: &Child,
+683 | |     waited: bool,
+684 | |     code: Option<i32>,
+...   |
+687 | |     eval(false, |s| s.terminal(child, waited, code, aborted)).map(|_| ())
+688 | | }
+    | |_^
+
+error[E0603]: function `observed` is private
+   --> apps\kilogram-cli\tests\migration_s5_process.rs:74:38
+    |
+ 74 |         let observed = memory_scope::observed(&self.0);
+    |                                      ^^^^^^^^ private function
+    |
+note: the function `observed` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:697:1
+    |
+697 | pub(super) fn observed(child: &Child) -> bool {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `dropping` is private
+   --> apps\kilogram-cli\tests\migration_s5_process.rs:76:27
+    |
+ 76 |             memory_scope::dropping(&self.0);
+    |                           ^^^^^^^^ private function
+    |
+note: the function `dropping` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:689:1
+    |
+689 | pub(super) fn dropping(child: &Child) {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+error[E0603]: function `terminal` is private
+   --> apps\kilogram-cli\tests\migration_s5_process.rs:81:35
+    |
+ 81 |             let _ = memory_scope::terminal(
+    |                                   ^^^^^^^^ private function
+    |
+note: the function `terminal` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:681:1
+    |
+681 | / pub(super) fn terminal(
+682 | |     child: &Child,
+683 | |     waited: bool,
+684 | |     code: Option<i32>,
+...   |
+687 | |     eval(false, |s| s.terminal(child, waited, code, aborted)).map(|_| ())
+688 | | }
+    | |_^
+
+error[E0603]: function `owner` is private
+   --> apps\kilogram-cli\tests\migration_s5_process.rs:644:23
+    |
+644 |         memory_scope::owner(owner as u8, &node.state, &node.profile, &node.ipc, false)?;
+    |                       ^^^^^ private function
+    |
+note: the function `owner` is defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:604:1
+    |
+604 | / pub(super) fn owner(
+605 | |     owner: u8,
+606 | |     root: &Path,
+607 | |     profile: &Path,
+...   |
+611 | |     eval(false, |s| s.alias(owner, root, profile, ipc, current)).map(|_| ())
+612 | | }
+    | |_^
+
+error[E0624]: associated function `enter` is private
+   --> apps\kilogram-cli\tests\support\migration_s54_control.rs:205:43
+    |
+205 |         let memory = memory_scope::Guard::enter(parent, until)?;
+    |                                           ^^^^^ private associated function
+    |
+   ::: apps\kilogram-cli\tests\support\migration_s54_memory_scope.rs:160:5
+    |
+160 |     pub(super) fn enter(parent: &Path, until: Instant) -> Result<Self> {
+    |     ------------------------------------------------------------------ private associated function defined here
+
+error: unused variable: `i`
+   --> apps\kilogram-cli\tests\support\migration_s54_memory_scope_tests.rs:166:9
+    |
+166 |     let i = raw(&mut s, 0, 10, false)?;
+    |         ^ help: if this is intentional, prefix it with an underscore: `_i`
+    |
+    = note: `-D unused-variables` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(unused_variables)]`
+
+Some errors have detailed explanations: E0603, E0624.
+For more information about an error, try `rustc --explain E0603`.
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 33 previous errors
