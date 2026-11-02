@@ -98,7 +98,7 @@ fn read(
     bytes: &mut usize,
     eof: &mut bool,
     mut retain: Option<&mut Vec<u8>>,
-    capped: bool,
+    ceiling: Option<usize>,
 ) -> Result<()> {
     if *eof {
         return Ok(());
@@ -107,7 +107,10 @@ fn read(
         Ok(0) => *eof = true,
         Ok(n) => {
             *bytes = bytes.saturating_add(n);
-            ensure!(!capped || *bytes <= CAP, "capture stream_cap");
+            ensure!(
+                ceiling.is_none_or(|cap| *bytes <= cap),
+                "capture stream_cap"
+            );
             if let Some(retain) = retain.as_mut() {
                 retain.extend_from_slice(&buffer[..n]);
             }
@@ -123,6 +126,7 @@ async fn collect(
     bound: &s53_deadline::CaptureBound,
     facts: &mut Facts,
     logs: &mut Logs,
+    ceiling: usize,
 ) -> Result<Zeroizing<Vec<u8>>> {
     ensure!(
         Instant::now() < bound.work,
@@ -139,7 +143,7 @@ async fn collect(
         .await
         .map_err(|_| anyhow::anyhow!("capture pipe_connect_deadline"))?
         .map_err(|_| anyhow::anyhow!("capture pipe_connect"))?;
-    let mut stdout = Zeroizing::new(Vec::with_capacity(CAP));
+    let mut stdout = Zeroizing::new(Vec::with_capacity(ceiling));
     let mut chunk = Zeroizing::new([0u8; 8192]);
     ensure!(Instant::now() < bound.work, "capture expired before spawn");
     use std::os::windows::process::CommandExt;
@@ -179,11 +183,11 @@ async fn collect(
                 &mut f.stdout_bytes,
                 &mut f.stdout_eof,
                 Some(&mut stdout),
-                true,
+                Some(ceiling),
             )
             .is_err()
             {
-                f.classification = if f.stdout_bytes > CAP {
+                f.classification = if f.stdout_bytes > ceiling {
                     "stdout_cap"
                 } else {
                     "stdout_read"
@@ -196,11 +200,11 @@ async fn collect(
                 &mut f.stderr_bytes,
                 &mut f.stderr_eof,
                 None,
-                true,
+                Some(ceiling),
             )
             .is_err()
             {
-                f.classification = if f.stderr_bytes > CAP {
+                f.classification = if f.stderr_bytes > ceiling {
                     "stderr_cap"
                 } else {
                     "stderr_read"
@@ -235,7 +239,7 @@ async fn collect(
                 &mut f.stdout_bytes,
                 &mut f.stdout_eof,
                 None,
-                false,
+                None,
             )
             .is_err()
                 || read(
@@ -244,7 +248,7 @@ async fn collect(
                     &mut f.stderr_bytes,
                     &mut f.stderr_eof,
                     None,
-                    false,
+                    None,
                 )
                 .is_err()
             {
@@ -263,6 +267,7 @@ pub(super) fn capture(
     bound: &s53_deadline::CaptureBound,
     facts: &mut Facts,
     logs: &mut Logs,
+    ceiling: usize,
 ) -> Result<Zeroizing<Vec<u8>>> {
     let mut run = || {
         let runtime = tokio::runtime::Builder::new_current_thread()
@@ -270,7 +275,7 @@ pub(super) fn capture(
             .enable_time()
             .build()
             .map_err(|_| anyhow::anyhow!("capture io runtime"))?;
-        runtime.block_on(collect(command, bound, facts, logs))
+        runtime.block_on(collect(command, bound, facts, logs, ceiling))
     };
     match tokio::runtime::Handle::try_current() {
         Ok(handle) if handle.runtime_flavor() == tokio::runtime::RuntimeFlavor::MultiThread => {

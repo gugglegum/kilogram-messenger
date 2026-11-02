@@ -1,0 +1,544 @@
+{
+  "classification": "Root independent A8a R2 acceptance audit; core only; historical OS support not new-image OS execution",
+  "baseline": "546487d9c8001c6d110444a05acb3c0d1c381772",
+  "manifest": {
+    "path": ".tmp/s54-block3e-p11a8a-r2-01/handoff-manifest.json",
+    "bytes": 21971,
+    "sha256": "2d7508ba797e1ac8d6a9bfb422199033a14fba6da3bcb12ac6fab95e38ba9efe"
+  },
+  "review": {
+    "path": ".tmp/s54-block3e-p11a8a-r2-01/review.json",
+    "bytes": 19257,
+    "sha256": "f595c305dbfb1dd7f9fa9a77ad77c5aeca56724803344e1ae3afc2824cefe343"
+  },
+  "checked_pins": 1519,
+  "current_actual_calls": [
+    {
+      "id": "exec-6d3b7b5c-657c-4074-83ef-5b11de83abc9",
+      "exit_code": 0,
+      "duration_ms": 5517,
+      "receipt": {
+        "step": "fmt-01",
+        "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "argv": [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-r2-01\\fmt.ps1"
+        ],
+        "actual_child_exit_code": 0,
+        "exit_code": 0,
+        "elapsed_seconds": 4.1979075,
+        "cleanup_verified": true,
+        "error": null,
+        "outer_job_owner_pid": 9788,
+        "actual_launcher_membership_verified": true,
+        "work_expired": false,
+        "members_before_cleanup": [],
+        "members_after_cleanup": [],
+        "capture_harness_membership": []
+      }
+    },
+    {
+      "id": "exec-cbc57382-078c-4eab-bf58-e2888b14145d",
+      "exit_code": 0,
+      "duration_ms": 12116,
+      "receipt": {
+        "step": "clippy-01",
+        "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "argv": [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-r2-01\\clippy.ps1"
+        ],
+        "actual_child_exit_code": 0,
+        "exit_code": 0,
+        "elapsed_seconds": 10.8544002,
+        "cleanup_verified": true,
+        "error": null,
+        "outer_job_owner_pid": 23296,
+        "actual_launcher_membership_verified": true,
+        "work_expired": false,
+        "members_before_cleanup": [],
+        "members_after_cleanup": [],
+        "capture_harness_membership": []
+      }
+    },
+    {
+      "id": "exec-c4630636-90fa-41be-b28d-7f96abe83e78",
+      "exit_code": 0,
+      "duration_ms": 99150,
+      "receipt": {
+        "step": "compile-01",
+        "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "argv": [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-r2-01\\compile.ps1",
+          "-Capture",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-r2-01\\compile-01.capture.json"
+        ],
+        "actual_child_exit_code": 0,
+        "exit_code": 0,
+        "elapsed_seconds": 98.26476,
+        "cleanup_verified": true,
+        "error": null,
+        "outer_job_owner_pid": 63216,
+        "actual_launcher_membership_verified": true,
+        "work_expired": false,
+        "members_before_cleanup": [
+          38476
+        ],
+        "members_after_cleanup": [],
+        "capture_harness_membership": []
+      }
+    },
+    {
+      "id": "exec-73abc8aa-311d-4bff-80c2-2920e5042a71",
+      "exit_code": 0,
+      "duration_ms": 18693,
+      "receipt": {
+        "step": "pure-01",
+        "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "argv": [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-r2-01\\pure.ps1",
+          "-Step",
+          "pure-01"
+        ],
+        "actual_child_exit_code": 0,
+        "exit_code": 0,
+        "elapsed_seconds": 17.55758,
+        "cleanup_verified": true,
+        "error": null,
+        "outer_job_owner_pid": 22628,
+        "actual_launcher_membership_verified": true,
+        "work_expired": false,
+        "members_before_cleanup": [],
+        "members_after_cleanup": [],
+        "capture_harness_membership": []
+      }
+    }
+  ],
+  "historical_actual_calls": [
+    {
+      "id": "exec-811a325f-56b5-40be-b8fe-a3e610222f4e",
+      "exit_code": 0,
+      "duration_ms": 5969,
+      "receipt": {
+        "step": "fmt-01",
+        "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "argv": [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\fmt.ps1"
+        ],
+        "actual_child_exit_code": 0,
+        "exit_code": 0,
+        "elapsed_seconds": 4.613374,
+        "cleanup_verified": true,
+        "error": null,
+        "outer_job_owner_pid": 34272,
+        "actual_launcher_membership_verified": true,
+        "work_expired": false,
+        "members_before_cleanup": [],
+        "members_after_cleanup": [],
+        "capture_harness_membership": []
+      }
+    },
+    {
+      "id": "exec-846c43fd-10eb-4683-aa55-0bc81d97db73",
+      "exit_code": 1,
+      "duration_ms": 13381,
+      "receipt": {
+        "step": "clippy-01",
+        "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "argv": [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\clippy.ps1"
+        ],
+        "actual_child_exit_code": 101,
+        "exit_code": 1,
+        "elapsed_seconds": 12.2311678,
+        "cleanup_verified": true,
+        "error": "Native check exit 101",
+        "outer_job_owner_pid": 48080,
+        "actual_launcher_membership_verified": true,
+        "work_expired": false,
+        "members_before_cleanup": [],
+        "members_after_cleanup": [],
+        "capture_harness_membership": []
+      }
+    },
+    {
+      "id": "exec-bac5de0f-e9e4-4d8f-afa4-ac3660328489",
+      "exit_code": 0,
+      "duration_ms": 6090,
+      "receipt": {
+        "step": "fmt-02",
+        "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "argv": [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\fmt.ps1"
+        ],
+        "actual_child_exit_code": 0,
+        "exit_code": 0,
+        "elapsed_seconds": 4.6749506,
+        "cleanup_verified": true,
+        "error": null,
+        "outer_job_owner_pid": 42756,
+        "actual_launcher_membership_verified": true,
+        "work_expired": false,
+        "members_before_cleanup": [],
+        "members_after_cleanup": [],
+        "capture_harness_membership": []
+      }
+    },
+    {
+      "id": "exec-4060143a-4272-4a73-a29a-c8fce24b01f2",
+      "exit_code": 0,
+      "duration_ms": 12001,
+      "receipt": {
+        "step": "clippy-02",
+        "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "argv": [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\clippy.ps1"
+        ],
+        "actual_child_exit_code": 0,
+        "exit_code": 0,
+        "elapsed_seconds": 10.7501079,
+        "cleanup_verified": true,
+        "error": null,
+        "outer_job_owner_pid": 61364,
+        "actual_launcher_membership_verified": true,
+        "work_expired": false,
+        "members_before_cleanup": [],
+        "members_after_cleanup": [],
+        "capture_harness_membership": []
+      }
+    },
+    {
+      "id": "exec-df4d249a-befa-44a9-9ae6-decd28342758",
+      "exit_code": 0,
+      "duration_ms": 6005,
+      "receipt": {
+        "step": "fmt-03",
+        "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "argv": [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\fmt.ps1"
+        ],
+        "actual_child_exit_code": 0,
+        "exit_code": 0,
+        "elapsed_seconds": 4.6545919,
+        "cleanup_verified": true,
+        "error": null,
+        "outer_job_owner_pid": 18516,
+        "actual_launcher_membership_verified": true,
+        "work_expired": false,
+        "members_before_cleanup": [],
+        "members_after_cleanup": [],
+        "capture_harness_membership": []
+      }
+    },
+    {
+      "id": "exec-61bb76c8-90d4-4570-aae5-a1cf8a76f0a3",
+      "exit_code": 0,
+      "duration_ms": 12519,
+      "receipt": {
+        "step": "clippy-03",
+        "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "argv": [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\clippy.ps1"
+        ],
+        "actual_child_exit_code": 0,
+        "exit_code": 0,
+        "elapsed_seconds": 11.3185541,
+        "cleanup_verified": true,
+        "error": null,
+        "outer_job_owner_pid": 29620,
+        "actual_launcher_membership_verified": true,
+        "work_expired": false,
+        "members_before_cleanup": [],
+        "members_after_cleanup": [],
+        "capture_harness_membership": []
+      }
+    },
+    {
+      "id": "exec-2ca50fd4-f1d7-403d-aa29-2c2fe39a09a5",
+      "exit_code": 0,
+      "duration_ms": 99462,
+      "receipt": {
+        "step": "compile-01",
+        "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "argv": [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\compile.ps1",
+          "-Capture",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\compile-01.capture.json"
+        ],
+        "actual_child_exit_code": 0,
+        "exit_code": 0,
+        "elapsed_seconds": 98.6147848,
+        "cleanup_verified": true,
+        "error": null,
+        "outer_job_owner_pid": 70476,
+        "actual_launcher_membership_verified": true,
+        "work_expired": false,
+        "members_before_cleanup": [
+          65316
+        ],
+        "members_after_cleanup": [],
+        "capture_harness_membership": []
+      }
+    },
+    {
+      "id": "exec-f113eab0-55e9-482a-9c0c-f445c16f4742",
+      "exit_code": 0,
+      "duration_ms": 50146,
+      "receipt": {
+        "step": "pure-01",
+        "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+        "argv": [
+          "-NoProfile",
+          "-NonInteractive",
+          "-File",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure.ps1",
+          "-Step",
+          "pure-01"
+        ],
+        "actual_child_exit_code": 0,
+        "exit_code": 0,
+        "elapsed_seconds": 49.0246126,
+        "cleanup_verified": true,
+        "error": null,
+        "outer_job_owner_pid": 8468,
+        "actual_launcher_membership_verified": true,
+        "work_expired": false,
+        "members_before_cleanup": [],
+        "members_after_cleanup": [],
+        "capture_harness_membership": [
+          {
+            "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-68444.json",
+            "attempt": "pure-01",
+            "owner_pid": 8468,
+            "launcher_pid": 59040,
+            "harness_pid": 68444,
+            "harness_start_utc": "2026-11-02T02:46:26.5622827Z",
+            "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+            "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+            "actual_handle_membership_verified": true,
+            "nonce": "68444-1793587586578"
+          },
+          {
+            "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-30524.json",
+            "attempt": "pure-01",
+            "owner_pid": 8468,
+            "launcher_pid": 59040,
+            "harness_pid": 30524,
+            "harness_start_utc": "2026-11-02T02:46:32.3751912Z",
+            "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+            "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+            "actual_handle_membership_verified": true,
+            "nonce": "30524-1793587592394"
+          },
+          {
+            "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-63240.json",
+            "attempt": "pure-01",
+            "owner_pid": 8468,
+            "launcher_pid": 59040,
+            "harness_pid": 63240,
+            "harness_start_utc": "2026-11-02T02:46:33.6321011Z",
+            "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+            "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+            "actual_handle_membership_verified": true,
+            "nonce": "63240-1793587593651"
+          },
+          {
+            "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-64440.json",
+            "attempt": "pure-01",
+            "owner_pid": 8468,
+            "launcher_pid": 59040,
+            "harness_pid": 64440,
+            "harness_start_utc": "2026-11-02T02:46:36.4848773Z",
+            "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+            "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+            "actual_handle_membership_verified": true,
+            "nonce": "64440-1793587596503"
+          },
+          {
+            "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-58784.json",
+            "attempt": "pure-01",
+            "owner_pid": 8468,
+            "launcher_pid": 59040,
+            "harness_pid": 58784,
+            "harness_start_utc": "2026-11-02T02:46:37.4039042Z",
+            "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+            "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+            "actual_handle_membership_verified": true,
+            "nonce": "58784-1793587597424"
+          },
+          {
+            "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-52492.json",
+            "attempt": "pure-01",
+            "owner_pid": 8468,
+            "launcher_pid": 59040,
+            "harness_pid": 52492,
+            "harness_start_utc": "2026-11-02T02:46:38.3752106Z",
+            "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+            "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+            "actual_handle_membership_verified": true,
+            "nonce": "52492-1793587598394"
+          },
+          {
+            "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-69748.json",
+            "attempt": "pure-01",
+            "owner_pid": 8468,
+            "launcher_pid": 59040,
+            "harness_pid": 69748,
+            "harness_start_utc": "2026-11-02T02:46:39.2886175Z",
+            "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+            "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+            "actual_handle_membership_verified": true,
+            "nonce": "69748-1793587599306"
+          },
+          {
+            "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-60640.json",
+            "attempt": "pure-01",
+            "owner_pid": 8468,
+            "launcher_pid": 59040,
+            "harness_pid": 60640,
+            "harness_start_utc": "2026-11-02T02:46:44.3770797Z",
+            "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+            "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+            "actual_handle_membership_verified": true,
+            "nonce": "60640-1793587604394"
+          },
+          {
+            "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-39124.json",
+            "attempt": "pure-01",
+            "owner_pid": 8468,
+            "launcher_pid": 59040,
+            "harness_pid": 39124,
+            "harness_start_utc": "2026-11-02T02:46:49.4722536Z",
+            "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+            "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+            "actual_handle_membership_verified": true,
+            "nonce": "39124-1793587609491"
+          }
+        ]
+      }
+    }
+  ],
+  "current_isolated_pass": 10,
+  "historical_isolated_pass": 20,
+  "current_fresh_units": 501,
+  "current_source_inputs": 593,
+  "historical_os_image": {
+    "path": "E:/AI-Projects/kilogram-p2p-messenger/target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe",
+    "bytes": 18026496,
+    "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+    "archive": ".tmp/s54-block3e-p11a8a-r2-01/first-revision/target/verification-scale/deps/kilogram-cli-test-migration_s5_process-tests.exe"
+  },
+  "current_artifacts": [
+    {
+      "package": "kilogram-cli",
+      "kind": "bin",
+      "target": "kilogram-cli",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 50785280,
+      "sha256": "8886785ae37cb0fd4f5aa27828f1b39dcc269991c55c899bd53bdd4e0eb75088",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "lib",
+      "target": "kilogram_cli",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 32650240,
+      "sha256": "bf93aeb36e1f03960ac33f36692564908f94a097eabde30cf34b88782171763d",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 18025984,
+      "sha256": "52e605eb54fe026c5426ee2af5521afb32a0a3520a62668c3f0cbd4d17b1476e",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "runtime2_process",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 23689728,
+      "sha256": "8eca44daa41d1ba117c108732e0c1ebc0e41ac688ee14ac70bb6d2210c1914cd",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-transport-iroh",
+      "kind": "lib",
+      "target": "kilogram_transport_iroh",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe",
+      "bytes": 19419648,
+      "sha256": "f5822cd40225a7ac12dbc2c58264439b8e3c5d4b4d20cf87309b9aa28f2023ad",
+      "profile": "verification-scale"
+    },
+    {
+      "package": "kilogram-transport-iroh",
+      "kind": "test",
+      "target": "local_relay_transport",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-transport-iroh-test-local_relay_transport-tests.exe",
+      "bytes": 22317056,
+      "sha256": "552cc6c23452ad50c94b65391e33df462b89e14551c7eac51304e55872788cf0",
+      "profile": "verification-scale"
+    }
+  ],
+  "r1_r2_source_review": "resolved; boundary settlement/no double-count/closing exclusion and immutable post-seal guards with regressions",
+  "navigation_preserved": [
+    {
+      "path": "ai-docs/README.md",
+      "bytes": 210074,
+      "sha256": "ae9bebb51c93508b583b0d60082dba9fb045048abe94872110dfc7841554ab9e"
+    },
+    {
+      "path": "ai-docs/chat-coordination.md",
+      "bytes": 165624,
+      "sha256": "b54423bbe9d02f51c2340f32bdaa2be4d57e6b0ed28020b6ec22a74f82dd4b15"
+    },
+    {
+      "path": "ai-docs/next-stage-plan.md",
+      "bytes": 60232,
+      "sha256": "52e158dd72339b23ef93de531300a57f60345dfb3b46cd7b41c044978c2906c1"
+    }
+  ],
+  "integrated_lifecycle_coverage": false,
+  "whole_execution": false,
+  "full_local_audit": {
+    "path": ".tmp/s54-block3e-p11a8a-r2-01/root-verification.json",
+    "bytes": 347272,
+    "sha256": "655ba91c394fb6c0db7bbe1d56858f099fd3a90f0066cfff7f6d040c22ccc7cb"
+  },
+  "audit_command_result": "996fbc session82265 completed b90f4a exit0"
+}

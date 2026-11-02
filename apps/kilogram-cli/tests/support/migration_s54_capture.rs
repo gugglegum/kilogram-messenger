@@ -180,6 +180,26 @@ fn transform(
     Ok((original, durable))
 }
 fn run(mut command: Command) -> Result<Value> {
+    run_kind(&mut command, Kind::Status)
+}
+enum Kind {
+    Status,
+    Memory(u32, Instant),
+}
+/// Closed internal memory query, not an arbitrary command/script interface.
+pub(super) fn memory_command(pid: u32) -> String {
+    format!(
+        "$ErrorActionPreference='Stop';$p=[Diagnostics.Process]::GetProcessById({pid});try{{$h=$p.Handle;$t=$p.StartTime.ToUniversalTime().Ticks;$p.Refresh();$b=$p.PrivateMemorySize64;[Console]::Write(('{{\"pid\":'+$p.Id.ToString([Globalization.CultureInfo]::InvariantCulture)+',\"ticks\":'+$t.ToString([Globalization.CultureInfo]::InvariantCulture)+',\"bytes\":'+$b.ToString([Globalization.CultureInfo]::InvariantCulture)+'}}'))}}finally{{$p.Dispose()}}"
+    )
+}
+pub(super) fn memory_query(shell: &Path, pid: u32, until: Instant) -> Result<Value> {
+    ensure!(pid > 0, "memory owned PID");
+    let script = memory_command(pid);
+    let mut cmd = command(shell);
+    cmd.args(["-NoProfile", "-NonInteractive", "-Command", &script]);
+    run_kind(&mut cmd, Kind::Memory(pid, until))
+}
+fn run_kind(command: &mut Command, kind: Kind) -> Result<Value> {
     healthy()?;
     let mut bound = s53_deadline::capture_bound()?;
     CAPTURE.with_borrow(|s| {
@@ -195,13 +215,20 @@ fn run(mut command: Command) -> Result<Value> {
             .checked_sub(Duration::from_secs(2))
             .context("capture cleanup reserve")?,
     );
+    let ceiling = match kind {
+        Kind::Status => CAP,
+        Kind::Memory(_, until) => {
+            bound.work = bound.work.min(until);
+            4096
+        }
+    };
     let mut logs = Logs::new(&bound)?;
     let mut facts = Facts {
         classification: "capture_setup",
         ..Default::default()
     };
     #[cfg(windows)]
-    let captured = pipe::capture(&mut command, &bound, &mut facts, &mut logs);
+    let captured = pipe::capture(command, &bound, &mut facts, &mut logs, ceiling);
     #[cfg(not(windows))]
     let captured: Result<Zeroizing<Vec<u8>>> = Err(anyhow::anyhow!("capture Windows-only"));
     let result = captured.and_then(|raw| {
@@ -209,7 +236,17 @@ fn run(mut command: Command) -> Result<Value> {
             Instant::now() < bound.work,
             "capture deadline before transform"
         );
-        let (original, durable) = transform(&raw, &mut facts, live_l1::status_fingerprints)?;
+        let (original, durable) = match kind {
+            Kind::Status => transform(&raw, &mut facts, live_l1::status_fingerprints)?,
+            Kind::Memory(pid, _) => {
+                let value = s54_memory::parse_memory(&raw, pid).map_err(|_| {
+                    facts.classification = "memory_schema";
+                    anyhow::anyhow!("memory query schema")
+                })?;
+                let safe = serde_json::to_vec(&value)?;
+                (value, safe)
+            }
+        };
         ensure!(
             Instant::now() < bound.work,
             "capture deadline before durable write"

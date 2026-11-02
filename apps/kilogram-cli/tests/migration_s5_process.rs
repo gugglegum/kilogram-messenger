@@ -6,6 +6,9 @@ mod live_l1;
 mod s53_deadline;
 #[path = "support/migration_s54_capture.rs"]
 mod s54_capture;
+#[allow(dead_code)] // A8a core; shared lifecycle wiring is the separate A8b gate.
+#[path = "support/migration_s54_memory.rs"]
+mod s54_memory;
 use anyhow::{Context, Result, ensure};
 use kilogram_cli::ordered_dialog::handshake::Credentials;
 use serde_json::{Value, json};

@@ -1,0 +1,23 @@
+# P11A8a implementation review — two focused corrections
+
+2026-11-02, parent546487d9c8001c6d110444a05acb3c0d1c381772. Publication NOT yet accepted. Preserve the submitted48-path manifest14175B/SHA256a5bb2e23d797c9b5ff3da6a8d285a1bcf55e90233e487d3084c1e1cf7cb54b5d and review85235B/SHA25609c6756b28a4a72e83e2d82a93015fe86b0d386f1c24dea81d49c871213f4b08 as first-revision evidence.
+
+Root read all seven source/fixture changes and the full memory tests. Actual desktop receipts were independently retrieved and saved in .tmp/s54-block3e-p11a8a-01/root-actual-calls.json. Root b8d03e confirmed all48 candidate raw pins,8 actual validation calls,20 isolated PASS,6 empty aggregates,9 actual harness-membership records, and all3 real memory query results/bytes. Initial style failure is preserved. This is not final compiler/publication acceptance. Scope remains core-only; no A8b/whole execution.
+
+## R1 — missed periodic slots vanish when no later progress query occurs
+
+migration_s54_memory.rs:328 increments missed_slots only when beginning Reason::Progress. BeforeStop, request_stop_at and close_at never settle the remaining due slots. Example: register/start at0, no progress (a long synchronous interval), successful BeforeStop at20001, request/close immediately. The finalized summary reports missed_periodic_slots=0 although four5-second opportunities elapsed before stopping. The max-gap field exposes the duration but does not make the zero missed-slot count correct. The same undercount occurs when an earlier progress query is followed by a long pre-stop tail.
+
+Account for overdue slots through the live observation boundary, without double counting already-accounted intervals and without counting intentionally disabled post-request closing time as missed progress. Define exact-on-cadence boundary semantics explicitly (a boundary sample may satisfy that instant if documented); use20001ms in the regression to avoid that ambiguity. Add focused pure checks for no progress before late BeforeStop, progress then late BeforeStop, and a long normal closing tail that must remain separate. Do not add queries, shrink gap tolerance or change cadence/caps/workload.
+
+## R2 — rejected completion mutates finalized evidence
+
+migration_s54_memory.rs:345-414: complete_at calls checked, which rejects sealed without setting failed; its outer error handler nevertheless marks rows[a.row].failed=true. A valid saved Attempt is Copy. Complete it, complete the lifetime and finish successfully, then replay that original completion: it returns Err but corrupts an already-finalized row, while diagnostic.coverage_valid stays true because failed and complete() do not inspect that row flag. Other cleanup mutators also bypass sealed and can change the finalized failure flag on rejected post-final calls.
+
+Make finalization a consistent immutable boundary for all mutating entry points: reject post-seal operations before touching rows/lifetimes/failure flags. Retain the intentional ability to record actual cleanup outcomes AFTER observation failure but BEFORE successful finalization. Do not suppress evidence of errors during an active run. Add a pure regression retaining an actual Attempt, finalizing, replaying its completion and attempting stop/close mutations; assert rejection and byte-equivalent serialized rows/diagnostic before/after. Existing failed-observation cleanup test must still pass.
+
+## Requested follow-up
+
+Fix these two core issues and inspect neighboring transitions for the same causes. No redesign, A8b wiring, product/dependency/unsafe changes or new OS experiment. Preserve first-revision code/evidence, then format/lint/compile and focused memory-ledger tests including both regressions. The unchanged A7 capture/query/OS behavior does not need the13 A7 checks or the real sleeper rerun solely for these ledger fixes. Retain historical actual OS evidence explicitly bound to the first-revision image; rehash unchanged query/capture/fixture dependencies and state that it is supporting historical evidence, not a new-image OS execution claim. If you materially alter those paths, run the directly affected checks normally. New-image compiler inputs/freshness must correspond to the corrected source.
+
+Return one revised implementation report and exact candidate manifest with clear old/new evidence distinction. Do not overwrite first raw logs/review/manifest; use a revision-specific directory or filenames. No commit/push until acceptance, no additional contract/docs-only round. Ordinary fixes may proceed autonomously. Send substantive callback then end without polling.

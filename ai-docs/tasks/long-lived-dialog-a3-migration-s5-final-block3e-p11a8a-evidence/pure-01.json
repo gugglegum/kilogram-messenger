@@ -1,0 +1,132 @@
+{
+  "step": "pure-01",
+  "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure.ps1",
+    "-Step",
+    "pure-01"
+  ],
+  "actual_child_exit_code": 0,
+  "exit_code": 0,
+  "elapsed_seconds": 49.0246126,
+  "cleanup_verified": true,
+  "error": null,
+  "outer_job_owner_pid": 8468,
+  "actual_launcher_membership_verified": true,
+  "work_expired": false,
+  "members_before_cleanup": [],
+  "members_after_cleanup": [],
+  "capture_harness_membership": [
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-68444.json",
+      "attempt": "pure-01",
+      "owner_pid": 8468,
+      "launcher_pid": 59040,
+      "harness_pid": 68444,
+      "harness_start_utc": "2026-11-02T02:46:26.5622827Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+      "actual_handle_membership_verified": true,
+      "nonce": "68444-1793587586578"
+    },
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-30524.json",
+      "attempt": "pure-01",
+      "owner_pid": 8468,
+      "launcher_pid": 59040,
+      "harness_pid": 30524,
+      "harness_start_utc": "2026-11-02T02:46:32.3751912Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+      "actual_handle_membership_verified": true,
+      "nonce": "30524-1793587592394"
+    },
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-63240.json",
+      "attempt": "pure-01",
+      "owner_pid": 8468,
+      "launcher_pid": 59040,
+      "harness_pid": 63240,
+      "harness_start_utc": "2026-11-02T02:46:33.6321011Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+      "actual_handle_membership_verified": true,
+      "nonce": "63240-1793587593651"
+    },
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-64440.json",
+      "attempt": "pure-01",
+      "owner_pid": 8468,
+      "launcher_pid": 59040,
+      "harness_pid": 64440,
+      "harness_start_utc": "2026-11-02T02:46:36.4848773Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+      "actual_handle_membership_verified": true,
+      "nonce": "64440-1793587596503"
+    },
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-58784.json",
+      "attempt": "pure-01",
+      "owner_pid": 8468,
+      "launcher_pid": 59040,
+      "harness_pid": 58784,
+      "harness_start_utc": "2026-11-02T02:46:37.4039042Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+      "actual_handle_membership_verified": true,
+      "nonce": "58784-1793587597424"
+    },
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-52492.json",
+      "attempt": "pure-01",
+      "owner_pid": 8468,
+      "launcher_pid": 59040,
+      "harness_pid": 52492,
+      "harness_start_utc": "2026-11-02T02:46:38.3752106Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+      "actual_handle_membership_verified": true,
+      "nonce": "52492-1793587598394"
+    },
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-69748.json",
+      "attempt": "pure-01",
+      "owner_pid": 8468,
+      "launcher_pid": 59040,
+      "harness_pid": 69748,
+      "harness_start_utc": "2026-11-02T02:46:39.2886175Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+      "actual_handle_membership_verified": true,
+      "nonce": "69748-1793587599306"
+    },
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-60640.json",
+      "attempt": "pure-01",
+      "owner_pid": 8468,
+      "launcher_pid": 59040,
+      "harness_pid": 60640,
+      "harness_start_utc": "2026-11-02T02:46:44.3770797Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+      "actual_handle_membership_verified": true,
+      "nonce": "60640-1793587604394"
+    },
+    {
+      "request": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11a8a-01\\pure-01.admission\\join-39124.json",
+      "attempt": "pure-01",
+      "owner_pid": 8468,
+      "launcher_pid": 59040,
+      "harness_pid": 39124,
+      "harness_start_utc": "2026-11-02T02:46:49.4722536Z",
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification-scale\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "sha256": "b2a82f5bdfd96362bc3e2707e440a19135d445d162f25477ec8373b49cbeeea4",
+      "actual_handle_membership_verified": true,
+      "nonce": "39124-1793587609491"
+    }
+  ]
+}

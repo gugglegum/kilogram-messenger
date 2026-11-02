@@ -1,0 +1,23 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: this `if` statement can be collapsed
+   --> apps\kilogram-cli\tests\support\migration_s54_memory.rs:395:13
+    |
+395 | /             if let Ok(i) = self.index(a.token) {
+396 | |                 if self.lives[i].inflight == Some(a.row) {
+397 | |                     self.lives[i].inflight = None;
+398 | |                 }
+399 | |             }
+    | |_____________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#collapsible_if
+    = note: `-D clippy::collapsible-if` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::collapsible_if)]`
+help: collapse nested if block
+    |
+395 ~             if let Ok(i) = self.index(a.token)
+396 ~                 && self.lives[i].inflight == Some(a.row) {
+397 |                     self.lives[i].inflight = None;
+398 ~                 }
+    |
+
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 1 previous error

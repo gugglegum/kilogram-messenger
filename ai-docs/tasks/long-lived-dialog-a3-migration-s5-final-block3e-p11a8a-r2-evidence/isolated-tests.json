@@ -1,0 +1,65 @@
+{
+  "format_version": 1,
+  "tests": [
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_memory::tests::s54_memory_cadence_boundaries_gaps_and_no_queries_while_closing"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_memory::tests::s54_memory_identity_foreign_overlap_creation_ticks_and_late_setup_bind"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_memory::tests::s54_memory_count_span_many_short_restarts_and_exact_full_bound"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_memory::tests::s54_memory_failure_is_not_zero_missing_coverage_and_cleanup_stays_recordable"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_memory::tests::s54_memory_stats_each_candidate_validated_before_pending_aggregation"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_memory::tests::s54_memory_wire_schema_cap_and_safe_errors"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_memory::tests::s54_memory_r1_late_stop_settles_missing_progress_and_exact_due_boundary"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_memory::tests::s54_memory_r1_progress_then_late_stop_does_not_double_count"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_memory::tests::s54_memory_r1_normal_closing_tail_is_separate_from_missed_slots"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "s54_memory::tests::s54_memory_r2_finalized_rows_summary_and_cleanup_are_immutable"
+    }
+  ]
+}
