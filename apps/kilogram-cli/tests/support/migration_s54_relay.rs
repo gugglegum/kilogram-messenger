@@ -1,14 +1,14 @@
 //! Dormant consuming P10B. One relay, original B640, same owned incomplete11/12.
 use super::*;
 #[path = "migration_s54_relay_live.rs"]
-mod live;
+pub(super) mod live;
 #[cfg(test)]
 #[path = "migration_s54_relay_locator_tests.rs"]
 mod locator_tests;
 #[path = "migration_s54_relay_locators.rs"]
-mod locators;
+pub(super) mod locators;
 #[path = "migration_s54_relay_proofs.rs"]
-mod proofs;
+pub(super) mod proofs;
 #[cfg(test)]
 #[path = "migration_s54_relay_tests.rs"]
 mod tests;

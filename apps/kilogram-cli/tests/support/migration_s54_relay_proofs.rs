@@ -1,7 +1,7 @@
 //! P10B predicates, shared by the inactive controller and focused pure tests.
 use super::*;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum Stage {
+pub(in super::super) enum Stage {
     Held,
     Ack,
     Released,
@@ -30,7 +30,7 @@ pub(super) fn schedules(base: &[[Value; 2]; 2], stage: Stage) -> [[Value; 2]; 2]
     }
     out
 }
-pub(super) fn controls(
+pub(in super::super) fn controls(
     actual: &[[Value; 2]; 2],
     base: &[[Value; 2]; 2],
     stage: Stage,
@@ -67,7 +67,7 @@ pub(super) fn held(base: &[[Value; 2]; 2]) -> Result<()> {
     }
     controls(base, base, Stage::Held)
 }
-pub(super) fn same(
+pub(in super::super) fn same(
     row: &Value,
     before: &Value,
     owner: usize,
@@ -157,7 +157,7 @@ pub(super) fn same(
     }
     Ok(())
 }
-pub(super) fn work(
+pub(in super::super) fn work(
     actual: oracle::Counts,
     owner: usize,
     stage: Stage,
@@ -178,7 +178,7 @@ pub(super) fn work(
     );
     Ok(())
 }
-pub(super) fn packet(
+pub(in super::super) fn packet(
     packet: Option<observations::PacketObservation>,
     owner: usize,
     complete: bool,
@@ -259,7 +259,7 @@ pub(super) fn profile(before: &Value, actual: &Value, url: &str) -> Result<()> {
     );
     Ok(())
 }
-pub(super) fn history(
+pub(in super::super) fn history(
     rows: &[Value],
     expected: &BTreeMap<String, Value>,
     frontier: [u64; 2],

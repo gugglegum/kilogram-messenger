@@ -15,6 +15,8 @@ mod catchup;
 mod control;
 #[path = "migration_s54_early.rs"]
 mod early;
+#[path = "migration_s54_final.rs"]
+mod final_phase;
 #[path = "migration_s54_graph.rs"]
 mod graph;
 #[path = "migration_s54_handoff.rs"]

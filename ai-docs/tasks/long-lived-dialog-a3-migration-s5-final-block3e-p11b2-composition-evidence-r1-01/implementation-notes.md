@@ -1,0 +1,9 @@
+# P11B2 R1 exact repair premises
+
+Root review R1 rejected the R0 candidate before full artifact audit. R0 exact43/raw204979B candidate, manifest and EXE are preserved here; original evidence directory and `.tmp/s54-block3e-p11b2-01` are unchanged.
+
+Decoder saved_pending is append-only: pause_observations inserts the typed row; native_commit updates counts/packet, not pending_rows. Runtime receive2 persists/emits Pending for a previously absent received source before drain2 materializes it. P10 starts these fresh relay lifetimes with sole original B640 missing at A and no pending at stopped route cut. Thus A must have exactly the actual decoded (C1,peer-role1,640,original EventID) pending history; B must have none. Entry captures these real maps against original source/PID/nonce. Old samples require exact map/key equality, including generation/operation. Fresh restarted nonces require empty history. Fresh final Stats/source/reader assertions independently keep current pending/debt zero. No history is cleared in production and P10 remains unchanged.
+
+Three regressions feed the existing Decoder start/saved_pending/native_commit envelopes. They prove the history survives successful decrypt, exercise the actual PendingHistory capture/check gates, reject missing/foreign/changed/extra tuple or content, owner/source/nonce substitution, and reject the same B640 history on a new zero-count/no-packet incarnation. A shared production final status predicate still rejects current pending1. Attack fixtures directly mutate cloned decoded maps only in negative test cases; no product/history mutation is added.
+
+Format -> strict Clippy -> compile-only -> exact stable focused tests using existing Jobs2/BelowNormal/offline/locked watchdogs. No actual messenger/profile/private/network/whole scenario or commit/push. Current candidate will have new evidence/pins/allowlist; no overwrite of rejected candidate evidence.

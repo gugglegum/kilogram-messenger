@@ -66,7 +66,9 @@ impl Cut {
         Ok(())
     }
 }
-fn expected(previous: &relay::Continuation) -> Result<[[BTreeMap<String, Value>; 2]; 2]> {
+pub(super) fn expected(
+    previous: &relay::Continuation,
+) -> Result<[[BTreeMap<String, Value>; 2]; 2]> {
     let c2 = &previous.previous.previous.previous.c2_history;
     let mut maps = std::array::from_fn(|o| {
         [
@@ -109,6 +111,18 @@ fn expected(previous: &relay::Continuation) -> Result<[[BTreeMap<String, Value>;
     Ok(maps)
 }
 pub(super) fn read(previous: &mut relay::Continuation) -> Result<Cut> {
+    read_cut(previous, None)
+}
+/// Cut-local observations remain separate from the immutable P10 relay rows.
+pub(super) struct Current {
+    pub keys: [oracle::Incarnation; 2],
+    pub rows: [[Value; 2]; 2],
+    pub associations: Value,
+}
+pub(super) fn read_current(previous: &mut relay::Continuation, current: &Current) -> Result<Cut> {
+    read_cut(previous, Some(current))
+}
+fn read_cut(previous: &mut relay::Continuation, current: Option<&Current>) -> Result<Cut> {
     let (owners, accounting) = accounting::seal_read(|| {
         let maps = expected(previous)?;
         let immutable = previous.previous.previous.previous.previous.immutable()?;
@@ -118,13 +132,19 @@ pub(super) fn read(previous: &mut relay::Continuation) -> Result<Cut> {
                 && previous.previous.previous.ack_lost.digest == ack.digest,
             "original lost/replayed ACK immutable tuple/batch commitments"
         );
-        let public = previous.relay["final"].clone();
+        let public = current.map_or_else(|| previous.relay["final"].clone(), |v| json!(v.rows));
         let profiles = previous.relay["profiles"].clone();
         let held = previous.delivery["original_commitment"].clone();
         let relay_pid = previous.relay_pid;
         let s = &mut previous.previous.previous.previous.previous.controller;
         let _phase = s53_deadline::Phase::until(s.until)?;
         let closures = s.normal_pair()?;
+        if let Some(current) = current {
+            ensure!(
+                closures.each_ref().map(|c| c.key) == current.keys,
+                "cut-local public observations bound to both actual normal closure keys"
+            );
+        }
         s.current_intervals()?;
         let mut accounting = accounting::Draft::new(
             &s.accounting,

@@ -5,11 +5,11 @@ pub(super) struct Baseline {
     pub controls: [[Value; 2]; 2],
     pub requests: old::Id,
 }
-pub(super) struct Sample {
+pub(in super::super) struct Sample {
     pub raw: [Value; 2],
     pub rows: [[Value; 2]; 2],
 }
-pub(super) fn controls(s: &control::Controller) -> Result<[[Value; 2]; 2]> {
+pub(in super::super) fn controls(s: &control::Controller) -> Result<[[Value; 2]; 2]> {
     let mut out = Vec::new();
     for c in &s.controls {
         let mut both = Vec::new();
@@ -28,7 +28,7 @@ pub(super) fn controls(s: &control::Controller) -> Result<[[Value; 2]; 2]> {
     out.try_into()
         .map_err(|_| anyhow::anyhow!("actual two owners"))
 }
-fn requests(s: &control::Controller) -> Result<old::Id> {
+pub(in super::super) fn requests(s: &control::Controller) -> Result<old::Id> {
     ensure!(s.requests.len() == 1344, "same original Text request map");
     Ok(*blake3::hash(&serde_json::to_vec(
         &s.requests
@@ -77,7 +77,7 @@ pub(super) fn baseline(
         requests: requests(s)?,
     })
 }
-pub(super) fn keys(s: &mut control::Controller) -> Result<[oracle::Incarnation; 2]> {
+pub(in super::super) fn keys(s: &mut control::Controller) -> Result<[oracle::Incarnation; 2]> {
     s.check()?;
     Ok([
         s.running[0]

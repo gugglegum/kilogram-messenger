@@ -1,0 +1,173 @@
+{
+  "format_version": 1,
+  "tests": [
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::final_phase::tests::s54_p11b2_actual_driver_two_cuts_wait_reconcile_release_reopen_order",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::final_phase::tests::s54_p11b2_every_failure_including_cut2_relay_and_post_final_memory_prevents_return",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::final_phase::tests::s54_p11b2_new_nonce_pid_reuse_and_restart_zero_never_move_p10_decrypt",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::final_phase::tests::s54_p11b2_all_four_current_admissions_are_required",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::final_phase::tests::s54_p11b2_exact_outcome_lifetime_cardinality_and_actual_relay_wait",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::final_phase::tests::s54_p11b2_required_memory_missing_fixture_incomplete_or_failed_refuses",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::final_phase::tests::s54_p11b2_functional_result_is_bounded_and_public_keys_are_fingerprinted",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::control::normal::tests::s54_p11a1_only_requested_exit0_is_expected_and_acknowledgement_is_not_wait",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::control::normal::tests::s54_p11a1_either_exit_order_still_requires_both_waits_before_sources_and_reopen",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::observations::normal::tests::s54_p11a1_normal_eof_identity_source_and_root_order_cannot_be_guessed",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::observations::normal::tests::s54_p11a1_zero_work_restart_and_closed_summary_do_not_invent_operations",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::relay_owner::s54_p11a1_normal_relay_requires_published_stop_exit0_and_no_forced_cleanup",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::accounting::tests::s54_b1b_zero_restart_same_pid_new_lifetime_preserves_prior_p10_decrypt",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::accounting::tests::s54_b1b_restart_reused_nonce_missing_owner_nonzero_or_moved_old_work_refuses",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::intervals::tests::s54_b1a_missing_duplicate_foreign_open_or_unresolved_outcomes_refuse",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::relay::tests::s54_p10b_controls_keep_a_prefix_and_b_hold_until_ordered_release",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::relay::tests::s54_p10b_source_frontiers_allow_only_original_b640_then_require_complete_receipts",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::relay::tests::s54_p10b_history_maps_reject_body_id_request_format_or_order_substitution",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::reader::tests::s54_p11a5_both_active_original_control_scope_is_required",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::relay::locator_tests::s54_p11a2_current_requires_signature_scope_owner_peer_interval_and_exact_url_only_route",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::relay::locator_tests::s54_p11a2_expired_prior_allows_new_current_but_not_expired_equal_reuse",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::relay::locator_tests::s54_p11a2_lower_or_equal_revision_changed_signed_content_is_rejected",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::relay::locator_tests::s54_p11a2_newer_same_route_accepts_unchanged_or_rotated_endpoint",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::relay::locator_tests::s54_p11a2_prior_authentication_prevents_cross_row_or_independent_metadata_substitution",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::relay::locator_tests::s54_p11a2_same_route_reuses_exact_signed_bytes_for_both_contexts_and_owners",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::final_phase::tests::s54_p11b2_r1_materialized_pending_history_survives_with_zero_current_pending",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::final_phase::tests::s54_p11b2_r1_pending_history_rejects_missing_foreign_changed_extra_owner_context_role_key",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    },
+    {
+      "kind": "test",
+      "name": "live_l1::handoff::final_p5::final_phase::tests::s54_p11b2_r1_fresh_zero_restart_requires_empty_pending_observation_history",
+      "target": "migration_s5_process",
+      "package": "kilogram-cli"
+    }
+  ]
+}

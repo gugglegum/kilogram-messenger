@@ -1,0 +1,54 @@
+{
+  "files": [
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_p5.rs",
+      "sha256": "d056729fa0f5e0791bef97945ad355dfe1fe0f9495bb30406b2657c237d16675",
+      "bytes": 5173
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_relay.rs",
+      "sha256": "97632b38abf4c321e259b159fdbc06aadb7cb18c80c9f8b1641b7f008af29e19",
+      "bytes": 10926
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_relay_live.rs",
+      "sha256": "53ff7f0bee87cabaf429eb70f60ef13487fdd4dc49b219e56d6633786e591976",
+      "bytes": 10623
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_relay_locators.rs",
+      "sha256": "2f6b74623f0b652a174142e31b94f3bf2e64fb1de0100d6ceaefefccad9b40c6",
+      "bytes": 7778
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_relay_proofs.rs",
+      "sha256": "20b72d887a46d95de8db434e41abd77f8be178d20de32f026baef9d1dbf54ab1",
+      "bytes": 9554
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_reader.rs",
+      "sha256": "c82c021b0f6bba75d5432a175d322906b15aa23590cd6b0d1e81d0d00e8301a7",
+      "bytes": 7313
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_native_checkpoint.rs",
+      "sha256": "aab6c8e11d887de8ce533cfa7999fe79e03dfdaccdc379276d277c0bf2503c2b",
+      "bytes": 13540
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_final.rs",
+      "sha256": "c80934aa75698386e5570ef8537bf528d6784cf87ea274a131887a0e6df58e44",
+      "bytes": 14866
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_final_live.rs",
+      "sha256": "d72be50d993745e9e2ec281694ca8b307e9ae8ee9dbe6ec7b61d4754d4290a4c",
+      "bytes": 15019
+    },
+    {
+      "path": "apps/kilogram-cli/tests/support/migration_s54_final_tests.rs",
+      "sha256": "fd86f1bd5e08e944afcbca683fdeaefac704084d0c20f8ed0fcc59c45b54eb28",
+      "bytes": 18302
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+[
+  "apps/kilogram-cli/tests/support/migration_s54_p5.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_relay.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_relay_live.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_relay_locators.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_relay_proofs.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_reader.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_native_checkpoint.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_final.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_final_live.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_final_tests.rs"
+]

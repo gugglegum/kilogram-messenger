@@ -2,12 +2,12 @@
 use super::*;
 use kilogram_protocol::ordered_dialog_v2 as v2;
 #[derive(Clone)]
-pub(super) struct Locator {
+pub(in super::super) struct Locator {
     pub revision: u64,
     pub endpoint: old::Id,
     pub raw: Vec<u8>,
 }
-pub(super) struct Publications {
+pub(in super::super) struct Publications {
     pub rows: [[Locator; 2]; 2],
 }
 pub(super) fn verify(
@@ -115,14 +115,14 @@ fn scope(s: &control::Controller, context: usize) -> Result<v2::VerifiedExisting
     }
     Ok(scope)
 }
-pub(super) fn read(
+pub(in super::super) fn read(
     s: &mut control::Controller,
     url: Option<&str>,
     prior: Option<&Publications>,
 ) -> Result<Publications> {
     read_cut(s, url, Comparison::Strict(prior))
 }
-pub(super) fn read_same_route(
+pub(in super::super) fn read_same_route(
     s: &mut control::Controller,
     url: &str,
     prior: &Publications,
@@ -192,7 +192,7 @@ fn read_cut(
             .map_err(|_| anyhow::anyhow!("same two owners"))?,
     })
 }
-pub(super) fn admitted(
+pub(in super::super) fn admitted(
     row: &Value,
     route: &Value,
     own: &Locator,

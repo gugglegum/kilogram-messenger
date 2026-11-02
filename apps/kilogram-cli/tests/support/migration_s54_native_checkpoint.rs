@@ -88,6 +88,12 @@ pub(in super::super) struct Checkpoint {
     pub native_generation: u64,
 }
 impl Checkpoint {
+    pub fn public_facts(&self) -> Value {
+        json!({"context":state::hex(&self.context),"role":self.role,
+            "public_identity_fingerprint":state::hex(&self.public_identity),
+            "content_fingerprint":state::hex(&self.content),"next":self.next,
+            "native_generation":self.native_generation})
+    }
     pub fn lineage(
         &self,
         index: u8,
