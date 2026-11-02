@@ -1,0 +1,48 @@
+{
+  "classification": "read-only static source/ownership review before final measurements",
+  "head": "177d51091efb0c571da4f8cd59db21c9b88fb784",
+  "index_empty": true,
+  "tracked_changes": [
+    "ai-docs/README.md",
+    "ai-docs/chat-coordination.md",
+    "ai-docs/next-stage-plan.md",
+    "scripts/invoke-migration-s54-whole.ps1",
+    "scripts/test-migration-s54-admission.ps1"
+  ],
+  "production_diff_only_Get_S54Path": true,
+  "other_production_text_identical": true,
+  "branch_from_canonical_existing_probe": true,
+  "unchanged_fallback_loop": true,
+  "source_pins": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+      "bytes": 48432,
+      "sha256": "3ee51b8763f366b2f9dd5a2703449bf5664fea7c28b42924dab7d8364b8bbe64"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\test-migration-s54-admission.ps1",
+      "bytes": 43492,
+      "sha256": "c8720051f07da762c1ef6b9cf8091238f244f918743bda9deba7c0527a153ec2"
+    }
+  ],
+  "navigation": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\README.md",
+      "bytes": 210074,
+      "sha256": "ae9bebb51c93508b583b0d60082dba9fb045048abe94872110dfc7841554ab9e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\chat-coordination.md",
+      "bytes": 165490,
+      "sha256": "61b708437cdcd98e2921b8397535fc5819d6c4e80b44c87fd1556ad114d57923"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\next-stage-plan.md",
+      "bytes": 60232,
+      "sha256": "52e158dd72339b23ef93de531300a57f60345dfb3b46cd7b41c044978c2906c1"
+    }
+  ],
+  "no_Rust_edits": true,
+  "staged": false,
+  "committed": false
+}

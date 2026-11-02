@@ -1,0 +1,6 @@
+test-migration-s54-admission.ps1: E:\AI-Projects\kilogram-p2p-messenger\.tmp\s54-block4f-path-implementation-01\work.ps1:18
+Line |
+  18 |      & (Join-Path $root 'scripts/test-migration-s54-admission.ps1') -P :
+     |      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Cannot process argument transformation on parameter 'Missing'. Cannot convert value "System.String" to type
+     | "System.Boolean". Boolean parameters accept only Boolean values and numbers, such as $True, $False, 1 or 0.

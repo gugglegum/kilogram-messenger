@@ -1,0 +1,8 @@
+{
+  "original_before_seconds": 0.38317,
+  "wrapped_seconds": 0.4071577,
+  "paths": 128,
+  "classification": "small warm-path wrapper calibration; not an exact overhead correction",
+  "note": "Statement timers/loop overhead not isolated; instrumented times remain attribution only.",
+  "original_after_seconds": 0.3425566
+}

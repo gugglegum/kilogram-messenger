@@ -18,8 +18,16 @@ function Get-S54Path([string]$Path,[switch]$AllowMissing) {
         $probe=Split-Path -Parent $probe;if(-not $probe){throw 'S54 missing ancestor.'}
     }
     if($probe -cne $full -and -not (Get-Item -LiteralPath $probe -Force).PSIsContainer){throw 'S54 missing suffix requires a directory.'}
-    for($p=$probe;$p;$p=Split-Path -Parent $p){
-        if((Get-Item -LiteralPath $p -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'S54 reparse ancestor.'}
+    if($probe -cmatch '^[A-Za-z]:\\'){
+        # Fresh leaf-to-root observations, without provider cmdlet overhead.
+        for($p=$probe;$p;$p=[IO.Path]::GetDirectoryName([IO.Path]::TrimEndingDirectorySeparator($p))){
+            if([IO.File]::GetAttributes($p) -band [IO.FileAttributes]::ReparsePoint){throw 'S54 reparse ancestor.'}
+        }
+    }else{
+        # UNC/device parent semantics differ: retain the complete provider walk.
+        for($p=$probe;$p;$p=Split-Path -Parent $p){
+            if((Get-Item -LiteralPath $p -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'S54 reparse ancestor.'}
+        }
     }
     return $full
 }

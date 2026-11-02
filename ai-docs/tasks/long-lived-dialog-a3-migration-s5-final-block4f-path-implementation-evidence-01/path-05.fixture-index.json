@@ -1,0 +1,20 @@
+{
+  "classification": "public_path_primitive_fixture_set",
+  "captures": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-public-02\\normal.json",
+      "bytes": 1765600,
+      "sha256": "85aedde6f0bbe580751f5195c66f5250c8660a2ec96a5bc74297fbaa9a5b232c"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-public-02\\tests.json",
+      "bytes": 2729983,
+      "sha256": "b738255100a4350b3f671aa49b2c13cc43adbaed17e5918b85975c43d8928a83"
+    }
+  ],
+  "reference": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\published-invoke.ps1.txt",
+    "bytes": 47484,
+    "sha256": "ef2dce5a4bfa5517debb7f596a0f2a3966cddecc4f921b0ae3c9bc5dd9710609"
+  }
+}

@@ -1,0 +1,560 @@
+[
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "5ab8fb0107813589b863cf006e2abf6c8e2349cbc71d38c371850bb27061145f",
+    "level": "top",
+    "first_line": "Assert-S54Wire $Capture 'CompilerCapture'",
+    "start_line": 266,
+    "end_line": 266,
+    "suffix": "compiler.s01"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "bb12d2ceed9a2f7f33a2b56ce2fee5d885cca2bbfcc422166fe28a369109bbd1",
+    "level": "top",
+    "first_line": "if($Capture.classification -cne $(if($Normal){'nonexecuting-normal-cli-compiler-provenance'}else{'nonexecuting-compiler-artifact-provenance'}) -or $Capture.profile -cne 'verification-scale' -or $Capture.target -cne 'x86_64-pc-windows-msvc'){throw 'S54 compiler role/profile.'}",
+    "start_line": 267,
+    "end_line": 267,
+    "suffix": "compiler.s02"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "010288cebba61b7e7353a75e6caa834a042c5cada44ff9987f8c5e13a1883076",
+    "level": "top",
+    "first_line": "if($null -ne $Capture.expected_manifest_sha256){",
+    "start_line": 268,
+    "end_line": 270,
+    "suffix": "compiler.s03"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "ce2027118e0e560fa117c67924c04506549acf2fe29cb6829bccac88a696d5f2",
+    "level": "top",
+    "first_line": "Assert-KilogramFrozenInputs $Capture.build_inputs_before $Capture.build_inputs_after",
+    "start_line": 271,
+    "end_line": 271,
+    "suffix": "compiler.s04"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "d6dbcf9dd724fcc998f01bbe5cb1e5ddbe6817f49c7cf73c4686939198fcd7f6",
+    "level": "top",
+    "first_line": "$b=$Capture.build_inputs_before",
+    "start_line": 272,
+    "end_line": 272,
+    "suffix": "compiler.s05"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "165a050afd96274a3267c23a6cbb929835f75db692d680eca3035d73fcd6e0d3",
+    "level": "top",
+    "first_line": "if($b.format_version -ne 1 -or $b.profile -cne 'verification-scale' -or $b.target -cne 'x86_64-pc-windows-msvc' -or $b.cargo_features.Count -ne 0){throw 'S54 build input policy.'}",
+    "start_line": 273,
+    "end_line": 273,
+    "suffix": "compiler.s06"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "bc802a74e27e8664815855febde8d04541a4bb9eeddc3040a4e03c82596b5116",
+    "level": "top",
+    "first_line": "Assert-S54Equal $b.packages @('kilogram-cli','kilogram-transport-iroh')",
+    "start_line": 274,
+    "end_line": 274,
+    "suffix": "compiler.s07"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "9eaa090b440338608bdf99defc9a1197eed577861f3dc5d8b8e015acabdccba1",
+    "level": "top",
+    "first_line": "Assert-S54Environment $b.environment $I.runtime.environment",
+    "start_line": 275,
+    "end_line": 275,
+    "suffix": "compiler.s08"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "390dc887a341a179690cf116cb0b44656375df4eda5e5120fe4ed00c039fee64",
+    "level": "top",
+    "first_line": "Assert-S54Equal $b.configs $I.runtime.configs",
+    "start_line": 275,
+    "end_line": 275,
+    "suffix": "compiler.s09"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "e8ee8cbb82784aafee815e93f78f39a2d225e057ef4d831a32639dc68dcd0e4e",
+    "level": "top",
+    "first_line": "if($b.rustc -cnotcontains 'release: 1.98.0' -or $b.rustc -cnotcontains 'host: x86_64-pc-windows-msvc' -or $b.cargo.Count -eq 0 -or $b.tools.Count -ne 2){throw 'S54 compiler/tool evidence.'}",
+    "start_line": 276,
+    "end_line": 276,
+    "suffix": "compiler.s10"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "a2a51d92bf7d849196778dcd21ac7978fc197a4fb467064f037cffb6e42f7471",
+    "level": "top",
+    "first_line": "Assert-S54Strings $b.rustc 32",
+    "start_line": 277,
+    "end_line": 277,
+    "suffix": "compiler.s11"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "ea5f4739a32833155b2932fcf7903e6fc5bab19151c428c70e5b30978ef3568b",
+    "level": "top",
+    "first_line": "Assert-S54Strings $b.cargo 32",
+    "start_line": 277,
+    "end_line": 277,
+    "suffix": "compiler.s12"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "242004bbe0b1f8f70d99464c097280b290c5113709253a86bcc8bdfdb355839d",
+    "level": "top",
+    "first_line": "for($n=0;$n -lt 2;$n++){",
+    "start_line": 278,
+    "end_line": 283,
+    "suffix": "compiler.s13"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "663bc58f202c5e4db8c2b25146cfcf23afc2375aee79fe5940a0358fee720780",
+    "level": "top",
+    "first_line": "$source=@{}",
+    "start_line": 284,
+    "end_line": 284,
+    "suffix": "compiler.s14"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "4950b983f2f468439ee1fba952da68c1cf891785a91047f66cb4e0d9c39bef09",
+    "level": "top",
+    "first_line": "foreach($r in $I.source.files){$rel=[IO.Path]::GetRelativePath($Policy.Root,$r.path).Replace('\\','/');if($rel -cnotin $script:S54Embedded -and ($rel -notin $script:S54Helpers -or $rel -in $script:S54Helpers[0..2])){$source[$rel]=$r.sha256}}",
+    "start_line": 284,
+    "end_line": 284,
+    "suffix": "compiler.s15"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "5dc46464a75d0730be558cb56dda9e3971f2eab492c38ffbc0e2517fca03bcf8",
+    "level": "top",
+    "first_line": "$projected=@{}",
+    "start_line": 285,
+    "end_line": 285,
+    "suffix": "compiler.s16"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "6591d37018df0d70235ac6617765d99bf2b6045b62baf8c49938959804e583fe",
+    "level": "top",
+    "first_line": "$seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)",
+    "start_line": 285,
+    "end_line": 285,
+    "suffix": "compiler.s17"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "aed5e7d240f62316f32384a787f4b1a04eddefdde128325c40c731b55b160dd1",
+    "level": "top",
+    "first_line": "foreach($r in $b.source_inputs){if($r.path -match '\\\\|(^|/)\\.\\.(/|$)' -or [IO.Path]::IsPathRooted($r.path) -or -not $seen.Add($r.path) -or $r.sha256 -cnotmatch '^[0-9a-f]{64}$'){throw 'S54 relative compiler source row.'};if((Test-S54Relevant $r.path) -and $r.path -cnotin $script:S54Embedded){$projected[$r.path]=$r.sha256}}",
+    "start_line": 286,
+    "end_line": 286,
+    "suffix": "compiler.s18"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "39e94bbeddf5a6cb686249af3380b21365126abc20de1501e94f7118fd126070",
+    "level": "top",
+    "first_line": "Assert-S54Equal $projected $source",
+    "start_line": 287,
+    "end_line": 287,
+    "suffix": "compiler.s19"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "6129e4b87cf4042362fc01a8c9ebc08eaa5d821010df488e9fe6d2ba738c1169",
+    "level": "top",
+    "first_line": "if($b.package_names.Count -eq 0 -or $b.package_names.Count -ne $b.resolved_graph.Count){throw 'S54 complete package graph.'}",
+    "start_line": 288,
+    "end_line": 288,
+    "suffix": "compiler.s20"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "8754ef9f4a21b93c2a0c0189c76d56b0e38a98c4c9fc36ab65f2a41f849e1c02",
+    "level": "top",
+    "first_line": "$map=[Collections.Generic.Dictionary[string,string]]::new([StringComparer]::Ordinal)",
+    "start_line": 289,
+    "end_line": 289,
+    "suffix": "compiler.s21"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "48c4bbbef7c5f605ae0b173d32b7a1f8264811df42114e09d0485cea6ffac191",
+    "level": "top",
+    "first_line": "foreach($row in $b.package_names){if(-not $row.id -or [Text.Encoding]::UTF8.GetByteCount($row.id) -gt 1024 -or -not $row.name -or [Text.Encoding]::UTF8.GetByteCount($row.name) -gt 256 -or $map.ContainsKey($row.id)){throw 'S54 unique package ID/name map.'};$map.Add($row.id,$row.name)}",
+    "start_line": 290,
+    "end_line": 290,
+    "suffix": "compiler.s22"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "f071f9698126d1e0b6b5eaa80434feee44576818d4eac35a5f6c1d360f6e748a",
+    "level": "top",
+    "first_line": "$seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)",
+    "start_line": 291,
+    "end_line": 291,
+    "suffix": "compiler.s23"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "67c794c1fd346616eca779cbf33adc8f698b4ca3c1495107bd57b11f6926ff3b",
+    "level": "top",
+    "first_line": "foreach($node in $b.resolved_graph){if(-not $map.ContainsKey($node.id) -or -not $seen.Add($node.id)){throw 'S54 graph package identity.'};$edges=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)",
+    "start_line": 292,
+    "end_line": 298,
+    "suffix": "compiler.s24"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "9b1a777d81081edc2902dedf25964c02f991b7a2c0c933875e15bdac553872d3",
+    "level": "top",
+    "first_line": "if($Capture.units.Count -eq 0 -or $Capture.units.Count -ne $Capture.raw_compiler_artifact_json.Count){throw 'S54 complete compiler artifact/units evidence.'}",
+    "start_line": 299,
+    "end_line": 299,
+    "suffix": "compiler.s25"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "6d3794bea8f735e55e61b9c870b38442ce657f9ad3983252e60593bb95c515e6",
+    "level": "top",
+    "first_line": "$sourceIndex=New-S54CompilerSourceIndex $I.source.files",
+    "start_line": 300,
+    "end_line": 300,
+    "suffix": "compiler.s26"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "3b9facbd506f9e56036e64297797cf3b685f782f0e39258ecaac220984514f95",
+    "level": "top",
+    "first_line": "$prefix=(Get-S54Path (Join-Path $Policy.Root 'target/x86_64-pc-windows-msvc/verification-scale') -AllowMissing)+[IO.Path]::DirectorySeparatorChar",
+    "start_line": 301,
+    "end_line": 301,
+    "suffix": "compiler.s27"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "ba9884c527d1e887d4d9d0544e3afcd28f71e401c7b927f7172800a964e91836",
+    "level": "raw-child",
+    "first_line": "$message=ConvertFrom-S54Strict ([Text.Encoding]::UTF8.GetBytes($line)) 131072",
+    "start_line": 303,
+    "end_line": 303,
+    "suffix": "compiler.s28.raw01"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "027b9821b5f3d154144f4504522f72c6f2069eb36930edcd3f701926098fd3dc",
+    "level": "raw-child",
+    "first_line": "Assert-S54Wire $message 'CargoArtifact'",
+    "start_line": 303,
+    "end_line": 303,
+    "suffix": "compiler.s28.raw02"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "e4d0601bec5666adbcb14b940be88ef1e7c8b74bc80ff72958b7732c05e20424",
+    "level": "raw-child",
+    "first_line": "if($message.reason -cne 'compiler-artifact' -or -not $map.ContainsKey($message.package_id)){throw 'S54 actual known compiler-artifact.'}",
+    "start_line": 304,
+    "end_line": 304,
+    "suffix": "compiler.s28.raw03"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "6f39cdc2a19f02de37ed46a806f8cc4284cf3fb24942161ee244e19f07cfc6d0",
+    "level": "raw-child",
+    "first_line": "Assert-S54Strings $message.target.kind 8",
+    "start_line": 305,
+    "end_line": 305,
+    "suffix": "compiler.s28.raw04"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "ae799284e1b1c29efcbdda8149d1b101be4cb40e464ae5bb15c8c8fedc469104",
+    "level": "raw-child",
+    "first_line": "Assert-S54Strings $message.target.crate_types 8",
+    "start_line": 305,
+    "end_line": 305,
+    "suffix": "compiler.s28.raw05"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "53f8687d18a613f3c8a6fe53f9837e74e82b5aef76feca5810339bf88cc0ad84",
+    "level": "raw-child",
+    "first_line": "Assert-S54Strings $message.features 256",
+    "start_line": 305,
+    "end_line": 305,
+    "suffix": "compiler.s28.raw06"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "75e3d5a986f47ab89e7a5f85d3d71e5e72b39cb3e15603f4b078639aa8584bf0",
+    "level": "raw-child",
+    "first_line": "if($message.target.kind.Count -eq 0 -or -not $message.target.name -or [Text.Encoding]::UTF8.GetByteCount($message.target.name) -gt 256 -or $message.target.edition -cnotin @('2015','2018','2021','2024') -or $message.filenames.Count -eq 0 -or $message.filenames.Count -gt 32){throw 'S54 bounded compiler target/output facts.'}",
+    "start_line": 306,
+    "end_line": 306,
+    "suffix": "compiler.s28.raw07"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "07f457b63b456362562202301ba0ba3062308c055fd8e1153d2cfb717eb75414",
+    "level": "raw-child",
+    "first_line": "$names=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)",
+    "start_line": 307,
+    "end_line": 307,
+    "suffix": "compiler.s28.raw08"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "d3afdae3ac35e91f2158b40f84814e2a895f444b310d7bb2b5ecc24fda31f385",
+    "level": "raw-child",
+    "first_line": "foreach($f in $message.filenames){if(-not $names.Add((Get-S54Path $f -AllowMissing))){throw 'S54 unique compiler output paths.'}}",
+    "start_line": 308,
+    "end_line": 308,
+    "suffix": "compiler.s28.raw09"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "be02029a2c96c940c8ea9d3fc6f7eb18be43e9508a728e296004b811def61422",
+    "level": "raw-child",
+    "first_line": "$manifest=Get-S54Path $message.manifest_path",
+    "start_line": 309,
+    "end_line": 309,
+    "suffix": "compiler.s28.raw10"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "a443ea73c1d27283572c2867d2249584f21f9c4cbe6e143c2f95e4a9e3674329",
+    "level": "raw-child",
+    "first_line": "$null=Get-S54Path $message.target.src_path",
+    "start_line": 309,
+    "end_line": 309,
+    "suffix": "compiler.s28.raw11"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "9dcec481b9b1c4562772df5ccac0ceffce7c5337114c3f3535215a79f30ae809",
+    "level": "raw-child",
+    "first_line": "if($manifest.StartsWith($Policy.Root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){",
+    "start_line": 310,
+    "end_line": 312,
+    "suffix": "compiler.s28.raw12"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "f014cced589ce273f5b2ce3bc823eb619189418a471ee93386f97f05a8c133f6",
+    "level": "raw-child",
+    "first_line": "$runtime=@($message.filenames|Where-Object {(Get-S54Path $_ -AllowMissing).StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)}).Count -gt 0 -and -not @($message.target.kind|Where-Object {$_ -cin @('custom-build','proc-macro')}).Count",
+    "start_line": 313,
+    "end_line": 313,
+    "suffix": "compiler.s28.raw13"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "99f1c893125941d2b7604e56fa58ef7b8e9b38578e2859ef10090ac285aa6a88",
+    "level": "raw-child",
+    "first_line": "if($runtime -and ($message.profile.opt_level -cne '3' -or -not $message.profile.debug_assertions -or -not $message.profile.overflow_checks -or $message.profile.debuginfo -isnot [string] -or $message.profile.debuginfo -cne 'line-tables-only')){throw 'S54 runtime opt3/debug/overflow profile.'}",
+    "start_line": 314,
+    "end_line": 314,
+    "suffix": "compiler.s28.raw14"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "ee80d006b720b887e95a0a08bb29968ea501832f096e27080b098261ebca4858",
+    "level": "top",
+    "first_line": "foreach($line in $Capture.raw_compiler_artifact_json){",
+    "start_line": 302,
+    "end_line": 315,
+    "suffix": "compiler.s28"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "68b060e37d582648feedfb7f65b374b4a47139f3660e5645d00b0bb90ea128cb",
+    "level": "top",
+    "first_line": "$actual=@(Get-KilogramCompilerUnits -Lines $Capture.raw_compiler_artifact_json -Workspace $Policy.Root -Target $b.target -Profile $b.profile -PackageNames $b.package_names)",
+    "start_line": 316,
+    "end_line": 316,
+    "suffix": "compiler.s29"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "3460a7ef24b0cd1cce75721cfc7037397375f85112d462375533981b4ed59c2d",
+    "level": "top",
+    "first_line": "$canonical={param($u)",
+    "start_line": 317,
+    "end_line": 323,
+    "suffix": "compiler.s30"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "6877188c9d1508c89778653bdab4cd49bc5d2ef487db43d2c7854f6c567f07f6",
+    "level": "top",
+    "first_line": "$actualSet=@($actual|ForEach-Object {& $canonical $_}|Sort-Object -Unique)",
+    "start_line": 324,
+    "end_line": 324,
+    "suffix": "compiler.s31"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "a3248b07345ec9249b702a0818720ca151bd6de07975af1d5c43332a5e4a6da2",
+    "level": "top",
+    "first_line": "$givenSet=@($Capture.units|ForEach-Object {& $canonical $_}|Sort-Object -Unique)",
+    "start_line": 325,
+    "end_line": 325,
+    "suffix": "compiler.s32"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "6d55b5db9a0c733bb23b87a7a02895eca09498ec6a215088056a072e43de75b9",
+    "level": "top",
+    "first_line": "if($givenSet.Count -ne $Capture.units.Count -or $actualSet.Count -ne $Capture.raw_compiler_artifact_json.Count){throw 'S54 duplicate compiler unit.'}",
+    "start_line": 326,
+    "end_line": 326,
+    "suffix": "compiler.s33"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "177f0aee73076578d0749c63d12348ebe08a7e1d8640b718b821baf415f94abc",
+    "level": "top",
+    "first_line": "Assert-S54Equal $actualSet $givenSet",
+    "start_line": 326,
+    "end_line": 326,
+    "suffix": "compiler.s34"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "d3ca02028c93e21b098218a496b48ef5d7825a3bd670e62480f170abe9f2cc99",
+    "level": "top",
+    "first_line": "$roles=@(if($Normal){$script:S54Images[1]}else{$script:S54Images[3..8]})",
+    "start_line": 327,
+    "end_line": 327,
+    "suffix": "compiler.s35"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "aa680be833fd2549f097ddb91e089f3eabf3e2327d7d12b18fdbe1eb44f3f0b0",
+    "level": "top",
+    "first_line": "if($Capture.stable_artifacts.Count -ne $roles.Count){throw 'S54 exact compiler executable set.'}",
+    "start_line": 328,
+    "end_line": 328,
+    "suffix": "compiler.s36"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "70ddcee4bdeff6602f9a0e725808da6f2fcea00450a64dfb1428e5c029e8ed2f",
+    "level": "top",
+    "first_line": "$seenRoles=[Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)",
+    "start_line": 329,
+    "end_line": 329,
+    "suffix": "compiler.s37"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "ff961a5f260ee2fd0c6116d8009188405c12e2fe051a497c09fcfcf3fdb5e466",
+    "level": "top",
+    "first_line": "$seenPaths=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)",
+    "start_line": 329,
+    "end_line": 329,
+    "suffix": "compiler.s38"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "1e5816c6c58d692069225d512efa448b45e68ac8fee6a79ffe29faf6160606ae",
+    "level": "top",
+    "first_line": "foreach($a in $Capture.stable_artifacts){",
+    "start_line": 330,
+    "end_line": 339,
+    "suffix": "compiler.s39"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "79066d58d8878742aa44d38da9d535e88c8444dd6a64e727690c1b141d14f0bf",
+    "level": "top",
+    "first_line": "Assert-S54CompilerSourcesFresh $I.source.files",
+    "start_line": 340,
+    "end_line": 340,
+    "suffix": "compiler.s40"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "c6da0c79fcd39215fbb5a531e812eff322cd40133dc370f4f096eee06fea4b0d",
+    "level": "top",
+    "first_line": "$e=$I.compiler.embedded",
+    "start_line": 177,
+    "end_line": 177,
+    "suffix": "embedded.s01"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "9624be78a9bffac96958e0952aa644feec8dee6df569c0a096d88add6ed3064e",
+    "level": "top",
+    "first_line": "if($e.before.Count -ne $script:S54Embedded.Count -or $e.after.Count -ne $script:S54Embedded.Count){throw 'S54 exact embedded before/after input set.'}",
+    "start_line": 178,
+    "end_line": 178,
+    "suffix": "embedded.s02"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "d8fb9cde7b52299bdeb096cd4162b2641012e654c5c785c138e8720b6ef8bf14",
+    "level": "top",
+    "first_line": "foreach($rows in @($e.before,$e.after)){",
+    "start_line": 179,
+    "end_line": 189,
+    "suffix": "embedded.s03"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "1b560ed0ed81302578c1dee6d3be1b1dd60576e6ad12e79cdaebdf5f115a254f",
+    "level": "top",
+    "first_line": "$expected=Get-S54DepInfoPins $Tests $false",
+    "start_line": 190,
+    "end_line": 190,
+    "suffix": "embedded.s04"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "46354e1fc738a1bbf68b855ddd5b950dac4f6571c3a09f2970b0521438943e0d",
+    "level": "top",
+    "first_line": "if($e.dep_info.Count -ne $expected.Count){throw 'S54 selected compiler dep-info set.'}",
+    "start_line": 191,
+    "end_line": 191,
+    "suffix": "embedded.s05"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "6591d37018df0d70235ac6617765d99bf2b6045b62baf8c49938959804e583fe",
+    "level": "top",
+    "first_line": "$seen=[Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)",
+    "start_line": 192,
+    "end_line": 192,
+    "suffix": "embedded.s06"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "25d544da493b41fc52f26467b812396ff5658048cdfae8886e1fdbad85f7fe5b",
+    "level": "top",
+    "first_line": "foreach($p in $e.dep_info){",
+    "start_line": 193,
+    "end_line": 198,
+    "suffix": "embedded.s07"
+  },
+  {
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "original_statement_sha256": "f33a5fdddb40594974fc7fdf967138692afe7e4bf7f725eb7324ea65a7003ca8",
+    "level": "top",
+    "first_line": "Assert-S54EmbeddedDependencies $Policy.Root $e.dep_info $I.source.files",
+    "start_line": 199,
+    "end_line": 199,
+    "suffix": "embedded.s08"
+  }
+]

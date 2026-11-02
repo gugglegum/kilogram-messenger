@@ -1,0 +1,242 @@
+diff --git a/scripts/invoke-migration-s54-whole.ps1 b/scripts/invoke-migration-s54-whole.ps1
+index 8466e0f..84eeeb1 100644
+--- a/scripts/invoke-migration-s54-whole.ps1
++++ b/scripts/invoke-migration-s54-whole.ps1
+@@ -18,8 +18,16 @@ function Get-S54Path([string]$Path,[switch]$AllowMissing) {
+         $probe=Split-Path -Parent $probe;if(-not $probe){throw 'S54 missing ancestor.'}
+     }
+     if($probe -cne $full -and -not (Get-Item -LiteralPath $probe -Force).PSIsContainer){throw 'S54 missing suffix requires a directory.'}
+-    for($p=$probe;$p;$p=Split-Path -Parent $p){
+-        if((Get-Item -LiteralPath $p -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'S54 reparse ancestor.'}
++    if($probe -cmatch '^[A-Za-z]:\\'){
++        # Fresh leaf-to-root observations, without provider cmdlet overhead.
++        for($p=$probe;$p;$p=[IO.Path]::GetDirectoryName([IO.Path]::TrimEndingDirectorySeparator($p))){
++            if([IO.File]::GetAttributes($p) -band [IO.FileAttributes]::ReparsePoint){throw 'S54 reparse ancestor.'}
++        }
++    }else{
++        # UNC/device parent semantics differ: retain the complete provider walk.
++        for($p=$probe;$p;$p=Split-Path -Parent $p){
++            if((Get-Item -LiteralPath $p -Force).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'S54 reparse ancestor.'}
++        }
+     }
+     return $full
+ }
+diff --git a/scripts/test-migration-s54-admission.ps1 b/scripts/test-migration-s54-admission.ps1
+index 0cdee7b..75edfff 100644
+--- a/scripts/test-migration-s54-admission.ps1
++++ b/scripts/test-migration-s54-admission.ps1
+@@ -1,13 +1,151 @@
+ [CmdletBinding()]
+-param([Parameter(Mandatory)][string]$FixtureIndex,[Parameter(Mandatory)][string]$EvidenceDirectory,[switch]$CompilerIndexOnly)
++param([Parameter(Mandatory)][string]$FixtureIndex,[Parameter(Mandatory)][string]$EvidenceDirectory,[switch]$CompilerIndexOnly,[switch]$PathOnly)
+ Set-StrictMode -Version Latest
+ $ErrorActionPreference='Stop'
+ . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1')
+ $index=ConvertFrom-S54Strict (Read-S54Public $FixtureIndex 16384) 16384
++if($PathOnly){
++    $evidence=Get-S54Path $EvidenceDirectory
++    $workspace=Split-Path -Parent $PSScriptRoot
++    $owned=Get-S54Path (Join-Path $workspace '.tmp/s54-block4f-path-implementation-01')
++    if(-not $evidence.StartsWith($owned+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or $index.classification -cne 'public_path_primitive_fixture_set'){throw 'Fresh owned path regression evidence only.'}
++    $script:PathCandidate=(Get-Item Function:Get-S54Path).ScriptBlock
++    $null=Read-S54Pin $index.reference 134217728
++    $tokens=$null;$errors=$null
++    $ast=[Management.Automation.Language.Parser]::ParseFile($index.reference.path,[ref]$tokens,[ref]$errors)
++    $fn=@($ast.FindAll({param($n)$n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -ceq 'Get-S54Path'},$false))[0]
++    if($errors.Count){throw 'Published path reference parse.'}
++    $referenceText='param('+(@($fn.Parameters|ForEach-Object {$_.Extent.Text}) -join ',')+")`n"+$fn.Body.Extent.Text.Substring(1,$fn.Body.Extent.Text.Length-2)
++    $reference=[ScriptBlock]::Create($referenceText)
++    $candidateText=$script:PathCandidate.ToString()
++    $oldLoop=@($fn.Body.EndBlock.Statements|Where-Object {$_ -is [Management.Automation.Language.ForStatementAst]})[0].Extent.Text
++    $normalizedCandidate=($candidateText.Replace("`r",'') -replace '(?m)^[ \t]+','')
++    $normalizedOldLoop=($oldLoop.Replace("`r",'') -replace '(?m)^[ \t]+','')
++    if(-not $normalizedCandidate.Contains($normalizedOldLoop,[StringComparison]::Ordinal)){throw 'Complete original fallback loop required.'}
++    $checks=[Collections.Generic.List[object]]::new()
++    function Require-Path([bool]$Pass,[string]$Name,$Detail=$null){if(-not $Pass){throw $Name};$checks.Add(@{name=$Name;passed=$true;detail=$Detail})}
++    function New-PathDestination([string]$Relative){
++        $p=& $script:PathCandidate (Join-Path $evidence $Relative) -AllowMissing
++        if(-not $p.StartsWith($evidence+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or (Test-Path -LiteralPath $p)){throw 'Fresh canonical owned path fixture destination.'};return $p
++    }
++    function Path-Outcome($Body,[string]$Path,[bool]$Missing){
++        try{$value=& $Body $Path -AllowMissing:$Missing;return @{accepted=$true;value=$value;error=$null}}
++        catch{return @{accepted=$false;value=$null;error=$_.Exception.Message}}
++    }
++    $corpus=[Collections.Generic.List[object]]::new()
++    function Add-PathCorpus($Value,[string]$Type){
++        if($null -eq $Value){return}
++        if($Type -ceq 'p'){$corpus.Add(@{path=[string]$Value;missing=$true});return}
++        if(-not $script:S54Schema.ContainsKey($Type)){return}
++        foreach($k in $script:S54Schema[$Type].Keys){
++            $d=$script:S54Schema[$Type][$k];$v=$Value[$k]
++            if($d.StartsWith('n')){if($null -eq $v){continue};$d=$d.Substring(1)}
++            if($d.StartsWith('a')){foreach($e in $v){Add-PathCorpus $e $d.Substring(1)}}else{Add-PathCorpus $v $d}
++        }
++    }
++    foreach($pin in $index.captures){
++        $capture=Read-S54Json $pin 8388608;Add-PathCorpus $capture 'CompilerCapture'
++        foreach($line in $capture.raw_compiler_artifact_json){
++            $v=ConvertFrom-S54Strict ([Text.Encoding]::UTF8.GetBytes($line)) 131072;Add-PathCorpus $v 'CargoArtifact'
++            foreach($p in @($v.manifest_path,$v.target.src_path)){$corpus.Add(@{path=$p;missing=$false})}
++        }
++    }
++    foreach($p in (Get-S54SourcePaths $workspace)){$corpus.Add(@{path=$p;missing=$false})}
++    $script:PathTrace=[Collections.Generic.List[string]]::new();$script:PathNative=$false;$script:PathInjection=''
++    function Invoke-PathAttribute([string]$Path){
++        $script:PathTrace.Add($Path)
++        if($script:PathInjection -cin @('missing','denied')){
++            if($script:PathInjection -ceq 'denied'){throw [UnauthorizedAccessException]::new('injected denied native attributes')}
++            throw [IO.FileNotFoundException]::new('injected missing native attributes')
++        }
++        if($script:PathInjection -ceq 'disappear' -and $Path -ceq $script:PathMutate){
++            $script:PathInjection='';$null=& $script:PathCandidate $Path
++            [IO.File]::Move($Path,(New-PathDestination 'disappeared-file-retained.txt'))
++        }
++        if($script:PathInjection -ceq 'junction' -and $Path -ceq $script:PathMutate){
++            $script:PathInjection='';$null=& $script:PathCandidate $Path
++            $held=New-PathDestination 'directory-before-junction-retained'
++            [IO.Directory]::Move($Path,$held);$null=New-Item -ItemType Junction -Path $Path -Target $held -ErrorAction Stop
++        }
++        if($script:PathNative){return [IO.File]::GetAttributes($Path)}
++        return (Get-Item -LiteralPath $Path -Force).Attributes
++    }
++    $oldTrace=[ScriptBlock]::Create($referenceText.Replace('(Get-Item -LiteralPath $p -Force).Attributes','(Invoke-PathAttribute $p)'))
++    $newTrace=[ScriptBlock]::Create($candidateText.Replace('[IO.File]::GetAttributes($p)','(Invoke-PathAttribute $p)'))
++    $positions=0
++    foreach($row in $corpus){
++        $script:PathTrace.Clear();$script:PathNative=$false;$a=& $oldTrace $row.path -AllowMissing:$row.missing;$before=$script:PathTrace.ToArray()
++        $script:PathTrace.Clear();$script:PathNative=$true;$b=& $newTrace $row.path -AllowMissing:$row.missing
++        if($a -cne $b -or ($before -join "`n") -cne ($script:PathTrace -join "`n")){throw 'Actual drive path outcome/attribute observation sequence mismatch.'}
++        $positions+=$before.Count
++    }
++    Require-Path $true 'actual retained corpus path outputs and attribute sequences' @{calls=$corpus.Count;attribute_observations_each=$positions;instrumented=$true}
++    Write-KilogramFrozenJson (New-PathDestination 'path-corpus.json') @{classification='completed corpus comparison; later cases may still fail';checks=@($checks)}
++    $dir=New-PathDestination 'plain';$null=New-Item -ItemType Directory -Path $dir
++    $file=New-PathDestination 'plain/bracket[1].txt';[IO.File]::WriteAllText($file,'public path fixture')
++    $junction=New-PathDestination 'junction';$null=New-Item -ItemType Junction -Path $junction -Target $dir
++    foreach($c in @(
++        @('disk-root',[IO.Path]::GetPathRoot($dir),$false),@('directory',$dir,$false),@('trailing-separator',($dir+'\'),$false),
++        @('forward-slash',$file.Replace('\','/'),$false),@('case-alias',$file.ToUpperInvariant(),$false),@('literal-brackets',$file,$false),
++        @('required-missing',($dir+'\absent'),$false),@('optional-missing',($dir+'\absent\suffix'),$true),@('file-as-parent',($file+'\suffix'),$true),
++        @('reparse-leaf',$junction,$false),@('reparse-ancestor',($junction+'\bracket[1].txt'),$false),@('relative','relative',$true),
++        @('dot',($dir+'\.\x'),$true),@('dotdot',($dir+'\..\x'),$true),@('bound',($dir+'\'+('x'*1025)),$true),@('empty','',$true)
++    )){
++        $script:PathTrace.Clear();$script:PathNative=$false;$a=Path-Outcome $oldTrace $c[1] $c[2];$before=$script:PathTrace.ToArray()
++        $script:PathTrace.Clear();$script:PathNative=$true;$b=Path-Outcome $newTrace $c[1] $c[2];$after=$script:PathTrace.ToArray()
++        Require-Path ((ConvertTo-KilogramFrozenJson $a) -ceq (ConvertTo-KilogramFrozenJson $b) -and ($before -join "`n") -ceq ($after -join "`n")) ('real path outcome and attribute sequence/'+$c[0]) @{reference=$a;candidate=$b;reference_attributes=$before;candidate_attributes=$after}
++    }
++    # Isolated filesystem mocks: only lexical UNC/device walks, never network IO.
++    $script:PathMockOps=[Collections.Generic.List[string]]::new()
++    function Test-Path {param([string]$LiteralPath) $script:PathMockOps.Add('exists/'+$LiteralPath);return $true}
++    function Get-Item {param([string]$LiteralPath,[switch]$Force) $script:PathMockOps.Add('attributes/'+$LiteralPath);return @{PSIsContainer=$true;Attributes=[IO.FileAttributes]::Directory}}
++    function Split-Path {param([string]$Path,[switch]$Parent) $script:PathMockOps.Add('parent/'+$Path);Microsoft.PowerShell.Management\Split-Path -Path $Path -Parent}
++    try{
++        foreach($spelling in @('\\server\share','\\server\share\dir\','\\?\UNC\server\share\dir','\\?\C:\dir','\\.\C:\dir')){
++            $script:PathMockOps.Clear();$a=Path-Outcome $reference $spelling $false;$before=$script:PathMockOps.ToArray()
++            $script:PathMockOps.Clear();$b=Path-Outcome $script:PathCandidate $spelling $false;$after=$script:PathMockOps.ToArray()
++            Require-Path ((-not $a.accepted -or $a.value -cnotmatch '^[A-Za-z]:\\') -and (ConvertTo-KilogramFrozenJson $a) -ceq (ConvertTo-KilogramFrozenJson $b) -and ($before -join "`n") -ceq ($after -join "`n")) ('unchanged fallback operations/'+$spelling) @{reference=$a;candidate=$b;reference_operations=$before;candidate_operations=$after;mocked_filesystem=$true;network_access=$false}
++        }
++        $unc='\\server\share\dir';$old=@();$native=@()
++        for($p=$unc;$p;$p=Microsoft.PowerShell.Management\Split-Path -Path $p -Parent){$old+=,$p}
++        for($p=$unc;$p;$p=[IO.Path]::GetDirectoryName([IO.Path]::TrimEndingDirectorySeparator($p))){$native+=,$p}
++        Require-Path (($old -join '|') -cne ($native -join '|')) 'UNC regression catches unconditional native parent mismatch' @{old=$old;unconditional_native=$native;lexical_only=$true}
++    }finally{Remove-Item Function:Test-Path,Function:Get-Item,Function:Split-Path}
++    Write-KilogramFrozenJson (New-PathDestination 'path-before-faults.json') @{classification='completed drive and mocked fallback comparisons; fault cases pending';checks=@($checks)}
++    foreach($fault in @('missing','denied')){
++        $script:PathInjection=$fault;$script:PathNative=$true;$script:PathTrace.Clear()
++        $outcome=Path-Outcome $newTrace $file $false
++        Require-Path (-not $outcome.accepted -and $script:PathTrace.Count -eq 1 -and $outcome.error -match ('injected '+$fault)) ('injected native lookup failure is fatal/'+$fault) $outcome
++    }
++    $script:PathInjection=''
++    $vanishing=New-PathDestination 'vanishing.txt';[IO.File]::WriteAllText($vanishing,'public disappearing file')
++    $script:PathMutate=$vanishing;$script:PathInjection='disappear';$script:PathTrace.Clear()
++    $outcome=Path-Outcome $newTrace $vanishing $false
++    Require-Path (-not $outcome.accepted -and $script:PathTrace.Count -eq 1 -and -not (Test-Path -LiteralPath $vanishing)) 'real disappearance between exists and first attributes refuses' $outcome
++    $mutable=New-PathDestination 'mutable';$null=New-Item -ItemType Directory -Path $mutable
++    $leaf=New-PathDestination 'mutable/leaf.txt';[IO.File]::WriteAllText($leaf,'public junction mutation file')
++    $script:PathMutate=$mutable;$script:PathInjection='junction';$script:PathTrace.Clear()
++    $outcome=Path-Outcome $newTrace $leaf $false
++    Require-Path (-not $outcome.accepted -and $outcome.error -ceq 'S54 reparse ancestor.' -and $script:PathTrace.Count -eq 2) 'real junction substitution between leaf and parent attributes refuses' $outcome
++    $script:PathInjection='';$script:PathReadCalls=0
++    function Get-S54Path([string]$Path,[switch]$AllowMissing){
++        if($Path -ceq $file){$script:PathReadCalls++;if($script:PathReadCalls -eq 2){$script:PathInjection='denied'}}
++        & $newTrace $Path -AllowMissing:$AllowMissing
++    }
++    try{
++        $why=$null;try{$null=Read-S54Public $file 4096}catch{$why=$_.Exception.Message}
++        Require-Path ($script:PathReadCalls -eq 2 -and $why -match 'injected denied') 'injected native lookup failure at post-read path check refuses' @{error=$why;path_calls=$script:PathReadCalls;injected=$true}
++    }finally{Set-Item Function:Get-S54Path $script:PathCandidate;$script:PathInjection=''}
++    $output=New-PathDestination 'path-results.json'
++    Write-KilogramFrozenJson $output @{classification='focused actual path and isolated failure/fallback tests; not UNC interoperability or runtime';count=$checks.Count;checks=@($checks);network_access=$false;production_runtime=$false}
++    Write-Output ('path_checks='+$checks.Count)
++    return
++}
+ if($CompilerIndexOnly){
+     $evidence=Get-S54Path $EvidenceDirectory
+     $workspace=Split-Path -Parent $PSScriptRoot
+-    if(-not $evidence.StartsWith((Join-Path $workspace '.tmp/s54-block4e-index-implementation-01/'),[StringComparison]::OrdinalIgnoreCase) -or $index.classification -cne 'public_compiler_index_fixture_set'){throw 'Fresh owned compiler-index fixtures only.'}
++    $newPathEvidence=$evidence.StartsWith((Join-Path $workspace '.tmp/s54-block4f-path-implementation-01/'),[StringComparison]::OrdinalIgnoreCase)
++    if((-not $newPathEvidence -and -not $evidence.StartsWith((Join-Path $workspace '.tmp/s54-block4e-index-implementation-01/'),[StringComparison]::OrdinalIgnoreCase)) -or $index.classification -cne 'public_compiler_index_fixture_set'){throw 'Fresh owned compiler-index fixtures only.'}
+     $checks=[Collections.Generic.List[object]]::new()
+     function Require-Index([bool]$Value,[string]$Name){if(-not $Value){throw $Name};$checks.Add(@{name=$Name;passed=$true})}
+     function Refuse-Index([string]$Name,[scriptblock]$Action,[string]$Pattern){
+@@ -21,10 +159,15 @@ if($CompilerIndexOnly){
+         if($f.classification -cne 'public_schema_fixture_only'){throw 'Public fixture scope required.'}
+         $p=New-S54Policy -FixtureRoot $f.root
+         if(-not (Split-Path -Leaf $p.Root).StartsWith('index-',[StringComparison]::Ordinal)){throw 'Fresh index fixture root required.'}
++        if($newPathEvidence -and $p.Root -cne $row[0].root){throw 'Exact newly constructed fixture ownership required.'}
+         $i=Read-S54Json $f.inputs.inventory 2097152
+         Set-S54Purpose $(if($i.identity.case -ceq (Get-S54Purpose FeasibilityF).Case){'FeasibilityF'}else{'WholeP'})
+         return @{root=$p.Root;policy=$p;i=$i;inputs=$f.inputs;normal=(Read-S54Json $i.compiler.normal 8388608);tests=(Read-S54Json $i.compiler.tests 8388608)}
+     }
++    function Owned-IndexWrite($Context,[string]$Path){
++        $full=Get-S54Path $Path -AllowMissing
++        if(-not $full.StartsWith($Context.root+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'Canonical owned public index write only.'};return $full
++    }
+     $invoke=Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1'
+     $matches=@(Select-String -LiteralPath $invoke -SimpleMatch '$sourceIndex.Contains((Get-S54Path $path))')
+     Require-Index ($matches.Count -eq 1) 'one production membership decision site'
+@@ -120,7 +263,7 @@ if($CompilerIndexOnly){
+         $extra=ConvertFrom-S54Strict ([Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $pin -Compress))) 4096
+         $extra.path=$extra.path.ToUpperInvariant().Replace('\','/');$ctx.i.source.files+=,$extra
+         Reset-Index $ctx $ctx.normal;Refuse-Index 'canonical duplicate compiler source' {Assert-S54Compiler $ctx.i $ctx.policy $ctx.normal $true} 'duplicate canonical compiler source'
+-        $ctx=Case-Index 'foreign';$cap=$ctx.normal;$foreign=Join-Path $ctx.root 'apps/unadmitted.rs';[IO.File]::WriteAllText($foreign,'public unadmitted target')
++        $ctx=Case-Index 'foreign';$cap=$ctx.normal;$foreign=Owned-IndexWrite $ctx (Join-Path $ctx.root 'apps/unadmitted.rs');[IO.File]::WriteAllText($foreign,'public unadmitted target')
+         $v=ConvertFrom-Json -InputObject $cap.raw_compiler_artifact_json[0] -AsHashtable;$v.target.src_path=$foreign;$cap.raw_compiler_artifact_json[0]=ConvertTo-Json $v -Depth 100 -Compress
+         Reset-Index $ctx $cap;Refuse-Index 'unadmitted workspace target' {Assert-S54Compiler $ctx.i $ctx.policy $cap $true} 'workspace compiler target belongs to admitted live sources'
+         foreach($case in @(
+@@ -147,25 +290,28 @@ if($CompilerIndexOnly){
+                 'graph' {foreach($x in @($cap.build_inputs_before,$cap.build_inputs_after)){$x.package_names=@($x.package_names|Select-Object -Skip 1)};$pattern='complete package graph'}
+                 'raw' {$v=ConvertFrom-Json $cap.raw_compiler_artifact_json[0] -AsHashtable;$v.reason='foreign';$cap.raw_compiler_artifact_json[0]=ConvertTo-Json $v -Depth 100 -Compress;$pattern='actual known compiler-artifact'}
+                 'unit' {$cap.units[0].features=@('invented');$pattern='exact structured identity|duplicate compiler unit'}
+-                'tool' {[IO.File]::WriteAllText($cap.build_inputs_before.tools[0].path,'changed public tool');$pattern='compiler tool/shim bytes'}
+-                'origin' {$u=@($cap.units|Where-Object {$_.executable -and -not $_.profile.test -and $_.package -ceq 'kilogram-cli'})[0];[IO.File]::WriteAllText($u.executable,'changed public compiler image');$pattern='actual compiler executable bytes'}
++                'tool' {[IO.File]::WriteAllText((Owned-IndexWrite $ctx $cap.build_inputs_before.tools[0].path),'changed public tool');$pattern='compiler tool/shim bytes'}
++                'origin' {$u=@($cap.units|Where-Object {$_.executable -and -not $_.profile.test -and $_.package -ceq 'kilogram-cli'})[0];[IO.File]::WriteAllText((Owned-IndexWrite $ctx $u.executable),'changed public compiler image');$pattern='actual compiler executable bytes'}
+             }
+             Reset-Index $ctx $cap;Refuse-Index "retained compiler refusal/$name" {Assert-S54Compiler $ctx.i $ctx.policy $cap $true} $pattern
+         }
+-        foreach($name in @('config','environment','capture','source-set','F01','foreign-selector')){
++        foreach($name in @('config','environment','capture','source-set','F01','foreign-selector','image')){
+             $ctx=Case-Index $name;$pattern=$null;$full=$false
+             switch($name){
+-                'config' {[IO.File]::WriteAllText($ctx.i.runtime.configs[0].path,'changed public config');$pattern='config presence|config identity/override'}
++                'config' {[IO.File]::WriteAllText((Owned-IndexWrite $ctx $ctx.i.runtime.configs[0].path),'changed public config');$pattern='config presence|config identity/override'}
+                 'environment' {$ctx.i.runtime.environment[0].value_sha256=('f'*64);$pattern='exact structured identity'}
+-                'capture' {[IO.File]::AppendAllText($ctx.inputs.capture.path,' ');$pattern='public pin mismatch';$full=$true}
+-                'source-set' {[IO.File]::WriteAllText((Join-Path $ctx.root 'apps/new-source.rs'),'public new source');$pattern='exact structured identity'}
++                'capture' {[IO.File]::AppendAllText((Owned-IndexWrite $ctx $ctx.inputs.capture.path),' ');$pattern='public pin mismatch';$full=$true}
++                'source-set' {[IO.File]::WriteAllText((Owned-IndexWrite $ctx (Join-Path $ctx.root 'apps/new-source.rs')),'public new source');$pattern='exact structured identity'}
++                'image' {[IO.File]::WriteAllText((Owned-IndexWrite $ctx $ctx.i.images[1].pin.path),'changed fixed public image');$pattern='public pin mismatch'}
+                 'F01' {$ctx.i.identity.attempt='F-s54-mixed-hooks-feasibility-01-attempt-01';$pattern='required identity'}
+                 'foreign-selector' {$ctx.i.identity.selector=(Get-S54Purpose WholeP).Selector;$pattern='required identity'}
+             }
+             Reset-Index $ctx $ctx.normal
+             Refuse-Index "retained inventory boundary/$name" {if($full){Test-S54Admission $ctx.inputs $ctx.policy}else{Assert-S54Inventory $ctx.i $ctx.policy}} $pattern
+         }
+-        Write-KilogramFrozenJson (Join-Path $evidence 'compiler-index-results.json') @{classification='real shared compiler/index/tail regressions on fresh public fixtures; no runtime capability';count=$checks.Count;checks=@($checks);instrumented=$true;timing_evidence=$false;production_runtime=$false}
++        $resultPath=Get-S54Path (Join-Path $evidence 'compiler-index-results.json') -AllowMissing
++        if(-not $resultPath.StartsWith($evidence+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or (Test-Path -LiteralPath $resultPath)){throw 'Fresh owned index results required.'}
++        Write-KilogramFrozenJson $resultPath @{classification='real shared compiler/index/tail regressions on fresh public fixtures; no runtime capability';count=$checks.Count;checks=@($checks);instrumented=$true;timing_evidence=$false;production_runtime=$false}
+         $indexChecksComplete=$true
+         Write-Output ('compiler_index_checks='+$checks.Count)
+     }finally{

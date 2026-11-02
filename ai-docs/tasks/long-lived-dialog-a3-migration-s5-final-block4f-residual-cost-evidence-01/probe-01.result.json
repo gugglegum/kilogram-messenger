@@ -1,0 +1,458 @@
+{
+  "cache_used": false,
+  "corpus_sha256": "80c9f3a2ddf0e4f2baf007d56c68199b7ee1d8adfc3f5df1104cd4f001a8dd45",
+  "parent_observations": 22059,
+  "live_walk_every_call": true,
+  "runtime": "not_established",
+  "corpus_calls": 8442,
+  "parent_sequences_equal": true,
+  "source_capture_image_and_failed_F01_pins_preserved": true,
+  "accepted_source_unchanged": true,
+  "unchanged_refusal_cases": [
+    {
+      "name": "duplicate-json-key",
+      "reference": {
+        "accepted": false,
+        "error": "S54 duplicate nested JSON key."
+      },
+      "equal": true,
+      "candidate": {
+        "accepted": false,
+        "error": "S54 duplicate nested JSON key."
+      }
+    },
+    {
+      "name": "case-sensitive-object-key",
+      "reference": {
+        "accepted": false,
+        "error": "S54 unknown field Pin."
+      },
+      "equal": true,
+      "candidate": {
+        "accepted": false,
+        "error": "S54 unknown field Pin."
+      }
+    },
+    {
+      "name": "bool-as-integer",
+      "reference": {
+        "accepted": false,
+        "error": "S54 unsigned integer type."
+      },
+      "equal": true,
+      "candidate": {
+        "accepted": false,
+        "error": "S54 unsigned integer type."
+      }
+    },
+    {
+      "name": "integer-as-bool",
+      "reference": {
+        "accepted": false,
+        "error": "S54 boolean type."
+      },
+      "equal": true,
+      "candidate": {
+        "accepted": false,
+        "error": "S54 boolean type."
+      }
+    },
+    {
+      "name": "negative-uint",
+      "reference": {
+        "accepted": false,
+        "error": "S54 unsigned integer type."
+      },
+      "equal": true,
+      "candidate": {
+        "accepted": false,
+        "error": "S54 unsigned integer type."
+      }
+    },
+    {
+      "name": "string-bound",
+      "reference": {
+        "accepted": false,
+        "error": "S54 string type/bound."
+      },
+      "equal": true,
+      "candidate": {
+        "accepted": false,
+        "error": "S54 string type/bound."
+      }
+    },
+    {
+      "name": "raw-byte-bound",
+      "reference": {
+        "accepted": false,
+        "error": "S54 raw compiler line."
+      },
+      "equal": true,
+      "candidate": {
+        "accepted": false,
+        "error": "S54 raw compiler line."
+      }
+    },
+    {
+      "name": "json-byte-bound",
+      "reference": {
+        "accepted": false,
+        "error": "S54 JSON bound/BOM."
+      },
+      "equal": true,
+      "candidate": {
+        "accepted": false,
+        "error": "S54 JSON bound/BOM."
+      }
+    },
+    {
+      "name": "array-order",
+      "reference": {
+        "accepted": false,
+        "error": "S54 exact structured identity."
+      },
+      "equal": true,
+      "candidate": {
+        "accepted": false,
+        "error": "S54 exact structured identity."
+      }
+    },
+    {
+      "name": "null-versus-empty-array",
+      "reference": {
+        "accepted": false,
+        "error": "S54 exact structured identity."
+      },
+      "equal": true,
+      "candidate": {
+        "accepted": false,
+        "error": "S54 exact structured identity."
+      }
+    },
+    {
+      "name": "number-versus-bool",
+      "reference": {
+        "accepted": false,
+        "error": "S54 exact structured identity."
+      },
+      "equal": true,
+      "candidate": {
+        "accepted": false,
+        "error": "S54 exact structured identity."
+      }
+    },
+    {
+      "name": "duplicate-canonical-source-path",
+      "reference": {
+        "accepted": false,
+        "error": "S54 duplicate canonical compiler source."
+      },
+      "equal": true,
+      "candidate": {
+        "accepted": false,
+        "error": "S54 duplicate canonical compiler source."
+      }
+    },
+    {
+      "name": "array-count-bound",
+      "reference": {
+        "accepted": false,
+        "error": "S54 array CargoTarget/kind."
+      },
+      "equal": true,
+      "candidate": {
+        "accepted": false,
+        "error": "S54 array CargoTarget/kind."
+      }
+    }
+  ],
+  "historical_fixtures_written": false,
+  "path_cases": [
+    {
+      "name": "root",
+      "reference": {
+        "value": "E:\\",
+        "error": null,
+        "accepted": true
+      },
+      "equal": true,
+      "candidate": {
+        "value": "E:\\",
+        "error": null,
+        "accepted": true
+      }
+    },
+    {
+      "name": "directory",
+      "reference": {
+        "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\tiny-public-01\\plain",
+        "error": null,
+        "accepted": true
+      },
+      "equal": true,
+      "candidate": {
+        "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\tiny-public-01\\plain",
+        "error": null,
+        "accepted": true
+      }
+    },
+    {
+      "name": "trailing-directory-separator",
+      "reference": {
+        "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\tiny-public-01\\plain\\",
+        "error": null,
+        "accepted": true
+      },
+      "equal": true,
+      "candidate": {
+        "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\tiny-public-01\\plain\\",
+        "error": null,
+        "accepted": true
+      }
+    },
+    {
+      "name": "forward-slashes",
+      "reference": {
+        "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\tiny-public-01\\plain\\bracket[1].txt",
+        "error": null,
+        "accepted": true
+      },
+      "equal": true,
+      "candidate": {
+        "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\tiny-public-01\\plain\\bracket[1].txt",
+        "error": null,
+        "accepted": true
+      }
+    },
+    {
+      "name": "case-alias",
+      "reference": {
+        "value": "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER\\.TMP\\S54-BLOCK4F-RESIDUAL-COST-01\\TINY-PUBLIC-01\\PLAIN\\BRACKET[1].TXT",
+        "error": null,
+        "accepted": true
+      },
+      "equal": true,
+      "candidate": {
+        "value": "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER\\.TMP\\S54-BLOCK4F-RESIDUAL-COST-01\\TINY-PUBLIC-01\\PLAIN\\BRACKET[1].TXT",
+        "error": null,
+        "accepted": true
+      }
+    },
+    {
+      "name": "literal-brackets",
+      "reference": {
+        "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\tiny-public-01\\plain\\bracket[1].txt",
+        "error": null,
+        "accepted": true
+      },
+      "equal": true,
+      "candidate": {
+        "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\tiny-public-01\\plain\\bracket[1].txt",
+        "error": null,
+        "accepted": true
+      }
+    },
+    {
+      "name": "missing-required",
+      "reference": {
+        "value": null,
+        "error": "S54 missing public path.",
+        "accepted": false
+      },
+      "equal": true,
+      "candidate": {
+        "value": null,
+        "error": "S54 missing public path.",
+        "accepted": false
+      }
+    },
+    {
+      "name": "missing-optional",
+      "reference": {
+        "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\tiny-public-01\\plain\\absent\\nested",
+        "error": null,
+        "accepted": true
+      },
+      "equal": true,
+      "candidate": {
+        "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\tiny-public-01\\plain\\absent\\nested",
+        "error": null,
+        "accepted": true
+      }
+    },
+    {
+      "name": "file-as-missing-parent",
+      "reference": {
+        "value": null,
+        "error": "S54 missing suffix requires a directory.",
+        "accepted": false
+      },
+      "equal": true,
+      "candidate": {
+        "value": null,
+        "error": "S54 missing suffix requires a directory.",
+        "accepted": false
+      }
+    },
+    {
+      "name": "junction-leaf",
+      "reference": {
+        "value": null,
+        "error": "S54 reparse ancestor.",
+        "accepted": false
+      },
+      "equal": true,
+      "candidate": {
+        "value": null,
+        "error": "S54 reparse ancestor.",
+        "accepted": false
+      }
+    },
+    {
+      "name": "junction-ancestor",
+      "reference": {
+        "value": null,
+        "error": "S54 reparse ancestor.",
+        "accepted": false
+      },
+      "equal": true,
+      "candidate": {
+        "value": null,
+        "error": "S54 reparse ancestor.",
+        "accepted": false
+      }
+    },
+    {
+      "name": "relative",
+      "reference": {
+        "value": null,
+        "error": "S54 absolute path/components.",
+        "accepted": false
+      },
+      "equal": true,
+      "candidate": {
+        "value": null,
+        "error": "S54 absolute path/components.",
+        "accepted": false
+      }
+    },
+    {
+      "name": "dot-component",
+      "reference": {
+        "value": null,
+        "error": "S54 absolute path/components.",
+        "accepted": false
+      },
+      "equal": true,
+      "candidate": {
+        "value": null,
+        "error": "S54 absolute path/components.",
+        "accepted": false
+      }
+    },
+    {
+      "name": "dotdot-component",
+      "reference": {
+        "value": null,
+        "error": "S54 absolute path/components.",
+        "accepted": false
+      },
+      "equal": true,
+      "candidate": {
+        "value": null,
+        "error": "S54 absolute path/components.",
+        "accepted": false
+      }
+    },
+    {
+      "name": "overlong",
+      "reference": {
+        "value": null,
+        "error": "S54 absolute path/components.",
+        "accepted": false
+      },
+      "equal": true,
+      "candidate": {
+        "value": null,
+        "error": "S54 absolute path/components.",
+        "accepted": false
+      }
+    },
+    {
+      "name": "empty",
+      "reference": {
+        "value": null,
+        "error": "S54 absolute path/components.",
+        "accepted": false
+      },
+      "equal": true,
+      "candidate": {
+        "value": null,
+        "error": "S54 absolute path/components.",
+        "accepted": false
+      }
+    },
+    {
+      "name": "mutation-between-queries",
+      "reference": {
+        "value": null,
+        "error": "S54 reparse ancestor.",
+        "accepted": false
+      },
+      "equal": true,
+      "candidate": {
+        "value": null,
+        "error": "S54 reparse ancestor.",
+        "accepted": false
+      }
+    }
+  ],
+  "unique_parent_chains": 2651,
+  "groups": [
+    {
+      "group": "normal/raw-wire",
+      "calls": 1853
+    },
+    {
+      "group": "normal/required-input",
+      "calls": 894
+    },
+    {
+      "group": "normal/wire",
+      "calls": 984
+    },
+    {
+      "group": "source",
+      "calls": 517
+    },
+    {
+      "group": "tests/raw-wire",
+      "calls": 2082
+    },
+    {
+      "group": "tests/required-input",
+      "calls": 1002
+    },
+    {
+      "group": "tests/wire",
+      "calls": 1110
+    }
+  ],
+  "classification": "isolated path ancestor primitive prototype; not full admission/runtime",
+  "runs": [
+    {
+      "all_accepted": true,
+      "calls": 8442,
+      "seconds": 43.5065408,
+      "mode": "reference",
+      "output_equal": true
+    },
+    {
+      "all_accepted": true,
+      "calls": 8442,
+      "seconds": 5.453294,
+      "mode": "native-candidate",
+      "output_equal": true
+    }
+  ]
+}

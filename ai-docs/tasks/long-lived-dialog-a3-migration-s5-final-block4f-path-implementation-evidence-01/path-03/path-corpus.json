@@ -1,0 +1,14 @@
+{
+  "classification": "completed corpus comparison; later cases may still fail",
+  "checks": [
+    {
+      "detail": {
+        "calls": 8442,
+        "attribute_observations_each": 71140,
+        "instrumented": true
+      },
+      "passed": true,
+      "name": "actual retained corpus path outputs and attribute sequences"
+    }
+  ]
+}

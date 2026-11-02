@@ -1,0 +1,52 @@
+{
+  "bounded_stdout_stderr_eof": true,
+  "executable": "C:/Users/Paul/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe",
+  "work_expired": false,
+  "actual_child_waited": true,
+  "error": null,
+  "owner_pid": 46328,
+  "classification": "bounded path implementation verification; no historical-fixture writes/build/stage/runtime",
+  "original_path_sha256": "32afa634aa3fe135e1ae545834facb755758a036d57f369377b3455a99075f88",
+  "elapsed_seconds": 24.6404815,
+  "actual_child_exit_code": 0,
+  "original_tick_ms": 501823921,
+  "actual_handle_job_membership_verified": true,
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\work.ps1",
+    "-Step",
+    "index-01"
+  ],
+  "effective_path_sha256": "b27e052877463bc883e77849d2511124a10d9331d76cebf9cc7f8d29281d6313",
+  "whole_attempt_verdict": "not_established",
+  "reader_failed": false,
+  "process_local_rust_bin": "C:\\Users\\Paul\\.rustup\\toolchains\\1.98.0-x86_64-pc-windows-msvc\\bin",
+  "child_started_utc": "2026-11-02T20:35:30.6891359Z",
+  "stdout": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\index-01.stdout.log",
+    "bytes": 63,
+    "sha256": "c5d0cad1d1568e5edb6a54ff961df8fabe254f089eeb63d74e0fcce2156e9c52"
+  },
+  "exit_code": 0,
+  "production_Run_F_P_executed": false,
+  "whole_seconds": 600,
+  "step": "index-01",
+  "cleanup_reserve_seconds": 30,
+  "work_seconds": 570,
+  "persistent_environment_changed": false,
+  "stderr": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\index-01.stderr.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "child_pid": 36868,
+  "cleanup": {
+    "after": [],
+    "verified": true,
+    "forced": false,
+    "before": [],
+    "failed": false
+  }
+}

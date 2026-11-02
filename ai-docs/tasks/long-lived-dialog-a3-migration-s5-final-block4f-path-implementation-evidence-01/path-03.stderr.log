@@ -1,0 +1,5 @@
+Exception: 
+Line |
+   3 |  : tch '(^|[\\/])\.\.?([\\/]|$)'){throw 'S54 absolute path/components.'}
+     |                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | S54 absolute path/components.

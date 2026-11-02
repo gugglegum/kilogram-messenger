@@ -1,0 +1,31 @@
+{
+  "administration": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\owner.ps1",
+      "bytes": 5218,
+      "sha256": "381e6e75aa38af805fb921a01056942a1fa3a33c73c768f06d9eee906227fc3d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\work.ps1",
+      "bytes": 2943,
+      "sha256": "fe451d9e51b53b6fe9ec2319dccde69f526e08f2366ab5c547d1d9e0bd997b06"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\make-fixtures.py",
+      "bytes": 10668,
+      "sha256": "9c07e37f3fedf9656f1c5bb8d0a4b51ddf2b7322f5ea9cc56f541b5dbe02c463"
+    }
+  ],
+  "sources": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+      "bytes": 48432,
+      "sha256": "3ee51b8763f366b2f9dd5a2703449bf5664fea7c28b42924dab7d8364b8bbe64"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\test-migration-s54-admission.ps1",
+      "bytes": 43191,
+      "sha256": "e566e71dedda6858d5d59deab195c10f6f44ff4a22f71bb0a2def4c24bf0c76c"
+    }
+  ]
+}

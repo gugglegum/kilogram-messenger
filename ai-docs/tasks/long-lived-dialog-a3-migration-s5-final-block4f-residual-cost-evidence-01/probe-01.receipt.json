@@ -1,0 +1,52 @@
+{
+  "original_tick_ms": 500875265,
+  "child_pid": 54988,
+  "whole_seconds": 600,
+  "cleanup_reserve_seconds": 30,
+  "error": null,
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\work.ps1",
+    "-Step",
+    "probe-01"
+  ],
+  "actual_child_waited": true,
+  "child_started_utc": "2026-11-02T20:19:42.0733634Z",
+  "persistent_environment_changed": false,
+  "bounded_stdout_stderr_eof": true,
+  "process_local_rust_bin": "C:\\Users\\Paul\\.rustup\\toolchains\\1.98.0-x86_64-pc-windows-msvc\\bin",
+  "effective_path_sha256": "b27e052877463bc883e77849d2511124a10d9331d76cebf9cc7f8d29281d6313",
+  "elapsed_seconds": 83.7405406,
+  "cleanup": {
+    "failed": false,
+    "verified": true,
+    "forced": false,
+    "before": [],
+    "after": []
+  },
+  "owner_pid": 15584,
+  "whole_attempt_verdict": "not_established",
+  "actual_handle_job_membership_verified": true,
+  "executable": "C:/Users/Paul/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe",
+  "actual_child_exit_code": 0,
+  "classification": "bounded residual attribution; no source edits/historical-fixture writes/build/stage/runtime",
+  "work_seconds": 570,
+  "work_expired": false,
+  "original_path_sha256": "32afa634aa3fe135e1ae545834facb755758a036d57f369377b3455a99075f88",
+  "stdout": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\probe-01.stdout.log",
+    "bytes": 87,
+    "sha256": "f67d465279678922c5ff767cd129b993185a936baa06f15ee99f60790da09488"
+  },
+  "stderr": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\probe-01.stderr.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "exit_code": 0,
+  "reader_failed": false,
+  "step": "probe-01",
+  "production_Run_F_P_executed": false
+}

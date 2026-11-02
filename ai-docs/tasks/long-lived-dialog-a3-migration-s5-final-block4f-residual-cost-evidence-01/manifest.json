@@ -1,0 +1,356 @@
+{
+  "classification": "byte-identical diagnostic export; no captures/images/fixture trees copied",
+  "head": "177d51091efb0c571da4f8cd59db21c9b88fb784",
+  "files": [
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\attribution-summary.json",
+        "bytes": 38750,
+        "sha256": "fe4dc38f52bbddaed93c1e72db0de47a3264ca6725eb21f2a8c7b1662ab47d97"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\attribution-summary.json",
+        "bytes": 38750,
+        "sha256": "fe4dc38f52bbddaed93c1e72db0de47a3264ca6725eb21f2a8c7b1662ab47d97"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\baseline.json",
+        "bytes": 706,
+        "sha256": "35c815bf03e3ece91ecd76a78708e2dc66f34b121e77f5ec42c66fe34ca3e0e6"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\baseline.json",
+        "bytes": 706,
+        "sha256": "35c815bf03e3ece91ecd76a78708e2dc66f34b121e77f5ec42c66fe34ca3e0e6"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\carrier-smoke.bin",
+        "bytes": 25,
+        "sha256": "05545d699fe98c394889c9e5254b0d6604523456b5c214420a173ac1889b89d7"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\carrier-smoke.bin",
+        "bytes": 25,
+        "sha256": "05545d699fe98c394889c9e5254b0d6604523456b5c214420a173ac1889b89d7"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\carrier-smoke.json",
+        "bytes": 97,
+        "sha256": "889d7185b20406ec6b77b2a9b6e941d919c5ec359ca87c7ff900912918482402"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\carrier-smoke.json",
+        "bytes": 97,
+        "sha256": "889d7185b20406ec6b77b2a9b6e941d919c5ec359ca87c7ff900912918482402"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\instrumented-functions.ps1.txt",
+        "bytes": 34013,
+        "sha256": "b4d2eb955aa2e2040320249813d7183aac6992121766bcf101a97f83d83598dc"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\instrumented-functions.ps1.txt",
+        "bytes": 34013,
+        "sha256": "b4d2eb955aa2e2040320249813d7183aac6992121766bcf101a97f83d83598dc"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\ledger.cs",
+        "bytes": 1842,
+        "sha256": "96e9019be65b6fd1134e8bfb7b9fe1ec545819348ae0efb5db93291b2a2f227b"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\ledger.cs",
+        "bytes": 1842,
+        "sha256": "96e9019be65b6fd1134e8bfb7b9fe1ec545819348ae0efb5db93291b2a2f227b"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\owner.ps1",
+        "bytes": 5272,
+        "sha256": "f0a118ac07762825bdb7d50efbabdf142275a754601e535b217af75c84db6884"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\owner.ps1",
+        "bytes": 5272,
+        "sha256": "f0a118ac07762825bdb7d50efbabdf142275a754601e535b217af75c84db6884"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\probe-01.receipt.json",
+        "bytes": 1977,
+        "sha256": "770dfbd17757e099e7c994d98b2715c8216e52965b23310ed106fb075bb2e1c5"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\probe-01.receipt.json",
+        "bytes": 1977,
+        "sha256": "770dfbd17757e099e7c994d98b2715c8216e52965b23310ed106fb075bb2e1c5"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\probe-01.result.json",
+        "bytes": 11761,
+        "sha256": "f0a31b0dbeca97fe3251b34df345ec11a335043d9484b54dd10d2bf3ef14bc5c"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\probe-01.result.json",
+        "bytes": 11761,
+        "sha256": "f0a31b0dbeca97fe3251b34df345ec11a335043d9484b54dd10d2bf3ef14bc5c"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\probe-01.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\probe-01.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\probe-01.stdout.log",
+        "bytes": 87,
+        "sha256": "f67d465279678922c5ff767cd129b993185a936baa06f15ee99f60790da09488"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\probe-01.stdout.log",
+        "bytes": 87,
+        "sha256": "f67d465279678922c5ff767cd129b993185a936baa06f15ee99f60790da09488"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\probe.ps1",
+        "bytes": 9943,
+        "sha256": "77181f5c43b72d6686e26bbbe2036a067378f34a9560a65989c4157e9b52e684"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\probe.ps1",
+        "bytes": 9943,
+        "sha256": "77181f5c43b72d6686e26bbbe2036a067378f34a9560a65989c4157e9b52e684"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\profile-01.calibration.json",
+        "bytes": 331,
+        "sha256": "010cabeacf76561c1c73442a0a20c0599580454cc083abfc571e6968825b3ce8"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\profile-01.calibration.json",
+        "bytes": 331,
+        "sha256": "010cabeacf76561c1c73442a0a20c0599580454cc083abfc571e6968825b3ce8"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\profile-01.embedded.json",
+        "bytes": 98,
+        "sha256": "17268fa58bf44f578825a14df877dbea7f3839e90a5710c62978565e082baf63"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\profile-01.embedded.json",
+        "bytes": 98,
+        "sha256": "17268fa58bf44f578825a14df877dbea7f3839e90a5710c62978565e082baf63"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\profile-01.metrics.json",
+        "bytes": 50956,
+        "sha256": "f0ae32bd7f956538a0fa71ccab65d82ca116c3fc9fe0bf2a2a9bf659813dd588"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\profile-01.metrics.json",
+        "bytes": 50956,
+        "sha256": "f0ae32bd7f956538a0fa71ccab65d82ca116c3fc9fe0bf2a2a9bf659813dd588"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\profile-01.normal.json",
+        "bytes": 96,
+        "sha256": "026f66cfd477a34660af405b9708182a3e8ad07ae01700ab5f072f7c49afe391"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\profile-01.normal.json",
+        "bytes": 96,
+        "sha256": "026f66cfd477a34660af405b9708182a3e8ad07ae01700ab5f072f7c49afe391"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\profile-01.preservation.json",
+        "bytes": 128935,
+        "sha256": "4f401c1eed89bf85937b75ef0d9e1d11743dec6c00ddbcf111fdd77d0e6a5781"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\profile-01.preservation.json",
+        "bytes": 128935,
+        "sha256": "4f401c1eed89bf85937b75ef0d9e1d11743dec6c00ddbcf111fdd77d0e6a5781"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\profile-01.receipt.json",
+        "bytes": 1987,
+        "sha256": "c70b1b9a94ffe7e348b97127c9f7b2fc8e4c639a91e5f2d69f2ddbb4b69c27e1"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\profile-01.receipt.json",
+        "bytes": 1987,
+        "sha256": "c70b1b9a94ffe7e348b97127c9f7b2fc8e4c639a91e5f2d69f2ddbb4b69c27e1"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\profile-01.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\profile-01.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\profile-01.stdout.log",
+        "bytes": 92,
+        "sha256": "fae24ab3944eaf67d3dc64074ed5a60681f7ef6f0d2a2a505ed7248c576b8430"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\profile-01.stdout.log",
+        "bytes": 92,
+        "sha256": "fae24ab3944eaf67d3dc64074ed5a60681f7ef6f0d2a2a505ed7248c576b8430"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\profile-01.tests.json",
+        "bytes": 95,
+        "sha256": "6a35b038ea72395407debef69d9160cb6cee7970af021e7c56e098f5de3c059e"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\profile-01.tests.json",
+        "bytes": 95,
+        "sha256": "6a35b038ea72395407debef69d9160cb6cee7970af021e7c56e098f5de3c059e"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\seal-01.receipt.json",
+        "bytes": 1973,
+        "sha256": "82e94c772969bfe59ee505c1743dcd3b07109e55b2b0ab22e0340c2828924c44"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\seal-01.receipt.json",
+        "bytes": 1973,
+        "sha256": "82e94c772969bfe59ee505c1743dcd3b07109e55b2b0ab22e0340c2828924c44"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\seal-01.result.json",
+        "bytes": 150386,
+        "sha256": "01c4e9130df41141737c7d224061797e6e31df94ec443c9a71b327f974ced113"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\seal-01.result.json",
+        "bytes": 150386,
+        "sha256": "01c4e9130df41141737c7d224061797e6e31df94ec443c9a71b327f974ced113"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\seal-01.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\seal-01.stderr.log",
+        "bytes": 0,
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\seal-01.stdout.log",
+        "bytes": 93,
+        "sha256": "ff96ecce0d6c9ea622939678b603b0c9a711486846ae5c532e7d3870656e9484"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\seal-01.stdout.log",
+        "bytes": 93,
+        "sha256": "ff96ecce0d6c9ea622939678b603b0c9a711486846ae5c532e7d3870656e9484"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\seal.ps1",
+        "bytes": 2400,
+        "sha256": "77f8afbf38cf0ea99d6f52f5fe1b444a05a7b7661b6b56e5e8e2c53df3803858"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\seal.ps1",
+        "bytes": 2400,
+        "sha256": "77f8afbf38cf0ea99d6f52f5fe1b444a05a7b7661b6b56e5e8e2c53df3803858"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\statement-map.json",
+        "bytes": 26894,
+        "sha256": "5110011e6cacc3009843cdb89b3982c34d1c57c4409bcad5f7e9b3900c1f602b"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\statement-map.json",
+        "bytes": 26894,
+        "sha256": "5110011e6cacc3009843cdb89b3982c34d1c57c4409bcad5f7e9b3900c1f602b"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\work.profile-01.original.ps1",
+        "bytes": 12801,
+        "sha256": "c3093a28990360f7a1abb4b45e15eedb4ecf9d2d7b532ad2496a8f3889a5b606"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\work.profile-01.original.ps1",
+        "bytes": 12801,
+        "sha256": "c3093a28990360f7a1abb4b45e15eedb4ecf9d2d7b532ad2496a8f3889a5b606"
+      }
+    },
+    {
+      "original": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-residual-cost-01\\work.ps1",
+        "bytes": 12931,
+        "sha256": "aee29876703d01fb816d8a50279d6a46214a1c179cecee9099fb3f999c253c6c"
+      },
+      "export": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4f-residual-cost-evidence-01\\work.ps1",
+        "bytes": 12931,
+        "sha256": "aee29876703d01fb816d8a50279d6a46214a1c179cecee9099fb3f999c253c6c"
+      }
+    }
+  ],
+  "file_count": 29,
+  "raw_bytes": 494541
+}

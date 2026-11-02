@@ -1,0 +1,339 @@
+{
+  "production_runtime": false,
+  "timing_evidence": false,
+  "count": 53,
+  "checks": [
+    {
+      "name": "one production membership decision site",
+      "passed": true
+    },
+    {
+      "name": "linear source+query+tail observation count/normal",
+      "passed": true
+    },
+    {
+      "name": "unchanged source cap/normal",
+      "passed": true
+    },
+    {
+      "query_count": 24,
+      "source_count": 23,
+      "counts": {
+        "tail_reads": 23,
+        "tail_calls": 1,
+        "build_calls": 1,
+        "source_paths": 23,
+        "caps": [
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608
+        ],
+        "queries": 24,
+        "tail_paths": [
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\P2-s53-exhausted-M1.candidate.json",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\apps\\kilogram-cli\\tests\\support\\migration_s54_capture_fixture.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\apps\\kilogram-cli\\tests\\support\\migration_s54_memory_fixture.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\apps\\kilogram-cli\\tests\\support\\migration_s54_outer_fixture.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\apps\\kilogram-cli\\tests\\support\\migration_s54_p5.rs",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\Cargo.lock",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\Cargo.toml",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\rust-toolchain.toml",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\cargo-frozen-artifacts.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\cargo-resource-policy.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\invoke-migration-s54-whole.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\migration-s5-l1-deadline.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\migration-s5-l1-test-result.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\migration-s53-metadata.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\migration-s53-runtime-dependencies.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\migration-s54-outer.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\migration-s54-preparation.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\run-cargo-tests-stable.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\test-migration-s54-admission.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\test-migration-s54-feasibility.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\test-migration-s54-preparation-order.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\test-migration-s54-repair.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\test-migration-s54-whole.ps1"
+        ]
+      },
+      "passed": true,
+      "name": "actual compiler positive/normal"
+    },
+    {
+      "name": "linear source+query+tail observation count/tests",
+      "passed": true
+    },
+    {
+      "name": "unchanged source cap/tests",
+      "passed": true
+    },
+    {
+      "query_count": 32,
+      "source_count": 23,
+      "counts": {
+        "tail_reads": 23,
+        "tail_calls": 1,
+        "build_calls": 1,
+        "source_paths": 23,
+        "caps": [
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608,
+          8388608
+        ],
+        "queries": 32,
+        "tail_paths": [
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-handoff-evidence\\P2-s53-exhausted-M1.candidate.json",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\apps\\kilogram-cli\\tests\\support\\migration_s54_capture_fixture.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\apps\\kilogram-cli\\tests\\support\\migration_s54_memory_fixture.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\apps\\kilogram-cli\\tests\\support\\migration_s54_outer_fixture.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\apps\\kilogram-cli\\tests\\support\\migration_s54_p5.rs",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\Cargo.lock",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\Cargo.toml",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\rust-toolchain.toml",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\cargo-frozen-artifacts.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\cargo-resource-policy.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\invoke-migration-s54-whole.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\migration-s5-l1-deadline.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\migration-s5-l1-test-result.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\migration-s53-metadata.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\migration-s53-runtime-dependencies.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\migration-s54-outer.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\migration-s54-preparation.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\run-cargo-tests-stable.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\test-migration-s54-admission.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\test-migration-s54-feasibility.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\test-migration-s54-preparation-order.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\test-migration-s54-repair.ps1",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\rust-public-fixtures\\index-pathimpl-index-03-positive-P\\scripts\\test-migration-s54-whole.ps1"
+        ]
+      },
+      "passed": true,
+      "name": "actual compiler positive/tests"
+    },
+    {
+      "name": "normal/tests own distinct local indexes",
+      "passed": true
+    },
+    {
+      "name": "full public admission/positive-P",
+      "passed": true
+    },
+    {
+      "name": "fixed F02/P01/positive-P",
+      "passed": true
+    },
+    {
+      "name": "full public admission/positive-F",
+      "passed": true
+    },
+    {
+      "name": "fixed F02/P01/positive-F",
+      "passed": true
+    },
+    {
+      "name": "actual compiler case/separator membership parity",
+      "passed": true
+    },
+    {
+      "name": "canonical duplicate compiler source : S54 duplicate canonical compiler source.",
+      "passed": true
+    },
+    {
+      "name": "unadmitted workspace target : S54 workspace compiler target belongs to admitted live sources.",
+      "passed": true
+    },
+    {
+      "name": "queried-content-index : S54 public pin mismatch.",
+      "passed": true
+    },
+    {
+      "name": "deterministic mutation reached/queried-content-index",
+      "passed": true
+    },
+    {
+      "name": "queried-missing-query : S54 missing public path.",
+      "passed": true
+    },
+    {
+      "name": "deterministic mutation reached/queried-missing-query",
+      "passed": true
+    },
+    {
+      "name": "queried-reparse-query : S54 reparse ancestor.",
+      "passed": true
+    },
+    {
+      "name": "deterministic mutation reached/queried-reparse-query",
+      "passed": true
+    },
+    {
+      "name": "unqueried-content-index : S54 public pin mismatch.",
+      "passed": true
+    },
+    {
+      "name": "deterministic mutation reached/unqueried-content-index",
+      "passed": true
+    },
+    {
+      "name": "unqueried-missing-index : S54 missing public path.",
+      "passed": true
+    },
+    {
+      "name": "deterministic mutation reached/unqueried-missing-index",
+      "passed": true
+    },
+    {
+      "name": "unqueried-reparse-index : S54 reparse ancestor.",
+      "passed": true
+    },
+    {
+      "name": "deterministic mutation reached/unqueried-reparse-index",
+      "passed": true
+    },
+    {
+      "name": "mutation occurs after final membership query",
+      "passed": true
+    },
+    {
+      "name": "after-last-query-content : S54 public pin mismatch.",
+      "passed": true
+    },
+    {
+      "name": "deterministic mutation reached/after-last-query-content",
+      "passed": true
+    },
+    {
+      "name": "mutation occurs after final membership query",
+      "passed": true
+    },
+    {
+      "name": "after-last-query-missing : S54 missing public path.",
+      "passed": true
+    },
+    {
+      "name": "deterministic mutation reached/after-last-query-missing",
+      "passed": true
+    },
+    {
+      "name": "mutation occurs after final membership query",
+      "passed": true
+    },
+    {
+      "name": "after-last-query-reparse : S54 reparse ancestor.",
+      "passed": true
+    },
+    {
+      "name": "deterministic mutation reached/after-last-query-reparse",
+      "passed": true
+    },
+    {
+      "name": "mutation occurs after final membership query",
+      "passed": true
+    },
+    {
+      "name": "after-last-query-embedded : S54 public pin mismatch.",
+      "passed": true
+    },
+    {
+      "name": "deterministic mutation reached/after-last-query-embedded",
+      "passed": true
+    },
+    {
+      "name": "retained compiler refusal/malformed : S54 closed object CompilerCapture.",
+      "passed": true
+    },
+    {
+      "name": "retained compiler refusal/profile : S54 compiler role/profile.",
+      "passed": true
+    },
+    {
+      "name": "retained compiler refusal/graph : S54 complete package graph.",
+      "passed": true
+    },
+    {
+      "name": "retained compiler refusal/raw : S54 actual known compiler-artifact.",
+      "passed": true
+    },
+    {
+      "name": "retained compiler refusal/unit : S54 exact structured identity.",
+      "passed": true
+    },
+    {
+      "name": "retained compiler refusal/tool : S54 compiler tool/shim bytes.",
+      "passed": true
+    },
+    {
+      "name": "retained compiler refusal/origin : S54 actual compiler executable bytes.",
+      "passed": true
+    },
+    {
+      "name": "retained inventory boundary/config : S54 config presence.",
+      "passed": true
+    },
+    {
+      "name": "retained inventory boundary/environment : S54 exact structured identity.",
+      "passed": true
+    },
+    {
+      "name": "retained inventory boundary/capture : S54 public pin mismatch.",
+      "passed": true
+    },
+    {
+      "name": "retained inventory boundary/source-set : S54 exact structured identity.",
+      "passed": true
+    },
+    {
+      "name": "retained inventory boundary/F01 : S54 required identity.",
+      "passed": true
+    },
+    {
+      "name": "retained inventory boundary/foreign-selector : S54 required identity.",
+      "passed": true
+    },
+    {
+      "name": "retained inventory boundary/image : S54 public pin mismatch.",
+      "passed": true
+    }
+  ],
+  "classification": "real shared compiler/index/tail regressions on fresh public fixtures; no runtime capability",
+  "instrumented": true
+}

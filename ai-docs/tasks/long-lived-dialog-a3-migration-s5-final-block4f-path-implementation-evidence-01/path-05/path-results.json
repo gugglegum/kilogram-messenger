@@ -1,0 +1,659 @@
+{
+  "classification": "focused actual path and isolated failure/fallback tests; not UNC interoperability or runtime",
+  "network_access": false,
+  "production_runtime": false,
+  "count": 28,
+  "checks": [
+    {
+      "passed": true,
+      "detail": {
+        "calls": 8442,
+        "attribute_observations_each": 71140,
+        "instrumented": true
+      },
+      "name": "actual retained corpus path outputs and attribute sequences"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "reference_attributes": [
+          "E:\\"
+        ],
+        "reference": {
+          "value": "E:\\",
+          "accepted": true,
+          "error": null
+        },
+        "candidate": {
+          "value": "E:\\",
+          "accepted": true,
+          "error": null
+        },
+        "candidate_attributes": [
+          "E:\\"
+        ]
+      },
+      "name": "real path outcome and attribute sequence/disk-root"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "reference_attributes": [
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp",
+          "E:\\AI-Projects\\kilogram-p2p-messenger",
+          "E:\\AI-Projects",
+          "E:\\"
+        ],
+        "reference": {
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain",
+          "accepted": true,
+          "error": null
+        },
+        "candidate": {
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain",
+          "accepted": true,
+          "error": null
+        },
+        "candidate_attributes": [
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp",
+          "E:\\AI-Projects\\kilogram-p2p-messenger",
+          "E:\\AI-Projects",
+          "E:\\"
+        ]
+      },
+      "name": "real path outcome and attribute sequence/directory"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "reference_attributes": [
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain\\",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp",
+          "E:\\AI-Projects\\kilogram-p2p-messenger",
+          "E:\\AI-Projects",
+          "E:\\"
+        ],
+        "reference": {
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain\\",
+          "accepted": true,
+          "error": null
+        },
+        "candidate": {
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain\\",
+          "accepted": true,
+          "error": null
+        },
+        "candidate_attributes": [
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain\\",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp",
+          "E:\\AI-Projects\\kilogram-p2p-messenger",
+          "E:\\AI-Projects",
+          "E:\\"
+        ]
+      },
+      "name": "real path outcome and attribute sequence/trailing-separator"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "reference_attributes": [
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain\\bracket[1].txt",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp",
+          "E:\\AI-Projects\\kilogram-p2p-messenger",
+          "E:\\AI-Projects",
+          "E:\\"
+        ],
+        "reference": {
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain\\bracket[1].txt",
+          "accepted": true,
+          "error": null
+        },
+        "candidate": {
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain\\bracket[1].txt",
+          "accepted": true,
+          "error": null
+        },
+        "candidate_attributes": [
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain\\bracket[1].txt",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp",
+          "E:\\AI-Projects\\kilogram-p2p-messenger",
+          "E:\\AI-Projects",
+          "E:\\"
+        ]
+      },
+      "name": "real path outcome and attribute sequence/forward-slash"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "reference_attributes": [
+          "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER\\.TMP\\S54-BLOCK4F-PATH-IMPLEMENTATION-01\\PATH-05\\PLAIN\\BRACKET[1].TXT",
+          "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER\\.TMP\\S54-BLOCK4F-PATH-IMPLEMENTATION-01\\PATH-05\\PLAIN",
+          "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER\\.TMP\\S54-BLOCK4F-PATH-IMPLEMENTATION-01\\PATH-05",
+          "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER\\.TMP\\S54-BLOCK4F-PATH-IMPLEMENTATION-01",
+          "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER\\.TMP",
+          "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER",
+          "E:\\AI-PROJECTS",
+          "E:\\"
+        ],
+        "reference": {
+          "value": "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER\\.TMP\\S54-BLOCK4F-PATH-IMPLEMENTATION-01\\PATH-05\\PLAIN\\BRACKET[1].TXT",
+          "accepted": true,
+          "error": null
+        },
+        "candidate": {
+          "value": "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER\\.TMP\\S54-BLOCK4F-PATH-IMPLEMENTATION-01\\PATH-05\\PLAIN\\BRACKET[1].TXT",
+          "accepted": true,
+          "error": null
+        },
+        "candidate_attributes": [
+          "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER\\.TMP\\S54-BLOCK4F-PATH-IMPLEMENTATION-01\\PATH-05\\PLAIN\\BRACKET[1].TXT",
+          "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER\\.TMP\\S54-BLOCK4F-PATH-IMPLEMENTATION-01\\PATH-05\\PLAIN",
+          "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER\\.TMP\\S54-BLOCK4F-PATH-IMPLEMENTATION-01\\PATH-05",
+          "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER\\.TMP\\S54-BLOCK4F-PATH-IMPLEMENTATION-01",
+          "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER\\.TMP",
+          "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER",
+          "E:\\AI-PROJECTS",
+          "E:\\"
+        ]
+      },
+      "name": "real path outcome and attribute sequence/case-alias"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "reference_attributes": [
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain\\bracket[1].txt",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp",
+          "E:\\AI-Projects\\kilogram-p2p-messenger",
+          "E:\\AI-Projects",
+          "E:\\"
+        ],
+        "reference": {
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain\\bracket[1].txt",
+          "accepted": true,
+          "error": null
+        },
+        "candidate": {
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain\\bracket[1].txt",
+          "accepted": true,
+          "error": null
+        },
+        "candidate_attributes": [
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain\\bracket[1].txt",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp",
+          "E:\\AI-Projects\\kilogram-p2p-messenger",
+          "E:\\AI-Projects",
+          "E:\\"
+        ]
+      },
+      "name": "real path outcome and attribute sequence/literal-brackets"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "reference_attributes": [],
+        "reference": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 missing public path."
+        },
+        "candidate": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 missing public path."
+        },
+        "candidate_attributes": []
+      },
+      "name": "real path outcome and attribute sequence/required-missing"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "reference_attributes": [
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp",
+          "E:\\AI-Projects\\kilogram-p2p-messenger",
+          "E:\\AI-Projects",
+          "E:\\"
+        ],
+        "reference": {
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain\\absent\\suffix",
+          "accepted": true,
+          "error": null
+        },
+        "candidate": {
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain\\absent\\suffix",
+          "accepted": true,
+          "error": null
+        },
+        "candidate_attributes": [
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\plain",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp",
+          "E:\\AI-Projects\\kilogram-p2p-messenger",
+          "E:\\AI-Projects",
+          "E:\\"
+        ]
+      },
+      "name": "real path outcome and attribute sequence/optional-missing"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "reference_attributes": [],
+        "reference": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 missing suffix requires a directory."
+        },
+        "candidate": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 missing suffix requires a directory."
+        },
+        "candidate_attributes": []
+      },
+      "name": "real path outcome and attribute sequence/file-as-parent"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "reference_attributes": [
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\junction"
+        ],
+        "reference": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 reparse ancestor."
+        },
+        "candidate": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 reparse ancestor."
+        },
+        "candidate_attributes": [
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\junction"
+        ]
+      },
+      "name": "real path outcome and attribute sequence/reparse-leaf"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "reference_attributes": [
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\junction\\bracket[1].txt",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\junction"
+        ],
+        "reference": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 reparse ancestor."
+        },
+        "candidate": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 reparse ancestor."
+        },
+        "candidate_attributes": [
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\junction\\bracket[1].txt",
+          "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\junction"
+        ]
+      },
+      "name": "real path outcome and attribute sequence/reparse-ancestor"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "reference_attributes": [],
+        "reference": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 absolute path/components."
+        },
+        "candidate": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 absolute path/components."
+        },
+        "candidate_attributes": []
+      },
+      "name": "real path outcome and attribute sequence/relative"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "reference_attributes": [],
+        "reference": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 absolute path/components."
+        },
+        "candidate": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 absolute path/components."
+        },
+        "candidate_attributes": []
+      },
+      "name": "real path outcome and attribute sequence/dot"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "reference_attributes": [],
+        "reference": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 absolute path/components."
+        },
+        "candidate": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 absolute path/components."
+        },
+        "candidate_attributes": []
+      },
+      "name": "real path outcome and attribute sequence/dotdot"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "reference_attributes": [],
+        "reference": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 absolute path/components."
+        },
+        "candidate": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 absolute path/components."
+        },
+        "candidate_attributes": []
+      },
+      "name": "real path outcome and attribute sequence/bound"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "reference_attributes": [],
+        "reference": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 absolute path/components."
+        },
+        "candidate": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 absolute path/components."
+        },
+        "candidate_attributes": []
+      },
+      "name": "real path outcome and attribute sequence/empty"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "network_access": false,
+        "candidate": {
+          "value": "\\\\server\\share",
+          "accepted": true,
+          "error": null
+        },
+        "reference_operations": [
+          "exists/\\\\server\\share",
+          "attributes/\\\\server\\share",
+          "parent/\\\\server\\share",
+          "attributes/\\\\server",
+          "parent/\\\\server",
+          "attributes/\\\\",
+          "parent/\\\\"
+        ],
+        "reference": {
+          "value": "\\\\server\\share",
+          "accepted": true,
+          "error": null
+        },
+        "mocked_filesystem": true,
+        "candidate_operations": [
+          "exists/\\\\server\\share",
+          "attributes/\\\\server\\share",
+          "parent/\\\\server\\share",
+          "attributes/\\\\server",
+          "parent/\\\\server",
+          "attributes/\\\\",
+          "parent/\\\\"
+        ]
+      },
+      "name": "unchanged fallback operations/\\\\server\\share"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "network_access": false,
+        "candidate": {
+          "value": "\\\\server\\share\\dir\\",
+          "accepted": true,
+          "error": null
+        },
+        "reference_operations": [
+          "exists/\\\\server\\share\\dir\\",
+          "attributes/\\\\server\\share\\dir\\",
+          "parent/\\\\server\\share\\dir\\",
+          "attributes/\\\\server\\share",
+          "parent/\\\\server\\share",
+          "attributes/\\\\server",
+          "parent/\\\\server",
+          "attributes/\\\\",
+          "parent/\\\\"
+        ],
+        "reference": {
+          "value": "\\\\server\\share\\dir\\",
+          "accepted": true,
+          "error": null
+        },
+        "mocked_filesystem": true,
+        "candidate_operations": [
+          "exists/\\\\server\\share\\dir\\",
+          "attributes/\\\\server\\share\\dir\\",
+          "parent/\\\\server\\share\\dir\\",
+          "attributes/\\\\server\\share",
+          "parent/\\\\server\\share",
+          "attributes/\\\\server",
+          "parent/\\\\server",
+          "attributes/\\\\",
+          "parent/\\\\"
+        ]
+      },
+      "name": "unchanged fallback operations/\\\\server\\share\\dir\\"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "network_access": false,
+        "candidate": {
+          "value": "\\\\?\\UNC\\server\\share\\dir",
+          "accepted": true,
+          "error": null
+        },
+        "reference_operations": [
+          "exists/\\\\?\\UNC\\server\\share\\dir",
+          "attributes/\\\\?\\UNC\\server\\share\\dir",
+          "parent/\\\\?\\UNC\\server\\share\\dir",
+          "attributes/\\\\?\\UNC\\server\\share",
+          "parent/\\\\?\\UNC\\server\\share",
+          "attributes/\\\\?\\UNC\\server",
+          "parent/\\\\?\\UNC\\server",
+          "attributes/\\\\?\\UNC\\",
+          "parent/\\\\?\\UNC\\",
+          "attributes/\\\\?",
+          "parent/\\\\?",
+          "attributes/\\",
+          "parent/\\"
+        ],
+        "reference": {
+          "value": "\\\\?\\UNC\\server\\share\\dir",
+          "accepted": true,
+          "error": null
+        },
+        "mocked_filesystem": true,
+        "candidate_operations": [
+          "exists/\\\\?\\UNC\\server\\share\\dir",
+          "attributes/\\\\?\\UNC\\server\\share\\dir",
+          "parent/\\\\?\\UNC\\server\\share\\dir",
+          "attributes/\\\\?\\UNC\\server\\share",
+          "parent/\\\\?\\UNC\\server\\share",
+          "attributes/\\\\?\\UNC\\server",
+          "parent/\\\\?\\UNC\\server",
+          "attributes/\\\\?\\UNC\\",
+          "parent/\\\\?\\UNC\\",
+          "attributes/\\\\?",
+          "parent/\\\\?",
+          "attributes/\\",
+          "parent/\\"
+        ]
+      },
+      "name": "unchanged fallback operations/\\\\?\\UNC\\server\\share\\dir"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "network_access": false,
+        "candidate": {
+          "value": "\\\\?\\C:\\dir",
+          "accepted": true,
+          "error": null
+        },
+        "reference_operations": [
+          "exists/\\\\?\\C:\\dir",
+          "attributes/\\\\?\\C:\\dir",
+          "parent/\\\\?\\C:\\dir",
+          "attributes/\\\\?\\C:\\",
+          "parent/\\\\?\\C:\\"
+        ],
+        "reference": {
+          "value": "\\\\?\\C:\\dir",
+          "accepted": true,
+          "error": null
+        },
+        "mocked_filesystem": true,
+        "candidate_operations": [
+          "exists/\\\\?\\C:\\dir",
+          "attributes/\\\\?\\C:\\dir",
+          "parent/\\\\?\\C:\\dir",
+          "attributes/\\\\?\\C:\\",
+          "parent/\\\\?\\C:\\"
+        ]
+      },
+      "name": "unchanged fallback operations/\\\\?\\C:\\dir"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "network_access": false,
+        "candidate": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 absolute path/components."
+        },
+        "reference_operations": [],
+        "reference": {
+          "value": null,
+          "accepted": false,
+          "error": "S54 absolute path/components."
+        },
+        "mocked_filesystem": true,
+        "candidate_operations": []
+      },
+      "name": "unchanged fallback operations/\\\\.\\C:\\dir"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "lexical_only": true,
+        "unconditional_native": [
+          "\\\\server\\share\\dir",
+          "\\\\server\\share"
+        ],
+        "old": [
+          "\\\\server\\share\\dir",
+          "\\\\server\\share",
+          "\\\\server",
+          "\\\\"
+        ]
+      },
+      "name": "UNC regression catches unconditional native parent mismatch"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "value": null,
+        "accepted": false,
+        "error": "injected missing native attributes"
+      },
+      "name": "injected native lookup failure is fatal/missing"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "value": null,
+        "accepted": false,
+        "error": "injected denied native attributes"
+      },
+      "name": "injected native lookup failure is fatal/denied"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "value": null,
+        "accepted": false,
+        "error": "Exception calling \"GetAttributes\" with \"1\" argument(s): \"Could not find file 'E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-05\\vanishing.txt'.\""
+      },
+      "name": "real disappearance between exists and first attributes refuses"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "value": null,
+        "accepted": false,
+        "error": "S54 reparse ancestor."
+      },
+      "name": "real junction substitution between leaf and parent attributes refuses"
+    },
+    {
+      "passed": true,
+      "detail": {
+        "error": "injected denied native attributes",
+        "injected": true,
+        "path_calls": 2
+      },
+      "name": "injected native lookup failure at post-read path check refuses"
+    }
+  ]
+}

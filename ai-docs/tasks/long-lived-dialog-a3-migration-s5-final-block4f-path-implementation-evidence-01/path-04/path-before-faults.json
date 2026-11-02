@@ -1,0 +1,463 @@
+{
+  "checks": [
+    {
+      "detail": {
+        "instrumented": true,
+        "calls": 8442,
+        "attribute_observations_each": 71140
+      },
+      "passed": true,
+      "name": "actual retained corpus path outputs and attribute sequences"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": null,
+          "accepted": true,
+          "value": "E:\\"
+        },
+        "reference": {
+          "error": null,
+          "accepted": true,
+          "value": "E:\\"
+        }
+      },
+      "passed": true,
+      "name": "real path outcome/disk-root"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": null,
+          "accepted": true,
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-04\\plain"
+        },
+        "reference": {
+          "error": null,
+          "accepted": true,
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-04\\plain"
+        }
+      },
+      "passed": true,
+      "name": "real path outcome/directory"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": null,
+          "accepted": true,
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-04\\plain\\"
+        },
+        "reference": {
+          "error": null,
+          "accepted": true,
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-04\\plain\\"
+        }
+      },
+      "passed": true,
+      "name": "real path outcome/trailing-separator"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": null,
+          "accepted": true,
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-04\\plain\\bracket[1].txt"
+        },
+        "reference": {
+          "error": null,
+          "accepted": true,
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-04\\plain\\bracket[1].txt"
+        }
+      },
+      "passed": true,
+      "name": "real path outcome/forward-slash"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": null,
+          "accepted": true,
+          "value": "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER\\.TMP\\S54-BLOCK4F-PATH-IMPLEMENTATION-01\\PATH-04\\PLAIN\\BRACKET[1].TXT"
+        },
+        "reference": {
+          "error": null,
+          "accepted": true,
+          "value": "E:\\AI-PROJECTS\\KILOGRAM-P2P-MESSENGER\\.TMP\\S54-BLOCK4F-PATH-IMPLEMENTATION-01\\PATH-04\\PLAIN\\BRACKET[1].TXT"
+        }
+      },
+      "passed": true,
+      "name": "real path outcome/case-alias"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": null,
+          "accepted": true,
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-04\\plain\\bracket[1].txt"
+        },
+        "reference": {
+          "error": null,
+          "accepted": true,
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-04\\plain\\bracket[1].txt"
+        }
+      },
+      "passed": true,
+      "name": "real path outcome/literal-brackets"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": "S54 missing public path.",
+          "accepted": false,
+          "value": null
+        },
+        "reference": {
+          "error": "S54 missing public path.",
+          "accepted": false,
+          "value": null
+        }
+      },
+      "passed": true,
+      "name": "real path outcome/required-missing"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": null,
+          "accepted": true,
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-04\\plain\\absent\\suffix"
+        },
+        "reference": {
+          "error": null,
+          "accepted": true,
+          "value": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4f-path-implementation-01\\path-04\\plain\\absent\\suffix"
+        }
+      },
+      "passed": true,
+      "name": "real path outcome/optional-missing"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": "S54 missing suffix requires a directory.",
+          "accepted": false,
+          "value": null
+        },
+        "reference": {
+          "error": "S54 missing suffix requires a directory.",
+          "accepted": false,
+          "value": null
+        }
+      },
+      "passed": true,
+      "name": "real path outcome/file-as-parent"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": "S54 reparse ancestor.",
+          "accepted": false,
+          "value": null
+        },
+        "reference": {
+          "error": "S54 reparse ancestor.",
+          "accepted": false,
+          "value": null
+        }
+      },
+      "passed": true,
+      "name": "real path outcome/reparse-leaf"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": "S54 reparse ancestor.",
+          "accepted": false,
+          "value": null
+        },
+        "reference": {
+          "error": "S54 reparse ancestor.",
+          "accepted": false,
+          "value": null
+        }
+      },
+      "passed": true,
+      "name": "real path outcome/reparse-ancestor"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": "S54 absolute path/components.",
+          "accepted": false,
+          "value": null
+        },
+        "reference": {
+          "error": "S54 absolute path/components.",
+          "accepted": false,
+          "value": null
+        }
+      },
+      "passed": true,
+      "name": "real path outcome/relative"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": "S54 absolute path/components.",
+          "accepted": false,
+          "value": null
+        },
+        "reference": {
+          "error": "S54 absolute path/components.",
+          "accepted": false,
+          "value": null
+        }
+      },
+      "passed": true,
+      "name": "real path outcome/dot"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": "S54 absolute path/components.",
+          "accepted": false,
+          "value": null
+        },
+        "reference": {
+          "error": "S54 absolute path/components.",
+          "accepted": false,
+          "value": null
+        }
+      },
+      "passed": true,
+      "name": "real path outcome/dotdot"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": "S54 absolute path/components.",
+          "accepted": false,
+          "value": null
+        },
+        "reference": {
+          "error": "S54 absolute path/components.",
+          "accepted": false,
+          "value": null
+        }
+      },
+      "passed": true,
+      "name": "real path outcome/bound"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": "S54 absolute path/components.",
+          "accepted": false,
+          "value": null
+        },
+        "reference": {
+          "error": "S54 absolute path/components.",
+          "accepted": false,
+          "value": null
+        }
+      },
+      "passed": true,
+      "name": "real path outcome/empty"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": null,
+          "accepted": true,
+          "value": "\\\\server\\share"
+        },
+        "candidate_operations": [
+          "exists/\\\\server\\share",
+          "attributes/\\\\server\\share",
+          "parent/\\\\server\\share",
+          "attributes/\\\\server",
+          "parent/\\\\server",
+          "attributes/\\\\",
+          "parent/\\\\"
+        ],
+        "reference": {
+          "error": null,
+          "accepted": true,
+          "value": "\\\\server\\share"
+        },
+        "reference_operations": [
+          "exists/\\\\server\\share",
+          "attributes/\\\\server\\share",
+          "parent/\\\\server\\share",
+          "attributes/\\\\server",
+          "parent/\\\\server",
+          "attributes/\\\\",
+          "parent/\\\\"
+        ],
+        "network_access": false,
+        "mocked_filesystem": true
+      },
+      "passed": true,
+      "name": "unchanged fallback operations/\\\\server\\share"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": null,
+          "accepted": true,
+          "value": "\\\\server\\share\\dir\\"
+        },
+        "candidate_operations": [
+          "exists/\\\\server\\share\\dir\\",
+          "attributes/\\\\server\\share\\dir\\",
+          "parent/\\\\server\\share\\dir\\",
+          "attributes/\\\\server\\share",
+          "parent/\\\\server\\share",
+          "attributes/\\\\server",
+          "parent/\\\\server",
+          "attributes/\\\\",
+          "parent/\\\\"
+        ],
+        "reference": {
+          "error": null,
+          "accepted": true,
+          "value": "\\\\server\\share\\dir\\"
+        },
+        "reference_operations": [
+          "exists/\\\\server\\share\\dir\\",
+          "attributes/\\\\server\\share\\dir\\",
+          "parent/\\\\server\\share\\dir\\",
+          "attributes/\\\\server\\share",
+          "parent/\\\\server\\share",
+          "attributes/\\\\server",
+          "parent/\\\\server",
+          "attributes/\\\\",
+          "parent/\\\\"
+        ],
+        "network_access": false,
+        "mocked_filesystem": true
+      },
+      "passed": true,
+      "name": "unchanged fallback operations/\\\\server\\share\\dir\\"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": null,
+          "accepted": true,
+          "value": "\\\\?\\UNC\\server\\share\\dir"
+        },
+        "candidate_operations": [
+          "exists/\\\\?\\UNC\\server\\share\\dir",
+          "attributes/\\\\?\\UNC\\server\\share\\dir",
+          "parent/\\\\?\\UNC\\server\\share\\dir",
+          "attributes/\\\\?\\UNC\\server\\share",
+          "parent/\\\\?\\UNC\\server\\share",
+          "attributes/\\\\?\\UNC\\server",
+          "parent/\\\\?\\UNC\\server",
+          "attributes/\\\\?\\UNC\\",
+          "parent/\\\\?\\UNC\\",
+          "attributes/\\\\?",
+          "parent/\\\\?",
+          "attributes/\\",
+          "parent/\\"
+        ],
+        "reference": {
+          "error": null,
+          "accepted": true,
+          "value": "\\\\?\\UNC\\server\\share\\dir"
+        },
+        "reference_operations": [
+          "exists/\\\\?\\UNC\\server\\share\\dir",
+          "attributes/\\\\?\\UNC\\server\\share\\dir",
+          "parent/\\\\?\\UNC\\server\\share\\dir",
+          "attributes/\\\\?\\UNC\\server\\share",
+          "parent/\\\\?\\UNC\\server\\share",
+          "attributes/\\\\?\\UNC\\server",
+          "parent/\\\\?\\UNC\\server",
+          "attributes/\\\\?\\UNC\\",
+          "parent/\\\\?\\UNC\\",
+          "attributes/\\\\?",
+          "parent/\\\\?",
+          "attributes/\\",
+          "parent/\\"
+        ],
+        "network_access": false,
+        "mocked_filesystem": true
+      },
+      "passed": true,
+      "name": "unchanged fallback operations/\\\\?\\UNC\\server\\share\\dir"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": null,
+          "accepted": true,
+          "value": "\\\\?\\C:\\dir"
+        },
+        "candidate_operations": [
+          "exists/\\\\?\\C:\\dir",
+          "attributes/\\\\?\\C:\\dir",
+          "parent/\\\\?\\C:\\dir",
+          "attributes/\\\\?\\C:\\",
+          "parent/\\\\?\\C:\\"
+        ],
+        "reference": {
+          "error": null,
+          "accepted": true,
+          "value": "\\\\?\\C:\\dir"
+        },
+        "reference_operations": [
+          "exists/\\\\?\\C:\\dir",
+          "attributes/\\\\?\\C:\\dir",
+          "parent/\\\\?\\C:\\dir",
+          "attributes/\\\\?\\C:\\",
+          "parent/\\\\?\\C:\\"
+        ],
+        "network_access": false,
+        "mocked_filesystem": true
+      },
+      "passed": true,
+      "name": "unchanged fallback operations/\\\\?\\C:\\dir"
+    },
+    {
+      "detail": {
+        "candidate": {
+          "error": "S54 absolute path/components.",
+          "accepted": false,
+          "value": null
+        },
+        "candidate_operations": [],
+        "reference": {
+          "error": "S54 absolute path/components.",
+          "accepted": false,
+          "value": null
+        },
+        "reference_operations": [],
+        "network_access": false,
+        "mocked_filesystem": true
+      },
+      "passed": true,
+      "name": "unchanged fallback operations/\\\\.\\C:\\dir"
+    },
+    {
+      "detail": {
+        "unconditional_native": [
+          "\\\\server\\share\\dir",
+          "\\\\server\\share"
+        ],
+        "lexical_only": true,
+        "old": [
+          "\\\\server\\share\\dir",
+          "\\\\server\\share",
+          "\\\\server",
+          "\\\\"
+        ]
+      },
+      "passed": true,
+      "name": "UNC regression catches unconditional native parent mismatch"
+    }
+  ],
+  "classification": "completed drive and mocked fallback comparisons; fault cases pending"
+}
