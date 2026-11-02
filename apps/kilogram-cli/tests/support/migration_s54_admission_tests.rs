@@ -3,6 +3,114 @@ use super::*;
 #[path = "migration_s54_admission_fixture.rs"]
 mod fixture;
 use fixture::Fixture;
+
+fn diagnostic_refuses<T>(result: Result<T>, expected: D) -> Result<()> {
+    let error = match result {
+        Ok(_) => anyhow::bail!("expected public diagnostic refusal"),
+        Err(e) => e,
+    };
+    ensure!(
+        diagnostic::code(&error) == expected,
+        "typed shared admission check context: {error:#}"
+    );
+    ensure!(error.chain().count() >= 2, "original error chain retained");
+    Ok(())
+}
+#[test]
+fn s54_admission_diagnostics_shared_source_and_image_checks() -> Result<()> {
+    let f = Fixture::new()?;
+    std::fs::write(
+        f.root.join(".git/HEAD"),
+        b"0000000000000000000000000000000000000000\n",
+    )?;
+    diagnostic_refuses(f.inspect(), D::SourceHead)?;
+    let f = Fixture::new()?;
+    std::fs::write(
+        f.root.join("Cargo.lock"),
+        b"SYNTHETIC_PRIVATE_CANARY_source",
+    )?;
+    diagnostic_refuses(f.inspect(), D::SourcePin)?;
+    let f = Fixture::new()?;
+    std::fs::write(f.root.join("apps/new.rs"), b"public added source")?;
+    diagnostic_refuses(f.inspect(), D::SourceSet)?;
+    let f = Fixture::new()?;
+    std::fs::write(f.root.join(IMAGES[1].1), b"SYNTHETIC_PRIVATE_CANARY_image")?;
+    diagnostic_refuses(f.inspect(), D::ImagePin)?;
+    let mut f = Fixture::new()?;
+    f.inventory["images"][1] = f.inventory["images"][0].clone();
+    f.seal()?;
+    diagnostic_refuses(f.inspect(), D::ImageRoles)
+}
+#[test]
+fn s54_admission_diagnostics_shared_inputs_runtime_and_activation_checks() -> Result<()> {
+    let f = Fixture::new()?;
+    std::fs::remove_file(&f.input.inventory.path)?;
+    diagnostic_refuses(f.inspect(), D::InputPin)?;
+    let mut f = Fixture::new()?;
+    f.inventory["unexpected"] = json!("SYNTHETIC_PRIVATE_CANARY_document");
+    f.seal()?;
+    diagnostic_refuses(f.inspect(), D::InputDocument)?;
+    let mut f = Fixture::new()?;
+    f.inventory["runtime"]["cargo_jobs"] = json!(999);
+    f.seal()?;
+    diagnostic_refuses(f.inspect(), D::RuntimePolicy)?;
+    let mut f = Fixture::new()?;
+    let old = f.inventory["runtime"]["environment"][0]["present"]
+        .as_bool()
+        .context("public presence")?;
+    f.inventory["runtime"]["environment"][0]["present"] = json!(!old);
+    f.seal()?;
+    diagnostic_refuses(f.inspect(), D::Environment)?;
+    let mut f = Fixture::new()?;
+    f.activation["not_after_utc_ms"] = json!(0);
+    f.seal()?;
+    diagnostic_refuses(f.inspect(), D::ActivationValidity)
+}
+#[test]
+fn s54_admission_diagnostics_closed_codes_preserve_original_unknown_and_nested_context()
+-> Result<()> {
+    let error = diagnostic::at(D::AdmissionUnknown, || {
+        diagnostic::at::<()>(D::Environment, || {
+            anyhow::bail!("SYNTHETIC_PRIVATE_CANARY_error")
+        })
+    })
+    .err()
+    .context("expected typed error")?;
+    ensure!(
+        diagnostic::code(&error) == D::Environment,
+        "specific check survives outer grouping"
+    );
+    ensure!(
+        error.root_cause().to_string() == "SYNTHETIC_PRIVATE_CANARY_error",
+        "original Err preserved in memory"
+    );
+    let unknown = anyhow::anyhow!("SYNTHETIC_PRIVATE_CANARY_unknown");
+    ensure!(
+        diagnostic::code(&unknown) == D::AdmissionUnknown,
+        "unclassified errors remain explicitly unknown"
+    );
+    let mut unique = BTreeSet::new();
+    for code in D::ALL {
+        let line = code.line();
+        ensure!(
+            line.is_ascii()
+                && line.len() <= 128
+                && !line.contains(['\r', '\n'])
+                && !line.contains("CANARY")
+                && unique.insert(line),
+            "closed unique bounded static lines"
+        );
+    }
+    ensure!(D::ALL.len() == 29, "explicit finite advisory vocabulary");
+    diagnostic::report::<()>(Ok(()))?;
+    Ok(())
+}
+#[test]
+#[ignore = "benign nonzero diagnostic producer; invoked only by bounded source checks with required inputs removed"]
+fn s54_admission_diagnostics_missing_input_child() -> Result<()> {
+    let _ = AdmittedRun::load_for(Purpose::FeasibilityF)?;
+    anyhow::bail!("missing-input public child must never obtain admission")
+}
 #[test]
 fn s54_admission_valid_public_binding_has_real_blake3_but_no_runtime_capability() -> Result<()> {
     let f = Fixture::new()?;
@@ -273,6 +381,7 @@ fn s54_admission_rejects_compiler_profile_graph_role_and_raw_unit_substitution()
 }
 #[test]
 fn s54_admission_rejects_activation_launch_capture_stale_and_clock_reset() -> Result<()> {
+    let mut checked = 0;
     for mutation in 0..8 {
         let mut f = Fixture::new()?;
         match mutation {
@@ -287,7 +396,13 @@ fn s54_admission_rejects_activation_launch_capture_stale_and_clock_reset() -> Re
         }
         f.seal()?;
         ensure!(f.inspect().is_err(), "exact I/A/L/C relation {mutation}");
+        checked += 1;
     }
+    ensure!(
+        checked == 8,
+        "all eight distinct I/A/L/C mutations executed"
+    );
+    println!("s54_activation_launch_capture_mutations_executed={checked}");
     Ok(())
 }
 #[test]
@@ -430,16 +545,14 @@ fn s54_admission_compiler_boundary_parity_mutations_reach_the_required_refusal()
             v["build_inputs_after"] = v["build_inputs_before"].clone();
             Ok(())
         })?;
-        let error = f
-            .inspect()
-            .err()
-            .context("required compiler refusal")?
-            .to_string();
+        let error = f.inspect().err().context("required compiler refusal")?;
         ensure!(
-            error.contains(expected),
-            "{name}: intended compiler refusal {expected}, actual {error}"
+            error
+                .chain()
+                .any(|cause| cause.to_string().contains(expected)),
+            "{name}: intended compiler refusal {expected}, actual {error:#}"
         );
-        println!("compiler_parity_refusal={name};reason={error}");
+        println!("compiler_parity_refusal={name};reason={expected}");
     }
     Ok(())
 }
@@ -495,16 +608,14 @@ fn s54_admission_embedded_inputs_and_compiler_dependencies_are_closed() -> Resul
             }
         }
         f.seal()?;
-        let error = f
-            .inspect()
-            .err()
-            .context("required embedded refusal")?
-            .to_string();
+        let error = f.inspect().err().context("required embedded refusal")?;
         ensure!(
-            error.contains(expected),
-            "{name}: intended embedded refusal {expected}, actual {error}"
+            error
+                .chain()
+                .any(|cause| cause.to_string().contains(expected)),
+            "{name}: intended embedded refusal {expected}, actual {error:#}"
         );
-        println!("embedded_refusal={name};reason={error}");
+        println!("embedded_refusal={name};reason={expected}");
     }
     Ok(())
 }
@@ -634,7 +745,8 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
             "inputs":{"inventory":f.input.inventory,"activation":f.input.activation,"launch":f.input.launch,"capture":f.input.capture}}))?)?;
         file.sync_all()?;
     }
-    for mutation in 0..8 {
+    let mut checked = 0;
+    for mutation in 0..9 {
         let mut f = Fixture::new_for(Purpose::FeasibilityF)?;
         match mutation {
             0 => f.inventory["identity"]["selector"] = Purpose::WholeP.selector().into(),
@@ -654,9 +766,13 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
                 f.inventory["identity"]["attempt"] =
                     "F-s54-mixed-hooks-feasibility-01-attempt-01".into()
             }
-            _ => {
+            7 => {
                 f.inventory["identity"]["attempt"] =
                     "F-s54-mixed-hooks-feasibility-01-attempt-02".into()
+            }
+            _ => {
+                f.inventory["identity"]["attempt"] =
+                    "F-s54-mixed-hooks-feasibility-01-attempt-03".into()
             }
         }
         f.seal()?;
@@ -664,6 +780,15 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
             f.inspect().is_err(),
             "cross-purpose substitution {mutation}"
         );
+        checked += 1;
+        if mutation == 8 {
+            println!("s54_f_shared_admission_refusal=F03;mutation=8;inspect=refused");
+        }
     }
+    ensure!(
+        checked == 9,
+        "all nine F shared admission mutations executed"
+    );
+    println!("s54_f_shared_admission_mutations_executed={checked}");
     Ok(())
 }

@@ -4,6 +4,9 @@ use super::*;
 mod schema;
 pub(super) use schema::Pin;
 use schema::*;
+#[path = "migration_s54_admission_diagnostic.rs"]
+mod diagnostic;
+use diagnostic::Code as D;
 #[path = "migration_s54_admission_compiler.rs"]
 mod compiler;
 #[path = "migration_s54_admission_files.rs"]
@@ -337,10 +340,13 @@ fn environment() -> Result<Vec<Environment>> {
     Ok(out)
 }
 fn env_check(rows: &[Environment]) -> Result<()> {
-    ensure!(
-        env_identity(rows)? == environment()? && std::env::var("CARGO_NET_OFFLINE")? == "true",
-        "exact actual frozen environment closure"
-    );
+    diagnostic::at(D::Environment, || {
+        ensure!(
+            env_identity(rows)? == environment()? && std::env::var("CARGO_NET_OFFLINE")? == "true",
+            "exact actual frozen environment closure"
+        );
+        Ok(())
+    })?;
     Ok(())
 }
 fn env_identity(rows: &[Environment]) -> Result<Vec<Environment>> {
@@ -383,10 +389,14 @@ fn source_check(p: &Policy, s: &Source) -> Result<()> {
     );
     files::digest(&s.implementation, 40)?;
     files::digest(&s.observed_head, 40)?;
-    ensure!(
-        s.implementation == s.observed_head && s.observed_head == head(&p.root)?,
-        "actual reviewed implementation HEAD"
-    );
+    diagnostic::at(D::SourceHead, || {
+        ensure!(
+            s.implementation == s.observed_head
+                && s.observed_head == diagnostic::at(D::SourceHead, || head(&p.root))?,
+            "actual reviewed implementation HEAD"
+        );
+        Ok(())
+    })?;
     unique_pins(&s.files, 4096)?;
     let actual = files::sources(&p.root)?;
     let expected = s
@@ -394,16 +404,19 @@ fn source_check(p: &Policy, s: &Source) -> Result<()> {
         .iter()
         .map(|v| files::key(&v.path))
         .collect::<Result<BTreeSet<_>>>()?;
-    ensure!(
-        expected
-            == actual
-                .iter()
-                .map(|v| files::key(v))
-                .collect::<Result<BTreeSet<_>>>()?,
-        "exact relevant filesystem source set, no historical recursion"
-    );
+    diagnostic::at(D::SourceSet, || {
+        ensure!(
+            expected
+                == actual
+                    .iter()
+                    .map(|v| files::key(v))
+                    .collect::<Result<BTreeSet<_>>>()?,
+            "exact relevant filesystem source set, no historical recursion"
+        );
+        Ok(())
+    })?;
     for r in &s.files {
-        files::pin(r, 8 * MIB)?;
+        diagnostic::at(D::SourcePin, || files::pin(r, 8 * MIB))?;
     }
     Ok(())
 }
@@ -416,17 +429,23 @@ fn image<'a>(i: &'a Inventory, role: &str) -> Result<&'a Pin> {
         .pin)
 }
 fn images(p: &Policy, i: &Inventory) -> Result<()> {
-    ensure!(i.images.len() == 9, "exact nine executable roles");
+    diagnostic::at(D::ImageRoles, || {
+        ensure!(i.images.len() == 9, "exact nine executable roles");
+        Ok(())
+    })?;
     let mut roles = BTreeSet::new();
     for r in &i.images {
-        ensure!(roles.insert(r.role.as_str()), "duplicate executable role");
+        diagnostic::at(D::ImageRoles, || {
+            ensure!(roles.insert(r.role.as_str()), "duplicate executable role");
+            Ok(())
+        })?;
         let spec = IMAGES
             .iter()
             .find(|s| s.0 == r.role)
             .context("unknown executable role")?;
         files::same(&r.pin.path, &p.root.join(spec.1))?;
         ensure!(r.pin.bytes > 0, "nonempty image");
-        files::pin(&r.pin, 128 * MIB)?;
+        diagnostic::at(D::ImagePin, || files::pin(&r.pin, 128 * MIB))?;
     }
     unique_pins(
         &i.images.iter().map(|r| r.pin.clone()).collect::<Vec<_>>(),
@@ -442,15 +461,18 @@ fn images(p: &Policy, i: &Inventory) -> Result<()> {
     Ok(())
 }
 fn runtime(p: &Policy, r: &Runtime) -> Result<()> {
-    ensure!(
-        r.cargo_jobs == 2
-            && r.priority == "BelowNormal"
-            && r.offline
-            && r.locked
-            && r.skip_cache
-            && r.architecture == "x64",
-        "required runtime resource/tool policy"
-    );
+    diagnostic::at(D::RuntimePolicy, || {
+        ensure!(
+            r.cargo_jobs == 2
+                && r.priority == "BelowNormal"
+                && r.offline
+                && r.locked
+                && r.skip_cache
+                && r.architecture == "x64",
+            "required runtime resource/tool policy"
+        );
+        Ok(())
+    })?;
     ensure!(
         r.resolutions.len() == p.resolutions.len(),
         "exact runtime resolvers"
@@ -474,8 +496,8 @@ fn runtime(p: &Policy, r: &Runtime) -> Result<()> {
     for dir in [&p.root, &p.root.join("target/verification-scale/deps")] {
         ensure!(!dir.join("powershell.exe").exists(), "memory shell shadow");
     }
-    env_check(&r.environment)?;
-    config_check(&p.configs, &r.configs)?;
+    diagnostic::at(D::Environment, || env_check(&r.environment))?;
+    diagnostic::at(D::RuntimeConfig, || config_check(&p.configs, &r.configs))?;
     let actual = std::env::var("TOKIO_WORKER_THREADS").ok();
     let available = std::thread::available_parallelism()?.get();
     let effective = actual
@@ -664,41 +686,53 @@ fn inspect_state(p: &Policy, input: &Inputs, state: Directory<'_>) -> Result<Ins
         .path
         .parent()
         .context("fixed purpose input directory")?;
-    ensure!(
-        [Purpose::WholeP, Purpose::FeasibilityF]
-            .into_iter()
-            .any(|purpose| purpose.run(&p.root) == run),
-        "fixed S54 input namespace"
-    );
+    diagnostic::at(D::Namespace, || {
+        ensure!(
+            [Purpose::WholeP, Purpose::FeasibilityF]
+                .into_iter()
+                .any(|purpose| purpose.run(&p.root) == run),
+            "fixed S54 input namespace"
+        );
+        Ok(())
+    })?;
     for (pin, name) in [
         (&input.inventory, "inputs.json"),
         (&input.activation, "activation.json"),
         (&input.launch, "launch.json"),
         (&input.capture, "capture.json"),
     ] {
-        files::same(&pin.path, &run.join(name))?;
+        diagnostic::at(D::Namespace, || files::same(&pin.path, &run.join(name)))?;
     }
-    let raw = files::pin(&input.inventory, 2 * MIB)?;
-    let i: Inventory = files::json(&raw, 2 * MIB)?;
-    let a: Activation = files::document(&input.activation, 16 * 1024)?;
-    let l: Launch = files::document(&input.launch, 16 * 1024)?;
-    let c: Capture = files::document(&input.capture, 4096)?;
-    ensure!(
-        i.schema == 1
-            && i.classification == Purpose::from_case(&i.identity.case)?.inventory_class(),
-        "S54 inventory schema"
-    );
-    let purpose = Purpose::identity(&i.identity.case, &i.identity.attempt, &i.identity.selector)?;
-    deadline(&i.deadline, purpose)?;
+    let raw = diagnostic::at(D::InputPin, || files::pin(&input.inventory, 2 * MIB))?;
+    let i: Inventory = diagnostic::at(D::InputDocument, || files::json(&raw, 2 * MIB))?;
+    let a: Activation = diagnostic::at(D::InputDocument, || {
+        files::document(&input.activation, 16 * 1024)
+    })?;
+    let l: Launch = diagnostic::at(D::InputDocument, || {
+        files::document(&input.launch, 16 * 1024)
+    })?;
+    let c: Capture = diagnostic::at(D::InputDocument, || files::document(&input.capture, 4096))?;
+    diagnostic::at(D::InputDocument, || {
+        ensure!(
+            i.schema == 1
+                && i.classification == Purpose::from_case(&i.identity.case)?.inventory_class(),
+            "S54 inventory schema"
+        );
+        Ok(())
+    })?;
+    let purpose = diagnostic::at(D::Namespace, || {
+        Purpose::identity(&i.identity.case, &i.identity.attempt, &i.identity.selector)
+    })?;
+    diagnostic::at(D::Namespace, || deadline(&i.deadline, purpose))?;
     match state {
-        Directory::Fresh => fresh(p, &i.identity)?,
-        _ => directory(p, &i.identity, state)?,
+        Directory::Fresh => diagnostic::at(D::Directory, || fresh(p, &i.identity))?,
+        _ => diagnostic::at(D::Directory, || directory(p, &i.identity, state))?,
     }
-    references(p, &i)?;
-    source_check(p, &i.source)?;
-    images(p, &i)?;
-    runtime(p, &i.runtime)?;
-    selection(&i)?;
+    diagnostic::at(D::Namespace, || references(p, &i))?;
+    diagnostic::at(D::SourceUnknown, || source_check(p, &i.source))?;
+    diagnostic::at(D::ImagesUnknown, || images(p, &i))?;
+    diagnostic::at(D::RuntimeUnknown, || runtime(p, &i.runtime))?;
+    diagnostic::at(D::Selection, || selection(&i))?;
     files::same(&input.inventory.path, &i.identity.run.join("inputs.json"))?;
     for (x, y) in [
         (&input.activation.path, &i.identity.activation),
@@ -707,60 +741,75 @@ fn inspect_state(p: &Policy, input: &Inputs, state: Directory<'_>) -> Result<Ins
     ] {
         files::same(x, y)?;
     }
-    ensure!(
-        a.schema == 1
-            && a.classification == purpose.activation_class()
-            && a.case == i.identity.case
-            && a.attempt == i.identity.attempt
-            && a.run_id == i.identity.run_id
-            && a.selector == i.identity.selector
-            && a.implementation == i.source.implementation
-            && a.execution_mode == "NativeToken"
-            && a.deadline == i.deadline
-            && a.retry == "root_reallocation_only",
-        "external activation binds exact I, not itself"
-    );
+    diagnostic::at(D::Activation, || {
+        ensure!(
+            a.schema == 1
+                && a.classification == purpose.activation_class()
+                && a.case == i.identity.case
+                && a.attempt == i.identity.attempt
+                && a.run_id == i.identity.run_id
+                && a.selector == i.identity.selector
+                && a.implementation == i.source.implementation
+                && a.execution_mode == "NativeToken"
+                && a.deadline == i.deadline
+                && a.retry == "root_reallocation_only",
+            "external activation binds exact I, not itself"
+        );
+        Ok(())
+    })?;
     same_pin(&a.inventory, &input.inventory)?;
     files::same(&a.run, &i.identity.run)?;
     if let Directory::BeforeNative(started) | Directory::Owned(started, _) = state {
         same_pin(&started.inventory, &input.inventory)?;
         same_pin(&started.activation, &input.activation)?;
-        ensure!(
-            started.owner_pid == l.owner_pid && started.owner_pid == c.owner_pid,
-            "actual launch owner matches claim"
-        );
+        diagnostic::at(D::NativeClaim, || {
+            ensure!(
+                started.owner_pid == l.owner_pid && started.owner_pid == c.owner_pid,
+                "actual launch owner matches claim"
+            );
+            Ok(())
+        })?;
     }
     if let Directory::Owned(_, claim) = state {
-        ensure!(
-            claim.launch_sha256 == input.launch.sha256
-                && claim.launcher_pid == c.launcher_pid
-                && (p.fixture || claim.harness_pid == std::process::id()),
-            "native original launch/harness binding"
-        );
+        diagnostic::at(D::NativeClaim, || {
+            ensure!(
+                claim.launch_sha256 == input.launch.sha256
+                    && claim.launcher_pid == c.launcher_pid
+                    && (p.fixture || claim.harness_pid == std::process::id()),
+                "native original launch/harness binding"
+            );
+            Ok(())
+        })?;
     }
     let now = u64::try_from(
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)?
             .as_millis(),
     )?;
-    ensure!(
-        a.not_before_utc_ms < a.not_after_utc_ms
-            && now >= a.not_before_utc_ms
-            && now < a.not_after_utc_ms,
-        "activation validity window"
-    );
-    ensure!(
-        l.schema == 1
-            && l.classification == "s54_original_launch_binding"
-            && l.case == a.case
-            && l.attempt == a.attempt
-            && l.run_id == a.run_id
-            && l.start_tick_ms > 0
-            && l.start_utc_ms >= a.not_before_utc_ms
-            && l.start_utc_ms < a.not_after_utc_ms
-            && l.start_utc_ms <= now,
-        "exact I/A/L/C launch identities/order"
-    );
+    diagnostic::at(D::ActivationValidity, || {
+        ensure!(
+            a.not_before_utc_ms < a.not_after_utc_ms
+                && now >= a.not_before_utc_ms
+                && now < a.not_after_utc_ms,
+            "activation validity window"
+        );
+        Ok(())
+    })?;
+    diagnostic::at(D::Launch, || {
+        ensure!(
+            l.schema == 1
+                && l.classification == "s54_original_launch_binding"
+                && l.case == a.case
+                && l.attempt == a.attempt
+                && l.run_id == a.run_id
+                && l.start_tick_ms > 0
+                && l.start_utc_ms >= a.not_before_utc_ms
+                && l.start_utc_ms < a.not_after_utc_ms
+                && l.start_utc_ms <= now,
+            "exact I/A/L/C launch identities/order"
+        );
+        Ok(())
+    })?;
     same_pin(&l.inventory, &input.inventory)?;
     same_pin(&l.activation, &input.activation)?;
     same_pin(&l.capture, &input.capture)?;
@@ -770,35 +819,41 @@ fn inspect_state(p: &Policy, input: &Inputs, state: Directory<'_>) -> Result<Ins
         (l.work_tick_ms, purpose.limits()[1]),
         (l.outer_tick_ms, purpose.limits()[2]),
     ] {
-        ensure!(
-            actual
-                == l.start_tick_ms
-                    .checked_add(seconds * 1000)
-                    .context("launch tick overflow")?,
-            "original numeric monotonic cutoffs"
-        );
+        diagnostic::at(D::Launch, || {
+            ensure!(
+                actual
+                    == l.start_tick_ms
+                        .checked_add(seconds * 1000)
+                        .context("launch tick overflow")?,
+                "original numeric monotonic cutoffs"
+            );
+            Ok(())
+        })?;
     }
     let utc_end = l
         .start_utc_ms
         .checked_add(purpose.limits()[2] * 1000)
         .context("launch UTC overflow")?;
-    ensure!(
-        now < utc_end
-            && c.version == 1
-            && c.attempt == a.attempt
-            && c.owner_pid == l.owner_pid
-            && c.launcher_pid == l.launcher_pid
-            && c.owner_pid > 0
-            && c.launcher_pid > 0
-            && c.owner_pid != c.launcher_pid
-            && c.whole_utc_ms == utc_end,
-        "exact current capture binding, no reset"
-    );
+    diagnostic::at(D::Capture, || {
+        ensure!(
+            now < utc_end
+                && c.version == 1
+                && c.attempt == a.attempt
+                && c.owner_pid == l.owner_pid
+                && c.launcher_pid == l.launcher_pid
+                && c.owner_pid > 0
+                && c.launcher_pid > 0
+                && c.owner_pid != c.launcher_pid
+                && c.whole_utc_ms == utc_end,
+            "exact current capture binding, no reset"
+        );
+        Ok(())
+    })?;
     files::same(&c.harness_path, &image(&i, "stable-migration")?.path)?;
     if !p.fixture {
         files::same(&std::env::current_exe()?, &c.harness_path)?;
     }
-    compiler::validate(p, &i)?;
+    diagnostic::at(D::CompilerUnknown, || compiler::validate(p, &i))?;
     // All admitted public files are checked again after traversing references.
     for pin in [
         &input.inventory,
@@ -806,7 +861,7 @@ fn inspect_state(p: &Policy, input: &Inputs, state: Directory<'_>) -> Result<Ins
         &input.launch,
         &input.capture,
     ] {
-        files::pin(pin, 2 * MIB)?;
+        diagnostic::at(D::InputPin, || files::pin(pin, 2 * MIB))?;
     }
     let inventory_blake3 = blake3::hash(&raw).to_hex().to_string();
     Ok(Inspection {

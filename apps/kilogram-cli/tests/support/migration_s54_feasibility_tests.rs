@@ -19,7 +19,7 @@ fn rows(last: [u16; 2]) -> Result<Vec<Value>> {
 #[test]
 fn s54_f_closed_purpose_rejects_cross_case_selector_attempt_and_keeps_p_limits() -> Result<()> {
     ensure!(
-        Purpose::FeasibilityF.attempt() == "F-s54-mixed-hooks-feasibility-01-attempt-03"
+        Purpose::FeasibilityF.attempt() == "F-s54-mixed-hooks-feasibility-01-attempt-04"
             && Purpose::WholeP.attempt() == "P-s54-whole-resumed-l1-01-attempt-01"
             && Purpose::identity(
                 Purpose::FeasibilityF.case(),
@@ -27,7 +27,7 @@ fn s54_f_closed_purpose_rejects_cross_case_selector_attempt_and_keeps_p_limits()
                 Purpose::FeasibilityF.selector(),
             )
             .is_err(),
-        "consumed F01 refused; closed F03/P01"
+        "consumed F01 refused; closed F04/P01"
     );
     ensure!(
         Purpose::identity(
@@ -37,6 +37,15 @@ fn s54_f_closed_purpose_rejects_cross_case_selector_attempt_and_keeps_p_limits()
         )
         .is_err(),
         "consumed F02 refused"
+    );
+    ensure!(
+        Purpose::identity(
+            Purpose::FeasibilityF.case(),
+            "F-s54-mixed-hooks-feasibility-01-attempt-03",
+            Purpose::FeasibilityF.selector(),
+        )
+        .is_err(),
+        "consumed F03 refused"
     );
     for p in [Purpose::WholeP, Purpose::FeasibilityF] {
         ensure!(

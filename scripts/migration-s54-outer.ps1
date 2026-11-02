@@ -15,6 +15,7 @@ public sealed class KilogramS54Output {
     }
     public sealed class SavedText {
         public string Text; public int Redacted, NamedTails, Malformed, PartialTailBytes;
+        public int AdmissionDiagnostics, AdmissionDiagnosticBytes, AdmissionDiagnosticDropped;
         public bool InvalidUtf8, Truncated;
     }
     sealed class Reader {
@@ -68,6 +69,25 @@ public sealed class KilogramS54Output {
         stdout.Forward(forwardedOut); stderr.Forward(forwardedErr);
     }
     static bool Marker(string s) { return s.StartsWith("S54_FUNCTIONAL",StringComparison.Ordinal) || s.StartsWith("S54_FROZEN_COMPLETED",StringComparison.Ordinal) || s.StartsWith("S54_FEASIBILITY_FUNCTIONAL",StringComparison.Ordinal) || s.StartsWith("S54_FEASIBILITY_FROZEN_COMPLETED",StringComparison.Ordinal); }
+    // Closed advisory vocabulary, paired with the typed Rust producer. Neither
+    // syntactically plausible tokens nor error Display/Debug are admitted.
+    static readonly HashSet<string> admissionCodes = new HashSet<string>(StringComparer.Ordinal) {
+        "admission:unknown", "inputs:required_input", "inputs:digest", "inputs:pin_read", "inputs:document",
+        "policy:unknown", "policy:binding", "namespace:binding", "directory:binding",
+        "source:unknown", "source:head", "source:set", "source:pin_read",
+        "images:unknown", "images:roles", "images:pin_read",
+        "runtime:unknown", "runtime:policy", "runtime:environment", "runtime:config",
+        "selection:binding", "activation:binding", "activation:validity", "launch:binding", "capture:binding",
+        "compiler:unknown", "native_claim:binding", "native_claim:create", "clock:binding"
+    };
+    static bool AdmissionDiagnostic(string line) {
+        const string prefix="S54_ADMISSION_DIAGNOSTIC v1 stage=";
+        if(line.Length>128 || !line.StartsWith(prefix,StringComparison.Ordinal)) return false;
+        string pair=line.Substring(prefix.Length); int split=pair.IndexOf(" reason=",StringComparison.Ordinal);
+        if(split<0) return false;
+        string code=pair.Substring(0,split)+":"+pair.Substring(split+8);
+        return admissionCodes.Contains(code);
+    }
     public static string[] Markers(byte[] bytes) {
         var result=new List<string>(); string text=Encoding.UTF8.GetString(bytes); int start=0,end;
         while((end=text.IndexOf('\n',start))>=0) {
@@ -85,7 +105,14 @@ public sealed class KilogramS54Output {
             string full=text.Substring(start,end-start); start=end+1;
             string term=full.EndsWith("\r",StringComparison.Ordinal)?"\r\n":"\n";
             string line=full.TrimEnd('\r'), saved=null;
-            if(line.StartsWith("S54_CAPTURE",StringComparison.Ordinal)) {
+            if(line.StartsWith("S54_ADMISSION_DIAGNOSTIC",StringComparison.Ordinal)) {
+                // Strip exactly one CR terminator, never trim arbitrary tails.
+                string exact=full.EndsWith("\r",StringComparison.Ordinal)?full.Substring(0,full.Length-1):full;
+                int bytes=Encoding.UTF8.GetByteCount(full)+1;
+                if(!result.InvalidUtf8 && AdmissionDiagnostic(exact) && result.AdmissionDiagnostics<4 && result.AdmissionDiagnosticBytes+bytes<=512) {
+                    saved=exact; result.AdmissionDiagnostics++; result.AdmissionDiagnosticBytes+=bytes;
+                } else { result.Redacted++; result.Malformed++; result.AdmissionDiagnosticDropped++; }
+            } else if(line.StartsWith("S54_CAPTURE",StringComparison.Ordinal)) {
                 if(Regex.IsMatch(line,"^S54_CAPTURE \\{\"classification\":\"bounded_native_capture\",\"stdout_eof\":(true|false),\"stderr_eof\":(true|false),\"stdout_overflow\":(true|false),\"stderr_overflow\":(true|false),\"stdout_failed\":(true|false),\"stderr_failed\":(true|false),\"stdout_bytes\":[0-9]{1,7},\"stderr_bytes\":[0-9]{1,7}\\}$")) saved=line;
                 else { saved="S54_CAPTURE [invalid protocol redacted]"; result.Malformed++; }
             } else if(Marker(line)) {
@@ -167,7 +194,7 @@ function Write-S54Transcript($Session) {
         }elseif($captureLines.Count){$allComplete=$false;$result.native_capture_status='invalid_or_duplicate'}
         $pin=Write-S54TranscriptBytes (Join-Path $Session.I.identity.run "native-$role.protocol.log") ([Text.UTF8Encoding]::new($false).GetBytes($saved.Text)) $job
         $complete=$state.Eof -and $state.Stopped -and -not $state.Failed -and -not $state.Overflow -and -not $saved.InvalidUtf8 -and -not $saved.Truncated -and $saved.PartialTailBytes -eq 0 -and $saved.Malformed -eq 0
-        $result[$role]=@{pin=$pin;captured_prefix_bytes=$state.Bytes.Length;captured_prefix_sha256=(Get-S54Sha $state.Bytes);source_eof=$state.Eof;reader_stopped=$state.Stopped;source_failed=$state.Failed;source_overflow=$state.Overflow;complete=$complete;invalid_utf8=$saved.InvalidUtf8;stored_truncated=$saved.Truncated;partial_tail_bytes=$saved.PartialTailBytes;redacted_lines=$saved.Redacted;redacted_named_tails=$saved.NamedTails;malformed_protocol_lines=$saved.Malformed}
+        $result[$role]=@{pin=$pin;captured_prefix_bytes=$state.Bytes.Length;captured_prefix_sha256=(Get-S54Sha $state.Bytes);source_eof=$state.Eof;reader_stopped=$state.Stopped;source_failed=$state.Failed;source_overflow=$state.Overflow;complete=$complete;invalid_utf8=$saved.InvalidUtf8;stored_truncated=$saved.Truncated;partial_tail_bytes=$saved.PartialTailBytes;redacted_lines=$saved.Redacted;redacted_named_tails=$saved.NamedTails;malformed_protocol_lines=$saved.Malformed;admission_diagnostics=@{classification='advisory_failure_evidence';count=$saved.AdmissionDiagnostics;bytes=$saved.AdmissionDiagnosticBytes;dropped=$saved.AdmissionDiagnosticDropped;authority='none';maximum_line_bytes=128;maximum_lines_per_stream=4;maximum_bytes_per_stream=512}}
         $allComplete=$allComplete -and $complete
     }
     $job.CheckWhole()
@@ -443,6 +470,9 @@ function Invoke-S54SingleExecutable($Pin,[string[]]$Arguments,[long]$WorkTick,[s
         try{
             if($ForwardOutput -and $null -ne $output){
                 $output.ForwardNew();$a=$output.StdoutSnapshot();$b=$output.StderrSnapshot()
+                # The capture separator must not complete an unterminated
+                # native diagnostic into an apparently valid protocol line.
+                if($b.Bytes.Length -gt 0 -and $b.Bytes[$b.Bytes.Length-1] -ne 10){[Console]::Error.Write(' [S54 incomplete native stderr line]')}
                 $status=[ordered]@{classification='bounded_native_capture';stdout_eof=($a.Eof -and $a.Stopped);stderr_eof=($b.Eof -and $b.Stopped);stdout_overflow=$a.Overflow;stderr_overflow=$b.Overflow;stdout_failed=$a.Failed;stderr_failed=$b.Failed;stdout_bytes=$a.Bytes.Length;stderr_bytes=$b.Bytes.Length}
                 [Console]::Error.WriteLine("`nS54_CAPTURE "+(ConvertTo-Json -InputObject $status -Compress))
             }

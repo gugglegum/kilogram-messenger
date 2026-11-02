@@ -143,6 +143,9 @@ impl AdmittedRun {
         Self::load_for(Purpose::WholeP)
     }
     pub(in super::super) fn load_for(purpose: Purpose) -> Result<Self> {
+        diagnostic::report(Self::load_inner(purpose))
+    }
+    fn load_inner(purpose: Purpose) -> Result<Self> {
         // Refuse an unactivated selector before resolving tools or inspecting files.
         let required = [
             "KILOGRAM_S54_INVENTORY_SHA256",
@@ -152,34 +155,48 @@ impl AdmittedRun {
         ]
         .into_iter()
         .map(|key| {
-            let value = std::env::var(key).context("required S54 runtime input absent")?;
-            files::digest(&value, 64)?;
+            let value = diagnostic::at(D::RequiredInput, || {
+                std::env::var(key).context("required S54 runtime input absent")
+            })?;
+            diagnostic::at(D::InputDigest, || files::digest(&value, 64))?;
             Ok((key, value))
         })
         .collect::<Result<BTreeMap<_, _>>>()?;
-        let p = Policy::production()?;
-        require_production(&p)?;
-        let input = input_for(&p.root, purpose, |key| {
-            required
-                .get(key)
-                .cloned()
-                .context("required S54 runtime pin")
+        let p = diagnostic::at(D::PolicyUnknown, Policy::production)?;
+        diagnostic::at(D::PolicyBinding, || require_production(&p))?;
+        let input = diagnostic::at(D::InputPin, || {
+            input_for(&p.root, purpose, |key| {
+                required
+                    .get(key)
+                    .cloned()
+                    .context("required S54 runtime pin")
+            })
         })?;
         let run = input
             .inventory
             .path
             .parent()
             .context("owned runtime directory")?;
-        let started_pin = pin(&run.join("started.json"), 16 * 1024)?;
-        let started: Started = files::document(&started_pin, 16 * 1024)?;
-        let verified = inspect_state(&p, &input, Directory::BeforeNative(&started))?;
-        ensure!(
-            verified.inventory.identity.case == purpose.case(),
-            "runtime caller purpose before profiles"
-        );
-        let capture_env =
-            std::env::var_os("KILOGRAM_S54_CAPTURE_ADMISSION").context("required capture path")?;
-        files::same(Path::new(&capture_env), &input.capture.path)?;
+        let started_pin =
+            diagnostic::at(D::NativeClaim, || pin(&run.join("started.json"), 16 * 1024))?;
+        let started: Started =
+            diagnostic::at(D::NativeClaim, || files::document(&started_pin, 16 * 1024))?;
+        let verified = diagnostic::at(D::AdmissionUnknown, || {
+            inspect_state(&p, &input, Directory::BeforeNative(&started))
+        })?;
+        diagnostic::at(D::Namespace, || {
+            ensure!(
+                verified.inventory.identity.case == purpose.case(),
+                "runtime caller purpose before profiles"
+            );
+            Ok(())
+        })?;
+        let capture_env = diagnostic::at(D::Capture, || {
+            std::env::var_os("KILOGRAM_S54_CAPTURE_ADMISSION").context("required capture path")
+        })?;
+        diagnostic::at(D::Capture, || {
+            files::same(Path::new(&capture_env), &input.capture.path)
+        })?;
         let l = &verified.launch;
         let claim = Claim {
             version: 1,
@@ -194,30 +211,42 @@ impl AdmittedRun {
             inventory_sha256: input.inventory.sha256.clone(),
             launch_sha256: input.launch.sha256.clone(),
         };
-        ensure!(
-            claim.harness_pid != claim.owner_pid && claim.harness_pid != claim.launcher_pid,
-            "separate actual runtime process"
-        );
-        let claim_pin = create(&run.join("native-started.json"), &claim)?;
+        diagnostic::at(D::NativeClaim, || {
+            ensure!(
+                claim.harness_pid != claim.owner_pid && claim.harness_pid != claim.launcher_pid,
+                "separate actual runtime process"
+            );
+            Ok(())
+        })?;
+        let claim_pin = diagnostic::at(D::NativeCreate, || {
+            create(&run.join("native-started.json"), &claim)
+        })?;
         let mut request = claim.clone();
         request.classification = "s54_clock_request".into();
         let before = Instant::now();
-        let request_pin = create(&run.join("clock-request.json"), &request)?;
+        let request_pin = diagnostic::at(D::Clock, || {
+            create(&run.join("clock-request.json"), &request)
+        })?;
         let reply_path = run.join("clock-reply.json");
         let wait_until = before
             .checked_add(Duration::from_secs(5))
             .context("rendezvous wait bound")?;
         while !reply_path.exists() {
-            ensure!(
-                Instant::now() < wait_until,
-                "bounded original owner clock rendezvous"
-            );
+            diagnostic::at(D::Clock, || {
+                ensure!(
+                    Instant::now() < wait_until,
+                    "bounded original owner clock rendezvous"
+                );
+                Ok(())
+            })?;
             std::thread::sleep(Duration::from_millis(5));
         }
-        let reply_pin = pin(&reply_path, 16 * 1024)?;
-        let reply: ClockReply = files::document(&reply_pin, 16 * 1024)?;
-        reply_binding(&reply, &claim, &request_pin)?;
-        let (origin, until) = original(before, Instant::now(), l, &reply)?;
+        let reply_pin = diagnostic::at(D::Clock, || pin(&reply_path, 16 * 1024))?;
+        let reply: ClockReply =
+            diagnostic::at(D::Clock, || files::document(&reply_pin, 16 * 1024))?;
+        diagnostic::at(D::Clock, || reply_binding(&reply, &claim, &request_pin))?;
+        let (origin, until) =
+            diagnostic::at(D::Clock, || original(before, Instant::now(), l, &reply))?;
         Ok(Self {
             input,
             verified,

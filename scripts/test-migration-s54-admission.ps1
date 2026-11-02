@@ -148,7 +148,7 @@ if($HeadOnly){
         Set-S54Purpose FeasibilityF
         $policy=New-S54Policy -FixtureRoot $f.root
         $facts=Test-S54Admission $f.inputs $policy
-        Require-Head ($facts.classification -ceq 'public_schema_fixture_only' -and $i.identity.attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-03') 'actual complete PS public packed F03 admission'
+        Require-Head ($facts.classification -ceq 'public_schema_fixture_only' -and $i.identity.attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-04') 'actual complete PS public packed F04 admission'
         $i.source.observed_head=$b;$i.source.implementation=$b;$why=$null
         try{Assert-S54Inventory $i $policy}catch{$why=$_.Exception.Message}
         Require-Head ($why -match 'S54 actual HEAD') 'actual PS admission refuses wrong observed packed HEAD' $why
@@ -183,7 +183,7 @@ if($HeadOnly){
         Require-Head ($LASTEXITCODE -eq 0 -and $realHead -ceq $gitHead) 'read-only real checkout HEAD agrees with Git'
         $out=Get-S54Path (Join-Path $evidence 'head-results.json') -AllowMissing
         if(-not $out.StartsWith($evidence+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or (Test-Path -LiteralPath $out)){throw 'Fresh HEAD results required.'}
-        Write-KilogramFrozenJson $out @{classification='focused HEAD/early-prerequisite/F03 public admission only';count=$checks.Count;checks=@($checks);fixture_roots=@($roots);production_prepare=$false;real_git_modified=$false;runtime='not_established'}
+        Write-KilogramFrozenJson $out @{classification='focused HEAD/early-prerequisite/F04 public admission only';count=$checks.Count;checks=@($checks);fixture_roots=@($roots);production_prepare=$false;real_git_modified=$false;runtime='not_established'}
         Write-Output ('head_checks='+$checks.Count)
     }finally{
         Set-Item Function:Read-S54Public $global:HHeadRealRead;$global:HHeadFault=''
@@ -441,7 +441,7 @@ if($CompilerIndexOnly){
             $ctx=Case-Index $name;Reset-Index $ctx $ctx.normal
             $facts=Test-S54Admission $ctx.inputs $ctx.policy
             Require-Index ($facts.classification -ceq 'public_schema_fixture_only') "full public admission/$name"
-            Require-Index ($ctx.i.identity.attempt -ceq (Get-S54Purpose $(if($name -ceq 'positive-F'){'FeasibilityF'}else{'WholeP'})).Attempt) "fixed F03/P01/$name"
+            Require-Index ($ctx.i.identity.attempt -ceq (Get-S54Purpose $(if($name -ceq 'positive-F'){'FeasibilityF'}else{'WholeP'})).Attempt) "fixed F04/P01/$name"
         }
         $ctx=Case-Index 'case-separator';$cap=$ctx.normal
         for($n=0;$n -lt $cap.raw_compiler_artifact_json.Count;$n++){
