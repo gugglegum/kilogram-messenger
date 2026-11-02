@@ -1,0 +1,178 @@
+{
+  "checked_utc": "2026-11-02T16:45:19.861797+00:00",
+  "head": "4c1fd911c57d7c47a166b7aec01e8d174f21799c",
+  "index_empty": true,
+  "source_paths": [
+    "apps/kilogram-cli/tests/support/migration_s53_deadline.rs",
+    "apps/kilogram-cli/tests/support/migration_s54_admission.rs",
+    "apps/kilogram-cli/tests/support/migration_s54_admission_files.rs",
+    "apps/kilogram-cli/tests/support/migration_s54_admission_fixture.rs",
+    "apps/kilogram-cli/tests/support/migration_s54_admission_runtime.rs",
+    "apps/kilogram-cli/tests/support/migration_s54_admission_tests.rs",
+    "apps/kilogram-cli/tests/support/migration_s54_capture.rs",
+    "apps/kilogram-cli/tests/support/migration_s54_control.rs",
+    "apps/kilogram-cli/tests/support/migration_s54_early.rs",
+    "apps/kilogram-cli/tests/support/migration_s54_feasibility.rs",
+    "apps/kilogram-cli/tests/support/migration_s54_feasibility_data.rs",
+    "apps/kilogram-cli/tests/support/migration_s54_feasibility_tests.rs",
+    "apps/kilogram-cli/tests/support/migration_s54_outer_fixture.ps1",
+    "apps/kilogram-cli/tests/support/migration_s54_p5.rs",
+    "apps/kilogram-cli/tests/support/migration_s54_purpose.rs",
+    "apps/kilogram-cli/tests/support/migration_s54_records.rs",
+    "scripts/cargo-frozen-artifacts.ps1",
+    "scripts/invoke-migration-s54-whole.ps1",
+    "scripts/migration-s54-outer.ps1",
+    "scripts/run-cargo-tests-stable.ps1",
+    "scripts/test-migration-s54-feasibility.ps1"
+  ],
+  "source_raw_pins": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s53_deadline.rs",
+      "bytes": 14406,
+      "sha256": "3147492066a1439007024fa530571a754795841fe8aca32bcb79110d92d38025"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_admission.rs",
+      "bytes": 27844,
+      "sha256": "b788efff444db1887c040fba2e0760055e94a5c2942e736960c7f5716c339d6d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_admission_files.rs",
+      "bytes": 12289,
+      "sha256": "a56cda59f0fc279724e2fcfb99a61467b752bac61f22bd1197ed3a11008c484c"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_admission_fixture.rs",
+      "bytes": 15859,
+      "sha256": "5241fcdce44ced440ce182c8db29a2a67f9010cad5df372a0e26c7821c1a90ff"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_admission_runtime.rs",
+      "bytes": 18481,
+      "sha256": "544a6d0c56876f4c450484eed28beefe61531e7f0b195bb9b51a247dda2f782b"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_admission_tests.rs",
+      "bytes": 26941,
+      "sha256": "c3750439553f9591dcbeafad5c3ee0be584fd61d664e436fde74fc4e6b5c41a8"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_capture.rs",
+      "bytes": 9597,
+      "sha256": "6c872f6236c0add66b243ec735c9faeebf9c0101992208bc147df89e55975910"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_control.rs",
+      "bytes": 26225,
+      "sha256": "3fda91bc2cfbb9cd71ad72b4b22fc7d9c9118780400b79ca103648d45879ea79"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_early.rs",
+      "bytes": 17604,
+      "sha256": "29d2f0e917a7fc9c626317ec2cc5e48c793ac851ac1f9cd21eb5b799b1423e9f"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_feasibility.rs",
+      "bytes": 27541,
+      "sha256": "ec2ec6edec46a061a28f3aada3a1c2a9449dee3feed132dd1e3adb06647db47d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_feasibility_data.rs",
+      "bytes": 18696,
+      "sha256": "a447a5c3ed038a12a81326a28730e92ccee913872aebb12d6ab614737e2a67e1"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_feasibility_tests.rs",
+      "bytes": 6312,
+      "sha256": "9abfebf8dec94181f132a06afee629f1589d9d47fb0df33d7f4cc295866c4b88"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_outer_fixture.ps1",
+      "bytes": 14638,
+      "sha256": "c996e32527bb3f7c59759ca1484a6744bf1e0a9a936b0a60a58d1ea2cc965828"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_p5.rs",
+      "bytes": 6576,
+      "sha256": "7edca96b98ebd1762be6fc17e35acb5d5d926107844102e093226d18ea1dfe5e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_purpose.rs",
+      "bytes": 3197,
+      "sha256": "d7a6febc9519fa17d4eb31eb1c82517289d17536ef7ee9bcf902ff99c31b6961"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_records.rs",
+      "bytes": 7689,
+      "sha256": "00a31c1a6ae5a3c69ffedc36432e23833418b2efc12be729beac6cd45985e8fb"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\cargo-frozen-artifacts.ps1",
+      "bytes": 12723,
+      "sha256": "1d641d0cd431dca793e9745e8e5578e7527aba97e68f0f86ba2a85d213b8f306"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+      "bytes": 46967,
+      "sha256": "1f707f455fc2d5aa63b05db457378fe915a0e16853828f236beb61f6e2d963ab"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s54-outer.ps1",
+      "bytes": 57385,
+      "sha256": "1b55bc29a462d2a76e56126206ef9cd42e62a43402c265cbdcde062710684107"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\run-cargo-tests-stable.ps1",
+      "bytes": 16861,
+      "sha256": "6926c8d7a6716995ea744f94a1cbf384021d25a1b4c5ae5cb9949ed18bd2fdda"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\test-migration-s54-feasibility.ps1",
+      "bytes": 6374,
+      "sha256": "df2eab35707d8e830eb383f48774a7c5b81160112dda4db3ce62820e1b068a8d"
+    }
+  ],
+  "compiled_source_closure": 516,
+  "final_compile_and_pure_inputs_equal": true,
+  "final_Rust_equals_linted_Rust": true,
+  "navigation_before": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\README.md",
+      "bytes": 210074,
+      "sha256": "ae9bebb51c93508b583b0d60082dba9fb045048abe94872110dfc7841554ab9e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\chat-coordination.md",
+      "bytes": 165828,
+      "sha256": "957ec8e1601c0785e212b1131b1ed8c8547b74c19242053eff369ba38fe5d0c1"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\next-stage-plan.md",
+      "bytes": 60232,
+      "sha256": "52e158dd72339b23ef93de531300a57f60345dfb3b46cd7b41c044978c2906c1"
+    }
+  ],
+  "navigation_after": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\README.md",
+      "bytes": 210074,
+      "sha256": "ae9bebb51c93508b583b0d60082dba9fb045048abe94872110dfc7841554ab9e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\chat-coordination.md",
+      "bytes": 165828,
+      "sha256": "957ec8e1601c0785e212b1131b1ed8c8547b74c19242053eff369ba38fe5d0c1"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\next-stage-plan.md",
+      "bytes": 60232,
+      "sha256": "52e158dd72339b23ef93de531300a57f60345dfb3b46cd7b41c044978c2906c1"
+    }
+  ],
+  "legacy_current_relay_unchanged": true,
+  "runtime_directories_absent": true,
+  "active_exact_images": [],
+  "normal_cli_staged": false,
+  "production_F_P_executed": false,
+  "commit_push": false
+}

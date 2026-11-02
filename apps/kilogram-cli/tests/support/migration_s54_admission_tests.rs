@@ -605,3 +605,57 @@ fn s54_owned_states_claim_once_and_revalidate_without_fresh_reuse() -> Result<()
     );
     Ok(())
 }
+
+#[test]
+fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substitution() -> Result<()>
+{
+    let f = Fixture::new_for(Purpose::FeasibilityF)?;
+    ensure!(
+        f.inspect()?.facts()["case"] == Purpose::FeasibilityF.case(),
+        "F actual strict admission reader"
+    );
+    ensure!(
+        runtime::require_production(&f.policy).is_err(),
+        "F fixture cannot activate runtime"
+    );
+    if let Some(path) = std::env::var_os("KILOGRAM_S54_FEASIBILITY_FIXTURE_EXPORT") {
+        use std::io::Write;
+        let path = PathBuf::from(path);
+        let owned = workspace().join(".tmp/s54-block4b-r1-01").canonicalize()?;
+        ensure!(
+            files::path(path.parent().context("F export parent")?, false)?.starts_with(owned),
+            "owned public F export only"
+        );
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(path)?;
+        file.write_all(&serde_json::to_vec(&json!({"classification":"public_schema_fixture_only","root":f.root,
+            "inputs":{"inventory":f.input.inventory,"activation":f.input.activation,"launch":f.input.launch,"capture":f.input.capture}}))?)?;
+        file.sync_all()?;
+    }
+    for mutation in 0..6 {
+        let mut f = Fixture::new_for(Purpose::FeasibilityF)?;
+        match mutation {
+            0 => f.inventory["identity"]["selector"] = Purpose::WholeP.selector().into(),
+            1 => f.activation["classification"] = Purpose::WholeP.activation_class().into(),
+            2 => f.inventory["deadline"]["controller"] = 2350.into(),
+            3 => {
+                f.capture["whole_utc_ms"] = f.launch["start_utc_ms"]
+                    .as_u64()
+                    .context("UTC")?
+                    .checked_add(2400000)
+                    .context("UTC overflow")?
+                    .into()
+            }
+            4 => f.inventory["classification"] = Purpose::WholeP.inventory_class().into(),
+            _ => f.inventory["identity"]["run"] = json!(Purpose::WholeP.run(&f.root)),
+        }
+        f.seal()?;
+        ensure!(
+            f.inspect().is_err(),
+            "cross-purpose substitution {mutation}"
+        );
+    }
+    Ok(())
+}

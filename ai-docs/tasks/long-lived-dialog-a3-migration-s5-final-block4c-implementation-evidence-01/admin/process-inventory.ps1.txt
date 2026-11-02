@@ -1,0 +1,17 @@
+param([string]$Step)
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+$root='E:/AI-Projects/kilogram-p2p-messenger'
+$base=Join-Path $root '.tmp/s54-block4c-implementation-01'
+$pre=Get-Content (Join-Path $root '.tmp/s54-block4c-01/preflight-03/preflight.json') -Raw|ConvertFrom-Json
+$known=@($pre.images|ForEach-Object {$_.pin.path})
+$result=@{classification='read-only exact nine-image inventory; no process termination';query_succeeded=$false;active_exact_images=$null;error=$null;checked_utc=[DateTimeOffset]::UtcNow.ToString('o')}
+try {
+ $rows=@(Get-CimInstance Win32_Process -Property ProcessId,ExecutablePath -OperationTimeoutSec 3 -ErrorAction Stop)
+ $result.active_exact_images=@($rows|Where-Object {$_.ExecutablePath -and $_.ExecutablePath -in $known}|ForEach-Object {@{pid=$_.ProcessId;path=$_.ExecutablePath}})
+ $result.query_succeeded=$true
+}catch{$result.error=$_.Exception.Message}
+. (Join-Path $root 'scripts/cargo-frozen-artifacts.ps1')
+Write-KilogramFrozenJson (Join-Path $base "$Step.process-inventory.json") $result
+if(-not $result.query_succeeded){throw 'Read-only CIM inventory unavailable; no zero measurement'}
+Write-Output "query_succeeded=true;active_exact_images=$($result.active_exact_images.Count)"

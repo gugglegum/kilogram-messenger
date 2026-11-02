@@ -1,0 +1,6 @@
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\test-migration-s54-feasibility.ps1:10
+Line |
+  10 |  : quire([bool]$Value,[string]$Name){if(-not $Value){throw $Name};$check :
+     |                                                      ~~~~~~~~~~~
+     | actual frozen leaf reaches pinned-input refusal/WholeP : The variable cannot be validated because the value
+     | System.Collections.Hashtable is not a valid value for the S54Purpose variable.

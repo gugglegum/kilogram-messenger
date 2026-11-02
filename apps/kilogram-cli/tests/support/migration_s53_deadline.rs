@@ -9,8 +9,60 @@ struct Scope {
     local: Option<Instant>,
     run: PathBuf,
     next: u64,
+    measurements: Option<std::collections::BTreeMap<&'static str, Measurement>>,
 }
 thread_local! {static SCOPE:RefCell<Option<Scope>>=const {RefCell::new(None)};}
+/// F-only inclusive duration classes. Nested classes must not be added twice
+/// during projection. No arguments, private output or guessed protocol timings.
+#[derive(Default, serde::Serialize)]
+struct Measurement {
+    count: u64,
+    total_us: u128,
+    maximum_us: u128,
+    first_start_us: u128,
+    last_end_us: u128,
+}
+pub(super) struct MeasurementSpan {
+    label: &'static str,
+    start: Option<Instant>,
+}
+pub(super) fn measure(label: &'static str) -> MeasurementSpan {
+    let enabled = SCOPE.with_borrow(|s| s.as_ref().is_some_and(|s| s.measurements.is_some()));
+    MeasurementSpan {
+        label,
+        start: enabled.then(Instant::now),
+    }
+}
+impl Drop for MeasurementSpan {
+    fn drop(&mut self) {
+        let Some(start) = self.start else {
+            return;
+        };
+        let end = Instant::now();
+        SCOPE.with_borrow_mut(|s| {
+            if let Some(s) = s
+                && let Some(rows) = &mut s.measurements
+            {
+                let m = rows.entry(self.label).or_default();
+                if m.count == 0 {
+                    m.first_start_us = start.saturating_duration_since(s.origin).as_micros();
+                }
+                m.count += 1;
+                m.total_us += end.duration_since(start).as_micros();
+                m.maximum_us = m.maximum_us.max(end.duration_since(start).as_micros());
+                m.last_end_us = end.saturating_duration_since(s.origin).as_micros();
+            }
+        });
+    }
+}
+pub(super) fn feasibility_timings() -> Result<Value> {
+    check()?;
+    SCOPE.with_borrow(|s| {
+        let rows=s.as_ref().and_then(|s|s.measurements.as_ref()).context("F timing scope required")?;
+        ensure!(rows.len() <= 32,"bounded fixed F timing classes");
+        Ok(json!({"classification":"inclusive actual F durations; nested classes overlap; not a P prediction", "classes":rows}))
+    })
+}
 pub(super) struct Guard;
 impl Guard {
     pub(super) fn enter(run: &Path, seconds: u64) -> Result<Self> {
@@ -24,6 +76,7 @@ impl Guard {
                 local: None,
                 run: run.into(),
                 next: 0,
+                measurements: None,
             });
             Ok(Self)
         })
@@ -31,12 +84,23 @@ impl Guard {
     /// S54 alone: a conservative original origin, never reply/startup time.
     /// Controller and observer stop at2350; capture cleanup cannot exceed2400.
     pub(super) fn enter_original(run: &Path, origin: Instant) -> Result<Self> {
+        Self::enter_original_limits(run, origin, 2350, 2400)
+    }
+    pub(super) fn enter_original_feasibility(run: &Path, origin: Instant) -> Result<Self> {
+        Self::enter_original_limits(run, origin, 450, 510)
+    }
+    fn enter_original_limits(
+        run: &Path,
+        origin: Instant,
+        controller: u64,
+        outer: u64,
+    ) -> Result<Self> {
         let now = Instant::now();
         let deadline = origin
-            .checked_add(Duration::from_secs(2350))
+            .checked_add(Duration::from_secs(controller))
             .context("original controller overflow")?;
         let whole = origin
-            .checked_add(Duration::from_secs(2400))
+            .checked_add(Duration::from_secs(outer))
             .context("original outer overflow")?;
         ensure!(
             origin <= now && now < deadline,
@@ -51,6 +115,7 @@ impl Guard {
                 local: None,
                 run: run.into(),
                 next: 0,
+                measurements: (controller == 450 && outer == 510).then(Default::default),
             });
             Ok(Self)
         })
@@ -149,6 +214,12 @@ pub(super) fn observer_context() -> Result<ObserverContext> {
     })
 }
 pub(super) fn output(command: &mut Command) -> Result<Output> {
+    let class = match command.get_args().nth(1).and_then(|a| a.to_str()) {
+        Some("history" | "history3") => "history_cli",
+        Some("send" | "send3") => "send_cli",
+        _ => "cli",
+    };
+    let _measurement = measure(class);
     check()?;
     let bound = SCOPE.with_borrow_mut(|scope| {
         scope.as_mut().map(|s| {
@@ -289,6 +360,52 @@ fn s54_original_scope_expiry_does_not_create_a_new_budget() -> Result<()> {
     ensure!(
         original_containment().is_none(),
         "legacy constructor behavior remains separate"
+    );
+    Ok(())
+}
+
+#[test]
+fn s54_f_original_clock_preserves_elapsed_start_and_fixed_containment() -> Result<()> {
+    let origin = Instant::now() - Duration::from_secs(7);
+    let _guard = Guard::enter_original_feasibility(Path::new("unused-pure-F-clock"), origin)?;
+    let context = observer_context()?;
+    let bound = capture_bound()?;
+    ensure!(
+        context.origin == origin
+            && context.whole == origin + Duration::from_secs(450)
+            && bound.whole == origin + Duration::from_secs(510),
+        "F450/510 from original launch, no reset"
+    );
+    Ok(())
+}
+
+#[test]
+fn s54_f_timing_is_actual_bounded_and_does_not_enable_the_legacy_scope() -> Result<()> {
+    {
+        let _guard = Guard::enter(Path::new("unused-pure-duration"), 60)?;
+        {
+            let _span = measure("pure");
+        }
+        ensure!(
+            feasibility_timings().is_err(),
+            "legacy scope has no F observations"
+        );
+    }
+    let _guard =
+        Guard::enter_original_feasibility(Path::new("unused-pure-F-duration"), Instant::now())?;
+    {
+        let _span = measure("pure");
+    }
+    let actual = feasibility_timings()?;
+    ensure!(
+        actual["classes"]["pure"]["count"] == 1
+            && actual["classes"]["pure"]["last_end_us"]
+                .as_u64()
+                .context("actual timestamp")?
+                >= actual["classes"]["pure"]["first_start_us"]
+                    .as_u64()
+                    .context("actual timestamp")?,
+        "actual measured class span"
     );
     Ok(())
 }

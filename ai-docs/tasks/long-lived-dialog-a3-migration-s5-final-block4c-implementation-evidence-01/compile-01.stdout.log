@@ -1,0 +1,4 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification-scale' without executing them...

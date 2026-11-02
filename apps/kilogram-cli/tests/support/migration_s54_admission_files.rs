@@ -187,7 +187,7 @@ pub(super) fn pin(p: &Pin, cap: usize) -> Result<Vec<u8>> {
 pub(super) fn document<T: DeserializeOwned>(p: &Pin, cap: usize) -> Result<T> {
     json(&pin(p, cap)?, cap)
 }
-pub(super) const HELPERS: [&str; 14] = [
+pub(super) const HELPERS: [&str; 15] = [
     "scripts/run-cargo-tests-stable.ps1",
     "scripts/cargo-frozen-artifacts.ps1",
     "scripts/cargo-resource-policy.ps1",
@@ -202,6 +202,7 @@ pub(super) const HELPERS: [&str; 14] = [
     "apps/kilogram-cli/tests/support/migration_s54_outer_fixture.ps1",
     "scripts/migration-s54-preparation.ps1",
     "scripts/test-migration-s54-repair.ps1",
+    "scripts/test-migration-s54-feasibility.ps1",
 ];
 pub(super) const EMBEDDED: [&str; 3] = [
     "apps/kilogram-cli/tests/support/migration_s54_capture_fixture.ps1",

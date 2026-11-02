@@ -1,0 +1,57 @@
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error[E0277]: the `?` operator can only be used in a closure that returns `Result` or `Option` (or another type that implements `FromResidual`)
+   --> apps\kilogram-cli\tests\support\migration_s54_admission.rs:633:87
+    |
+633 |             .filter(|v| *v == format!("{}: test", Purpose::from_case(&i.identity.case)?.selector()))
+    |                     ---                                                               ^ cannot use the `?` operator in a closure that returns `bool`
+    |                     |
+    |                     this function should return `Result` or `Option` to accept `?`
+
+error[E0308]: mismatched types
+   --> apps\kilogram-cli\tests\support\migration_s54_feasibility.rs:222:45
+    |
+222 |     s.remember(&format!("f-page-{target}"), page.facts())?;
+    |       --------                              ^^^^^^^^^^^^ expected `Value`, found `&Value`
+    |       |
+    |       arguments to this method are incorrect
+    |
+note: method defined here
+   --> apps\kilogram-cli\tests\support\migration_s54_control.rs:676:12
+    |
+676 |     pub fn remember(&mut self, name: &str, mut facts: Value) -> Result<()> {
+    |            ^^^^^^^^                        ----------------
+help: consider using clone here
+    |
+222 |     s.remember(&format!("f-page-{target}"), page.facts().clone())?;
+    |                                                         ++++++++
+
+error[E0596]: cannot borrow `repo` as mutable, as it is not declared as mutable
+   --> apps\kilogram-cli\tests\support\migration_s54_feasibility_data.rs:165:13
+    |
+165 |     let q = repo.metadata(node.slot)?.ack_next;
+    |             ^^^^ cannot borrow as mutable
+    |
+help: consider changing this to be mutable
+    |
+164 |     let mut repo = profile.open(&node.profile)?;
+    |         +++
+
+error[E0596]: cannot borrow `repo` as mutable, as it is not declared as mutable
+   --> apps\kilogram-cli\tests\support\migration_s54_feasibility_data.rs:177:9
+    |
+177 |         repo.metadata(node.slot)?.peer_source_next == expected,
+    |         ^^^^ cannot borrow as mutable
+    |
+help: consider changing this to be mutable
+    |
+175 |     let mut repo = profile.open(&node.profile)?;
+    |         +++
+
+Some errors have detailed explanations: E0277, E0308, E0596.
+For more information about an error, try `rustc --explain E0277`.
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 4 previous errors
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:138
+Line |
+ 138 |          throw "cargo test --no-run failed with exit code $LASTEXITCOD :
+     |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | cargo test --no-run failed with exit code 101

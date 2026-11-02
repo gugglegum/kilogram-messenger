@@ -1,0 +1,24 @@
+param([string]$Step)
+$ErrorActionPreference='Stop'
+$workspace='E:/AI-Projects/kilogram-p2p-messenger'
+. (Join-Path $workspace 'scripts/invoke-migration-s54-whole.ps1')
+$fixture=Join-Path $workspace 'apps/kilogram-cli/tests/support/migration_s54_outer_fixture.ps1'
+$shell=[Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+$rows=@()
+foreach($mode in @('normal','nonzero','partial')) {
+    $root=Join-Path $workspace ".tmp/s54-block4b-r1-01/block4c-$Step-F-$mode"
+    if(Test-Path -LiteralPath $root){throw 'fresh benign directory required'}
+    $run=Invoke-S54SingleExecutable (Get-S54Pin $shell 134217728) @('-NoProfile','-NonInteractive','-File',$fixture,'-Mode',$mode,'-Purpose','FeasibilityF','-Root',$root) ([Environment]::TickCount64+45000)
+    $record=Read-S54Json (Get-S54Pin (Join-Path $root 'fixture-result.json') 65536) 65536
+    $passed=$mode -ceq 'normal'
+    if($run.code -ne 0 -or ($record.actual_outer_decision -ceq 'passed') -ne $passed -or -not $record.containment_teardown_verified){throw "benign F result/$mode"}
+    $out=Read-S54Public $record.transcript.stdout.pin.path 1048576
+    $err=Read-S54Public $record.transcript.stderr.pin.path 1048576
+    $text=[Text.Encoding]::UTF8.GetString($out);$errorText=[Text.Encoding]::UTF8.GetString($err)
+    if(($text+$errorText) -match 'secret-nonzero|private partial diagnostic'){throw 'unsanitized F transcript persisted'}
+    if($passed -and (-not $record.transcript.complete -or $text -notmatch '(?m)^S54_FEASIBILITY_FUNCTIONAL ' -or $text -notmatch '(?m)^S54_FEASIBILITY_FROZEN_COMPLETED ' -or $text -cmatch '(?m)^S54_FUNCTIONAL|^S54_FROZEN_COMPLETED')){throw 'actual F writer/markers/EOF'}
+    if($mode -ceq 'nonzero' -and $record.process_outcomes.harness.code -ne 7){throw 'actual nonzero native fact lost'}
+    if($mode -ceq 'partial' -and (-not $record.work_expired -or $record.transcript.complete)){throw 'partial F became complete'}
+    $rows+=@{mode=$mode;owner_exit=$run.code;result=(Get-S54Pin (Join-Path $root 'fixture-result.json') 65536);decision=$record.actual_outer_decision;actual_F_markers_written=$passed;sanitized=$true}
+}
+Write-KilogramFrozenJson (Join-Path $workspace ".tmp/s54-block4c-implementation-01/$Step.results.json") @{classification='bounded benign fixed-F marker/outer verification only; no messenger/profile/network';checks=$rows}

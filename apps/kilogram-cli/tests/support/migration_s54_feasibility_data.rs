@@ -1,0 +1,462 @@
+//! Fixed small-sample oracles; P's25/39/640/256 rules are not relaxed.
+use super::*;
+use kilogram_cli::ordered_dialog::handshake::Spec;
+use kilogram_protocol::ordered_dialog_v2 as v2;
+
+pub(super) fn mapped(
+    rows: &[Value],
+    context: u8,
+    last: [u16; 2],
+) -> Result<BTreeMap<String, Value>> {
+    ensure!(
+        rows.len() == usize::from(last[0] + last[1]),
+        "F exact readable count"
+    );
+    let map = source::history_map(rows)?;
+    let mut seen = BTreeSet::new();
+    for r in map.values() {
+        let role: u8 = r["role"].as_u64().context("history role")?.try_into()?;
+        let n: u16 = r["ordinal"]
+            .as_u64()
+            .context("history ordinal")?
+            .try_into()?;
+        ensure!(
+            role < 2 && (1..=last[role as usize]).contains(&n),
+            "F genuine source range"
+        );
+        let request = oracle::Request::new(context, role, n)?;
+        let format = if context == 0 && n >= [5, 3][role as usize] {
+            2
+        } else {
+            1
+        };
+        ensure!(
+            r["request"] == source::request_id(request)
+                && r["text"] == request.body()
+                && r["format"] == format
+                && seen.insert((role, n)),
+            "F exact request/body/format and uniqueness"
+        );
+    }
+    Ok(map)
+}
+pub(super) fn retained(
+    before: &BTreeMap<String, Value>,
+    after: &BTreeMap<String, Value>,
+) -> Result<()> {
+    ensure!(
+        before.iter().all(|(id, row)| after.get(id) == Some(row)),
+        "F original sources retained"
+    );
+    Ok(())
+}
+pub(super) fn ids(
+    map: &BTreeMap<String, Value>,
+    first: u16,
+    last: u16,
+) -> Result<Vec<(u64, old::Id)>> {
+    (first..=last)
+        .map(|n| {
+            let rows = map
+                .values()
+                .filter(|r| r["role"] == 0 && r["ordinal"] == n)
+                .collect::<Vec<_>>();
+            ensure!(rows.len() == 1, "one actual A source at ordinal");
+            Ok((
+                u64::from(n),
+                state::parse_id(rows[0]["id"].as_str().context("source ID")?)?,
+            ))
+        })
+        .collect()
+}
+pub(super) struct Frozen40 {
+    cursor: String,
+    view: Value,
+    frontiers: Value,
+    suffix: Vec<Value>,
+    pub map: BTreeMap<String, Value>,
+}
+impl Frozen40 {
+    pub fn capture(node: &Node) -> Result<Self> {
+        let first = node.history(16, None)?;
+        Self::from_pages(&first, |cursor| node.history(32, Some(cursor)))
+    }
+    pub fn from_pages(first: &Value, read: impl FnMut(&str) -> Result<Value>) -> Result<Self> {
+        ensure!(
+            first["items"].as_array().is_some_and(|a| a.len() == 16)
+                && first["finished"] == false
+                && first["F"] == json!([7, 35]),
+            "A original16 of40 at[7,35]"
+        );
+        let mut frozen = Self {
+            cursor: first["cursor"]
+                .as_str()
+                .context("original A cursor")?
+                .into(),
+            view: first["view"].clone(),
+            frontiers: first["F"].clone(),
+            suffix: vec![],
+            map: BTreeMap::new(),
+        };
+        frozen.suffix = frozen.read_with(read)?;
+        let mut all = first["items"].as_array().context("first items")?.clone();
+        all.extend(frozen.suffix.iter().cloned());
+        frozen.map = mapped(&all, 0, [6, 34])?;
+        Ok(frozen)
+    }
+    fn read_with(&self, mut read: impl FnMut(&str) -> Result<Value>) -> Result<Vec<Value>> {
+        let page = read(&self.cursor)?;
+        ensure!(
+            page["view"] == self.view && page["F"] == self.frontiers && page["finished"] == true,
+            "same retained A40 view/frontiers and terminal suffix"
+        );
+        let rows = page["items"].as_array().context("original A suffix")?;
+        ensure!(rows.len() == 24, "original A40-16 suffix24");
+        source::history_map(rows)?; // duplicate validation, preserving actual cursor order below
+        rows.iter()
+            .map(|r| {
+                source::history_map(std::slice::from_ref(r))?
+                    .into_values()
+                    .next()
+                    .context("actual ordered suffix row")
+            })
+            .collect()
+    }
+    pub fn verify(&self, node: &Node) -> Result<()> {
+        let _measurement = s53_deadline::measure("old_cursor_query");
+        self.verify_with(|cursor| node.history(32, Some(cursor)))
+    }
+    pub fn verify_with(&self, read: impl FnMut(&str) -> Result<Value>) -> Result<()> {
+        ensure!(
+            self.read_with(read)? == self.suffix,
+            "old A cursor survives current history169/218 and reopen"
+        );
+        Ok(())
+    }
+}
+pub(super) fn ack_sources(
+    ack: &observations::AckObservation,
+    map: &BTreeMap<String, Value>,
+) -> Result<()> {
+    ensure!(
+        ack.context == 0
+            && ack.lane == 0
+            && !ack.query_reply
+            && ack.from == Some(7)
+            && !ack.receipts.is_empty()
+            && ack.receipts.iter().any(|r| r.ordinal >= 7),
+        "F targeted new-range push, not old-only/query"
+    );
+    for r in &ack.receipts {
+        let actual = map
+            .get(&state::hex(&r.event))
+            .context("ACK actual source")?;
+        ensure!(
+            r.lane == 0
+                && actual["role"] == 0
+                && actual["ordinal"] == r.ordinal
+                && actual["format"] == r.source_format,
+            "ACK actual tuple/source/format"
+        );
+        if r.ordinal >= 7 {
+            ensure!(
+                r.ordinal <= 184 && r.encoding == 2 && r.source_format == 2,
+                "new-range Event2 receipt"
+            );
+        }
+    }
+    Ok(())
+}
+pub(super) fn ack_cursor(node: &Node) -> Result<u64> {
+    source::owned(node)?;
+    let profile = Profile3::load(&node.profile)?;
+    let mut repo = profile.open(&node.profile)?;
+    let q = repo.metadata(node.slot)?.ack_next;
+    ensure!(
+        (1..=7).contains(&q),
+        "actual persisted B ACK cursor cannot skip offline7"
+    );
+    Ok(q)
+}
+pub(super) fn watermark(node: &Node, expected: u64) -> Result<()> {
+    source::owned(node)?;
+    let profile = Profile3::load(&node.profile)?;
+    let mut repo = profile.open(&node.profile)?;
+    ensure!(
+        repo.metadata(node.slot)?.peer_source_next == expected,
+        "actual signed Head/prefix source watermark"
+    );
+    Ok(())
+}
+pub(super) fn pending(s: &control::Controller, ids: &[(u64, old::Id)]) -> Result<()> {
+    let rows = &s.running[1]
+        .as_ref()
+        .context("actual B")?
+        .decoder
+        .pending_rows;
+    ensure!(
+        ids.len() == 64
+            && rows
+                .values()
+                .filter(|r| r.context == 0 && r.role == 0)
+                .count()
+                == 64,
+        "F exactly64 pending sources"
+    );
+    for (n, id) in ids {
+        let p = rows.get(&(0, 0, *n)).context("actual pending successor")?;
+        ensure!(
+            p.event == *id && p.ordinal == *n && p.generation > 0,
+            "F real successor association"
+        );
+    }
+    Ok(())
+}
+fn credential(
+    repo: &mut db::migration7::live1::L1Repository,
+    slot: u8,
+    id: old::Id,
+) -> Result<v2::RootVerifiedCredential> {
+    Ok(
+        v2::ParsedCredentialBundle::parse(&repo.auth(slot, id)?.context("stored credential")?)?
+            .verify_root()?,
+    )
+}
+fn receiver(raw: &[u8]) -> Result<old::Id> {
+    let value = old::decode(raw, v2::MAX_RECEIPT)?;
+    let body = &value.fields(2)?[0];
+    match body.list()?.first().context("receipt version")?.uint()? {
+        1 => Ok(body.fields(8)?[7].fixed()?),
+        2 => Ok(v2::ParsedReceipt2::parse(raw)?.fields().receiver_auth),
+        _ => anyhow::bail!("explicit receipt version"),
+    }
+}
+/// All current readers run only after the actual normal pair has been reconciled.
+/// Return immutable signed source/receipt/parent facts, compared across both owners/reopen.
+pub(super) fn terminal(
+    s: &mut control::Controller,
+    maps: &[BTreeMap<String, Value>; 2],
+) -> Result<Value> {
+    let _measurement = s53_deadline::measure("terminal_source_read");
+    let closures = s.feasibility_normal_pair()?;
+    let contexts = s
+        .origin
+        .contexts
+        .each_ref()
+        .map(|c| state::parse_id(c))
+        .into_iter()
+        .collect::<Result<Vec<_>>>()?;
+    let contexts: [old::Id; 2] = contexts
+        .try_into()
+        .map_err(|_| anyhow::anyhow!("two contexts"))?;
+    let mut owners = Vec::new();
+    for (owner, closure) in closures.iter().enumerate() {
+        s.check()?;
+        let node = s.view(owner, 0)?;
+        source::owned(&node)?;
+        let profile = Profile3::load(&node.profile)?;
+        let mut repo = profile.open(&node.profile)?;
+        ensure!(
+            repo.source_id() == closure.key.owner,
+            "actual normal source ownership"
+        );
+        let mut facts = Vec::new();
+        for c in 0..2 {
+            let slot = s.view(owner, c)?.slot;
+            let spec_raw = repo.spec(slot)?;
+            let spec = Spec::parse(&spec_raw)?;
+            let head_raw = repo.head(slot)?;
+            let head = state::Head::parse(
+                &head_raw,
+                contexts[c],
+                spec.cert_refs()?[owner],
+                owner as u64,
+            )?;
+            let origin = offline::existing_scope(&mut repo, slot, &head, &spec_raw)?;
+            for original in [&s.original[owner], &s.migration[owner]] {
+                original
+                    .as_ref()
+                    .context("same legacy/migration origin")?
+                    .terminal_scope(c, &spec_raw, &origin)?;
+            }
+            let last = if c == 0 { [184u64, 34] } else { [4, 4] };
+            let next = last.map(|n| n + 1);
+            let meta = repo.metadata(slot)?;
+            let counts = repo.counts(slot)?;
+            let sources = repo.source_counts(slot)?;
+            let repair = repo.repair_state(slot)?;
+            ensure!(
+                meta.next == next
+                    && meta.request_index_ready
+                    && sources.lanes == next
+                    && sources.projections == last.iter().sum::<u64>()
+                    && sources.requests == last[owner]
+                    && counts.sources == last.iter().sum::<u64>() + 2
+                    && counts.receipts == last
+                    && counts.queued == 0
+                    && counts.pending == 0
+                    && counts.debt == 0
+                    && repair.pending == 0
+                    && repair.head.is_none()
+                    && repair.outstanding == 0
+                    && repair.grant.as_ref().is_none_or(|g| g.3 == [0; 32])
+                    && repo.queue_page(slot, None, 1)?.is_empty()
+                    && repo.pending_page(slot, None, 1)?.is_empty()
+                    && repo.debt_page(slot, None, 1)?.is_empty(),
+                "F exact durable counts/frontiers/empty indexes"
+            );
+            let mode = repo.existing_state(slot)?;
+            let selected = if c == 0 {
+                Some(origin.selection(v2::ParsedModeProof2::parse(
+                    &repo.existing_control(slot, mode.q.context("actual F Q")?)?,
+                )?)?)
+            } else {
+                ensure!(mode.q.is_none(), "C2 remains original L1");
+                None
+            };
+            let genesis = origin.old_control_ids();
+            for role in 0..2u8 {
+                let raw = repo.event_at(slot, role, 0)?.context("original genesis")?;
+                ensure!(
+                    old::hash(old::EVENT_ID, &raw) == genesis[role as usize + 2],
+                    "original genesis ID"
+                );
+                for original in [&s.original[owner], &s.migration[owner]] {
+                    original
+                        .as_ref()
+                        .context("origin")?
+                        .terminal_source(c, role, 0, &raw, None)?;
+                }
+                let mut previous = genesis[role as usize + 2];
+                let mut sequence = 0;
+                for n in 1..=last[role as usize] {
+                    s53_deadline::check()?;
+                    let request = oracle::Request::new(c as u8, role, n.try_into()?)?;
+                    let actual = maps[c]
+                        .values()
+                        .find(|r| r["role"] == role && r["ordinal"] == n)
+                        .context("actual final map")?;
+                    let event = state::parse_id(actual["id"].as_str().context("final ID")?)?;
+                    let raw = repo
+                        .event_at(slot, role, n)?
+                        .context("actual final source")?;
+                    let receipt = repo
+                        .receipt(slot, role, n)?
+                        .context("actual final receipt")?;
+                    let format = actual["format"].as_u64().context("source format")? as u8;
+                    let author_id = if format == 1 {
+                        old::Core::parse(&old::decode(&raw, v2::MAX_EVENT)?.fields(5)?[1])?
+                            .author_auth
+                    } else {
+                        v2::ParsedEvent2::parse(&raw)?.core().author_auth
+                    };
+                    let author = credential(&mut repo, slot, author_id)?;
+                    let receiver = credential(&mut repo, slot, receiver(&receipt)?)?;
+                    let mut projection = repo.projection(slot, event)?;
+                    let text = zeroize::Zeroizing::new(std::mem::take(&mut projection.text));
+                    let binding = old::decode(&projection.binding, 2304)?;
+                    let binding = binding.fields(5)?;
+                    let request_id = source::parse_request_id(&source::request_id(request))?;
+                    ensure!(
+                        binding[0].uint()? == 7
+                            && binding[1].fixed::<32>()? == repo.migration_id()
+                            && binding[2].fixed::<32>()? == repo.source_id()
+                            && binding[4].fixed::<16>()? == request_id
+                            && text.as_str() == request.body(),
+                        "actual original projection/request/body"
+                    );
+                    if role as usize == owner {
+                        ensure!(
+                            repo.request(slot, request_id)?
+                                .is_some_and(|r| r.event == Some(event)),
+                            "actual own request association"
+                        );
+                    }
+                    let (prev, parents, seq, hash) = if let Some(selected) = &selected {
+                        let row = records::verify_feasibility(
+                            &records::Expected {
+                                contexts: &contexts,
+                                request,
+                                event,
+                                d: origin.d(),
+                                e: origin.e(),
+                                sid: origin.sid(),
+                                selection: selected.proof().q(),
+                            },
+                            &records::Projection {
+                                event,
+                                request: request_id,
+                                text: &text,
+                            },
+                            selected,
+                            records::Credentials {
+                                author: &author,
+                                receiver: &receiver,
+                            },
+                            &raw,
+                            &receipt,
+                        )?;
+                        (row.previous, row.parents, row.sequence, row.source_hash)
+                    } else {
+                        ensure!(format == 1, "C2 actual legacy encoding");
+                        let verified = origin.verify_event(&raw, &author)?;
+                        let core = &verified.event().core;
+                        ensure!(
+                            verified.event().id()? == event
+                                && core.request == request_id
+                                && core.n == n
+                                && core.role == u64::from(role)
+                                && core.kind == 3,
+                            "C2 signed source/request"
+                        );
+                        v2::ParsedReceipt1::parse(&receipt)?
+                            .verify_pre_q(&verified, &origin, &receiver)?;
+                        (
+                            core.previous,
+                            core.parents.clone(),
+                            core.sequence,
+                            *blake3::hash(&raw).as_bytes(),
+                        )
+                    };
+                    ensure!(
+                        prev == Some(previous) && seq > sequence && parents.len() <= 2,
+                        "actual source chain/sequence"
+                    );
+                    ensure!(
+                        parents
+                            .iter()
+                            .all(|id| maps[c].contains_key(&state::hex(id))
+                                || genesis[2..].contains(id)),
+                        "actual same-context parents"
+                    );
+                    for original in [&s.original[owner], &s.migration[owner]] {
+                        original.as_ref().context("original")?.terminal_source(
+                            c,
+                            role,
+                            n,
+                            &raw,
+                            Some(&receipt),
+                        )?;
+                    }
+                    facts.push(json!({"context":c,"role":role,"ordinal":n,"event":state::hex(&event),
+                        "previous":prev.map(|id|state::hex(&id)),"parents":parents.iter().map(|id|state::hex(id)).collect::<Vec<_>>(),
+                        "sequence":seq,"source":state::hex(&hash),"receipt":blake3::hash(&receipt).to_hex().to_string()}));
+                    previous = event;
+                    sequence = seq;
+                }
+                ensure!(
+                    repo.event_at(slot, role, last[role as usize] + 1)?
+                        .is_none()
+                        && repo.receipt(slot, role, 0)?.is_none(),
+                    "no final suffix or genesis receipt"
+                );
+            }
+        }
+        owners.push(facts);
+    }
+    ensure!(
+        owners.len() == 2 && owners[0] == owners[1] && owners[0].len() == 226,
+        "same226 immutable signed Text/receipt/parent facts at both originals"
+    );
+    Ok(json!({"records":owners[0]}))
+}

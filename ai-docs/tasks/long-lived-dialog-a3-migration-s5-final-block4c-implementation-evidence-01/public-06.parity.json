@@ -1,0 +1,52 @@
+{
+  "classification": "public fixed F/P schema and marker parity, no compiler/profile/network",
+  "checks": [
+    {
+      "name": "P actual shared PS admission positive",
+      "passed": true
+    },
+    {
+      "name": "F actual shared PS admission positive",
+      "passed": true
+    },
+    {
+      "rejected": true,
+      "name": "F actual PS inventory/class",
+      "reason": "S54 required identity."
+    },
+    {
+      "rejected": true,
+      "name": "F actual PS inventory/selector",
+      "reason": "S54 required identity."
+    },
+    {
+      "rejected": true,
+      "name": "F actual PS inventory/deadline",
+      "reason": "S54 exact structured identity."
+    },
+    {
+      "rejected": true,
+      "name": "F actual PS inventory/root",
+      "reason": "S54 path role mismatch."
+    },
+    {
+      "rejected": true,
+      "name": "P policy rejects F pinned input paths before profile creation",
+      "reason": "S54 path role mismatch."
+    },
+    {
+      "rejected": true,
+      "name": "F policy rejects P pinned input paths before profile creation",
+      "reason": "S54 path role mismatch."
+    },
+    {
+      "name": "P native/wrapper grammar remains accepted",
+      "passed": true
+    },
+    {
+      "rejected": true,
+      "name": "P rejects extra F marker on stdout",
+      "reason": "S54 cross-purpose marker."
+    }
+  ]
+}

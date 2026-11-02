@@ -204,7 +204,48 @@ impl Controller {
         )?;
         memory_scope::finish_coverage()
     }
+    pub fn feasibility_normal_pair(&mut self) -> Result<[Closure; 2]> {
+        self.stopped_reconciled()?;
+        self.check()?;
+        ensure!(
+            self.origin
+                .pair
+                .base
+                .file_name()
+                .is_some_and(|n| n == "f-origin")
+                && self.relay.is_none()
+                && self.relay_outcome.is_none()
+                && !self.phases.complete(),
+            "F original namespace and actual normal closures, no P/relay claim"
+        );
+        let sources = [0, 1].map(|owner| self.original[owner].as_ref().map(|s| s.source_id));
+        let pair = normal::closed_pair(
+            self.last_normal.as_ref(),
+            &self.outcomes,
+            [
+                sources[0].context("original A")?,
+                sources[1].context("original B")?,
+            ],
+        )?;
+        for c in &pair {
+            self.operations.closed(c.key, c.sequence, c.counts)?;
+        }
+        self.operations.summary()?;
+        Ok(pair)
+    }
+    pub fn finish_feasibility_memory(&mut self) -> Result<Value> {
+        let _measurement = s53_deadline::measure("memory_finish");
+        self.feasibility_normal_pair()?;
+        self.current_intervals()?;
+        memory_scope::finish_coverage()
+    }
     pub fn new(parent: &Path, until: Instant) -> Result<Self> {
+        Self::new_for(parent, until, Purpose::WholeP)
+    }
+    pub fn new_feasibility(parent: &Path, until: Instant) -> Result<Self> {
+        Self::new_for(parent, until, Purpose::FeasibilityF)
+    }
+    fn new_for(parent: &Path, until: Instant, purpose: Purpose) -> Result<Self> {
         s53_deadline::check()?;
         let available = std::thread::available_parallelism()?.get();
         let inherited =
@@ -221,7 +262,10 @@ impl Controller {
         );
         let capture = s54_capture::Guard::enter(until)?;
         let memory = memory_scope::Guard::enter(parent, until)?;
-        let origin = OldOrigin::create(parent)?;
+        let origin = match purpose {
+            Purpose::WholeP => OldOrigin::create(parent)?,
+            Purpose::FeasibilityF => OldOrigin::create_for(parent, purpose)?,
+        };
         let controls = [
             Controls::new(&origin.pair.base, &origin.contexts[0], 0)?,
             Controls::new(&origin.pair.base, &origin.contexts[0], 1)?,
@@ -348,6 +392,7 @@ impl Controller {
         Ok(row)
     }
     pub fn start(&mut self, owner: usize) -> Result<()> {
+        let _measurement = s53_deadline::measure("runtime_start");
         self.stopped(owner)?;
         self.last_normal = None;
         normal::reopen(
@@ -416,6 +461,7 @@ impl Controller {
         })
     }
     pub fn stop(&mut self, owner: usize) -> Result<()> {
+        let _measurement = s53_deadline::measure("kill_wait_reconcile");
         self.kill_wait(owner)?;
         self.reconcile_stop(owner)
     }
@@ -502,6 +548,7 @@ impl Controller {
         self.reconcile_stop(1)
     }
     fn reconcile_stop(&mut self, owner: usize) -> Result<()> {
+        let _measurement = s53_deadline::measure("stopped_source_reconcile");
         self.stopped(owner)?;
         ensure!(
             self.pending_stops[owner]

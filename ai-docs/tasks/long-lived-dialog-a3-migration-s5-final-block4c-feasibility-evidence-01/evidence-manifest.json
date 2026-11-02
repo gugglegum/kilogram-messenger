@@ -1,0 +1,122 @@
+{
+  "classification": "Block4C public diagnostic evidence only",
+  "report": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-contract-readiness-01.md",
+    "bytes": 25033,
+    "sha256": "dc9392a4859de0f4c0beabc4aefb17c794e6ede3995b68eadac54e3e1ad7ed9c"
+  },
+  "files": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\environment-restore-diagnostic.json",
+      "bytes": 3960,
+      "sha256": "f7b39ff46002f5bb397eca3c49ddf50ad8a99c6935dd6979bcd8d05efca7500d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\final-verification.json",
+      "bytes": 2643,
+      "sha256": "57445c746ff5e808a6bacab2b3c814d3270dd1d69ee031180c29a70b10699ae0"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\metadata-raw.json",
+      "bytes": 4465395,
+      "sha256": "1ebcf7e3ffc106e86c24af96414b27a94433de8ebdd24008c32cabe265926c92"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\preflight-01-admin.ps1.txt",
+      "bytes": 5915,
+      "sha256": "a1e502fc562666bed44390f33be33909035f60950925933ff51be3e4945c17d4"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\preflight-01.receipt.json",
+      "bytes": 762,
+      "sha256": "71aeac1d103df6d2f60ddb5074e81988f6fe691cc59fbc2a6429cd4e9b1ff168"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\preflight-01.stderr.log",
+      "bytes": 421,
+      "sha256": "da2554ec078d1fc10eeca6816cf599fe3e021f60c65dbd6df71c0a308928af4b"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\preflight-01.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\preflight-02-admin.ps1.txt",
+      "bytes": 6133,
+      "sha256": "581a3b76f7ca417b74c97ce21c869d755a73924170108754ae5f061990b9ea2b"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\preflight-02-environment-restore-diagnostic.json",
+      "bytes": 4265,
+      "sha256": "1a521dfaaa1acc3fd813a82d141a0b068f3cd41a4b4a44ac9aa38b7a767ac083"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\preflight-final-admin.ps1.txt",
+      "bytes": 7756,
+      "sha256": "db14f575d2c0218a52f29e7d33976e04e140445feedea3ac63b7ea9192727ece"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\preflight.json",
+      "bytes": 137967,
+      "sha256": "5d17347fe35ea3a5c037aec6b7fe133cb444330a9dc46201da2cb767cf32c677"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\selected-tools.json",
+      "bytes": 1369,
+      "sha256": "6ec6a83b78e7cfdcfaf35506ba0945cfb2c360153dcaf20d0ad533f69fcde5e4"
+    }
+  ],
+  "source_diagnostics": [
+    {
+      "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-01\\preflight.ps1",
+      "copy": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\preflight-final-admin.ps1.txt"
+    },
+    {
+      "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-01\\preflight-01.ps1",
+      "copy": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\preflight-01-admin.ps1.txt"
+    },
+    {
+      "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-01\\preflight-02.ps1",
+      "copy": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\preflight-02-admin.ps1.txt"
+    },
+    {
+      "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-01\\preflight-01.receipt.json",
+      "copy": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\preflight-01.receipt.json"
+    },
+    {
+      "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-01\\preflight-01.stdout.log",
+      "copy": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\preflight-01.stdout.log"
+    },
+    {
+      "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-01\\preflight-01.stderr.log",
+      "copy": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\preflight-01.stderr.log"
+    },
+    {
+      "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-01\\preflight-02\\environment-restore-diagnostic.json",
+      "copy": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\preflight-02-environment-restore-diagnostic.json"
+    },
+    {
+      "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-01\\preflight-03\\preflight.json",
+      "copy": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\preflight.json"
+    },
+    {
+      "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-01\\preflight-03\\metadata-raw.json",
+      "copy": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\metadata-raw.json"
+    },
+    {
+      "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-01\\preflight-03\\environment-restore-diagnostic.json",
+      "copy": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\environment-restore-diagnostic.json"
+    },
+    {
+      "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-01\\selected-tools.json",
+      "copy": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-evidence-01\\selected-tools.json"
+    }
+  ],
+  "preflight03_execution": {
+    "observed_tool_session": 33122,
+    "observed_exit_code": 0,
+    "elapsed_or_transcript_reconstructed": false,
+    "note": "Final diagnostic completed in the prior continued turn; only persisted public outputs are copied, not a reconstructed stdout receipt."
+  }
+}

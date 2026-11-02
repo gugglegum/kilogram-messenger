@@ -17,6 +17,8 @@ mod catchup;
 mod control;
 #[path = "migration_s54_early.rs"]
 mod early;
+#[path = "migration_s54_feasibility.rs"]
+mod feasibility;
 #[path = "migration_s54_final.rs"]
 mod final_phase;
 #[path = "migration_s54_graph.rs"]
@@ -29,6 +31,9 @@ mod intervals;
 mod observations;
 #[path = "migration_s54_offline.rs"]
 mod offline;
+#[path = "migration_s54_purpose.rs"]
+mod purpose;
+use purpose::Purpose;
 #[path = "migration_s54_oracle.rs"]
 mod oracle;
 #[cfg(test)]
@@ -76,16 +81,25 @@ struct OldOrigin {
 }
 impl OldOrigin {
     fn create(parent: &Path) -> Result<Self> {
+        Self::create_for(parent, Purpose::WholeP)
+    }
+    fn create_for(parent: &Path, purpose: Purpose) -> Result<Self> {
         let owned = workspace()
             .canonicalize()?
             .join(".tmp")
-            .join("migration-s54-integrated");
+            .join(purpose.namespace());
         let actual = parent.canonicalize()?;
+        if purpose == Purpose::FeasibilityF {
+            ensure!(
+                actual == purpose.run(&workspace().canonicalize()?),
+                "exact fresh F namespace"
+            );
+        }
         ensure!(
             actual.starts_with(&owned) && actual != owned,
             "new owned S54 attempt only"
         );
-        let base = parent.join("p5-origin");
+        let base = parent.join(purpose.origin_name());
         std::fs::create_dir(&base)?;
         let (old, c1) = old_pair(&base)?;
         let c2 = obligations::context_between(&old[0], &old[1], &base, "p5-second")?;

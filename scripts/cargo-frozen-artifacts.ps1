@@ -63,6 +63,10 @@ function Get-KilogramFrozenArtifactCount([string[]]$Package) {
         default { throw 'Frozen scale build selection differs.' }
     }
 }
+function Get-KilogramFrozenApplicationPath([string]$Name) {
+    # Invocation and policy both use the first effective Application, never an array of paths.
+    return [string](Get-Command $Name -CommandType Application -ErrorAction Stop | Select-Object -First 1).Source
+}
 function Get-KilogramFrozenBuildInputs {
     param([string]$Workspace,[string]$Profile,[string]$Target,[string[]]$Package,[string[]]$CargoFeatures)
     $null=Get-KilogramFrozenArtifactCount $Package
@@ -81,7 +85,7 @@ function Get-KilogramFrozenBuildInputs {
     $tools=@();foreach($name in @('cargo','rustc')){
         $selected=(& rustup which $name);if($LASTEXITCODE -ne 0){throw 'Selected compiler path unavailable.'}
         $selected=[IO.Path]::GetFullPath([string]$selected)
-        $shim=(Get-Command $name -CommandType Application -ErrorAction Stop).Source
+        $shim=Get-KilogramFrozenApplicationPath $name
         $tools+=[ordered]@{name=$name;path=$selected;sha256=(Get-KilogramFrozenHash $selected);shim_path=$shim;shim_sha256=(Get-KilogramFrozenHash $shim)}
     }
     $rustc=@(& rustc -vV);if($LASTEXITCODE -ne 0 -or -not($rustc -ccontains 'release: 1.98.0') -or -not($rustc -ccontains "host: $Target")){throw 'Pinned compiler/host mismatch.'}

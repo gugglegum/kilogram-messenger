@@ -1,0 +1,5 @@
+Exception: E:\AI-Projects\kilogram-p2p-messenger\.tmp\s54-block4c-implementation-01\process-inventory.ps1:16
+Line |
+  16 |  : _succeeded){throw 'Read-only CIM inventory unavailable; no zero measu :
+     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Read-only CIM inventory unavailable; no zero measurement

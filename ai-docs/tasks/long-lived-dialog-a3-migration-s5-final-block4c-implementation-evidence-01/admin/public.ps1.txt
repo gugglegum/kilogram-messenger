@@ -1,0 +1,6 @@
+param([string]$Step)
+$ErrorActionPreference='Stop'
+$root='E:/AI-Projects/kilogram-p2p-messenger'
+$dir=Join-Path $root ".tmp/s54-block4c-implementation-01/$Step"
+$null=New-Item -ItemType Directory -Path $dir -ErrorAction Stop
+if($Step -cin @('public-02','public-03','public-06')){& (Join-Path $root '.tmp/s54-block4c-implementation-01/public-parity.ps1') -Step $Step}else{& (Join-Path $root 'scripts/test-migration-s54-feasibility.ps1') -EvidenceDirectory $dir}

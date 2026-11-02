@@ -1,0 +1,65 @@
+{
+  "classification": "Block4C public preparation final verification; no runtime result",
+  "checked_utc": "2026-11-02T15:25:11.318315+00:00",
+  "head": "4c1fd911c57d7c47a166b7aec01e8d174f21799c",
+  "task": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-preparation-task-01.md",
+    "bytes": 7350,
+    "sha256": "5c34e84354fc8122817ffcd4395f602c07a13b348d110f307b4ad96464ebf4f1"
+  },
+  "report": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4c-feasibility-contract-readiness-01.md",
+    "bytes": 25033,
+    "sha256": "dc9392a4859de0f4c0beabc4aefb17c794e6ede3995b68eadac54e3e1ad7ed9c"
+  },
+  "relevant_source_count": 511,
+  "relevant_sources_match_preflight": true,
+  "image_count": 9,
+  "images_match_preflight": true,
+  "selected_tools_match_preflight": true,
+  "environment_restore_evidence_equal": true,
+  "navigation_before": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\README.md",
+      "bytes": 210074,
+      "sha256": "ae9bebb51c93508b583b0d60082dba9fb045048abe94872110dfc7841554ab9e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\chat-coordination.md",
+      "bytes": 165628,
+      "sha256": "6c468b4fdb1e97aa7ae8d837f345346b9ac3e5884abdebeb235ec72be12c2fb3"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\next-stage-plan.md",
+      "bytes": 60232,
+      "sha256": "52e158dd72339b23ef93de531300a57f60345dfb3b46cd7b41c044978c2906c1"
+    }
+  ],
+  "navigation_after": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\README.md",
+      "bytes": 210074,
+      "sha256": "ae9bebb51c93508b583b0d60082dba9fb045048abe94872110dfc7841554ab9e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\chat-coordination.md",
+      "bytes": 165628,
+      "sha256": "6c468b4fdb1e97aa7ae8d837f345346b9ac3e5884abdebeb235ec72be12c2fb3"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\next-stage-plan.md",
+      "bytes": 60232,
+      "sha256": "52e158dd72339b23ef93de531300a57f60345dfb3b46cd7b41c044978c2906c1"
+    }
+  ],
+  "index_empty": true,
+  "tracked_dirty_paths": [
+    "ai-docs/README.md",
+    "ai-docs/chat-coordination.md",
+    "ai-docs/next-stage-plan.md"
+  ],
+  "existing_untracked_paths_preserved_during_packaging": true,
+  "runtime_directories_absent": true,
+  "source_build_or_runtime_execution": false,
+  "whole_attempt_verdict": "not_established"
+}

@@ -145,11 +145,9 @@ fn same_pin(a: &Pin, b: &Pin) -> Result<()> {
     );
     Ok(())
 }
-fn deadline(d: &Deadline) -> Result<()> {
+fn deadline(d: &Deadline, purpose: Purpose) -> Result<()> {
     ensure!(
-        d.controller == 2350
-            && d.work == 2375
-            && d.outer == 2400
+        [d.controller, d.work, d.outer] == purpose.limits()
             && d.origin == "owned_launch"
             && d.clock == "windows_tick_count64",
         "exact original S54 deadline policy"
@@ -506,16 +504,13 @@ enum Directory<'a> {
 }
 fn directory(p: &Policy, i: &Identity, state: Directory<'_>) -> Result<()> {
     ensure!(
-        i.case == CASE && i.attempt == ATTEMPT && i.selector == SELECTOR,
+        Purpose::identity(&i.case, &i.attempt, &i.selector).is_ok(),
         "exact S54 case/attempt/selector"
     );
     files::digest(&i.run_id, 64)?;
     ensure!(i.run_id != "0".repeat(64), "nonzero run identity");
     files::same(&i.workspace, &p.root)?;
-    files::same(
-        &i.run,
-        &p.root.join(".tmp/migration-s54-integrated").join(ATTEMPT),
-    )?;
+    files::same(&i.run, &Purpose::from_case(&i.case)?.run(&p.root))?;
     ensure!(i.run.is_dir(), "reserved fresh owned run directory");
     for (path, name) in [
         (&i.output, "assertions.json"),
@@ -557,7 +552,7 @@ fn directory(p: &Policy, i: &Identity, state: Directory<'_>) -> Result<()> {
                         .contains(&name)
                         && e.path().is_file()
                         && e.metadata()?.len() <= MIB as u64)
-                    || (name == "p5-origin" && e.path().is_dir())
+                    || (name == Purpose::from_case(&i.case)?.origin_name() && e.path().is_dir())
                     || runtime::command_log_name(name)
             }
         };
@@ -628,14 +623,15 @@ fn selection(i: &Inventory) -> Result<()> {
         t.package == "kilogram-cli"
             && t.target == "migration_s5_process"
             && t.kind == "test"
-            && t.name == SELECTOR,
+            && t.name == Purpose::from_case(&i.identity.case)?.selector(),
         "exact isolated full name/target"
     );
+    let expected_selector = Purpose::from_case(&i.identity.case)?.selector();
     let list = files::pin(&s.list, MIB)?;
     let list = std::str::from_utf8(&list)?;
     ensure!(
         list.lines()
-            .filter(|v| *v == format!("{SELECTOR}: test"))
+            .filter(|v| *v == format!("{}: test", expected_selector))
             .count()
             == 1,
         "prepared exact selector inventory once"
@@ -645,8 +641,9 @@ fn selection(i: &Inventory) -> Result<()> {
 fn references(p: &Policy, i: &Inventory) -> Result<()> {
     let dir = p
         .root
-        .join(".tmp/migration-s54-public-evidence")
-        .join(ATTEMPT);
+        .join(".tmp")
+        .join(Purpose::from_case(&i.identity.case)?.public_namespace())
+        .join(Purpose::from_case(&i.identity.case)?.attempt());
     for (pin, name) in [
         (&i.compiler.normal, "normal.json"),
         (&i.compiler.tests, "tests.json"),
@@ -662,7 +659,17 @@ fn inspect_with(p: &Policy, input: &Inputs) -> Result<Inspection> {
     inspect_state(p, input, Directory::Fresh)
 }
 fn inspect_state(p: &Policy, input: &Inputs, state: Directory<'_>) -> Result<Inspection> {
-    let run = p.root.join(".tmp/migration-s54-integrated").join(ATTEMPT);
+    let run = input
+        .inventory
+        .path
+        .parent()
+        .context("fixed purpose input directory")?;
+    ensure!(
+        [Purpose::WholeP, Purpose::FeasibilityF]
+            .into_iter()
+            .any(|purpose| purpose.run(&p.root) == run),
+        "fixed S54 input namespace"
+    );
     for (pin, name) in [
         (&input.inventory, "inputs.json"),
         (&input.activation, "activation.json"),
@@ -677,10 +684,12 @@ fn inspect_state(p: &Policy, input: &Inputs, state: Directory<'_>) -> Result<Ins
     let l: Launch = files::document(&input.launch, 16 * 1024)?;
     let c: Capture = files::document(&input.capture, 4096)?;
     ensure!(
-        i.schema == 1 && i.classification == "bound_s54_whole_inventory",
+        i.schema == 1
+            && i.classification == Purpose::from_case(&i.identity.case)?.inventory_class(),
         "S54 inventory schema"
     );
-    deadline(&i.deadline)?;
+    let purpose = Purpose::identity(&i.identity.case, &i.identity.attempt, &i.identity.selector)?;
+    deadline(&i.deadline, purpose)?;
     match state {
         Directory::Fresh => fresh(p, &i.identity)?,
         _ => directory(p, &i.identity, state)?,
@@ -700,7 +709,7 @@ fn inspect_state(p: &Policy, input: &Inputs, state: Directory<'_>) -> Result<Ins
     }
     ensure!(
         a.schema == 1
-            && a.classification == "root_s54_whole_activation"
+            && a.classification == purpose.activation_class()
             && a.case == i.identity.case
             && a.attempt == i.identity.attempt
             && a.run_id == i.identity.run_id
@@ -757,9 +766,9 @@ fn inspect_state(p: &Policy, input: &Inputs, state: Directory<'_>) -> Result<Ins
     same_pin(&l.capture, &input.capture)?;
     files::same(&l.run, &a.run)?;
     for (actual, seconds) in [
-        (l.controller_tick_ms, 2350u64),
-        (l.work_tick_ms, 2375),
-        (l.outer_tick_ms, 2400),
+        (l.controller_tick_ms, purpose.limits()[0]),
+        (l.work_tick_ms, purpose.limits()[1]),
+        (l.outer_tick_ms, purpose.limits()[2]),
     ] {
         ensure!(
             actual
@@ -771,7 +780,7 @@ fn inspect_state(p: &Policy, input: &Inputs, state: Directory<'_>) -> Result<Ins
     }
     let utc_end = l
         .start_utc_ms
-        .checked_add(2400000)
+        .checked_add(purpose.limits()[2] * 1000)
         .context("launch UTC overflow")?;
     ensure!(
         now < utc_end

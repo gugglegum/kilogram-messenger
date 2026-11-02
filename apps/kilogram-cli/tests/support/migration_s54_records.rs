@@ -67,6 +67,51 @@ pub(super) fn verify(
     raw: &[u8],
     receipt: &[u8],
 ) -> Result<Record> {
+    let cuts = if expected.request.context == 0 {
+        [25, 25]
+    } else {
+        [33, 33]
+    };
+    verify_at_cuts(
+        expected,
+        projection,
+        selected,
+        credentials,
+        raw,
+        receipt,
+        cuts,
+    )
+}
+/// Only the fixed F C1 selection is admitted here. P's25/33 policy is unchanged.
+pub(super) fn verify_feasibility(
+    expected: &Expected<'_>,
+    projection: &Projection<'_>,
+    selected: &v2::StaticSelection2,
+    credentials: Credentials<'_>,
+    raw: &[u8],
+    receipt: &[u8],
+) -> Result<Record> {
+    ensure!(expected.request.context == 0, "F signed mixed C1 only");
+    verify_at_cuts(
+        expected,
+        projection,
+        selected,
+        credentials,
+        raw,
+        receipt,
+        [5, 3],
+    )
+}
+#[allow(clippy::too_many_arguments)]
+fn verify_at_cuts(
+    expected: &Expected<'_>,
+    projection: &Projection<'_>,
+    selected: &v2::StaticSelection2,
+    credentials: Credentials<'_>,
+    raw: &[u8],
+    receipt: &[u8],
+    cuts: [u64; 2],
+) -> Result<Record> {
     ensure!(
         raw.len() <= v2::MAX_EVENT
             && receipt.len() <= v2::MAX_RECEIPT
@@ -79,11 +124,6 @@ pub(super) fn verify(
         expected.request.number,
     )?;
     let context = expected.contexts[request.context as usize];
-    let cuts = if request.context == 0 {
-        [25, 25]
-    } else {
-        [33, 33]
-    };
     ensure!(
         expected.contexts[0] != expected.contexts[1]
             && selected.c() == context
@@ -95,11 +135,12 @@ pub(super) fn verify(
         "original context/D/E/SID/selected Q and C1/C2 cuts"
     );
     let format = old::decode(raw, v2::MAX_EVENT)?.fields(5)?[0].uint()?;
-    let required = if request.context == 0 && request.number >= 25 {
-        2
-    } else {
-        1
-    };
+    let required =
+        if request.context == 0 && u64::from(request.number) >= cuts[request.role as usize] {
+            2
+        } else {
+            1
+        };
     ensure!(
         format == required,
         "actual source encoding matches original selected Text boundary"

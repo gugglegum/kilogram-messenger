@@ -1,0 +1,7 @@
+{
+  "active_exact_images": null,
+  "classification": "read-only exact nine-image inventory; no process termination",
+  "checked_utc": "2026-11-02T16:42:51.5306414+00:00",
+  "query_succeeded": false,
+  "error": "Клиенту не удалось получить доступ к ресурсу CIM."
+}

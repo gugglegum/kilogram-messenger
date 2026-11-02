@@ -1,0 +1,39 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: the loop variable `owner` is used to index `debt`
+   --> apps\kilogram-cli\tests\support\migration_s54_feasibility.rs:138:22
+    |
+138 |         for owner in 0..2 {
+    |                      ^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+    = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator and enumerate()
+    |
+138 -         for owner in 0..2 {
+138 +         for (owner, <item>) in debt.iter().enumerate() {
+    |
+
+error: the loop variable `owner` is used to index `before`
+   --> apps\kilogram-cli\tests\support\migration_s54_feasibility.rs:568:18
+    |
+568 |     for owner in 0..2 {
+    |                  ^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+help: consider using an iterator and enumerate()
+    |
+568 -     for owner in 0..2 {
+568 +     for (owner, <item>) in before.iter().enumerate() {
+    |
+
+error: function `s54_f_real_A40_cursor_oracle_retains_suffix_after_current_169_and_rejects_new_snapshot` should have a snake case name
+  --> apps\kilogram-cli\tests\support\migration_s54_feasibility_tests.rs:52:4
+   |
+52 | fn s54_f_real_A40_cursor_oracle_retains_suffix_after_current_169_and_rejects_new_snapshot()
+   |    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ help: convert the identifier to snake case: `s54_f_real_a40_cursor_oracle_retains_suffix_after_current_169_and_rejects_new_snapshot`
+   |
+   = note: `-D non-snake-case` implied by `-D warnings`
+   = help: to override `-D warnings` add `#[allow(non_snake_case)]`
+
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 3 previous errors

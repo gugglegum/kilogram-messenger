@@ -2,6 +2,7 @@
 param(
     [ValidateSet('Owner','Launcher','Native','Linger')][string]$Role='Owner',
     [ValidateSet('normal','tail','legacy','nonzero','delayed','timeout','eof','linger','cleanup','partial','overflow')][string]$Mode='normal',
+    [ValidateSet('WholeP','FeasibilityF')][string]$Purpose='WholeP',
     [Parameter(Mandatory)][string]$Root
 )
 # Deliberately benign: pinned PowerShell, finite sleeps/public JSON/stdout only.
@@ -10,7 +11,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 $self=[IO.Path]::GetFullPath($PSCommandPath)
 $workspace=[IO.Path]::GetFullPath((Join-Path $PSScriptRoot '../../../..'))
-. (Join-Path $workspace 'scripts/invoke-migration-s54-whole.ps1')
+. (Join-Path $workspace 'scripts/invoke-migration-s54-whole.ps1') -Purpose $Purpose
 $rootPath=[IO.Path]::GetFullPath($Root)
 $owned=[IO.Path]::GetFullPath((Join-Path $workspace '.tmp/s54-block4b-r1-01/'))
 if(-not $rootPath.StartsWith($owned,[StringComparison]::OrdinalIgnoreCase)){throw 'Only owned public benign fixture root.'}
@@ -21,10 +22,10 @@ if($Role -ceq 'Launcher'){
     while(-not (Test-Path -LiteralPath $specPath)){if([Environment]::TickCount64 -ge $specUntil){throw 'bounded benign launcher handoff'};Start-Sleep -Milliseconds 5}
     $spec=ConvertFrom-S54Strict (Read-S54Public $specPath 16384) 16384
     if($spec.classification -cne 'public_benign_fixture_only'){throw 'No production fixture input.'}
-    $native=Invoke-S54SingleExecutable (Get-S54Pin $shell 134217728) @('-NoProfile','-NonInteractive','-File',$self,'-Role','Native','-Mode',$Mode,'-Root',$rootPath) ([long]$spec.controller_tick_ms) -ForwardOutput
+    $native=Invoke-S54SingleExecutable (Get-S54Pin $shell 134217728) @('-NoProfile','-NonInteractive','-File',$self,'-Role','Native','-Mode',$Mode,'-Root',$rootPath,'-Purpose',$Purpose) ([long]$spec.controller_tick_ms) -ForwardOutput
     if($native.code -ne 0){exit $native.code}
     if($Mode -ceq 'tail'){Start-Sleep -Milliseconds 1800}
-    Write-Output 'S54_BENIGN_WRAPPER public_fixture_only'
+    if($Purpose -ceq 'FeasibilityF'){Write-Output ($script:S54PolicyPurpose.Wrapper+' '+(ConvertTo-Json -InputObject $spec.wrapper_marker -Compress))}else{Write-Output 'S54_BENIGN_WRAPPER public_fixture_only'}
     exit 0
 }
 if($Role -ceq 'Native'){
@@ -57,13 +58,13 @@ if($Role -ceq 'Native'){
     if($Mode -cin @('timeout','eof','partial')){Write-Output 'public fixture keeps output open until bounded timeout';Start-Sleep -Seconds 10;exit 0}
     if($Mode -cin @('linger','cleanup')){
         $child=[Diagnostics.Process]::new();$child.StartInfo.FileName=$shell;$child.StartInfo.UseShellExecute=$false;$child.StartInfo.RedirectStandardOutput=$true;$child.StartInfo.RedirectStandardError=$true;$child.StartInfo.CreateNoWindow=$true;$child.StartInfo.WindowStyle=[Diagnostics.ProcessWindowStyle]::Hidden
-        foreach($a in @('-NoProfile','-NonInteractive','-File',$self,'-Role','Linger','-Mode',$Mode,'-Root',$rootPath)){$null=$child.StartInfo.ArgumentList.Add($a)}
+        foreach($a in @('-NoProfile','-NonInteractive','-File',$self,'-Role','Linger','-Mode',$Mode,'-Root',$rootPath,'-Purpose',$Purpose)){$null=$child.StartInfo.ArgumentList.Add($a)}
         if(-not $child.Start()){throw 'benign descendant start'};$child.Dispose()
     }
     Write-Output 'running 1 test'
-    Write-Output 'test public_fixture::benign ... diagnostic on the named line'
+    Write-Output ('test '+$(if($Purpose -ceq 'FeasibilityF'){$script:S54Selector}else{'public_fixture::benign'})+' ... diagnostic on the named line')
     Write-Output 'public diagnostic between name and native ok'
-    Write-Output 'S54_BENIGN_FUNCTIONAL public_fixture_only'
+    if($Purpose -ceq 'FeasibilityF'){Write-Output ($script:S54PolicyPurpose.Native+' '+(ConvertTo-Json -InputObject $spec.native_marker -Compress))}else{Write-Output 'S54_BENIGN_FUNCTIONAL public_fixture_only'}
     Write-Output 'ok'
     Write-Output 'test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s'
     exit 0
@@ -92,15 +93,21 @@ $session=$null;$launcher=$null;$actualPassed=$false;$failure=$null;$failureDetai
 try {
     $runId='b'*64;$nonce=[Convert]::ToHexString([Security.Cryptography.RandomNumberGenerator]::GetBytes(32)).ToLowerInvariant()
     $fixtureInput=Write-S54New (Join-Path $rootPath 'public-input.json') @{classification='public_benign_fixture_only';mode=$Mode} 4096
-    $started=@{version=1;classification='s54_exclusive_attempt';case='public-outer-fixture';attempt="public-$Mode";run_id=$runId;selector='public_fixture::benign';inventory=$fixtureInput;activation=$fixtureInput;owner_pid=$PID;nonce=$nonce}
+    $fixtureCase=if($Purpose -ceq 'FeasibilityF'){$script:S54Case}else{'public-outer-fixture'}
+    $fixtureAttempt=if($Purpose -ceq 'FeasibilityF'){$script:S54Attempt}else{"public-$Mode"}
+    $fixtureSelector=if($Purpose -ceq 'FeasibilityF'){$script:S54Selector}else{'public_fixture::benign'}
+    $started=@{version=1;classification='s54_exclusive_attempt';case=$fixtureCase;attempt=$fixtureAttempt;run_id=$runId;selector=$fixtureSelector;inventory=$fixtureInput;activation=$fixtureInput;owner_pid=$PID;nonce=$nonce}
     $null=Write-S54New (Join-Path $rootPath 'started.json') $started 16384
-    $launcher=New-S54Process $shell @('-NoProfile','-NonInteractive','-File',$self,'-Role','Launcher','-Mode',$Mode,'-Root',$rootPath)
+    $launcher=New-S54Process $shell @('-NoProfile','-NonInteractive','-File',$self,'-Role','Launcher','-Mode',$Mode,'-Root',$rootPath,'-Purpose',$Purpose)
     if(-not $launcher.Start()){throw 'benign launcher start'};$job.VerifyChild($launcher)
-    $i=@{identity=@{run=$rootPath;case='public-outer-fixture';attempt="public-$Mode";run_id=$runId;selector='public_fixture::benign'}}
+    $i=@{identity=@{run=$rootPath;case=$fixtureCase;attempt=$fixtureAttempt;run_id=$runId;selector=$fixtureSelector}}
     $session=@{Job=$job;I=$i;Inputs=@{inventory=$fixtureInput;launch=$fixtureInput};Started=$started;Launcher=$launcher;Harness=$null;ExpectedHarness=(Get-S54Pin $shell 134217728);Output=([KilogramS54Output]::new($launcher));OriginTick=$origin;ControllerTick=($origin+$work*1000);ClockSent=$false;JoinSent=$false;JoinSharingRetries=0;HandleVerified=$false;LauncherWaited=$false;HarnessWaited=$false;LauncherWaitedTick=$null;HarnessWaitedTick=$null;Transcript=$null;ClockRequest=$null;ClockReply=$null;NativeClaim=$null;Join=$null;Permit=$null}
-    $null=Write-S54New (Join-Path $rootPath 'fixture-session.json') @{classification='public_benign_fixture_only';case=$i.identity.case;attempt=$i.identity.attempt;run_id=$runId;owner_pid=$PID;launcher_pid=$launcher.Id;nonce=$nonce;inventory_sha256=$fixtureInput.sha256;launch_sha256=$fixtureInput.sha256;controller_tick_ms=$session.ControllerTick} 16384
+    $fixtureAssertion=@{Pin=$fixtureInput;Value=@{provenance=@{blake3=('3'*64)}}}
+    $nativeMarker=New-S54Marker $i $session.Inputs $fixtureAssertion $script:S54PolicyPurpose.FunctionalClass
+    $wrapperMarker=New-S54Marker $i $session.Inputs $fixtureAssertion $script:S54PolicyPurpose.WrapperClass
+    $null=Write-S54New (Join-Path $rootPath 'fixture-session.json') @{native_marker=$nativeMarker;wrapper_marker=$wrapperMarker;classification='public_benign_fixture_only';case=$i.identity.case;attempt=$i.identity.attempt;run_id=$runId;owner_pid=$PID;launcher_pid=$launcher.Id;nonce=$nonce;inventory_sha256=$fixtureInput.sha256;launch_sha256=$fixtureInput.sha256;controller_tick_ms=$session.ControllerTick} 16384
     Wait-S54OwnedProcesses $session
-    $layout=Get-S54Invocation $session.Output.Stdout 'public_fixture::benign' 'S54_BENIGN_FUNCTIONAL' 'S54_BENIGN_WRAPPER'
+    $layout=if($Purpose -ceq 'FeasibilityF'){Assert-S54NativeOutput $session.Output.Stdout $session.Output.Stderr $i $session.Inputs $fixtureAssertion}else{Get-S54Invocation $session.Output.Stdout 'public_fixture::benign' 'S54_BENIGN_FUNCTIONAL' 'S54_BENIGN_WRAPPER'}
     if($Mode -cnotin @('normal','tail','legacy')){throw 'unexpected benign failure mode passed'}
     $actualPassed=$true
 }catch{
@@ -128,7 +135,7 @@ finally {
     if($null -ne $session){if($null -ne $session.Harness){$session.Harness.Dispose()}}
     if($null -ne $launcher){$launcher.Dispose()}
     $job.CheckWhole()
-    $record=@{classification='public_benign_fixture_only';mode=$Mode;actual_outer_decision=if($actualPassed){'passed'}else{'failed'};failure=$failure;failure_detail=$failureDetail;unknown_owned_processes=$unknown;work_expired=$job.WorkExpired;clock_membership_served=($null -ne $session -and $session.ClockSent);a7_membership_served=($null -ne $session -and $session.JoinSent);exclusive_join_sharing_retries=if($null -ne $session){$session.JoinSharingRetries}else{0};launcher_waited=($null -ne $session -and $session.LauncherWaited);harness_waited=($null -ne $session -and $session.HarnessWaited);process_outcomes=$outcomes;transcript=if($null -ne $session){$session.Transcript}else{$null};known_wait_gap_ms=if($null -ne $session -and $null -ne $session.LauncherWaitedTick -and $null -ne $session.HarnessWaitedTick){$session.LauncherWaitedTick-$session.HarnessWaitedTick}else{$null};eof_at_failure=$eofAtFailure;cleanup=$closed;containment_teardown_verified=$teardown;elapsed_ms=([KilogramS5Deadline]::TickNow()-$origin);whole_attempt_verdict='not_established'}
+    $record=@{classification='public_benign_fixture_only';purpose=$Purpose;mode=$Mode;actual_outer_decision=if($actualPassed){'passed'}else{'failed'};failure=$failure;failure_detail=$failureDetail;unknown_owned_processes=$unknown;work_expired=$job.WorkExpired;clock_membership_served=($null -ne $session -and $session.ClockSent);a7_membership_served=($null -ne $session -and $session.JoinSent);exclusive_join_sharing_retries=if($null -ne $session){$session.JoinSharingRetries}else{0};launcher_waited=($null -ne $session -and $session.LauncherWaited);harness_waited=($null -ne $session -and $session.HarnessWaited);process_outcomes=$outcomes;transcript=if($null -ne $session){$session.Transcript}else{$null};known_wait_gap_ms=if($null -ne $session -and $null -ne $session.LauncherWaitedTick -and $null -ne $session.HarnessWaitedTick){$session.LauncherWaitedTick-$session.HarnessWaitedTick}else{$null};eof_at_failure=$eofAtFailure;cleanup=$closed;containment_teardown_verified=$teardown;elapsed_ms=([KilogramS5Deadline]::TickNow()-$origin);whole_attempt_verdict='not_established'}
     $null=Write-S54New (Join-Path $rootPath 'fixture-result.json') $record 65536
     if($teardown){$job.Finish()}
 }

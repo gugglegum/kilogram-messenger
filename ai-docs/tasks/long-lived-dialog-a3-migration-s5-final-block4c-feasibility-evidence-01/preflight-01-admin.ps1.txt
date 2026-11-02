@@ -1,0 +1,52 @@
+param([Parameter(Mandatory)][string]$Evidence)
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+$workspace='E:/AI-Projects/kilogram-p2p-messenger'
+Set-Location $workspace
+. (Join-Path $workspace 'scripts/invoke-migration-s54-whole.ps1')
+. (Join-Path $workspace 'scripts/migration-s53-runtime-dependencies.ps1')
+. (Join-Path $workspace 'scripts/migration-s53-metadata.ps1')
+$oldPath=$env:PATH;$oldOffline=[Environment]::GetEnvironmentVariable('CARGO_NET_OFFLINE','Process')
+$before=@(Get-KilogramFrozenEnvironment -Entries @(Get-ChildItem Env:))
+$rows=@();$result=$null
+try {
+    $inherited=@('pwsh.exe','powershell.exe','git.exe','rustup.exe','cargo.exe','rustc.exe'|ForEach-Object {
+        $command=Get-Command $_ -CommandType Application -ErrorAction Stop|Select-Object -First 1
+        $item=Get-Item -LiteralPath $command.Source -Force
+        @{name=$_;path=$command.Source;reparse=[bool]($item.Attributes -band [IO.FileAttributes]::ReparsePoint);bytes=$item.Length}
+    })
+    $initialFailure=$null;try{$null=New-S54Policy}catch{$initialFailure=$_.Exception.Message}
+    $active=@(& rustup show active-toolchain);if($LASTEXITCODE -ne 0){throw 'Active toolchain discovery failed'}
+    $cargoPath=[IO.Path]::GetFullPath([string](& rustup which cargo));if($LASTEXITCODE -ne 0){throw 'cargo discovery failed'}
+    $rustcPath=[IO.Path]::GetFullPath([string](& rustup which rustc));if($LASTEXITCODE -ne 0){throw 'rustc discovery failed'}
+    $null=Get-S54Path $cargoPath;$null=Get-S54Path $rustcPath
+    $bin=Split-Path -Parent $cargoPath;if($bin -cne (Split-Path -Parent $rustcPath)){throw 'Selected compiler bin directories differ'}
+    $env:PATH=$bin+[IO.Path]::PathSeparator+$oldPath
+    $env:CARGO_NET_OFFLINE='true'
+    $policy=New-S54Policy
+    $shell=Get-KilogramS53ShellDependency -Executable $policy.Resolutions[0].path -RequireCurrentHost
+    $memory=Get-KilogramS53MemoryShellDependency $workspace
+    $paths=Assert-S54PublishedSources $policy
+    $sources=@($paths|ForEach-Object {Get-S54Pin $_ 8388608})
+    $inputs=Get-KilogramFrozenBuildInputs -Workspace $workspace -Profile verification-scale -Target x86_64-pc-windows-msvc -Package @('kilogram-cli','kilogram-transport-iroh') -CargoFeatures @()
+    Write-KilogramFrozenJson (Join-Path $Evidence 'metadata-inputs.json') $inputs
+    $images=@($script:S54Images|ForEach-Object {@{role=$_.role;pin=(Get-S54Pin (Join-Path $workspace $_.path) 134217728)}})
+    $live=@();$mutable=Get-S54MutablePaths $workspace
+    $processes=@(Get-CimInstance Win32_Process -Property ProcessId,ExecutablePath -OperationTimeoutSec 3 -ErrorAction Stop)
+    foreach($p in $processes){if($p.ExecutablePath -and [IO.Path]::GetFullPath($p.ExecutablePath) -in @($images|ForEach-Object {$_.pin.path})){$live+=@{pid=$p.ProcessId;path=$p.ExecutablePath}}}
+    $forbidden=@(Get-ChildItem Env:|Where-Object {$_.Name -match '^KILOGRAM_.*(SCHEDULE|CLOCK|PAUSE)$'}|ForEach-Object {@{name=$_.Name;present=$true;value_sha256=(Get-KilogramFrozenDigest $_.Value)}})
+    if($forbidden.Count){throw 'Inherited test schedule/clock/pause present; values withheld.'}
+    $workerValue=[Environment]::GetEnvironmentVariable('TOKIO_WORKER_THREADS','Process');$effective=if($null -eq $workerValue){[Environment]::ProcessorCount}else{[int]$workerValue}
+    if($effective -lt 2){throw 'At least two actual workers required.'}
+    $previous=ConvertFrom-S54Strict (Read-S54Public (Join-Path $workspace '.tmp/s54-block4b-r1-01/compile-02.capture.json') 8388608) 8388608
+    $compilerComparison=@();foreach($tool in $inputs.tools){$prior=@($previous.build_inputs_before.tools|Where-Object name -CEQ $tool.name)[0];$compilerComparison+=@{name=$tool.name;actual=$tool;prior=$prior;selected_compiler_sha256_same=($tool.sha256 -ceq $prior.sha256);shim_same=($tool.shim_sha256 -ceq $prior.shim_sha256)}}
+    $result=@{classification='Block4C actual public metadata preflight only; no runtime admission';head=([string](& git rev-parse HEAD));inherited_resolutions=$inherited;inherited_policy_refusal=$initialFailure;active_toolchain=$active;process_local_path_recipe=@{prepend_existing_directory=$bin;inherit_original_tail=$true;original_path_sha256=(Get-KilogramFrozenDigest $oldPath);effective_path_sha256=(Get-KilogramFrozenDigest $env:PATH);set_process_cargo_net_offline='true';user_system_environment_changed=$false};effective_resolutions=$policy.Resolutions;metadata_shell=$shell;memory_shell=$memory;relevant_environment=$inputs.environment;configs=$inputs.configs;compiler_comparison=$compilerComparison;sources=$sources;embedded=(Get-S54EmbeddedSnapshot $workspace);images=$images;mutable_paths=$mutable;active_exact_path_processes=$live;forbidden_environment=$forbidden;workers=@{present=($null -ne $workerValue);value=$workerValue;available=[Environment]::ProcessorCount;effective=$effective};p_attempt_exists=(Test-Path -LiteralPath (Join-Path $workspace '.tmp/migration-s54-integrated/P-s54-whole-resumed-l1-01-attempt-01'));p_public_exists=(Test-Path -LiteralPath (Join-Path $workspace '.tmp/migration-s54-public-evidence/P-s54-whole-resumed-l1-01-attempt-01'));full_inventory_admission='not executed; no prepared inventory/activation';compiler_profile_runtime_evidence='deferred; metadata is not a new compiler artifact';whole_attempt_verdict='not_established'}
+}finally{
+    $env:PATH=$oldPath
+    [Environment]::SetEnvironmentVariable('CARGO_NET_OFFLINE',$oldOffline,'Process')
+    $after=@(Get-KilogramFrozenEnvironment -Entries @(Get-ChildItem Env:))
+    Assert-S54Equal $before $after
+}
+$result.process_environment_restored=$true
+Write-KilogramFrozenJson (Join-Path $Evidence 'preflight.json') $result
+Write-Output ('preflight_sources='+$result.sources.Count+';images='+$result.images.Count+';workers='+$result.workers.effective+';live_exact='+$result.active_exact_path_processes.Count+';process_environment_restored=true')

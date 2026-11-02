@@ -1,0 +1,19 @@
+{
+  "classification": "Public metadata/version/discovery only; no build/test/Prepare",
+  "argv": [
+    "C:/Users/Paul/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe",
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-01\\preflight.ps1",
+    "-Evidence",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-01"
+  ],
+  "owner_child_pid": 14468,
+  "actual_exit": 1,
+  "timed_out": false,
+  "timeout_seconds": 210,
+  "elapsed_seconds": 9.672000000020489,
+  "stdout_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "stderr_sha256": "da2554ec078d1fc10eeca6816cf599fe3e021f60c65dbd6df71c0a308928af4b"
+}

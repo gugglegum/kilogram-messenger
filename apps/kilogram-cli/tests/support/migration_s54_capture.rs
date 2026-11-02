@@ -190,6 +190,7 @@ fn transform(
     Ok((original, durable))
 }
 fn run(mut command: Command) -> Result<Value> {
+    let _measurement = s53_deadline::measure("status_rpc");
     run_kind(&mut command, Kind::Status)
 }
 enum Kind {

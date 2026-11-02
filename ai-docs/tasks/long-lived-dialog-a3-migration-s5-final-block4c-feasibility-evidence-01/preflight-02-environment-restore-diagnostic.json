@@ -1,0 +1,197 @@
+{
+  "primary_error": "Синтаксическая ошибка в имени файла, имени папки или метке тома. : 'C:\\Users\\Paul\\.rustup\\toolchains\\1.98.0-x86_64-pc-windows-msvc\\bin\\cargo.exe C:\\Users\\Paul\\.cargo\\bin\\cargo.exe'.",
+  "before": [
+    {
+      "name": "AR",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "ARFLAGS",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CARGO_HOME",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CARGO_INCREMENTAL",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CARGO_NET_OFFLINE",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CC",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CFLAGS",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CXX",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CXXFLAGS",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "INCLUDE",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "LIB",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "LIBPATH",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "PATH",
+      "present": true,
+      "value_sha256": "32afa634aa3fe135e1ae545834facb755758a036d57f369377b3455a99075f88"
+    },
+    {
+      "name": "RUST_LOG",
+      "present": true,
+      "value_sha256": "aa63925edf225e26d79eca9cebc7639de6dfe576d2d9e4183e162f99e38be7ee"
+    },
+    {
+      "name": "RUSTUP_HOME",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "RUSTUP_TOOLCHAIN",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "VCTOOLSINSTALLDIR",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "VSINSTALLDIR",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "WINDOWSSDKDIR",
+      "present": false,
+      "value_sha256": null
+    }
+  ],
+  "after": [
+    {
+      "name": "AR",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "ARFLAGS",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CARGO_HOME",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CARGO_INCREMENTAL",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CARGO_NET_OFFLINE",
+      "present": true,
+      "value_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "CC",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CFLAGS",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CXX",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "CXXFLAGS",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "INCLUDE",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "LIB",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "LIBPATH",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "PATH",
+      "present": true,
+      "value_sha256": "32afa634aa3fe135e1ae545834facb755758a036d57f369377b3455a99075f88"
+    },
+    {
+      "name": "RUST_LOG",
+      "present": true,
+      "value_sha256": "aa63925edf225e26d79eca9cebc7639de6dfe576d2d9e4183e162f99e38be7ee"
+    },
+    {
+      "name": "RUSTUP_HOME",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "RUSTUP_TOOLCHAIN",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "VCTOOLSINSTALLDIR",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "VSINSTALLDIR",
+      "present": false,
+      "value_sha256": null
+    },
+    {
+      "name": "WINDOWSSDKDIR",
+      "present": false,
+      "value_sha256": null
+    }
+  ]
+}

@@ -2,6 +2,7 @@
 use super::*;
 pub(super) struct Fixture {
     pub root: PathBuf,
+    purpose: Purpose,
     pub policy: Policy,
     pub input: Inputs,
     pub inventory: Value,
@@ -31,6 +32,9 @@ fn profile(test: bool) -> Value {
 }
 impl Fixture {
     pub fn new() -> Result<Self> {
+        Self::new_for(Purpose::WholeP)
+    }
+    pub fn new_for(purpose: Purpose) -> Result<Self> {
         let base = workspace().join(".tmp/s54-block4b-r1-01/rust-public-fixtures");
         std::fs::create_dir_all(&base)?;
         let root = tempfile::Builder::new()
@@ -125,8 +129,9 @@ impl Fixture {
             "tools":tools,"rustc":["rustc 1.98.0","release: 1.98.0",format!("host: {TARGET}")],"cargo":["cargo 1.98.0"],
             "environment":environment()?,"configs":configs,"source_inputs":source_inputs,"package_names":packages,"resolved_graph":graph});
         let evidence = root
-            .join(".tmp/migration-s54-public-evidence")
-            .join(ATTEMPT);
+            .join(".tmp")
+            .join(purpose.public_namespace())
+            .join(purpose.attempt());
         std::fs::create_dir_all(&evidence)?;
         let normal = Self::compiler(&root, &build, true)?;
         let tests = Self::compiler(&root, &build, false)?;
@@ -151,13 +156,13 @@ impl Fixture {
             "embedded":{"before":embedded,"after":embedded,"dep_info":dep_info},
             "normal_argv":["build","--package","kilogram-cli","--bin","kilogram-cli","--profile",PROFILE,"--target",TARGET,"--jobs","2","--offline","--locked","--message-format=json-render-diagnostics"],
             "tests_argv":["test","--package","kilogram-cli","--package","kilogram-transport-iroh","--profile",PROFILE,"--target",TARGET,"--jobs","2","--offline","--locked","--no-run","--message-format=json-render-diagnostics"]});
-        let run = root.join(".tmp/migration-s54-integrated").join(ATTEMPT);
+        let run = purpose.run(&root);
         std::fs::create_dir_all(&run)?;
-        let isolated = json!({"format_version":1,"tests":[{"package":"kilogram-cli","kind":"test","target":"migration_s5_process","name":SELECTOR}]});
+        let isolated = json!({"format_version":1,"tests":[{"package":"kilogram-cli","kind":"test","target":"migration_s5_process","name":purpose.selector()}]});
         let isolated = write(&evidence.join("isolated.json"), &isolated)?;
         let list = public(
             &evidence.join("list.txt"),
-            format!("{SELECTOR}: test\n").as_bytes(),
+            format!("{}: test\n", purpose.selector()).as_bytes(),
         )?;
         let actual = std::env::var("TOKIO_WORKER_THREADS").ok();
         let available = std::thread::available_parallelism()?.get();
@@ -166,10 +171,10 @@ impl Fixture {
             .map(|s| s.parse::<usize>())
             .transpose()?
             .unwrap_or(available);
-        let inventory = json!({"schema":1,"classification":"bound_s54_whole_inventory",
-            "identity":{"case":CASE,"attempt":ATTEMPT,"selector":SELECTOR,"run_id":state::hex(&[11;32]),"workspace":root,"run":run,
+        let inventory = json!({"schema":1,"classification":purpose.inventory_class(),
+            "identity":{"case":purpose.case(),"attempt":purpose.attempt(),"selector":purpose.selector(),"run_id":state::hex(&[11;32]),"workspace":root,"run":run,
                 "output":run.join("assertions.json"),"activation":run.join("activation.json"),"launch":run.join("launch.json"),"capture":run.join("capture.json")},
-            "deadline":{"controller":2350,"work":2375,"outer":2400,"origin":"owned_launch","clock":"windows_tick_count64"},
+            "deadline":{"controller":purpose.limits()[0],"work":purpose.limits()[1],"outer":purpose.limits()[2],"origin":"owned_launch","clock":"windows_tick_count64"},
             "source":{"s53_product":S53,"closure_publication":CLOSURE,"implementation":head(&root)?,"observed_head":head(&root)?,"files":source},
             "compiler":compiler,"images":images,"runtime":{"metadata_shell":pin(&resolved[0].path)?,"memory_shell":pin(&resolved[1].path)?,
                 "resolutions":resolved,"environment":environment()?,"configs":configs,"workers":{"present":actual.is_some(),"value":actual,"available":available,"effective":effective},
@@ -181,13 +186,13 @@ impl Fixture {
                 .as_millis(),
         )?;
         let placeholder = pin(&root.join("Cargo.toml"))?;
-        let activation = json!({"schema":1,"classification":"root_s54_whole_activation","inventory":placeholder,"case":CASE,"attempt":ATTEMPT,
-            "run_id":state::hex(&[11;32]),"run":run,"selector":SELECTOR,"implementation":head(&root)?,"execution_mode":"NativeToken",
+        let activation = json!({"schema":1,"classification":purpose.activation_class(),"inventory":placeholder,"case":purpose.case(),"attempt":purpose.attempt(),
+            "run_id":state::hex(&[11;32]),"run":run,"selector":purpose.selector(),"implementation":head(&root)?,"execution_mode":"NativeToken",
             "deadline":inventory["deadline"],"not_before_utc_ms":now-1000,"not_after_utc_ms":now+3600000,"retry":"root_reallocation_only"});
-        let capture = json!({"version":1,"attempt":ATTEMPT,"owner_pid":100,"launcher_pid":101,"harness_path":root.join(IMAGES[5].1),"whole_utc_ms":now+2400000});
+        let capture = json!({"version":1,"attempt":purpose.attempt(),"owner_pid":100,"launcher_pid":101,"harness_path":root.join(IMAGES[5].1),"whole_utc_ms":now+purpose.limits()[2]*1000});
         let launch = json!({"schema":1,"classification":"s54_original_launch_binding","inventory":placeholder,"activation":placeholder,"capture":placeholder,
-            "case":CASE,"attempt":ATTEMPT,"run_id":state::hex(&[11;32]),"run":run,"owner_pid":100,"launcher_pid":101,
-            "start_tick_ms":5000,"start_utc_ms":now,"controller_tick_ms":2355000,"work_tick_ms":2380000,"outer_tick_ms":2405000});
+            "case":purpose.case(),"attempt":purpose.attempt(),"run_id":state::hex(&[11;32]),"run":run,"owner_pid":100,"launcher_pid":101,
+            "start_tick_ms":5000,"start_utc_ms":now,"controller_tick_ms":5000+purpose.limits()[0]*1000,"work_tick_ms":5000+purpose.limits()[1]*1000,"outer_tick_ms":5000+purpose.limits()[2]*1000});
         let input = Inputs {
             inventory: placeholder.clone(),
             activation: placeholder.clone(),
@@ -195,6 +200,7 @@ impl Fixture {
             capture: placeholder,
         };
         let mut out = Self {
+            purpose,
             root,
             policy,
             input,
@@ -268,10 +274,7 @@ impl Fixture {
     }
     pub fn seal(&mut self) -> Result<()> {
         // The fixture writer never trusts the deliberately mutated wire run.
-        let run = self
-            .root
-            .join(".tmp/migration-s54-integrated")
-            .join(ATTEMPT);
+        let run = self.purpose.run(&self.root);
         self.input.inventory = write(&run.join("inputs.json"), &self.inventory)?;
         self.activation["inventory"] = json!(self.input.inventory);
         self.input.activation = write(&run.join("activation.json"), &self.activation)?;

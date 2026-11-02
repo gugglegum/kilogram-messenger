@@ -24,6 +24,7 @@ param(
     [string]$S54ActivationSha256,
     [string]$S54LaunchSha256,
     [string]$S54CaptureSha256,
+    [ValidateSet('WholeP','FeasibilityF')][string]$S54Purpose='WholeP',
     [object]$S54PreparationGuard
 )
 
@@ -34,7 +35,7 @@ $ErrorActionPreference = 'Stop'
 if ($PSBoundParameters.ContainsKey('FrozenExecutionOnly') -or
     @($PSBoundParameters.Keys | Where-Object { $_ -like 'S54*' -and $_ -cne 'S54PreparationGuard' }).Count) {
     $frozenArguments=@{};foreach($key in $PSBoundParameters.Keys){$frozenArguments[$key]=$PSBoundParameters[$key]}
-    . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1')
+    . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1') -Purpose $S54Purpose
     Invoke-S54FrozenExecution $frozenArguments
     return
 }

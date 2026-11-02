@@ -1,0 +1,195 @@
+{
+  "classification": "Block4C source/pure/public/benign checks only",
+  "checks": [
+    {
+      "step": "compile-05",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-implementation-01\\compile.ps1",
+        "-Capture",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-implementation-01\\compile-05.capture.json"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 44.1472398,
+      "cleanup_verified": true,
+      "error": null,
+      "outer_job_owner_pid": 39288,
+      "actual_launcher_membership_verified": true,
+      "work_expired": false,
+      "members_before_cleanup": [],
+      "members_after_cleanup": [],
+      "capture_harness_membership": []
+    },
+    {
+      "step": "clippy-03",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-implementation-01\\clippy.ps1"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 15.6956686,
+      "cleanup_verified": true,
+      "error": null,
+      "outer_job_owner_pid": 61840,
+      "actual_launcher_membership_verified": true,
+      "work_expired": false,
+      "members_before_cleanup": [],
+      "members_after_cleanup": [],
+      "capture_harness_membership": []
+    },
+    {
+      "step": "pure-02",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-implementation-01\\pure.ps1",
+        "-Step",
+        "pure-02"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 145.7819959,
+      "cleanup_verified": true,
+      "error": null,
+      "outer_job_owner_pid": 25280,
+      "actual_launcher_membership_verified": true,
+      "work_expired": false,
+      "members_before_cleanup": [],
+      "members_after_cleanup": [],
+      "capture_harness_membership": []
+    },
+    {
+      "step": "public-05",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-implementation-01\\public.ps1",
+        "-Step",
+        "public-05"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 1.6159373,
+      "cleanup_verified": true,
+      "error": null,
+      "outer_job_owner_pid": 18624,
+      "actual_launcher_membership_verified": true,
+      "work_expired": false,
+      "members_before_cleanup": [],
+      "members_after_cleanup": [],
+      "capture_harness_membership": []
+    },
+    {
+      "step": "public-06",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-implementation-01\\public.ps1",
+        "-Step",
+        "public-06"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 103.9282005,
+      "cleanup_verified": true,
+      "error": null,
+      "outer_job_owner_pid": 63740,
+      "actual_launcher_membership_verified": true,
+      "work_expired": false,
+      "members_before_cleanup": [],
+      "members_after_cleanup": [],
+      "capture_harness_membership": []
+    },
+    {
+      "step": "powershell-02",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-implementation-01\\powershell-tests.ps1",
+        "-Step",
+        "powershell-02"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 21.6648042,
+      "cleanup_verified": true,
+      "error": null,
+      "outer_job_owner_pid": 63096,
+      "actual_launcher_membership_verified": true,
+      "work_expired": false,
+      "members_before_cleanup": [],
+      "members_after_cleanup": [],
+      "capture_harness_membership": []
+    },
+    {
+      "step": "fmt-02",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-implementation-01\\fmt.ps1"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 0.704928,
+      "cleanup_verified": true,
+      "error": null,
+      "outer_job_owner_pid": 26124,
+      "actual_launcher_membership_verified": true,
+      "work_expired": false,
+      "members_before_cleanup": [],
+      "members_after_cleanup": [],
+      "capture_harness_membership": []
+    },
+    {
+      "step": "metadata-02",
+      "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "argv": [
+        "-NoProfile",
+        "-NonInteractive",
+        "-File",
+        "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-implementation-01\\process-inventory.ps1",
+        "-Step",
+        "metadata-02"
+      ],
+      "actual_child_exit_code": 0,
+      "exit_code": 0,
+      "elapsed_seconds": 0.9563772,
+      "cleanup_verified": true,
+      "error": null,
+      "outer_job_owner_pid": 53912,
+      "actual_launcher_membership_verified": true,
+      "work_expired": false,
+      "members_before_cleanup": [],
+      "members_after_cleanup": [],
+      "capture_harness_membership": []
+    }
+  ],
+  "pure_exact_count": 38,
+  "public_count": 26,
+  "public_parity_count": 10,
+  "benign_F_modes": [
+    "normal",
+    "nonzero",
+    "partial"
+  ],
+  "production_runtime_executed": false,
+  "whole_attempt_verdict": "not_established"
+}

@@ -3,7 +3,8 @@ param(
     [ValidateSet('Unavailable','Prepare','Run')][string]$Action='Unavailable',
     [string]$InventorySha256,
     [string]$ActivationSha256,
-    [string]$PreparationRunId
+    [string]$PreparationRunId,
+    [ValidateSet('WholeP','FeasibilityF')][string]$Purpose='WholeP'
 )
 # Dot-source defines policy/outer functions only. Actions are explicit.
 Set-StrictMode -Version Latest
@@ -197,6 +198,38 @@ function Assert-S54Embedded($I,$Policy,$Tests) {
     }
     Assert-S54EmbeddedDependencies $Policy.Root $e.dep_info $I.source.files
 }
+function Get-S54Purpose([ValidateSet('WholeP','FeasibilityF')][string]$Name='WholeP') {
+    $f=$Name -ceq 'FeasibilityF'
+    $case=if($f){'F-s54-mixed-hooks-feasibility-01'}else{'P-s54-whole-resumed-l1-01'}
+    return @{Name=$Name;Case=$case;Attempt=($case+'-attempt-01');
+        Selector=$(if($f){'live_l1::handoff::final_p5::feasibility::s54_short_mixed_hooks_feasibility_public'}else{'live_l1::handoff::final_p5::s54_continuous_whole_resumed_l1_p5_public'});
+        Namespace=$(if($f){'migration-s54-feasibility'}else{'migration-s54-integrated'});
+        PublicNamespace=$(if($f){'migration-s54-feasibility-public-evidence'}else{'migration-s54-public-evidence'});
+        Origin=$(if($f){'f-origin'}else{'p5-origin'});
+        InventoryClass=$(if($f){'bound_s54_feasibility_inventory'}else{'bound_s54_whole_inventory'});
+        ActivationClass=$(if($f){'root_s54_feasibility_activation'}else{'root_s54_whole_activation'});
+        Native=$(if($f){'S54_FEASIBILITY_FUNCTIONAL'}else{'S54_FUNCTIONAL'});
+        Wrapper=$(if($f){'S54_FEASIBILITY_FROZEN_COMPLETED'}else{'S54_FROZEN_COMPLETED'});
+        FunctionalClass=$(if($f){'feasibility_assertions_completed'}else{'functional_assertions_completed'});
+        WrapperClass=$(if($f){'s54_feasibility_frozen_execution_completed'}else{'s54_frozen_execution_completed'});
+        ObservationsClass=$(if($f){'F feasibility functional only'}else{'P11 functional phase only'});
+        OuterClass=$(if($f){'s54_feasibility_outer_observations'}else{'s54_outer_observations'});
+        Deadline=@{controller=$(if($f){450}else{2350});work=$(if($f){480}else{2375});outer=$(if($f){510}else{2400});origin='owned_launch';clock='windows_tick_count64'}}
+}
+function Set-S54Purpose([ValidateSet('WholeP','FeasibilityF')][string]$Name='WholeP') {
+    $script:S54PolicyPurpose=Get-S54Purpose $Name
+    $script:S54Case=$script:S54PolicyPurpose.Case;$script:S54Attempt=$script:S54PolicyPurpose.Attempt;$script:S54Selector=$script:S54PolicyPurpose.Selector
+}
+function Get-S54OutputPurpose($I) {
+    # Public parser fixtures retain the historical P grammar. Production identity
+    # admission is mandatory; an exact F identity alone selects the fixed F grammar.
+    if($I.identity.case -ceq 'F-s54-mixed-hooks-feasibility-01') {
+        $p=Get-S54Purpose FeasibilityF
+        if($I.identity.attempt -cne $p.Attempt -or $I.identity.selector -cne $p.Selector){throw 'S54 cross-purpose output identity.'}
+        return $p
+    }
+    return Get-S54Purpose WholeP
+}
 function New-S54Policy([string]$FixtureRoot) {
     $workspace=Split-Path -Parent $PSScriptRoot
     if($FixtureRoot){
@@ -298,12 +331,12 @@ function Assert-S54Compiler($I,$Policy,$Capture,[bool]$Normal) {
 function Assert-S54Inventory($I,$Policy,[string]$State='Fresh',$Owner=$null) {
     Assert-S54Wire $I 'Inventory'
     $id=$I.identity;$root=$Policy.Root
-    if($I.schema -ne 1 -or $I.classification -cne 'bound_s54_whole_inventory' -or $id.case -cne $script:S54Case -or $id.attempt -cne $script:S54Attempt -or $id.selector -cne $script:S54Selector -or $id.run_id -cnotmatch '^[0-9a-f]{64}$' -or $id.run_id -ceq ('0'*64)){throw 'S54 required identity.'}
-    Assert-S54Equal $I.deadline @{controller=2350;work=2375;outer=2400;origin='owned_launch';clock='windows_tick_count64'}
-    Assert-S54SamePath $id.workspace $root;Assert-S54SamePath $id.run (Join-Path $root ".tmp/migration-s54-integrated/$script:S54Attempt")
+    if($I.schema -ne 1 -or $I.classification -cne $script:S54PolicyPurpose.InventoryClass -or $id.case -cne $script:S54Case -or $id.attempt -cne $script:S54Attempt -or $id.selector -cne $script:S54Selector -or $id.run_id -cnotmatch '^[0-9a-f]{64}$' -or $id.run_id -ceq ('0'*64)){throw 'S54 required identity.'}
+    Assert-S54Equal $I.deadline $script:S54PolicyPurpose.Deadline
+    Assert-S54SamePath $id.workspace $root;Assert-S54SamePath $id.run (Join-Path $root ".tmp/$($script:S54PolicyPurpose.Namespace)/$script:S54Attempt")
     foreach($n in @('activation','launch','capture')){Assert-S54SamePath $id[$n] (Join-Path $id.run "$n.json")};Assert-S54SamePath $id.output (Join-Path $id.run 'assertions.json')
     Assert-S54Directory $I $Policy $State $Owner
-    $public=Join-Path $root ".tmp/migration-s54-public-evidence/$script:S54Attempt"
+    $public=Join-Path $root ".tmp/$($script:S54PolicyPurpose.PublicNamespace)/$script:S54Attempt"
     foreach($pair in @(@($I.compiler.normal,'normal.json'),@($I.compiler.tests,'tests.json'),@($I.compiler.frozen_manifest,'frozen.json'),@($I.selection.isolated,'isolated.json'),@($I.selection.list,'list.txt'))){Assert-S54SamePath $pair[0].path (Join-Path $public $pair[1])}
     if($I.source.s53_product -cne '1f404b54ebce47ae3b52eaeb6855e30f3b8f3309' -or $I.source.closure_publication -cne '20418e41e4c486158fdc30b0c9f857750432e25e' -or $I.source.implementation -cnotmatch '^[0-9a-f]{40}$' -or $I.source.observed_head -cne $I.source.implementation){throw 'S54 source revision roles.'}
     $head=[Text.Encoding]::UTF8.GetString((Read-S54Public (Join-Path $root '.git/HEAD') 4096)).Trim()
@@ -356,19 +389,19 @@ function New-S54InventoryBytes($Specification,$Policy) {
 }
 function Test-S54Admission($Inputs,$Policy,[string]$State='Fresh',$Owner=$null) {
     if($Inputs -isnot [Collections.IDictionary] -or $Inputs.Count -ne 4){throw 'S54 exact input pin set.'}
-    foreach($n in @('inventory','activation','launch','capture')){Assert-S54SamePath $Inputs[$n].path (Join-Path $Policy.Root ".tmp/migration-s54-integrated/$script:S54Attempt/$(if($n -ceq 'inventory'){'inputs.json'}else{"$n.json"})")}
+    foreach($n in @('inventory','activation','launch','capture')){Assert-S54SamePath $Inputs[$n].path (Join-Path $Policy.Root ".tmp/$($script:S54PolicyPurpose.Namespace)/$script:S54Attempt/$(if($n -ceq 'inventory'){'inputs.json'}else{"$n.json"})")}
     $raw=Read-S54Pin $Inputs.inventory 2097152;$i=ConvertFrom-S54Strict $raw 2097152;Assert-S54Inventory $i $Policy -State $State -Owner $Owner
     $a=Read-S54Json $Inputs.activation 16384;$l=Read-S54Json $Inputs.launch 16384;$c=Read-S54Json $Inputs.capture 4096
     Assert-S54Wire $a 'Activation';Assert-S54Wire $l 'Launch';Assert-S54Wire $c 'Capture'
     if($State -cne 'Fresh'){Assert-S54StartedBinding $i $Inputs $Owner $c}
     foreach($n in @('inventory','activation','launch','capture')){Assert-S54SamePath $Inputs[$n].path (Join-Path $i.identity.run $(if($n -ceq 'inventory'){'inputs.json'}else{"$n.json"}))}
-    if($a.schema -ne 1 -or $a.classification -cne 'root_s54_whole_activation' -or $a.case -cne $i.identity.case -or $a.attempt -cne $i.identity.attempt -or $a.run_id -cne $i.identity.run_id -or $a.selector -cne $i.identity.selector -or $a.run -cne $i.identity.run -or $a.implementation -cne $i.source.implementation -or $a.execution_mode -cne 'NativeToken' -or $a.retry -cne 'root_reallocation_only'){throw 'S54 external activation identity.'}
+    if($a.schema -ne 1 -or $a.classification -cne $script:S54PolicyPurpose.ActivationClass -or $a.case -cne $i.identity.case -or $a.attempt -cne $i.identity.attempt -or $a.run_id -cne $i.identity.run_id -or $a.selector -cne $i.identity.selector -or $a.run -cne $i.identity.run -or $a.implementation -cne $i.source.implementation -or $a.execution_mode -cne 'NativeToken' -or $a.retry -cne 'root_reallocation_only'){throw 'S54 external activation identity.'}
     Assert-S54PinEqual $a.inventory $Inputs.inventory;Assert-S54Equal $a.deadline $i.deadline
     $now=[DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds();if($a.not_before_utc_ms -ge $a.not_after_utc_ms -or $now -lt $a.not_before_utc_ms -or $now -ge $a.not_after_utc_ms){throw 'S54 activation validity.'}
     if($l.schema -ne 1 -or $l.classification -cne 's54_original_launch_binding' -or $l.case -cne $a.case -or $l.attempt -cne $a.attempt -or $l.run_id -cne $a.run_id -or $l.run -cne $a.run -or $l.start_tick_ms -le 0 -or $l.start_utc_ms -gt $now -or $l.start_utc_ms -lt $a.not_before_utc_ms -or $l.start_utc_ms -ge $a.not_after_utc_ms){throw 'S54 launch binding.'}
     Assert-S54PinEqual $l.inventory $Inputs.inventory;Assert-S54PinEqual $l.activation $Inputs.activation;Assert-S54PinEqual $l.capture $Inputs.capture
-    foreach($pair in @(@('controller_tick_ms',2350000),@('work_tick_ms',2375000),@('outer_tick_ms',2400000))){if([decimal]$l[$pair[0]] -ne ([decimal]$l.start_tick_ms+[decimal]$pair[1])){throw 'S54 original numeric tick relation.'}}
-    if($c.version -ne 1 -or $c.attempt -cne $a.attempt -or $c.owner_pid -le 0 -or $c.launcher_pid -le 0 -or $c.owner_pid -eq $c.launcher_pid -or $c.owner_pid -ne $l.owner_pid -or $c.launcher_pid -ne $l.launcher_pid -or [decimal]$c.whole_utc_ms -ne ([decimal]$l.start_utc_ms+2400000) -or $now -ge $c.whole_utc_ms){throw 'S54 capture/clock binding.'}
+    foreach($pair in @(@('controller_tick_ms',($script:S54PolicyPurpose.Deadline.controller*1000)),@('work_tick_ms',($script:S54PolicyPurpose.Deadline.work*1000)),@('outer_tick_ms',($script:S54PolicyPurpose.Deadline.outer*1000)))){if([decimal]$l[$pair[0]] -ne ([decimal]$l.start_tick_ms+[decimal]$pair[1])){throw 'S54 original numeric tick relation.'}}
+    if($c.version -ne 1 -or $c.attempt -cne $a.attempt -or $c.owner_pid -le 0 -or $c.launcher_pid -le 0 -or $c.owner_pid -eq $c.launcher_pid -or $c.owner_pid -ne $l.owner_pid -or $c.launcher_pid -ne $l.launcher_pid -or [decimal]$c.whole_utc_ms -ne ([decimal]$l.start_utc_ms+$script:S54PolicyPurpose.Deadline.outer*1000) -or $now -ge $c.whole_utc_ms){throw 'S54 capture/clock binding.'}
     Assert-S54SamePath $c.harness_path (Join-Path $Policy.Root $script:S54Images[5].path)
     foreach($n in @('inventory','activation','launch','capture')){$null=Read-S54Pin $Inputs[$n] 2097152}
     return [ordered]@{classification=$Policy.Scope;inventory_sha256=(Get-S54Sha $raw);clock='numeric binding only; safe clock/runtime connection requires Slice B';whole_attempt_verdict='not_established'}
@@ -413,10 +446,8 @@ $script:S54Schema=@{
  IsolatedEntry=@{package='s';target='s';kind='s';name='s'}
  Isolated=@{format_version='u';tests='aIsolatedEntry'}
 }
-$script:S54Case='P-s54-whole-resumed-l1-01'
-$script:S54Attempt=$script:S54Case+'-attempt-01'
-$script:S54Selector='live_l1::handoff::final_p5::s54_continuous_whole_resumed_l1_p5_public'
-$script:S54Helpers=@('scripts/run-cargo-tests-stable.ps1','scripts/cargo-frozen-artifacts.ps1','scripts/cargo-resource-policy.ps1','scripts/migration-s5-l1-deadline.ps1','scripts/migration-s53-metadata.ps1','scripts/migration-s53-runtime-dependencies.ps1','scripts/migration-s5-l1-test-result.ps1','scripts/invoke-migration-s54-whole.ps1','scripts/test-migration-s54-admission.ps1','scripts/migration-s54-outer.ps1','scripts/test-migration-s54-whole.ps1','apps/kilogram-cli/tests/support/migration_s54_outer_fixture.ps1','scripts/migration-s54-preparation.ps1','scripts/test-migration-s54-repair.ps1')
+Set-S54Purpose $Purpose
+$script:S54Helpers=@('scripts/run-cargo-tests-stable.ps1','scripts/cargo-frozen-artifacts.ps1','scripts/cargo-resource-policy.ps1','scripts/migration-s5-l1-deadline.ps1','scripts/migration-s53-metadata.ps1','scripts/migration-s53-runtime-dependencies.ps1','scripts/migration-s5-l1-test-result.ps1','scripts/invoke-migration-s54-whole.ps1','scripts/test-migration-s54-admission.ps1','scripts/migration-s54-outer.ps1','scripts/test-migration-s54-whole.ps1','apps/kilogram-cli/tests/support/migration_s54_outer_fixture.ps1','scripts/migration-s54-preparation.ps1','scripts/test-migration-s54-repair.ps1','scripts/test-migration-s54-feasibility.ps1')
 $script:S54Embedded=@('apps/kilogram-cli/tests/support/migration_s54_capture_fixture.ps1','apps/kilogram-cli/tests/support/migration_s54_memory_fixture.ps1','ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/P2-s53-exhausted-M1.candidate.json')
 $script:S54Images=@(
  @{role='legacy-cli';path='target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe';package='';kind='';target=''},

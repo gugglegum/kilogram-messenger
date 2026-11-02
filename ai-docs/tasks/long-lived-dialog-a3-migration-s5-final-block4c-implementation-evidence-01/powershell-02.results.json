@@ -1,0 +1,41 @@
+{
+  "checks": [
+    {
+      "result": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\block4c-powershell-02-F-normal\\fixture-result.json",
+        "bytes": 2448,
+        "sha256": "8a8d61da34c09bb0622d6f337ddca4e334b60cfb6bd2cf6c946535b0bacbebfb"
+      },
+      "mode": "normal",
+      "owner_exit": 0,
+      "decision": "passed",
+      "sanitized": true,
+      "actual_F_markers_written": true
+    },
+    {
+      "result": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\block4c-powershell-02-F-nonzero\\fixture-result.json",
+        "bytes": 2415,
+        "sha256": "39974f2ac2994c79a246478d9589803811d040b32e8c94431f476fb8f00c6afa"
+      },
+      "mode": "nonzero",
+      "owner_exit": 0,
+      "decision": "failed",
+      "sanitized": true,
+      "actual_F_markers_written": false
+    },
+    {
+      "result": {
+        "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4b-r1-01\\block4c-powershell-02-F-partial\\fixture-result.json",
+        "bytes": 2839,
+        "sha256": "5a2544f862efc5e62afc38e2ecdec9b96f8fc0e94a62ec1e0f1f06fd743754a8"
+      },
+      "mode": "partial",
+      "owner_exit": 0,
+      "decision": "failed",
+      "sanitized": true,
+      "actual_F_markers_written": false
+    }
+  ],
+  "classification": "bounded benign fixed-F marker/outer verification only; no messenger/profile/network"
+}

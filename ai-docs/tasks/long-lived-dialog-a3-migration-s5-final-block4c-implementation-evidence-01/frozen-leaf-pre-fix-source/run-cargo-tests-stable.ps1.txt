@@ -1,0 +1,388 @@
+[CmdletBinding()]
+param(
+    [string[]]$Package = @(),
+    [string]$Filter,
+    [string]$Profile = 'verification',
+    [string[]]$CargoFeatures = @(),
+    [int]$CargoJobs = 0,
+    [string]$IsolatedTestsFile,
+    [ValidateSet('AfterAggregate', 'BeforeAggregate')]
+    [string]$IsolatedTestOrder = 'AfterAggregate',
+    [switch]$NormalProcessPriority,
+    [switch]$Run,
+    [switch]$NoFailFast,
+    [switch]$NoCapture,
+    [switch]$SkipCacheStatus,
+    [string[]]$SkipTest = @(),
+    [string]$ExpectedArtifactsManifest,
+    [string]$ExpectedArtifactsSha256,
+    [string]$BuildEvidencePath,
+    [string]$CargoTarget,
+    [string]$StableArtifactsDirectory,
+    [switch]$FrozenExecutionOnly,
+    [string]$S54InventorySha256,
+    [string]$S54ActivationSha256,
+    [string]$S54LaunchSha256,
+    [string]$S54CaptureSha256,
+    [ValidateSet('WholeP','FeasibilityF')][string]$S54Purpose='WholeP',
+    [object]$S54PreparationGuard
+)
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+
+# This opt-in returns before every historical compiler/resource/list/cache lane.
+if ($PSBoundParameters.ContainsKey('FrozenExecutionOnly') -or
+    @($PSBoundParameters.Keys | Where-Object { $_ -like 'S54*' -and $_ -cne 'S54PreparationGuard' }).Count) {
+    $frozenArguments=@{};foreach($key in $PSBoundParameters.Keys){$frozenArguments[$key]=$PSBoundParameters[$key]}
+    . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1') -Purpose $S54Purpose
+    Invoke-S54FrozenExecution $frozenArguments
+    return
+}
+if ($PSBoundParameters.ContainsKey('S54PreparationGuard')) {
+    . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1')
+    Assert-S54ImageGuard $S54PreparationGuard (Split-Path -Parent $PSScriptRoot)
+    if ($Run -or $NormalProcessPriority -or $Profile -cne 'verification-scale' -or
+        $CargoJobs -ne 2 -or $CargoTarget -cne 'x86_64-pc-windows-msvc' -or
+        -not $SkipCacheStatus -or $CargoFeatures.Count -or $Filter -or $SkipTest.Count -or
+        $IsolatedTestsFile -or $ExpectedArtifactsManifest -or $ExpectedArtifactsSha256 -or
+        -not $BuildEvidencePath -or $StableArtifactsDirectory -cne (Join-Path (Split-Path -Parent $PSScriptRoot) 'target/verification-scale/deps')) { throw 'S54 guard requires the exact preparation compile-only lane.' }
+    Assert-S54Equal $Package @('kilogram-cli','kilogram-transport-iroh')
+    if (@($S54PreparationGuard.Entries | Where-Object Staged).Count -ne 1 -or -not $S54PreparationGuard.Entries[0].Staged) { throw 'S54 guarded normal image must precede stable staging.' }
+}
+
+function Complete-CacheStatus {
+    if ($SkipCacheStatus) {
+        Write-Host 'cache_status=skipped_explicitly'
+        return
+    }
+    & powershell -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'cargo-cache-maintenance.ps1')
+    $cacheStatusExit = $LASTEXITCODE
+    if ($cacheStatusExit -ne 0) {
+        throw "Cargo cache status check failed with exit code $cacheStatusExit."
+    }
+}
+
+. (Join-Path $PSScriptRoot 'cargo-resource-policy.ps1')
+$cargoJobsResolved = Set-KilogramCargoResourcePolicy -RequestedJobs $CargoJobs
+if ($NormalProcessPriority) {
+    try {
+        [System.Diagnostics.Process]::GetCurrentProcess().PriorityClass =
+            [System.Diagnostics.ProcessPriorityClass]::Normal
+        Write-Host 'cargo_process_priority_override=normal'
+    }
+    catch {
+        throw "Could not set the explicitly requested normal process priority: $($_.Exception.Message)"
+    }
+}
+
+$workspaceRoot = Split-Path -Parent $PSScriptRoot
+$manifestPath = Join-Path $workspaceRoot 'Cargo.toml'
+$frozenOptIn = -not [string]::IsNullOrWhiteSpace($BuildEvidencePath) -or -not [string]::IsNullOrWhiteSpace($ExpectedArtifactsManifest)
+$frozenExpected = $null
+if ($frozenOptIn) {
+    . (Join-Path $PSScriptRoot 'cargo-frozen-artifacts.ps1')
+    $frozenArtifactCount = Get-KilogramFrozenArtifactCount $Package
+    if ([string]::IsNullOrWhiteSpace($BuildEvidencePath) -or -not [IO.Path]::IsPathRooted($BuildEvidencePath) -or (Test-Path -LiteralPath $BuildEvidencePath)) { throw 'New absolute build evidence path required.' }
+    $requiredStable = [IO.Path]::GetFullPath((Join-Path $workspaceRoot 'target/verification-scale/deps'))
+    if ([IO.Path]::GetFullPath($StableArtifactsDirectory) -cne $requiredStable) { throw 'Frozen scale stable directory mismatch.' }
+    if ($Run -and [string]::IsNullOrWhiteSpace($ExpectedArtifactsManifest)) { throw 'Run capture requires an independently frozen expected manifest.' }
+    if (-not [string]::IsNullOrWhiteSpace($ExpectedArtifactsManifest)) { $frozenExpected = Read-KilogramFrozenManifest $ExpectedArtifactsManifest $ExpectedArtifactsSha256 $frozenArtifactCount }
+    elseif (-not [string]::IsNullOrWhiteSpace($ExpectedArtifactsSha256)) { throw 'Expected manifest/hash must be paired.' }
+    $frozenBefore = Get-KilogramFrozenBuildInputs -Workspace $workspaceRoot -Profile $Profile -Target $CargoTarget -Package $Package -CargoFeatures $CargoFeatures
+    if ($frozenExpected) { Assert-KilogramFrozenInputs $frozenExpected.build_inputs $frozenBefore }
+} elseif ($CargoTarget -or $StableArtifactsDirectory -or $ExpectedArtifactsSha256) { throw 'Frozen build options require explicit evidence/manifest opt-in.' }
+$metadataOutput = & cargo metadata --manifest-path $manifestPath --locked --no-deps --format-version 1
+if ($LASTEXITCODE -ne 0) {
+    throw "cargo metadata failed with exit code $LASTEXITCODE"
+}
+$metadata = ($metadataOutput -join [Environment]::NewLine) | ConvertFrom-Json
+$packageNamesById = @{}
+foreach ($metadataPackage in $metadata.packages) {
+    $packageNamesById[[string]$metadataPackage.id] = [string]$metadataPackage.name
+}
+
+$cargoArguments = @(
+    'test'
+    '--manifest-path', $manifestPath
+    '--locked'
+    '--jobs', $cargoJobsResolved
+    '--profile', $Profile
+    '--no-run'
+    '--message-format=json-render-diagnostics'
+)
+if ($frozenOptIn) { $cargoArguments += @('--offline', '--target', $CargoTarget) }
+if ($CargoFeatures.Count -gt 0) {
+    if ($CargoFeatures | Where-Object { [string]::IsNullOrWhiteSpace($_) }) {
+        throw 'Cargo feature names must not be empty.'
+    }
+    $cargoArguments += @('--features', ($CargoFeatures -join ','))
+}
+
+if ($Package.Count -eq 0) {
+    $cargoArguments += '--workspace'
+} else {
+    foreach ($packageName in $Package) {
+        if ([string]::IsNullOrWhiteSpace($packageName)) {
+            throw 'Package names must not be empty.'
+        }
+        $cargoArguments += @('--package', $packageName)
+    }
+}
+
+Write-Host "Compiling Rust test harnesses with profile '$Profile' without executing them..."
+Push-Location $workspaceRoot
+try {
+    $cargoOutput = @(& cargo @cargoArguments)
+    if ($LASTEXITCODE -ne 0) {
+        throw "cargo test --no-run failed with exit code $LASTEXITCODE"
+    }
+} finally {
+    Pop-Location
+}
+
+$artifactsByExecutable = @{}
+foreach ($line in $cargoOutput) {
+    try {
+        $message = $line | ConvertFrom-Json -ErrorAction Stop
+    } catch {
+        continue
+    }
+
+    if ($message.reason -ne 'compiler-artifact' -or
+        -not $message.profile.test -or
+        [string]::IsNullOrWhiteSpace([string]$message.executable)) {
+        continue
+    }
+
+    $executable = [System.IO.Path]::GetFullPath([string]$message.executable)
+    if ([System.IO.Path]::GetExtension($executable) -ne '.exe') {
+        continue
+    }
+    $artifactsByExecutable[$executable] = $message
+}
+
+if ($artifactsByExecutable.Count -eq 0) {
+    throw 'Cargo did not report any Windows test executables.'
+}
+
+$stableArtifacts = @()
+foreach ($entry in $artifactsByExecutable.GetEnumerator()) {
+    $sourcePath = $entry.Key
+    $message = $entry.Value
+    $packageId = [string]$message.package_id
+    $packageName = [string]$message.target.name
+    if ($packageNamesById.ContainsKey($packageId)) {
+        $packageName = $packageNamesById[$packageId]
+    }
+    $targetName = [string]$message.target.name
+    $targetKind = (@($message.target.kind) -join '-')
+    $stableStem = "$packageName-$targetKind-$targetName-tests"
+    $stableStem = $stableStem -replace '[^A-Za-z0-9._-]', '-'
+    $stablePath = Join-Path ([System.IO.Path]::GetDirectoryName($sourcePath)) "$stableStem.exe"
+    if ($frozenOptIn) {
+        [void][IO.Directory]::CreateDirectory($StableArtifactsDirectory)
+        $stablePath = Join-Path $StableArtifactsDirectory "$stableStem.exe"
+    }
+
+    if ($null -ne $S54PreparationGuard) {
+        $null=Copy-S54PreparedImage $S54PreparationGuard $sourcePath $stablePath
+    } else {
+        Copy-Item -LiteralPath $sourcePath -Destination $stablePath -Force
+    }
+    $stableArtifacts += [PSCustomObject]@{
+        Package = $packageName
+        Kind = $targetKind
+        Target = $targetName
+        Path = $stablePath
+    }
+}
+
+$stableArtifacts = @($stableArtifacts | Sort-Object Package, Kind, Target, Path -Unique)
+if ($null -ne $S54PreparationGuard) { Complete-S54ImageStage $S54PreparationGuard }
+# This guard precedes BOTH the compile-only return and every --list/Run branch.
+# -Run compiles/stages again, so validating only in its caller is insufficient.
+if ($frozenOptIn) {
+    $frozenUnits = @(Get-KilogramCompilerUnits -Lines $cargoOutput -Workspace $workspaceRoot -Target $CargoTarget -Profile $Profile -PackageNames $frozenBefore.package_names)
+    $frozenAfter = Get-KilogramFrozenBuildInputs -Workspace $workspaceRoot -Profile $Profile -Target $CargoTarget -Package $Package -CargoFeatures $CargoFeatures
+    Assert-KilogramFrozenInputs $frozenBefore $frozenAfter
+    $frozenRows = @(Get-KilogramFrozenStableRows $stableArtifacts $Profile)
+    if ($frozenRows.Count -ne $frozenArtifactCount) { throw 'Frozen staging artifact set differs from the selected package graph.' }
+    if ($frozenExpected) {
+        Assert-KilogramFrozenInputs $frozenExpected.build_inputs $frozenAfter
+        Assert-KilogramFrozenArtifacts $frozenExpected $frozenRows $Profile $CargoTarget $StableArtifactsDirectory $frozenArtifactCount
+        Assert-KilogramFrozenInputs $frozenExpected.units_identity (Get-KilogramFrozenUnitIdentity $frozenUnits)
+    }
+    Write-KilogramFrozenJson $BuildEvidencePath ([ordered]@{
+        classification='nonexecuting-compiler-artifact-provenance'; profile=$Profile; target=$CargoTarget
+        expected_manifest_sha256=if($frozenExpected){$ExpectedArtifactsSha256}else{$null}
+        build_inputs_before=$frozenBefore;build_inputs_after=$frozenAfter; units=$frozenUnits
+        raw_compiler_artifact_json=@($cargoOutput|Where-Object {$_ -match '^\s*\{"reason":"compiler-artifact"'})
+        stable_artifacts=$frozenRows;frozen_guard_verified=($null -ne $frozenExpected)
+    })
+    Write-Host "frozen_artifacts_verified=$($null -ne $frozenExpected)"
+}
+foreach ($artifact in $stableArtifacts) {
+    Write-Host "stable_test_executable=$($artifact.Path)"
+}
+
+$isolatedTests = @()
+if (-not [string]::IsNullOrWhiteSpace($IsolatedTestsFile)) {
+    $isolatedTestsPath = [System.IO.Path]::GetFullPath($IsolatedTestsFile)
+    if (-not (Test-Path -LiteralPath $isolatedTestsPath -PathType Leaf)) {
+        throw "Isolated test manifest does not exist: $isolatedTestsPath"
+    }
+    $isolatedManifest = Get-Content -LiteralPath $isolatedTestsPath -Raw | ConvertFrom-Json
+    $manifestProperties = @($isolatedManifest.PSObject.Properties.Name | Sort-Object)
+    if (($manifestProperties -join ',') -cne 'format_version,tests' -or
+        [int]$isolatedManifest.format_version -ne 1) {
+        throw 'Isolated test manifest must be exact format version 1.'
+    }
+    $seenIsolatedTests = @{}
+    foreach ($entry in @($isolatedManifest.tests)) {
+        $entryProperties = @($entry.PSObject.Properties.Name | Sort-Object)
+        if (($entryProperties -join ',') -cne 'kind,name,package,target') {
+            throw 'Each isolated test entry must contain only package, kind, target and name.'
+        }
+        foreach ($property in @('package', 'kind', 'target', 'name')) {
+            if ([string]::IsNullOrWhiteSpace([string]$entry.$property)) {
+                throw "Isolated test property '$property' must not be empty."
+            }
+        }
+        $key = "$($entry.package)|$($entry.kind)|$($entry.target)|$($entry.name)"
+        if ($seenIsolatedTests.ContainsKey($key)) {
+            throw "Duplicate isolated test entry: $key"
+        }
+        $seenIsolatedTests[$key] = $true
+        $matches = @($stableArtifacts | Where-Object {
+            $_.Package -ceq [string]$entry.package -and
+            $_.Kind -ceq [string]$entry.kind -and
+            $_.Target -ceq [string]$entry.target
+        })
+        if ($matches.Count -ne 1) {
+            throw "Isolated test entry must match exactly one stable executable: $key"
+        }
+        $isolatedTests += [PSCustomObject]@{
+            Package = [string]$entry.package
+            Kind = [string]$entry.kind
+            Target = [string]$entry.target
+            Name = [string]$entry.name
+            Path = [string]$matches[0].Path
+        }
+    }
+    if ($isolatedTests.Count -eq 0) {
+        throw 'Isolated test manifest must contain at least one test.'
+    }
+    if (-not [string]::IsNullOrWhiteSpace($Filter)) {
+        throw 'Filter and IsolatedTestsFile cannot be combined.'
+    }
+    foreach ($artifactPath in @($isolatedTests.Path | Sort-Object -Unique)) {
+        Push-Location $workspaceRoot
+        try {
+            $listedTests = @(& $artifactPath '--list' '--format' 'terse')
+            $listExitCode = $LASTEXITCODE
+        } finally {
+            Pop-Location
+        }
+        if ($listExitCode -ne 0) {
+            throw "Failed to list tests from isolated-test executable: $artifactPath"
+        }
+        foreach ($isolatedTest in @($isolatedTests | Where-Object { $_.Path -ceq $artifactPath })) {
+            $expectedListLine = "$($isolatedTest.Name): test"
+            if (@($listedTests | Where-Object { [string]$_ -ceq $expectedListLine }).Count -ne 1) {
+                throw "Isolated test selector does not resolve to exactly one test: $($isolatedTest.Name)"
+            }
+        }
+    }
+}
+
+if (-not $Run) {
+    Complete-CacheStatus
+    Write-Host "test_profile=$Profile"
+    Write-Host 'status=compiled-only'
+    Write-Host 'No test executable was started. Pass -Run explicitly when it is safe to run tests.'
+    exit 0
+}
+
+Write-Warning 'Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.'
+$testArguments = @()
+if (-not [string]::IsNullOrWhiteSpace($Filter)) {
+    $testArguments += $Filter
+}
+foreach ($skippedTest in $SkipTest) {
+    if ([string]::IsNullOrWhiteSpace($skippedTest)) {
+        throw 'Skipped test names must not be empty.'
+    }
+    $testArguments += @('--skip', $skippedTest)
+    Write-Host "skipping_unchanged_test=$skippedTest"
+}
+if ($NoCapture) {
+    $testArguments += '--nocapture'
+}
+$testArguments += '--test-threads=1'
+
+$failedArtifacts = @()
+$runIsolatedTests = {
+    foreach ($isolatedTest in $isolatedTests) {
+        Write-Host "running_isolated_test_executable=$($isolatedTest.Path)"
+        Write-Host "running_isolated_test=$($isolatedTest.Name)"
+        $isolatedArguments = @($isolatedTest.Name, '--exact')
+        if ($NoCapture) {
+            $isolatedArguments += '--nocapture'
+        }
+        $isolatedArguments += '--test-threads=1'
+        Push-Location $workspaceRoot
+        try {
+            & $isolatedTest.Path @isolatedArguments
+            $testExitCode = $LASTEXITCODE
+        } finally {
+            Pop-Location
+        }
+
+        if ($testExitCode -ne 0) {
+            $failedArtifacts += "$($isolatedTest.Path) :: $($isolatedTest.Name)"
+            if (-not $NoFailFast) {
+                throw "Isolated stable test failed with exit code ${testExitCode}: $($isolatedTest.Name)"
+            }
+        }
+    }
+}
+
+Write-Host "isolated_test_order=$IsolatedTestOrder"
+if ($IsolatedTestOrder -ceq 'BeforeAggregate') {
+    . $runIsolatedTests
+}
+
+foreach ($artifact in $stableArtifacts) {
+    Write-Host "running_test_executable=$($artifact.Path)"
+    $artifactArguments = @($testArguments)
+    foreach ($isolatedTest in @($isolatedTests | Where-Object { $_.Path -ceq $artifact.Path })) {
+        $artifactArguments += @('--skip', $isolatedTest.Name)
+    }
+    Push-Location $workspaceRoot
+    try {
+        & $artifact.Path @artifactArguments
+        $testExitCode = $LASTEXITCODE
+    } finally {
+        Pop-Location
+    }
+
+    if ($testExitCode -ne 0) {
+        $failedArtifacts += $artifact.Path
+        if (-not $NoFailFast) {
+            throw "Stable test executable failed with exit code ${testExitCode}: $($artifact.Path)"
+        }
+    }
+}
+
+if ($IsolatedTestOrder -ceq 'AfterAggregate') {
+    . $runIsolatedTests
+}
+
+if ($failedArtifacts.Count -ne 0) {
+    throw "One or more stable test executables failed: $($failedArtifacts -join ', ')"
+}
+
+Complete-CacheStatus
+Write-Host 'status=passed'
+Write-Host "isolated_test_count=$($isolatedTests.Count)"

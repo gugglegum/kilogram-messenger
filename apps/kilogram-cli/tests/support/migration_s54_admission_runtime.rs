@@ -57,8 +57,16 @@ fn create<T: serde::Serialize>(path: &Path, value: &T) -> Result<Pin> {
     drop(f);
     pin(path, 16 * 1024)
 }
+#[cfg(test)]
 fn input_from(root: &Path, get: impl Fn(&str) -> Result<String>) -> Result<Inputs> {
-    let run = root.join(".tmp/migration-s54-integrated").join(ATTEMPT);
+    input_for(root, Purpose::WholeP, get)
+}
+fn input_for(
+    root: &Path,
+    purpose: Purpose,
+    get: impl Fn(&str) -> Result<String>,
+) -> Result<Inputs> {
+    let run = purpose.run(root);
     let take = |role: &str, file: &str, cap| -> Result<Pin> {
         let expected = get(role)?;
         files::digest(&expected, 64)?;
@@ -92,13 +100,14 @@ fn original(
     launch: &Launch,
     reply: &ClockReply,
 ) -> Result<(Instant, Instant)> {
+    let purpose = Purpose::from_case(&launch.case)?;
     ensure!(
         before <= now
             && reply.origin_tick_ms == launch.start_tick_ms
             && reply.sampled_tick_ms >= reply.origin_tick_ms
             && reply.sampled_tick_ms < launch.controller_tick_ms
             && reply.remaining_controller_ms == launch.controller_tick_ms - reply.sampled_tick_ms
-            && reply.remaining_controller_ms <= 2_350_000,
+            && reply.remaining_controller_ms <= purpose.limits()[0] * 1000,
         "original monotonic sample relation"
     );
     let until = before
@@ -106,7 +115,7 @@ fn original(
         .context("sample Instant overflow")?;
     ensure!(now < until, "late/expired original clock reply");
     let origin = until
-        .checked_sub(Duration::from_secs(2350))
+        .checked_sub(Duration::from_secs(purpose.limits()[0]))
         .context("sample original underflow")?;
     ensure!(origin <= before, "no new clock origin");
     Ok((origin, until))
@@ -131,6 +140,9 @@ fn reply_binding(reply: &ClockReply, claim: &Claim, request: &Pin) -> Result<()>
 }
 impl AdmittedRun {
     pub(in super::super) fn load() -> Result<Self> {
+        Self::load_for(Purpose::WholeP)
+    }
+    pub(in super::super) fn load_for(purpose: Purpose) -> Result<Self> {
         // Refuse an unactivated selector before resolving tools or inspecting files.
         let required = [
             "KILOGRAM_S54_INVENTORY_SHA256",
@@ -147,7 +159,7 @@ impl AdmittedRun {
         .collect::<Result<BTreeMap<_, _>>>()?;
         let p = Policy::production()?;
         require_production(&p)?;
-        let input = input_from(&p.root, |key| {
+        let input = input_for(&p.root, purpose, |key| {
             required
                 .get(key)
                 .cloned()
@@ -161,6 +173,10 @@ impl AdmittedRun {
         let started_pin = pin(&run.join("started.json"), 16 * 1024)?;
         let started: Started = files::document(&started_pin, 16 * 1024)?;
         let verified = inspect_state(&p, &input, Directory::BeforeNative(&started))?;
+        ensure!(
+            verified.inventory.identity.case == purpose.case(),
+            "runtime caller purpose before profiles"
+        );
         let capture_env =
             std::env::var_os("KILOGRAM_S54_CAPTURE_ADMISSION").context("required capture path")?;
         files::same(Path::new(&capture_env), &input.capture.path)?;
@@ -168,8 +184,8 @@ impl AdmittedRun {
         let claim = Claim {
             version: 1,
             classification: "s54_native_started".into(),
-            case: CASE.into(),
-            attempt: ATTEMPT.into(),
+            case: purpose.case().into(),
+            attempt: purpose.attempt(),
             run_id: verified.inventory.identity.run_id.clone(),
             owner_pid: l.owner_pid,
             launcher_pid: l.launcher_pid,
@@ -271,8 +287,22 @@ impl AdmittedRun {
         Ok(())
     }
     pub(in super::super) fn persist(&self, completed: &final_phase::Completed) -> Result<()> {
+        ensure!(
+            self.verified.inventory.identity.case == Purpose::WholeP.case(),
+            "P completion purpose"
+        );
+        self.persist_facts(completed.facts(), Purpose::WholeP)
+    }
+    pub(in super::super) fn persist_feasibility(
+        &self,
+        completed: &feasibility::Completed,
+    ) -> Result<()> {
+        self.persist_facts(completed.facts(), Purpose::FeasibilityF)
+    }
+    fn persist_facts(&self, facts: &Value, purpose: Purpose) -> Result<()> {
         self.revalidate()?;
         let i = &self.verified.inventory;
+        ensure!(i.identity.case == purpose.case(), "result purpose");
         let provenance = attempt_result::Provenance::BoundPreRunInventory {
             path: self.input.inventory.path.clone(),
             blake3: self.verified.blake3.clone(),
@@ -281,11 +311,11 @@ impl AdmittedRun {
         attempt_result::persist_bounded_before_tail(
             &i.identity.output,
             &attempt_result::Envelope {
-                case: CASE,
+                case: purpose.case(),
                 run: self.run(),
                 output: &i.identity.output,
                 provenance: &provenance,
-                observations: completed.facts(),
+                observations: facts,
             },
             512 * 1024,
             || self.revalidate(),
@@ -294,18 +324,22 @@ impl AdmittedRun {
         s53_deadline::check()?;
         let marker = FunctionalMarker {
             version: 1,
-            classification: "functional_assertions_completed".into(),
+            classification: purpose.functional_class().into(),
             whole_attempt_verdict: "not_established".into(),
-            case: CASE.into(),
-            attempt: ATTEMPT.into(),
+            case: purpose.case().into(),
+            attempt: purpose.attempt(),
             run_id: i.identity.run_id.clone(),
-            selector: SELECTOR.into(),
+            selector: purpose.selector().into(),
             inventory_sha256: self.input.inventory.sha256.clone(),
             inventory_blake3: self.verified.blake3.clone(),
             assertions_sha256: assertion.sha256,
             assertions_bytes: assertion.bytes,
         };
-        println!("\nS54_FUNCTIONAL {}", serde_json::to_string(&marker)?);
+        println!(
+            "\n{} {}",
+            purpose.native_marker(),
+            serde_json::to_string(&marker)?
+        );
         Ok(())
     }
 }
@@ -328,7 +362,7 @@ mod tests {
             inventory: dummy_pin.clone(),
             activation: dummy_pin.clone(),
             capture: dummy_pin,
-            case: String::new(),
+            case: CASE.into(),
             attempt: String::new(),
             run_id: String::new(),
             run: PathBuf::new(),
@@ -343,7 +377,7 @@ mod tests {
         let mut r = ClockReply {
             version: 1,
             classification: String::new(),
-            case: String::new(),
+            case: CASE.into(),
             attempt: String::new(),
             run_id: String::new(),
             owner_pid: 1,
@@ -362,6 +396,18 @@ mod tests {
             until == before + Duration::from_millis(2340000)
                 && origin == before - Duration::from_secs(10),
             "conservative original origin includes startup/wait"
+        );
+        let mut f = l.clone();
+        f.case = Purpose::FeasibilityF.case().into();
+        f.controller_tick_ms = f.start_tick_ms + 450_000;
+        f.work_tick_ms = f.start_tick_ms + 480_000;
+        f.outer_tick_ms = f.start_tick_ms + 510_000;
+        let mut fr = r.clone();
+        fr.remaining_controller_ms = 440_000;
+        let (fo, fu) = original(before, now, &f, &fr)?;
+        ensure!(
+            fo == before - Duration::from_secs(10) && fu == fo + Duration::from_secs(450),
+            "F sampled original clock charges the same startup/wait, not P2350"
         );
         let mut changed_wall_clock = l.clone();
         changed_wall_clock.start_utc_ms = u64::MAX;

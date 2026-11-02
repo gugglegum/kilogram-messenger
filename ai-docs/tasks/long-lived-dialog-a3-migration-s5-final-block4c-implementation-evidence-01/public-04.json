@@ -1,0 +1,23 @@
+{
+  "step": "public-04",
+  "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4c-implementation-01\\public.ps1",
+    "-Step",
+    "public-04"
+  ],
+  "actual_child_exit_code": 1,
+  "exit_code": 1,
+  "elapsed_seconds": 1.3797023,
+  "cleanup_verified": true,
+  "error": "Native check exit 1",
+  "outer_job_owner_pid": 66012,
+  "actual_launcher_membership_verified": true,
+  "work_expired": false,
+  "members_before_cleanup": [],
+  "members_after_cleanup": [],
+  "capture_harness_membership": []
+}

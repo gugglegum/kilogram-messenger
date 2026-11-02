@@ -1,0 +1,48 @@
+param([string]$Step)
+$ErrorActionPreference='Stop'
+$workspace='E:/AI-Projects/kilogram-p2p-messenger'
+$base=Join-Path $workspace '.tmp/s54-block4c-implementation-01'
+. (Join-Path $workspace 'scripts/invoke-migration-s54-whole.ps1')
+$results=@()
+function Reject([string]$Name,[scriptblock]$Action) {
+ $message=$null;try{$null=& $Action}catch{$message=$_.Exception.Message}
+ if($null -eq $message){throw "expected refusal/$Name"}
+ $script:results+=@{name=$Name;rejected=$true;reason=$message}
+}
+$indices=@{}
+foreach($purpose in @(@('P','WholeP'),@('F','FeasibilityF'))) {
+ $index=Read-S54Json (Get-S54Pin (Join-Path $workspace ('.tmp/s54-block4b-r1-01/block4c-pure-01.'+$purpose[0]+'-fixture-index.json')) 16384) 16384
+ Set-S54Purpose $purpose[1]
+ $policy=New-S54Policy -FixtureRoot $index.root
+ $facts=Test-S54Admission $index.inputs $policy
+ if($facts.classification -cne 'public_schema_fixture_only'){throw 'public schema policy only'}
+ $i=Read-S54Json $index.inputs.inventory 2097152
+ $indices[$purpose[0]]=@{Index=$index;Policy=$policy;I=$i}
+ $results+=@{name=($purpose[0]+' actual shared PS admission positive');passed=$true}
+}
+$f=$indices.F
+foreach($mutation in @('class','selector','deadline','root')) {
+ $bad=ConvertFrom-S54Strict ([Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $f.I -Depth 100 -Compress))) 2097152
+ switch($mutation) {
+  class {$bad.classification='bound_s54_whole_inventory'}
+  selector {$bad.identity.selector=(Get-S54Purpose WholeP).Selector}
+  deadline {$bad.deadline.controller=2350}
+  root {$bad.identity.run=Join-Path $f.Policy.Root ('.tmp/migration-s54-integrated/'+(Get-S54Purpose WholeP).Attempt)}
+ }
+ Reject ('F actual PS inventory/'+$mutation) {Assert-S54Inventory $bad $f.Policy}
+}
+Set-S54Purpose WholeP
+Reject 'P policy rejects F pinned input paths before profile creation' {Test-S54Admission $indices.F.Index.inputs $indices.F.Policy}
+Set-S54Purpose FeasibilityF
+Reject 'F policy rejects P pinned input paths before profile creation' {Test-S54Admission $indices.P.Index.inputs $indices.P.Policy}
+Set-S54Purpose WholeP
+$p=Get-S54Purpose WholeP;$i=$indices.P.I
+$assertion=@{Pin=@{sha256=('c'*64);bytes=123};Value=@{provenance=@{blake3=('d'*64)}}}
+$native=$p.Native+' '+(ConvertTo-Json -InputObject (New-S54Marker $i $indices.P.Index.inputs $assertion $p.FunctionalClass) -Compress)
+$wrapper=$p.Wrapper+' '+(ConvertTo-Json -InputObject (New-S54Marker $i $indices.P.Index.inputs $assertion $p.WrapperClass) -Compress)
+$text=(@('running 1 test',('test '+$p.Selector+' ... diagnostic'),$native,'ok','test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.01s',$wrapper) -join "`n")+"`n"
+$null=Assert-S54NativeOutput $text '' $i $indices.P.Index.inputs $assertion
+$results+=@{name='P native/wrapper grammar remains accepted';passed=$true}
+Reject 'P rejects extra F marker on stdout' {Assert-S54NativeOutput ($text+"S54_FEASIBILITY_FUNCTIONAL private-data`n") '' $i $indices.P.Index.inputs $assertion}
+Write-KilogramFrozenJson (Join-Path $base "$Step.parity.json") @{classification='public fixed F/P schema and marker parity, no compiler/profile/network';checks=$results}
+Write-Output "public_parity_checks=$($results.Count)"

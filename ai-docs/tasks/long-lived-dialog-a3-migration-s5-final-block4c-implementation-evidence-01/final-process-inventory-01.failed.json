@@ -1,0 +1,6 @@
+{
+  "classification": "failed direct host CIM query; no measurement",
+  "query_succeeded": false,
+  "active_exact_images": null,
+  "error": "CIM client could not access the resource; prior zero-shaped raw output is untrusted and superseded"
+}

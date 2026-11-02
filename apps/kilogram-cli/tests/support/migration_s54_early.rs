@@ -198,6 +198,7 @@ impl Controller {
         self.phases.accept(oracle::Phase::OldReady)
     }
     pub fn migrate(&mut self, owner: usize) -> Result<()> {
+        let _measurement = s53_deadline::measure("migration");
         self.stopped(owner)?;
         let node = &self.origin.pair.nodes[owner];
         let witness = source::Legacy::capture(node, &self.origin.contexts)?;
