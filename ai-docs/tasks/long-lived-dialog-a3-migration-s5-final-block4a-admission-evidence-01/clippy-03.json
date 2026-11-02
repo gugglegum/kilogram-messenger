@@ -1,0 +1,21 @@
+{
+  "step": "clippy-03",
+  "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4a-01\\clippy.ps1"
+  ],
+  "actual_child_exit_code": 0,
+  "exit_code": 0,
+  "elapsed_seconds": 13.2943858,
+  "cleanup_verified": true,
+  "error": null,
+  "outer_job_owner_pid": 65768,
+  "actual_launcher_membership_verified": true,
+  "work_expired": false,
+  "members_before_cleanup": [],
+  "members_after_cleanup": [],
+  "capture_harness_membership": []
+}

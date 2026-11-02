@@ -1,0 +1,14 @@
+E:\AI-Projects\kilogram-p2p-messenger\target\x86_64-pc-windows-msvc\verification-scale\deps\runtime2_process-7e801b4093dc31df.d: apps\kilogram-cli\tests\runtime2_process.rs apps\kilogram-cli\tests\runtime2_process\bootstrap.rs apps\kilogram-cli\tests\runtime2_process\diagnostic.rs apps\kilogram-cli\tests\runtime2_process\faults.rs apps\kilogram-cli\tests\runtime2_process\lifecycle.rs apps\kilogram-cli\tests\runtime2_process\positive.rs apps\kilogram-cli\tests\runtime2_process\schedule_control.rs apps\kilogram-cli\tests\runtime2_process\versions.rs
+
+E:\AI-Projects\kilogram-p2p-messenger\target\x86_64-pc-windows-msvc\verification-scale\deps\runtime2_process-7e801b4093dc31df.exe: apps\kilogram-cli\tests\runtime2_process.rs apps\kilogram-cli\tests\runtime2_process\bootstrap.rs apps\kilogram-cli\tests\runtime2_process\diagnostic.rs apps\kilogram-cli\tests\runtime2_process\faults.rs apps\kilogram-cli\tests\runtime2_process\lifecycle.rs apps\kilogram-cli\tests\runtime2_process\positive.rs apps\kilogram-cli\tests\runtime2_process\schedule_control.rs apps\kilogram-cli\tests\runtime2_process\versions.rs
+
+apps\kilogram-cli\tests\runtime2_process.rs:
+apps\kilogram-cli\tests\runtime2_process\bootstrap.rs:
+apps\kilogram-cli\tests\runtime2_process\diagnostic.rs:
+apps\kilogram-cli\tests\runtime2_process\faults.rs:
+apps\kilogram-cli\tests\runtime2_process\lifecycle.rs:
+apps\kilogram-cli\tests\runtime2_process\positive.rs:
+apps\kilogram-cli\tests\runtime2_process\schedule_control.rs:
+apps\kilogram-cli\tests\runtime2_process\versions.rs:
+
+# env-dep:CARGO_MANIFEST_DIR=E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli

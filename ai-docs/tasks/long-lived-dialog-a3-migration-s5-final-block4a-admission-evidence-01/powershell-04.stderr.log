@@ -1,0 +1,10 @@
+at Assert-S54Compiler, E:\AI-Projects\kilogram-p2p-messenger\scripts\invoke-migration-s54-whole.ps1: line 178
+at Assert-S54Inventory, E:\AI-Projects\kilogram-p2p-messenger\scripts\invoke-migration-s54-whole.ps1: line 226
+at Test-S54Admission, E:\AI-Projects\kilogram-p2p-messenger\scripts\invoke-migration-s54-whole.ps1: line 248
+at <ScriptBlock>, E:\AI-Projects\kilogram-p2p-messenger\scripts\test-migration-s54-admission.ps1: line 40
+at <ScriptBlock>, E:\AI-Projects\kilogram-p2p-messenger\.tmp\s54-block4a-01\powershell-tests.ps1: line 8
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\invoke-migration-s54-whole.ps1:178
+Line |
+ 178 |  : s.Count -ne $roles.Count){throw 'S54 exact compiler executable set.'}
+     |                              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | S54 exact compiler executable set.

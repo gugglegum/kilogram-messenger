@@ -1,0 +1,48 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: used `expect()` on a `Result` value
+   --> apps\kilogram-cli\tests\support\migration_s54_admission_tests.rs:369:25
+    |
+369 | /                         fixture::pin(&root.join("tools/pwsh.exe"))
+370 | |                             .expect("public tool pin")
+    | |______________________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#expect_used
+    = note: requested on the command line with `-D clippy::expect-used`
+
+error: used `expect()` on a `Result` value
+   --> apps\kilogram-cli\tests\support\migration_s54_admission_tests.rs:375:42
+    |
+375 |                       let mut raw: Value = serde_json::from_str(
+    |  __________________________________________^
+376 | |                         v["raw_compiler_artifact_json"][0]
+377 | |                             .as_str()
+378 | |                             .expect("public line"),
+379 | |                     )
+380 | |                     .expect("public JSON");
+    | |__________________________________________^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#expect_used
+
+error: used `expect()` on an `Option` value
+   --> apps\kilogram-cli\tests\support\migration_s54_admission_tests.rs:376:25
+    |
+376 | /                         v["raw_compiler_artifact_json"][0]
+377 | |                             .as_str()
+378 | |                             .expect("public line"),
+    | |__________________________________________________^
+    |
+    = note: if this value is `None`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#expect_used
+
+error: used `expect()` on a `Result` value
+   --> apps\kilogram-cli\tests\support\migration_s54_admission_tests.rs:410:31
+    |
+410 |                         json!(serde_json::to_string(&raw).expect("public serialization"));
+    |                               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: if this value is an `Err`, it will panic
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#expect_used
+
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 4 previous errors

@@ -6,6 +6,8 @@ use kilogram_state::indexed_dialog as db;
 use std::collections::{BTreeMap, BTreeSet};
 #[path = "migration_s54_accounting.rs"]
 mod accounting;
+#[path = "migration_s54_admission.rs"]
+mod admission;
 #[cfg(test)]
 #[path = "migration_s54_block2_tests.rs"]
 mod block2_tests;

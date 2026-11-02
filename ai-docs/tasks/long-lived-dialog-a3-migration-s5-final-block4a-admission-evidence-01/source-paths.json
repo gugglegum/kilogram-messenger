@@ -1,0 +1,11 @@
+[
+  "apps/kilogram-cli/tests/support/migration_s54_p5.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_admission.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_admission_schema.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_admission_files.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_admission_compiler.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_admission_fixture.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_admission_tests.rs",
+  "scripts/invoke-migration-s54-whole.ps1",
+  "scripts/test-migration-s54-admission.ps1"
+]

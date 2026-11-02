@@ -1,0 +1,8 @@
+    Finished `verification-scale` profile [optimized + debuginfo] target(s) in 0.94s
+Error: Системе не удается найти указанный путь. (os error 3)
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:313
+Line |
+ 313 |  :             throw "Isolated stable test failed with exit code ${testE :
+     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Isolated stable test failed with exit code 101:
+     | live_l1::handoff::final_p5::admission::tests::s54_admission_rejects_case_attempt_run_selection_and_dirty_reuse

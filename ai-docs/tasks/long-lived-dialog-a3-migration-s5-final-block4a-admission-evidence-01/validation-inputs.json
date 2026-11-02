@@ -1,0 +1,49 @@
+{
+  "files": [
+    {
+      "sha256": "cfab08b1390a68eeb333707b43ea85900f13a9a43bf13c59aabcfe1882140ed5",
+      "bytes": 5227,
+      "path": "apps/kilogram-cli/tests/support/migration_s54_p5.rs"
+    },
+    {
+      "sha256": "019c2a0f4cea653e8efa50f0cbb7879c254c64a6d4d042112ea5ae0388df2597",
+      "bytes": 22974,
+      "path": "apps/kilogram-cli/tests/support/migration_s54_admission.rs"
+    },
+    {
+      "sha256": "3c8cd42e97c5616d454fc67f0291fcfaf123afcfd1af1654ebb6370ba46a8d5c",
+      "bytes": 6377,
+      "path": "apps/kilogram-cli/tests/support/migration_s54_admission_schema.rs"
+    },
+    {
+      "sha256": "1729b53041706130436db14b79792b2520012ba7979b82829df80b2555990b65",
+      "bytes": 9199,
+      "path": "apps/kilogram-cli/tests/support/migration_s54_admission_files.rs"
+    },
+    {
+      "sha256": "5e103efd963058e0def409a6da31cac6946b6e273c2efc9a82bea0a6f02e508a",
+      "bytes": 15871,
+      "path": "apps/kilogram-cli/tests/support/migration_s54_admission_compiler.rs"
+    },
+    {
+      "sha256": "3b887a38d9cdbb5780138fd897dca0afaf7c7350f2bd3e5748da562348a00abd",
+      "bytes": 14328,
+      "path": "apps/kilogram-cli/tests/support/migration_s54_admission_fixture.rs"
+    },
+    {
+      "sha256": "44f40e46dc18babc2e9f027f27e940ccae63ae5ceea93d4eeb69e1b760495a72",
+      "bytes": 11488,
+      "path": "apps/kilogram-cli/tests/support/migration_s54_admission_tests.rs"
+    },
+    {
+      "sha256": "403f0dadacc4196f46d46abe63e4ab26d83f3f4d5605b302694d9e3b0a9c8341",
+      "bytes": 33377,
+      "path": "scripts/invoke-migration-s54-whole.ps1"
+    },
+    {
+      "sha256": "5589c9dddd654a94b28d1f28d2d603fa02b87b8a2528a428c15839ed9ddc07ea",
+      "bytes": 7414,
+      "path": "scripts/test-migration-s54-admission.ps1"
+    }
+  ]
+}

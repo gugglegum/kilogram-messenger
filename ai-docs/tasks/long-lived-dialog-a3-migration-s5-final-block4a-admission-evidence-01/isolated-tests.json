@@ -1,0 +1,59 @@
+{
+  "tests": [
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::admission::tests::s54_admission_valid_public_binding_has_real_blake3_but_no_runtime_capability"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::admission::tests::s54_admission_strict_json_recurses_through_nested_maps_and_caps"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::admission::tests::s54_admission_rejects_missing_changed_oversized_and_duplicate_referenced_files"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::admission::tests::s54_admission_rejects_case_attempt_run_selection_and_dirty_reuse"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::admission::tests::s54_admission_rejects_source_set_config_environment_and_tool_drift"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::admission::tests::s54_admission_rejects_image_roles_path_aliases_escape_and_shell_shadow"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::admission::tests::s54_admission_rejects_compiler_profile_graph_role_and_raw_unit_substitution"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::admission::tests::s54_admission_rejects_activation_launch_capture_stale_and_clock_reset"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::admission::tests::s54_admission_rejects_actual_public_junction_ancestor"
+    }
+  ],
+  "format_version": 1
+}

@@ -1,0 +1,196 @@
+[CmdletBinding()]
+param([Parameter(Mandatory)][string]$FixtureIndex,[Parameter(Mandatory)][string]$EvidenceDirectory)
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+. (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1')
+$index=ConvertFrom-S54Strict (Read-S54Public $FixtureIndex 16384) 16384
+if($index.classification -cne 'public_schema_fixture_only'){throw 'Only exported public fixture is supported.'}
+$policy=New-S54Policy -FixtureRoot $index.root
+$inputs=$index.inputs
+$baseline=@{};foreach($n in @('inventory','activation','launch','capture')){$baseline[$n]=Read-S54Public $inputs[$n].path 2097152}
+$i=ConvertFrom-S54Strict $baseline.inventory 2097152
+$a=ConvertFrom-S54Strict $baseline.activation 16384
+$l=ConvertFrom-S54Strict $baseline.launch 16384
+$c=ConvertFrom-S54Strict $baseline.capture 4096
+$evidence=Get-S54Path $EvidenceDirectory
+if(-not $evidence.StartsWith((Join-Path (Split-Path -Parent $PSScriptRoot) '.tmp/s54-block4a-r1-01/'),[StringComparison]::OrdinalIgnoreCase)){throw 'Owned check evidence only.'}
+$results=[Collections.Generic.List[object]]::new()
+function Require([bool]$Condition,[string]$Message){if(-not $Condition){throw $Message}}
+function Refuses([string]$Name,[scriptblock]$Test,[string]$Pattern) {
+    $errorText=$null
+    try {& $Test}catch{$errorText=$_.Exception.Message}
+    Require ($null -ne $errorText) ('Expected refusal: '+$Name)
+    if($Pattern){Require ($errorText -match $Pattern) ("Wrong refusal for ${Name}: $errorText; expected $Pattern")}
+    $results.Add([ordered]@{name=$Name;expected_refusal=$true;error=$errorText})
+}
+function Copy-Public($Value){ConvertFrom-S54Strict ([Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $Value -Depth 100 -Compress))) 8388608}
+function Seal-Public($I,$A,$L,$C) {
+    # Test-only writes to the exported owned public fixture, never real I/A/L/C.
+    $objects=@{inventory=$I;activation=$A;launch=$L;capture=$C}
+    foreach($n in @('inventory','activation','capture','launch')) {
+        if($n -ceq 'activation'){$A.inventory=$inputs.inventory}
+        if($n -ceq 'launch'){$L.inventory=$inputs.inventory;$L.activation=$inputs.activation;$L.capture=$inputs.capture}
+        $bytes=[Text.UTF8Encoding]::new($false).GetBytes((ConvertTo-Json -InputObject $objects[$n] -Depth 100 -Compress))
+        [IO.File]::WriteAllBytes($inputs[$n].path,$bytes);$inputs[$n]=Get-S54Pin $inputs[$n].path
+    }
+}
+function Restore-Public {
+    foreach($n in @('inventory','activation','launch','capture')){[IO.File]::WriteAllBytes($inputs[$n].path,$baseline[$n]);$inputs[$n]=Get-S54Pin $inputs[$n].path}
+}
+try {
+    $value=Test-S54Admission $inputs $policy
+    Require ($value.classification -ceq 'public_schema_fixture_only' -and $value.whole_attempt_verdict -ceq 'not_established') 'No public fixture can establish whole success.'
+    $bytes=New-S54InventoryBytes $i $policy
+    Require ($bytes.Length -gt 0 -and $bytes.Length -le 2097152) 'Bounded inventory preparation function.'
+    $null=ConvertFrom-S54Strict $bytes 2097152
+    $results.Add([ordered]@{name='valid public production-path admission/preparation';passed=$true})
+    Refuses 'nested duplicate map' {ConvertFrom-S54Strict ([Text.Encoding]::UTF8.GetBytes('{"outer":[{"nested":{"x":1,"x":2}}]}')) 4096}
+    Refuses 'BOM' {ConvertFrom-S54Strict ([byte[]](239,187,191,123,125)) 4096}
+    Refuses 'invalid UTF8' {ConvertFrom-S54Strict ([byte[]](255)) 4096}
+    Refuses 'oversized bytes' {ConvertFrom-S54Strict ([byte[]]::new(4097)) 4096}
+    foreach($name in @('unknown','numeric_boolean','S53_case','wrong_selector','duplicate_role','wrong_compiler_argv','wrong_profile')) {
+        $bad=Copy-Public $i
+        switch($name) {
+            'unknown' {$bad.extra=$true}
+            'numeric_boolean' {$bad.runtime.cargo_jobs=$true}
+            'S53_case' {$bad.identity.case='C-s53-controls-b-only-01'}
+            'wrong_selector' {$bad.identity.selector='not-whole'}
+            'duplicate_role' {$bad.images[1]=Copy-Public $bad.images[0]}
+            'wrong_compiler_argv' {$bad.compiler.normal_argv=@('test','--no-run')}
+            'wrong_profile' {$bad.runtime.priority='Normal'}
+        }
+        Seal-Public $bad (Copy-Public $a) (Copy-Public $l) (Copy-Public $c)
+        Refuses $name {Test-S54Admission $inputs $policy};Restore-Public
+    }
+    $capturePath=$i.compiler.normal.path;$savedCapture=Read-S54Public $capturePath 8388608
+    try {
+        $badCapture=ConvertFrom-S54Strict $savedCapture 8388608
+        $badCapture.build_inputs_before.resolved_graph=@();$badCapture.build_inputs_after.resolved_graph=@()
+        [IO.File]::WriteAllBytes($capturePath,[Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $badCapture -Depth 100 -Compress)))
+        $bad=Copy-Public $i;$bad.compiler.normal=Get-S54Pin $capturePath
+        Seal-Public $bad (Copy-Public $a) (Copy-Public $l) (Copy-Public $c)
+        Refuses 'missing actual graph facts with restamped outer pins' {Test-S54Admission $inputs $policy}
+    }finally{[IO.File]::WriteAllBytes($capturePath,$savedCapture);Restore-Public}
+    # Same sixteen production-boundary mutations as the Rust parity test. Each
+    # runs directly and through the full path with only public refs restamped.
+    $parity=@(
+        @('duplicate_artifacts','duplicate compiler image path/role'),
+        @('invented_guard','no invented frozen guard'),
+        @('wrong_expected_hash','frozen expected-manifest identity'),
+        @('missing_guard','frozen expected-manifest identity'),
+        @('normal_guard','frozen expected-manifest identity'),
+        @('runtime_debuginfo','runtime opt3/debug/overflow profile'),
+        @('duplicate_package_id','unique package ID/name map'),
+        @('invalid_dep_kind','bounded dependency kinds'),
+        @('duplicate_dep_kind','bounded dependency kinds'),
+        @('escaped_executable','compiler executable target/profile path'),
+        @('duplicate_features','bounded unique compiler string'),
+        @('empty_target_kind','bounded compiler target/output facts'),
+        @('duplicate_output','unique compiler output paths'),
+        @('unadmitted_workspace_source','workspace compiler target belongs to admitted live sources'),
+        @('tool_basename','compiler executable role'),
+        @('duplicate_graph_features','bounded unique compiler string')
+    )
+    foreach($case in $parity){
+        $name=$case[0];$normal=$name -ceq 'normal_guard';$role=if($normal){'normal'}else{'tests'}
+        $path=$i.compiler[$role].path;$saved=Read-S54Public $path 8388608
+        try {
+            $capture=ConvertFrom-S54Strict $saved 8388608
+            Assert-S54Compiler $i $policy $capture $normal
+            switch($name){
+                'duplicate_artifacts' {$capture.stable_artifacts=@(1..6|ForEach-Object {Copy-Public $capture.stable_artifacts[0]})}
+                'invented_guard' {$capture.frozen_guard_verified=$true}
+                'wrong_expected_hash' {$capture.expected_manifest_sha256='0'*64;$capture.frozen_guard_verified=$true}
+                'missing_guard' {$capture.expected_manifest_sha256=$i.compiler.frozen_manifest.sha256}
+                'normal_guard' {$capture.expected_manifest_sha256=$i.compiler.frozen_manifest.sha256}
+                'duplicate_package_id' {$capture.build_inputs_before.package_names[1]=Copy-Public $capture.build_inputs_before.package_names[0]}
+                {$_ -cin @('invalid_dep_kind','duplicate_dep_kind')} {
+                    $kinds=if($name -ceq 'invalid_dep_kind'){@(@{kind='foreign';target=$null})}else{@(@{kind=$null;target=$null},@{kind=$null;target=$null})}
+                    $capture.build_inputs_before.resolved_graph[0].deps=@(@{name='self';pkg='fixture:kilogram-cli';dep_kinds=@($kinds)})
+                }
+                'duplicate_graph_features' {$capture.build_inputs_before.resolved_graph[0].features=@('same','same')}
+                'tool_basename' {$p=Get-S54Pin (Join-Path $policy.Root 'tools/pwsh.exe');$capture.build_inputs_before.tools[0].path=$p.path;$capture.build_inputs_before.tools[0].sha256=$p.sha256}
+                default {
+                    $raw=ConvertFrom-S54Strict ([Text.Encoding]::UTF8.GetBytes($capture.raw_compiler_artifact_json[0])) 131072
+                    switch($name){
+                        'runtime_debuginfo' {$capture.units[0].profile.debuginfo=0;$raw.profile.debuginfo=0}
+                        'escaped_executable' {$p=Join-Path $policy.Root $script:S54Images[3].path;$capture.units[0].executable=$p;$raw.executable=$p}
+                        'duplicate_features' {$capture.units[0].features=@('same','same');$raw.features=@('same','same')}
+                        'empty_target_kind' {$capture.units[0].kind=@();$raw.target.kind=@()}
+                        'duplicate_output' {$paths=@($raw.filenames[0],$raw.filenames[0]);$capture.units[0].filenames=$paths;$raw.filenames=$paths}
+                        'unadmitted_workspace_source' {$raw.target.src_path=Join-Path $policy.Root 'tools/cargo.exe'}
+                    }
+                    $capture.raw_compiler_artifact_json[0]=ConvertTo-Json -InputObject $raw -Depth 100 -Compress
+                }
+            }
+            $capture.build_inputs_after=Copy-Public $capture.build_inputs_before
+            Refuses "compiler parity direct/$name" {Assert-S54Compiler $i $policy $capture $normal} $case[1]
+            [IO.File]::WriteAllBytes($path,[Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $capture -Depth 100 -Compress)))
+            $bad=Copy-Public $i;$bad.compiler[$role]=Get-S54Pin $path
+            Seal-Public $bad (Copy-Public $a) (Copy-Public $l) (Copy-Public $c)
+            Refuses "compiler parity bound/$name" {Test-S54Admission $inputs $policy} $case[1]
+        }finally{[IO.File]::WriteAllBytes($path,$saved);Restore-Public}
+    }
+    foreach($name in $script:S54Embedded){
+        $path=Join-Path $policy.Root $name;$saved=Read-S54Public $path 8388608
+        try {
+            [IO.File]::WriteAllText($path,'changed public embedded input')
+            Refuses "changed embedded source/$name" {Test-S54Admission $inputs $policy} 'public pin mismatch'
+            Remove-Item -LiteralPath $path
+            Refuses "missing embedded source/$name" {Test-S54Admission $inputs $policy} 'missing public path'
+        }finally{[IO.File]::WriteAllBytes($path,$saved)}
+    }
+    $depSaved=@{};foreach($p in $i.compiler.embedded.dep_info){$depSaved[$p.path]=Read-S54Public $p.path 1048576}
+    try {
+        foreach($case in @(@('missing_before','exact embedded before/after input set'),@('changed_after','exact bound pin bytes/hash'),@('duplicate_dep_info','exact compiler dep-info role'),@('unknown_dependency','unadmitted compiler dependency input'),@('missing_dependency','embedded dep-info completeness'))){
+            $bad=Copy-Public $i
+            switch($case[0]){
+                'missing_before' {$bad.compiler.embedded.before=@()}
+                'changed_after' {$bad.compiler.embedded.after[0].sha256='0'*64}
+                'duplicate_dep_info' {$bad.compiler.embedded.dep_info[1]=Copy-Public $bad.compiler.embedded.dep_info[0]}
+                default {
+                    for($n=0;$n -lt $bad.compiler.embedded.dep_info.Count;$n++){
+                        $path=$bad.compiler.embedded.dep_info[$n].path
+                        $source=if($case[0] -ceq 'unknown_dependency'){$p=Join-Path $policy.Root 'apps/public-unadmitted.json';[IO.File]::WriteAllText($p,'unadmitted public compile input');$p}else{Join-Path $policy.Root 'apps/kilogram-cli/tests/support/migration_s54_p5.rs'}
+                        [IO.File]::WriteAllText($path,"${path}: $source`n")
+                        $bad.compiler.embedded.dep_info[$n]=Get-S54Pin $path
+                    }
+                }
+            }
+            Seal-Public $bad (Copy-Public $a) (Copy-Public $l) (Copy-Public $c)
+            Refuses ("embedded boundary/"+$case[0]) {Test-S54Admission $inputs $policy} $case[1]
+            foreach($p in $depSaved.Keys){[IO.File]::WriteAllBytes($p,$depSaved[$p])};Restore-Public
+        }
+    }finally{foreach($p in $depSaved.Keys){[IO.File]::WriteAllBytes($p,$depSaved[$p])};Restore-Public}
+    foreach($name in @('stale_activation','reset_clock','capture_mismatch','unexpected_cleanup_claim')) {
+        $aa=Copy-Public $a;$ll=Copy-Public $l;$cc=Copy-Public $c
+        switch($name) {
+            'stale_activation' {$aa.not_after_utc_ms=1}
+            'reset_clock' {$ll.controller_tick_ms++}
+            'capture_mismatch' {$cc.whole_utc_ms=1}
+            'unexpected_cleanup_claim' {$ll.cleanup_verified=$true}
+        }
+        Seal-Public (Copy-Public $i) $aa $ll $cc
+        Refuses $name {Test-S54Admission $inputs $policy};Restore-Public
+    }
+    $source=Join-Path $policy.Root 'Cargo.lock';$saved=Read-S54Public $source 8388608
+    try {[IO.File]::WriteAllText($source,'changed public source');Refuses 'changed current source pin' {Test-S54Admission $inputs $policy}}
+    finally {[IO.File]::WriteAllBytes($source,$saved)}
+    $new=Join-Path $policy.Root 'apps/new-public-source.rs'
+    try {[IO.File]::WriteAllText($new,'public unadmitted source');Refuses 'added relevant source set' {Test-S54Admission $inputs $policy}}
+    finally {if(Test-Path -LiteralPath $new){Remove-Item -LiteralPath $new}}
+    $shadow=Join-Path $policy.Root 'powershell.exe'
+    try {[IO.File]::WriteAllText($shadow,'public shadow');Refuses 'memory shell shadow' {Test-S54Admission $inputs $policy}}
+    finally {if(Test-Path -LiteralPath $shadow){Remove-Item -LiteralPath $shadow}}
+    Refuses 'parent path escape' {Get-S54Path (Join-Path $policy.Root '../escape') -AllowMissing}
+    $reparse=Join-Path (Split-Path -Parent $PSScriptRoot) '.tmp/s54-block4a-01/reparse-public-fixture/alias'
+    Require (Test-Path -LiteralPath $reparse) 'Required owned reparse fixture.'
+    Refuses 'actual junction ancestor' {Get-S54Path $reparse}
+    Refuses 'Run remains unavailable' {& (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1') -Action Run}
+    Refuses 'Prepare remains unavailable' {& (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1') -Action Prepare}
+    $final=Test-S54Admission $inputs $policy
+    Require ($final.classification -ceq 'public_schema_fixture_only') 'Fixture restored after negative cases.'
+    $record=[ordered]@{classification='public schema/policy checks only; no process/profile/network fixture';count=$results.Count;checks=@($results);whole_attempt_verdict='not_established'}
+    Write-KilogramFrozenJson (Join-Path $evidence 'powershell-public-results.json') $record
+    Write-Output ('public_policy_check_count='+$results.Count)
+}finally{Restore-Public}

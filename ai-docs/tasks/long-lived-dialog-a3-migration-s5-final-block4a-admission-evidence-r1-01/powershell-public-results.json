@@ -1,0 +1,361 @@
+{
+  "classification": "public schema/policy checks only; no process/profile/network fixture",
+  "count": 71,
+  "checks": [
+    {
+      "name": "valid public production-path admission/preparation",
+      "passed": true
+    },
+    {
+      "name": "nested duplicate map",
+      "expected_refusal": true,
+      "error": "S54 duplicate nested JSON key."
+    },
+    {
+      "name": "BOM",
+      "expected_refusal": true,
+      "error": "S54 JSON bound/BOM."
+    },
+    {
+      "name": "invalid UTF8",
+      "expected_refusal": true,
+      "error": "Exception calling \"GetString\" with \"1\" argument(s): \"Unable to translate bytes [FF] at index 0 from specified code page to Unicode.\""
+    },
+    {
+      "name": "oversized bytes",
+      "expected_refusal": true,
+      "error": "S54 JSON bound/BOM."
+    },
+    {
+      "name": "unknown",
+      "expected_refusal": true,
+      "error": "S54 closed object Inventory."
+    },
+    {
+      "name": "numeric_boolean",
+      "expected_refusal": true,
+      "error": "S54 unsigned integer type."
+    },
+    {
+      "name": "S53_case",
+      "expected_refusal": true,
+      "error": "S54 required identity."
+    },
+    {
+      "name": "wrong_selector",
+      "expected_refusal": true,
+      "error": "S54 required identity."
+    },
+    {
+      "name": "duplicate_role",
+      "expected_refusal": true,
+      "error": "S54 duplicate image role."
+    },
+    {
+      "name": "wrong_compiler_argv",
+      "expected_refusal": true,
+      "error": "S54 exact structured identity."
+    },
+    {
+      "name": "wrong_profile",
+      "expected_refusal": true,
+      "error": "S54 resource/runtime policy."
+    },
+    {
+      "name": "missing actual graph facts with restamped outer pins",
+      "expected_refusal": true,
+      "error": "S54 complete package graph."
+    },
+    {
+      "name": "compiler parity direct/duplicate_artifacts",
+      "expected_refusal": true,
+      "error": "S54 duplicate compiler image path/role."
+    },
+    {
+      "name": "compiler parity bound/duplicate_artifacts",
+      "expected_refusal": true,
+      "error": "S54 duplicate compiler image path/role."
+    },
+    {
+      "name": "compiler parity direct/invented_guard",
+      "expected_refusal": true,
+      "error": "S54 no invented frozen guard."
+    },
+    {
+      "name": "compiler parity bound/invented_guard",
+      "expected_refusal": true,
+      "error": "S54 no invented frozen guard."
+    },
+    {
+      "name": "compiler parity direct/wrong_expected_hash",
+      "expected_refusal": true,
+      "error": "S54 frozen expected-manifest identity."
+    },
+    {
+      "name": "compiler parity bound/wrong_expected_hash",
+      "expected_refusal": true,
+      "error": "S54 frozen expected-manifest identity."
+    },
+    {
+      "name": "compiler parity direct/missing_guard",
+      "expected_refusal": true,
+      "error": "S54 frozen expected-manifest identity."
+    },
+    {
+      "name": "compiler parity bound/missing_guard",
+      "expected_refusal": true,
+      "error": "S54 frozen expected-manifest identity."
+    },
+    {
+      "name": "compiler parity direct/normal_guard",
+      "expected_refusal": true,
+      "error": "S54 frozen expected-manifest identity."
+    },
+    {
+      "name": "compiler parity bound/normal_guard",
+      "expected_refusal": true,
+      "error": "S54 frozen expected-manifest identity."
+    },
+    {
+      "name": "compiler parity direct/runtime_debuginfo",
+      "expected_refusal": true,
+      "error": "S54 runtime opt3/debug/overflow profile."
+    },
+    {
+      "name": "compiler parity bound/runtime_debuginfo",
+      "expected_refusal": true,
+      "error": "S54 runtime opt3/debug/overflow profile."
+    },
+    {
+      "name": "compiler parity direct/runtime_debuginfo_array",
+      "expected_refusal": true,
+      "error": "S54 runtime opt3/debug/overflow profile."
+    },
+    {
+      "name": "compiler parity bound/runtime_debuginfo_array",
+      "expected_refusal": true,
+      "error": "S54 runtime opt3/debug/overflow profile."
+    },
+    {
+      "name": "compiler parity direct/oversized_compiler_string",
+      "expected_refusal": true,
+      "error": "S54 bounded unique compiler string."
+    },
+    {
+      "name": "compiler parity bound/oversized_compiler_string",
+      "expected_refusal": true,
+      "error": "S54 bounded unique compiler string."
+    },
+    {
+      "name": "compiler parity direct/duplicate_package_id",
+      "expected_refusal": true,
+      "error": "S54 unique package ID/name map."
+    },
+    {
+      "name": "compiler parity bound/duplicate_package_id",
+      "expected_refusal": true,
+      "error": "S54 unique package ID/name map."
+    },
+    {
+      "name": "compiler parity direct/invalid_dep_kind",
+      "expected_refusal": true,
+      "error": "S54 bounded dependency kinds."
+    },
+    {
+      "name": "compiler parity bound/invalid_dep_kind",
+      "expected_refusal": true,
+      "error": "S54 bounded dependency kinds."
+    },
+    {
+      "name": "compiler parity direct/duplicate_dep_kind",
+      "expected_refusal": true,
+      "error": "S54 bounded dependency kinds."
+    },
+    {
+      "name": "compiler parity bound/duplicate_dep_kind",
+      "expected_refusal": true,
+      "error": "S54 bounded dependency kinds."
+    },
+    {
+      "name": "compiler parity direct/escaped_executable",
+      "expected_refusal": true,
+      "error": "S54 compiler executable target/profile path."
+    },
+    {
+      "name": "compiler parity bound/escaped_executable",
+      "expected_refusal": true,
+      "error": "S54 compiler executable target/profile path."
+    },
+    {
+      "name": "compiler parity direct/duplicate_features",
+      "expected_refusal": true,
+      "error": "S54 bounded unique compiler string."
+    },
+    {
+      "name": "compiler parity bound/duplicate_features",
+      "expected_refusal": true,
+      "error": "S54 bounded unique compiler string."
+    },
+    {
+      "name": "compiler parity direct/empty_target_kind",
+      "expected_refusal": true,
+      "error": "S54 bounded compiler target/output facts."
+    },
+    {
+      "name": "compiler parity bound/empty_target_kind",
+      "expected_refusal": true,
+      "error": "S54 bounded compiler target/output facts."
+    },
+    {
+      "name": "compiler parity direct/duplicate_output",
+      "expected_refusal": true,
+      "error": "S54 unique compiler output paths."
+    },
+    {
+      "name": "compiler parity bound/duplicate_output",
+      "expected_refusal": true,
+      "error": "S54 unique compiler output paths."
+    },
+    {
+      "name": "compiler parity direct/unadmitted_workspace_source",
+      "expected_refusal": true,
+      "error": "S54 workspace compiler target belongs to admitted live sources."
+    },
+    {
+      "name": "compiler parity bound/unadmitted_workspace_source",
+      "expected_refusal": true,
+      "error": "S54 workspace compiler target belongs to admitted live sources."
+    },
+    {
+      "name": "compiler parity direct/tool_basename",
+      "expected_refusal": true,
+      "error": "S54 compiler executable role."
+    },
+    {
+      "name": "compiler parity bound/tool_basename",
+      "expected_refusal": true,
+      "error": "S54 compiler executable role."
+    },
+    {
+      "name": "compiler parity direct/duplicate_graph_features",
+      "expected_refusal": true,
+      "error": "S54 bounded unique compiler string."
+    },
+    {
+      "name": "compiler parity bound/duplicate_graph_features",
+      "expected_refusal": true,
+      "error": "S54 bounded unique compiler string."
+    },
+    {
+      "name": "changed embedded source/apps/kilogram-cli/tests/support/migration_s54_capture_fixture.ps1",
+      "expected_refusal": true,
+      "error": "S54 public pin mismatch."
+    },
+    {
+      "name": "missing embedded source/apps/kilogram-cli/tests/support/migration_s54_capture_fixture.ps1",
+      "expected_refusal": true,
+      "error": "S54 missing public path."
+    },
+    {
+      "name": "changed embedded source/apps/kilogram-cli/tests/support/migration_s54_memory_fixture.ps1",
+      "expected_refusal": true,
+      "error": "S54 public pin mismatch."
+    },
+    {
+      "name": "missing embedded source/apps/kilogram-cli/tests/support/migration_s54_memory_fixture.ps1",
+      "expected_refusal": true,
+      "error": "S54 missing public path."
+    },
+    {
+      "name": "changed embedded source/ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/P2-s53-exhausted-M1.candidate.json",
+      "expected_refusal": true,
+      "error": "S54 public pin mismatch."
+    },
+    {
+      "name": "missing embedded source/ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/P2-s53-exhausted-M1.candidate.json",
+      "expected_refusal": true,
+      "error": "S54 missing public path."
+    },
+    {
+      "name": "embedded boundary/missing_before",
+      "expected_refusal": true,
+      "error": "S54 exact embedded before/after input set."
+    },
+    {
+      "name": "embedded boundary/changed_after",
+      "expected_refusal": true,
+      "error": "S54 exact bound pin bytes/hash."
+    },
+    {
+      "name": "embedded boundary/duplicate_dep_info",
+      "expected_refusal": true,
+      "error": "S54 exact compiler dep-info role."
+    },
+    {
+      "name": "embedded boundary/unknown_dependency",
+      "expected_refusal": true,
+      "error": "S54 unadmitted compiler dependency input."
+    },
+    {
+      "name": "embedded boundary/missing_dependency",
+      "expected_refusal": true,
+      "error": "S54 embedded dep-info completeness."
+    },
+    {
+      "name": "stale_activation",
+      "expected_refusal": true,
+      "error": "S54 activation validity."
+    },
+    {
+      "name": "reset_clock",
+      "expected_refusal": true,
+      "error": "S54 original numeric tick relation."
+    },
+    {
+      "name": "capture_mismatch",
+      "expected_refusal": true,
+      "error": "S54 capture/clock binding."
+    },
+    {
+      "name": "unexpected_cleanup_claim",
+      "expected_refusal": true,
+      "error": "S54 closed object Launch."
+    },
+    {
+      "name": "changed current source pin",
+      "expected_refusal": true,
+      "error": "S54 public pin mismatch."
+    },
+    {
+      "name": "added relevant source set",
+      "expected_refusal": true,
+      "error": "S54 exact structured identity."
+    },
+    {
+      "name": "memory shell shadow",
+      "expected_refusal": true,
+      "error": "S54 memory shell shadow."
+    },
+    {
+      "name": "parent path escape",
+      "expected_refusal": true,
+      "error": "S54 absolute path/components."
+    },
+    {
+      "name": "actual junction ancestor",
+      "expected_refusal": true,
+      "error": "S54 reparse ancestor."
+    },
+    {
+      "name": "Run remains unavailable",
+      "expected_refusal": true,
+      "error": "Slice A: actual preparation, activation, safe original clock and whole execution are unavailable until Slice B."
+    },
+    {
+      "name": "Prepare remains unavailable",
+      "expected_refusal": true,
+      "error": "Slice A: actual preparation, activation, safe original clock and whole execution are unavailable until Slice B."
+    }
+  ],
+  "whole_attempt_verdict": "not_established"
+}

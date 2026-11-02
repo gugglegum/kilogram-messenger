@@ -1,0 +1,126 @@
+{
+  "classification": "public schema/policy checks only; no process/profile/network fixture",
+  "count": 24,
+  "checks": [
+    {
+      "name": "valid public production-path admission/preparation",
+      "passed": true
+    },
+    {
+      "name": "nested duplicate map",
+      "expected_refusal": true,
+      "error": "S54 duplicate nested JSON key."
+    },
+    {
+      "name": "BOM",
+      "expected_refusal": true,
+      "error": "S54 JSON bound/BOM."
+    },
+    {
+      "name": "invalid UTF8",
+      "expected_refusal": true,
+      "error": "Exception calling \"GetString\" with \"1\" argument(s): \"Unable to translate bytes [FF] at index 0 from specified code page to Unicode.\""
+    },
+    {
+      "name": "oversized bytes",
+      "expected_refusal": true,
+      "error": "S54 JSON bound/BOM."
+    },
+    {
+      "name": "unknown",
+      "expected_refusal": true,
+      "error": "S54 closed object Inventory."
+    },
+    {
+      "name": "numeric_boolean",
+      "expected_refusal": true,
+      "error": "S54 unsigned integer type."
+    },
+    {
+      "name": "S53_case",
+      "expected_refusal": true,
+      "error": "S54 required identity."
+    },
+    {
+      "name": "wrong_selector",
+      "expected_refusal": true,
+      "error": "S54 required identity."
+    },
+    {
+      "name": "duplicate_role",
+      "expected_refusal": true,
+      "error": "S54 duplicate image role."
+    },
+    {
+      "name": "wrong_compiler_argv",
+      "expected_refusal": true,
+      "error": "S54 exact structured identity."
+    },
+    {
+      "name": "wrong_profile",
+      "expected_refusal": true,
+      "error": "S54 resource/runtime policy."
+    },
+    {
+      "name": "missing actual graph facts with restamped outer pins",
+      "expected_refusal": true,
+      "error": "S54 complete package graph."
+    },
+    {
+      "name": "stale_activation",
+      "expected_refusal": true,
+      "error": "S54 activation validity."
+    },
+    {
+      "name": "reset_clock",
+      "expected_refusal": true,
+      "error": "S54 original numeric tick relation."
+    },
+    {
+      "name": "capture_mismatch",
+      "expected_refusal": true,
+      "error": "S54 capture/clock binding."
+    },
+    {
+      "name": "unexpected_cleanup_claim",
+      "expected_refusal": true,
+      "error": "S54 closed object Launch."
+    },
+    {
+      "name": "changed current source pin",
+      "expected_refusal": true,
+      "error": "S54 public pin mismatch."
+    },
+    {
+      "name": "added relevant source set",
+      "expected_refusal": true,
+      "error": "S54 exact structured identity."
+    },
+    {
+      "name": "memory shell shadow",
+      "expected_refusal": true,
+      "error": "S54 memory shell shadow."
+    },
+    {
+      "name": "parent path escape",
+      "expected_refusal": true,
+      "error": "S54 absolute path/components."
+    },
+    {
+      "name": "actual junction ancestor",
+      "expected_refusal": true,
+      "error": "S54 reparse ancestor."
+    },
+    {
+      "name": "Run remains unavailable",
+      "expected_refusal": true,
+      "error": "Slice A: actual preparation, activation, safe original clock and whole execution are unavailable until Slice B."
+    },
+    {
+      "name": "Prepare remains unavailable",
+      "expected_refusal": true,
+      "error": "Slice A: actual preparation, activation, safe original clock and whole execution are unavailable until Slice B."
+    }
+  ],
+  "whole_attempt_verdict": "not_established"
+}

@@ -1,0 +1,50 @@
+[
+  {
+    "role": "activation",
+    "expected": {
+      "bytes": 1074,
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/s54-block4a-r1-01/rust-public-fixtures\\public-0yBK3v\\.tmp/migration-s54-integrated\\P-s54-whole-resumed-l1-01-attempt-01\\activation.json",
+      "sha256": "0ff6c964c30667445f92a2a1abfad0cf3889008f7ab1a66f027a2143113e92a9"
+    },
+    "actual": {
+      "bytes": 1074,
+      "sha256": "0ff6c964c30667445f92a2a1abfad0cf3889008f7ab1a66f027a2143113e92a9"
+    }
+  },
+  {
+    "role": "capture",
+    "expected": {
+      "bytes": 324,
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/s54-block4a-r1-01/rust-public-fixtures\\public-0yBK3v\\.tmp/migration-s54-integrated\\P-s54-whole-resumed-l1-01-attempt-01\\capture.json",
+      "sha256": "3487dfc1b5511fc8e27004a4b735c520c153c306b5a45a7252427ceb362e9823"
+    },
+    "actual": {
+      "bytes": 324,
+      "sha256": "3487dfc1b5511fc8e27004a4b735c520c153c306b5a45a7252427ceb362e9823"
+    }
+  },
+  {
+    "role": "inventory",
+    "expected": {
+      "bytes": 16788,
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/s54-block4a-r1-01/rust-public-fixtures\\public-0yBK3v\\.tmp/migration-s54-integrated\\P-s54-whole-resumed-l1-01-attempt-01\\inputs.json",
+      "sha256": "6b4ef5e719beadea7983614c24bc49820639e161c9b534bb6302fd6e15f14735"
+    },
+    "actual": {
+      "bytes": 16788,
+      "sha256": "6b4ef5e719beadea7983614c24bc49820639e161c9b534bb6302fd6e15f14735"
+    }
+  },
+  {
+    "role": "launch",
+    "expected": {
+      "bytes": 1443,
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp/s54-block4a-r1-01/rust-public-fixtures\\public-0yBK3v\\.tmp/migration-s54-integrated\\P-s54-whole-resumed-l1-01-attempt-01\\launch.json",
+      "sha256": "b0866dd9f784fccab6f3337c14d8b3cba89d2ea7ef98d9822775ddb2cfd44934"
+    },
+    "actual": {
+      "bytes": 1443,
+      "sha256": "b0866dd9f784fccab6f3337c14d8b3cba89d2ea7ef98d9822775ddb2cfd44934"
+    }
+  }
+]
