@@ -1,0 +1,76 @@
+param([Parameter(Mandatory)][string]$Step)
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+$workspace='E:/AI-Projects/kilogram-p2p-messenger'
+$base=Join-Path $workspace '.tmp/s54-block4d-preparation-order-repair-01'
+Set-Location $workspace
+. (Join-Path $workspace 'scripts/invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
+switch($Step){
+ 'fmt-01' {
+  $files=@('migration_s54_admission_files.rs','migration_s54_admission_tests.rs','migration_s54_feasibility_tests.rs','migration_s54_purpose.rs')|ForEach-Object {Join-Path $workspace "apps/kilogram-cli/tests/support/$_"}
+  & rustfmt --edition 2024 @files;if($LASTEXITCODE){exit $LASTEXITCODE}
+  & rustfmt --edition 2024 --check @files;exit $LASTEXITCODE
+ }
+ 'clippy-01' {
+  . (Join-Path $workspace 'scripts/cargo-resource-policy.ps1')
+  $null=Set-KilogramCargoResourcePolicy -RequestedJobs 2
+  $a=@('clippy','--package','kilogram-cli','--tests','--profile','verification-scale','--target','x86_64-pc-windows-msvc','--jobs','2','--offline','--locked','--','-D','warnings')
+  & cargo @a;exit $LASTEXITCODE
+ }
+ 'pure-01' {
+  $export=Join-Path $workspace '.tmp/s54-block4b-r1-01/block4d-order-repair-01'
+  $null=New-Item -ItemType Directory -Path $export -ErrorAction Stop
+  $env:KILOGRAM_S54_ADMISSION_FIXTURE_EXPORT=Join-Path $export 'P-fixture-index.json'
+  $env:KILOGRAM_S54_FEASIBILITY_FIXTURE_EXPORT=Join-Path $export 'F-fixture-index.json'
+  # This profile uses different stable paths from the guarded scale images.
+  # Every aggregate name is skipped; the three exact public isolated selectors
+  # are enumerated and run by the stable runner, without these aggregate skips.
+  $skip=@([char[]](48..57)+[char[]](65..90)+[char[]](97..122)+[char]'_'|ForEach-Object {[string]$_})
+  & (Join-Path $workspace 'scripts/run-cargo-tests-stable.ps1') -Package @('kilogram-cli') -Profile verification -CargoJobs 2 -SkipCacheStatus -Run -NoCapture -IsolatedTestsFile (Join-Path $base 'isolated-tests.json') -IsolatedTestOrder BeforeAggregate -SkipTest $skip
+  if($LASTEXITCODE){exit $LASTEXITCODE}
+  $pins=@(Get-ChildItem (Join-Path $workspace 'target/verification/deps') -Filter 'kilogram-cli-*-tests.exe'|ForEach-Object {Get-S54Pin $_.FullName 134217728})
+  Write-KilogramFrozenJson (Join-Path $base 'pure-01.images.json') @{classification='stable non-scale public test images; no seven fixed scale replacements';images=$pins}
+ }
+ 'public-01' {
+  foreach($n in @('public-purpose-01','public-order-01')){$null=New-Item -ItemType Directory -Path (Join-Path $base $n) -ErrorAction Stop}
+  & (Join-Path $workspace 'scripts/test-migration-s54-feasibility.ps1') -EvidenceDirectory (Join-Path $base 'public-purpose-01')
+  & (Join-Path $workspace 'scripts/test-migration-s54-preparation-order.ps1') -EvidenceDirectory (Join-Path $base 'public-order-01') -FixtureIndex (Join-Path $workspace '.tmp/s54-block4b-r1-01/block4d-order-repair-01/F-fixture-index.json') -PFixtureIndex (Join-Path $workspace '.tmp/s54-block4b-r1-01/block4d-order-repair-01/P-fixture-index.json')
+ }
+ {$_ -cin @('compile-01','compile-02')} {
+  $number=$Step.Substring(8)
+  $publicName='compile-public-'+$number;$preimagesName='compile-preimages-'+$number
+  foreach($n in @($publicName,$preimagesName)){if(Test-Path (Join-Path $base $n)){throw 'Fresh actual guarded build evidence required.'}}
+  $public=Join-Path $base $publicName;$null=New-Item -ItemType Directory -Path $public -ErrorAction Stop
+  $policy=New-S54Policy
+  $old=Get-Content (Join-Path $workspace 'ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-f-preparation-report-01.pins.json') -Raw|ConvertFrom-Json -AsHashtable
+  foreach($p in @($old.administration)+@($old.public_artifacts)){$null=Read-S54Pin $p 134217728}
+  $preserved=@($script:S54Images|Where-Object {$_.role -cin @('legacy-cli','relay')}|ForEach-Object {Get-S54Pin (Join-Path $workspace $_.path) 134217728})
+  $guard=$null;$ok=$false
+  try {
+   $guard=New-S54ImageGuard $workspace (Join-Path $base $preimagesName)
+   $c=Invoke-S54CompileStage $guard $public
+   $source=@((Get-S54SourcePaths $workspace)|ForEach-Object {Get-S54Pin $_ 8388608})
+   $images=@($script:S54Images|ForEach-Object {@{role=$_.role;pin=(Get-S54Pin (Join-Path $workspace $_.path) 134217728)}})
+   # Compiler predicate context only: no Inventory wire object, root dispatch,
+   # run identity, activation, runtime claim or production directories.
+   $proof=@{source=@{files=$source};images=$images;runtime=@{environment=$c.before.environment;configs=$c.before.configs;resolutions=$policy.Resolutions}}
+   Write-KilogramFrozenJson (Join-Path $base ($Step+'.stage-result.json')) @{classification='shared test-then-normal stage completed; final compiler admission pending';normal=$c.normal_pin;tests=$c.tests_pin;test_origins_before=$c.test_origins_before;test_origins_after=$c.test_origins_after;test_dep_info_before=$c.test_dep_info_before;test_dep_info_after=$c.test_dep_info_after;normal_origins=$c.normal_origins;normal_dep_info=$c.normal_dep_info}
+   $normalFromWire=Read-S54Json $c.normal_pin 8388608
+   Assert-S54Compiler $proof $policy $normalFromWire $true
+   Assert-S54Compiler $proof $policy $c.tests $false
+   Assert-S54EmbeddedDependencies $workspace $c.test_dep_info_after $source
+   foreach($p in $preserved){$null=Read-S54Pin $p 134217728}
+   foreach($p in @($old.administration)+@($old.public_artifacts)){$null=Read-S54Pin $p 134217728}
+   foreach($suffix in @('01','02')){foreach($space in @('migration-s54-feasibility','migration-s54-feasibility-public-evidence')){
+    $path=Join-Path $workspace ".tmp/$space/F-s54-mixed-hooks-feasibility-01-attempt-$suffix"
+    if($suffix -ceq '02' -and (Test-Path $path)){throw 'Production F02 directory must remain absent.'}
+   }}
+   $ok=$true
+   Write-KilogramFrozenJson (Join-Path $base ($Step+'.result.json')) @{classification='actual shared guarded test-then-final-normal compiler verification from unpublished repair; no production inventory';sources=$source;images=$images;legacy_relay_unchanged=$preserved;normal=$c.normal_pin;tests=$c.tests_pin;embedded_before=$c.embedded_before;embedded_after=$c.embedded_after;test_origins_before=$c.test_origins_before;test_origins_after=$c.test_origins_after;test_dep_info_before=$c.test_dep_info_before;test_dep_info_after=$c.test_dep_info_after;normal_origins=$c.normal_origins;normal_dep_info=$c.normal_dep_info;actual_normal_and_tests_compiler_admission_passed=$true;failed_F01_evidence_unchanged=$true;production_preparation=$false;runtime='not_established'}
+  }finally{Close-S54ImageGuard $guard $ok}
+ }
+ 'validate-01' { & (Join-Path $base 'validate-existing.ps1') }
+ 'final-01' { & (Join-Path $base 'final.ps1') }
+ default {throw 'Unknown bounded repair verification step.'}
+}
+exit 0

@@ -1,0 +1,30 @@
+{
+  "images": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe",
+      "bytes": 72190976,
+      "sha256": "bedfdb05c1e39b1bd22e15639c40d2bfb946048ccc1a8f8776659ca6d0f95556"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-lib-kilogram_cli-tests.exe",
+      "bytes": 49567744,
+      "sha256": "550f6e685d000ffc68a412c6f34f4eaa0426d2d55d7227c7931508841d41aaf4"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s5_process-tests.exe",
+      "bytes": 34786304,
+      "sha256": "d1a340b5a3f567394cb9ea9b55e4ca964ee628b242ae2003248d1547b1ecd4d5"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-migration_s53_cold-tests.exe",
+      "bytes": 17871360,
+      "sha256": "e31573a26d60a745e503ba28cb9ff22c24d46bd79c796450445dfec277051dd6"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\verification\\deps\\kilogram-cli-test-runtime2_process-tests.exe",
+      "bytes": 37422080,
+      "sha256": "bd09abfdf0366f80ad2d878875122cdd35acb1ac59778e6b15dd09ca6e4f7474"
+    }
+  ],
+  "classification": "stable non-scale public test images; no seven fixed scale replacements"
+}

@@ -1,0 +1,14 @@
+[
+  {
+    "saved": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\conflicting-normal-00.bin",
+    "sha256": "bf3e4642dacfb44f890e49ce917495f67d1e54b603a6d50794ce8626f4ec4a80",
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\compatibility\\long-lived-dialog-migration\\kilogram-cli.exe",
+    "bytes": 50413056
+  },
+  {
+    "saved": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\conflicting-normal-01.bin",
+    "sha256": "681757614eac48ba481b8a907dc5bb30f2942aef2dfff459c360e9f1e0c7f6a9",
+    "source": "E:\\AI-Projects\\kilogram-p2p-messenger\\target\\x86_64-pc-windows-msvc\\verification-scale\\kilogram-cli.exe",
+    "bytes": 50476032
+  }
+]

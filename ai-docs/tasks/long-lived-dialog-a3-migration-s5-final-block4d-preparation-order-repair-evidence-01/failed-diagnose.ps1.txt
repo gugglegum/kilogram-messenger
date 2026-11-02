@@ -1,0 +1,57 @@
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+$workspace='E:/AI-Projects/kilogram-p2p-messenger'
+$base=Join-Path $workspace '.tmp/s54-block4d-f-preparation-01'
+$env:PATH='C:\Users\Paul\.rustup\toolchains\1.98.0-x86_64-pc-windows-msvc\bin'+[IO.Path]::PathSeparator+$env:PATH
+. (Join-Path $workspace 'scripts/invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
+$pre=Get-Content (Join-Path $base 'preflight-02.json') -Raw|ConvertFrom-Json -AsHashtable
+$baseline=Get-Content (Join-Path $base 'baseline.json') -Raw|ConvertFrom-Json -AsHashtable
+$public=$pre.public;$run=$pre.run
+$policy=New-S54Policy
+$sources=Assert-S54PublishedSources $policy
+$sourcePins=@($sources|ForEach-Object {Get-S54Pin $_ 8388608})
+Assert-S54Equal $sourcePins $pre.sources
+$head=(& git -C $workspace rev-parse HEAD)
+$index=@(& git -C $workspace diff --cached --name-only)
+if($head -cne $baseline.head -or $index.Count){throw 'Baseline/index changed.'}
+$navigation=@($baseline.navigation|ForEach-Object {$now=Get-S54Pin $_.path 8388608;Assert-S54PinEqual $_ $now;$now})
+$currentImages=@($pre.images|ForEach-Object {@{role=$_.role;before=$_.pin;current=(Get-S54Pin $_.pin.path 134217728)}})
+foreach($image in $currentImages|Where-Object {$_.role -cin @('legacy-cli','relay')}){Assert-S54PinEqual $image.before $image.current}
+$preimages=Get-Content (Join-Path $public 'image-preimages/preimages.json') -Raw|ConvertFrom-Json -AsHashtable
+$outcome=Get-Content (Join-Path $public 'image-preimages/preparation-outcome.json') -Raw|ConvertFrom-Json -AsHashtable
+if($preimages.images.Count -ne 7 -or $outcome.staged.Count -ne 7 -or -not $outcome.stage_completed -or $outcome.preparation_succeeded -or $outcome.automatic_rollback){throw 'Unexpected failed attempt guard outcome.'}
+$stages=@()
+for($n=0;$n -lt 7;$n++){
+ $before=$preimages.images[$n];$null=Read-S54Pin $before.saved 134217728
+ if($before.saved.sha256 -cne $before.original.sha256 -or $before.saved.bytes -ne $before.original.bytes){throw 'Preimage bytes differ.'}
+ $stagePath=Join-Path $public ('image-preimages/staged-{0:d2}.json' -f $n)
+ $stage=Get-Content $stagePath -Raw|ConvertFrom-Json -AsHashtable
+ $null=Read-S54Pin $stage.destination 134217728
+ $sourceNow=Get-S54Pin $stage.source.path 134217728
+ $stages+=@{record=(Get-S54Pin $stagePath 65536);original=$before.original;saved=$before.saved;staged=$stage.destination;compiler_source_recorded=$stage.source;compiler_source_now=$sourceNow;compiler_source_still_matches=($sourceNow.bytes -eq $stage.source.bytes -and $sourceNow.sha256 -ceq $stage.source.sha256)}
+}
+$captures=@()
+foreach($name in @('normal.json','tests.json')){
+ $capture=Get-Content (Join-Path $public $name) -Raw|ConvertFrom-Json -AsHashtable
+ foreach($artifact in $capture.stable_artifacts){
+  $normal=($name -ceq 'normal.json')
+  $unit=@($capture.units|Where-Object {$_.package -ceq $artifact.package -and $_.target -ceq $artifact.target -and (@($_.kind)-join ',') -ceq $artifact.kind -and $_.profile.test -ne $normal -and $_.class -ceq 'runtime-target' -and $_.executable})
+  if($unit.Count -ne 1){throw 'Compiler executable cardinality.'}
+  $now=Get-S54Pin $unit[0].executable 134217728
+  $captures+=@{capture=$name;package=$artifact.package;target=$artifact.target;kind=$artifact.kind;profile_test=$unit[0].profile.test;staged=$artifact;compiler_executable_now=$now;actual_compiler_bytes_match=($now.bytes -eq $artifact.bytes -and $now.sha256 -ceq $artifact.sha256)}
+ }
+}
+$lock=[IO.File]::Open((Join-Path $workspace '.tmp/s54-preparation.lock'),[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None)
+try{$lockReleased=$true}finally{$lock.Dispose()}
+$rows=@(Get-CimInstance Win32_Process -Property ProcessId,ExecutablePath -OperationTimeoutSec 3 -ErrorAction Stop)
+$imagePaths=@($currentImages|ForEach-Object {$_.current.path})
+$active=@($rows|Where-Object {$_.ExecutablePath -and $_.ExecutablePath -in $imagePaths}|ForEach-Object {@{pid=$_.ProcessId;path=$_.ExecutablePath}})
+if($active.Count){throw 'Exact image process remains; none stopped by diagnosis.'}
+$runFiles=@(Get-ChildItem -LiteralPath $run -Force|ForEach-Object {$_.Name})
+if($runFiles.Count){throw 'Unexpected run artifact after failed preparation.'}
+$pAbsent=@('.tmp/migration-s54-integrated/P-s54-whole-resumed-l1-01-attempt-01','.tmp/migration-s54-public-evidence/P-s54-whole-resumed-l1-01-attempt-01')|ForEach-Object {-not(Test-Path -LiteralPath (Join-Path $workspace $_))}
+if($pAbsent -contains $false){throw 'Unexpected P directory.'}
+$pins=@(Get-ChildItem -LiteralPath $public -Recurse -File|Sort-Object FullName|ForEach-Object {Get-S54Pin $_.FullName 134217728})
+$result=@{classification='read-only diagnosis of failed production Prepare; no retry/admission bypass/runtime';head=$head;index_empty=$true;navigation_unchanged=$navigation;source_count=$sourcePins.Count;sources_match_native_preflight=$true;public_artifacts=$pins;images=$currentImages;seven_stages=$stages;guard_outcome=$outcome;compiler_rechecks=$captures;workspace_lock_released=$lockReleased;process_inventory_succeeded=$true;active_exact_images=$active;run_files=$runFiles;P_directories_absent=$true;prepared_inventory_present=$false;F_runtime='not_established';whole_S54='not_established'}
+Write-KilogramFrozenJson (Join-Path $base 'diagnosis.json') $result
+Write-Output ('diagnosis_saved; sources='+$sources.Count+'; staged='+$stages.Count+'; compiler_mismatches='+@($captures|Where-Object {-not $_.actual_compiler_bytes_match}).Count+'; active_images='+$active.Count+'; lock_released='+$lockReleased)

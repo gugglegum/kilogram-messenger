@@ -1,0 +1,147 @@
+{
+  "classification": "public shared preparation-order and F02 admission regression; no compiler/runtime/network",
+  "checks": [
+    {
+      "name": "old order refuses actual compiler drift : S54 actual compiler executable bytes.",
+      "passed": true
+    },
+    {
+      "name": "stable lane refuses normal already staged : S54 test stage must precede final normal image.",
+      "passed": true
+    },
+    {
+      "name": "old-order failure retained without rollback",
+      "passed": true
+    },
+    {
+      "name": "missing images cannot complete : S54 all seven images must be staged exactly once.",
+      "passed": true
+    },
+    {
+      "name": "foreign destination refused : S54 unstaged exact mutable destination required.",
+      "passed": true
+    },
+    {
+      "name": "concurrent preparation refused : S54 concurrent owned preparation refused.",
+      "passed": true
+    },
+    {
+      "name": "five test roles cannot supply six-role rows : S54 test stage must precede final normal image.",
+      "passed": true
+    },
+    {
+      "name": "six staged roles retain all seven leases and normal remains unstaged",
+      "passed": true
+    },
+    {
+      "name": "six test roles cannot complete without normal : S54 all seven images must be staged exactly once.",
+      "passed": true
+    },
+    {
+      "name": "duplicate stage refused : S54 unstaged exact mutable destination required.",
+      "passed": true
+    },
+    {
+      "name": "duplicate selected role refused : S54 exact six guarded test roles.",
+      "passed": true
+    },
+    {
+      "name": "foreign selected role refused : S54 exact six guarded test roles.",
+      "passed": true
+    },
+    {
+      "name": "test lease denies another writer before normal : Exception calling \"Open\" with \"4\" argument(s): \"The process cannot access the file 'E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\public-order-01\\tests-then-normal\\target\\verification-scale\\deps\\kilogram-cli-bin-kilogram-cli-tests.exe' because it is being used by another process.\"",
+      "passed": true
+    },
+    {
+      "name": "test origin drift after final build still refused : S54 actual compiler executable bytes.",
+      "passed": true
+    },
+    {
+      "name": "orchestrator releases seven leases only after final normal",
+      "passed": true
+    },
+    {
+      "name": "duplicate completion refused : S54 all seven images must be staged exactly once.",
+      "passed": true
+    },
+    {
+      "name": "post-completion staging refused : S54 image staging already completed.",
+      "passed": true
+    },
+    {
+      "name": "final normal origin drift still refused : S54 actual compiler executable bytes.",
+      "passed": true
+    },
+    {
+      "name": "actual seven-stage completion outcome",
+      "passed": true
+    },
+    {
+      "name": "original preimage retained after final stage",
+      "passed": true
+    },
+    {
+      "name": "original preimage retained after final stage",
+      "passed": true
+    },
+    {
+      "name": "original preimage retained after final stage",
+      "passed": true
+    },
+    {
+      "name": "original preimage retained after final stage",
+      "passed": true
+    },
+    {
+      "name": "original preimage retained after final stage",
+      "passed": true
+    },
+    {
+      "name": "original preimage retained after final stage",
+      "passed": true
+    },
+    {
+      "name": "original preimage retained after final stage",
+      "passed": true
+    },
+    {
+      "name": "missing source retains interrupted test stage : S54 missing public path.",
+      "passed": true
+    },
+    {
+      "name": "interrupted test stage keeps outcome and preimages",
+      "passed": true
+    },
+    {
+      "name": "failure cleanup releases workspace lock",
+      "passed": true
+    },
+    {
+      "name": "public fixture only",
+      "passed": true
+    },
+    {
+      "name": "actual PS inventory admits F02",
+      "passed": true
+    },
+    {
+      "name": "actual PS inventory refuses F01 : S54 required identity.",
+      "passed": true
+    },
+    {
+      "name": "actual PS inventory refuses F03 : S54 required identity.",
+      "passed": true
+    },
+    {
+      "name": "actual PS inventory refuses foreign selector : S54 required identity.",
+      "passed": true
+    },
+    {
+      "name": "actual PS inventory retains P01",
+      "passed": true
+    }
+  ],
+  "whole_attempt_verdict": "not_established",
+  "count": 35
+}

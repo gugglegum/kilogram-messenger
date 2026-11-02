@@ -1,0 +1,54 @@
+{
+  "actual_child_waited": true,
+  "original_path_sha256": "32afa634aa3fe135e1ae545834facb755758a036d57f369377b3455a99075f88",
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\work.ps1",
+    "-Step",
+    "compile-02"
+  ],
+  "original_tick_ms": 492983875,
+  "child_pid": 24412,
+  "exit_code": 1,
+  "effective_path_sha256": "b27e052877463bc883e77849d2511124a10d9331d76cebf9cc7f8d29281d6313",
+  "whole_attempt_verdict": "not_established",
+  "work_seconds": 1770,
+  "cleanup": {
+    "before": [
+      63584
+    ],
+    "verified": true,
+    "forced": true,
+    "failed": false,
+    "after": []
+  },
+  "actual_child_exit_code": 1,
+  "classification": "bounded native repair verification; no production preparation or messenger activation",
+  "stdout": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-02.stdout.log",
+    "bytes": 1231,
+    "sha256": "891b63c8b487730e76631d19ba64f91a3cda4891af4802aa952b33d0f435ae9c"
+  },
+  "stderr": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-02.stderr.log",
+    "bytes": 666,
+    "sha256": "727da5f093fb6472c52b864ea9f38c32daff34592ba29a30571069dfa6fd1ac6"
+  },
+  "process_local_rust_bin": "C:\\Users\\Paul\\.rustup\\toolchains\\1.98.0-x86_64-pc-windows-msvc\\bin",
+  "child_started_utc": "2026-11-02T18:08:10.7427902Z",
+  "actual_handle_job_membership_verified": true,
+  "cleanup_reserve_seconds": 30,
+  "error": "Actual child exit 1",
+  "step": "compile-02",
+  "owner_pid": 55648,
+  "production_Run_F_P_executed": false,
+  "whole_seconds": 1800,
+  "reader_failed": false,
+  "work_expired": false,
+  "bounded_stdout_stderr_eof": true,
+  "persistent_environment_changed": false,
+  "elapsed_seconds": 795.2788572,
+  "executable": "C:/Users/Paul/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe"
+}

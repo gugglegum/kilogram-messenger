@@ -634,7 +634,7 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
             "inputs":{"inventory":f.input.inventory,"activation":f.input.activation,"launch":f.input.launch,"capture":f.input.capture}}))?)?;
         file.sync_all()?;
     }
-    for mutation in 0..6 {
+    for mutation in 0..8 {
         let mut f = Fixture::new_for(Purpose::FeasibilityF)?;
         match mutation {
             0 => f.inventory["identity"]["selector"] = Purpose::WholeP.selector().into(),
@@ -649,7 +649,15 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
                     .into()
             }
             4 => f.inventory["classification"] = Purpose::WholeP.inventory_class().into(),
-            _ => f.inventory["identity"]["run"] = json!(Purpose::WholeP.run(&f.root)),
+            5 => f.inventory["identity"]["run"] = json!(Purpose::WholeP.run(&f.root)),
+            6 => {
+                f.inventory["identity"]["attempt"] =
+                    "F-s54-mixed-hooks-feasibility-01-attempt-01".into()
+            }
+            _ => {
+                f.inventory["identity"]["attempt"] =
+                    "F-s54-mixed-hooks-feasibility-01-attempt-03".into()
+            }
         }
         f.seal()?;
         ensure!(

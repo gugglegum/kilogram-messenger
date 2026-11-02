@@ -609,28 +609,11 @@ function Invoke-S54Preparation([string]$RunId) {
     $null=New-Item -ItemType Directory -Path $run -ErrorAction Stop
     $null=New-Item -ItemType Directory -Path $public -ErrorAction Stop
     $imageGuard=New-S54ImageGuard $policy.Root (Join-Path $public 'image-preimages')
-    $embeddedBefore=Get-S54EmbeddedSnapshot $policy.Root
-    $null=Write-S54New (Join-Path $public 'embedded-before.json') @{classification='exact public compiler inputs before both preparation builds';inputs=$embeddedBefore} 65536
-    $before=Get-KilogramFrozenBuildInputs -Workspace $policy.Root -Profile verification-scale -Target x86_64-pc-windows-msvc -Package @('kilogram-cli','kilogram-transport-iroh') -CargoFeatures @()
-    $normalArgs=@('build','--package','kilogram-cli','--bin','kilogram-cli','--profile','verification-scale','--target','x86_64-pc-windows-msvc','--jobs','2','--offline','--locked','--message-format=json-render-diagnostics')
-    $raw=@(& cargo @normalArgs);if($LASTEXITCODE -ne 0){throw 'S54 preparation normal compiler failed.'}
-    $after=Get-KilogramFrozenBuildInputs -Workspace $policy.Root -Profile verification-scale -Target x86_64-pc-windows-msvc -Package @('kilogram-cli','kilogram-transport-iroh') -CargoFeatures @()
-    Assert-KilogramFrozenInputs $before $after
-    $units=@(Get-KilogramCompilerUnits -Lines $raw -Workspace $policy.Root -Target x86_64-pc-windows-msvc -Profile verification-scale -PackageNames $before.package_names)
-    $normal=@($units|Where-Object {$_.package -ceq 'kilogram-cli' -and $_.target -ceq 'kilogram-cli' -and (@($_.kind)-join ',') -ceq 'bin' -and -not $_.profile.test -and $_.executable})
-    if($normal.Count -ne 1){throw 'S54 one actual non-test normal compiler image.'}
-    $fixed=Join-Path $policy.Root $script:S54Images[1].path
-    $null=[IO.Directory]::CreateDirectory((Split-Path -Parent $fixed));$null=Get-S54Path $fixed -AllowMissing
-    $pin=Copy-S54PreparedImage $imageGuard $normal[0].executable $fixed
-    $normalCapture=@{classification='nonexecuting-normal-cli-compiler-provenance';profile='verification-scale';target='x86_64-pc-windows-msvc';expected_manifest_sha256=$null;build_inputs_before=$before;build_inputs_after=$after;units=$units;raw_compiler_artifact_json=@($raw|Where-Object {$_ -match '^\s*\{"reason":"compiler-artifact"'});stable_artifacts=@(@{package='kilogram-cli';kind='bin';target='kilogram-cli';path=$pin.path;bytes=$pin.bytes;sha256=$pin.sha256;profile='verification-scale'});frozen_guard_verified=$false}
-    $normalPin=Write-S54New (Join-Path $public 'normal.json') $normalCapture 8388608
-    & (Join-Path $PSScriptRoot 'run-cargo-tests-stable.ps1') -Package @('kilogram-cli','kilogram-transport-iroh') -Profile verification-scale -CargoJobs 2 -SkipCacheStatus -CargoTarget x86_64-pc-windows-msvc -StableArtifactsDirectory (Join-Path $policy.Root 'target/verification-scale/deps') -BuildEvidencePath (Join-Path $public 'tests.json') -S54PreparationGuard $imageGuard
-    if($LASTEXITCODE -ne 0){throw 'S54 preparation stable compilation failed.'}
-    $testsPin=Get-S54Pin (Join-Path $public 'tests.json') 8388608;$tests=Read-S54Json $testsPin 8388608
-    Assert-KilogramFrozenInputs $before $tests.build_inputs_before;Assert-KilogramFrozenInputs $before $tests.build_inputs_after
-    $embeddedAfter=Get-S54EmbeddedSnapshot $policy.Root
-    for($n=0;$n -lt $embeddedBefore.Count;$n++){Assert-S54PinEqual $embeddedBefore[$n] $embeddedAfter[$n]}
-    $depInfo=Get-S54DepInfoPins $tests $false
+    $compiled=Invoke-S54CompileStage $imageGuard $public
+    $before=$compiled.before;$normalPin=$compiled.normal_pin;$normalArgs=$compiled.normal_argv
+    $testsPin=$compiled.tests_pin;$tests=$compiled.tests
+    $embeddedBefore=$compiled.embedded_before;$embeddedAfter=$compiled.embedded_after
+    $depInfo=$compiled.test_dep_info_after
     $source=@($sourcePaths|ForEach-Object {Get-S54Pin $_ 8388608})
     Assert-S54EmbeddedDependencies $policy.Root $depInfo $source
     $null=Assert-S54PublishedSources $policy

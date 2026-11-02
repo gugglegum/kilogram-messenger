@@ -1,0 +1,199 @@
+{
+  "classification": "failed preparation evidence pins; no accepted input inventory",
+  "head": "d0e0cd7bfb05132b0769dc468dec027218d9950b",
+  "preparation_run_id": "781ded2ab918d9f46b99394c3e7a912e174d7ab922f31622cad3333cdbbd1cc8",
+  "administration": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\baseline.json",
+      "bytes": 971,
+      "sha256": "c816851f78b081f4493ece8c80fcaad7b347b2b056bd151aab4cfb33a8a0fab2"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\owner.ps1",
+      "bytes": 5539,
+      "sha256": "6995b4cae4166d4dd3cd5243b6352200e83f87df2eea16e9d7b8e6fb421f2378"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\preflight.ps1",
+      "bytes": 5457,
+      "sha256": "7244639da63e97344eccb4001b4f68524e2098566c759eb02587df6073e36f47"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\preflight-01-owner.ps1.txt",
+      "bytes": 5373,
+      "sha256": "96c90f1ef5fb1729dfdddfac08f07fc7b57e18a4735419ffa0c772a17ca7a92c"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\preflight-01-preflight.ps1.txt",
+      "bytes": 5285,
+      "sha256": "bd787aca3380437514d5a719920c82139325ac8d314af0647d459f90537d7760"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\preflight-01.receipt.json",
+      "bytes": 2080,
+      "sha256": "5b52a82d560c4ce8818e669813e487e24bd4171dc34f2f07ebe2bc5a352e707d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\preflight-01.stderr.log",
+      "bytes": 420,
+      "sha256": "c7445053175e7a163bf00896fc45a49296d0124576b1c851e511661502358b3c"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\preflight-02.json",
+      "bytes": 136786,
+      "sha256": "7ce372b2c4249a722f04ed2ad000b0b69cfedce52a6d49635daa069eeca038e7"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\preflight-02.receipt.json",
+      "bytes": 2065,
+      "sha256": "64d29081b5a338543b2163c44cd92baa52e9e25d5ecde887717f7a80aab4a083"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\preflight-02.stdout.log",
+      "bytes": 77,
+      "sha256": "566c290c766dd1b5a962a4d5cdf9beeeda7d38b1823ef30f94158def7eccdd87"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\preflight-02.stderr.log",
+      "bytes": 121,
+      "sha256": "0e421c90466cc817e37fa3d6434ce20780a42aaf5fc06472e37e8ba98259e495"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\prepare-01.receipt.json",
+      "bytes": 2135,
+      "sha256": "526d3d5edf725a2a9b78752235c6dbe6f99934ee2c488ad86e733f18f7f7beee"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\prepare-01.stdout.log",
+      "bytes": 1231,
+      "sha256": "891b63c8b487730e76631d19ba64f91a3cda4891af4802aa952b33d0f435ae9c"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\prepare-01.stderr.log",
+      "bytes": 5778,
+      "sha256": "eb6042118db5965390666a0df2345cb2c6f16dcbcf708137eadb216226d3643f"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\diagnose.ps1",
+      "bytes": 5526,
+      "sha256": "0dfadf5457344e580c9f23e370546764a47d6352b64305d7c6b60dbb04b9746b"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\diagnosis.json",
+      "bytes": 36065,
+      "sha256": "3df9b2094145d19f9abe45e7d18f5b9085f0f2c50509093d07ef10f837482e69"
+    }
+  ],
+  "public_artifacts": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\embedded-before.json",
+      "bytes": 756,
+      "sha256": "0693fdc3680f11226f73bf908e4cd4c9be06af3d21857e7e4d02f3bb9d49181b"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\frozen.json",
+      "bytes": 817455,
+      "sha256": "839753d99bcb6b6220c5df196b3fc54dbfd878b9bfc1ba5ec178c24763c65067"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\image-preimages\\preimage-00.bin",
+      "bytes": 50019840,
+      "sha256": "adcfcf397e2d67d2936e00d759e2180bb4d767edef352aa5139b817603f3855d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\image-preimages\\preimage-01.bin",
+      "bytes": 50785280,
+      "sha256": "8886785ae37cb0fd4f5aa27828f1b39dcc269991c55c899bd53bdd4e0eb75088"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\image-preimages\\preimage-02.bin",
+      "bytes": 32753152,
+      "sha256": "442c6cfe7eb70d3786262fc9eef9ac0f5c811e30e916b0df262ada1acf69184a"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\image-preimages\\preimage-03.bin",
+      "bytes": 21593088,
+      "sha256": "9469e2579b000df24ab396c13d21ed2758e1a1bedf8e4c507fee47beafda9b35"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\image-preimages\\preimage-04.bin",
+      "bytes": 23689728,
+      "sha256": "8eca44daa41d1ba117c108732e0c1ebc0e41ac688ee14ac70bb6d2210c1914cd"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\image-preimages\\preimage-05.bin",
+      "bytes": 19419648,
+      "sha256": "f5822cd40225a7ac12dbc2c58264439b8e3c5d4b4d20cf87309b9aa28f2023ad"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\image-preimages\\preimage-06.bin",
+      "bytes": 22317056,
+      "sha256": "552cc6c23452ad50c94b65391e33df462b89e14551c7eac51304e55872788cf0"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\image-preimages\\preimages.json",
+      "bytes": 4830,
+      "sha256": "40f3aee0c5da460764ab88df9822185493b5f2b33ad51e03fc76eb87cb371ba7"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\image-preimages\\preparation-outcome.json",
+      "bytes": 2019,
+      "sha256": "ae7a43c374fa26678ed4b1ef355976f15c6f4f38e8b805372de1fe42540c1caa"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\image-preimages\\staged-00.json",
+      "bytes": 495,
+      "sha256": "4e9c776541cc57eb8d10f45fa8df28fb966b528c76a24ae53292eed901dbc362"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\image-preimages\\staged-01.json",
+      "bytes": 523,
+      "sha256": "d3ba2fec6e05f79433ff527c8d6543a4e871ba77eda16fbd782233ad7bcff348"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\image-preimages\\staged-02.json",
+      "bytes": 523,
+      "sha256": "9584ac5fda7970510f036c27ef6231980ec47c5aec0bf72d805934c7b742ac3f"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\image-preimages\\staged-03.json",
+      "bytes": 540,
+      "sha256": "6b62c530468912a7ee53c92c6c37d773965abca4f9076aa1c67b5d84d6a8e647"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\image-preimages\\staged-04.json",
+      "bytes": 532,
+      "sha256": "c2d2d343221497b9cd1512bfb0231eb320bddfe7d5c5c25d8dd413a1d755dfc4"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\image-preimages\\staged-05.json",
+      "bytes": 556,
+      "sha256": "af7f6a57e59c6b305b7770672e319442b8d3f21d2e9b713943a8fb2a999cca2c"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\image-preimages\\staged-06.json",
+      "bytes": 553,
+      "sha256": "6dadd60878c9decf3973e9d0e47c104978ea9e99b8f15ab3020d579a951fb6a9"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\isolated.json",
+      "bytes": 194,
+      "sha256": "0680b4fe55b13e506cb99f826426da7d15145d924a108f27ab53402ad77fcc25"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\list.txt",
+      "bytes": 33234,
+      "sha256": "87bef9a24c8d9dcc6ab2f8c3d14fbcfca76e0b20016e35bc05bf9792f3e3dcc0"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\normal.json",
+      "bytes": 1765774,
+      "sha256": "3a73d6d5940d9ed1f1e067b6c95b5fa6ca0f4d81254c637ca2ba58e214a08c07"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\migration-s54-feasibility-public-evidence\\F-s54-mixed-hooks-feasibility-01-attempt-01\\tests.json",
+      "bytes": 2729983,
+      "sha256": "08fb393211339d8a00d5e33295eeabbf3429ecd904387ef53f653f0ed6d110af"
+    }
+  ]
+}

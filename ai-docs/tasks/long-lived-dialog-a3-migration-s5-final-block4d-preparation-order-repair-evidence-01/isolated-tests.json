@@ -1,0 +1,23 @@
+{
+  "format_version": 1,
+  "tests": [
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::admission::tests::s54_admission_valid_public_binding_has_real_blake3_but_no_runtime_capability"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::admission::tests::s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substitution"
+    },
+    {
+      "package": "kilogram-cli",
+      "kind": "test",
+      "target": "migration_s5_process",
+      "name": "live_l1::handoff::final_p5::feasibility::tests::s54_f_closed_purpose_rejects_cross_case_selector_attempt_and_keeps_p_limits"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+$base=Join-Path (Get-Location).Path '.tmp/s54-block4d-preparation-order-repair-01'
+. (Join-Path (Get-Location).Path 'scripts/invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
+$policy=New-S54Policy;$root=$policy.Root
+$stage=Read-S54Json (Get-S54Pin (Join-Path $base 'compile-02.stage-result.json') 16384) 16384
+$normal=Read-S54Json $stage.normal 8388608;$tests=Read-S54Json $stage.tests 8388608
+$paths=Get-S54SourcePaths $root;$source=@($paths|ForEach-Object {Get-S54Pin $_ 8388608})
+$images=@($script:S54Images|ForEach-Object {@{role=$_.role;pin=(Get-S54Pin (Join-Path $root $_.path) 134217728)}})
+$proof=@{source=@{files=$source};images=$images;runtime=@{environment=$normal.build_inputs_before.environment;configs=$normal.build_inputs_before.configs;resolutions=$policy.Resolutions}}
+# Same real compiler predicate, both inputs read through the strict wire reader.
+Assert-S54Compiler $proof $policy $normal $true
+Assert-S54Compiler $proof $policy $tests $false
+Assert-S54EmbeddedDependencies $root $stage.test_dep_info_after $source
+Assert-S54Equal $stage.test_origins_before $stage.test_origins_after
+Assert-S54Equal $stage.test_dep_info_before $stage.test_dep_info_after
+foreach($p in @($stage.test_origins_before)+@($stage.test_dep_info_before)+@($stage.normal_origins)+@($stage.normal_dep_info)){$null=Read-S54Pin $p 134217728}
+Assert-S54Equal $stage.test_origins_after (Get-S54SelectedOriginPins $tests $false)
+Assert-S54Equal $stage.test_dep_info_after (Get-S54DepInfoPins $tests $false)
+Assert-S54Equal $stage.normal_origins (Get-S54SelectedOriginPins $normal $true)
+$legacy=@($images|Where-Object role -CEQ 'legacy-cli')[0].pin;$relay=@($images|Where-Object role -CEQ 'relay')[0].pin
+if($legacy.bytes -ne $policy.Legacy.bytes -or $legacy.sha256 -cne $policy.Legacy.sha256 -or $relay.bytes -ne $policy.Relay.bytes -or $relay.sha256 -cne $policy.Relay.sha256){throw 'Accepted legacy/relay origin differs.'}
+$old=Get-Content (Join-Path $root 'ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-f-preparation-report-01.pins.json') -Raw|ConvertFrom-Json -AsHashtable
+foreach($p in @($old.administration)+@($old.public_artifacts)){$null=Read-S54Pin $p 134217728}
+Write-KilogramFrozenJson (Join-Path $base 'compile-02.result.json') @{classification='read-only full compiler/dep-info validation of actual shared compile-02 captures; original exit1/outcome retained';sources=$source;images=$images;legacy_relay_unchanged=@($legacy,$relay);normal=$stage.normal;tests=$stage.tests;embedded_before=(Get-S54EmbeddedSnapshot $root);embedded_after=(Get-S54EmbeddedSnapshot $root);test_origins_before=$stage.test_origins_before;test_origins_after=$stage.test_origins_after;test_dep_info_before=$stage.test_dep_info_before;test_dep_info_after=$stage.test_dep_info_after;normal_origins=$stage.normal_origins;normal_dep_info=$stage.normal_dep_info;actual_normal_and_tests_compiler_admission_passed=$true;failed_F01_evidence_unchanged=$true;production_preparation=$false;runtime='not_established'}
+Write-Output 'existing_actual_captures_compiler_and_dep_info_admission=passed;no_build_or_stage=true'

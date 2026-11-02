@@ -1,0 +1,9 @@
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification-scale` profile [optimized + debuginfo] target(s) in 3m 02s
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification-scale` profile [optimized + debuginfo] target(s) in 3m 00s
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\invoke-migration-s54-whole.ps1:170
+Line |
+ 170 |  : e.Contains($path)){throw 'S54 unadmitted compiler dependency input.'}
+     |                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | S54 unadmitted compiler dependency input.

@@ -1,0 +1,6 @@
+warning: in the working copy of 'ai-docs/chat-coordination.md', CRLF will be replaced by LF the next time Git touches it
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\invoke-migration-s54-whole.ps1:14
+Line |
+  14 |  : tch '(^|[\\/])\.\.?([\\/]|$)'){throw 'S54 absolute path/components.'}
+     |                                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | S54 absolute path/components.

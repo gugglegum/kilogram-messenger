@@ -1,0 +1,64 @@
+param([Parameter(Mandatory)][string]$EvidencePath)
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+trap {
+    [IO.File]::WriteAllText(($EvidencePath+'.error.json'),(ConvertTo-Json -InputObject @{message=$_.Exception.Message;stack=$_.ScriptStackTrace} -Depth 4))
+    break
+}
+$workspace='E:/AI-Projects/kilogram-p2p-messenger'
+. (Join-Path $workspace 'scripts/invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
+if((& git -C $workspace rev-parse HEAD) -cne 'd0e0cd7bfb05132b0769dc468dec027218d9950b'){throw 'Published preparation baseline differs.'}
+if(@(& git -C $workspace diff --cached --name-only).Count){throw 'Index must remain empty.'}
+$policy=New-S54Policy
+Assert-S54SamePath ([Diagnostics.Process]::GetCurrentProcess().MainModule.FileName) $policy.Resolutions[0].path
+$sources=Assert-S54PublishedSources $policy
+$run=Join-Path $policy.Root ".tmp/$($script:S54PolicyPurpose.Namespace)/$script:S54Attempt"
+$public=Join-Path $policy.Root ".tmp/$($script:S54PolicyPurpose.PublicNamespace)/$script:S54Attempt"
+foreach($path in @($run,$public,
+    (Join-Path $workspace '.tmp/migration-s54-integrated/P-s54-whole-resumed-l1-01-attempt-01'),
+    (Join-Path $workspace '.tmp/migration-s54-public-evidence/P-s54-whole-resumed-l1-01-attempt-01'))){
+    $null=Get-S54Path $path -AllowMissing
+    if(Test-Path -LiteralPath $path){throw 'Production attempt/public directory is already occupied; no reuse.'}
+}
+$rows=@(Get-CimInstance Win32_Process -Property ProcessId,ExecutablePath -OperationTimeoutSec 3 -ErrorAction Stop)
+$images=@($script:S54Images|ForEach-Object {@{role=$_.role;pin=(Get-S54Pin (Join-Path $workspace $_.path) 134217728)}})
+$imagePaths=@($images|ForEach-Object {$_.pin.path})
+$live=@($rows|Where-Object {$_.ExecutablePath -and $_.ExecutablePath -in $imagePaths}|ForEach-Object {@{pid=$_.ProcessId;path=$_.ExecutablePath}})
+if($live.Count){throw 'Exact preparation image process conflict; no process will be stopped.'}
+Assert-S54NoLiveImages (Get-S54MutablePaths $workspace)
+$inputs=Get-KilogramFrozenBuildInputs -Workspace $workspace -Profile verification-scale -Target x86_64-pc-windows-msvc -Package @('kilogram-cli','kilogram-transport-iroh') -CargoFeatures @()
+$tools=@($policy.Resolutions|ForEach-Object {@{name=$_.name;pin=(Get-S54Pin $_.path 134217728)}})
+$targetLib=@(& rustc --print target-libdir);if($LASTEXITCODE -ne 0 -or $targetLib.Count -ne 1){throw 'Pinned compiler target library discovery failed.'}
+$null=Get-S54Path $targetLib[0]
+$rlibs=@(Get-ChildItem -LiteralPath $targetLib[0] -Filter '*.rlib' -File)
+if(-not $rlibs.Count){throw 'Installed Windows target standard libraries absent.'}
+$vswhere='C:/Program Files (x86)/Microsoft Visual Studio/Installer/vswhere.exe'
+$null=Get-S54Path $vswhere
+$linkers=@(& $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -find 'VC\Tools\MSVC\**\bin\Hostx64\x64\link.exe')
+if($LASTEXITCODE -ne 0 -or -not $linkers.Count){throw 'Existing MSVC x64 linker not found; no install/update permitted.'}
+$linkerPins=@($linkers|ForEach-Object {Get-S54Pin $_ 134217728})
+$sdkRoot='C:/Program Files (x86)/Windows Kits/10/Lib'
+$sdk=@(Get-ChildItem -LiteralPath $sdkRoot -Directory|Where-Object {
+    (Test-Path -LiteralPath (Join-Path $_.FullName 'um/x64/kernel32.lib')) -and
+    (Test-Path -LiteralPath (Join-Path $_.FullName 'ucrt/x64/ucrt.lib'))
+}|Sort-Object Name -Descending)
+if(-not $sdk.Count){throw 'Installed Windows SDK x64 libraries absent.'}
+$workerValue=[Environment]::GetEnvironmentVariable('TOKIO_WORKER_THREADS','Process')
+$workers=if($null -eq $workerValue){[Environment]::ProcessorCount}else{[int]$workerValue}
+if($workers -lt 2){throw 'At least two actual Tokio workers required.'}
+$forbidden=@(Get-ChildItem Env:|Where-Object {$_.Name -match '^KILOGRAM_.*(SCHEDULE|CLOCK|PAUSE)$'}|ForEach-Object {$_.Name})
+if($forbidden.Count){throw 'Inherited schedule/clock/pause found; values withheld.'}
+$drive=[IO.DriveInfo]::new([IO.Path]::GetPathRoot($workspace))
+$result=@{classification='read-only native preflight; no guard/reservation/build/runtime';head=(& git -C $workspace rev-parse HEAD);
+    source_count=$sources.Count;sources=@($sources|ForEach-Object {Get-S54Pin $_ 8388608});
+    run=$run;public=$public;production_directories_absent=$true;index_empty=$true;tools=$tools;images=$images;
+    process_inventory_succeeded=$true;active_exact_images=$live;mutable_paths=(Get-S54MutablePaths $workspace);
+    build_inputs_canonical_sha256=(Get-KilogramFrozenDigest (ConvertTo-KilogramFrozenJson $inputs));
+    compiler=$inputs.tools;rustc=$inputs.rustc;cargo=$inputs.cargo;package_count=$inputs.package_names.Count;
+    configs=$inputs.configs;environment=$inputs.environment;target_library_directory=$targetLib[0];target_rlib_count=$rlibs.Count;
+    vswhere=(Get-S54Pin $vswhere 134217728);msvc_linkers=$linkerPins;available_sdk_versions=@($sdk.Name);
+    workers=@{present=($null -ne $workerValue);value=$workerValue;available=[Environment]::ProcessorCount;effective=$workers};
+    free_bytes=$drive.AvailableFreeSpace;original_path_sha256=$env:KILOGRAM_BLOCK4D_ORIGINAL_PATH_SHA256;
+    effective_path_sha256=(Get-KilogramFrozenDigest $env:PATH);persistent_environment_changed=$false;whole_attempt_verdict='not_established'}
+Write-KilogramFrozenJson $EvidencePath $result
+Write-Output "preflight_ok=true;sources=$($sources.Count);images=$($images.Count);live_exact=0;packages=$($inputs.package_names.Count);workers=$workers"

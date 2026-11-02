@@ -1,0 +1,52 @@
+{
+  "process_local_rust_bin": "C:\\Users\\Paul\\.rustup\\toolchains\\1.98.0-x86_64-pc-windows-msvc\\bin",
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\work.ps1",
+    "-Step",
+    "final-01"
+  ],
+  "owner_pid": 16372,
+  "step": "final-01",
+  "cleanup": {
+    "forced": false,
+    "after": [],
+    "verified": true,
+    "failed": false,
+    "before": []
+  },
+  "classification": "bounded native repair verification; no production preparation or messenger activation",
+  "exit_code": 0,
+  "stderr": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\final-01.stderr.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "reader_failed": false,
+  "cleanup_reserve_seconds": 30,
+  "child_pid": 57920,
+  "whole_seconds": 600,
+  "actual_child_exit_code": 0,
+  "original_path_sha256": "32afa634aa3fe135e1ae545834facb755758a036d57f369377b3455a99075f88",
+  "original_tick_ms": 494483734,
+  "bounded_stdout_stderr_eof": true,
+  "production_Run_F_P_executed": false,
+  "work_expired": false,
+  "child_started_utc": "2026-11-02T18:33:10.5945039Z",
+  "effective_path_sha256": "b27e052877463bc883e77849d2511124a10d9331d76cebf9cc7f8d29281d6313",
+  "actual_handle_job_membership_verified": true,
+  "stdout": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\final-01.stdout.log",
+    "bytes": 67,
+    "sha256": "03ec55571acf53bc51aed471f397a0d13facfa99229e4c83d4955ca089ec2a30"
+  },
+  "elapsed_seconds": 12.7725805,
+  "error": null,
+  "executable": "C:/Users/Paul/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe",
+  "actual_child_waited": true,
+  "work_seconds": 570,
+  "whole_attempt_verdict": "not_established",
+  "persistent_environment_changed": false
+}

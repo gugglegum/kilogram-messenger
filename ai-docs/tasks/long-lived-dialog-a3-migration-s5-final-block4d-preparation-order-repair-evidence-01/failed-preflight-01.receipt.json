@@ -1,0 +1,52 @@
+{
+  "work_expired": false,
+  "whole_attempt_verdict": "not_established",
+  "actual_handle_job_membership_verified": true,
+  "child_pid": 68680,
+  "actual_child_exit_code": 1,
+  "production_Run_F_P_executed": false,
+  "stdout": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\preflight-01.stdout.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "error": "Actual child exit 1",
+  "reader_failed": false,
+  "whole_seconds": 300,
+  "owner_pid": 54604,
+  "classification": "bounded native preparation administration; no messenger activation",
+  "executable": "C:/Users/Paul/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe",
+  "child_started_utc": "2026-11-02T17:15:44.2762768Z",
+  "bounded_stdout_stderr_eof": true,
+  "original_tick_ms": 489837375,
+  "step": "preflight-01",
+  "stderr": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\preflight-01.stderr.log",
+    "bytes": 420,
+    "sha256": "c7445053175e7a163bf00896fc45a49296d0124576b1c851e511661502358b3c"
+  },
+  "original_path_sha256": "32afa634aa3fe135e1ae545834facb755758a036d57f369377b3455a99075f88",
+  "cleanup_reserve_seconds": 30,
+  "persistent_environment_changed": false,
+  "exit_code": 1,
+  "actual_child_waited": true,
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\preflight.ps1",
+    "-EvidencePath",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\preflight-01.json"
+  ],
+  "cleanup": {
+    "forced": false,
+    "failed": false,
+    "after": [],
+    "verified": true,
+    "before": []
+  },
+  "process_local_rust_bin": "C:\\Users\\Paul\\.rustup\\toolchains\\1.98.0-x86_64-pc-windows-msvc\\bin",
+  "elapsed_seconds": 8.4593023,
+  "effective_path_sha256": "b27e052877463bc883e77849d2511124a10d9331d76cebf9cc7f8d29281d6313",
+  "work_seconds": 270
+}

@@ -14,7 +14,11 @@ impl Purpose {
         }
     }
     pub(super) fn attempt(self) -> String {
-        format!("{}-attempt-01", self.case())
+        let suffix = match self {
+            Self::WholeP => "01",
+            Self::FeasibilityF => "02",
+        };
+        format!("{}-attempt-{suffix}", self.case())
     }
     pub(super) fn selector(self) -> &'static str {
         match self {

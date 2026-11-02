@@ -1,0 +1,9 @@
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification-scale` profile [optimized + debuginfo] target(s) in 2m 08s
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification-scale` profile [optimized + debuginfo] target(s) in 2m 59s
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\invoke-migration-s54-whole.ps1:70
+Line |
+  70 |  :  -or $Value.Count -ne $shape.Count){throw "S54 closed object $Type."}
+     |                                        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | S54 closed object DepKind.

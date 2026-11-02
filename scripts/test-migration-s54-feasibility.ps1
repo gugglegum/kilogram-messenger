@@ -5,7 +5,8 @@ $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1')
 $workspace=Split-Path -Parent $PSScriptRoot
 $evidence=Get-S54Path $EvidenceDirectory
-if(-not $evidence.StartsWith((Join-Path $workspace '.tmp/s54-block4c-implementation-01/'),[StringComparison]::OrdinalIgnoreCase)){throw 'Fresh owned public F checks only.'}
+$owned=@('.tmp/s54-block4c-implementation-01/','.tmp/s54-block4d-preparation-order-repair-01/')
+if(-not @($owned|Where-Object {$evidence.StartsWith((Join-Path $workspace $_),[StringComparison]::OrdinalIgnoreCase)}).Count){throw 'Fresh owned public F checks only.'}
 $checks=[Collections.Generic.List[object]]::new()
 function Require([bool]$Value,[string]$Name){if(-not $Value){throw $Name};$checks.Add(@{name=$Name;passed=$true})}
 function Reject([string]$Name,[scriptblock]$Action){$failed=$false;try{$null=& $Action}catch{$failed=$true};Require $failed $Name}
@@ -25,10 +26,13 @@ try {
     Require ((Get-KilogramFrozenApplicationPath $name) -ceq (Join-Path $two $name)) 'single candidate remains scalar'
 }finally{$env:PATH=$beforePath}
 $p=Get-S54Purpose WholeP;$f=Get-S54Purpose FeasibilityF
+Require ($f.Attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-02' -and $p.Attempt -ceq 'P-s54-whole-resumed-l1-01-attempt-01') 'closed F02/P01 binding'
 Require ($p.Deadline.controller -eq 2350 -and $p.Deadline.work -eq 2375 -and $p.Deadline.outer -eq 2400) 'P original deadline unchanged'
 Require ($f.Deadline.controller -eq 450 -and $f.Deadline.work -eq 480 -and $f.Deadline.outer -eq 510) 'F fixed deadline'
 Reject 'closed purpose rejects invented limits' {Get-S54Purpose arbitrary}
 $i=@{identity=@{case=$f.Case;attempt=$f.Attempt;selector=$f.Selector;run_id=('a'*64)}}
+$old=@{identity=@{case=$f.Case;attempt=($f.Case+'-attempt-01');selector=$f.Selector;run_id=('a'*64)}}
+Reject 'consumed F01 rejected by actual output policy' {Get-S54OutputPurpose $old}
 $inputs=@{inventory=@{sha256=('b'*64)}}
 $assertion=@{Pin=@{sha256=('c'*64);bytes=123};Value=@{provenance=@{blake3=('d'*64)}}}
 $native=$f.Native+' '+(ConvertTo-Json -InputObject (New-S54Marker $i $inputs $assertion $f.FunctionalClass) -Compress)

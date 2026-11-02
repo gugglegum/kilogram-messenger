@@ -1,0 +1,96 @@
+warning: in the working copy of 'ai-docs/chat-coordination.md', CRLF will be replaced by LF the next time Git touches it
+   Compiling digest v0.11.3
+   Compiling tinystr v0.8.4
+   Compiling curve25519-dalek v5.0.0
+   Compiling sha2 v0.11.0
+   Compiling icu_locale_core v2.3.0
+   Compiling zerotrie v0.2.5
+   Compiling blake3 v1.8.7
+   Compiling icu_collections v2.3.0
+   Compiling icu_provider v2.3.1
+   Compiling ed25519-dalek v3.0.0
+   Compiling icu_normalizer v2.3.0
+   Compiling icu_properties v2.3.0
+   Compiling log v0.4.34
+   Compiling hmac v0.13.0
+   Compiling hkdf v0.13.0
+   Compiling x25519-dalek v3.0.0
+   Compiling hpke v0.14.0
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling kilogram-crypto v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-crypto)
+   Compiling url v2.5.8
+   Compiling tracing-core v0.1.36
+   Compiling tracing v0.1.44
+   Compiling kilogram-identity v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-identity)
+   Compiling ring v0.17.14
+   Compiling num-traits v0.2.19
+   Compiling rustls-webpki v0.103.16
+   Compiling h2 v0.4.19
+   Compiling rustls v0.23.46
+   Compiling kilogram-sync-capability v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-sync-capability)
+   Compiling kilogram-ratchet v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ratchet)
+   Compiling tokio-rustls v0.26.4
+   Compiling hyper v1.11.0
+   Compiling kilogram-protocol v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-protocol)
+   Compiling hyper-util v0.1.20
+   Compiling prefix-trie v0.8.4
+   Compiling kilogram-peer-capability-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-capability-store)
+   Compiling kilogram-peer-reenrollment v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment)
+   Compiling noq-udp v1.2.0
+   Compiling hickory-proto v0.26.1
+   Compiling hickory-net v0.26.1
+   Compiling kilogram-peer-reenrollment-acceptance v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-acceptance)
+   Compiling tower-http v0.6.11
+   Compiling hyper-rustls v0.27.9
+   Compiling rustls-platform-verifier v0.7.0
+   Compiling chrono v0.4.45
+   Compiling noq-proto v1.2.0
+   Compiling wmi v0.18.4
+   Compiling time v0.3.55
+   Compiling iroh-metrics v1.0.1
+   Compiling hickory-resolver v0.26.1
+   Compiling reqwest v0.13.4
+   Compiling iroh-base v1.1.0
+   Compiling kilogram-peer-reenrollment-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-runtime)
+   Compiling kilogram-mailbox v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox)
+   Compiling kilogram-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-store)
+   Compiling attohttpc v0.30.1
+   Compiling simdutf8 v0.1.5
+   Compiling tokio-websockets v0.13.3
+   Compiling moxcms v0.8.1
+   Compiling noq v1.2.0
+   Compiling igd-next v0.17.1
+   Compiling iroh-dns v1.1.0
+   Compiling netwatch v0.19.3
+   Compiling kilogram-peer-history-recovery v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery)
+   Compiling image v0.25.10
+   Compiling iroh-relay v1.1.0
+   Compiling kilogram-peer-history-recovery-consent v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-consent)
+   Compiling portmapper v0.19.3
+   Compiling kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+   Compiling kilogram-ticket-publication v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-ticket-publication)
+   Compiling iroh v1.1.0
+   Compiling kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+   Compiling kilogram-session v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-session)
+   Compiling kilogram-runtime-ipc v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-runtime-ipc)
+   Compiling kilogram-transport-iroh v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-transport-iroh)
+   Compiling kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+   Compiling kilogram-rollout v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-rollout)
+   Compiling kilogram-ticket-store v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-ticket-store)
+   Compiling rqrr v0.10.1
+   Compiling kilogram-publication-conflict v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-publication-conflict)
+   Compiling qrcode v0.14.1
+   Compiling kilogram-mailbox-provisioning v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-provisioning)
+   Compiling kilogram-mailbox-client v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-mailbox-client)
+   Compiling kilogram-peer-reenrollment-staging v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-reenrollment-staging)
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification-scale` profile [optimized + debuginfo] target(s) in 10m 15s
+   Compiling kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+    Finished `verification-scale` profile [optimized + debuginfo] target(s) in 2m 54s
+warning: in the working copy of 'ai-docs/chat-coordination.md', CRLF will be replaced by LF the next time Git touches it
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\invoke-migration-s54-whole.ps1:328
+Line |
+ 328 |  : tes) -cne $pin.sha256){throw 'S54 actual compiler executable bytes.'}
+     |                           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | S54 actual compiler executable bytes.

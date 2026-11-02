@@ -201,7 +201,7 @@ function Assert-S54Embedded($I,$Policy,$Tests) {
 function Get-S54Purpose([ValidateSet('WholeP','FeasibilityF')][string]$Name='WholeP') {
     $f=$Name -ceq 'FeasibilityF'
     $case=if($f){'F-s54-mixed-hooks-feasibility-01'}else{'P-s54-whole-resumed-l1-01'}
-    return @{Name=$Name;Case=$case;Attempt=($case+'-attempt-01');
+    return @{Name=$Name;Case=$case;Attempt=($case+$(if($f){'-attempt-02'}else{'-attempt-01'}));
         Selector=$(if($f){'live_l1::handoff::final_p5::feasibility::s54_short_mixed_hooks_feasibility_public'}else{'live_l1::handoff::final_p5::s54_continuous_whole_resumed_l1_p5_public'});
         Namespace=$(if($f){'migration-s54-feasibility'}else{'migration-s54-integrated'});
         PublicNamespace=$(if($f){'migration-s54-feasibility-public-evidence'}else{'migration-s54-public-evidence'});
@@ -324,8 +324,7 @@ function Assert-S54Compiler($I,$Policy,$Capture,[bool]$Normal) {
         $u=@($Capture.units|Where-Object {$_.package -ceq $a.package -and $_.target -ceq $a.target -and (@($_.kind)-join ',') -ceq $a.kind -and $_.profile.test -ne $Normal -and $_.class -ceq 'runtime-target' -and $_.executable})
         if($u.Count -ne 1){throw 'S54 one actual compiler executable unit.'}
         if(-not (Get-S54Path $u[0].executable).StartsWith($prefix,[StringComparison]::OrdinalIgnoreCase)){throw 'S54 compiler executable target/profile path.'}
-        $bytes=Read-S54Public $u[0].executable 134217728
-        if($bytes.Length -ne $pin.bytes -or (Get-S54Sha $bytes) -cne $pin.sha256){throw 'S54 actual compiler executable bytes.'}
+        Assert-S54CompilerImageBytes $u[0].executable $pin
     }
 }
 function Assert-S54Inventory($I,$Policy,[string]$State='Fresh',$Owner=$null) {
@@ -447,7 +446,7 @@ $script:S54Schema=@{
  Isolated=@{format_version='u';tests='aIsolatedEntry'}
 }
 Set-S54Purpose $Purpose
-$script:S54Helpers=@('scripts/run-cargo-tests-stable.ps1','scripts/cargo-frozen-artifacts.ps1','scripts/cargo-resource-policy.ps1','scripts/migration-s5-l1-deadline.ps1','scripts/migration-s53-metadata.ps1','scripts/migration-s53-runtime-dependencies.ps1','scripts/migration-s5-l1-test-result.ps1','scripts/invoke-migration-s54-whole.ps1','scripts/test-migration-s54-admission.ps1','scripts/migration-s54-outer.ps1','scripts/test-migration-s54-whole.ps1','apps/kilogram-cli/tests/support/migration_s54_outer_fixture.ps1','scripts/migration-s54-preparation.ps1','scripts/test-migration-s54-repair.ps1','scripts/test-migration-s54-feasibility.ps1')
+$script:S54Helpers=@('scripts/run-cargo-tests-stable.ps1','scripts/cargo-frozen-artifacts.ps1','scripts/cargo-resource-policy.ps1','scripts/migration-s5-l1-deadline.ps1','scripts/migration-s53-metadata.ps1','scripts/migration-s53-runtime-dependencies.ps1','scripts/migration-s5-l1-test-result.ps1','scripts/invoke-migration-s54-whole.ps1','scripts/test-migration-s54-admission.ps1','scripts/migration-s54-outer.ps1','scripts/test-migration-s54-whole.ps1','apps/kilogram-cli/tests/support/migration_s54_outer_fixture.ps1','scripts/migration-s54-preparation.ps1','scripts/test-migration-s54-repair.ps1','scripts/test-migration-s54-feasibility.ps1','scripts/test-migration-s54-preparation-order.ps1')
 $script:S54Embedded=@('apps/kilogram-cli/tests/support/migration_s54_capture_fixture.ps1','apps/kilogram-cli/tests/support/migration_s54_memory_fixture.ps1','ai-docs/tasks/long-lived-dialog-a3-migration-s5-handoff-evidence/P2-s53-exhausted-M1.candidate.json')
 $script:S54Images=@(
  @{role='legacy-cli';path='target/compatibility/long-lived-dialog-baseline/kilogram-cli.exe';package='';kind='';target=''},

@@ -1,0 +1,58 @@
+{
+  "step": "prepare-01",
+  "work_expired": false,
+  "child_pid": 29956,
+  "owner_pid": 53068,
+  "reader_failed": false,
+  "executable": "C:/Users/Paul/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe",
+  "original_path_sha256": "32afa634aa3fe135e1ae545834facb755758a036d57f369377b3455a99075f88",
+  "actual_child_waited": true,
+  "cleanup": {
+    "forced": true,
+    "verified": true,
+    "before": [
+      66072
+    ],
+    "failed": false,
+    "after": []
+  },
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\invoke-migration-s54-whole.ps1",
+    "-Action",
+    "Prepare",
+    "-Purpose",
+    "FeasibilityF",
+    "-PreparationRunId",
+    "781ded2ab918d9f46b99394c3e7a912e174d7ab922f31622cad3333cdbbd1cc8"
+  ],
+  "persistent_environment_changed": false,
+  "production_Run_F_P_executed": false,
+  "stdout": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\prepare-01.stdout.log",
+    "bytes": 1231,
+    "sha256": "891b63c8b487730e76631d19ba64f91a3cda4891af4802aa952b33d0f435ae9c"
+  },
+  "actual_child_exit_code": 1,
+  "original_tick_ms": 490271921,
+  "stderr": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-f-preparation-01\\prepare-01.stderr.log",
+    "bytes": 5778,
+    "sha256": "eb6042118db5965390666a0df2345cb2c6f16dcbcf708137eadb216226d3643f"
+  },
+  "exit_code": 1,
+  "classification": "bounded native preparation administration; no messenger activation",
+  "effective_path_sha256": "b27e052877463bc883e77849d2511124a10d9331d76cebf9cc7f8d29281d6313",
+  "error": "Actual child exit 1",
+  "bounded_stdout_stderr_eof": true,
+  "elapsed_seconds": 1014.5606315,
+  "whole_seconds": 1200,
+  "cleanup_reserve_seconds": 30,
+  "process_local_rust_bin": "C:\\Users\\Paul\\.rustup\\toolchains\\1.98.0-x86_64-pc-windows-msvc\\bin",
+  "work_seconds": 1170,
+  "actual_handle_job_membership_verified": true,
+  "child_started_utc": "2026-11-02T17:22:58.7162778Z",
+  "whole_attempt_verdict": "not_established"
+}

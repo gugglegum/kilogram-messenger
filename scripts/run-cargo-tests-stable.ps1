@@ -48,7 +48,7 @@ if ($PSBoundParameters.ContainsKey('S54PreparationGuard')) {
         $IsolatedTestsFile -or $ExpectedArtifactsManifest -or $ExpectedArtifactsSha256 -or
         -not $BuildEvidencePath -or $StableArtifactsDirectory -cne (Join-Path (Split-Path -Parent $PSScriptRoot) 'target/verification-scale/deps')) { throw 'S54 guard requires the exact preparation compile-only lane.' }
     Assert-S54Equal $Package @('kilogram-cli','kilogram-transport-iroh')
-    if (@($S54PreparationGuard.Entries | Where-Object Staged).Count -ne 1 -or -not $S54PreparationGuard.Entries[0].Staged) { throw 'S54 guarded normal image must precede stable staging.' }
+    Assert-S54TestStageState $S54PreparationGuard Before
 }
 
 function Complete-CacheStatus {
@@ -199,14 +199,16 @@ foreach ($entry in $artifactsByExecutable.GetEnumerator()) {
 }
 
 $stableArtifacts = @($stableArtifacts | Sort-Object Package, Kind, Target, Path -Unique)
-if ($null -ne $S54PreparationGuard) { Complete-S54ImageStage $S54PreparationGuard }
 # This guard precedes BOTH the compile-only return and every --list/Run branch.
 # -Run compiles/stages again, so validating only in its caller is insufficient.
 if ($frozenOptIn) {
     $frozenUnits = @(Get-KilogramCompilerUnits -Lines $cargoOutput -Workspace $workspaceRoot -Target $CargoTarget -Profile $Profile -PackageNames $frozenBefore.package_names)
     $frozenAfter = Get-KilogramFrozenBuildInputs -Workspace $workspaceRoot -Profile $Profile -Target $CargoTarget -Package $Package -CargoFeatures $CargoFeatures
     Assert-KilogramFrozenInputs $frozenBefore $frozenAfter
-    $frozenRows = @(Get-KilogramFrozenStableRows $stableArtifacts $Profile)
+    # Preparation retains every image lease until the orchestrator stages the
+    # final normal CLI. Read staged identities from those handles, not a second
+    # incompatible file open, and do not complete the transaction here.
+    $frozenRows = if ($null -ne $S54PreparationGuard) { @(Get-S54GuardedTestRows $S54PreparationGuard $stableArtifacts) } else { @(Get-KilogramFrozenStableRows $stableArtifacts $Profile) }
     if ($frozenRows.Count -ne $frozenArtifactCount) { throw 'Frozen staging artifact set differs from the selected package graph.' }
     if ($frozenExpected) {
         Assert-KilogramFrozenInputs $frozenExpected.build_inputs $frozenAfter

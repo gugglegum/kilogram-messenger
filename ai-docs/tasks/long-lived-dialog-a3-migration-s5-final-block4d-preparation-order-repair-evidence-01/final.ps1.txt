@@ -1,0 +1,53 @@
+Set-StrictMode -Version Latest
+$ErrorActionPreference='Stop'
+$workspace='E:/AI-Projects/kilogram-p2p-messenger';Set-Location $workspace
+$base=Join-Path $workspace '.tmp/s54-block4d-preparation-order-repair-01'
+. (Join-Path $workspace 'scripts/invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
+$receipt=Read-S54Json (Get-S54Pin (Join-Path $base 'validate-01.receipt.json') 65536) 65536
+if($receipt.exit_code -ne 0 -or -not $receipt.actual_child_waited -or -not $receipt.bounded_stdout_stderr_eof -or -not $receipt.cleanup.verified){throw 'Actual successful source verification receipt required.'}
+$compiled=Read-S54Json (Get-S54Pin (Join-Path $base 'compile-02.result.json') 1048576) 1048576
+foreach($p in $compiled.sources){$null=Read-S54Pin $p 8388608}
+foreach($p in $compiled.images.pin){$null=Read-S54Pin $p 134217728}
+Assert-S54Equal $compiled.test_origins_before $compiled.test_origins_after
+Assert-S54Equal $compiled.test_dep_info_before $compiled.test_dep_info_after
+$embedded=Read-S54Json (Get-S54Pin (Join-Path $base 'compile-public-02/embedded-before.json') 65536) 65536
+Assert-S54Equal $compiled.embedded_before $embedded.inputs
+Assert-S54Equal $compiled.embedded_after (Get-S54EmbeddedSnapshot $workspace)
+$outcome=Read-S54Json (Get-S54Pin (Join-Path $base 'compile-preimages-02/preparation-outcome.json') 65536) 65536
+if(-not $outcome.stage_completed -or $outcome.preparation_succeeded -or $outcome.staged.Count -ne 7 -or $outcome.automatic_rollback -or $outcome.owner_pid -ne (Read-S54Json (Get-S54Pin (Join-Path $base 'compile-02.receipt.json') 65536) 65536).child_pid){throw 'Actual seven-stage source verification outcome.'}
+$pre=Read-S54Json $outcome.preimages 65536
+$before=Read-S54Json (Get-S54Pin (Join-Path $workspace '.tmp/s54-block4d-f-preparation-01/diagnosis.json') 1048576) 1048576
+$stages=@()
+for($n=0;$n -lt 7;$n++){
+ $image=$pre.images[$n];$null=Read-S54Pin $image.saved 134217728
+ if($image.saved.bytes -ne $image.original.bytes -or $image.saved.sha256 -cne $image.original.sha256){throw 'Repair preimage bytes differ.'}
+ $prior=Read-S54Json (Get-S54Pin (Join-Path $base 'compile-preimages-01/preparation-outcome.json') 65536) 65536
+ $old=@($prior.staged|Where-Object {$_.path -ieq $image.path})
+ if($old.Count -ne 1){throw 'Prior exact mutable role missing.'}
+ Assert-S54PinEqual $image.original $old[0]
+ $stagePath=Join-Path $base ('compile-preimages-02/staged-{0:d2}.json' -f $n)
+ $stage=Read-S54Json (Get-S54Pin $stagePath 16384) 16384
+ $null=Read-S54Pin $stage.source 134217728;$null=Read-S54Pin $stage.destination 134217728
+ $stages+=@{record=(Get-S54Pin $stagePath 16384);source=$stage.source;destination=$stage.destination;created_utc=(Get-Item -LiteralPath $stagePath).CreationTimeUtc.ToString('o')}
+}
+$saved=Get-Content (Join-Path $base 'conflicting-normal-pins.json') -Raw|ConvertFrom-Json -AsHashtable
+foreach($p in $saved){$actual=Get-S54Pin $p.saved 134217728;if($actual.bytes -ne $p.bytes -or $actual.sha256 -cne $p.sha256){throw 'Conflicting normal binary evidence changed.'}}
+$baseline=Read-S54Json (Get-S54Pin (Join-Path $base 'baseline.json') 16384) 16384
+$nav=@($baseline.navigation|ForEach-Object {$null=Read-S54Pin $_ 8388608;$_})
+if((& git rev-parse HEAD) -cne $baseline.head -or @(& git diff --cached --name-only).Count){throw 'Unpublished candidate head/index differs.'}
+$old=Get-Content (Join-Path $workspace 'ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-f-preparation-report-01.pins.json') -Raw|ConvertFrom-Json -AsHashtable
+foreach($p in @($old.administration)+@($old.public_artifacts)){$null=Read-S54Pin $p 134217728}
+foreach($path in @('.tmp/migration-s54-feasibility/F-s54-mixed-hooks-feasibility-01-attempt-02','.tmp/migration-s54-feasibility-public-evidence/F-s54-mixed-hooks-feasibility-01-attempt-02','.tmp/migration-s54-integrated/P-s54-whole-resumed-l1-01-attempt-01','.tmp/migration-s54-public-evidence/P-s54-whole-resumed-l1-01-attempt-01')){if(Test-Path (Join-Path $workspace $path)){throw 'Production F02/P01 directories must remain absent.'}}
+if(@(Get-ChildItem -LiteralPath (Join-Path $workspace '.tmp/migration-s54-feasibility/F-s54-mixed-hooks-feasibility-01-attempt-01') -Force).Count){throw 'Failed F01 run must remain empty.'}
+$lock=[IO.File]::Open((Join-Path $workspace '.tmp/s54-preparation.lock'),[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None);$lock.Dispose()
+$rows=@(Get-CimInstance Win32_Process -Property ProcessId,ExecutablePath -OperationTimeoutSec 3 -ErrorAction Stop)
+$paths=@($compiled.images.pin.path)
+$active=@($rows|Where-Object {$_.ExecutablePath -and $_.ExecutablePath -in $paths}|ForEach-Object {@{pid=$_.ProcessId;path=$_.ExecutablePath}})
+if($active.Count){throw 'Actual exact-image process remains; no process stopped by this check.'}
+$parse=@()
+foreach($path in @('scripts/invoke-migration-s54-whole.ps1','scripts/migration-s54-outer.ps1','scripts/migration-s54-preparation.ps1','scripts/run-cargo-tests-stable.ps1','scripts/test-migration-s54-feasibility.ps1','scripts/test-migration-s54-preparation-order.ps1')){
+ $tokens=$null;$errors=$null;$null=[Management.Automation.Language.Parser]::ParseFile((Join-Path $workspace $path),[ref]$tokens,[ref]$errors)
+ if($errors.Count){throw "PS parse failed: $path"};$parse+=$path
+}
+Write-KilogramFrozenJson (Join-Path $base 'final-verification.json') @{classification='source repair final evidence/preservation only; not production preparation or runtime';head=$baseline.head;index_empty=$true;navigation_preserved=$nav;sources_verified=$compiled.sources.Count;seven_stages=$stages;seven_preimages_verified=$true;conflicting_binaries_preserved=$saved;failed_F01_evidence_pins_unchanged=(@($old.administration).Count+@($old.public_artifacts).Count);guard_outcome=$outcome;process_inventory_succeeded=$true;active_exact_images=$active;workspace_lock_released=$true;production_F02_P01_directories_absent=$true;ps_parsed=$parse;runtime='not_established'}
+Write-Output 'source_repair_final_verification=passed; production_runtime=false'

@@ -1,0 +1,170 @@
+[
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-02.receipt.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.receipt.json",
+    "bytes": 2054,
+    "sha256": "78bf74717574b28cf90f0742498f2756524768aff6a67777430c8219dd863623"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-02.stdout.log",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.stdout.log",
+    "bytes": 1231,
+    "sha256": "891b63c8b487730e76631d19ba64f91a3cda4891af4802aa952b33d0f435ae9c"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-02.stderr.log",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.stderr.log",
+    "bytes": 666,
+    "sha256": "727da5f093fb6472c52b864ea9f38c32daff34592ba29a30571069dfa6fd1ac6"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\validate-01.receipt.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/validate-01.receipt.json",
+    "bytes": 2017,
+    "sha256": "fd0bc99e99086b383bbe7df8734c5b42583edee51c58570e13d17a40cb81292c"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\validate-01.stdout.log",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/validate-01.stdout.log",
+    "bytes": 88,
+    "sha256": "5fc15de25ff29777aee392db8b77ab5782892f07a803666b5d70bbb2e1eb93c5"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\validate-01.stderr.log",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/validate-01.stderr.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\final-01.receipt.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/final-01.receipt.json",
+    "bytes": 2004,
+    "sha256": "4bde723718b4dcf5c2fc7ee01fb45a41ba922c179530a41f7d199f3f9545fb60"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\final-01.stdout.log",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/final-01.stdout.log",
+    "bytes": 67,
+    "sha256": "03ec55571acf53bc51aed471f397a0d13facfa99229e4c83d4955ca089ec2a30"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\final-01.stderr.log",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/final-01.stderr.log",
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-02.stage-result.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.stage-result.json",
+    "bytes": 7993,
+    "sha256": "beda2f22d321c86c2f4a3fd1fce3b8a1af4409a6da5062b6e78e46c0bcbe4463"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-02.result.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.result.json",
+    "bytes": 138392,
+    "sha256": "22c2d76626f67ea103b57b1be28854e9f602bac2072842d3ad576d78164da314"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\final-verification.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/final-verification.json",
+    "bytes": 11307,
+    "sha256": "2f8ab4ecd0593b409843d6b578552f5f24ed15c1349be196bc00a1709b43d048"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\owner.ps1",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/owner.ps1.txt",
+    "bytes": 4670,
+    "sha256": "7e04dba5e75f19d6f6949a65876bee1d27c22486eb73cd534ea094a6d5ae4295"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\work.ps1",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/work.ps1.txt",
+    "bytes": 6803,
+    "sha256": "94ccb38118ccdaf264358060b6b08c1e4597e5110edf2bbe3b1362a4515d782e"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\final.ps1",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/final.ps1.txt",
+    "bytes": 6066,
+    "sha256": "8ad3f4976b037380ce8f9adecef779b1c592d22892a94c0503104fa11525b56f"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\validate-existing.ps1",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/validate-existing.ps1.txt",
+    "bytes": 3167,
+    "sha256": "01ee5c6f74fd35d3449265c69a527a6fd5fd1bc3b8e7217309cfe17014d4c61c"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-public-02\\normal.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.normal.json",
+    "bytes": 1765600,
+    "sha256": "85aedde6f0bbe580751f5195c66f5250c8660a2ec96a5bc74297fbaa9a5b232c"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-public-02\\tests.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.tests.json",
+    "bytes": 2729983,
+    "sha256": "b738255100a4350b3f671aa49b2c13cc43adbaed17e5918b85975c43d8928a83"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-public-02\\embedded-before.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.embedded-before.json",
+    "bytes": 756,
+    "sha256": "0693fdc3680f11226f73bf908e4cd4c9be06af3d21857e7e4d02f3bb9d49181b"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-preimages-02\\preimages.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.preimages.json",
+    "bytes": 4536,
+    "sha256": "80b90f3ce7088db581ccb1a19dc40e4c4f4e1a3abc5329b6f2ddfb7b77c016ea"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-preimages-02\\preparation-outcome.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.preparation-outcome.json",
+    "bytes": 1977,
+    "sha256": "9d050368006340d55df85406a380d50f2ba8083bd7b8095c5887c91cc6c06ebb"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-preimages-02\\staged-00.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.staged-00.json",
+    "bytes": 495,
+    "sha256": "07cdd7f7c3ce4dded599123ad4758d54828552358a0eb2094cd23c3ca21026ee"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-preimages-02\\staged-01.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.staged-01.json",
+    "bytes": 523,
+    "sha256": "ccdcc5bc0f4560827b8b501476e76caabe6c3666782588b47a6c7f7c05508226"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-preimages-02\\staged-02.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.staged-02.json",
+    "bytes": 523,
+    "sha256": "eb7169cbe20e8d566d2624a4b4abd6993935d9c3d7c5d82ce4bfa78d9cf875b5"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-preimages-02\\staged-03.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.staged-03.json",
+    "bytes": 540,
+    "sha256": "2dc7c5c4bbec6dec352ae4ee00712612eb57d27a7f59f515287fa7f353a8f78a"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-preimages-02\\staged-04.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.staged-04.json",
+    "bytes": 532,
+    "sha256": "12e45b5870d37122f46a24592d1867bd5530b0cc4c1db82b64266ed5a5395c6c"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-preimages-02\\staged-05.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.staged-05.json",
+    "bytes": 556,
+    "sha256": "74dc7d8771b9dd8da4aee08aba50a6cea6dad3afd5e496ab7d8b7797b3631503"
+  },
+  {
+    "original": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4d-preparation-order-repair-01\\compile-preimages-02\\staged-06.json",
+    "candidate_copy": "ai-docs/tasks/long-lived-dialog-a3-migration-s5-final-block4d-preparation-order-repair-evidence-01/compile-02.staged-06.json",
+    "bytes": 553,
+    "sha256": "396abd3743a6b7988bf2de561128cb8af8e38d3fa6a82bd61fded3bc13157214"
+  }
+]

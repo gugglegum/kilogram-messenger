@@ -1,0 +1,25 @@
+{
+  "head": "d0e0cd7bfb05132b0769dc468dec027218d9950b",
+  "navigation": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\README.md",
+      "bytes": 210074,
+      "sha256": "ae9bebb51c93508b583b0d60082dba9fb045048abe94872110dfc7841554ab9e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\chat-coordination.md",
+      "bytes": 165557,
+      "sha256": "9caaccb89bb980f980b713061967f616d8a6a7d5f4b01a438560c589fd003122"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\next-stage-plan.md",
+      "bytes": 60232,
+      "sha256": "52e158dd72339b23ef93de531300a57f60345dfb3b46cd7b41c044978c2906c1"
+    }
+  ],
+  "task": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4d-f-preparation-task-01.md",
+    "bytes": 4996,
+    "sha256": "8ad45fce321100d4c78a93e95b0d303e4e981ebe15ee7a2fbfb51b05ff393d87"
+  }
+}
