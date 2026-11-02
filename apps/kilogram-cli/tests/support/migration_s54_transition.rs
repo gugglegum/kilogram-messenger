@@ -48,7 +48,8 @@ impl Controller {
         self.stop(1)?;
         self.stop(0)?;
         self.stopped(0)?;
-        self.old_overlap = source::current_old_encrypts(&self.view(0, 0)?)?;
+        let encrypts = source::current_old_encrypts(&self.view(0, 0)?)?;
+        self.old_overlap = encrypts.iter().map(accounting::Fact::legacy_json).collect();
         self.migrate(1)?;
         let prior = &self.rows["p2"]["a"]["next"];
         let readable = prior[0].as_u64().context("observed A own frontier")?
@@ -66,6 +67,26 @@ impl Controller {
                         .packet_effects(),
             )?;
         ensure!(observed == 95, "source-observed old/genesis subtotal95");
+        let mut facts = self.migration[0]
+            .as_ref()
+            .context("A migration")?
+            .accounting_facts()?;
+        facts.extend(encrypts.iter().cloned());
+        facts.extend(
+            self.migration[1]
+                .as_ref()
+                .context("B migration")?
+                .accounting_facts()?,
+        );
+        ensure!(
+            self.accounting
+                .capture(accounting::Stage::P2, facts)?
+                .calls()?
+                == observed,
+            "typed observed95 effects"
+        );
+        self.current_intervals()?;
+        self.accounting.bind_encrypts(&self.intervals, &encrypts)?;
         self.remember(
             "p2-source-subtotal",
             json!({"old_genesis_subtotal":observed}),
@@ -315,12 +336,49 @@ impl Controller {
         })?;
         self.identity()?;
         let actual = early::history(&self.view(0, 0)?)?;
-        self.old_overlap.extend(
+        let late = self.migration[1]
+            .as_ref()
+            .context("actual B legacy sources")?
+            .late_accounting(
+                &actual,
+                self.original[0].as_ref().context("actual A source")?,
+            )?;
+        self.old_overlap
+            .extend(late.iter().map(accounting::Fact::legacy_json));
+        let mut old_facts = self.accounting.facts(accounting::Stage::P2, 0);
+        old_facts.extend(late.iter().cloned());
+        old_facts.extend(
             self.migration[1]
                 .as_ref()
-                .context("actual B legacy sources")?
-                .late_old(&actual)?,
+                .context("B migration")?
+                .accounting_facts()?,
         );
+        let old = self.accounting.capture(accounting::Stage::P4, old_facts)?;
+        self.accounting.readable(&actual)?;
+        let marks = [0, 1].map(|o| -> Result<accounting::Mark> {
+            let run = self.running[o]
+                .as_ref()
+                .context("same actual current child")?;
+            let row = &readable["after"][o];
+            let next = [
+                row["next"][0].as_u64().context("actual C1 next0")?,
+                row["next"][1].as_u64().context("actual C1 next1")?,
+            ];
+            accounting::Mark::live(
+                run.interval_start,
+                run.decoder.normal_identity()?,
+                next,
+                &run.decoder.interval_prefix()?,
+            )
+        });
+        let [a, b] = marks;
+        let a = a?;
+        let b = b?;
+        self.accounting
+            .bind_late(&self.intervals, &late, a.clone())?;
+        self.accounting
+            .b25(&self.intervals, 0, &readable["received"], a)?;
+        self.accounting.b25(&self.intervals, 1, &b25, b)?;
         ensure!(
             self.old_overlap.len() == 17
                 && self
@@ -348,6 +406,10 @@ impl Controller {
         ensure!(
             observed == 104,
             "source-observed old/genesis subtotal104, separate B25"
+        );
+        ensure!(
+            old.calls()? == u64::try_from(observed)?,
+            "typed observed104 excludes chronological B25"
         );
         let b25_copies = usize::from(b25["id"].is_string())
             + usize::from(readable["received"]["id"].is_string());

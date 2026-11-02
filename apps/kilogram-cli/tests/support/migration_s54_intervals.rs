@@ -2,7 +2,7 @@
 use super::*;
 #[cfg(test)]
 #[path = "migration_s54_intervals_tests.rs"]
-mod tests;
+pub(super) mod tests;
 const LIFETIMES: usize = 32;
 const OPERATIONS: usize = 4096;
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -11,7 +11,7 @@ pub(super) struct Work {
     pub decrypt: u64,
 }
 impl Work {
-    fn add(self, b: Self) -> Result<Self> {
+    pub(super) fn add(self, b: Self) -> Result<Self> {
         Ok(Self {
             encrypt: self
                 .encrypt
@@ -23,7 +23,7 @@ impl Work {
                 .context("interval decrypt overflow")?,
         })
     }
-    fn sub(self, b: Self) -> Result<Self> {
+    pub(super) fn sub(self, b: Self) -> Result<Self> {
         Ok(Self {
             encrypt: self
                 .encrypt
@@ -35,12 +35,12 @@ impl Work {
                 .context("negative interval decrypt tail")?,
         })
     }
-    fn calls(self) -> Result<u64> {
+    pub(super) fn calls(self) -> Result<u64> {
         self.encrypt
             .checked_add(self.decrypt)
             .context("interval calls overflow")
     }
-    fn of(c: oracle::Counts) -> Self {
+    pub(super) fn of(c: oracle::Counts) -> Self {
         Self {
             encrypt: c.encrypt,
             decrypt: c.decrypt,
@@ -253,7 +253,7 @@ pub(super) struct CloseInput<'a> {
     pub end: &'a source::End,
     pub kind: ClosureKind,
 }
-#[derive(Default)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub(super) struct Ledger {
     pub migrations: [Option<Endpoint>; 2],
     pub starts: Vec<Started>,

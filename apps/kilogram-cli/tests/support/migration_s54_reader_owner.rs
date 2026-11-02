@@ -139,7 +139,11 @@ fn history(
     }
     anyhow::bail!("bounded complete history EOF missing")
 }
-pub(super) fn read(s: &mut control::Controller, input: Input<'_>) -> Result<Owner> {
+pub(super) fn read(
+    s: &mut control::Controller,
+    input: Input<'_>,
+    accounting: &mut accounting::Draft,
+) -> Result<Owner> {
     let Input {
         owner,
         closure,
@@ -206,6 +210,7 @@ pub(super) fn read(s: &mut control::Controller, input: Input<'_>) -> Result<Owne
         state::parse_id(&s.origin.contexts[1])?,
     ];
     let slots = gates::mapping(owner, repo.contexts(), contexts, ready)?;
+    accounting.begin_owner(owner as u8, repo.source_id(), slots)?;
     ensure!(
         profile
             .enabled_contexts
@@ -337,6 +342,8 @@ pub(super) fn read(s: &mut control::Controller, input: Input<'_>) -> Result<Owne
             );
             original.terminal_source(c, role, 0, &raw, None)?;
             migration.terminal_source(c, role, 0, &raw, None)?;
+            let event = old::Event::parse(&raw, spec.peers[role as usize].cert.device_id())?;
+            accounting.genesis(accounting::Atom::legacy(c as u8, &raw, &event, None)?)?;
         }
         origins.push(origin);
         proofs.push(proof);
@@ -469,6 +476,7 @@ pub(super) fn read(s: &mut control::Controller, input: Input<'_>) -> Result<Owne
                 }
                 witness_hash.update(&row.event);
                 witness_hash.update(&row.receipt_hash);
+                accounting.text(c as u8, &row)?;
                 graph.insert(row)?;
             }
         }
@@ -487,6 +495,7 @@ pub(super) fn read(s: &mut control::Controller, input: Input<'_>) -> Result<Owne
     let graph = graph.finish()?;
     let mut histories = Vec::new();
     let mut native = Vec::new();
+    let mut lineages = Vec::new();
     for c in 0..2 {
         let tails = metadata[c]
             .tails
@@ -507,7 +516,7 @@ pub(super) fn read(s: &mut control::Controller, input: Input<'_>) -> Result<Owne
             snapshot.head == heads[c].0,
             "same already-verified actual Head before Native checkpoint"
         );
-        native.push(checkpoint::read(checkpoint::Input {
+        let checkpoint = checkpoint::read(checkpoint::Input {
             material: &material,
             source: repo.source_id(),
             head: &heads[c].1,
@@ -520,7 +529,15 @@ pub(super) fn read(s: &mut control::Controller, input: Input<'_>) -> Result<Owne
             migration,
             context: c,
             live: &public[c]["native"],
-        })?);
+        })?;
+        lineages.push(checkpoint.lineage(
+            c as u8,
+            slots[c],
+            repo.source_id(),
+            &origins[c],
+            &graph.contexts[c],
+        )?);
+        native.push(checkpoint);
         tick(&mut s.relay, s.until)?;
     }
     // Original witnesses are no longer borrowed when Controller checks run
@@ -566,5 +583,11 @@ pub(super) fn read(s: &mut control::Controller, input: Input<'_>) -> Result<Owne
     };
     drop(repo);
     s.check()?;
+    accounting.finish_owner(
+        &result.graph,
+        lineages
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("two verified owner/context lineages"))?,
+    )?;
     Ok(result)
 }

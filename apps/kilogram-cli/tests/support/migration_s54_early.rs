@@ -212,6 +212,8 @@ impl Controller {
         );
         let ready = self.origin.migrate_stopped(owner)?;
         let endpoint = witness.after_migration(&self.origin.pair.nodes[owner], &ready)?;
+        self.accounting
+            .migration(&endpoint, witness.accounting_facts()?)?;
         self.intervals.migration(owner as u8, endpoint)?;
         self.remember(
             &format!("migration-{owner}"),
@@ -254,6 +256,18 @@ impl Controller {
         ensure!(
             observed == 71,
             "source-observed old/genesis subtotal71 before packet17/18"
+        );
+        let mut facts = self.migration[0]
+            .as_ref()
+            .context("original A migration")?
+            .accounting_facts()?;
+        facts.extend(stopped_b.accounting_facts()?);
+        ensure!(
+            self.accounting
+                .capture(accounting::Stage::P0, facts)?
+                .calls()?
+                == u64::try_from(observed)?,
+            "typed observed71 effects"
         );
         self.remember(
             "p0-source-subtotal",

@@ -4,6 +4,8 @@ use kilogram_cli::ordered_dialog::{runtime7::Profile3, state};
 use kilogram_protocol::ordered_dialog_v1 as old;
 use kilogram_state::indexed_dialog as db;
 use std::collections::{BTreeMap, BTreeSet};
+#[path = "migration_s54_accounting.rs"]
+mod accounting;
 #[cfg(test)]
 #[path = "migration_s54_block2_tests.rs"]
 mod block2_tests;

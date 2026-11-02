@@ -71,6 +71,8 @@ pub(super) struct Input<'a> {
 }
 #[derive(Clone, Debug)]
 pub(in super::super) struct Checkpoint {
+    origin: old::Id,
+    curve: old::Id,
     scope: old::Id,
     content: old::Id,
     account: old::Id,
@@ -86,9 +88,45 @@ pub(in super::super) struct Checkpoint {
     pub native_generation: u64,
 }
 impl Checkpoint {
+    pub fn lineage(
+        &self,
+        index: u8,
+        slot: u8,
+        source: old::Id,
+        origin: &v2::VerifiedExistingScope1,
+        graph: &graph::Context,
+    ) -> Result<accounting::Lineage> {
+        let scope = Scope::verified(origin)?;
+        let ids = origin.old_control_ids();
+        ensure!(
+            self.context == origin.c()
+                && self.origin == scope.origin
+                && self.role < 2
+                && self.curve == scope.curves[self.role as usize]
+                && graph.context == self.context
+                && graph.genesis == [ids[2], ids[3]],
+            "same restored original account/session and authenticated genesis lineage"
+        );
+        Ok(accounting::Lineage {
+            owner: self.role,
+            source,
+            index,
+            context: self.context,
+            slot,
+            scope: self.origin,
+            graph_scope: graph.scope_commitment,
+            offer: ids[0],
+            grant: ids[1],
+            genesis: [ids[2], ids[3]],
+            curve: self.curve,
+            native_public: self.public_identity,
+        })
+    }
     pub fn same_content(&self, other: &Self) -> Result<()> {
         ensure!(
             self.scope == other.scope
+                && self.origin == other.origin
+                && self.curve == other.curve
                 && self.content == other.content
                 && self.account == other.account
                 && self.session == other.session
@@ -321,6 +359,8 @@ fn open(
             )?,
         );
         Ok(Checkpoint {
+            origin: i.scope.origin,
+            curve: account.curve_key(),
             scope,
             content: old::hash(b"kg:s54:native-payload:v1\0", &plain),
             account: digest(p[3].bytes()?),

@@ -1,0 +1,347 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification-scale' without executing them...
+frozen_artifacts_verified=True
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-runtime2_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+WARNING: Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+skipping_unchanged_test=ordered_ingress::
+skipping_unchanged_test=recovery_discovery::
+skipping_unchanged_test=recovery_link::
+skipping_unchanged_test=recovery_plan::
+skipping_unchanged_test=recovery_platform::
+skipping_unchanged_test=recovery_qr::
+skipping_unchanged_test=recovery_scheduler::
+skipping_unchanged_test=runtime_endpoint_announcement::
+skipping_unchanged_test=runtime_own_device_automation::
+skipping_unchanged_test=runtime_own_device_discovery::
+skipping_unchanged_test=runtime_own_device_roster::
+skipping_unchanged_test=runtime_publication::
+skipping_unchanged_test=runtime_queue::
+skipping_unchanged_test=runtime_ticket_automation::
+skipping_unchanged_test=tests::
+skipping_unchanged_test=canonical_sync_v2_runtime::
+skipping_unchanged_test=ordered_dialog::
+skipping_unchanged_test=live_l1::
+skipping_unchanged_test=migration_s5_process_actual_renewed_pending_and_undelivered
+skipping_unchanged_test=migration_s5_process_capacity_crash_and_predecessor_fences
+skipping_unchanged_test=migration_s5_process_fence_copy_ready_publication_kills
+skipping_unchanged_test=migration_s5_process_real_d9b_partial_control_peer_origins
+skipping_unchanged_test=migration_s5_process_two_context_escrow_and_history
+skipping_unchanged_test=s53_deadline::
+skipping_unchanged_test=s54_capture::
+skipping_unchanged_test=s54_memory::
+skipping_unchanged_test=a3_s4_component_ipc_history_escaped_byte_budget_no_cursor_skip
+skipping_unchanged_test=a3_s4_process_burst128_bounded_rounds
+skipping_unchanged_test=a3_s4_process_smoke_fresh_offline_restart_readable
+skipping_unchanged_test=bootstrap::
+skipping_unchanged_test=diagnostic::
+skipping_unchanged_test=faults::
+skipping_unchanged_test=lifecycle::
+skipping_unchanged_test=positive::
+skipping_unchanged_test=schedule_control::
+skipping_unchanged_test=versions::
+skipping_unchanged_test=ordered2::
+skipping_unchanged_test=ordered::
+skipping_unchanged_test=real_local_relay_preserves_adapter_frames_route_policies_and_reconnect
+isolated_test_order=BeforeAggregate
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::accounting::tests::s54_b1b_complete_directed_union_consumes_exact_current_capacities
+
+running 1 test
+test live_l1::handoff::final_p5::accounting::tests::s54_b1b_complete_directed_union_consumes_exact_current_capacities ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.02s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::accounting::tests::s54_b1b_overlap_omitted_duplicate_foreign_or_swapped_despite_equal_totals_refuses
+
+running 1 test
+test live_l1::handoff::final_p5::accounting::tests::s54_b1b_overlap_omitted_duplicate_foreign_or_swapped_despite_equal_totals_refuses ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.02s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::accounting::tests::s54_b1b_original_raw_cipher_projection_and_event_binding_cannot_be_replaced
+
+running 1 test
+test live_l1::handoff::final_p5::accounting::tests::s54_b1b_original_raw_cipher_projection_and_event_binding_cannot_be_replaced ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.02s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::accounting::tests::s54_b1b_b25_old104_chronological106_and_c2_event1_stay_distinct
+
+running 1 test
+test live_l1::handoff::final_p5::accounting::tests::s54_b1b_b25_old104_chronological106_and_c2_event1_stay_distinct ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.02s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::accounting::tests::s54_b1b_partial_duplicate_tap_or_later_graph_owner_failure_never_seals
+
+running 1 test
+test live_l1::handoff::final_p5::accounting::tests::s54_b1b_partial_duplicate_tap_or_later_graph_owner_failure_never_seals ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.02s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::accounting::tests::s54_b1b_genesis_lineage_scope_role_slot_and_account_substitution_refuse
+
+running 1 test
+test live_l1::handoff::final_p5::accounting::tests::s54_b1b_genesis_lineage_scope_role_slot_and_account_substitution_refuse ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.02s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::accounting::tests::s54_b1b_zero_restart_same_pid_new_lifetime_preserves_prior_p10_decrypt
+
+running 1 test
+test live_l1::handoff::final_p5::accounting::tests::s54_b1b_zero_restart_same_pid_new_lifetime_preserves_prior_p10_decrypt ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.02s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::accounting::tests::s54_b1b_restart_reused_nonce_missing_owner_nonzero_or_moved_old_work_refuses
+
+running 1 test
+test live_l1::handoff::final_p5::accounting::tests::s54_b1b_restart_reused_nonce_missing_owner_nonzero_or_moved_old_work_refuses ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.02s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::accounting::tests::s54_b1b_checked_union_refuses_overflow_and_underflow
+
+running 1 test
+test live_l1::handoff::final_p5::accounting::tests::s54_b1b_checked_union_refuses_overflow_and_underflow ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::accounting::tests::s54_b1b_signed_selected_sources_bridge_raw_cipher_body_and_format
+
+running 1 test
+test live_l1::handoff::final_p5::accounting::tests::s54_b1b_signed_selected_sources_bridge_raw_cipher_body_and_format ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.01s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::intervals::tests::s54_b1a_observed_mixed_context_prefix_and_reconciled_root_membership_are_separate
+
+running 1 test
+test live_l1::handoff::final_p5::intervals::tests::s54_b1a_observed_mixed_context_prefix_and_reconciled_root_membership_are_separate ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::intervals::tests::s54_b1a_committed_metadata_ignores_unmaterialized_pending_sources
+
+running 1 test
+test live_l1::handoff::final_p5::intervals::tests::s54_b1a_committed_metadata_ignores_unmaterialized_pending_sources ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::intervals::tests::s54_b1a_reused_pid_new_nonce_lifetime_is_valid_but_reused_nonce_is_not
+
+running 1 test
+test live_l1::handoff::final_p5::intervals::tests::s54_b1a_reused_pid_new_nonce_lifetime_is_valid_but_reused_nonce_is_not ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::intervals::tests::s54_b1a_missing_duplicate_foreign_open_or_unresolved_outcomes_refuse
+
+running 1 test
+test live_l1::handoff::final_p5::intervals::tests::s54_b1a_missing_duplicate_foreign_open_or_unresolved_outcomes_refuse ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::intervals::tests::s54_b1a_lane_gaps_regressions_mapping_direction_and_tail_are_checked
+
+running 1 test
+test live_l1::handoff::final_p5::intervals::tests::s54_b1a_lane_gaps_regressions_mapping_direction_and_tail_are_checked ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::intervals::tests::s54_b1a_synthetic_tail_cannot_be_normal_or_observed_or_unexplained
+
+running 1 test
+test live_l1::handoff::final_p5::intervals::tests::s54_b1a_synthetic_tail_cannot_be_normal_or_observed_or_unexplained ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::intervals::tests::s54_b1a_zero_work_frozen_format_and_dirty_counters_do_not_bypass_coverage
+
+running 1 test
+test live_l1::handoff::final_p5::intervals::tests::s54_b1a_zero_work_frozen_format_and_dirty_counters_do_not_bypass_coverage ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::intervals::tests::s54_b1a_bound32_and_prior_decrypt_cannot_move_to_zero_restart
+
+running 1 test
+test live_l1::handoff::final_p5::intervals::tests::s54_b1a_bound32_and_prior_decrypt_cannot_move_to_zero_restart ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::reader::tests::s54_p11a5_original_ready_slot_mapping_rejects_foreign_and_duplicate_owner
+
+running 1 test
+test live_l1::handoff::final_p5::reader::tests::s54_p11a5_original_ready_slot_mapping_rejects_foreign_and_duplicate_owner ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::reader::tests::s54_p11a5_exact_root_counts_exclude_all_relevant_distant_extras
+
+running 1 test
+test live_l1::handoff::final_p5::reader::tests::s54_p11a5_exact_root_counts_exclude_all_relevant_distant_extras ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::reader::tests::s54_p11a5_terminal_next_and_repair_obligations_cannot_be_hidden
+
+running 1 test
+test live_l1::handoff::final_p5::reader::tests::s54_p11a5_terminal_next_and_repair_obligations_cannot_be_hidden ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::reader::tests::s54_p11a5_both_active_original_control_scope_is_required
+
+running 1 test
+test live_l1::handoff::final_p5::reader::tests::s54_p11a5_both_active_original_control_scope_is_required ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::reader::tests::s54_p11a5_actual_a3_projection_request_and_b640_gates
+
+running 1 test
+test live_l1::handoff::final_p5::reader::tests::s54_p11a5_actual_a3_projection_request_and_b640_gates ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::reader::tests::s54_p11a5_history_must_match_original_projection_and_verified_receipt
+
+running 1 test
+test live_l1::handoff::final_p5::reader::tests::s54_p11a5_history_must_match_original_projection_and_verified_receipt ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::reader::checkpoint::tests::s54_p11a6_real_restore_both_roles_asymmetric_guard_and_zero_reader_calls
+
+running 1 test
+test live_l1::handoff::final_p5::reader::checkpoint::tests::s54_p11a6_real_restore_both_roles_asymmetric_guard_and_zero_reader_calls ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::reader::checkpoint::tests::s54_p11a6_real_restored_account_sid_and_all_public_keys_must_match
+
+running 1 test
+test live_l1::handoff::final_p5::reader::checkpoint::tests::s54_p11a6_real_restored_account_sid_and_all_public_keys_must_match ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::reader::checkpoint::tests::s54_p11a6_cut_content_commits_stored_pickles_guard_and_reservation_not_outer_seal
+
+running 1 test
+test live_l1::handoff::final_p5::reader::checkpoint::tests::s54_p11a6_cut_content_commits_stored_pickles_guard_and_reservation_not_outer_seal ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::graph::tests::s54_p11a4_actual_genesis_predecessor_and_stored_tails
+
+running 1 test
+test live_l1::handoff::final_p5::graph::tests::s54_p11a4_actual_genesis_predecessor_and_stored_tails ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.01s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::graph::tests::s54_p11a4_owner_cut_comparison_covers_each_normalized_commitment
+
+running 1 test
+test live_l1::handoff::final_p5::graph::tests::s54_p11a4_owner_cut_comparison_covers_each_normalized_commitment ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.05s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::graph::tests::s54_p11a4_a3_signed_record_output_bridges_into_complete_graph
+
+running 1 test
+test live_l1::handoff::final_p5::graph::tests::s54_p11a4_a3_signed_record_output_bridges_into_complete_graph ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.01s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::records::tests::s54_p11a3_signed_text_receipts_dispatch_independently_across_both_context_cuts
+
+running 1 test
+test live_l1::handoff::final_p5::records::tests::s54_p11a3_signed_text_receipts_dispatch_independently_across_both_context_cuts ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.01s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::records::tests::s54_p11a3_actual_normalized_facts_preserve_signed_parents_sequence_and_ciphertext
+
+running 1 test
+test live_l1::handoff::final_p5::records::tests::s54_p11a3_actual_normalized_facts_preserve_signed_parents_sequence_and_ciphertext ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 262 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 112 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 73 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 263 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-runtime2_process-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 17 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 11 filtered out; finished in 0.00s
+
+running_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 1 filtered out; finished in 0.00s
+
+cache_status=skipped_explicitly
+status=passed
+isolated_test_count=32

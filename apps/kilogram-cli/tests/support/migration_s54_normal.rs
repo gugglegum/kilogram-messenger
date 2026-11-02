@@ -14,7 +14,7 @@ pub(in super::super) struct Closure {
     pub generation: u64,
     pub operation: old::Id,
     pub point: [u64; 2],
-    outcome: usize,
+    pub(in super::super) outcome: usize,
 }
 fn closed_outcome(c: &Closure, row: &Value, owner: usize) -> Result<()> {
     ensure!(

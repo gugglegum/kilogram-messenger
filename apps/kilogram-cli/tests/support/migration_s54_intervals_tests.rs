@@ -40,17 +40,17 @@ fn feed(
 ) -> Result<()> {
     d.line(&format!("s54_observation {}",json!({"kind":kind,"pid":key.pid,"owner":state::hex(&key.owner),"incarnation":state::hex(&key.nonce),"sequence":sequence,"facts":facts})),ops,&mut Default::default(),&mut 0)
 }
-struct Case {
-    owner: u8,
-    lifetime: u64,
-    pid: u32,
-    nonce: u8,
-    packets: Vec<(u8, Work)>,
-    tail: [Work; 2],
-    normal: bool,
+pub(crate) struct Case {
+    pub owner: u8,
+    pub lifetime: u64,
+    pub pid: u32,
+    pub nonce: u8,
+    pub packets: Vec<(u8, Work)>,
+    pub tail: [Work; 2],
+    pub normal: bool,
 }
 impl Case {
-    fn zero(owner: u8, lifetime: u64, nonce: u8) -> Self {
+    pub fn zero(owner: u8, lifetime: u64, nonce: u8) -> Self {
         Self {
             owner,
             lifetime,
@@ -62,17 +62,20 @@ impl Case {
         }
     }
 }
-struct Model {
-    ledger: Ledger,
-    ops: oracle::Operations,
-    outcomes: Vec<Value>,
+pub(crate) struct Model {
+    pub ledger: Ledger,
+    pub ops: oracle::Operations,
+    pub outcomes: Vec<Value>,
     generation: [u64; 2],
 }
 impl Model {
     fn new() -> Result<Self> {
+        Self::with_migrations([endpoint(0), endpoint(1)])
+    }
+    pub fn with_migrations(endpoints: [Endpoint; 2]) -> Result<Self> {
         let mut ledger = Ledger::default();
         for o in 0..2 {
-            ledger.migration(o, endpoint(o))?;
+            ledger.migration(o, endpoints[o as usize].clone())?;
         }
         Ok(Self {
             ledger,
@@ -81,7 +84,7 @@ impl Model {
             generation: [0; 2],
         })
     }
-    fn current(&mut self, c: Case) -> Result<usize> {
+    pub fn current(&mut self, c: Case) -> Result<usize> {
         let owner = c.owner as usize;
         let initial = self
             .ledger
@@ -90,7 +93,12 @@ impl Model {
             .rev()
             .find(|x| self.ledger.starts[x.start].owner == c.owner)
             .map(|x| x.endpoint.clone())
-            .unwrap_or(endpoint(c.owner));
+            .unwrap_or(
+                self.ledger.migrations[owner]
+                    .as_ref()
+                    .context("supplied migration")?
+                    .clone(),
+            );
         let index = self.ledger.started(Started {
             owner: c.owner,
             lifetime: c.lifetime,
@@ -105,7 +113,7 @@ impl Model {
         let mut d = observations::Decoder::new(
             c.pid,
             key.owner,
-            [state::hex(&[3; 32]), state::hex(&[4; 32])],
+            initial.lanes.each_ref().map(|l| state::hex(&l.context)),
             c.owner,
         );
         feed(

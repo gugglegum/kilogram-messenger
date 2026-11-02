@@ -41,6 +41,47 @@ pub(super) struct Legacy {
     pub source_id: old::Id,
 }
 impl Legacy {
+    pub fn accounting_facts(&self) -> Result<Vec<accounting::Fact>> {
+        let mut facts = Vec::new();
+        for (index, ctx) in self.contexts.iter().enumerate() {
+            let spec = Spec::parse(&ctx.spec)?;
+            for ((author, n), raw) in &ctx.events {
+                let event = old::Event::parse(raw, spec.peers[*author as usize].cert.device_id())?;
+                let body = if *n == 0 {
+                    None
+                } else {
+                    let row = ctx
+                        .history
+                        .get(&state::hex(&event.id()?))
+                        .context("retained original projection")?;
+                    ensure!(
+                        row["request"] == state::hex(&event.core.request),
+                        "original request/event body witness"
+                    );
+                    Some(row["text"].as_str().context("retained original body")?)
+                };
+                facts.push(accounting::Fact::new(
+                    ctx.role,
+                    self.source_id,
+                    self.source_id,
+                    accounting::Atom::legacy(index.try_into()?, raw, &event, body)?,
+                )?);
+            }
+        }
+        Ok(facts)
+    }
+    pub fn late_accounting(
+        &self,
+        actual: &[Value],
+        receiver: &Self,
+    ) -> Result<Vec<accounting::Fact>> {
+        self.late_old(actual)?;
+        self.accounting_facts()?
+            .into_iter()
+            .filter(|f| f.late_position())
+            .map(|f| f.for_receiver(receiver.contexts[0].role, receiver.source_id))
+            .collect()
+    }
     pub fn terminal_native(&self, index: usize, sid: &str, keys: &[old::Id; 3]) -> Result<()> {
         let ctx = self
             .contexts
@@ -638,7 +679,7 @@ pub(super) fn debt(node: &Node, request: oracle::Request) -> Result<Value> {
         json!({"request":request_id(request),"id":state::hex(&id),"source_blake3":hash(&raw),"ciphertext_blake3":hash(old::decode(&raw,kilogram_protocol::ordered_dialog_v2::MAX_EVENT)?.fields(5)?[3].bytes()?),"receipt_expected":{"context":node.branch.context,"role":request.role,"ordinal":request.number,"event_id":state::hex(&id)}}),
     )
 }
-pub(super) fn current_old_encrypts(node: &Node) -> Result<Vec<Value>> {
+pub(super) fn current_old_encrypts(node: &Node) -> Result<Vec<accounting::Fact>> {
     owned(node)?;
     let p = Profile3::load(&node.profile)?;
     let mut repo = p.open(&node.profile)?;
@@ -651,15 +692,21 @@ pub(super) fn current_old_encrypts(node: &Node) -> Result<Vec<Value>> {
         let event = old::Event::parse(&raw, spec.peers[0].cert.device_id())?;
         let request = oracle::Request::new(0, 0, n)?;
         let id = event.id()?;
+        let projection = repo.projection(node.slot, id)?;
         ensure!(
             event.core.c == spec.c
                 && event.core.role == 0
                 && event.core.n == u64::from(n)
                 && event.core.request == parse_request_id(&request_id(request))?
-                && repo.projection(node.slot, id)?.text == request.body(),
+                && projection.text == request.body(),
             "actual source-bound current old encrypt"
         );
-        out.push(json!({"role":0,"ordinal":n,"event":state::hex(&id),"source_blake3":hash(&raw),"effect":"current-old-encrypt"}));
+        out.push(accounting::Fact::new(
+            0,
+            repo.source_id(),
+            repo.source_id(),
+            accounting::Atom::legacy(0, &raw, &event, Some(&projection.text))?,
+        )?);
     }
     Ok(out)
 }

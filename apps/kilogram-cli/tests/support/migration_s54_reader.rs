@@ -42,8 +42,16 @@ pub(super) struct Owner {
 }
 pub(super) struct Cut {
     pub owners: [Owner; 2],
+    pub accounting: accounting::Accounted,
 }
 impl Cut {
+    pub fn after_zero_restart(&self, other: &Self) -> Result<()> {
+        self.same_content(other)?;
+        self.accounting.after_zero_restart(
+            &other.accounting,
+            &other.owners.each_ref().map(|o| o.closure.clone()),
+        )
+    }
     pub fn same_content(&self, other: &Self) -> Result<()> {
         for (a, b) in self.owners.iter().zip(&other.owners) {
             ensure!(
@@ -101,8 +109,7 @@ fn expected(previous: &relay::Continuation) -> Result<[[BTreeMap<String, Value>;
     Ok(maps)
 }
 pub(super) fn read(previous: &mut relay::Continuation) -> Result<Cut> {
-    let before = kilogram_ratchet::ordered::native_call_counts();
-    let result = (|| {
+    let (owners, accounting) = accounting::seal_read(|| {
         let maps = expected(previous)?;
         let immutable = previous.previous.previous.previous.previous.immutable()?;
         let ack = previous.previous.previous.ack_replayed.clone();
@@ -118,6 +125,13 @@ pub(super) fn read(previous: &mut relay::Continuation) -> Result<Cut> {
         let s = &mut previous.previous.previous.previous.previous.controller;
         let _phase = s53_deadline::Phase::until(s.until)?;
         let closures = s.normal_pair()?;
+        s.current_intervals()?;
+        let mut accounting = accounting::Draft::new(
+            &s.accounting,
+            &s.intervals,
+            &s.operations.summary()?,
+            &s.outcomes,
+        )?;
         ensure!(
             s.phases.next == 11
                 && !s.phases.complete()
@@ -144,6 +158,7 @@ pub(super) fn read(previous: &mut relay::Continuation) -> Result<Cut> {
                     held: &held,
                     ack: &ack,
                 },
+                &mut accounting,
             )?);
             ensure!(
                 s.normal_pair()? == closures,
@@ -158,11 +173,8 @@ pub(super) fn read(previous: &mut relay::Continuation) -> Result<Cut> {
             owners[0].history == owners[1].history && owners[0].witnesses == owners[1].witnesses,
             "both actual immutable owner contents equal, excluding owner-specific IDs/generations"
         );
-        Ok(Cut { owners })
-    })();
-    ensure!(
-        before == kilogram_ratchet::ordered::native_call_counts(),
-        "stopped reader has zero Native constructors/packet calls, including failures"
-    );
-    result
+        let pending = accounting.finish([&owners[0].graph, &owners[1].graph])?;
+        Ok((owners, pending))
+    })?;
+    Ok(Cut { owners, accounting })
 }

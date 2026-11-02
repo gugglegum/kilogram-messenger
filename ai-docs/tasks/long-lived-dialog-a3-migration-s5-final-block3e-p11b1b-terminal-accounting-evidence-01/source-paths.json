@@ -1,0 +1,17 @@
+[
+  "apps/kilogram-cli/tests/support/migration_s54_source.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_early.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_transition.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_control.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_reader.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_reader_owner.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_native_checkpoint.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_intervals.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_p5.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_accounting.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_accounting_tap.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_accounting_tests.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_accounting_fixture.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_intervals_tests.rs",
+  "apps/kilogram-cli/tests/support/migration_s54_normal.rs"
+]
