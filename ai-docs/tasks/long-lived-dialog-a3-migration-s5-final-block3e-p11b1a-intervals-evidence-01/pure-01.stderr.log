@@ -1,0 +1,8 @@
+    Finished `verification-scale` profile [optimized + debuginfo] target(s) in 1.00s
+Error: interval source/context identity
+Exception: E:\AI-Projects\kilogram-p2p-messenger\scripts\run-cargo-tests-stable.ps1:313
+Line |
+ 313 |  :             throw "Isolated stable test failed with exit code ${testE :
+     |                ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Isolated stable test failed with exit code 101:
+     | live_l1::handoff::final_p5::intervals::tests::s54_b1a_committed_metadata_ignores_unmaterialized_pending_sources

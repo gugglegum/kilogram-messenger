@@ -50,6 +50,23 @@ fn commit(d: &mut Decoder, o: &mut oracle::Operations) -> Result<()> {
 fn end(point: (u64, u64), generation: u64, op: u8) -> source::End {
     source::End {
         point,
+        endpoint: intervals::Endpoint {
+            source: [1; 32],
+            lanes: [
+                intervals::Lane {
+                    context: [3; 32],
+                    slot: 0,
+                    role: 0,
+                    next: [point.0 + 1, point.1 + 1],
+                },
+                intervals::Lane {
+                    context: [4; 32],
+                    slot: 1,
+                    role: 0,
+                    next: [1, 1],
+                },
+            ],
+        },
         generation,
         operation: [op; 32],
     }

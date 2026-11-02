@@ -1,0 +1,21 @@
+{
+  "step": "clippy-01",
+  "executable": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+  "argv": [
+    "-NoProfile",
+    "-NonInteractive",
+    "-File",
+    "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11b1a-01\\clippy.ps1"
+  ],
+  "actual_child_exit_code": 101,
+  "exit_code": 1,
+  "elapsed_seconds": 11.7465366,
+  "cleanup_verified": true,
+  "error": "Native check exit 101",
+  "outer_job_owner_pid": 3204,
+  "actual_launcher_membership_verified": true,
+  "work_expired": false,
+  "members_before_cleanup": [],
+  "members_after_cleanup": [],
+  "capture_harness_membership": []
+}

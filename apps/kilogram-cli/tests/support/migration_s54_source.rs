@@ -334,7 +334,7 @@ impl Legacy {
             source_id: source.source_id(),
         })
     }
-    pub fn after_migration(&self, node: &Node, ready: &Value) -> Result<()> {
+    pub fn after_migration(&self, node: &Node, ready: &Value) -> Result<intervals::Endpoint> {
         ensure!(
             node.branch.state == self.state
                 && ready["zero_migration_native_calls"] == true
@@ -348,9 +348,20 @@ impl Legacy {
             material.signing == self.signing && material.encryption == self.encryption,
             "same in-memory device secrets"
         );
+        let mut lanes = Vec::new();
         for ctx in &self.contexts {
             let slot = oracle::ready_slot(ready, &state::hex(&ctx.c))?;
             let snapshot = repo.snapshot(slot)?;
+            ensure!(
+                repo.contexts().get(slot as usize) == Some(&(ctx.c, ctx.role)),
+                "original Ready/context/role endpoint"
+            );
+            lanes.push(intervals::committed_lane(
+                ctx.c,
+                slot,
+                ctx.role,
+                &snapshot.meta,
+            ));
             ensure!(
                 repo.spec(slot)? == ctx.spec
                     && snapshot.head == ctx.head
@@ -370,7 +381,18 @@ impl Legacy {
                 .collect::<BTreeMap<_, _>>();
             ensure!(queue == ctx.queue, "sealed original queue bytes unchanged");
         }
-        Ok(())
+        let endpoint = intervals::Endpoint {
+            source: repo.source_id(),
+            lanes: lanes
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("two migration endpoints"))?,
+        };
+        endpoint.validate(endpoint.lanes[0].role)?;
+        ensure!(
+            endpoint.source == self.source_id,
+            "original migration endpoint source"
+        );
+        Ok(endpoint)
     }
     pub fn identity(&self, node: &Node, rows: &[Value; 2]) -> Result<()> {
         ensure!(node.branch.state == self.state, "same original state path");
@@ -525,16 +547,19 @@ pub(super) fn history_map(rows: &[Value]) -> Result<BTreeMap<String, Value>> {
     }
     Ok(map)
 }
+#[derive(Clone, Debug)]
 pub(super) struct End {
     pub point: (u64, u64),
+    pub endpoint: intervals::Endpoint,
     pub generation: u64,
     pub operation: old::Id,
 }
-pub(super) fn point(node: &Node, contexts: &[String; 2]) -> Result<(old::Id, (u64, u64))> {
+pub(super) fn point(
+    node: &Node,
+    contexts: &[String; 2],
+) -> Result<(old::Id, (u64, u64), intervals::Endpoint)> {
     let end = end(node, contexts)?;
-    let p = Profile3::load(&node.profile)?;
-    let repo = p.open(&node.profile)?;
-    Ok((repo.source_id(), end.point))
+    Ok((end.endpoint.source, end.point, end.endpoint))
 }
 pub(super) fn end(node: &Node, contexts: &[String; 2]) -> Result<End> {
     read_end(node, contexts, None)
@@ -554,7 +579,7 @@ fn read_end(node: &Node, contexts: &[String; 2], expected: Option<old::Id>) -> R
             "same actual normally stopped source/profile owner"
         );
     }
-    let mut point = (0, 0);
+    let mut lanes = Vec::new();
     for c in contexts {
         let slot = repo
             .contexts()
@@ -563,11 +588,22 @@ fn read_end(node: &Node, contexts: &[String; 2], expected: Option<old::Id>) -> R
             .context("actual stored context mapping")? as u8;
         let (_, role) = repo.contexts()[slot as usize];
         let snap = repo.snapshot(slot)?;
-        point.0 += snap.meta.next[role as usize] - 1;
-        point.1 += snap.meta.next[1 - role as usize] - 1;
+        lanes.push(intervals::committed_lane(
+            state::parse_id(c)?,
+            slot,
+            role,
+            &snap.meta,
+        ));
     }
+    let endpoint = intervals::Endpoint {
+        source: repo.source_id(),
+        lanes: lanes
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("two committed context endpoints"))?,
+    };
     Ok(End {
-        point,
+        point: endpoint.point()?,
+        endpoint,
         generation: repo.generation(),
         operation: repo.last_commit()?,
     })

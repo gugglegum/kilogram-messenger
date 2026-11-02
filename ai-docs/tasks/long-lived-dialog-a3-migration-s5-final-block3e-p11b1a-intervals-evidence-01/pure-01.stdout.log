@@ -1,0 +1,73 @@
+cargo_process_priority=below-normal
+cargo_logical_processors=24
+cargo_jobs=2
+Compiling Rust test harnesses with profile 'verification-scale' without executing them...
+frozen_artifacts_verified=True
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-bin-kilogram-cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-lib-kilogram_cli-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-runtime2_process-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-transport-iroh-lib-kilogram_transport_iroh-tests.exe
+stable_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-transport-iroh-test-local_relay_transport-tests.exe
+WARNING: Executing stable-path test harnesses. A network-listening harness can request one initial Windows Firewall approval for this stable path.
+skipping_unchanged_test=ordered_ingress::
+skipping_unchanged_test=recovery_discovery::
+skipping_unchanged_test=recovery_link::
+skipping_unchanged_test=recovery_plan::
+skipping_unchanged_test=recovery_platform::
+skipping_unchanged_test=recovery_qr::
+skipping_unchanged_test=recovery_scheduler::
+skipping_unchanged_test=runtime_endpoint_announcement::
+skipping_unchanged_test=runtime_own_device_automation::
+skipping_unchanged_test=runtime_own_device_discovery::
+skipping_unchanged_test=runtime_own_device_roster::
+skipping_unchanged_test=runtime_publication::
+skipping_unchanged_test=runtime_queue::
+skipping_unchanged_test=runtime_ticket_automation::
+skipping_unchanged_test=tests::
+skipping_unchanged_test=canonical_sync_v2_runtime::
+skipping_unchanged_test=ordered_dialog::
+skipping_unchanged_test=live_l1::
+skipping_unchanged_test=migration_s5_process_actual_renewed_pending_and_undelivered
+skipping_unchanged_test=migration_s5_process_capacity_crash_and_predecessor_fences
+skipping_unchanged_test=migration_s5_process_fence_copy_ready_publication_kills
+skipping_unchanged_test=migration_s5_process_real_d9b_partial_control_peer_origins
+skipping_unchanged_test=migration_s5_process_two_context_escrow_and_history
+skipping_unchanged_test=s53_deadline::
+skipping_unchanged_test=s54_capture::
+skipping_unchanged_test=s54_memory::
+skipping_unchanged_test=a3_s4_component_ipc_history_escaped_byte_budget_no_cursor_skip
+skipping_unchanged_test=a3_s4_process_burst128_bounded_rounds
+skipping_unchanged_test=a3_s4_process_smoke_fresh_offline_restart_readable
+skipping_unchanged_test=bootstrap::
+skipping_unchanged_test=diagnostic::
+skipping_unchanged_test=faults::
+skipping_unchanged_test=lifecycle::
+skipping_unchanged_test=positive::
+skipping_unchanged_test=schedule_control::
+skipping_unchanged_test=versions::
+skipping_unchanged_test=ordered2::
+skipping_unchanged_test=ordered::
+skipping_unchanged_test=real_local_relay_preserves_adapter_frames_route_policies_and_reconnect
+isolated_test_order=BeforeAggregate
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::intervals::tests::s54_b1a_observed_mixed_context_prefix_and_reconciled_root_membership_are_separate
+
+running 1 test
+test live_l1::handoff::final_p5::intervals::tests::s54_b1a_observed_mixed_context_prefix_and_reconciled_root_membership_are_separate ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 252 filtered out; finished in 0.00s
+
+running_isolated_test_executable=E:\AI-Projects\kilogram-p2p-messenger\target\verification-scale\deps\kilogram-cli-test-migration_s5_process-tests.exe
+running_isolated_test=live_l1::handoff::final_p5::intervals::tests::s54_b1a_committed_metadata_ignores_unmaterialized_pending_sources
+
+running 1 test
+test live_l1::handoff::final_p5::intervals::tests::s54_b1a_committed_metadata_ignores_unmaterialized_pending_sources ... FAILED
+
+failures:
+
+failures:
+    live_l1::handoff::final_p5::intervals::tests::s54_b1a_committed_metadata_ignores_unmaterialized_pending_sources
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 252 filtered out; finished in 0.00s
+

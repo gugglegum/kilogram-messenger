@@ -1,0 +1,17 @@
+[
+  {
+    "sha256": "ae9bebb51c93508b583b0d60082dba9fb045048abe94872110dfc7841554ab9e",
+    "path": "ai-docs/README.md",
+    "bytes": 210074
+  },
+  {
+    "sha256": "1387cb646dbefd7b9a6deb1f0f888b4100827cf35978adc4f82d5ab22a795524",
+    "path": "ai-docs/chat-coordination.md",
+    "bytes": 165483
+  },
+  {
+    "sha256": "52e158dd72339b23ef93de531300a57f60345dfb3b46cd7b41c044978c2906c1",
+    "path": "ai-docs/next-stage-plan.md",
+    "bytes": 60232
+  }
+]

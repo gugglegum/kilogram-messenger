@@ -47,6 +47,7 @@ pub(super) struct Decoder {
     sequence: u64,
     counts: oracle::Counts,
     last_packet: Option<PacketObservation>,
+    interval_prefix: Option<intervals::Prefix>,
     final_seen: bool,
     final_record: Option<FinalObservation>,
     lines: u64,
@@ -69,6 +70,19 @@ pub(super) struct Decoder {
     pub live_retry_complete: Option<Value>,
 }
 impl Decoder {
+    pub fn interval_prefix(&self) -> Result<intervals::Prefix> {
+        let prefix = self
+            .interval_prefix
+            .as_ref()
+            .context("actual observed interval start")?;
+        ensure!(
+            Some(prefix.key) == self.key
+                && prefix.counts == self.counts
+                && prefix.sequence == self.sequence,
+            "retained observed prefix binding"
+        );
+        Ok(prefix.clone())
+    }
     pub fn packet(&self) -> Result<Option<PacketObservation>> {
         self.incarnation()?;
         Ok(self.last_packet)
@@ -89,6 +103,7 @@ impl Decoder {
             sequence: 0,
             counts: Default::default(),
             last_packet: None,
+            interval_prefix: None,
             final_seen: false,
             final_record: None,
             lines: 0,
@@ -191,6 +206,7 @@ impl Decoder {
             ops.start(key)?;
             pages.start(key)?;
             self.key = Some(key);
+            self.interval_prefix = Some(intervals::Prefix::new(key));
             return Ok(());
         }
         ensure!(self.key == Some(key), "stable incarnation, start required");
@@ -204,13 +220,18 @@ impl Decoder {
                 state::parse_id(facts["operation"].as_str().context("commit operation")?)?;
             let delta = counts.delta(self.counts)?;
             ops.commit(key, sequence, generation, operation, counts)?;
-            self.last_packet = Some(PacketObservation {
+            let packet = PacketObservation {
                 context: self.context_index(facts)?,
                 counts: delta,
                 operation,
                 generation,
                 sequence,
-            });
+            };
+            self.interval_prefix
+                .as_mut()
+                .context("observed prefix start")?
+                .observe(packet)?;
+            self.last_packet = Some(packet);
             self.max_packet_delta = self.max_packet_delta.max(
                 delta
                     .encrypt

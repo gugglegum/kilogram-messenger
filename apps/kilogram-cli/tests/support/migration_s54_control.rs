@@ -86,6 +86,7 @@ pub(super) struct Running {
     pub log: PathBuf,
     pub decoder: observations::Decoder,
     pub start_sources: (u64, u64),
+    pub interval_start: usize,
     normal: Option<normal::Stop>,
 }
 pub(super) struct Stopped {
@@ -122,6 +123,7 @@ pub(super) struct Controller {
     pending_stops: [Option<Stopped>; 2],
     last_normal: Option<[Closure; 2]>,
     pub operations: oracle::Operations,
+    pub intervals: intervals::Ledger,
     pub pages: oracle::Pages,
     pub phases: oracle::Phases,
     pub until: Instant,
@@ -174,6 +176,11 @@ impl Drop for Controller {
     }
 }
 impl Controller {
+    pub fn current_intervals(&self) -> Result<intervals::Verified> {
+        self.stopped_reconciled()?;
+        self.intervals
+            .verify(&self.operations.summary()?, &self.outcomes)
+    }
     pub fn memory_diagnostics(&self) -> Result<Value> {
         memory_scope::diagnostic()
     }
@@ -227,6 +234,7 @@ impl Controller {
             pending_stops: [None, None],
             last_normal: None,
             operations: Default::default(),
+            intervals: Default::default(),
             pages: Default::default(),
             phases: oracle::Phases { next: 0 },
             until,
@@ -346,12 +354,15 @@ impl Controller {
         )?;
         self.controls[owner].write()?;
         let n = &self.origin.pair.nodes[owner];
-        let (source_id, start_sources) = if n.indexed {
-            source::point(n, &self.origin.contexts)?
+        let (source_id, start_sources, endpoint) = if n.indexed {
+            let (source, point, endpoint) = source::point(n, &self.origin.contexts)?;
+            (source, point, Some(endpoint))
         } else {
-            ([0; 32], (0, 0))
+            ([0; 32], (0, 0), None)
         };
-        let count = self.origin.pair.starts[owner] + 1;
+        let count = self.origin.pair.starts[owner]
+            .checked_add(1)
+            .context("owned lifetime ordinal overflow")?;
         let name = format!("s54-{owner}-{count}");
         let log = n.branch.base.join(format!("{name}.stderr.log"));
         for context in &self.origin.contexts {
@@ -378,6 +389,12 @@ impl Controller {
         memory_scope::alias(&n.branch.state, &n.profile, &n.ipc, n.indexed)?;
         let child = OwnedChild::spawn(&mut cmd)?;
         let pid = child.0.id();
+        let interval_start = self.intervals.started(intervals::Started {
+            owner: owner as u8,
+            lifetime: count,
+            pid,
+            endpoint,
+        })?;
         self.running[owner] = Some(Running {
             child,
             log,
@@ -388,6 +405,7 @@ impl Controller {
                 owner as u8,
             ),
             start_sources,
+            interval_start,
             normal: None,
         });
         self.origin.pair.starts[owner] = count;
@@ -448,6 +466,19 @@ impl Controller {
             .context("waited actual child outcome")?;
         ensure!(!exit.success(), "intentional killed outcome");
         self.outcomes.push(json!({"owner":owner,"pid":pid,"waited":true,"success":exit.success(),"code":exit.code(),"counter_outcome":"pending stopped-source reconciliation"}));
+        let current = self.intervals.starts[run.interval_start].endpoint.is_some();
+        self.intervals.waited(
+            run.interval_start,
+            pid,
+            if current {
+                Some(run.decoder.normal_identity()?)
+            } else {
+                None
+            },
+            self.outcomes.len() - 1,
+            exit.code(),
+            intervals::WaitKind::Killed,
+        )?;
         ensure!(self.outcomes.len() <= 32, "bounded process outcomes");
         let run = self.running[owner]
             .take()
@@ -492,9 +523,28 @@ impl Controller {
             run.decoder.close_killed(
                 &mut self.operations,
                 run.start_sources,
-                stopped,
+                stopped.clone(),
                 pending.counts,
             )?;
+            let prefix = run.decoder.interval_prefix()?;
+            let gap = pending.counts.encrypt != prefix.counts.encrypt
+                || pending.counts.decrypt != prefix.counts.decrypt;
+            let sequence = prefix
+                .sequence
+                .checked_add(u64::from(gap))
+                .context("killed closed sequence overflow")?;
+            let closed = self.intervals.build(
+                intervals::CloseInput {
+                    start: run.interval_start,
+                    prefix,
+                    counts: pending.counts,
+                    sequence,
+                    end: &stopped,
+                    kind: intervals::ClosureKind::Killed,
+                },
+                &self.operations,
+            )?;
+            self.intervals.retain(vec![closed])?;
         }
         if let Some(outcome) = self.outcomes.get_mut(pending.outcome) {
             outcome["counter_outcome"] = if n.indexed {

@@ -1,0 +1,50 @@
+[
+  {
+    "sha256": "26fee776c0bd8c56d12a720d21f1b71a555dd985ffe0e1523a46ac2ce3521f23",
+    "path": "apps/kilogram-cli/tests/support/migration_s54_source.rs",
+    "archive": ".tmp\\s54-block3e-p11b1a-01\\preimages\\apps\\kilogram-cli\\tests\\support\\migration_s54_source.rs",
+    "bytes": 26361
+  },
+  {
+    "sha256": "333a449d2aa2b366a462e9452ad3839a0d2e9f55bfca58e2b94bf2ddd3f2e247",
+    "path": "apps/kilogram-cli/tests/support/migration_s54_control.rs",
+    "archive": ".tmp\\s54-block3e-p11b1a-01\\preimages\\apps\\kilogram-cli\\tests\\support\\migration_s54_control.rs",
+    "bytes": 22295
+  },
+  {
+    "sha256": "afbd46fd7064d45c8f5239fb3b4fac0646fe0db698ea8009b8f4ad7c9720d235",
+    "path": "apps/kilogram-cli/tests/support/migration_s54_normal.rs",
+    "archive": ".tmp\\s54-block3e-p11b1a-01\\preimages\\apps\\kilogram-cli\\tests\\support\\migration_s54_normal.rs",
+    "bytes": 14566
+  },
+  {
+    "sha256": "c503a856f6be5274e971e1fab40445f779603c3552a917b5b03f30661636ed52",
+    "path": "apps/kilogram-cli/tests/support/migration_s54_observations.rs",
+    "archive": ".tmp\\s54-block3e-p11b1a-01\\preimages\\apps\\kilogram-cli\\tests\\support\\migration_s54_observations.rs",
+    "bytes": 16577
+  },
+  {
+    "sha256": "4f7822e9a94bf139bc094fc03e4ef154d884d214cf8178e6fdedfe0442c1765a",
+    "path": "apps/kilogram-cli/tests/support/migration_s54_early.rs",
+    "archive": ".tmp\\s54-block3e-p11b1a-01\\preimages\\apps\\kilogram-cli\\tests\\support\\migration_s54_early.rs",
+    "bytes": 16960
+  },
+  {
+    "sha256": "5fdc05a359e4659094fd4cb49def143544f48153de8fbda22e13f87cd28a618e",
+    "path": "apps/kilogram-cli/tests/support/migration_s54_p5.rs",
+    "archive": ".tmp\\s54-block3e-p11b1a-01\\preimages\\apps\\kilogram-cli\\tests\\support\\migration_s54_p5.rs",
+    "bytes": 5011
+  },
+  {
+    "sha256": "06c4a5932fbf0bc0627a74b7d8f8e52e55f4d5911e1fcd148bd41a7ed630a394",
+    "path": "apps/kilogram-cli/tests/support/migration_s54_normal_decoder_tests.rs",
+    "archive": ".tmp\\s54-block3e-p11b1a-01\\preimages\\apps\\kilogram-cli\\tests\\support\\migration_s54_normal_decoder_tests.rs",
+    "bytes": 6986
+  },
+  {
+    "sha256": "e259f9f5b17a265193c42bac1f57498a1ccc14953606ecb1908b89bf4c8de160",
+    "path": "apps/kilogram-cli/tests/support/migration_s54_block2_tests.rs",
+    "archive": ".tmp\\s54-block3e-p11b1a-01\\preimages\\apps\\kilogram-cli\\tests\\support\\migration_s54_block2_tests.rs",
+    "bytes": 16570
+  }
+]

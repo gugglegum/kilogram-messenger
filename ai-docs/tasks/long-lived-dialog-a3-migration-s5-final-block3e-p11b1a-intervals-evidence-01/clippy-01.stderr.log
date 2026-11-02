@@ -1,0 +1,33 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: the loop variable `c` is used to index `w`
+   --> apps\kilogram-cli\tests\support\migration_s54_intervals.rs:126:18
+    |
+126 |         for c in 0..2 {
+    |                  ^^^^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#needless_range_loop
+    = note: `-D clippy::needless-range-loop` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::needless_range_loop)]`
+help: consider using an iterator and enumerate()
+    |
+126 -         for c in 0..2 {
+126 +         for (c, <item>) in w.iter_mut().enumerate() {
+    |
+
+error: this function has too many arguments (8/7)
+   --> apps\kilogram-cli\tests\support\migration_s54_intervals.rs:387:5
+    |
+387 | /     pub fn build(
+388 | |         &self,
+389 | |         start: usize,
+390 | |         prefix: Prefix,
+...   |
+395 | |         ops: &oracle::Operations,
+396 | |     ) -> Result<Closed> {
+    | |_______________________^
+    |
+    = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.98.0/index.html#too_many_arguments
+    = note: `-D clippy::too-many-arguments` implied by `-D warnings`
+    = help: to override `-D warnings` add `#[allow(clippy::too_many_arguments)]`
+
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 2 previous errors

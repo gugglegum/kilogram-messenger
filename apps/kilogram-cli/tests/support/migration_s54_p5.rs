@@ -17,6 +17,8 @@ mod early;
 mod graph;
 #[path = "migration_s54_handoff.rs"]
 mod handoff;
+#[path = "migration_s54_intervals.rs"]
+mod intervals;
 #[path = "migration_s54_observations.rs"]
 mod observations;
 #[path = "migration_s54_offline.rs"]

@@ -147,6 +147,23 @@ fn s54_b2_kill_outcome_requires_stopped_sources_and_actual_resolved_counters() -
         d.line(&native(1, 7, 2), &mut o, &mut p, &mut 0)?;
         let end = source::End {
             point: if bad { (13, 20) } else { (12, 20) },
+            endpoint: intervals::Endpoint {
+                source: [1; 32],
+                lanes: [
+                    intervals::Lane {
+                        context: [3; 32],
+                        slot: 0,
+                        role: 0,
+                        next: [if bad { 14 } else { 13 }, 21],
+                    },
+                    intervals::Lane {
+                        context: [4; 32],
+                        slot: 1,
+                        role: 0,
+                        next: [1, 1],
+                    },
+                ],
+            },
             generation: 8,
             operation: [8; 32],
         };

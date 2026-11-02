@@ -236,6 +236,14 @@ impl Controller {
                     .context("requested normal child")?
                     .wait(exit.code(), Instant::now())?;
                 self.outcomes.push(json!({"owner":owner,"pid":run.child.0.id(),"waited":true,"success":exit.success(),"code":exit.code(),"normal_stop":run.normal.as_ref().map(Stop::facts),"counter_outcome":"pending normal final/EOF/source reconciliation"}));
+                self.intervals.waited(
+                    run.interval_start,
+                    run.child.0.id(),
+                    Some(run.decoder.normal_identity()?),
+                    self.outcomes.len() - 1,
+                    exit.code(),
+                    intervals::WaitKind::Normal,
+                )?;
                 let run = self.running[owner].take().context("same waited handle")?;
                 // This field remains the actual last live sample for killed callers;
                 // the normal path below uses only the retained final record.
@@ -267,6 +275,7 @@ impl Controller {
         self.check()?;
         let mut proofs = Vec::new();
         let mut closures = Vec::new();
+        let mut intervals = Vec::new();
         // Both actual waits are proved before either private source is opened.
         for owner in 0..2 {
             self.stopped(owner)?;
@@ -297,6 +306,17 @@ impl Controller {
                 eof,
             )?;
             let final_record = run.decoder.normal_final(&self.operations, stop.key, eof)?;
+            intervals.push(self.intervals.build(
+                intervals::CloseInput {
+                    start: run.interval_start,
+                    prefix: run.decoder.interval_prefix()?,
+                    counts: final_record.counts,
+                    sequence: final_record.sequence,
+                    end: &end,
+                    kind: intervals::ClosureKind::Normal { eof },
+                },
+                &self.operations,
+            )?);
             closures.push(Closure {
                 key: stop.key,
                 sequence: final_record.sequence,
@@ -309,6 +329,7 @@ impl Controller {
             });
             proofs.push((facts, final_record.counts, pending.outcome));
         }
+        self.intervals.retain(intervals)?;
         for (owner, (facts, counts, outcome)) in proofs.iter().enumerate() {
             self.counters[owner] = *counts;
             self.outcomes[*outcome]["counter_outcome"] =

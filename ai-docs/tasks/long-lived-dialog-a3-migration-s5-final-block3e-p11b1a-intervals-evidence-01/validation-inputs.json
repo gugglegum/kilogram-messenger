@@ -1,0 +1,106 @@
+{
+  "files": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_source.rs",
+      "bytes": 27473,
+      "sha256": "d11c89b035560cec0135f873cde88bf4278a6308bcd313fa18a190f72de94168"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_control.rs",
+      "bytes": 24226,
+      "sha256": "7b105338ae84b3fcba2e5a80b9713060bad06b1cb5d1bb941dbba1f7e4b8335c"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_normal.rs",
+      "bytes": 15436,
+      "sha256": "f542f29a5c4a92ef1f3196d904fd341859d5b8a20705a09c1a2f49f0686c437c"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_observations.rs",
+      "bytes": 17357,
+      "sha256": "6a2ad4dc6225559207444a5f19fa0ac8360c58997759bfe294f7846154ada9c2"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_early.rs",
+      "bytes": 17033,
+      "sha256": "b2c8f24977739f291ebeb91714a795f4c27437082846cc68c8869a1af195bb3c"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_p5.rs",
+      "bytes": 5065,
+      "sha256": "fd4bc77c8c8ed766b34465954af43558b069764515c0d191dfbfce72fe76d1ef"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_normal_decoder_tests.rs",
+      "bytes": 7488,
+      "sha256": "f8d472d239b7a954d25245a75a5af22ff18e42294f94c7911e0073e1a9f7d509"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_block2_tests.rs",
+      "bytes": 16690,
+      "sha256": "cba62a8c31799eabfc304909e90d471cefabe6d9ff233a84d2c99a8211c3b6fd"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_intervals.rs",
+      "bytes": 26444,
+      "sha256": "422410c89884bfaa95c887b6a1fdfd7ca3f12925ec148ece2dcd1134a8ed079b"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_intervals_tests.rs",
+      "bytes": 18173,
+      "sha256": "c9e76cfc1720cb54d6ff53f5be389b6a29740fc2cab0e936f7537b5705be4cd2"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11b1a-01\\check.ps1",
+      "bytes": 5550,
+      "sha256": "f96895553ab73b929dcafab3c8b63de593c77931f12e7f0d9372a9fb3e3260d5"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11b1a-01\\clippy.ps1",
+      "bytes": 460,
+      "sha256": "c4533d1360cea309f7f8db1b6a792c36584a5e516f68343e7713496e3d42d59f"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11b1a-01\\compile.ps1",
+      "bytes": 501,
+      "sha256": "c99cb6d1340258a47fc9359490beaec9881f8b3f736ae882937adfb425c2cb43"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11b1a-01\\fmt.ps1",
+      "bytes": 81,
+      "sha256": "6766fdce5d3716ac62a85b863fd3527ec0fb3c73e4a0f09c800b3a941aeb0b71"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11b1a-01\\implementation-notes.md",
+      "bytes": 2505,
+      "sha256": "9fd1df5c859091be82457fcbac37e870c81433554de3d508e73237eb1be5a69d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11b1a-01\\isolated-tests.json",
+      "bytes": 6029,
+      "sha256": "73939c5c53e5bf00b44b2a647651dbe260b4068dc59e4f268d322af09bc8ddd6"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11b1a-01\\pure.ps1",
+      "bytes": 2982,
+      "sha256": "5f2bea7ace451cd5b32590c3aa25b51c7aab46f5c997bf68aa0c4c186d92f686"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block3e-p11b1a-01\\test-selection.json",
+      "bytes": 3086,
+      "sha256": "c2190ae085873c08686511b40c4c688d786f23f5728d6cfdaa991ebb3c516504"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\run-cargo-tests-stable.ps1",
+      "bytes": 14816,
+      "sha256": "c16df34557a668821e5aca0b67a1dadebcf6de2cfff5178958bff621c3e3fbe0"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\scripts\\migration-s5-l1-deadline.ps1",
+      "bytes": 6038,
+      "sha256": "0c6b3cd61b8641756f9343c7e663cce59fabbb0d052a3d54ba07ad5898e89d45"
+    }
+  ],
+  "created_utc": "2026-11-02T05:27:04.0056165+00:00",
+  "classification": "B1a validation inputs before exact pure execution"
+}

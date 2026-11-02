@@ -211,7 +211,8 @@ impl Controller {
             "check binds actual original source"
         );
         let ready = self.origin.migrate_stopped(owner)?;
-        witness.after_migration(&self.origin.pair.nodes[owner], &ready)?;
+        let endpoint = witness.after_migration(&self.origin.pair.nodes[owner], &ready)?;
+        self.intervals.migration(owner as u8, endpoint)?;
         self.remember(
             &format!("migration-{owner}"),
             json!({"preview":preview,"ready":ready,"original":witness.report()}),
