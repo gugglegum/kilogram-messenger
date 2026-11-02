@@ -28,6 +28,8 @@ mod oracle;
 mod p9a_tests;
 #[path = "migration_s54_pressure.rs"]
 mod pressure;
+#[path = "migration_s54_reader.rs"]
+mod reader;
 #[path = "migration_s54_records.rs"]
 mod records;
 #[cfg(test)]

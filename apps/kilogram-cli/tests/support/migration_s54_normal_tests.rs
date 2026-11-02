@@ -1,5 +1,65 @@
 //! Pure predicates used by the real original-handle lifecycle. No OS fixture.
 use super::*;
+#[test]
+fn s54_p11a5_last_actual_normal_pair_excludes_empty_stale_killed_and_foreign_outcomes() -> Result<()>
+{
+    let pair = std::array::from_fn(|o| Closure {
+        key: oracle::Incarnation {
+            owner: [o as u8 + 1; 32],
+            pid: o as u32 + 7,
+            nonce: [o as u8 + 3; 32],
+        },
+        sequence: 0,
+        counts: Default::default(),
+        eof: 123,
+        generation: 5,
+        operation: [6; 32],
+        point: [672; 2],
+        outcome: o,
+    });
+    let rows=pair.iter().enumerate().map(|(o,c)|json!({"owner":o,"pid":c.key.pid,"code":0,"success":true,"waited":true,"counter_outcome":"normal exit0/final/EOF/source resolved","normal_stop":{"source":state::hex(&c.key.owner),"incarnation":state::hex(&c.key.nonce),"acknowledged":true,"waited":true},"normal_closure":{"source":state::hex(&c.key.owner),"pid":c.key.pid,"incarnation":state::hex(&c.key.nonce),"eof":c.eof,"sequence":c.sequence,"root_generation":c.generation,"last_commit":state::hex(&c.operation),"source_point":c.point}})).collect::<Vec<_>>();
+    let sources = pair.each_ref().map(|c| c.key.owner);
+    ensure!(
+        closed_pair(Some(&pair), &rows, sources)? == pair,
+        "actual typed normal closure gate"
+    );
+    ensure!(
+        closed_pair(None, &rows, sources).is_err()
+            && closed_pair(Some(&pair), &[], sources).is_err()
+            && closed_pair(Some(&pair), &rows, [[99; 32]; 2]).is_err(),
+        "no empty/foreign success shortcut"
+    );
+    for field in [
+        "owner",
+        "pid",
+        "code",
+        "success",
+        "waited",
+        "counter_outcome",
+        "normal_stop",
+        "normal_closure",
+    ] {
+        let mut bad = rows.clone();
+        bad[0][field] = Value::Null;
+        ensure!(
+            closed_pair(Some(&pair), &bad, sources).is_err(),
+            "resolved actual outcome field {field}"
+        );
+    }
+    let mut later = rows.clone();
+    later.push(json!({"owner":0,"counter_outcome":"source/counter resolved"}));
+    ensure!(
+        closed_pair(Some(&pair), &later, sources).is_err(),
+        "earlier normal closure cannot survive later killed cut"
+    );
+    let mut foreign = pair.clone();
+    foreign[0].key.nonce = [99; 32];
+    ensure!(
+        closed_pair(Some(&foreign), &rows, sources).is_err(),
+        "actual PID/source/nonce binding"
+    );
+    Ok(())
+}
 fn key(pid: u32) -> oracle::Incarnation {
     oracle::Incarnation {
         owner: [1; 32],

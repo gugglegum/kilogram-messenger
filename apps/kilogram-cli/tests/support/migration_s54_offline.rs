@@ -7,6 +7,14 @@ pub(super) mod retained;
 mod tests;
 #[path = "migration_s54_offline_witness.rs"]
 mod witness;
+pub(super) fn existing_scope(
+    repo: &mut db::migration7::live1::L1Repository,
+    slot: u8,
+    head: &state::Head,
+    spec: &[u8],
+) -> Result<kilogram_protocol::ordered_dialog_v2::VerifiedExistingScope1> {
+    witness::existing(repo, slot, head, spec)
+}
 
 #[derive(Clone, PartialEq, Eq)]
 struct Scope {

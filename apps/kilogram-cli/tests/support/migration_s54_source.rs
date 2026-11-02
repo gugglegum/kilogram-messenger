@@ -3,6 +3,9 @@ use super::*;
 use kilogram_cli::ordered_dialog::{engine, handshake::Spec};
 use kilogram_crypto::{DeviceEncryptionIdentity, SealedMessage};
 use zeroize::Zeroizing;
+#[cfg(test)]
+#[path = "migration_s54_source_terminal_tests.rs"]
+mod terminal_tests;
 
 pub(super) fn owned(node: &Node) -> Result<()> {
     let root = workspace()
@@ -38,6 +41,71 @@ pub(super) struct Legacy {
     pub source_id: old::Id,
 }
 impl Legacy {
+    pub fn terminal_identity(
+        &self,
+        node: &Node,
+        material: &db::migration7::live1::L1OwnerMaterial,
+    ) -> Result<()> {
+        ensure!(
+            node.branch.state.canonicalize()? == self.state.canonicalize()?
+                && material.signing == self.signing
+                && material.encryption == self.encryption,
+            "original state/device immutable identity, no Head/Native comparison"
+        );
+        Ok(())
+    }
+    pub fn terminal_scope(
+        &self,
+        index: usize,
+        spec: &[u8],
+        origin: &kilogram_protocol::ordered_dialog_v2::VerifiedExistingScope1,
+    ) -> Result<()> {
+        let ctx = self
+            .contexts
+            .get(index)
+            .context("original logical context witness")?;
+        let parsed = Spec::parse(&ctx.spec)?;
+        let head = state::Head::parse(
+            &ctx.head,
+            ctx.c,
+            parsed.cert_refs()?[ctx.role as usize],
+            ctx.role as u64,
+        )?;
+        ensure!(
+            ctx.spec == spec
+                && ctx.c == origin.c()
+                && head.d == Some(origin.d())
+                && head.e == Some(origin.e())
+                && head.sid.as_deref() == Some(origin.sid())
+                && head.offer == Some(origin.old_control_ids()[0])
+                && head.grant == Some(origin.old_control_ids()[1]),
+            "original immutable Spec/genesis session binding"
+        );
+        Ok(())
+    }
+    pub fn terminal_source(
+        &self,
+        index: usize,
+        role: u8,
+        n: u64,
+        raw: &[u8],
+        receipt: Option<&[u8]>,
+    ) -> Result<()> {
+        let ctx = self
+            .contexts
+            .get(index)
+            .context("original immutable source context")?;
+        if let Some(original) = ctx.events.get(&(role, n)) {
+            ensure!(original == raw, "original Legacy source bytes");
+        }
+        if let Some(saved) = ctx.receipts.get(&(role, n)) {
+            ensure!(
+                receipt == Some(saved.as_slice()),
+                "original saved Legacy receipt bytes"
+            );
+        }
+        Ok(())
+    }
     pub fn text_id(&self, role: u8, n: u64) -> Result<old::Id> {
         ensure!(n > 0, "original Text ordinal");
         let raw = self.contexts[0]

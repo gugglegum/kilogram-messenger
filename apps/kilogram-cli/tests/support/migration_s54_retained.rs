@@ -14,7 +14,10 @@ pub(in super::super) struct Immutable {
 fn digest(raw: &[u8]) -> old::Id {
     *blake3::hash(raw).as_bytes()
 }
-fn saved_ack(ack: &observations::AckObservation, actual: &[v2::TaggedItem]) -> Result<()> {
+pub(in super::super) fn saved_ack(
+    ack: &observations::AckObservation,
+    actual: &[v2::TaggedItem],
+) -> Result<()> {
     ensure!(
         actual.len() == ack.receipts.len()
             && actual
@@ -36,6 +39,53 @@ fn saved_ack(ack: &observations::AckObservation, actual: &[v2::TaggedItem]) -> R
     Ok(())
 }
 impl Immutable {
+    pub fn terminal_scope(
+        &self,
+        owner: usize,
+        node: &Node,
+        source: old::Id,
+        migration: old::Id,
+        origin: &v2::VerifiedExistingScope1,
+        q: old::Id,
+    ) -> Result<()> {
+        ensure!(
+            origin.c() == self.scope.context
+                && origin.d() == self.scope.d
+                && origin.e() == self.scope.e
+                && origin.sid() == self.scope.sid
+                && q == self.scope.q,
+            "original immutable P7 scope"
+        );
+        if owner == 0 {
+            ensure!(
+                node.branch.state.canonicalize()? == self.state
+                    && source == self.scope.source
+                    && migration == self.scope.migration,
+                "original P7 owner/source/migration"
+            );
+        }
+        Ok(())
+    }
+    pub fn terminal_record(&self, row: &records::Record) -> Result<()> {
+        if row.role == 0 && row.ordinal == 384 {
+            ensure!(row.event == self.anchor, "original P7 anchor384");
+        }
+        if row.role == 0 && (385..=640).contains(&row.ordinal) {
+            self.same_row(
+                (row.ordinal - 385) as usize,
+                &Source {
+                    ordinal: row.ordinal,
+                    request: row.request,
+                    id: row.event,
+                    previous: row.previous.context("actual offline previous")?,
+                    source_hash: row.source_hash,
+                    ciphertext_hash: row.ciphertext_hash,
+                    text_hash: row.body_hash,
+                },
+            )?;
+        }
+        Ok(())
+    }
     pub(super) fn from_snapshot(s: &Snapshot) -> Self {
         Self {
             state: s.state.clone(),
@@ -337,6 +387,9 @@ impl Immutable {
     }
 }
 
+#[cfg(test)]
+#[path = "migration_s54_retained_terminal_tests.rs"]
+mod terminal_tests;
 #[cfg(test)]
 #[path = "migration_s54_retained_tests.rs"]
 mod tests;

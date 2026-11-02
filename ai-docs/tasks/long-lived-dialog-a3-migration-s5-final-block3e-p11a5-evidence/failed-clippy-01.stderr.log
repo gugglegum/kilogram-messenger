@@ -1,0 +1,14 @@
+    Checking kilogram-state v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-state)
+    Checking kilogram-peer-history-recovery-execution v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-execution)
+    Checking kilogram-peer-history-recovery-runtime v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\crates\kilogram-peer-history-recovery-runtime)
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error: no rules expected `limit`
+  --> apps\kilogram-cli\tests\support\migration_s54_reader_owner.rs:87:34
+   |
+87 |             identity.1 == json!([limit(context) + 1; 2]),
+   |                                  ^^^^^ no rules expected this token in macro call
+   |
+   = note: while trying to match end of macro
+
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 1 previous error
+warning: build failed, waiting for other jobs to finish...

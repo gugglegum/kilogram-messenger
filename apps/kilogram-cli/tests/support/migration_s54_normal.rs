@@ -4,6 +4,76 @@ use super::*;
 #[path = "migration_s54_normal_tests.rs"]
 mod tests;
 
+/// Retained only after both real normal waits, final EOF and ledger/source reconciliation.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(in super::super) struct Closure {
+    pub key: oracle::Incarnation,
+    pub sequence: u64,
+    pub counts: oracle::Counts,
+    pub eof: u64,
+    pub generation: u64,
+    pub operation: old::Id,
+    pub point: [u64; 2],
+    outcome: usize,
+}
+fn closed_outcome(c: &Closure, row: &Value, owner: usize) -> Result<()> {
+    ensure!(
+        row["owner"] == owner
+            && row["pid"] == c.key.pid
+            && row["code"] == 0
+            && row["success"] == true
+            && row["waited"] == true
+            && row["counter_outcome"] == "normal exit0/final/EOF/source resolved"
+            && row["normal_stop"]["source"] == state::hex(&c.key.owner)
+            && row["normal_stop"]["incarnation"] == state::hex(&c.key.nonce)
+            && row["normal_stop"]["acknowledged"] == true
+            && row["normal_stop"]["waited"] == true
+            && row["normal_closure"]["source"] == state::hex(&c.key.owner)
+            && row["normal_closure"]["pid"] == c.key.pid
+            && row["normal_closure"]["incarnation"] == state::hex(&c.key.nonce)
+            && row["normal_closure"]["eof"] == c.eof
+            && row["normal_closure"]["sequence"] == c.sequence
+            && row["normal_closure"]["root_generation"] == c.generation
+            && row["normal_closure"]["last_commit"] == state::hex(&c.operation)
+            && row["normal_closure"]["source_point"] == json!(c.point),
+        "retained actual normal closure/outcome binding"
+    );
+    Ok(())
+}
+fn closed_pair(
+    pair: Option<&[Closure; 2]>,
+    outcomes: &[Value],
+    sources: [old::Id; 2],
+) -> Result<[Closure; 2]> {
+    let pair = pair.context("actual last normal pair, not an earlier killed stop")?;
+    ensure!(
+        pair[0].key.owner != pair[1].key.owner && pair[0].key.pid != pair[1].key.pid,
+        "two original distinct normally closed owners"
+    );
+    for (owner, c) in pair.iter().enumerate() {
+        ensure!(
+            c.key.owner == sources[owner]
+                && c.key.pid > 0
+                && c.key.nonce != [0; 32]
+                && outcomes
+                    .iter()
+                    .enumerate()
+                    .rev()
+                    .find(|(_, r)| r["owner"] == owner)
+                    .is_some_and(|(i, _)| i == c.outcome),
+            "latest actual original owner closure"
+        );
+        closed_outcome(
+            c,
+            outcomes
+                .get(c.outcome)
+                .context("nonempty actual normal outcome")?,
+            owner,
+        )?;
+    }
+    Ok(pair.clone())
+}
+
 pub(super) fn exit_zero(code: Option<i32>) -> Result<()> {
     ensure!(
         code == Some(0),
@@ -194,6 +264,7 @@ impl Controller {
         )?;
         self.check()?;
         let mut proofs = Vec::new();
+        let mut closures = Vec::new();
         // Both actual waits are proved before either private source is opened.
         for owner in 0..2 {
             self.stopped(owner)?;
@@ -224,6 +295,16 @@ impl Controller {
                 eof,
             )?;
             let final_record = run.decoder.normal_final(&self.operations, stop.key, eof)?;
+            closures.push(Closure {
+                key: stop.key,
+                sequence: final_record.sequence,
+                counts: final_record.counts,
+                eof,
+                generation: end.generation,
+                operation: end.operation,
+                point: [end.point.0, end.point.1],
+                outcome: pending.outcome,
+            });
             proofs.push((facts, final_record.counts, pending.outcome));
         }
         for (owner, (facts, counts, outcome)) in proofs.iter().enumerate() {
@@ -236,12 +317,47 @@ impl Controller {
         self.pending_stops = [None, None];
         self.stopped_reconciled()?;
         self.check()?;
+        self.last_normal = Some(
+            closures
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("two actual normal closures"))?,
+        );
         Ok(json!(
             proofs
                 .into_iter()
                 .map(|(facts, _, _)| facts)
                 .collect::<Vec<_>>()
         ))
+    }
+    /// No source opens here. The retained pair is invalidated on any start/kill.
+    pub fn normal_pair(&mut self) -> Result<[Closure; 2]> {
+        self.stopped_reconciled()?;
+        self.check()?;
+        ensure!(
+            self.relay.is_some() && self.relay_outcome.is_none(),
+            "same owned relay still live"
+        );
+        self.relay
+            .as_mut()
+            .context("retained original relay")?
+            .child
+            .alive()?;
+        let sources = [
+            self.original[0]
+                .as_ref()
+                .context("actual original A")?
+                .source_id,
+            self.original[1]
+                .as_ref()
+                .context("actual original B")?
+                .source_id,
+        ];
+        let pair = closed_pair(self.last_normal.as_ref(), &self.outcomes, sources)?;
+        for c in &pair {
+            self.operations.closed(c.key, c.sequence, c.counts)?;
+        }
+        self.operations.summary()?;
+        Ok(pair)
     }
     pub fn finish_normal_relay(&mut self) -> Result<Value> {
         self.stopped_reconciled()?;

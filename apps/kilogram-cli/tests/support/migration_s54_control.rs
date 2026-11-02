@@ -2,6 +2,7 @@
 use super::*;
 #[path = "migration_s54_normal.rs"]
 mod normal;
+pub(super) use normal::Closure;
 pub(super) fn runtime_workers(available: usize, inherited: Option<&str>) -> Result<usize> {
     let workers = inherited
         .map(str::parse::<usize>)
@@ -119,6 +120,7 @@ pub(super) struct Controller {
     pub relay: Option<relay_owner::Relay>,
     pub relay_outcome: Option<Value>,
     pending_stops: [Option<Stopped>; 2],
+    last_normal: Option<[Closure; 2]>,
     pub operations: oracle::Operations,
     pub pages: oracle::Pages,
     pub phases: oracle::Phases,
@@ -194,6 +196,7 @@ impl Controller {
             relay: None,
             relay_outcome: None,
             pending_stops: [None, None],
+            last_normal: None,
             operations: Default::default(),
             pages: Default::default(),
             phases: oracle::Phases { next: 0 },
@@ -300,6 +303,7 @@ impl Controller {
     }
     pub fn start(&mut self, owner: usize) -> Result<()> {
         self.stopped(owner)?;
+        self.last_normal = None;
         normal::reopen(
             self.pending_stops[owner].is_some(),
             self.relay_outcome.is_some(),
@@ -360,6 +364,7 @@ impl Controller {
     }
     pub fn kill_wait(&mut self, owner: usize) -> Result<()> {
         self.check()?;
+        self.last_normal = None;
         ensure!(
             self.running
                 .get(owner)

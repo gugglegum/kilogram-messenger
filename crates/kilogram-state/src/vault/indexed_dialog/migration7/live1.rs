@@ -25,6 +25,9 @@ mod mixed;
 mod ops;
 #[path = "live1/read.rs"]
 mod read;
+#[path = "live1/source_counts.rs"]
+mod source_counts;
+pub use source_counts::L1SourceCounts;
 #[cfg(all(windows, feature = "verification-state-lock-adoption"))]
 #[path = "live1/verification_close.rs"]
 mod verification_close;

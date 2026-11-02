@@ -1,0 +1,123 @@
+    Checking kilogram-cli v0.1.0 (E:\AI-Projects\kilogram-p2p-messenger\apps\kilogram-cli)
+error[E0277]: can't compare `serde_json::Value` with `std::option::Option<std::string::String>`
+  --> apps\kilogram-cli\tests\support\migration_s54_reader_gates.rs:87:45
+   |
+87 |             && retained["current_consent2"] == mode.current_consent.map(|id| state::hex(&id)),
+   |                                             ^^ no implementation for `serde_json::Value == std::option::Option<std::string::String>`
+   |
+   = help: the trait `std::cmp::PartialEq<std::option::Option<std::string::String>>` is not implemented for `serde_json::Value`
+   = help: the following other types implement trait `std::cmp::PartialEq<Rhs>`:
+             `&mut serde_json::Value` implements `std::cmp::PartialEq<bool>`
+             `&mut serde_json::Value` implements `std::cmp::PartialEq<f32>`
+             `&mut serde_json::Value` implements `std::cmp::PartialEq<f64>`
+             `&mut serde_json::Value` implements `std::cmp::PartialEq<i16>`
+             `&mut serde_json::Value` implements `std::cmp::PartialEq<i32>`
+             `&mut serde_json::Value` implements `std::cmp::PartialEq<i64>`
+             `&mut serde_json::Value` implements `std::cmp::PartialEq<i8>`
+             `&mut serde_json::Value` implements `std::cmp::PartialEq<isize>`
+           and 35 others
+
+error[E0277]: can't compare `serde_json::Value` with `std::option::Option<std::string::String>`
+  --> apps\kilogram-cli\tests\support\migration_s54_reader_gates.rs:97:55
+   |
+97 |             id.is_some() && retained["controls"][key] == id.map(|v| state::hex(&v)),
+   |                                                       ^^ no implementation for `serde_json::Value == std::option::Option<std::string::String>`
+   |
+   = help: the trait `std::cmp::PartialEq<std::option::Option<std::string::String>>` is not implemented for `serde_json::Value`
+   = help: the following other types implement trait `std::cmp::PartialEq<Rhs>`:
+             `&mut serde_json::Value` implements `std::cmp::PartialEq<bool>`
+             `&mut serde_json::Value` implements `std::cmp::PartialEq<f32>`
+             `&mut serde_json::Value` implements `std::cmp::PartialEq<f64>`
+             `&mut serde_json::Value` implements `std::cmp::PartialEq<i16>`
+             `&mut serde_json::Value` implements `std::cmp::PartialEq<i32>`
+             `&mut serde_json::Value` implements `std::cmp::PartialEq<i64>`
+             `&mut serde_json::Value` implements `std::cmp::PartialEq<i8>`
+             `&mut serde_json::Value` implements `std::cmp::PartialEq<isize>`
+           and 35 others
+
+error[E0609]: no field `c2_history` on type `live_l1::handoff::final_p5::catchup::Continuation`
+  --> apps\kilogram-cli\tests\support\migration_s54_reader.rs:56:42
+   |
+56 |     let c2 = &previous.previous.previous.c2_history;
+   |                                          ^^^^^^^^^^ unknown field
+   |
+help: one of the expressions' fields has a field of the same name
+   |
+56 |     let c2 = &previous.previous.previous.previous.c2_history;
+   |                                          +++++++++
+
+error[E0609]: no field `histories` on type `live_l1::handoff::final_p5::handoff::Continuation`
+  --> apps\kilogram-cli\tests\support\migration_s54_reader.rs:57:63
+   |
+57 |     let mut maps = std::array::from_fn(|o| [previous.previous.histories[o].clone(), c2[o].clone()]);
+   |                                                               ^^^^^^^^^ unknown field
+   |
+help: one of the expressions' fields has a field of the same name
+   |
+57 |     let mut maps = std::array::from_fn(|o| [previous.previous.previous.histories[o].clone(), c2[o].clone()]);
+   |                                                               +++++++++
+
+error[E0599]: no method named `immutable` found for struct `live_l1::handoff::final_p5::pressure::Continuation` in the current scope
+  --> apps\kilogram-cli\tests\support\migration_s54_reader.rs:96:61
+   |
+96 |         let immutable = previous.previous.previous.previous.immutable()?;
+   |                                                             ^^^^^^^^^ method not found in `live_l1::handoff::final_p5::pressure::Continuation`
+   |
+  ::: apps\kilogram-cli\tests\support\migration_s54_pressure.rs:14:1
+   |
+14 | pub(super) struct Continuation {
+   | ------------------------------ method `immutable` not found for this struct
+   |
+help: one of the expressions' fields has a method of the same name
+   |
+96 |         let immutable = previous.previous.previous.previous.previous.immutable()?;
+   |                                                             +++++++++
+
+error[E0609]: no field `ack_replayed` on type `live_l1::handoff::final_p5::handoff::Continuation`
+  --> apps\kilogram-cli\tests\support\migration_s54_reader.rs:97:37
+   |
+97 |         let ack = previous.previous.ack_replayed.clone();
+   |                                     ^^^^^^^^^^^^ unknown field
+   |
+help: one of the expressions' fields has a field of the same name
+   |
+97 |         let ack = previous.previous.previous.ack_replayed.clone();
+   |                                     +++++++++
+
+error[E0609]: no field `ack_lost` on type `live_l1::handoff::final_p5::handoff::Continuation`
+  --> apps\kilogram-cli\tests\support\migration_s54_reader.rs:99:31
+   |
+99 |             previous.previous.ack_lost.receipts == ack.receipts
+   |                               ^^^^^^^^ unknown field
+   |
+help: one of the expressions' fields has a field of the same name
+   |
+99 |             previous.previous.previous.ack_lost.receipts == ack.receipts
+   |                               +++++++++
+
+error[E0609]: no field `ack_lost` on type `live_l1::handoff::final_p5::handoff::Continuation`
+   --> apps\kilogram-cli\tests\support\migration_s54_reader.rs:100:38
+    |
+100 |                 && previous.previous.ack_lost.digest == ack.digest,
+    |                                      ^^^^^^^^ unknown field
+    |
+help: one of the expressions' fields has a field of the same name
+    |
+100 |                 && previous.previous.previous.ack_lost.digest == ack.digest,
+    |                                      +++++++++
+
+error[E0609]: no field `controller` on type `live_l1::handoff::final_p5::pressure::Continuation`
+   --> apps\kilogram-cli\tests\support\migration_s54_reader.rs:107:58
+    |
+107 |         let s = &mut previous.previous.previous.previous.controller;
+    |                                                          ^^^^^^^^^^ unknown field
+    |
+help: one of the expressions' fields has a field of the same name
+    |
+107 |         let s = &mut previous.previous.previous.previous.previous.controller;
+    |                                                          +++++++++
+
+Some errors have detailed explanations: E0277, E0599, E0609.
+For more information about an error, try `rustc --explain E0277`.
+error: could not compile `kilogram-cli` (test "migration_s5_process") due to 9 previous errors
+warning: build failed, waiting for other jobs to finish...
