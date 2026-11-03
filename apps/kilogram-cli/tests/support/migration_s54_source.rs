@@ -16,6 +16,9 @@ mod deferred_memory_tests;
 #[path = "migration_s54_migration_source_fixture.rs"]
 pub(super) mod migration_source_fixture;
 #[cfg(test)]
+#[path = "migration_s54_p_storage_tests.rs"]
+mod p_storage_tests;
+#[cfg(test)]
 #[path = "migration_s54_source_scope_tests.rs"]
 mod scope_tests;
 #[cfg(test)]

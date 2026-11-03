@@ -20,21 +20,42 @@ pub(super) struct Fresh {
 }
 impl Fresh {
     pub fn legacy(purpose: Purpose) -> Result<Self> {
-        Self::staged(purpose, 1, false).map(|(fresh, _)| fresh)
+        Self::staged(purpose, 1, None, false).map(|(fresh, _)| fresh)
     }
     pub fn f_with_genesis(slot: u8) -> Result<(Self, [Legacy; 2])> {
-        let (fresh, genesis) = Self::staged(Purpose::FeasibilityF, slot, true)?;
+        let (fresh, genesis) = Self::staged(
+            Purpose::FeasibilityF,
+            slot,
+            Some(".tmp/s54-block4ao-deferred-memory-01/fixtures"),
+            false,
+        )?;
         Ok((fresh, genesis.context("actual early genesis witnesses")?))
     }
-    fn staged(purpose: Purpose, slot: u8, early: bool) -> Result<(Self, Option<[Legacy; 2]>)> {
+    pub fn p_with_genesis(slot: u8, late: bool) -> Result<(Self, [Legacy; 2])> {
+        let (fresh, genesis) = Self::staged(
+            Purpose::WholeP,
+            slot,
+            Some(".tmp/s54-block4ap-storage-01/fixtures"),
+            late,
+        )?;
+        Ok((fresh, genesis.context("actual P genesis witnesses")?))
+    }
+    fn staged(
+        purpose: Purpose,
+        slot: u8,
+        genesis_root: Option<&str>,
+        late: bool,
+    ) -> Result<(Self, Option<[Legacy; 2]>)> {
         ensure!(slot < 2, "fixture C1 slot");
-        let base = workspace().join(if early {
-            ".tmp/s54-block4ao-deferred-memory-01/fixtures"
-        } else {
-            ".tmp/s54-block4af-cold-witness-01/fixtures"
-        });
+        let base =
+            workspace().join(genesis_root.unwrap_or(".tmp/s54-block4af-cold-witness-01/fixtures"));
         std::fs::create_dir_all(&base)?;
-        let dir = tempfile::Builder::new().prefix("fresh-").tempdir_in(base)?;
+        let mut dir = tempfile::Builder::new().prefix("fresh-").tempdir_in(base)?;
+        if genesis_root.is_some_and(|p| p.contains("block4ap")) {
+            // Retain fresh AP storage even if a prerequisite or assertion fails.
+            dir.disable_cleanup(true);
+            println!("ap_fresh_storage={}", dir.path().display());
+        }
         let mut stores = Vec::new();
         for i in 0..2 {
             let account = dir.path().join(format!("account{i}"));
@@ -87,7 +108,7 @@ impl Fresh {
             activate(&mut a_engine, &mut b_engine, *c, binding)?;
             bindings.push(binding);
         }
-        let early_nodes = if early {
+        let early_nodes = if genesis_root.is_some() {
             Some(nodes(dir.path(), [&a_engine, &b_engine], &contexts, slot)?)
         } else {
             None
@@ -167,6 +188,7 @@ impl Fresh {
                 purpose == Purpose::FeasibilityF || n < last,
             )?;
         }
+        let before_queue = admin::required(&a_engine.store, &state::native_path(contexts[0]))?;
         for n in [last + 1, last + 2] {
             let request = oracle::Request::new(0, 0, n)?;
             a_engine.queue(
@@ -174,6 +196,13 @@ impl Fresh {
                 parse_request_id(&request_id(request))?,
                 &request.body(),
             )?;
+        }
+        ensure!(
+            admin::required(&a_engine.store, &state::native_path(contexts[0]))? == before_queue,
+            "queueing leaves committed Native state unchanged"
+        );
+        if late {
+            late_p(&mut a_engine, &mut b_engine, contexts[0], bindings[0])?;
         }
         let nodes = if let Some(nodes) = early_nodes {
             nodes
@@ -207,31 +236,36 @@ impl Fresh {
         [c1, [1, 1]]
     }
     pub fn migrate(&mut self) -> Result<()> {
-        let calls = native_call_counts();
         for owner in 0..2 {
-            let node = &self.nodes[owner];
-            let config = db::migration7::MigrationConfig {
-                logical_quota: [512 * 1024 * 1024; 2],
-                physical_capacity: 2 * 1024 * 1024 * 1024,
-                output_profile: node.profile.clone(),
-                control_ipc_file: node.ipc.clone(),
-                locator_directory: node.locators.clone(),
-            };
-            self.ready[owner] = storage_migration::upgrade(
-                StateDirectoryLock::acquire(&node.branch.state)?,
-                node.branch.account.parse()?,
-                node.branch.device.parse()?,
-                &config,
-                false,
-                None,
-            )?;
-            ensure!(
-                self.ready[owner]["storage_stage"] == "Ready"
-                    && self.ready[owner]["zero_migration_native_calls"] == true,
-                "actual Ready publication"
-            );
-            self.nodes[owner].indexed = true;
+            self.migrate_owner(owner)?;
         }
+        Ok(())
+    }
+    pub fn migrate_owner(&mut self, owner: usize) -> Result<()> {
+        ensure!(owner < 2 && !self.nodes[owner].indexed, "unmigrated owner");
+        let calls = native_call_counts();
+        let node = &self.nodes[owner];
+        let config = db::migration7::MigrationConfig {
+            logical_quota: [512 * 1024 * 1024; 2],
+            physical_capacity: 2 * 1024 * 1024 * 1024,
+            output_profile: node.profile.clone(),
+            control_ipc_file: node.ipc.clone(),
+            locator_directory: node.locators.clone(),
+        };
+        self.ready[owner] = storage_migration::upgrade(
+            StateDirectoryLock::acquire(&node.branch.state)?,
+            node.branch.account.parse()?,
+            node.branch.device.parse()?,
+            &config,
+            false,
+            None,
+        )?;
+        ensure!(
+            self.ready[owner]["storage_stage"] == "Ready"
+                && self.ready[owner]["zero_migration_native_calls"] == true,
+            "actual Ready publication"
+        );
+        self.nodes[owner].indexed = true;
         ensure!(
             native_call_counts() == calls,
             "migration performs zero Native work"
@@ -244,12 +278,83 @@ impl Fresh {
     }
     pub fn capture(&self, owner: usize) -> Result<Legacy> {
         let n = &self.nodes[owner];
+        ensure!(!n.indexed, "never reopen migrated storage as legacy");
         let source = db::migration7::V4Source::open(
             StateDirectoryLock::acquire(&n.branch.state)?,
             db::Config::default(),
         )?;
         Legacy::capture_source(n, &self.contexts, self.purpose, &source)
     }
+}
+// Independent late-B storage fixture: both live objects here are legacy Engines.
+// It deliberately does not claim current-A/legacy-B runtime or TLS admission.
+fn late_p(
+    a_engine: &mut Engine,
+    b_engine: &mut Engine,
+    c: old::Id,
+    binding: old::Id,
+) -> Result<()> {
+    for n in 17..=24 {
+        if n > 18 {
+            let request = oracle::Request::new(0, 0, n)?;
+            a_engine.queue(c, parse_request_id(&request_id(request))?, &request.body())?;
+        }
+        let event = a_engine
+            .materialize_one(c, binding)?
+            .context("queued A Text")?;
+        ensure!(
+            event.core.n == u64::from(n),
+            "materialized real queued ordinal"
+        );
+        let frame = a_engine.deliver_frame(c, &[event], binding, admin::random()?)?;
+        let batch = b_engine.accept_data_frame(c, &frame)?;
+        ensure!(
+            batch.error.is_none() && batch.readable == 1,
+            "late A readable at B"
+        );
+        if n < 24 {
+            let (ack, ordinals) = b_engine
+                .ack_intents(c, binding)?
+                .context("A actual receipt")?;
+            a_engine.accept_ack_frame(c, &ack)?;
+            b_engine.mark_ack_intents(c, binding, &ordinals, 2)?;
+        }
+        let request = oracle::Request::new(0, 1, n)?;
+        b_engine.queue(c, parse_request_id(&request_id(request))?, &request.body())?;
+        let event = b_engine
+            .materialize_one(c, binding)?
+            .context("real B later Text")?;
+        let frame = b_engine.deliver_frame(c, &[event], binding, admin::random()?)?;
+        let batch = a_engine.accept_data_frame(c, &frame)?;
+        ensure!(
+            batch.error.is_none() && batch.readable == 0,
+            "real B gap remains pending"
+        );
+    }
+    ensure!(
+        a_engine.pending_stats(c)?.0 == 8,
+        "eight real pending B17..24"
+    );
+    ensure!(a_engine.unacked(c)?.len() == 1, "A24 receipt not applied");
+    ensure!(b_engine.unacked(c)?.len() == 9, "observed B16..24 debts");
+    for n in 16..=24 {
+        ensure!(
+            a_engine
+                .store
+                .get(&kilogram_cli::ordered_dialog::outbox::receipt_path(c, 1, n))?
+                .is_none(),
+            "pending/held B has no readable receipt"
+        );
+        if n > 16 {
+            let pending = admin::required(&a_engine.store, &engine::pending_path(c, n))?;
+            let raw = admin::required(
+                &b_engine.store,
+                &engine::event_path(c, b_engine.event_at(c, 1, n)?.context("B source")?.id()?),
+            )?;
+            ensure!(pending == raw, "pending is exact signed B source");
+        }
+    }
+    Ok(())
 }
 fn nodes(dir: &Path, engines: [&Engine; 2], contexts: &[old::Id], slot: u8) -> Result<[Node; 2]> {
     engines
