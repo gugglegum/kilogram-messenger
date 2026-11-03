@@ -1,7 +1,6 @@
 //! Fresh actual Engine/Native origins only; no historical fixture consumers.
+use super::cold_witness_fixture as fixture;
 use super::*;
-#[path = "migration_s54_cold_witness_fixture.rs"]
-mod fixture;
 use kilogram_ratchet::ordered::native_call_counts;
 type Repo = db::migration7::live1::L1Repository;
 

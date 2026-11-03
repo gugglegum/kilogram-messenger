@@ -60,6 +60,10 @@ impl<'a> MigrationSources<'a> {
         ensure!(pair[0] != pair[1], "distinct verified migration owners");
         Ok(pair)
     }
+    pub(super) fn bind_memory(&self, owner: usize) -> Result<()> {
+        let source = self.source(owner)?;
+        memory_scope::bind_legacy(owner as u8, source)
+    }
     pub(super) fn normal_pair(
         &self,
         pair: Option<&[Closure; 2]>,
@@ -242,7 +246,7 @@ impl Drop for Controller {
     }
 }
 impl Controller {
-    fn migration_sources(&self) -> MigrationSources<'_> {
+    pub(super) fn migration_sources(&self) -> MigrationSources<'_> {
         MigrationSources::new(
             &self.origin.contexts,
             &self.migration,

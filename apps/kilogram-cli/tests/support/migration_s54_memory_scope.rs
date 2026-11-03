@@ -4,7 +4,7 @@ use super::*;
 use sha2::{Digest, Sha256};
 use std::{cell::RefCell, ffi::OsStr, marker::PhantomData, rc::Rc};
 #[path = "migration_s54_memory_scope_tests.rs"]
-mod tests;
+pub(crate) mod tests;
 #[derive(Clone, Serialize)]
 pub(crate) struct Pin {
     pub path: PathBuf,

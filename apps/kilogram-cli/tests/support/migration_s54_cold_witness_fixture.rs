@@ -20,7 +20,19 @@ pub(super) struct Fresh {
 }
 impl Fresh {
     pub fn legacy(purpose: Purpose) -> Result<Self> {
-        let base = workspace().join(".tmp/s54-block4af-cold-witness-01/fixtures");
+        Self::staged(purpose, 1, false).map(|(fresh, _)| fresh)
+    }
+    pub fn f_with_genesis(slot: u8) -> Result<(Self, [Legacy; 2])> {
+        let (fresh, genesis) = Self::staged(Purpose::FeasibilityF, slot, true)?;
+        Ok((fresh, genesis.context("actual early genesis witnesses")?))
+    }
+    fn staged(purpose: Purpose, slot: u8, early: bool) -> Result<(Self, Option<[Legacy; 2]>)> {
+        ensure!(slot < 2, "fixture C1 slot");
+        let base = workspace().join(if early {
+            ".tmp/s54-block4ao-deferred-memory-01/fixtures"
+        } else {
+            ".tmp/s54-block4af-cold-witness-01/fixtures"
+        });
         std::fs::create_dir_all(&base)?;
         let dir = tempfile::Builder::new().prefix("fresh-").tempdir_in(base)?;
         let mut stores = Vec::new();
@@ -62,8 +74,11 @@ impl Fresh {
             )?;
             contexts.push(c);
         }
-        // Migration maps contexts in ascending order; choose logical C1 last.
-        contexts.sort_by(|a, b| b.cmp(a));
+        // Preserve AF's default C1-last mapping; AO also exercises C1-first.
+        contexts.sort();
+        if slot == 1 {
+            contexts.reverse();
+        }
         let mut a_engine = Engine::new(sa)?;
         let mut b_engine = Engine::new(sb)?;
         let mut bindings = Vec::new();
@@ -72,6 +87,62 @@ impl Fresh {
             activate(&mut a_engine, &mut b_engine, *c, binding)?;
             bindings.push(binding);
         }
+        let early_nodes = if early {
+            Some(nodes(dir.path(), [&a_engine, &b_engine], &contexts, slot)?)
+        } else {
+            None
+        };
+        let genesis = if let Some(nodes) = &early_nodes {
+            // Capture only after both real vault leases are quiescent. Restoring
+            // transient Engine leases below does not redo the Native handshake.
+            drop(a_engine);
+            drop(b_engine);
+            let mut saved = Vec::new();
+            let logical = [state::hex(&contexts[0]), state::hex(&contexts[1])];
+            for (owner, node) in nodes.iter().enumerate() {
+                let source = db::migration7::V4Source::open(
+                    StateDirectoryLock::acquire(&node.branch.state)?,
+                    db::Config::default(),
+                )?;
+                let witness = Legacy::capture_source(node, &logical, purpose, &source)?;
+                witness.role(owner)?;
+                ensure!(
+                    witness.contexts.iter().all(|c| c.events.len() == 2
+                        && c.events.contains_key(&(0, 0))
+                        && c.events.contains_key(&(1, 0))
+                        && c.history.is_empty()
+                        && c.queue.is_empty()),
+                    "actual zero Text genesis before traffic"
+                );
+                saved.push(witness);
+            }
+            a_engine = Engine::new(OrderedVault::open(StateDirectoryLock::acquire(
+                &nodes[0].branch.state,
+            )?)?)?;
+            b_engine = Engine::new(OrderedVault::open(StateDirectoryLock::acquire(
+                &nodes[1].branch.state,
+            )?)?)?;
+            for e in [&mut a_engine, &mut b_engine] {
+                for (c, binding) in contexts.iter().zip(&bindings) {
+                    let generation = e.policy(*c)?;
+                    e.leases.insert(
+                        *c,
+                        Lease {
+                            binding: *binding,
+                            generation,
+                            deadline: engine::now()? + 300,
+                        },
+                    );
+                }
+            }
+            Some(
+                saved
+                    .try_into()
+                    .map_err(|_| anyhow::anyhow!("two genesis owners"))?,
+            )
+        } else {
+            None
+        };
         let last = match purpose {
             Purpose::FeasibilityF => 2,
             Purpose::WholeP => 16,
@@ -104,44 +175,23 @@ impl Fresh {
                 &request.body(),
             )?;
         }
-        let nodes = [a_engine, b_engine]
-            .into_iter()
-            .enumerate()
-            .map(|(owner, e)| {
-                let state = e.store.root().to_path_buf();
-                let (_, account, claim) = admin::claim(&e.store)?;
-                let device = e.device.identity().device_id();
-                let base = dir.path().join(format!("public{owner}"));
-                std::fs::create_dir(&base)?;
-                let node = Node {
-                    branch: Branch {
-                        base: base.clone(),
-                        state,
-                        account: account.to_string(),
-                        device: device.to_string(),
-                        config: base.join("config.json"),
-                        context: state::hex(&contexts[0]),
-                        claim: state::hex(&claim),
-                    },
-                    profile: base.join("indexed.profile"),
-                    ipc: base.join("indexed.ipc"),
-                    locators: base.join("locators"),
-                    indexed: false,
-                    slot: 1,
-                };
-                drop(e);
-                Ok(node)
-            })
-            .collect::<Result<Vec<_>>>()?
-            .try_into()
-            .map_err(|_| anyhow::anyhow!("two original owners"))?;
-        Ok(Self {
-            _dir: dir,
-            nodes,
-            contexts: [state::hex(&contexts[0]), state::hex(&contexts[1])],
-            ready: [Value::Null, Value::Null],
-            purpose,
-        })
+        let nodes = if let Some(nodes) = early_nodes {
+            nodes
+        } else {
+            nodes(dir.path(), [&a_engine, &b_engine], &contexts, slot)?
+        };
+        drop(a_engine);
+        drop(b_engine);
+        Ok((
+            Self {
+                _dir: dir,
+                nodes,
+                contexts: [state::hex(&contexts[0]), state::hex(&contexts[1])],
+                ready: [Value::Null, Value::Null],
+                purpose,
+            },
+            genesis,
+        ))
     }
     pub fn next(&self, owner: usize) -> [[u64; 2]; 2] {
         let c1 = match self.purpose {
@@ -200,6 +250,36 @@ impl Fresh {
         )?;
         Legacy::capture_source(n, &self.contexts, self.purpose, &source)
     }
+}
+fn nodes(dir: &Path, engines: [&Engine; 2], contexts: &[old::Id], slot: u8) -> Result<[Node; 2]> {
+    engines
+        .iter()
+        .enumerate()
+        .map(|(owner, e)| {
+            let state = e.store.root().to_path_buf();
+            let (_, account, claim) = admin::claim(&e.store)?;
+            let base = dir.join(format!("public{owner}"));
+            std::fs::create_dir(&base)?;
+            Ok(Node {
+                branch: Branch {
+                    base: base.clone(),
+                    state,
+                    account: account.to_string(),
+                    device: e.device.identity().device_id().to_string(),
+                    config: base.join("config.json"),
+                    context: state::hex(&contexts[0]),
+                    claim: state::hex(&claim),
+                },
+                profile: base.join("indexed.profile"),
+                ipc: base.join("indexed.ipc"),
+                locators: base.join("locators"),
+                indexed: false,
+                slot,
+            })
+        })
+        .collect::<Result<Vec<_>>>()?
+        .try_into()
+        .map_err(|_| anyhow::anyhow!("two original owners"))
 }
 fn activate(
     a_engine: &mut Engine,

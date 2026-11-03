@@ -328,7 +328,6 @@ fn run(parent: &Path, until: Instant) -> Result<Completed> {
     for owner in 0..2 {
         let witness = source::Legacy::capture(&s.origin.pair.nodes[owner], &s.origin.contexts)?;
         witness.role(owner)?;
-        memory_scope::bind_legacy(owner as u8, witness.source_id)?;
         s.original[owner] = Some(witness);
         s.controls[owner].old["hold_ordinals"] = json!([]);
     }

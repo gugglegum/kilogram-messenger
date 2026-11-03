@@ -148,6 +148,181 @@ fn value(source: Id, n: u64) -> Value {
     json!({"version":3,"profile_mode":"ordered-dialog-indexed","storage_stage":"Ready",
     "source_id":kilogram_cli::ordered_dialog::state::hex(&source),"stats":{"max_native_bytes":n,"max_commit_app_bytes":n}})
 }
+/// Injected ledger observations only. Production binding functions still run
+/// through the actual registry; each poisoned negative uses a separate model.
+pub(crate) struct DeferredModel;
+impl DeferredModel {
+    pub(crate) fn enter() -> Result<Self> {
+        ensure!(!active(), "separate deferred model");
+        let state = model()?;
+        SLOT.with_borrow_mut(|s| s.state = Some(state));
+        Ok(Self)
+    }
+    pub(crate) fn legacy(&self, owner: u8, pid: u32, closed: bool) -> Result<usize> {
+        eval(false, |s| {
+            let i = raw(s, owner, pid, false)?;
+            register(s, i)?;
+            if closed {
+                close_model(s, i, false)?;
+            }
+            Ok(i)
+        })?
+        .context("model active")
+    }
+    pub(crate) fn current(&self, owner: u8, pid: u32, source: Id, nonce: Id) -> Result<usize> {
+        eval(false, |s| {
+            let i = raw(s, owner, pid, true)?;
+            register(s, i)?;
+            s.bind_one(i, source, Some(nonce))?;
+            Ok(i)
+        })?
+        .context("model active")
+    }
+    pub(crate) fn close(&self, i: usize) -> Result<()> {
+        eval(false, |s| close_model(s, i, false))?.context("model active")
+    }
+    pub(crate) fn stats(&self, i: usize, source: Id) -> Result<()> {
+        eval(false, |s| {
+            let a = s.raw[i].alias.clone();
+            let t = s
+                .ticket(&a.profile, &a.ipc, true)?
+                .context("current ticket")?;
+            s.candidate(t, &value(source, 10))?;
+            s.ledger
+                .injected_checkpoint(s.raw[i].token.context("current token")?)
+        })?
+        .context("model active")
+    }
+    pub(crate) fn source(&self, owner: usize) -> Result<Option<Id>> {
+        eval(true, |s| Ok(s.sources[owner]))?.context("model active")
+    }
+    pub(crate) fn bound(&self, owner: u8) -> Result<usize> {
+        eval(true, |s| {
+            Ok(s.raw
+                .iter()
+                .filter(|r| r.alias.owner == owner && r.binding.is_some())
+                .count())
+        })?
+        .context("model active")
+    }
+    pub(crate) fn failed(&self) -> Result<bool> {
+        eval(true, |s| Ok(s.ledger.failed))?.context("model active")
+    }
+}
+impl Drop for DeferredModel {
+    fn drop(&mut self) {
+        SLOT.with_borrow_mut(|s| {
+            s.state = None;
+            s.busy = false;
+            s.poison = false;
+        });
+    }
+}
+
+/// Existing benign resident, actual Child/query adapter; application start and
+/// Stats values remain injected, with source IDs supplied by verified storage.
+#[cfg(windows)]
+pub(crate) fn actual_deferred_adapter(
+    dir: &Path,
+    roots: [&Path; 2],
+    public: [&Path; 2],
+    sources: [Id; 2],
+    mut bind: impl FnMut(usize) -> Result<()>,
+) -> Result<()> {
+    let _deadline = s53_deadline::Guard::enter(dir, 100)?;
+    let until = s53_deadline::capture_deadline()?;
+    let _capture = s54_capture::Guard::enter(until)?;
+    let _input = InputGuard::install_kind(required(dir, s54_capture::admitted_attempt()?)?, true)?;
+    let observer = Guard::enter(dir, until)?;
+    let mut profiles = Vec::new();
+    let mut ipcs = Vec::new();
+    for owner in 0..2 {
+        let mut p = Vec::new();
+        let mut q = Vec::new();
+        for current in [false, true] {
+            let stem = if current { "ao-current" } else { "ao-legacy" };
+            let profile = public[owner].join(format!("{stem}.json"));
+            std::fs::write(&profile, b"{\"adapter_fixture\":true}")?;
+            let ipc = public[owner].join(format!("{stem}.ipc"));
+            super::owner(owner as u8, roots[owner], &profile, &ipc, current)?;
+            p.push(profile);
+            q.push(ipc);
+        }
+        profiles.push(p);
+        ipcs.push(q);
+    }
+    let exe = Path::new(
+        "C:/Users/Paul/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe",
+    );
+    let fixture =
+        workspace().join("apps/kilogram-cli/tests/support/migration_s54_memory_fixture.ps1");
+    ensure!(
+        std::fs::read(&fixture)? == include_bytes!("migration_s54_memory_fixture.ps1"),
+        "pinned resident fixture"
+    );
+    let spawn = |profile: &Path, ready: &Path| -> Result<OwnedChild> {
+        let mut cmd = command(exe);
+        cmd.args(["-NoProfile", "-NonInteractive", "-NoLogo", "-File"])
+            .arg(&fixture)
+            .arg("-ReadyFile")
+            .arg(ready)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null());
+        OwnedChild::spawn_memory_fixture(&mut cmd, profile)
+    };
+    let mut a = spawn(&profiles[0][0], &public[0].join("ao-old-ready"))?;
+    let mut b = spawn(&profiles[1][0], &public[1].join("ao-old-ready"))?;
+    ensure!(
+        eval(true, |s| Ok(
+            s.sources == [None, None] && s.raw.iter().all(|r| r.binding.is_none())
+        ))?
+        .context("state")?,
+        "actual legacy residents unbound"
+    );
+    a.kill_wait()?;
+    ensure!(a.0.try_wait()?.is_some(), "actual old A wait");
+    bind(0)?;
+    ensure!(
+        eval(true, |s| Ok(s.sources == [Some(sources[0]), None]
+            && s.raw[0].binding.is_some()
+            && s.raw[1].binding.is_none()))?
+        .context("state")?,
+        "A backfilled B remains unbound"
+    );
+    let mut waits = 1;
+    for nonce in [[61; 32], [62; 32]] {
+        b.alive()?;
+        let ready = public[0].join(format!("ao-current-{}-ready", nonce[0]));
+        let mut current = spawn(&profiles[0][1], &ready)?;
+        bind_current(&current.0, sources[0], nonce)?;
+        around_status(&profiles[0][1], &ipcs[0][1], true, || {
+            Ok(value(sources[0], 10))
+        })?;
+        checkpoint(&mut current.0)?;
+        b.alive()?;
+        current.kill_wait()?;
+        ensure!(current.0.try_wait()?.is_some(), "actual current wait");
+        waits += 1;
+    }
+    b.kill_wait()?;
+    ensure!(b.0.try_wait()?.is_some(), "actual old B wait");
+    waits += 1;
+    bind(1)?;
+    let facts = finish_coverage()?;
+    ensure!(
+        facts["original_lifetime_coverage_complete"] == true
+            && facts["coverage"]["coverage_valid"] == true
+            && facts["actual_resident_spawns"] == 4
+            && facts["actual_terminal_outcomes"] == 4,
+        "actual deferred adapter coverage"
+    );
+    drop(observer);
+    println!(
+        "ao_actual_adapter=passed;resident_spawns=4;actual_waits={waits};migration_sources=real;decoder_Stats=injected;owner7_network=false;new_nonce=true"
+    );
+    Ok(())
+}
 #[test]
 fn s54_memory_scope_optout_and_required_input_absence_do_no_observation() -> Result<()> {
     ensure!(!active(), "pure test scope absent");

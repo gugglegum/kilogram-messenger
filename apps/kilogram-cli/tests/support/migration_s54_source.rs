@@ -4,8 +4,14 @@ use kilogram_cli::ordered_dialog::{engine, handshake::Spec};
 use kilogram_crypto::{DeviceEncryptionIdentity, SealedMessage};
 use zeroize::Zeroizing;
 #[cfg(test)]
+#[path = "migration_s54_cold_witness_fixture.rs"]
+pub(super) mod cold_witness_fixture;
+#[cfg(test)]
 #[path = "migration_s54_cold_witness_tests.rs"]
 mod cold_witness_tests;
+#[cfg(test)]
+#[path = "migration_s54_deferred_memory_tests.rs"]
+mod deferred_memory_tests;
 #[cfg(test)]
 #[path = "migration_s54_migration_source_fixture.rs"]
 pub(super) mod migration_source_fixture;

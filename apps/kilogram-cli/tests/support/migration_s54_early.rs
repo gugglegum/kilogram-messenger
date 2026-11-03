@@ -151,7 +151,6 @@ impl Controller {
             let witness =
                 source::Legacy::capture(&self.origin.pair.nodes[owner], &self.origin.contexts)?;
             witness.role(owner)?;
-            memory_scope::bind_legacy(owner as u8, witness.source_id)?;
             self.remember(&format!("genesis-{owner}"), witness.report())?;
             self.original[owner] = Some(witness);
         }
@@ -222,7 +221,7 @@ impl Controller {
         )?;
         self.rows.insert(format!("ready-{owner}"), ready);
         self.migration[owner] = Some(witness);
-        Ok(())
+        self.migration_sources().bind_memory(owner)
     }
     pub fn p1(&mut self) -> Result<()> {
         self.stop(1)?;
