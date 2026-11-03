@@ -301,6 +301,15 @@ fn normal(s: &mut Controller) -> Result<()> {
     s.feasibility_normal_pair()?;
     Ok(())
 }
+fn legacy_offline_before_queue(row: &Value) -> bool {
+    row["phase"] == 3
+        && row["send_next"] == 3
+        && row["receive_next"] == 3
+        && row["unacked"] == 0
+        && row["status"]
+            .as_str()
+            .is_some_and(|v| v.starts_with("ConnectionBackoff: "))
+}
 fn run(parent: &Path, until: Instant) -> Result<Completed> {
     let started = Instant::now();
     let mut s = Controller::new_feasibility(parent, until)?;
@@ -344,11 +353,14 @@ fn run(parent: &Path, until: Instant) -> Result<Completed> {
     })?;
     timing(&mut s, "f-legacy-two-each", old)?;
     s.stop(1)?;
+    // Frozen OD1 probes an idle link every30s, then allows15s for its RPC.
+    // Close/wait and reopen A after B is stopped: the fresh process has no
+    // admitted writer, and Backoff now belongs to a fresh failed admission.
+    // Preserve the same30s barrier and prove the original3/3 frontier below.
+    s.stop(0)?;
+    s.start(0)?;
     s.wait(30, |s| {
-        Ok(s.status(0, 0)?["status"]
-            .as_str()
-            .is_some_and(|v| v.starts_with("ConnectionBackoff"))
-            .then_some(()))
+        Ok(legacy_offline_before_queue(&s.status(0, 0)?).then_some(()))
     })?;
     let queued = [s.send(0, 3)?, s.send(0, 4)?];
     ensure!(

@@ -5,6 +5,51 @@ fn id(n: u16) -> old::Id {
     id[..2].copy_from_slice(&n.to_be_bytes());
     id
 }
+#[test]
+fn s54_f_legacy_offline_barrier_requires_disconnected_preserved_state() -> Result<()> {
+    // Sanitized F06 command0108 C1: peer stopped, but the idle link still says Active.
+    let saved_active =
+        json!({"phase":3,"send_next":3,"receive_next":3,"unacked":0,"status":"Active"});
+    ensure!(
+        !legacy_offline_before_queue(&saved_active),
+        "saved Active is not offline evidence"
+    );
+    // Sanitized command0022 C1: Backoff is exposed, but startup has not restored C1.
+    let saved_bootstrap = json!({"phase":0,"send_next":0,"receive_next":0,"unacked":0,"status":"ConnectionBackoff: static diagnostic omitted"});
+    ensure!(
+        !legacy_offline_before_queue(&saved_bootstrap),
+        "bootstrap/reopen Backoff is not preserved C1 state"
+    );
+    // Source-backed positive contract fixture, not an observation of another Run.
+    let mut disconnected = saved_active.clone();
+    disconnected["status"] = "ConnectionBackoff: static diagnostic omitted".into();
+    ensure!(
+        legacy_offline_before_queue(&disconnected),
+        "actual Backoff with preserved legacy frontier is admissible"
+    );
+    for (field, wrong) in [
+        ("phase", json!(1)),
+        ("send_next", json!(4)),
+        ("receive_next", json!(2)),
+        ("unacked", json!(1)),
+        ("status", json!("Negotiating")),
+        ("status", json!("ConnectionBackoffish")),
+        ("status", json!("")),
+        ("status", Value::Null),
+        ("status", json!(false)),
+    ] {
+        let mut changed = disconnected.clone();
+        changed[field] = wrong;
+        ensure!(
+            !legacy_offline_before_queue(&changed),
+            "offline barrier refuses changed state or absent status"
+        );
+    }
+    println!(
+        "s54_legacy_offline_fixture=Active_refused;bootstrap_refused;Backoff_preserved_required;negative_mutations=9;runtime=false"
+    );
+    Ok(())
+}
 fn rows(last: [u16; 2]) -> Result<Vec<Value>> {
     let mut out = vec![];
     for role in 0..2u8 {
