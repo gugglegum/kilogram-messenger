@@ -7,6 +7,9 @@ use zeroize::Zeroizing;
 #[path = "migration_s54_cold_witness_tests.rs"]
 mod cold_witness_tests;
 #[cfg(test)]
+#[path = "migration_s54_migration_source_fixture.rs"]
+pub(super) mod migration_source_fixture;
+#[cfg(test)]
 #[path = "migration_s54_source_scope_tests.rs"]
 mod scope_tests;
 #[cfg(test)]
@@ -448,6 +451,56 @@ impl Legacy {
         );
         Ok(())
     }
+    /// Project the retained migration witness and Ready mapping without opening
+    /// storage. The repository verifier below and later lifecycle lookups use
+    /// this same contiguous committed baseline, excluding queued requests.
+    pub(super) fn migration_endpoint(&self, ready: &Value) -> Result<intervals::Endpoint> {
+        ensure!(
+            self.contexts.len() == 2
+                && ready["storage_stage"] == "Ready"
+                && ready["zero_migration_native_calls"] == true
+                && ready["source_id"] == state::hex(&self.source_id),
+            "retained migration Ready/source"
+        );
+        let mut lanes = Vec::new();
+        for ctx in &self.contexts {
+            let slot = oracle::ready_slot(ready, &state::hex(&ctx.c))?;
+            let next =
+                [0, 1].map(|role| ctx.events.keys().filter(|(r, _)| *r == role).count() as u64);
+            ensure!(
+                next.iter().all(|n| (1..=25).contains(n))
+                    && next.iter().sum::<u64>() == ctx.events.len() as u64,
+                "actual committed cardinality matches original events including genesis, excluding queue"
+            );
+            for role in 0..2 {
+                ensure!(
+                    (0..next[role as usize]).all(|n| ctx.events.contains_key(&(role, n))),
+                    "contiguous original committed frontier"
+                );
+            }
+            let row = &ready["contexts"][slot as usize];
+            ensure!(
+                row["role"] == ctx.role
+                    && row["readable"] == json!(next)
+                    && row["queue"] == ctx.queue.len() as u64,
+                "retained Ready role/frontier/queue"
+            );
+            lanes.push(intervals::Lane {
+                context: ctx.c,
+                slot,
+                role: ctx.role,
+                next,
+            });
+        }
+        let endpoint = intervals::Endpoint {
+            source: self.source_id,
+            lanes: lanes
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("two migration endpoints"))?,
+        };
+        endpoint.validate(endpoint.lanes[0].role)?;
+        Ok(endpoint)
+    }
     fn migrated_endpoint(
         &self,
         node: &Node,
@@ -455,6 +508,7 @@ impl Legacy {
         repo: &mut db::migration7::live1::L1Repository,
     ) -> Result<intervals::Endpoint> {
         self.migration_scope(node, ready)?;
+        let endpoint = self.migration_endpoint(ready)?;
         let material = repo.owner_material()?;
         ensure!(
             material.signing == self.signing
@@ -462,9 +516,8 @@ impl Legacy {
                 && material.account == state::parse_id(&node.branch.account)?,
             "same in-memory device secrets"
         );
-        let mut lanes = Vec::new();
-        for ctx in &self.contexts {
-            let slot = oracle::ready_slot(ready, &state::hex(&ctx.c))?;
+        for (ctx, lane) in self.contexts.iter().zip(&endpoint.lanes) {
+            let slot = lane.slot;
             let snapshot = repo.cold_ready_snapshot(slot)?;
             ensure!(
                 repo.contexts().get(slot as usize) == Some(&(ctx.c, ctx.role))
@@ -473,26 +526,10 @@ impl Legacy {
                 "original Ready/context/role endpoint"
             );
             let actual = repo.source_counts(slot)?;
-            let retained =
-                [0, 1].map(|role| ctx.events.keys().filter(|(r, _)| *r == role).count() as u64);
             ensure!(
-                actual.lanes == retained
-                    && actual.lanes.iter().all(|n| (1..=25).contains(n))
-                    && repo.counts(slot)?.sources == ctx.events.len() as u64,
+                actual.lanes == lane.next && repo.counts(slot)?.sources == ctx.events.len() as u64,
                 "actual committed cardinality matches original events including genesis, excluding queue"
             );
-            for role in 0..2 {
-                ensure!(
-                    (0..actual.lanes[role as usize]).all(|n| ctx.events.contains_key(&(role, n))),
-                    "contiguous original committed frontier"
-                );
-            }
-            lanes.push(intervals::Lane {
-                context: ctx.c,
-                slot,
-                role: ctx.role,
-                next: actual.lanes,
-            });
             ensure!(
                 repo.spec(slot)? == ctx.spec
                     && snapshot.head == ctx.head
@@ -518,15 +555,8 @@ impl Legacy {
                 "sealed original queue bytes and cardinality unchanged"
             );
         }
-        let endpoint = intervals::Endpoint {
-            source: repo.source_id(),
-            lanes: lanes
-                .try_into()
-                .map_err(|_| anyhow::anyhow!("two migration endpoints"))?,
-        };
-        endpoint.validate(endpoint.lanes[0].role)?;
         ensure!(
-            endpoint.source == self.source_id,
+            endpoint.source == repo.source_id(),
             "original migration endpoint source"
         );
         Ok(endpoint)

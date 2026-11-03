@@ -3,6 +3,71 @@ use super::*;
 #[path = "migration_s54_normal.rs"]
 mod normal;
 pub(super) use normal::Closure;
+#[cfg(test)]
+#[path = "migration_s54_migration_source_tests.rs"]
+mod migration_source_tests;
+
+/// Retained migration facts only. Live frontiers and genesis witnesses are not
+/// substitutes for this baseline; resolving it performs no repository I/O.
+pub(super) struct MigrationSources<'a> {
+    contexts: &'a [String; 2],
+    witnesses: &'a [Option<source::Legacy>; 2],
+    rows: &'a BTreeMap<String, Value>,
+    endpoints: &'a [Option<intervals::Endpoint>; 2],
+}
+impl<'a> MigrationSources<'a> {
+    pub(super) fn new(
+        contexts: &'a [String; 2],
+        witnesses: &'a [Option<source::Legacy>; 2],
+        rows: &'a BTreeMap<String, Value>,
+        endpoints: &'a [Option<intervals::Endpoint>; 2],
+    ) -> Self {
+        Self {
+            contexts,
+            witnesses,
+            rows,
+            endpoints,
+        }
+    }
+    pub(super) fn source(&self, owner: usize) -> Result<old::Id> {
+        ensure!(owner < 2, "verified migration owner range");
+        let witness = self.witnesses[owner]
+            .as_ref()
+            .context("verified migration witness")?;
+        let ready = self
+            .rows
+            .get(&format!("ready-{owner}"))
+            .context("retained migration Ready")?;
+        let endpoint = self.endpoints[owner]
+            .as_ref()
+            .context("registered migration endpoint")?;
+        endpoint.validate(owner as u8)?;
+        let expected = witness.migration_endpoint(ready)?;
+        ensure!(
+            expected == *endpoint
+                && expected
+                    .lanes
+                    .iter()
+                    .enumerate()
+                    .all(|(c, lane)| lane.role == owner as u8
+                        && state::hex(&lane.context) == self.contexts[c]),
+            "retained migration source/context/slot/frontier agreement"
+        );
+        Ok(expected.source)
+    }
+    pub(super) fn pair(&self) -> Result<[old::Id; 2]> {
+        let pair = [self.source(0)?, self.source(1)?];
+        ensure!(pair[0] != pair[1], "distinct verified migration owners");
+        Ok(pair)
+    }
+    pub(super) fn normal_pair(
+        &self,
+        pair: Option<&[Closure; 2]>,
+        outcomes: &[Value],
+    ) -> Result<[Closure; 2]> {
+        normal::closed_pair(pair, outcomes, self.pair()?)
+    }
+}
 pub(super) fn runtime_workers(available: usize, inherited: Option<&str>) -> Result<usize> {
     let workers = inherited
         .map(str::parse::<usize>)
@@ -177,6 +242,14 @@ impl Drop for Controller {
     }
 }
 impl Controller {
+    fn migration_sources(&self) -> MigrationSources<'_> {
+        MigrationSources::new(
+            &self.origin.contexts,
+            &self.migration,
+            &self.rows,
+            &self.intervals.migrations,
+        )
+    }
     pub fn current_intervals(&self) -> Result<intervals::Verified> {
         self.stopped_reconciled()?;
         self.intervals
@@ -193,15 +266,8 @@ impl Controller {
         self.stopped_reconciled()?;
         // The live-relay gate already admitted this pair before relay closure.
         // Recheck retained outcomes without reopening that lifecycle boundary.
-        let sources = [0, 1].map(|i| self.original[i].as_ref().map(|s| s.source_id));
-        normal::closed_pair(
-            self.last_normal.as_ref(),
-            &self.outcomes,
-            [
-                sources[0].context("original A")?,
-                sources[1].context("original B")?,
-            ],
-        )?;
+        self.migration_sources()
+            .normal_pair(self.last_normal.as_ref(), &self.outcomes)?;
         memory_scope::finish_coverage()
     }
     pub fn feasibility_normal_pair(&mut self) -> Result<[Closure; 2]> {
@@ -218,15 +284,9 @@ impl Controller {
                 && !self.phases.complete(),
             "F original namespace and actual normal closures, no P/relay claim"
         );
-        let sources = [0, 1].map(|owner| self.original[owner].as_ref().map(|s| s.source_id));
-        let pair = normal::closed_pair(
-            self.last_normal.as_ref(),
-            &self.outcomes,
-            [
-                sources[0].context("original A")?,
-                sources[1].context("original B")?,
-            ],
-        )?;
+        let pair = self
+            .migration_sources()
+            .normal_pair(self.last_normal.as_ref(), &self.outcomes)?;
         for c in &pair {
             self.operations.closed(c.key, c.sequence, c.counts)?;
         }

@@ -73,6 +73,13 @@ pub(super) fn closed_pair(
     }
     Ok(pair.clone())
 }
+pub(super) fn request_key(key: oracle::Incarnation, pid: u32, source: old::Id) -> Result<()> {
+    ensure!(
+        key.pid == pid && key.owner == source,
+        "original handle/source/nonce before requesting shutdown"
+    );
+    Ok(())
+}
 
 pub(super) fn exit_zero(code: Option<i32>) -> Result<()> {
     ensure!(
@@ -168,6 +175,7 @@ impl Controller {
             "original current owner normal lifecycle"
         );
         self.check()?;
+        let source = self.migration_sources().source(owner)?;
         let run = self.running[owner]
             .as_mut()
             .context("original live normal handle")?;
@@ -175,13 +183,7 @@ impl Controller {
         run.child.alive()?;
         memory_scope::before_normal(&mut run.child.0)?;
         let key = run.decoder.incarnation()?;
-        ensure!(
-            key.pid == run.child.0.id()
-                && self.original[owner]
-                    .as_ref()
-                    .is_some_and(|o| o.source_id == key.owner),
-            "original handle/source/nonce before requesting shutdown"
-        );
+        request_key(key, run.child.0.id(), source)?;
         let stop = Stop::new(key, Instant::now(), self.until)?;
         let until = stop.until;
         run.normal = Some(stop); // Own the unresolved request even if IPC fails.
@@ -365,17 +367,9 @@ impl Controller {
             .context("retained original relay")?
             .child
             .alive()?;
-        let sources = [
-            self.original[0]
-                .as_ref()
-                .context("actual original A")?
-                .source_id,
-            self.original[1]
-                .as_ref()
-                .context("actual original B")?
-                .source_id,
-        ];
-        let pair = closed_pair(self.last_normal.as_ref(), &self.outcomes, sources)?;
+        let pair = self
+            .migration_sources()
+            .normal_pair(self.last_normal.as_ref(), &self.outcomes)?;
         for c in &pair {
             self.operations.closed(c.key, c.sequence, c.counts)?;
         }
