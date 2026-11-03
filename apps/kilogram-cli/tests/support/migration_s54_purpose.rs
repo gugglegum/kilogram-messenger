@@ -16,7 +16,7 @@ impl Purpose {
     pub(super) fn attempt(self) -> String {
         let suffix = match self {
             Self::WholeP => "01",
-            Self::FeasibilityF => "04",
+            Self::FeasibilityF => "05",
         };
         format!("{}-attempt-{suffix}", self.case())
     }

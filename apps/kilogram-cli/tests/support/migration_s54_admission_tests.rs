@@ -132,13 +132,13 @@ fn s54_admission_valid_public_binding_has_real_blake3_but_no_runtime_capability(
         runtime::require_production(&f.policy).is_err(),
         "public fixture cannot create runtime capability"
     );
+    println!(
+        "s54_p_shared_admission_accepted={}",
+        Purpose::WholeP.attempt()
+    );
     if let Some(path) = std::env::var_os("KILOGRAM_S54_ADMISSION_FIXTURE_EXPORT") {
         let path = PathBuf::from(path);
-        let owned = workspace().join(".tmp/s54-block4b-r1-01").canonicalize()?;
-        ensure!(
-            files::path(path.parent().context("export parent")?, false)?.starts_with(owned),
-            "owned public export path"
-        );
+        public_fixture_export_parent(&path)?;
         use std::io::Write;
         let mut file = std::fs::OpenOptions::new()
             .write(true)
@@ -731,14 +731,14 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
         runtime::require_production(&f.policy).is_err(),
         "F fixture cannot activate runtime"
     );
+    println!(
+        "s54_f_shared_admission_accepted={}",
+        Purpose::FeasibilityF.attempt()
+    );
     if let Some(path) = std::env::var_os("KILOGRAM_S54_FEASIBILITY_FIXTURE_EXPORT") {
         use std::io::Write;
         let path = PathBuf::from(path);
-        let owned = workspace().join(".tmp/s54-block4b-r1-01").canonicalize()?;
-        ensure!(
-            files::path(path.parent().context("F export parent")?, false)?.starts_with(owned),
-            "owned public F export only"
-        );
+        public_fixture_export_parent(&path)?;
         let mut file = std::fs::OpenOptions::new()
             .write(true)
             .create_new(true)
@@ -748,7 +748,7 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
         file.sync_all()?;
     }
     let mut checked = 0;
-    for mutation in 0..9 {
+    for mutation in 0..10 {
         let mut f = Fixture::new_for(Purpose::FeasibilityF)?;
         match mutation {
             0 => f.inventory["identity"]["selector"] = Purpose::WholeP.selector().into(),
@@ -772,25 +772,52 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
                 f.inventory["identity"]["attempt"] =
                     "F-s54-mixed-hooks-feasibility-01-attempt-02".into()
             }
-            _ => {
+            8 => {
                 f.inventory["identity"]["attempt"] =
                     "F-s54-mixed-hooks-feasibility-01-attempt-03".into()
             }
+            9 => {
+                f.inventory["identity"]["attempt"] =
+                    "F-s54-mixed-hooks-feasibility-01-attempt-04".into()
+            }
+            _ => unreachable!(),
         }
         f.seal()?;
-        ensure!(
-            f.inspect().is_err(),
-            "cross-purpose substitution {mutation}"
-        );
+        let refusal = f
+            .inspect()
+            .err()
+            .with_context(|| format!("cross-purpose substitution {mutation}"))?;
         checked += 1;
-        if mutation == 8 {
-            println!("s54_f_shared_admission_refusal=F03;mutation=8;inspect=refused");
+        if mutation >= 6 {
+            ensure!(
+                format!("{refusal:#}").contains("S54 cross-purpose identity"),
+                "old attempt must fail identity admission"
+            );
+            println!(
+                "s54_f_shared_admission_refusal=F{:02};mutation={mutation};inspect=refused",
+                mutation - 5
+            );
         }
     }
     ensure!(
-        checked == 9,
-        "all nine F shared admission mutations executed"
+        checked == 10,
+        "all ten F shared admission mutations executed"
     );
     println!("s54_f_shared_admission_mutations_executed={checked}");
+    Ok(())
+}
+
+fn public_fixture_export_parent(path: &Path) -> Result<()> {
+    let parent = files::path(path.parent().context("export parent")?, false)?;
+    let owned = [".tmp/s54-block4b-r1-01", ".tmp/s54-block4o-f05-purpose-01"]
+        .into_iter()
+        .map(|rel| workspace().join(rel))
+        .filter(|root| root.exists())
+        .map(|root| root.canonicalize())
+        .collect::<std::io::Result<Vec<_>>>()?;
+    ensure!(
+        owned.iter().any(|root| parent.starts_with(root)),
+        "owned public fixture export only"
+    );
     Ok(())
 }

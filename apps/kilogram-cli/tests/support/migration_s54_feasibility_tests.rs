@@ -19,39 +19,31 @@ fn rows(last: [u16; 2]) -> Result<Vec<Value>> {
 #[test]
 fn s54_f_closed_purpose_rejects_cross_case_selector_attempt_and_keeps_p_limits() -> Result<()> {
     ensure!(
-        Purpose::FeasibilityF.attempt() == "F-s54-mixed-hooks-feasibility-01-attempt-04"
-            && Purpose::WholeP.attempt() == "P-s54-whole-resumed-l1-01-attempt-01"
-            && Purpose::identity(
+        Purpose::FeasibilityF.attempt() == "F-s54-mixed-hooks-feasibility-01-attempt-05"
+            && Purpose::WholeP.attempt() == "P-s54-whole-resumed-l1-01-attempt-01",
+        "closed F05/P01"
+    );
+    let mut refused = 0;
+    for suffix in ["01", "02", "03", "04"] {
+        ensure!(
+            Purpose::identity(
                 Purpose::FeasibilityF.case(),
-                "F-s54-mixed-hooks-feasibility-01-attempt-01",
+                &format!("F-s54-mixed-hooks-feasibility-01-attempt-{suffix}"),
                 Purpose::FeasibilityF.selector(),
             )
             .is_err(),
-        "consumed F01 refused; closed F04/P01"
-    );
-    ensure!(
-        Purpose::identity(
-            Purpose::FeasibilityF.case(),
-            "F-s54-mixed-hooks-feasibility-01-attempt-02",
-            Purpose::FeasibilityF.selector(),
-        )
-        .is_err(),
-        "consumed F02 refused"
-    );
-    ensure!(
-        Purpose::identity(
-            Purpose::FeasibilityF.case(),
-            "F-s54-mixed-hooks-feasibility-01-attempt-03",
-            Purpose::FeasibilityF.selector(),
-        )
-        .is_err(),
-        "consumed F03 refused"
-    );
+            "consumed F{suffix} refused"
+        );
+        refused += 1;
+        println!("s54_f_purpose_refusal=F{suffix}");
+    }
+    ensure!(refused == 4, "all four consumed attempts checked");
     for p in [Purpose::WholeP, Purpose::FeasibilityF] {
         ensure!(
             Purpose::identity(p.case(), &p.attempt(), p.selector())? == p,
             "exact fixed purpose"
         );
+        println!("s54_purpose_accepted={}", p.attempt());
         let other = if p == Purpose::WholeP {
             Purpose::FeasibilityF
         } else {

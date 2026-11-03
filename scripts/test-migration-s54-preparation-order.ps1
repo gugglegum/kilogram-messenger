@@ -1,11 +1,11 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$EvidenceDirectory,[Parameter(Mandatory)][string]$FixtureIndex,[Parameter(Mandatory)][string]$PFixtureIndex)
+param([Parameter(Mandatory)][string]$EvidenceDirectory,[Parameter(Mandatory)][string]$FixtureIndex,[Parameter(Mandatory)][string]$PFixtureIndex,[switch]$PurposeOnly)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
 $workspace=Split-Path -Parent $PSScriptRoot
 $evidence=Get-S54Path $EvidenceDirectory
-if(-not @('.tmp/s54-block4d-preparation-order-repair-01/','.tmp/s54-block4h-head-repair-01/','.tmp/s54-block4k-admission-diagnostics-01/'|Where-Object {$evidence.StartsWith((Join-Path $workspace $_),[StringComparison]::OrdinalIgnoreCase)}).Count){throw 'Fresh owned preparation-order checks only.'}
+if(-not @('.tmp/s54-block4d-preparation-order-repair-01/','.tmp/s54-block4h-head-repair-01/','.tmp/s54-block4k-admission-diagnostics-01/','.tmp/s54-block4o-f05-purpose-01/'|Where-Object {$evidence.StartsWith((Join-Path $workspace $_),[StringComparison]::OrdinalIgnoreCase)}).Count){throw 'Fresh owned preparation-order checks only.'}
 $checks=[Collections.Generic.List[object]]::new()
 function Require([bool]$Value,[string]$Name){if(-not $Value){throw $Name};$checks.Add(@{name=$Name;passed=$true})}
 function Reject([string]$Name,[scriptblock]$Action,[string]$Pattern){
@@ -15,6 +15,7 @@ function Reject([string]$Name,[scriptblock]$Action,[string]$Pattern){
 function New-StageRoot([string]$Name){$root=Join-Path $evidence $Name;$null=New-Item -ItemType Directory -Path $root -ErrorAction Stop;return $root}
 function Test-Rows($Root){return @($script:S54Images[3..8]|ForEach-Object {[pscustomobject]@{Package=$_.package;Kind=$_.kind;Target=$_.target;Path=(Join-Path $Root $_.path)}})}
 
+if(-not $PurposeOnly){
 # The old normal-first order loses compiler provenance when the test build
 # replaces a shared compiler path. No executable is launched in this regression.
 $root=New-StageRoot 'old-order';$source=Join-Path $root 'compiler-normal.bin'
@@ -86,6 +87,7 @@ $outcome=Read-S54Json (Get-S54Pin (Join-Path $root 'preimages/preparation-outcom
 Require (-not $outcome.stage_completed -and -not $outcome.preparation_succeeded -and $outcome.staged.Count -eq 1 -and -not $outcome.automatic_rollback) 'interrupted test stage keeps outcome and preimages'
 $lock=[IO.File]::Open((Join-Path $root '.tmp/s54-preparation.lock'),[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]::None)
 $lock.Dispose();Require $true 'failure cleanup releases workspace lock'
+}
 
 # Full actual PS admission on a fresh exported Rust F fixture. No production
 # inventory or messenger capability is constructed by this test.
@@ -94,11 +96,14 @@ Require ($index.classification -ceq 'public_schema_fixture_only') 'public fixtur
 $policy=New-S54Policy -FixtureRoot $index.root
 $i=Read-S54Json $index.inputs.inventory 2097152
 Assert-S54Inventory $i $policy
-Require ($i.identity.attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-04') 'actual PS inventory admits F04'
-foreach($suffix in @('01','02','03')){
+Require ($i.identity.attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-05') 'actual PS inventory admits F05'
+$refused=0
+foreach($suffix in @('01','02','03','04')){
     $i.identity.attempt=$i.identity.case+'-attempt-'+$suffix
     Reject "actual PS inventory refuses F$suffix" {Assert-S54Inventory $i $policy} 'required identity'
+    $refused++
 }
+Require ($refused -eq 4) 'all four consumed attempts executed by actual PS inventory'
 $i.identity.attempt=(Get-S54Purpose FeasibilityF).Attempt
 $i.identity.selector=(Get-S54Purpose WholeP).Selector
 Reject 'actual PS inventory refuses foreign selector' {Assert-S54Inventory $i $policy} 'required identity'
@@ -107,5 +112,5 @@ $pindex=Read-S54Json (Get-S54Pin $PFixtureIndex 16384) 16384
 $pi=Read-S54Json $pindex.inputs.inventory 2097152
 Assert-S54Inventory $pi (New-S54Policy -FixtureRoot $pindex.root)
 Require ($pi.identity.attempt -ceq 'P-s54-whole-resumed-l1-01-attempt-01') 'actual PS inventory retains P01'
-Write-KilogramFrozenJson (Join-Path $evidence 'result.json') @{classification='public shared preparation-order and F04 admission regression; no compiler/runtime/network';checks=@($checks);count=$checks.Count;whole_attempt_verdict='not_established'}
+Write-KilogramFrozenJson (Join-Path $evidence 'result.json') @{classification='public shared preparation-order and F05 admission regression; no compiler/runtime/network';purpose_only=[bool]$PurposeOnly;checks=@($checks);count=$checks.Count;whole_attempt_verdict='not_established'}
 Write-Output ('preparation_order_checks='+$checks.Count)

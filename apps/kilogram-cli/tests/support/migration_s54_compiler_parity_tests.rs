@@ -14,7 +14,7 @@ fn public_f04() -> Result<(Policy, Inventory)> {
     };
     let i: Inventory = files::document(&pin, 2 * MIB)?;
     ensure!(
-        i.identity.attempt == Purpose::FeasibilityF.attempt()
+        i.identity.attempt == "F-s54-mixed-hooks-feasibility-01-attempt-04"
             && i.source.implementation == "9013f9cfb2e1803d279eaa0377b2865c835618ec"
             && i.identity.run_id
                 == "27f67783ab7bbcfd5b306178bc010a11317b213a8aba317d7230915ccccb95d2",
