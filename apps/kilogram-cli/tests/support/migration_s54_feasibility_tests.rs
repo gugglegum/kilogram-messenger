@@ -64,12 +64,12 @@ fn rows(last: [u16; 2]) -> Result<Vec<Value>> {
 #[test]
 fn s54_f_closed_purpose_rejects_cross_case_selector_attempt_and_keeps_p_limits() -> Result<()> {
     ensure!(
-        Purpose::FeasibilityF.attempt() == "F-s54-mixed-hooks-feasibility-01-attempt-09"
+        Purpose::FeasibilityF.attempt() == "F-s54-mixed-hooks-feasibility-01-attempt-10"
             && Purpose::WholeP.attempt() == "P-s54-whole-resumed-l1-01-attempt-01",
-        "closed F09/P01"
+        "closed F10/P01"
     );
     let mut refused = 0;
-    for suffix in ["01", "02", "03", "04", "05", "06", "07", "08"] {
+    for suffix in ["01", "02", "03", "04", "05", "06", "07", "08", "09"] {
         ensure!(
             Purpose::identity(
                 Purpose::FeasibilityF.case(),
@@ -82,7 +82,7 @@ fn s54_f_closed_purpose_rejects_cross_case_selector_attempt_and_keeps_p_limits()
         refused += 1;
         println!("s54_f_purpose_refusal=F{suffix}");
     }
-    ensure!(refused == 8, "all eight consumed attempts checked");
+    ensure!(refused == 9, "all nine consumed attempts checked");
     for p in [Purpose::WholeP, Purpose::FeasibilityF] {
         ensure!(
             Purpose::identity(p.case(), &p.attempt(), p.selector())? == p,

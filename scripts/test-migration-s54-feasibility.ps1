@@ -5,7 +5,7 @@ $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1')
 $workspace=Split-Path -Parent $PSScriptRoot
 $evidence=Get-S54Path $EvidenceDirectory
-$owned=@('.tmp/s54-block4c-implementation-01/','.tmp/s54-block4d-preparation-order-repair-01/','.tmp/s54-block4h-head-repair-01/','.tmp/s54-block4k-admission-diagnostics-01/','.tmp/s54-block4o-f05-purpose-01/','.tmp/s54-block4s-f06-purpose-01/','.tmp/s54-block4w-f07-purpose-01/','.tmp/s54-block4aa-f08-purpose-01/','.tmp/s54-block4ag-f09-purpose-01/')
+$owned=@('.tmp/s54-block4c-implementation-01/','.tmp/s54-block4d-preparation-order-repair-01/','.tmp/s54-block4h-head-repair-01/','.tmp/s54-block4k-admission-diagnostics-01/','.tmp/s54-block4o-f05-purpose-01/','.tmp/s54-block4s-f06-purpose-01/','.tmp/s54-block4w-f07-purpose-01/','.tmp/s54-block4aa-f08-purpose-01/','.tmp/s54-block4ag-f09-purpose-01/','.tmp/s54-block4aj-f10-purpose-01/')
 if(-not @($owned|Where-Object {$evidence.StartsWith((Join-Path $workspace $_),[StringComparison]::OrdinalIgnoreCase)}).Count){throw 'Fresh owned public F checks only.'}
 $checks=[Collections.Generic.List[object]]::new()
 function Require([bool]$Value,[string]$Name){if(-not $Value){throw $Name};$checks.Add(@{name=$Name;passed=$true})}
@@ -26,18 +26,18 @@ try {
     Require ((Get-KilogramFrozenApplicationPath $name) -ceq (Join-Path $two $name)) 'single candidate remains scalar'
 }finally{$env:PATH=$beforePath}
 $p=Get-S54Purpose WholeP;$f=Get-S54Purpose FeasibilityF
-Require ($f.Attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-09' -and $p.Attempt -ceq 'P-s54-whole-resumed-l1-01-attempt-01') 'closed F09/P01 binding'
+Require ($f.Attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-10' -and $p.Attempt -ceq 'P-s54-whole-resumed-l1-01-attempt-01') 'closed F10/P01 binding'
 Require ($p.Deadline.controller -eq 2350 -and $p.Deadline.work -eq 2375 -and $p.Deadline.outer -eq 2400) 'P original deadline unchanged'
 Require ($f.Deadline.controller -eq 450 -and $f.Deadline.work -eq 480 -and $f.Deadline.outer -eq 510) 'F fixed deadline'
 Reject 'closed purpose rejects invented limits' {Get-S54Purpose arbitrary}
 $i=@{identity=@{case=$f.Case;attempt=$f.Attempt;selector=$f.Selector;run_id=('a'*64)}}
 $refused=0
-foreach($suffix in @('01','02','03','04','05','06','07','08')){
+foreach($suffix in @('01','02','03','04','05','06','07','08','09')){
     $old=@{identity=@{case=$f.Case;attempt=($f.Case+'-attempt-'+$suffix);selector=$f.Selector;run_id=('a'*64)}}
     Reject "consumed F$suffix rejected by actual output policy" {Get-S54OutputPurpose $old}
     $refused++
 }
-Require ($refused -eq 8) 'all eight consumed attempts executed by output policy'
+Require ($refused -eq 9) 'all nine consumed attempts executed by output policy'
 $inputs=@{inventory=@{sha256=('b'*64)}}
 $assertion=@{Pin=@{sha256=('c'*64);bytes=123};Value=@{provenance=@{blake3=('d'*64)}}}
 $native=$f.Native+' '+(ConvertTo-Json -InputObject (New-S54Marker $i $inputs $assertion $f.FunctionalClass) -Compress)
