@@ -249,7 +249,7 @@ function Assert-S54Embedded($I,$Policy,$Tests) {
 function Get-S54Purpose([ValidateSet('WholeP','FeasibilityF')][string]$Name='WholeP') {
     $f=$Name -ceq 'FeasibilityF'
     $case=if($f){'F-s54-mixed-hooks-feasibility-01'}else{'P-s54-whole-resumed-l1-01'}
-    return @{Name=$Name;Case=$case;Attempt=($case+$(if($f){'-attempt-08'}else{'-attempt-01'}));
+    return @{Name=$Name;Case=$case;Attempt=($case+$(if($f){'-attempt-09'}else{'-attempt-01'}));
         Selector=$(if($f){'live_l1::handoff::final_p5::feasibility::s54_short_mixed_hooks_feasibility_public'}else{'live_l1::handoff::final_p5::s54_continuous_whole_resumed_l1_p5_public'});
         Namespace=$(if($f){'migration-s54-feasibility'}else{'migration-s54-integrated'});
         PublicNamespace=$(if($f){'migration-s54-feasibility-public-evidence'}else{'migration-s54-public-evidence'});
