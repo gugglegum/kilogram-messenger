@@ -310,6 +310,15 @@ function Assert-S54CompilerSourcesFresh($Sources) {
     # The index never authorizes bytes or a stale filesystem observation.
     foreach($p in $Sources){$null=Read-S54Pin $p 8388608}
 }
+function ConvertTo-S54CompilerUnitIdentity($Unit) {
+    $v=[ordered]@{};foreach($k in $Unit.Keys){$v[$k]=$Unit[$k]}
+    $filenames=[string[]]@($Unit.filenames|ForEach-Object {Get-S54Path $_ -AllowMissing})
+    [Array]::Sort($filenames,[StringComparer]::Ordinal)
+    $v.filenames=@($filenames)
+    $v.features=@($Unit.features|Sort-Object -CaseSensitive)
+    if($null -ne $Unit.executable){$v.executable=Get-S54Path $Unit.executable -AllowMissing}
+    ConvertTo-KilogramFrozenJson (ConvertTo-S54Canonical $v)
+}
 function Assert-S54Compiler($I,$Policy,$Capture,[bool]$Normal) {
     Assert-S54Wire $Capture 'CompilerCapture'
     if($Capture.classification -cne $(if($Normal){'nonexecuting-normal-cli-compiler-provenance'}else{'nonexecuting-compiler-artifact-provenance'}) -or $Capture.profile -cne 'verification-scale' -or $Capture.target -cne 'x86_64-pc-windows-msvc'){throw 'S54 compiler role/profile.'}
@@ -362,15 +371,8 @@ function Assert-S54Compiler($I,$Policy,$Capture,[bool]$Normal) {
         if($runtime -and ($message.profile.opt_level -cne '3' -or -not $message.profile.debug_assertions -or -not $message.profile.overflow_checks -or $message.profile.debuginfo -isnot [string] -or $message.profile.debuginfo -cne 'line-tables-only')){throw 'S54 runtime opt3/debug/overflow profile.'}
     }
     $actual=@(Get-KilogramCompilerUnits -Lines $Capture.raw_compiler_artifact_json -Workspace $Policy.Root -Target $b.target -Profile $b.profile -PackageNames $b.package_names)
-    $canonical={param($u)
-        $v=[ordered]@{};foreach($k in $u.Keys){$v[$k]=$u[$k]}
-        $v.filenames=@($u.filenames|ForEach-Object {Get-S54Path $_ -AllowMissing})
-        $v.features=@($u.features|Sort-Object -CaseSensitive)
-        if($null -ne $u.executable){$v.executable=Get-S54Path $u.executable -AllowMissing}
-        ConvertTo-KilogramFrozenJson (ConvertTo-S54Canonical $v)
-    }
-    $actualSet=@($actual|ForEach-Object {& $canonical $_}|Sort-Object -Unique)
-    $givenSet=@($Capture.units|ForEach-Object {& $canonical $_}|Sort-Object -Unique)
+    $actualSet=@($actual|ForEach-Object {ConvertTo-S54CompilerUnitIdentity $_}|Sort-Object -Unique)
+    $givenSet=@($Capture.units|ForEach-Object {ConvertTo-S54CompilerUnitIdentity $_}|Sort-Object -Unique)
     if($givenSet.Count -ne $Capture.units.Count -or $actualSet.Count -ne $Capture.raw_compiler_artifact_json.Count){throw 'S54 duplicate compiler unit.'};Assert-S54Equal $actualSet $givenSet
     $roles=@(if($Normal){$script:S54Images[1]}else{$script:S54Images[3..8]})
     if($Capture.stable_artifacts.Count -ne $roles.Count){throw 'S54 exact compiler executable set.'}

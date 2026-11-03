@@ -3,6 +3,8 @@ use super::*;
 #[path = "migration_s54_admission_fixture.rs"]
 mod fixture;
 use fixture::Fixture;
+#[path = "migration_s54_compiler_parity_tests.rs"]
+mod compiler_parity;
 
 fn diagnostic_refuses<T>(result: Result<T>, expected: D) -> Result<()> {
     let error = match result {

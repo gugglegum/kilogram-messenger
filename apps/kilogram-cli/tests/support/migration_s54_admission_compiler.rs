@@ -271,6 +271,7 @@ fn units(p: &Policy, i: &Inventory, c: &CompilerCapture) -> Result<()> {
     let encoded = |u: &Unit| {
         let mut u = u.clone();
         u.features.sort();
+        u.filenames.sort();
         serde_json::to_string(&u)
     };
     let supplied = c

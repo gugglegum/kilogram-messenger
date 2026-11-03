@@ -1,9 +1,50 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$FixtureIndex,[Parameter(Mandatory)][string]$EvidenceDirectory,[switch]$CompilerIndexOnly,[switch]$PathOnly,[switch]$HeadOnly)
+param([Parameter(Mandatory)][string]$FixtureIndex,[Parameter(Mandatory)][string]$EvidenceDirectory,[switch]$CompilerIndexOnly,[switch]$PathOnly,[switch]$HeadOnly,[switch]$CompilerFilenameOnly)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1')
 $index=ConvertFrom-S54Strict (Read-S54Public $FixtureIndex 16384) 16384
+if($CompilerFilenameOnly){
+    $workspace=Split-Path -Parent $PSScriptRoot;$evidence=Get-S54Path $EvidenceDirectory
+    if(-not $evidence.StartsWith((Get-S54Path (Join-Path $workspace '.tmp/s54-block4n-compiler-parity-01'))+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase) -or $index.classification -cne 'public_schema_fixture_only'){throw 'Fresh public compiler filename fixture required.'}
+    $policy=New-S54Policy -FixtureRoot $index.root
+    $i=Read-S54Json $index.inputs.inventory 2097152
+    $original=Read-S54Json $i.compiler.normal 8388608
+    $checks=[Collections.Generic.List[object]]::new()
+    function Copy-FilenamePublic($Value){ConvertFrom-S54Strict ([Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $Value -Depth 100 -Compress))) 8388608}
+    function Check-Filename([string]$Name,$Capture,[bool]$Refusal){
+        $refused=$false;try{Assert-S54Compiler $i $policy $Capture $true}catch{$refused=$true}
+        if($refused -ne $Refusal){throw ('Shared PS filename compiler outcome/'+$Name)}
+        $checks.Add(@{name=$Name;passed=$true;expected_refusal=$Refusal})
+    }
+    Check-Filename 'actual-shaped PDB before EXE' $original $false
+    $c=Copy-FilenamePublic $original;[Array]::Reverse($c.units[0].filenames)
+    Check-Filename 'supplied filename permutation' $c $false
+    $raw=ConvertFrom-S54Strict ([Text.Encoding]::UTF8.GetBytes($c.raw_compiler_artifact_json[0])) 131072
+    [Array]::Reverse($raw.filenames);$c.raw_compiler_artifact_json[0]=ConvertTo-Json -InputObject $raw -Depth 100 -Compress
+    Check-Filename 'raw filename permutation' $c $false
+    foreach($mutation in @('missing','extra','duplicate','changed','profile','guard','fresh','features','executable','raw_duplicate','unit_duplicate')){
+        $c=Copy-FilenamePublic $original
+        $changed=[IO.Path]::Combine((Split-Path -Parent $c.units[0].executable),'changed-output.pdb')
+        switch($mutation){
+            'missing' {$c.units[0].filenames=@($c.units[0].filenames[0])}
+            'extra' {$c.units[0].filenames+=@($changed)}
+            'duplicate' {$c.units[0].filenames+=@($c.units[0].filenames[0])}
+            'changed' {$c.units[0].filenames[0]=$changed}
+            'profile' {$c.units[0].profile.opt_level='2'}
+            'guard' {$c.frozen_guard_verified=$true}
+            'fresh' {$c.units[0].fresh=$false}
+            'features' {$c.units[0].features=@('unproved-feature')}
+            'executable' {$c.units[0].executable=$changed}
+            'raw_duplicate' {$raw=ConvertFrom-S54Strict ([Text.Encoding]::UTF8.GetBytes($c.raw_compiler_artifact_json[0])) 131072;$raw.filenames+=@($raw.filenames[0]);$c.raw_compiler_artifact_json[0]=ConvertTo-Json -InputObject $raw -Depth 100 -Compress}
+            'unit_duplicate' {$c.units+=@($c.units[0])}
+        }
+        Check-Filename $mutation $c $true
+    }
+    Write-KilogramFrozenJson (Join-Path $evidence 'compiler-filename-results.json') @{classification='fresh public shared PS compiler filename collection checks only';checks=@($checks);count=$checks.Count;runtime_admission=$false;production_Run=$false}
+    Write-Output ('compiler_filename_checks='+$checks.Count)
+    return
+}
 if($HeadOnly){
     $workspace=Split-Path -Parent $PSScriptRoot;$evidence=Get-S54Path $EvidenceDirectory
     if(-not $evidence.StartsWith((Join-Path $workspace '.tmp/s54-block4h-head-repair-01/'),[StringComparison]::OrdinalIgnoreCase) -or $index.classification -cne 'fresh_public_HEAD_checks'){throw 'Owned fresh HEAD checks required.'}
