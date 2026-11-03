@@ -1,5 +1,9 @@
 use super::*;
 
+#[cfg(test)]
+#[path = "cold_read_tests.rs"]
+mod cold_tests;
+
 impl L1Repository {
     /// Read one authenticated primary witness through its immutable V4Ref. No index scan.
     fn original_point(&mut self, path: &str, kind: u8, cap: usize) -> Result<Option<Vec<u8>>> {
@@ -96,7 +100,7 @@ impl L1Repository {
             .get(original_control(c, context, "spec")?)?
             .ok_or(Error::Integrity("copied L1 Spec"))
     }
-    pub fn snapshot(&mut self, c: u8) -> Result<L1Snapshot> {
+    fn head_native_snapshot(&mut self, c: u8) -> Result<L1ColdReadySnapshot> {
         self.occupied(c)?;
         let raw = self
             .core
@@ -127,6 +131,43 @@ impl L1Repository {
         {
             return Err(Error::Integrity("current Native pointer"));
         }
+        Ok(L1ColdReadySnapshot { head, native })
+    }
+    /// Cold Ready/L1 only: no global or per-context runtime initialization.
+    /// Validates every occupied context without writing or opening Native sessions.
+    pub fn cold_ready_snapshot(&mut self, c: u8) -> Result<L1ColdReadySnapshot> {
+        self.occupied(c)?;
+        let raw = self
+            .core
+            .get(migration_key(self.profile.mid, 2, b"")?)?
+            .ok_or(Error::Integrity("migration progress"))?;
+        if Progress::parse(&raw, self.profile.mid)?.stage != super::super::MigrationStage::Ready {
+            return Err(Error::UnsupportedRuntimeProfile);
+        }
+        if self.initialized()? {
+            return Err(Error::Integrity("cold Ready owner already initialized"));
+        }
+        if !(1..=2).contains(&self.profile.contexts.len()) {
+            return Err(Error::Bound("cold Ready occupied contexts"));
+        }
+        let mut selected = None;
+        for slot in 0..self.profile.contexts.len() {
+            let slot = slot as u8;
+            if self.core.get(key(slot, b"meta")?)?.is_some() {
+                return Err(Error::Integrity("cold Ready partial initialization"));
+            }
+            if self.existing_state(slot)?.mode != ExistingMode::L1 {
+                return Err(Error::UnsupportedRuntimeProfile);
+            }
+            let snapshot = self.head_native_snapshot(slot)?;
+            if slot == c {
+                selected = Some(snapshot);
+            }
+        }
+        selected.ok_or(Error::Bound("unoccupied L1 slot"))
+    }
+    pub fn snapshot(&mut self, c: u8) -> Result<L1Snapshot> {
+        let L1ColdReadySnapshot { head, native } = self.head_native_snapshot(c)?;
         let meta = unpack(
             &self
                 .core

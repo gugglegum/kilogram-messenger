@@ -31,6 +31,12 @@ pub struct L1Snapshot {
     pub native: Option<Vec<u8>>,
     pub meta: L1Metadata,
 }
+/// Immutable source bytes before runtime initialization. No fabricated metadata.
+#[derive(Clone)]
+pub struct L1ColdReadySnapshot {
+    pub head: Vec<u8>,
+    pub native: Option<Vec<u8>>,
+}
 pub struct L1OwnerMaterial {
     pub account: Id,
     pub nonce: Id,
