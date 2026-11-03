@@ -2,7 +2,7 @@
 use super::*;
 
 fn fixture() -> Result<tempfile::TempDir> {
-    let base = workspace().join(".tmp/s54-block4z-f07-queue-witness-01/scope-fixtures");
+    let base = workspace().join(".tmp/s54-block4aa-f08-purpose-01/scope-fixtures");
     std::fs::create_dir_all(&base)?;
     Ok(tempfile::Builder::new().prefix("empty-").tempdir_in(base)?)
 }
@@ -45,7 +45,7 @@ fn s54_source_owned_scope_refuses_cross_attempt_namespace_origin_and_escape() ->
         );
     }
     let mut checked = 0;
-    for suffix in ["01", "02", "03", "04", "05", "06"] {
+    for suffix in ["01", "02", "03", "04", "05", "06", "07"] {
         let old = format!("F-s54-mixed-hooks-feasibility-01-attempt-{suffix}");
         ensure!(
             owned_state(root, &f, &old).is_err(),
@@ -54,7 +54,7 @@ fn s54_source_owned_scope_refuses_cross_attempt_namespace_origin_and_escape() ->
         println!("s54_source_scope_refused=F{suffix}");
         checked += 1;
     }
-    ensure!(checked == 6, "all six consumed source attempts checked");
+    ensure!(checked == 7, "all seven consumed source attempts checked");
     println!("s54_source_scope_consumed_executed={checked}");
     let purpose = Purpose::FeasibilityF;
     for wrong in [
@@ -94,7 +94,7 @@ fn s54_source_owned_scope_refuses_cross_attempt_namespace_origin_and_escape() ->
 
 #[test]
 fn s54_source_owned_requires_active_capture_before_path_access() -> Result<()> {
-    let missing = workspace().join(".tmp/s54-block4z-f07-queue-witness-01/no-source-created");
+    let missing = workspace().join(".tmp/s54-block4aa-f08-purpose-01/no-source-created");
     ensure!(!missing.exists(), "uncreated source fixture");
     let node = Node {
         branch: Branch {
@@ -131,9 +131,10 @@ fn s54_source_owned_requires_active_capture_before_path_access() -> Result<()> {
 }
 #[test]
 fn s54_source_owned_stale_or_unknown_attempt_refuses_before_missing_path_access() -> Result<()> {
-    let missing = workspace().join(".tmp/s54-block4z-f07-queue-witness-01/no-stale-source");
+    let missing = workspace().join(".tmp/s54-block4aa-f08-purpose-01/no-stale-source");
     ensure!(!missing.exists(), "uncreated stale source fixture");
-    for attempt in (1..=6)
+    let mut checked = 0;
+    for attempt in (1..=7)
         .map(|n| format!("F-s54-mixed-hooks-feasibility-01-attempt-{n:02}"))
         .chain(["invented-attempt".into()])
     {
@@ -144,7 +145,12 @@ fn s54_source_owned_stale_or_unknown_attempt_refuses_before_missing_path_access(
             refusal.to_string() == "source requires current admitted S54 purpose",
             "closed admission identity checked before even workspace canonicalization"
         );
+        checked += 1;
     }
-    println!("s54_source_queue_stale_admissions_refused=7;path_access=false");
+    ensure!(
+        checked == 8,
+        "all seven stale plus unknown attempts checked"
+    );
+    println!("s54_source_queue_stale_admissions_refused={checked};path_access=false");
     Ok(())
 }
