@@ -748,7 +748,7 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
         file.sync_all()?;
     }
     let mut checked = 0;
-    for mutation in 0..10 {
+    for mutation in 0..11 {
         let mut f = Fixture::new_for(Purpose::FeasibilityF)?;
         match mutation {
             0 => f.inventory["identity"]["selector"] = Purpose::WholeP.selector().into(),
@@ -780,6 +780,10 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
                 f.inventory["identity"]["attempt"] =
                     "F-s54-mixed-hooks-feasibility-01-attempt-04".into()
             }
+            10 => {
+                f.inventory["identity"]["attempt"] =
+                    "F-s54-mixed-hooks-feasibility-01-attempt-05".into()
+            }
             _ => unreachable!(),
         }
         f.seal()?;
@@ -800,8 +804,8 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
         }
     }
     ensure!(
-        checked == 10,
-        "all ten F shared admission mutations executed"
+        checked == 11,
+        "all eleven F shared admission mutations executed"
     );
     println!("s54_f_shared_admission_mutations_executed={checked}");
     Ok(())
@@ -809,12 +813,16 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
 
 fn public_fixture_export_parent(path: &Path) -> Result<()> {
     let parent = files::path(path.parent().context("export parent")?, false)?;
-    let owned = [".tmp/s54-block4b-r1-01", ".tmp/s54-block4o-f05-purpose-01"]
-        .into_iter()
-        .map(|rel| workspace().join(rel))
-        .filter(|root| root.exists())
-        .map(|root| root.canonicalize())
-        .collect::<std::io::Result<Vec<_>>>()?;
+    let owned = [
+        ".tmp/s54-block4b-r1-01",
+        ".tmp/s54-block4o-f05-purpose-01",
+        ".tmp/s54-block4s-f06-purpose-01",
+    ]
+    .into_iter()
+    .map(|rel| workspace().join(rel))
+    .filter(|root| root.exists())
+    .map(|root| root.canonicalize())
+    .collect::<std::io::Result<Vec<_>>>()?;
     ensure!(
         owned.iter().any(|root| parent.starts_with(root)),
         "owned public fixture export only"
