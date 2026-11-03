@@ -2,7 +2,7 @@
 use super::*;
 
 fn fixture() -> Result<tempfile::TempDir> {
-    let base = workspace().join(".tmp/s54-block4s-f06-purpose-01/scope-fixtures");
+    let base = workspace().join(".tmp/s54-block4w-f07-purpose-01/scope-fixtures");
     std::fs::create_dir_all(&base)?;
     Ok(tempfile::Builder::new().prefix("empty-").tempdir_in(base)?)
 }
@@ -42,7 +42,7 @@ fn s54_source_owned_scope_refuses_cross_attempt_namespace_origin_and_escape() ->
         );
     }
     let mut checked = 0;
-    for suffix in ["01", "02", "03", "04", "05"] {
+    for suffix in ["01", "02", "03", "04", "05", "06"] {
         let old = format!("F-s54-mixed-hooks-feasibility-01-attempt-{suffix}");
         ensure!(
             owned_state(root, &f, &old).is_err(),
@@ -51,7 +51,7 @@ fn s54_source_owned_scope_refuses_cross_attempt_namespace_origin_and_escape() ->
         println!("s54_source_scope_refused=F{suffix}");
         checked += 1;
     }
-    ensure!(checked == 5, "all five consumed source attempts checked");
+    ensure!(checked == 6, "all six consumed source attempts checked");
     println!("s54_source_scope_consumed_executed={checked}");
     let purpose = Purpose::FeasibilityF;
     for wrong in [
@@ -91,7 +91,7 @@ fn s54_source_owned_scope_refuses_cross_attempt_namespace_origin_and_escape() ->
 
 #[test]
 fn s54_source_owned_requires_active_capture_before_path_access() -> Result<()> {
-    let missing = workspace().join(".tmp/s54-block4s-f06-purpose-01/no-source-created");
+    let missing = workspace().join(".tmp/s54-block4w-f07-purpose-01/no-source-created");
     ensure!(!missing.exists(), "uncreated source fixture");
     let node = Node {
         branch: Branch {
