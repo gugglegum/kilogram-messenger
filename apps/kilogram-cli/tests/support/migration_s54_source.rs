@@ -4,6 +4,9 @@ use kilogram_cli::ordered_dialog::{engine, handshake::Spec};
 use kilogram_crypto::{DeviceEncryptionIdentity, SealedMessage};
 use zeroize::Zeroizing;
 #[cfg(test)]
+#[path = "migration_s54_cold_witness_tests.rs"]
+mod cold_witness_tests;
+#[cfg(test)]
 #[path = "migration_s54_source_scope_tests.rs"]
 mod scope_tests;
 #[cfg(test)]
@@ -70,6 +73,7 @@ impl QueuedRequests {
 fn hash(raw: &[u8]) -> String {
     blake3::hash(raw).to_hex().to_string()
 }
+#[derive(Clone)]
 struct SavedContext {
     c: old::Id,
     role: u8,
@@ -82,6 +86,7 @@ struct SavedContext {
     queue: BTreeMap<[u8; 16], Vec<u8>>,
     receipts: BTreeMap<(u8, u64), Vec<u8>>,
 }
+#[derive(Clone)]
 pub(super) struct Legacy {
     state: PathBuf,
     signing: Zeroizing<old::Id>,
@@ -238,6 +243,17 @@ impl Legacy {
             kilogram_state::StateDirectoryLock::acquire(&node.branch.state)?,
             db::Config::default(),
         )?;
+        Self::capture_source(node, contexts, purpose, &source)
+    }
+    // Borrowed verifier: production capture retains admission and path ownership
+    // before opening the source. Fresh component tests supply their own lease.
+    fn capture_source(
+        node: &Node,
+        contexts: &[String; 2],
+        purpose: Purpose,
+        source: &db::migration7::V4Source,
+    ) -> Result<Self> {
+        ensure!(!node.indexed, "actual original V4 source");
         let signing = Zeroizing::new(
             source
                 .required("device-secret.key")?
@@ -418,33 +434,65 @@ impl Legacy {
         })
     }
     pub fn after_migration(&self, node: &Node, ready: &Value) -> Result<intervals::Endpoint> {
+        self.migration_scope(node, ready)?;
+        let profile = Profile3::load(&node.profile)?;
+        let mut repo = profile.open(&node.profile)?;
+        self.migrated_endpoint(node, ready, &mut repo)
+    }
+    fn migration_scope(&self, node: &Node, ready: &Value) -> Result<()> {
         ensure!(
             node.branch.state == self.state
                 && ready["zero_migration_native_calls"] == true
                 && ready["source_id"] == state::hex(&self.source_id),
             "same original directory/source and zero migration crypto"
         );
-        let profile = Profile3::load(&node.profile)?;
-        let mut repo = profile.open(&node.profile)?;
+        Ok(())
+    }
+    fn migrated_endpoint(
+        &self,
+        node: &Node,
+        ready: &Value,
+        repo: &mut db::migration7::live1::L1Repository,
+    ) -> Result<intervals::Endpoint> {
+        self.migration_scope(node, ready)?;
         let material = repo.owner_material()?;
         ensure!(
-            material.signing == self.signing && material.encryption == self.encryption,
+            material.signing == self.signing
+                && material.encryption == self.encryption
+                && material.account == state::parse_id(&node.branch.account)?,
             "same in-memory device secrets"
         );
         let mut lanes = Vec::new();
         for ctx in &self.contexts {
             let slot = oracle::ready_slot(ready, &state::hex(&ctx.c))?;
-            let snapshot = repo.snapshot(slot)?;
+            let snapshot = repo.cold_ready_snapshot(slot)?;
             ensure!(
-                repo.contexts().get(slot as usize) == Some(&(ctx.c, ctx.role)),
+                repo.contexts().get(slot as usize) == Some(&(ctx.c, ctx.role))
+                    && Spec::parse(&ctx.spec)?.role(node.branch.device.parse()?)?
+                        == u64::from(ctx.role),
                 "original Ready/context/role endpoint"
             );
-            lanes.push(intervals::committed_lane(
-                ctx.c,
+            let actual = repo.source_counts(slot)?;
+            let retained =
+                [0, 1].map(|role| ctx.events.keys().filter(|(r, _)| *r == role).count() as u64);
+            ensure!(
+                actual.lanes == retained
+                    && actual.lanes.iter().all(|n| (1..=25).contains(n))
+                    && repo.counts(slot)?.sources == ctx.events.len() as u64,
+                "actual committed cardinality matches original events including genesis, excluding queue"
+            );
+            for role in 0..2 {
+                ensure!(
+                    (0..actual.lanes[role as usize]).all(|n| ctx.events.contains_key(&(role, n))),
+                    "contiguous original committed frontier"
+                );
+            }
+            lanes.push(intervals::Lane {
+                context: ctx.c,
                 slot,
-                ctx.role,
-                &snapshot.meta,
-            ));
+                role: ctx.role,
+                next: actual.lanes,
+            });
             ensure!(
                 repo.spec(slot)? == ctx.spec
                     && snapshot.head == ctx.head
@@ -457,12 +505,18 @@ impl Legacy {
                     "all original source bytes"
                 );
             }
-            let queue = repo
-                .queue_page(slot, None, 32)?
-                .into_iter()
+            let rows = repo.queue_page(slot, None, 32)?;
+            let queue = rows
+                .iter()
+                .cloned()
                 .map(|q| (q.request, q.sealed))
                 .collect::<BTreeMap<_, _>>();
-            ensure!(queue == ctx.queue, "sealed original queue bytes unchanged");
+            ensure!(
+                queue == ctx.queue
+                    && rows.len() == queue.len()
+                    && repo.counts(slot)?.queued == queue.len() as u64,
+                "sealed original queue bytes and cardinality unchanged"
+            );
         }
         let endpoint = intervals::Endpoint {
             source: repo.source_id(),
@@ -637,11 +691,20 @@ pub(super) struct End {
     pub generation: u64,
     pub operation: old::Id,
 }
+#[derive(Clone, Copy, Debug)]
+pub(super) enum ExpectedStart<'a> {
+    FirstCurrent(&'a intervals::Endpoint),
+    Strict,
+}
 pub(super) fn point(
     node: &Node,
     contexts: &[String; 2],
+    phase: ExpectedStart<'_>,
 ) -> Result<(old::Id, (u64, u64), intervals::Endpoint)> {
-    let end = end(node, contexts)?;
+    owned(node)?;
+    let p = Profile3::load(&node.profile)?;
+    let mut repo = p.open(&node.profile)?;
+    let end = repository_end(&mut repo, contexts, phase)?;
     Ok((end.endpoint.source, end.point, end.endpoint))
 }
 pub(super) fn end(node: &Node, contexts: &[String; 2]) -> Result<End> {
@@ -662,6 +725,13 @@ fn read_end(node: &Node, contexts: &[String; 2], expected: Option<old::Id>) -> R
             "same actual normally stopped source/profile owner"
         );
     }
+    repository_end(&mut repo, contexts, ExpectedStart::Strict)
+}
+fn repository_end(
+    repo: &mut db::migration7::live1::L1Repository,
+    contexts: &[String; 2],
+    phase: ExpectedStart<'_>,
+) -> Result<End> {
     let mut lanes = Vec::new();
     for c in contexts {
         let slot = repo
@@ -670,13 +740,19 @@ fn read_end(node: &Node, contexts: &[String; 2], expected: Option<old::Id>) -> R
             .position(|(id, _)| state::hex(id) == *c)
             .context("actual stored context mapping")? as u8;
         let (_, role) = repo.contexts()[slot as usize];
-        let snap = repo.snapshot(slot)?;
-        lanes.push(intervals::committed_lane(
-            state::parse_id(c)?,
+        let next = match phase {
+            ExpectedStart::FirstCurrent(_) => {
+                repo.cold_ready_snapshot(slot)?;
+                repo.source_counts(slot)?.lanes
+            }
+            ExpectedStart::Strict => repo.snapshot(slot)?.meta.next,
+        };
+        lanes.push(intervals::Lane {
+            context: state::parse_id(c)?,
             slot,
             role,
-            &snap.meta,
-        ));
+            next,
+        });
     }
     let endpoint = intervals::Endpoint {
         source: repo.source_id(),
@@ -684,6 +760,12 @@ fn read_end(node: &Node, contexts: &[String; 2], expected: Option<old::Id>) -> R
             .try_into()
             .map_err(|_| anyhow::anyhow!("two committed context endpoints"))?,
     };
+    if let ExpectedStart::FirstCurrent(migration) = phase {
+        ensure!(
+            &endpoint == migration,
+            "first current start equals verified migration endpoint before spawn"
+        );
+    }
     Ok(End {
         point: endpoint.point()?,
         endpoint,

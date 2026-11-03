@@ -402,7 +402,8 @@ impl Controller {
         self.controls[owner].write()?;
         let n = &self.origin.pair.nodes[owner];
         let (source_id, start_sources, endpoint) = if n.indexed {
-            let (source, point, endpoint) = source::point(n, &self.origin.contexts)?;
+            let phase = self.intervals.expected_current_start(owner.try_into()?)?;
+            let (source, point, endpoint) = source::point(n, &self.origin.contexts, phase)?;
             (source, point, Some(endpoint))
         } else {
             ([0; 32], (0, 0), None)

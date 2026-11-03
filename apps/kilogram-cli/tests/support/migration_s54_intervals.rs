@@ -267,6 +267,26 @@ pub(super) struct Verified {
     pub reconciled_entries: usize,
 }
 impl Ledger {
+    pub fn expected_current_start(&self, owner: u8) -> Result<source::ExpectedStart<'_>> {
+        let migration = self
+            .migrations
+            .get(owner as usize)
+            .context("current start owner")?
+            .as_ref()
+            .context("verified migration start missing")?;
+        migration.validate(owner)?;
+        Ok(
+            if self
+                .starts
+                .iter()
+                .any(|s| s.owner == owner && s.endpoint.is_some())
+            {
+                source::ExpectedStart::Strict
+            } else {
+                source::ExpectedStart::FirstCurrent(migration)
+            },
+        )
+    }
     pub fn migration(&mut self, owner: u8, e: Endpoint) -> Result<()> {
         e.validate(owner)?;
         let slot = self
