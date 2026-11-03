@@ -4,14 +4,25 @@ use kilogram_cli::ordered_dialog::{engine, handshake::Spec};
 use kilogram_crypto::{DeviceEncryptionIdentity, SealedMessage};
 use zeroize::Zeroizing;
 #[cfg(test)]
+#[path = "migration_s54_source_scope_tests.rs"]
+mod scope_tests;
+#[cfg(test)]
 #[path = "migration_s54_source_terminal_tests.rs"]
 mod terminal_tests;
 
 pub(super) fn owned(node: &Node) -> Result<()> {
-    let root = workspace()
-        .canonicalize()?
-        .join(".tmp/migration-s54-integrated");
-    let state = node.branch.state.canonicalize()?;
+    let attempt = s54_capture::admitted_attempt()?;
+    owned_state(&workspace(), &node.branch.state, &attempt)
+}
+fn owned_state(workspace: &Path, state: &Path, admitted_attempt: &str) -> Result<()> {
+    let purpose = [Purpose::WholeP, Purpose::FeasibilityF]
+        .into_iter()
+        .find(|p| p.attempt() == admitted_attempt)
+        .context("source requires current admitted S54 purpose")?;
+    let root = purpose
+        .run(&workspace.canonicalize()?)
+        .join(purpose.origin_name());
+    let state = state.canonicalize()?;
     ensure!(
         state.starts_with(&root) && state != root,
         "only this fresh S54 origin source"
