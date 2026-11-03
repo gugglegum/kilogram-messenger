@@ -2,7 +2,7 @@
 use super::*;
 
 fn fixture() -> Result<tempfile::TempDir> {
-    let base = workspace().join(".tmp/s54-block4w-f07-purpose-01/scope-fixtures");
+    let base = workspace().join(".tmp/s54-block4z-f07-queue-witness-01/scope-fixtures");
     std::fs::create_dir_all(&base)?;
     Ok(tempfile::Builder::new().prefix("empty-").tempdir_in(base)?)
 }
@@ -20,7 +20,10 @@ fn s54_source_owned_scope_accepts_exact_p_and_f_origins() -> Result<()> {
     let fixture = fixture()?;
     for purpose in [Purpose::WholeP, Purpose::FeasibilityF] {
         let state = state_at(fixture.path(), purpose)?;
-        owned_state(fixture.path(), &state, &purpose.attempt())?;
+        ensure!(
+            owned_state(fixture.path(), &state, &purpose.attempt())? == purpose,
+            "actual owner guard returns the exact closed admitted purpose"
+        );
         println!("s54_source_scope_accepted={}", purpose.attempt());
     }
     Ok(())
@@ -91,7 +94,7 @@ fn s54_source_owned_scope_refuses_cross_attempt_namespace_origin_and_escape() ->
 
 #[test]
 fn s54_source_owned_requires_active_capture_before_path_access() -> Result<()> {
-    let missing = workspace().join(".tmp/s54-block4w-f07-purpose-01/no-source-created");
+    let missing = workspace().join(".tmp/s54-block4z-f07-queue-witness-01/no-source-created");
     ensure!(!missing.exists(), "uncreated source fixture");
     let node = Node {
         branch: Branch {
@@ -116,5 +119,32 @@ fn s54_source_owned_requires_active_capture_before_path_access() -> Result<()> {
         refusal.to_string() == "capture scope failed or absent",
         "admission checked before missing path access"
     );
+    ensure!(
+        Legacy::capture(&node, &[String::new(), String::new()])
+            .err()
+            .context("capture must refuse before opening missing storage")?
+            .to_string()
+            == "capture scope failed or absent",
+        "actual Legacy capture checks healthy admission before source/key access"
+    );
+    Ok(())
+}
+#[test]
+fn s54_source_owned_stale_or_unknown_attempt_refuses_before_missing_path_access() -> Result<()> {
+    let missing = workspace().join(".tmp/s54-block4z-f07-queue-witness-01/no-stale-source");
+    ensure!(!missing.exists(), "uncreated stale source fixture");
+    for attempt in (1..=6)
+        .map(|n| format!("F-s54-mixed-hooks-feasibility-01-attempt-{n:02}"))
+        .chain(["invented-attempt".into()])
+    {
+        let refusal = owned_state(&missing, &missing, &attempt)
+            .err()
+            .context("stale or unknown attempt must refuse")?;
+        ensure!(
+            refusal.to_string() == "source requires current admitted S54 purpose",
+            "closed admission identity checked before even workspace canonicalization"
+        );
+    }
+    println!("s54_source_queue_stale_admissions_refused=7;path_access=false");
     Ok(())
 }

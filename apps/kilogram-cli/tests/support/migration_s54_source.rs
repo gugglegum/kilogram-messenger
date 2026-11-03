@@ -11,10 +11,13 @@ mod scope_tests;
 mod terminal_tests;
 
 pub(super) fn owned(node: &Node) -> Result<()> {
+    owned_purpose(node).map(|_| ())
+}
+fn owned_purpose(node: &Node) -> Result<Purpose> {
     let attempt = s54_capture::admitted_attempt()?;
     owned_state(&workspace(), &node.branch.state, &attempt)
 }
-fn owned_state(workspace: &Path, state: &Path, admitted_attempt: &str) -> Result<()> {
+fn owned_state(workspace: &Path, state: &Path, admitted_attempt: &str) -> Result<Purpose> {
     let purpose = [Purpose::WholeP, Purpose::FeasibilityF]
         .into_iter()
         .find(|p| p.attempt() == admitted_attempt)
@@ -27,7 +30,42 @@ fn owned_state(workspace: &Path, state: &Path, admitted_attempt: &str) -> Result
         state.starts_with(&root) && state != root,
         "only this fresh S54 origin source"
     );
-    Ok(())
+    Ok(purpose)
+}
+struct QueuedRequests {
+    purpose: Purpose,
+    seen: BTreeSet<[u8; 16]>,
+}
+impl QueuedRequests {
+    fn new(purpose: Purpose) -> Self {
+        Self {
+            purpose,
+            seen: BTreeSet::new(),
+        }
+    }
+    fn matching(
+        &mut self,
+        index: usize,
+        role: u64,
+        name: &str,
+    ) -> Result<([u8; 16], oracle::Request)> {
+        ensure!(self.seen.len() < 2, "at most two original queued requests");
+        let req = parse_request_id(name)?;
+        ensure!(index == 0 && role == 0, "only original A C1 offline queue");
+        let numbers = match self.purpose {
+            Purpose::WholeP => [17, 18],
+            Purpose::FeasibilityF => [3, 4],
+        };
+        let request = numbers
+            .into_iter()
+            .map(|n| oracle::Request::new(0, 0, n))
+            .collect::<Result<Vec<_>>>()?
+            .into_iter()
+            .find(|r| request_id(*r) == name)
+            .context("exact admitted-purpose queued request")?;
+        ensure!(self.seen.insert(req), "unique original queued request");
+        Ok((req, request))
+    }
 }
 fn hash(raw: &[u8]) -> String {
     blake3::hash(raw).to_hex().to_string()
@@ -194,7 +232,7 @@ impl Legacy {
         self.contexts.iter().map(|c| c.events.len()).sum()
     }
     pub fn capture(node: &Node, contexts: &[String; 2]) -> Result<Self> {
-        owned(node)?;
+        let purpose = owned_purpose(node)?;
         ensure!(!node.indexed, "actual original V4 source");
         let source = db::migration7::V4Source::open(
             kilogram_state::StateDirectoryLock::acquire(&node.branch.state)?,
@@ -308,26 +346,19 @@ impl Legacy {
                 }
             }
             let mut queue = BTreeMap::new();
+            let mut requests = QueuedRequests::new(purpose);
             for entry in source
                 .entries()
                 .iter()
                 .filter(|e| e.context == Some(c) && e.kind == 13)
             {
-                ensure!(queue.len() < 2, "only original17/18 queued");
+                ensure!(queue.len() < 2, "at most two original queued requests");
                 let name = entry
                     .path
                     .rsplit('-')
                     .next()
                     .context("queue request suffix")?;
-                let req = parse_request_id(name)?;
-                ensure!(index == 0 && role == 0, "only original A C1 offline queue");
-                let request = [17, 18]
-                    .into_iter()
-                    .map(|n| oracle::Request::new(0, 0, n))
-                    .collect::<Result<Vec<_>>>()?
-                    .into_iter()
-                    .find(|r| request_id(*r) == name)
-                    .context("exact original queued17/18 request")?;
+                let (req, request) = requests.matching(index, role, name)?;
                 let sealed = source.required(&entry.path)?;
                 let envelope = old::decode(&sealed, 8192)?;
                 let f = envelope.fields(3)?;
