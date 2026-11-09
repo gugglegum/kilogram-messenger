@@ -2,6 +2,31 @@
 use super::*;
 use control::Controller;
 
+enum RetainedMigration {
+    Legacy(source::Legacy),
+    P(source::boundary::Checked),
+}
+impl RetainedMigration {
+    fn witness(&self) -> &source::Legacy {
+        match self {
+            Self::Legacy(w) => w,
+            Self::P(p) => p.witness(),
+        }
+    }
+    fn complete(self, node: &Node, ready: &Value) -> Result<(source::Legacy, intervals::Endpoint)> {
+        match self {
+            Self::Legacy(w) => {
+                let endpoint = w.after_migration(node, ready)?;
+                Ok((w, endpoint))
+            }
+            Self::P(p) => {
+                let endpoint = p.after_migration(node, ready)?;
+                Ok((p.into_witness(), endpoint))
+            }
+        }
+    }
+}
+
 pub(super) struct Frozen {
     pub cursor: String,
     view: Value,
@@ -201,17 +226,33 @@ impl Controller {
         self.stopped(owner)?;
         let node = &self.origin.pair.nodes[owner];
         let witness = source::Legacy::capture(node, &self.origin.contexts)?;
+        self.migrate_retained(owner, RetainedMigration::Legacy(witness))
+    }
+    pub(super) fn migrate_p(&mut self, owner: usize, phase: source::boundary::Phase) -> Result<()> {
+        let _measurement = s53_deadline::measure("migration");
+        self.stopped(owner)?;
+        let proof = source::Legacy::capture_boundary(
+            &self.origin.pair.nodes[owner],
+            &self.origin.contexts,
+        )?;
+        let checked = proof.prepare(phase, owner, &self.origin.contexts)?;
+        self.migrate_retained(owner, RetainedMigration::P(checked))
+    }
+    fn migrate_retained(&mut self, owner: usize, retained: RetainedMigration) -> Result<()> {
+        self.stopped(owner)?;
+        let node = &self.origin.pair.nodes[owner];
+        let witness = retained.witness();
         self.original[owner]
             .as_ref()
             .context("original enrollment witness")?
-            .same_identity(&witness)?;
+            .same_identity(witness)?;
         let preview = json_cli(&current(), &node.branch.upgrade(true))?;
         ensure!(
             preview["source_id"] == state::hex(&witness.source_id),
             "check binds actual original source"
         );
         let ready = self.origin.migrate_stopped(owner)?;
-        let endpoint = witness.after_migration(&self.origin.pair.nodes[owner], &ready)?;
+        let (witness, endpoint) = retained.complete(&self.origin.pair.nodes[owner], &ready)?;
         self.accounting
             .migration(&endpoint, witness.accounting_facts()?)?;
         self.intervals.migration(owner as u8, endpoint)?;
@@ -247,7 +288,7 @@ impl Controller {
             "original17/18 accepted without packet creation"
         );
         self.stop(0)?;
-        self.migrate(0)?;
+        self.migrate_p(0, source::boundary::Phase::FirstA)?;
         let observed = self.migration[0]
             .as_ref()
             .context("actual original A sources")?

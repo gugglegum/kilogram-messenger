@@ -1,7 +1,7 @@
 //! Actual fresh P storage/crypto. Both traffic engines are legacy; no mixed
 //! runtime, process, transport or measured memory evidence is claimed here.
 use super::*;
-use boundary::{Exact, PendingRow, Proof, verify_pending, verify_receipt};
+use boundary::{Checked, Exact, PendingRow, Phase, Proof, verify_pending, verify_receipt};
 use cold_witness_fixture::Fresh;
 use control::MigrationSources;
 use kilogram_ratchet::ordered::native_call_counts;
@@ -224,30 +224,113 @@ fn substitutions(
     Ok(4)
 }
 
+// Counterfactual retained records only: no conversion or durable state mutation.
+fn phase_substitutions(
+    proof: &Proof,
+    phase: Phase,
+    owner: usize,
+    contexts: &[String; 2],
+) -> Result<usize> {
+    let count = match phase {
+        Phase::FirstA => 4,
+        Phase::LateB => 6,
+    };
+    for case in 0..count {
+        let mut wrong = proof.clone();
+        let mut mapping = contexts.clone();
+        let mut intent = phase;
+        let mut author = owner;
+        match case {
+            0 => {
+                intent = match phase {
+                    Phase::FirstA => Phase::LateB,
+                    Phase::LateB => Phase::FirstA,
+                };
+                author = 1 - owner;
+            }
+            1 => {
+                author = 1 - owner;
+            }
+            2 => {
+                mapping.swap(0, 1);
+            }
+            3 => {
+                let ctx = &mut wrong.witness.contexts[0];
+                let key = ctx
+                    .events
+                    .keys()
+                    .rev()
+                    .find(|(r, n)| usize::from(*r) == owner && *n > 0)
+                    .copied()
+                    .context("actual last own source")?;
+                ctx.events.remove(&key);
+            }
+            4 => {
+                wrong.witness.contexts[0].receipts.remove(&(0, 24));
+                wrong.exact.receipts.remove(&(0, 24));
+            }
+            _ => {
+                wrong.witness.contexts[0].receipts.remove(&(1, 1));
+                wrong.exact.receipts.remove(&(1, 1));
+            }
+        }
+        ensure!(
+            wrong.prepare(intent, author, &mapping).is_err(),
+            "typed P phase refuses substitution {case}"
+        );
+    }
+    Ok(count)
+}
+
+fn cold_mapping_refusal(checked: &Checked, f: &Fresh, owner: usize) -> Result<usize> {
+    let mut wrong = f.ready[owner].clone();
+    wrong["contexts"]
+        .as_array_mut()
+        .context("actual Ready contexts")?
+        .swap(0, 1);
+    ensure!(
+        checked.after_migration(&f.nodes[owner], &wrong).is_err(),
+        "shared P cold operation rejects wrong physical Ready mapping"
+    );
+    Ok(1)
+}
+
 #[test]
 fn ap_real_p_first_a_storage_roles_and_slots() -> Result<()> {
     for slot in [0, 1] {
         let (mut f, genesis) = Fresh::p_with_genesis(slot, false)?;
-        let Proof { witness: a, exact } = capture(&f, 0)?;
+        let proof = capture(&f, 0)?;
+        let phase_refused = if slot == 0 {
+            phase_substitutions(&proof, Phase::FirstA, 0, &f.contexts)?
+        } else {
+            0
+        };
+        ensure!(
+            !f.nodes[0].indexed && f.ready[0].is_null(),
+            "phase refusals occur before conversion"
+        );
+        let checked = proof.prepare(Phase::FirstA, 0, &f.contexts)?;
+        let a = checked.witness();
+        let exact = checked.exact();
         let b = f.capture(1)?;
-        genesis[0].same_identity(&a)?;
+        genesis[0].same_identity(a)?;
         genesis[1].same_identity(&b)?;
         ensure!(
             genesis[0].source_id != a.source_id && genesis[1].source_id != b.source_id,
             "actual genesis to P source growth"
         );
-        let expected = [17, 18]
-            .map(|n| oracle::Request::new(0, 0, n).and_then(|r| parse_request_id(&request_id(r))))
-            .into_iter()
-            .collect::<Result<BTreeSet<_>>>()?;
-        ensure!(
-            exact.queue.keys().copied().collect::<BTreeSet<_>>() == expected
-                && exact.debt.is_empty(),
-            "exact A17/18 requests with validated sealed bytes; own debt zero"
-        );
         let calls = native_call_counts();
         f.migrate_owner(0)?;
-        let endpoint = a.after_migration(&f.nodes[0], &f.ready[0])?;
+        let before_operation = {
+            let repo = f.open(0)?;
+            cold_unchanged(&repo)?
+        };
+        let endpoint = checked.after_migration(&f.nodes[0], &f.ready[0])?;
+        let mapping_refused = if slot == 0 {
+            cold_mapping_refusal(&checked, &f, 0)?
+        } else {
+            0
+        };
         ensure!(
             endpoint.lanes[0].next == [17, 16]
                 && endpoint.lanes[0].slot == slot
@@ -256,9 +339,13 @@ fn ap_real_p_first_a_storage_roles_and_slots() -> Result<()> {
         );
         let mut repo = f.open(0)?;
         let before = cold_unchanged(&repo)?;
-        exact.verify(&mut repo, slot, &a)?;
+        ensure!(
+            before == before_operation,
+            "shared P phase/cold operation is immutable"
+        );
+        exact.verify(&mut repo, slot, a)?;
         let refused = if slot == 0 {
-            substitutions(&exact, &mut repo, slot, &a, true)?
+            substitutions(exact, &mut repo, slot, a, true)?
         } else {
             0
         };
@@ -273,9 +360,9 @@ fn ap_real_p_first_a_storage_roles_and_slots() -> Result<()> {
             b.source_id == after_b.source_id,
             "B unmigrated storage untouched by A conversion"
         );
-        verify_binding(&f, 0, a, endpoint)?;
+        verify_binding(&f, 0, checked.into_witness(), endpoint)?;
         println!(
-            "ap_first_A=passed;C1slot={slot};C1=17_16;C2=1_1;queue17_18_exact=true;genesis_growth=real;only_A_migrated=true;B_unbound=true;queue_negatives={refused};cold_zero_Native=true;ledger_observations=injected;runtime_transport=not_established"
+            "ap_first_A=passed;C1slot={slot};C1=17_16;C2=1_1;queue17_18_exact=true;genesis_growth=real;only_A_migrated=true;B_unbound=true;shared_phase_cold=true;phase_negatives={phase_refused};cold_mapping_negatives={mapping_refused};queue_negatives={refused};cold_zero_Native=true;ledger_observations=injected;runtime_transport=not_established"
         );
     }
     Ok(())
@@ -289,41 +376,34 @@ fn ap_real_p_late_b_storage_roles_and_slots() -> Result<()> {
             witness: a,
             exact: exact_a,
         } = capture(&f, 0)?;
-        let Proof { witness: b, exact } = capture(&f, 1)?;
-        let pending = read_pending(&f, &a, &b)?;
-        verify_pending(&b, &pending)?;
+        let proof = capture(&f, 1)?;
+        let phase_refused = if slot == 0 {
+            phase_substitutions(&proof, Phase::LateB, 1, &f.contexts)?
+        } else {
+            0
+        };
+        ensure!(
+            !f.nodes[1].indexed && f.ready[1].is_null(),
+            "late phase refusals precede conversion"
+        );
+        let checked = proof.prepare(Phase::LateB, 1, &f.contexts)?;
+        let b = checked.witness();
+        let exact = checked.exact();
+        let pending = read_pending(&f, &a, b)?;
+        verify_pending(b, &pending)?;
         let pending_refused = if slot == 0 {
-            pending_substitutions(&b, &pending)?
+            pending_substitutions(b, &pending)?
         } else {
             0
         };
         genesis[0].same_identity(&a)?;
-        genesis[1].same_identity(&b)?;
+        genesis[1].same_identity(b)?;
         ensure!(
             genesis[0].source_id != a.source_id && genesis[1].source_id != b.source_id,
             "late source growth real"
         );
         let ctx = &b.contexts[0];
         let spec = Spec::parse(&ctx.spec)?;
-        let expected = (16..=24)
-            .map(|n| {
-                let raw = ctx.events.get(&(1, n)).context("B16..24 actual source")?;
-                Ok((
-                    n,
-                    old::Event::parse(raw, spec.peers[1].cert.device_id())?.id()?,
-                ))
-            })
-            .collect::<Result<Vec<_>>>()?;
-        ensure!(
-            exact.debt == expected && exact.queue.is_empty(),
-            "nine observed exact B16..24 debts; no queue"
-        );
-        for n in 1..=24 {
-            ensure!(
-                ctx.receipts.contains_key(&(1, n)) == (n <= 15),
-                "B1..15 genuinely retired; B16..24 no opposite receipt"
-            );
-        }
         let a24 = old::Event::parse(
             ctx.events.get(&(0, 24)).context("A24 at B")?,
             spec.peers[0].cert.device_id(),
@@ -336,7 +416,16 @@ fn ap_real_p_late_b_storage_roles_and_slots() -> Result<()> {
         );
         let calls = native_call_counts();
         f.migrate_owner(1)?;
-        let endpoint = b.after_migration(&f.nodes[1], &f.ready[1])?;
+        let before_operation = {
+            let repo = f.open(1)?;
+            cold_unchanged(&repo)?
+        };
+        let endpoint = checked.after_migration(&f.nodes[1], &f.ready[1])?;
+        let mapping_refused = if slot == 0 {
+            cold_mapping_refusal(&checked, &f, 1)?
+        } else {
+            0
+        };
         ensure!(
             endpoint.lanes[0].next == [25, 25]
                 && endpoint.lanes[0].slot == slot
@@ -345,13 +434,17 @@ fn ap_real_p_late_b_storage_roles_and_slots() -> Result<()> {
         );
         let mut repo = f.open(1)?;
         let before = cold_unchanged(&repo)?;
-        exact.verify(&mut repo, slot, &b)?;
+        ensure!(
+            before == before_operation,
+            "late shared phase/cold operation is immutable"
+        );
+        exact.verify(&mut repo, slot, b)?;
         ensure!(
             repo.receipt(slot, 0, 24)?.as_ref() == Some(r1),
             "exact cold saved R1(A24) bytes"
         );
         let refused = if slot == 0 {
-            substitutions(&exact, &mut repo, slot, &b, false)?
+            substitutions(exact, &mut repo, slot, b, false)?
         } else {
             0
         };
@@ -364,9 +457,9 @@ fn ap_real_p_late_b_storage_roles_and_slots() -> Result<()> {
             a.source_id == f.capture(0)?.source_id,
             "legacy A source untouched by B migration"
         );
-        verify_binding(&f, 1, b, endpoint)?;
+        verify_binding(&f, 1, checked.into_witness(), endpoint)?;
         println!(
-            "ap_late_B=passed;C1slot={slot};C1=25_25;C2=1_1;B_debt16_24_exact=9;B1_15_signed_receipts=true;A24_debt_and_saved_R1_exact=true;A_pending17_24_exact=8;only_B_migrated=true;shared_pending=true;pending_negatives={pending_refused};debt_receipt_negatives={refused};cold_zero_Native=true;storage_only=true;ledger_observations=injected;mixed_runtime=not_established"
+            "ap_late_B=passed;C1slot={slot};C1=25_25;C2=1_1;B_debt16_24_exact=9;B1_15_signed_receipts=true;A24_debt_and_saved_R1_exact=true;A_pending17_24_exact=8;only_B_migrated=true;shared_phase_cold=true;phase_negatives={phase_refused};cold_mapping_negatives={mapping_refused};shared_pending=true;pending_negatives={pending_refused};debt_receipt_negatives={refused};cold_zero_Native=true;storage_only=true;ledger_observations=injected;mixed_runtime=not_established"
         );
     }
     Ok(())

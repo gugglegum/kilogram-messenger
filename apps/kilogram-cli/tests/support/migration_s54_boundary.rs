@@ -3,11 +3,101 @@
 use super::*;
 type Repo = db::migration7::live1::L1Repository;
 
+#[derive(Clone)]
 pub(in super::super) struct Proof {
     pub witness: Legacy,
     pub exact: Exact,
 }
 impl Proof {
+    pub fn prepare(self, phase: Phase, owner: usize, contexts: &[String; 2]) -> Result<Checked> {
+        ensure!(
+            owner == phase.owner()
+                && self.witness.contexts.len() == 2
+                && contexts[0] != contexts[1]
+                && self.exact.source == self.witness.source_id,
+            "P phase owner/context/source binding"
+        );
+        self.witness.role(owner)?;
+        for (index, ctx) in self.witness.contexts.iter().enumerate() {
+            ensure!(
+                state::hex(&ctx.c) == contexts[index],
+                "P logical context mapping"
+            );
+            let spec = Spec::parse(&ctx.spec)?;
+            let head =
+                state::Head::parse(&ctx.head, ctx.c, spec.cert_refs()?[owner], owner as u64)?;
+            ensure!(head.phase == 3, "P retained Ready phase");
+            let next =
+                [0, 1].map(|role| ctx.events.keys().filter(|(r, _)| *r == role).count() as u64);
+            let expected = if index == 1 { [1, 1] } else { phase.next() };
+            ensure!(
+                next == expected
+                    && ctx.events.len() as u64 == next.iter().sum::<u64>()
+                    && (0..2).all(|role| (0..next[role as usize])
+                        .all(|n| ctx.events.contains_key(&(role, n)))),
+                "P exact retained committed frontiers"
+            );
+            if index == 1 {
+                ensure!(
+                    ctx.queue.is_empty() && ctx.receipts.is_empty() && ctx.history.is_empty(),
+                    "P C2 remains zero Text and queue"
+                );
+            }
+        }
+        let ctx = &self.witness.contexts[0];
+        ensure!(
+            self.exact.queue == ctx.queue && self.exact.receipts == ctx.receipts,
+            "P exact proof agrees with retained source"
+        );
+        match phase {
+            Phase::FirstA => {
+                // capture_source already decrypts/authenticates each sealed body.
+                let expected = [17, 18]
+                    .map(|n| {
+                        oracle::Request::new(0, 0, n).and_then(|r| parse_request_id(&request_id(r)))
+                    })
+                    .into_iter()
+                    .collect::<Result<BTreeSet<_>>>()?;
+                ensure!(
+                    self.exact.queue.keys().copied().collect::<BTreeSet<_>>() == expected
+                        && self.exact.debt.is_empty(),
+                    "P first A exact queue17/18 and no own debt"
+                );
+            }
+            Phase::LateB => {
+                let spec = Spec::parse(&ctx.spec)?;
+                let expected = (16..=24)
+                    .map(|n| {
+                        let raw = ctx.events.get(&(1, n)).context("B16..24 retained source")?;
+                        Ok((
+                            n,
+                            old::Event::parse(raw, spec.peers[1].cert.device_id())?.id()?,
+                        ))
+                    })
+                    .collect::<Result<Vec<_>>>()?;
+                ensure!(
+                    self.exact.queue.is_empty() && self.exact.debt == expected,
+                    "P late B exact nine source debts and no queue"
+                );
+                for n in 1..=24 {
+                    ensure!(
+                        ctx.receipts.contains_key(&(1, n)) == (n <= 15),
+                        "P B1..15 retired and B16..24 lack opposite receipts"
+                    );
+                }
+                let event = old::Event::parse(
+                    ctx.events.get(&(0, 24)).context("actual A24 at B")?,
+                    spec.peers[0].cert.device_id(),
+                )?;
+                let r1 = ctx
+                    .receipts
+                    .get(&(0, 24))
+                    .context("P saved signed R1(A24)")?;
+                verify_receipt(ctx, &event, r1)?;
+            }
+        }
+        Ok(Checked { proof: self })
+    }
     // Source-subtree only: the actual scenario enters via capture_boundary's
     // admission/ownership gate. Component tests supply their own fresh lease.
     pub(super) fn capture_source(
@@ -19,6 +109,55 @@ impl Proof {
         let witness = Legacy::capture_source(node, contexts, purpose, source)?;
         let exact = Exact::capture(source, &witness)?;
         Ok(Self { witness, exact })
+    }
+}
+
+#[derive(Clone, Copy)]
+pub(in super::super) enum Phase {
+    FirstA,
+    LateB,
+}
+impl Phase {
+    fn owner(self) -> usize {
+        match self {
+            Self::FirstA => 0,
+            Self::LateB => 1,
+        }
+    }
+    fn next(self) -> [u64; 2] {
+        match self {
+            Self::FirstA => [17, 16],
+            Self::LateB => [25, 25],
+        }
+    }
+}
+
+/// Constructed only after the retained pre-conversion phase checks succeed.
+pub(in super::super) struct Checked {
+    proof: Proof,
+}
+impl Checked {
+    pub fn witness(&self) -> &Legacy {
+        &self.proof.witness
+    }
+    pub(super) fn exact(&self) -> &Exact {
+        &self.proof.exact
+    }
+    pub fn into_witness(self) -> Legacy {
+        self.proof.witness
+    }
+    pub fn after_migration(&self, node: &Node, ready: &Value) -> Result<intervals::Endpoint> {
+        ensure!(node.indexed, "converted P owner before cold verification");
+        let endpoint = self.proof.witness.after_migration(node, ready)?;
+        // after_migration above has returned and closed its repository handle.
+        {
+            let profile = Profile3::load(&node.profile)?;
+            let mut repo = profile.open(&node.profile)?;
+            self.proof
+                .exact
+                .verify(&mut repo, endpoint.lanes[0].slot, &self.proof.witness)?;
+        }
+        Ok(endpoint)
     }
 }
 

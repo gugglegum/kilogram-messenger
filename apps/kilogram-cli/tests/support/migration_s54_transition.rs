@@ -50,7 +50,7 @@ impl Controller {
         self.stopped(0)?;
         let encrypts = source::current_old_encrypts(&self.view(0, 0)?)?;
         self.old_overlap = encrypts.iter().map(accounting::Fact::legacy_json).collect();
-        self.migrate(1)?;
+        self.migrate_p(1, source::boundary::Phase::LateB)?;
         let prior = &self.rows["p2"]["a"]["next"];
         let readable = prior[0].as_u64().context("observed A own frontier")?
             + prior[1].as_u64().context("observed A peer frontier")?
