@@ -17,6 +17,8 @@ mod deferred_memory_tests;
 #[cfg(test)]
 #[path = "migration_s54_migration_source_fixture.rs"]
 pub(super) mod migration_source_fixture;
+#[path = "migration_s54_mixed_boundary.rs"]
+pub(super) mod mixed_boundary;
 #[path = "migration_s54_offline_restart.rs"]
 pub(super) mod offline_restart;
 #[cfg(test)]
@@ -668,7 +670,12 @@ impl Legacy {
         );
         Ok(())
     }
-    pub fn r1(&self, a: &Node) -> Result<Value> {
+    fn r1_rows(
+        &self,
+        debt: &[(u64, old::Id)],
+        packet: Option<&Vec<u8>>,
+        local_receipt: Option<&Vec<u8>>,
+    ) -> Result<Value> {
         let ctx = &self.contexts[0];
         let raw = ctx
             .receipts
@@ -678,31 +685,9 @@ impl Legacy {
         let spec = Spec::parse(&ctx.spec)?;
         let event = old::Event::parse(source, spec.peers[0].cert.device_id())?;
         let id = event.id()?;
-        let value = old::decode(raw, 1024)?;
-        let f = value.fields(2)?[0].fields(8)?;
+        boundary::verify_receipt(ctx, &event, raw)?;
         ensure!(
-            f[0].uint()? == 1
-                && f[1].fixed::<32>()? == event.core.d
-                && f[2].fixed::<32>()? == event.core.e
-                && f[3].uint()? == 0
-                && f[4].uint()? == 24
-                && f[5].fixed::<32>()? == id,
-            "saved R1 exact source/context/lane/ordinal"
-        );
-        ensure!(
-            f[6].fixed::<32>()? == spec.cert_refs()?[1],
-            "actual saved receiver certificate"
-        );
-        spec.peers[1].cert.device_id().verify(
-            &old::signing_bytes(old::RECEIPT_SIGN, &value.fields(2)?[0], 1024)?,
-            value.fields(2)?[1].bytes()?,
-        )?;
-        let p = Profile3::load(&a.profile)?;
-        let mut repo = p.open(&a.profile)?;
-        ensure!(
-            repo.debt_page(a.slot, None, 32)? == vec![(24, id)]
-                && repo.event_at(a.slot, 0, 24)?.as_ref() == Some(source)
-                && repo.receipt(a.slot, 0, 24)?.is_none(),
+            debt == [(24, id)] && packet == Some(source) && local_receipt.is_none(),
             "R1 retained at B with same actual nonempty A debt"
         );
         Ok(

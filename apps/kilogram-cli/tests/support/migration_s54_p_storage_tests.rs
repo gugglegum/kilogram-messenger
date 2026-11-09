@@ -344,6 +344,33 @@ fn ap_real_p_first_a_storage_roles_and_slots() -> Result<()> {
             "shared P phase/cold operation is immutable"
         );
         exact.verify(&mut repo, slot, a)?;
+        let cold = mixed_boundary::repository(&mut repo, &endpoint, &f.contexts, &b)
+            .err()
+            .context("cold refusal")?;
+        ensure!(
+            cold.to_string().contains("must already be initialized"),
+            "actual cold repo cannot use warm collector"
+        );
+        if slot == 0 {
+            for case in 0..4 {
+                let mut wrong = endpoint.clone();
+                let mut contexts = f.contexts.clone();
+                match case {
+                    0 => wrong.source = [99; 32],
+                    1 => wrong.lanes[0].role = 1,
+                    2 => contexts.swap(0, 1),
+                    _ => wrong.lanes[0].slot = wrong.lanes[1].slot,
+                }
+                let error = mixed_boundary::repository(&mut repo, &wrong, &contexts, &b)
+                    .err()
+                    .context("scope refusal")?;
+                ensure!(
+                    !error.to_string().contains("must already be initialized"),
+                    "wrong warm scope refused before cold check"
+                );
+            }
+        }
+        println!("aq4_actual_cold_refusal_slot={slot} positive_warm_execution=false");
         let refused = if slot == 0 {
             substitutions(exact, &mut repo, slot, a, true)?
         } else {
@@ -391,6 +418,15 @@ fn ap_real_p_late_b_storage_roles_and_slots() -> Result<()> {
         let exact = checked.exact();
         let pending = read_pending(&f, &a, b)?;
         verify_pending(b, &pending)?;
+        let warm_rows_refused = if slot == 0 {
+            mixed_boundary::tests::legacy_row_checks(&a, b, &pending)?
+        } else {
+            0
+        };
+        ensure!(
+            warm_rows_refused == if slot == 0 { 18 } else { 0 },
+            "new supplied warm-row refusals"
+        );
         let pending_refused = if slot == 0 {
             pending_substitutions(b, &pending)?
         } else {

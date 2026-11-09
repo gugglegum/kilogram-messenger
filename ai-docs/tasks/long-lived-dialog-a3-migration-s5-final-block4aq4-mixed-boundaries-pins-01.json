@@ -1,0 +1,351 @@
+{
+  "format_version": 1,
+  "head": "fc3682707c5bedca297b7c80db2ebc463863803d",
+  "classification": "AQ4 real AP legacy/cold negative + supplied observations/static collector; positive warm/mixed execution unestablished",
+  "sources": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_source.rs",
+      "bytes": 35390,
+      "sha256": "ab0bd3132e643d766957a68f52644e0b4db83e3bbcac4329fc5bb056b0614be4"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_early.rs",
+      "bytes": 21677,
+      "sha256": "325c698fe7d9899785992fdf57ddbcda207177951b9990ec7f8b070d58924167"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_transition.rs",
+      "bytes": 18868,
+      "sha256": "7e76ee2e7af7c08aa236205a93bd3395f7055eb4a834e225245b67fc2d8a30e0"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_p_storage_tests.rs",
+      "bytes": 17477,
+      "sha256": "22cae22728a2b58fed0f1a63da3751b0dac55ed303941093a23e02e625adc5c7"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_mixed_boundary.rs",
+      "bytes": 10149,
+      "sha256": "a1154f567549b8bee863672e458ad031e53c9a1b9c5957518ee3c91b0eba3641"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\apps\\kilogram-cli\\tests\\support\\migration_s54_mixed_boundary_tests.rs",
+      "bytes": 7233,
+      "sha256": "549a075b581cdbf8efa6152259dbc5870d07eaf6898d18a40de2895bcc799ac3"
+    }
+  ],
+  "report": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4aq4-mixed-boundaries-report-01.md",
+    "bytes": 9652,
+    "sha256": "87b71d931e88183109af515f8f31a18b307757dc1605b96745e965c818f53d87"
+  },
+  "evidence": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\actual-tool-returns.json",
+      "bytes": 3242,
+      "sha256": "8765e2b0c715690c5d6cf8691cf7e62655db69938489341f2e610d8cc06a97ab"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\baseline.json",
+      "bytes": 3552,
+      "sha256": "ec2efd675808428e5bdf46d4f0237339d7cd45b7ced2c62070fa7afd44c42443"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\before-focused-source.json",
+      "bytes": 1864,
+      "sha256": "56ae17686e3a8b8bb8f968e001d88d09d26846d0dab448e4452494aa2e0dcf24"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\before-focused.py",
+      "bytes": 484,
+      "sha256": "9096218640769fa6f0ac59d09278d18395b6f3d2e3c5960323985efa586e6c65"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\clippy-01.cargo.json",
+      "bytes": 359,
+      "sha256": "c040ea8960a993ca58102944ec6ec3a9b9d2787461eb8df7679012441038d54d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\clippy-01.receipt.json",
+      "bytes": 2061,
+      "sha256": "c073b18ccadefc1b60e956b1f065e3550b59e745981abfcabd2fb69a4cb573a0"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\clippy-01.stderr.log",
+      "bytes": 173,
+      "sha256": "16ec59bb176b1232527fa444c4e813851861ac226e018e09b4f140c950919073"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\clippy-01.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\compile-01.cargo.json",
+      "bytes": 1553,
+      "sha256": "007877c260d7793b7683f233c96a3c7740c7feaddebe5ca5ce4357cc018642c2"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\compile-01.images.json",
+      "bytes": 1171,
+      "sha256": "cff73b1883711bc285dcc47f135c6e022161015014ed764fb3740841452642c6"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\compile-01.receipt.json",
+      "bytes": 2087,
+      "sha256": "e10d27a6582ff6cb56b1da390d5db6efeccd043c00764708957d012c4ca29991"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\compile-01.stderr.log",
+      "bytes": 173,
+      "sha256": "c546dc8f28419c9e61b9b3c527090259cea37cea8fda12cd1736b2f64a941a65"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\compile-01.stdout.log",
+      "bytes": 497,
+      "sha256": "7d884e404de749315d5912597f50a3c71f701a4cf27eb44f3d518bca0d0efcd8"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\deliver.py",
+      "bytes": 13843,
+      "sha256": "c1842cdaaf427531f4e5ca8d1f0fda6c17ed819d8778d7bd6eccf2857c6c321b"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\format-01.receipt.json",
+      "bytes": 2078,
+      "sha256": "cc9d8eaaa69ac5db05c614f7f1874ae11189fb4f17b72d23eb66f499844eea7f"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\format-01.stderr.log",
+      "bytes": 1481,
+      "sha256": "f8e417572136b2bc614a6c0ced5dd4f8e6775a1eeaa348494ae4f8d35d641585"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\format-01.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\format-02.receipt.json",
+      "bytes": 2058,
+      "sha256": "0880dd27c8fa7cf687b58d45d6942d848423eb6cb9e0db212566a56d8f3b4c45"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\format-02.result.json",
+      "bytes": 731,
+      "sha256": "813edc30e77633a1c9ba3388911424b7746dccd55f2e3422a167c2c6b2d18c84"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\format-02.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\format-02.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\owner.ps1",
+      "bytes": 7400,
+      "sha256": "c1780e914a7effd92da826073a47f21f2e598f63cf56228c0cd9600f6d3833d4"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\preconditions.md",
+      "bytes": 2788,
+      "sha256": "b6a998312504350d502f23a59895d1d97bdfa3c7d7b7e4b1fa13745b5eeeda1d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\record.py",
+      "bytes": 1137,
+      "sha256": "5d7df9b8740246bad3ad1b144127dd3bc715843cb795c2361d247ddca7f2df3e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-early-01.cargo.json",
+      "bytes": 1553,
+      "sha256": "969ec7fcd7346bb4b845e7b23fd791fdf690284fa663664e781c78e6ee44cda4"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-early-01.images.json",
+      "bytes": 1171,
+      "sha256": "cff73b1883711bc285dcc47f135c6e022161015014ed764fb3740841452642c6"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-early-01.receipt.json",
+      "bytes": 2079,
+      "sha256": "6b96dcff8666c25d00f8b4deb1e192f09407b5a9250564f669c14378708d5d1d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-early-01.selectors.json",
+      "bytes": 273,
+      "sha256": "e42620f8b9915300ef08b256aa83a440e313d601ead778eab455bbc2b154513d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-early-01.stderr.log",
+      "bytes": 81,
+      "sha256": "948d34d44cada3964cf7ddaf7e273355b71d70e64e01225e994078b62fc3f9c5"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-early-01.stdout.log",
+      "bytes": 4833,
+      "sha256": "1db1d1cd4d150f21bb45ed311e17a7f3689dab3793bd84366a43e5e6466664af"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-late-01.cargo.json",
+      "bytes": 1553,
+      "sha256": "58383112bc304456f411446ceef9fee0ad49a6a728fd94a1abfcf6ee09c009ee"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-late-01.images.json",
+      "bytes": 1171,
+      "sha256": "cff73b1883711bc285dcc47f135c6e022161015014ed764fb3740841452642c6"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-late-01.receipt.json",
+      "bytes": 2076,
+      "sha256": "22c935017f2e5e73d4b5f6c7be63f7137feacf4b5afc92250972a264d51f1017"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-late-01.selectors.json",
+      "bytes": 272,
+      "sha256": "82dfbe55e3ad47862b1cd17af82125849950c0be396b275cde69431b38af8277"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-late-01.stderr.log",
+      "bytes": 82,
+      "sha256": "805094b312de48efb6e1249cc0f9c2f695ec2ec2530809d8ac25f1ba315e1fbb"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-late-01.stdout.log",
+      "bytes": 5016,
+      "sha256": "57b4104e05759ad90611bd63b69824815e6b9b6a471309f0cfd6ccab4da3a4d2"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-negatives-01.cargo.json",
+      "bytes": 1553,
+      "sha256": "74f881b2cb0dc55b026c9d3e54981cdd95888a444cfd317dee8f8fb9b78649ee"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-negatives-01.images.json",
+      "bytes": 1171,
+      "sha256": "cff73b1883711bc285dcc47f135c6e022161015014ed764fb3740841452642c6"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-negatives-01.receipt.json",
+      "bytes": 2094,
+      "sha256": "c07f4861b5068620c978148696c929664deacec4dc51f5380f088ae5dc2b2b27"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-negatives-01.selectors.json",
+      "bytes": 285,
+      "sha256": "6afedb11c2563ed0fcecc7e652998acbb2eff9debf4c062c7d51b5e69811dbf7"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-negatives-01.stderr.log",
+      "bytes": 81,
+      "sha256": "60c69c9a082f7f7acc6b75625dc5451b9ad5ce32a5a87bb7ac3e156d7b88f378"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\rust-negatives-01.stdout.log",
+      "bytes": 3208,
+      "sha256": "a2957180f6fb0a5bd752c4381ee435d14afdcbb251e2e4e5aed251d0debe728a"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\seal-01.processes.json",
+      "bytes": 147,
+      "sha256": "274804eed1b56d5bf294655c46018df0c507896c81f5d6df4f92aeaedb0ac02d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\seal-01.receipt.json",
+      "bytes": 2051,
+      "sha256": "2dc3086ff8abbbc6591bdb435f26da27d84d02f2918e006d6e5db4bf60425eaa"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\seal-01.scope.json",
+      "bytes": 1174,
+      "sha256": "6a2d2297453bd42279699f7530de522e070dd26a059c79df12d9c9110b2f9d3d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\seal-01.source.json",
+      "bytes": 1503,
+      "sha256": "d784260cc311426d155cedae06060b13873705cc74a8c6df4ed89a550362282c"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\seal-01.stderr.log",
+      "bytes": 121,
+      "sha256": "0e421c90466cc817e37fa3d6434ce20780a42aaf5fc06472e37e8ba98259e495"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\seal-01.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\setup.py",
+      "bytes": 2269,
+      "sha256": "ca0783f4f0099779002bf42485ac41fbea019b97a2d960143ea7f17f69e27b8d"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\source.patch",
+      "bytes": 29738,
+      "sha256": "9984f4b9283bedce1c0624d4102ef126b63e92b1c26706304f2a10c933cf7966"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\static-order.json",
+      "bytes": 1932,
+      "sha256": "a9a346b401fb1269f8ac12822cc9cada9cc9ed4de9d00b4fe199472b26c1d81b"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\static-order.py",
+      "bytes": 4253,
+      "sha256": "9d9a172a4d26bdda19dbb180728f2d59b6ab2a39a69395fc362ea1492901f9ee"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4aq4-mixed-boundaries-01\\work.ps1",
+      "bytes": 5184,
+      "sha256": "a8387cdc8aaf0563995bb1183ff39e0970e80f7cc66fab36ed7738fc5c2d57ac"
+    }
+  ],
+  "navigation": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\README.md",
+      "bytes": 210074,
+      "sha256": "ae9bebb51c93508b583b0d60082dba9fb045048abe94872110dfc7841554ab9e"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\chat-coordination.md",
+      "bytes": 165761,
+      "sha256": "f6ee96f39ccf30e4fc133ea06d0c897ebc1643a347ae36cf9607552d6675bc20"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\next-stage-plan.md",
+      "bytes": 60232,
+      "sha256": "52e158dd72339b23ef93de531300a57f60345dfb3b46cd7b41c044978c2906c1"
+    }
+  ],
+  "tools": [
+    {
+      "path": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\native\\powershell\\pwsh.exe",
+      "bytes": 301360,
+      "sha256": "2a6769a3330dc1084d0154bfde7d164ab750ca7f700f313f9d417c1be78b2233"
+    },
+    {
+      "path": "C:\\Users\\Paul\\.rustup\\toolchains\\1.98.0-x86_64-pc-windows-msvc\\bin\\rustc.exe",
+      "bytes": 110592,
+      "sha256": "777119d5feeca3d9fc163dc0e0d8be896cfcb65c45255328cef214d833546c6a"
+    },
+    {
+      "path": "C:\\Users\\Paul\\.rustup\\toolchains\\1.98.0-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+      "bytes": 31435264,
+      "sha256": "197c9f582da4994c585b13366abc12e810de2708ce14ddcf0873a8f377f3954e"
+    },
+    {
+      "path": "C:\\Users\\Paul\\.cache\\codex-runtimes\\codex-primary-runtime\\dependencies\\python\\python.exe",
+      "bytes": 107312,
+      "sha256": "3c48fbdcc2ed5c55290e39bef50bd6b1da76f43f3069a4a2624d0b8876a605f5"
+    }
+  ],
+  "warm_collector_positive": false,
+  "production_Run": false,
+  "publication": false
+}

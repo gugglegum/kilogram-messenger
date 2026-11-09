@@ -47,10 +47,38 @@ impl Controller {
     pub fn p3(&mut self) -> Result<()> {
         self.stop(1)?;
         self.stop(0)?;
-        self.stopped(0)?;
+        self.stopped_reconciled()?;
+        let original_a = self.p2_sources()?;
+        source::mixed_boundary::bindings(&memory_scope::diagnostic()?, [Some(original_a), None])?;
+        let _measurement = s53_deadline::measure("migration");
+        let proof =
+            source::Legacy::capture_boundary(&self.origin.pair.nodes[1], &self.origin.contexts)?;
+        let checked = proof.prepare(source::boundary::Phase::LateB, 1, &self.origin.contexts)?;
+        let original_b = checked.witness().source_id;
+        self.original[1]
+            .as_ref()
+            .context("original B genesis")?
+            .same_identity(checked.witness())?;
+        let r1 = source::mixed_boundary::collect(
+            &self.view(0, 0)?,
+            self.intervals.migrations[0]
+                .as_ref()
+                .context("original A endpoint")?,
+            &self.origin.contexts,
+            checked.witness(),
+        )?;
         let encrypts = source::current_old_encrypts(&self.view(0, 0)?)?;
         self.old_overlap = encrypts.iter().map(accounting::Fact::legacy_json).collect();
-        self.migrate_p(1, source::boundary::Phase::LateB)?;
+        self.migrate_p_checked(1, checked)?;
+        ensure!(
+            self.migration_sources().pair()? == [original_a, original_b],
+            "P3 both retained AN migration sources"
+        );
+        source::mixed_boundary::bindings(
+            &memory_scope::diagnostic()?,
+            [Some(original_a), Some(original_b)],
+        )?;
+        drop(_measurement);
         let prior = &self.rows["p2"]["a"]["next"];
         let readable = prior[0].as_u64().context("observed A own frontier")?
             + prior[1].as_u64().context("observed A peer frontier")?
@@ -91,10 +119,6 @@ impl Controller {
             "p2-source-subtotal",
             json!({"old_genesis_subtotal":observed}),
         )?;
-        let r1 = self.migration[1]
-            .as_ref()
-            .context("B original source")?
-            .r1(&self.view(0, 0)?)?;
         self.remember("saved-r1", r1)?;
         // Pause actual signed P outside Owner7. B's independent worker can
         // perform pre-Q Head and saved-ACK work before Q exists on either side.

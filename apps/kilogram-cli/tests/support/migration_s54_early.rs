@@ -228,17 +228,7 @@ impl Controller {
         let witness = source::Legacy::capture(node, &self.origin.contexts)?;
         self.migrate_retained(owner, RetainedMigration::Legacy(witness))
     }
-    pub(super) fn migrate_p(&mut self, owner: usize, phase: source::boundary::Phase) -> Result<()> {
-        let _measurement = s53_deadline::measure("migration");
-        self.stopped(owner)?;
-        let proof = source::Legacy::capture_boundary(
-            &self.origin.pair.nodes[owner],
-            &self.origin.contexts,
-        )?;
-        let checked = proof.prepare(phase, owner, &self.origin.contexts)?;
-        self.migrate_p_checked(owner, checked)
-    }
-    fn migrate_p_checked(
+    pub(super) fn migrate_p_checked(
         &mut self,
         owner: usize,
         checked: source::boundary::Checked,
@@ -418,14 +408,11 @@ impl Controller {
         self.send(0, 24)?;
         self.send(1, 24)?;
         self.wait(30, |s| {
-            let a = s.status(0, 0)?;
-            let b = s.status(1, 0)?;
-            Ok((a["next"] == json!([25, 16])
-                && a["counts"]["debt"] == 1
-                && a["counts"]["pending"] == 8
-                && b["receive_next"] == 25
-                && b["send_next"] == 25)
-                .then_some(()))
+            let rows = [
+                [s.status(0, 0)?, s.status(0, 1)?],
+                [s.status(1, 0)?, s.status(1, 1)?],
+            ];
+            Ok(source::mixed_boundary::live(&rows, &s.origin.contexts)?.then_some(()))
         })?;
         let request = source_row(&self.view(0, 0)?, 0, 24)?;
         ensure!(
@@ -435,11 +422,38 @@ impl Controller {
         self.frozen = Some(Frozen::capture(&self.view(0, 0)?)?);
         let a = self.status(0, 0)?;
         let b = self.status(1, 0)?;
+        let c2 = [self.status(0, 1)?, self.status(1, 1)?];
+        ensure!(
+            source::mixed_boundary::live(
+                &[[a.clone(), c2[0].clone()], [b.clone(), c2[1].clone()]],
+                &self.origin.contexts
+            )?,
+            "P2 final mixed live boundary"
+        );
+        let original_a = self.p2_sources()?;
+        source::mixed_boundary::bindings(&memory_scope::diagnostic()?, [Some(original_a), None])?;
         self.remember(
             "p2",
-            json!({"a":a,"b":b,"A24":request,"expected_old_genesis_subtotal":95}),
+            json!({"a":a,"b":b,"c2":c2,"A24":request,"A_migration_source":state::hex(&original_a),"B_unbound":true,"expected_old_genesis_subtotal":95}),
         )?;
         self.phases.accept(oracle::Phase::Interop)
+    }
+    pub(super) fn p2_sources(&self) -> Result<old::Id> {
+        let a = self.migration_sources().source(0)?;
+        source::mixed_boundary::early_a(
+            self.intervals.migrations[0]
+                .as_ref()
+                .context("retained A endpoint")?,
+            a,
+        )?;
+        ensure!(
+            self.migration[1].is_none()
+                && self.intervals.migrations[1].is_none()
+                && !self.rows.contains_key("ready-1")
+                && self.migration_sources().source(1).is_err(),
+            "P2 B has no retained migration/Ready/registered source"
+        );
+        Ok(a)
     }
     pub fn p5(&mut self) -> Result<()> {
         let b25 = self.rows["p4"]["B25"].clone();
