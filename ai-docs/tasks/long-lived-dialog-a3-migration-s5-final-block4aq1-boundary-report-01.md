@@ -1,0 +1,40 @@
+# AQ1: shared exact boundary proof
+
+2026-11-10. Candidate on AP HEAD `1ceb24c729076065a312e44ff3521f3beb79587c`. Implements only AQ1; AQ2 Controller/restart/P1/P2/P3 integration and warm L1 collection are deferred. No commit/push, attempt allocation, Prepare/Run/WholeP or historical validation.
+
+## Result and source changes
+
+The two AP selectors now exercise the shared non-cfg(test) `migration_s54_boundary.rs` module on real fresh Engine/Native/storage data, both physical C1 slots. The existing eight queue/debt/receipt substitutions still use that exact comparator. Eight additional pending substitutions exercise the shared pending comparator with authentic retained packet replacements; no duplicate map conversion can silently drop rows.
+
+- `migration_s54_boundary.rs`: borrowed source/Legacy Exact capture, signature verifier and strict cold comparison; owned Proof contains Legacy/Exact evidence and no storage lease. Exact retains source-ID binding and verifies cold repository source/context/role. No Fresh dependency, Debug, Serialize, runtime actor, injection or secret export. PendingRow is ordinal/ID/signed raw packet; verify_pending requires exactly B17–B24, verifies signature/context/D/E/lane/kind/ordinal/ID/raw bytes against retained B source and explicitly rejects duplicates before checking the complete set.
+- `migration_s54_source.rs`: shared module is available without cfg(test). Existing Legacy::capture and new Legacy::capture_boundary share private with_source: healthy admitted purpose and canonical owned path first, legacy-stage guard next, one exclusive V4Source open, borrowed callback, owned return. Existing Legacy caller semantics are preserved. Borrowed proof construction is source-subtree-only, so scenario callers use the admission-checked wrapper; no concurrent second open or lease across conversion.
+- `migration_s54_p_storage_tests.rs`: private fresh component caller captures witness/Exact together under one lease. Pending rows are read from stopped legacy A under a separate nonoverlapping owned lease whose inventory matches the retained A witness. Both AP positives and eight prior substitutions call the shared verifier. New eight negatives: missing, extra authentic B16, duplicate at equal cardinality, wrong ID, authentic A17 from the wrong author/lane, authentic C2 genesis, corrupt raw signature bytes, and held B16 replacing B17 at equal cardinality. Reversed correct rows also pass. These counterfactual vectors never modify durable state.
+- `migration_s54_source_scope_tests.rs`: existing absent-admission/missing-path test checks both capture entrypoints refuse before source/key access. Four ownership selectors passed using fresh empty directories and no real historical source opens.
+- `migration_s54_memory_scope_tests.rs`: one strict benign fixture image hash updated after observed bundled pwsh replacement. Actual current pwsh is301360B/SHA256 `2a6769a3330dc1084d0154bfde7d164ab750ca7f700f313f9d417c1be78b2233`; the old362a fixture constant was stale. WindowsPowerShell resident remains495616B/SHA256 `60c9b29843624dd8af6b6a7b26147753be6aeef65098b9a503cc50850afe410f`. This is component tooling pin maintenance, not a memory algorithm/ledger/equality change or production/preparation restamp. Its directly affected actual child adapter was rerun and passed4spawns/4waits.
+
+Unchanged: Controller, P orchestration/status/lifetimes, runtime/storage/crypto, semantic restart snapshots and warm collector. Existing navigation files are byte-identical to the fresh AQ1 baseline and index is empty. Candidate includes only these five sources/tests, accepted AQ contract, this report and companion pins. AP fixture constructor/root is unchanged: each run created/logged new random fresh AP-owned fixture directories; no old fixture data was read or enumerated.
+
+## Real, injected and unexecuted evidence
+
+Early A passed17/16+C2 1/1, exact queue17/18 with unchanged committed Native state, only A conversion, cold metadata absent, exact source/event/queue/debt/receipt checks and A-only deferred binding. Independent late B passed25/25+C2 1/1, empty queue, exact nine B16–B24 debts, genuine B1–B15 signed receipt retirement and authentic saved R1(A24) while A retains its exact A24 debt. Shared pending comparison observed actual eight legacy A gap records matching retained signed B17–B24 packets in both slot mappings. Cold checks remained immutable/zero-Native and the same eight prior substitutions were refused.
+
+Both traffic engines in the late fixture are legacy. DeferredModel lifecycle records are injected; the separate adapter uses actual owned benign PowerShell children and checked Job admission with injected decoder/Stats. Neither proves current-A/legacy-B transport, warm L1 collection or fresh offline admission. The new actual capture wrapper's missing-admission refusal and ownership policy are tested/static-reviewed; no admitted WholeP runtime was executed. Planned24lifetimes/timing remain design estimates. AQ2 must bind A's retained peer descriptors to the actual latest stopped-B local descriptors for both contexts, revalidate at the barrier, tie fresh-child evidence to actual waited handles/increasing start records, and match the frozen executable's retained implementation to its timing assumptions. Those obligations are not AQ1 results.
+
+## Verification and actual receipts
+
+Tool availability was checked after pause, with pinned current binaries in baseline.json. Process-local Rust1.98.0/pwsh, offline/locked verification profile, Jobs2/BelowNormal, existing target/s54-diagnostics-source-checks. Compile-only before exact tests through scripts/run-cargo-tests-stable.ps1; no direct network cargo-test execution. Fixed harness: `E:\AI-Projects\kilogram-p2p-messenger\target\s54-diagnostics-source-checks\verification\deps\kilogram-cli-test-migration_s5_process-tests.exe`, 35659776B SHA256 `fb7785890fb5fe9733a79bba99cabfe5992a2453cb0319e76f4de705323602f0`. Source/tool/image pins are unchanged through final seal.
+
+| Step | Tool/child exit | Seconds | Work/whole/cleanup seconds |
+| --- | --- | --- | --- |
+| format-01 | 0/0 | 1.426 | 570/600/30 |
+| compile-01 | 0/0 | 61.561 | 3600/3660/60 |
+| rust-early-01 | 0/0 | 140.995 | 570/600/30 |
+| rust-late-01 | 0/0 | 213.988 | 570/600/30 |
+| rust-01 | 0/0 | 4.160 | 570/600/30 |
+| adapter-02 | 0/0 | 34.399 | 570/600/30 |
+| clippy-01 | 0/0 | 22.980 | 3600/3660/60 |
+| seal-01 | 0/0 | 1.231 | 570/600/30 |
+
+Selectors: AP `ap_real_p_first_a_storage_roles_and_slots` and `ap_real_p_late_b_storage_roles_and_slots`; four source::scope_tests selectors; one deferred_memory_tests::ao_actual_child_query_deferred_binding_and_new_nonce_restart. Full exact names/arrays are pinned in selector JSON files. No unchanged AF/F/AO broad matrix was repeated. Strict CLI all-target Clippy passed with literal `-- -D warnings`; scoped formatting/diff and final process inventory passed.
+
+The eight required successful application owner invocations have actual child exit/wait/Job membership and bounded stdout/stderr EOF, no work expiry or remaining Job members. Forced owned residual cleanup, after launcher completion: `{'compile-01': [48608]}`. Residual application identity is not established; membership and cleanup after=[] are verified. Initial adapter-01 failed in30.776s with `capture requires independently managed launch`: private wrapper renaming had changed CAPTURE to CAQ1TURE in the admission environment key. This administrative failure occurred after fresh F storage setup and before capture membership/resident spawns. Its failed logs/receipt and pre-repair wrapper bytes are preserved. Only the wrapper key was corrected; source/binary stayed unchanged, and fresh adapter-02 passed. No successful tests or Clippy were repeated; no compile or AP test failed. All nine actual invocations, including that failure, are in `.tmp/s54-block4aq1-boundary-01/actual-tool-returns.json` with pinned receipts/logs/Cargo arrays/images. These are diagnostic execution receipts, not WholeP PASS. Source patch/candidate pins support review; publication awaits explicit root acceptance.

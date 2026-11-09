@@ -1,6 +1,7 @@
 //! Actual fresh P storage/crypto. Both traffic engines are legacy; no mixed
 //! runtime, process, transport or measured memory evidence is claimed here.
 use super::*;
+use boundary::{Exact, PendingRow, Proof, verify_pending, verify_receipt};
 use cold_witness_fixture::Fresh;
 use control::MigrationSources;
 use kilogram_ratchet::ordered::native_call_counts;
@@ -9,143 +10,101 @@ use memory_scope::tests::DeferredModel;
 
 type Repo = db::migration7::live1::L1Repository;
 
-// Exact cold comparison shared by positive checks and in-memory substitutions.
-// Expected values below are captured from authenticated real legacy records.
-#[derive(Clone)]
-struct Exact {
-    queue: BTreeMap<[u8; 16], Vec<u8>>,
-    debt: Vec<(u64, old::Id)>,
-    receipts: BTreeMap<(u8, u64), Vec<u8>>,
-}
-impl Exact {
-    fn capture(f: &Fresh, owner: usize, witness: &Legacy) -> Result<Self> {
-        let ctx = &witness.contexts[0];
-        let source = db::migration7::V4Source::open(
-            StateDirectoryLock::acquire(&f.nodes[owner].branch.state)?,
-            db::Config::default(),
-        )?;
-        ensure!(
-            source.source_id() == witness.source_id,
-            "same quiescent inventory"
-        );
-        let mut debt = Vec::new();
-        let outbox_entries = source
-            .entries()
-            .iter()
-            .filter(|e| {
-                e.path
-                    .starts_with(&format!("{}outbox/", engine::prefix(ctx.c)))
-            })
-            .count();
-        ensure!(
-            outbox_entries
-                == ctx
-                    .events
-                    .keys()
-                    .filter(|(r, n)| *r == ctx.role && *n > 0)
-                    .count(),
-            "all authenticated outbox records covered exactly"
-        );
-        for ((role, n), raw) in &ctx.events {
-            if *n == 0 {
-                continue;
-            }
-            let spec = Spec::parse(&ctx.spec)?;
-            let event = old::Event::parse(raw, spec.peers[*role as usize].cert.device_id())?;
-            let id = event.id()?;
-            let receipt = ctx.receipts.get(&(*role, *n));
-            if let Some(receipt) = receipt {
-                verify_receipt(ctx, &event, receipt)?;
-            }
-            if *role != ctx.role {
-                continue;
-            }
-            let raw = source.required(&engine::outbox_path(ctx.c, *n))?;
-            let value = old::decode(&raw, 1024)?;
-            let fields = value.fields(3)?;
-            let status = fields[2].uint()?;
-            ensure!(
-                fields[0].uint()? == 1 && fields[1].fixed::<32>()? == id && status <= 1,
-                "authenticated outbox exact ordinal/event/state"
-            );
-            ensure!(
-                (status == 1) == receipt.is_some(),
-                "delivered iff actual signed opposite receipt"
-            );
-            if status == 0 {
-                debt.push((*n, id));
-            }
-        }
-        Ok(Self {
-            queue: ctx.queue.clone(),
-            debt,
-            receipts: ctx.receipts.clone(),
-        })
-    }
-    fn verify(&self, repo: &mut Repo, slot: u8, witness: &Legacy) -> Result<()> {
-        let rows = repo.queue_page(slot, None, 32)?;
-        let queue = rows
-            .iter()
-            .map(|q| (q.request, q.sealed.clone()))
-            .collect::<BTreeMap<_, _>>();
-        ensure!(
-            queue == self.queue && rows.len() == self.queue.len(),
-            "exact queue ID/bytes/cardinality"
-        );
-        ensure!(
-            repo.debt_page(slot, None, 32)? == self.debt,
-            "exact debt ordinal/ID/cardinality"
-        );
-        let counts = repo.counts(slot)?;
-        ensure!(
-            counts.debt == self.debt.len() as u64 && counts.queued == self.queue.len() as u64,
-            "exact cold debt and queue counts"
-        );
-        ensure!(
-            counts.receipts
-                == [0, 1]
-                    .map(|role| self.receipts.keys().filter(|(r, _)| *r == role).count() as u64),
-            "exact cold receipt cardinality"
-        );
-        for ((role, n), raw) in &witness.contexts[0].events {
-            ensure!(
-                repo.event_at(slot, *role, *n)?.as_ref() == Some(raw),
-                "exact event bytes"
-            );
-            ensure!(
-                repo.receipt(slot, *role, *n)?.as_ref() == self.receipts.get(&(*role, *n)),
-                "exact receipt bytes or absence"
-            );
-        }
-        ensure!(
-            !repo.initialized()? && repo.snapshot(slot).is_err(),
-            "cold metadata remains absent"
-        );
-        Ok(())
-    }
+// Component-only caller: one owned source lease, released on return.
+fn capture(f: &Fresh, owner: usize) -> Result<Proof> {
+    let source = db::migration7::V4Source::open(
+        StateDirectoryLock::acquire(&f.nodes[owner].branch.state)?,
+        db::Config::default(),
+    )?;
+    Proof::capture_source(&f.nodes[owner], &f.contexts, f.purpose, &source)
 }
 
-fn verify_receipt(ctx: &SavedContext, event: &old::Event, raw: &[u8]) -> Result<()> {
+fn read_pending(f: &Fresh, a: &Legacy, b: &Legacy) -> Result<Vec<PendingRow>> {
+    let ctx = &b.contexts[0];
     let spec = Spec::parse(&ctx.spec)?;
-    let receiver = 1 - event.core.role as usize;
-    let value = old::decode(raw, 1024)?;
-    let record = value.fields(2)?;
-    let f = record[0].fields(8)?;
-    ensure!(
-        f[0].uint()? == 1
-            && f[1].fixed::<32>()? == event.core.d
-            && f[2].fixed::<32>()? == event.core.e
-            && f[3].uint()? == event.core.role
-            && f[4].uint()? == event.core.n
-            && f[5].fixed::<32>()? == event.id()?
-            && f[6].fixed::<32>()? == spec.cert_refs()?[receiver],
-        "signed opposite receipt exact source"
-    );
-    spec.peers[receiver].cert.device_id().verify(
-        &old::signing_bytes(old::RECEIPT_SIGN, &record[0], 1024)?,
-        record[1].bytes()?,
+    let source = db::migration7::V4Source::open(
+        StateDirectoryLock::acquire(&f.nodes[0].branch.state)?,
+        db::Config::default(),
     )?;
-    Ok(())
+    ensure!(
+        source.source_id() == a.source_id,
+        "same stopped real pending inventory"
+    );
+    let prefix = format!("{}pending/", engine::prefix(ctx.c));
+    let mut rows = Vec::new();
+    for entry in source
+        .entries()
+        .iter()
+        .filter(|e| e.path.starts_with(&prefix))
+    {
+        let ordinal = entry
+            .path
+            .rsplit('/')
+            .next()
+            .context("pending ordinal suffix")?
+            .parse()?;
+        let raw = source.required(&entry.path)?.to_vec();
+        let id = old::Event::parse(&raw, spec.peers[1].cert.device_id())?.id()?;
+        rows.push(PendingRow { ordinal, id, raw });
+    }
+    Ok(rows)
+}
+
+fn pending_substitutions(b: &Legacy, rows: &[PendingRow]) -> Result<usize> {
+    let ctx = &b.contexts[0];
+    let spec = Spec::parse(&ctx.spec)?;
+    // These replacements are already genuinely signed, retained source events.
+    let signed = |ctx: &SavedContext, lane: u8, n: u64, slot: u64| -> Result<PendingRow> {
+        let raw = ctx
+            .events
+            .get(&(lane, n))
+            .context("real substitution source")?
+            .clone();
+        let id = old::Event::parse(&raw, spec.peers[lane as usize].cert.device_id())?.id()?;
+        Ok(PendingRow {
+            ordinal: slot,
+            id,
+            raw,
+        })
+    };
+    for case in 0..8 {
+        let mut wrong = rows.to_vec();
+        match case {
+            0 => {
+                wrong.pop();
+            }
+            1 => {
+                wrong.push(signed(ctx, 1, 16, 16)?);
+            }
+            2 => {
+                wrong[7] = wrong[0].clone();
+            }
+            3 => {
+                wrong[0].id[0] ^= 1;
+            }
+            4 => {
+                wrong[0] = signed(ctx, 0, 17, 17)?;
+            }
+            5 => {
+                wrong[0] = signed(&b.contexts[1], 1, 0, 17)?;
+            }
+            6 => {
+                *wrong[0].raw.last_mut().context("signed packet bytes")? ^= 1;
+            }
+            _ => {
+                wrong[0] = signed(ctx, 1, 16, 16)?;
+            }
+        }
+        ensure!(
+            verify_pending(b, &wrong).is_err(),
+            "shared pending comparator refuses substitution {case}"
+        );
+    }
+    // Ordinary row order does not affect the exact set; duplicates do.
+    let mut reversed = rows.to_vec();
+    reversed.reverse();
+    verify_pending(b, &reversed)?;
+    Ok(8)
 }
 
 fn cold_unchanged(repo: &Repo) -> Result<(u64, old::Id, [u64; 6])> {
@@ -269,7 +228,7 @@ fn substitutions(
 fn ap_real_p_first_a_storage_roles_and_slots() -> Result<()> {
     for slot in [0, 1] {
         let (mut f, genesis) = Fresh::p_with_genesis(slot, false)?;
-        let a = f.capture(0)?;
+        let Proof { witness: a, exact } = capture(&f, 0)?;
         let b = f.capture(1)?;
         genesis[0].same_identity(&a)?;
         genesis[1].same_identity(&b)?;
@@ -277,7 +236,6 @@ fn ap_real_p_first_a_storage_roles_and_slots() -> Result<()> {
             genesis[0].source_id != a.source_id && genesis[1].source_id != b.source_id,
             "actual genesis to P source growth"
         );
-        let exact = Exact::capture(&f, 0, &a)?;
         let expected = [17, 18]
             .map(|n| oracle::Request::new(0, 0, n).and_then(|r| parse_request_id(&request_id(r))))
             .into_iter()
@@ -327,16 +285,24 @@ fn ap_real_p_first_a_storage_roles_and_slots() -> Result<()> {
 fn ap_real_p_late_b_storage_roles_and_slots() -> Result<()> {
     for slot in [0, 1] {
         let (mut f, genesis) = Fresh::p_with_genesis(slot, true)?;
-        let a = f.capture(0)?;
-        let b = f.capture(1)?;
+        let Proof {
+            witness: a,
+            exact: exact_a,
+        } = capture(&f, 0)?;
+        let Proof { witness: b, exact } = capture(&f, 1)?;
+        let pending = read_pending(&f, &a, &b)?;
+        verify_pending(&b, &pending)?;
+        let pending_refused = if slot == 0 {
+            pending_substitutions(&b, &pending)?
+        } else {
+            0
+        };
         genesis[0].same_identity(&a)?;
         genesis[1].same_identity(&b)?;
         ensure!(
             genesis[0].source_id != a.source_id && genesis[1].source_id != b.source_id,
             "late source growth real"
         );
-        let exact_a = Exact::capture(&f, 0, &a)?;
-        let exact = Exact::capture(&f, 1, &b)?;
         let ctx = &b.contexts[0];
         let spec = Spec::parse(&ctx.spec)?;
         let expected = (16..=24)
@@ -400,7 +366,7 @@ fn ap_real_p_late_b_storage_roles_and_slots() -> Result<()> {
         );
         verify_binding(&f, 1, b, endpoint)?;
         println!(
-            "ap_late_B=passed;C1slot={slot};C1=25_25;C2=1_1;B_debt16_24_exact=9;B1_15_signed_receipts=true;A24_debt_and_saved_R1_exact=true;A_pending17_24_exact=8;only_B_migrated=true;debt_receipt_negatives={refused};cold_zero_Native=true;storage_only=true;ledger_observations=injected;mixed_runtime=not_established"
+            "ap_late_B=passed;C1slot={slot};C1=25_25;C2=1_1;B_debt16_24_exact=9;B1_15_signed_receipts=true;A24_debt_and_saved_R1_exact=true;A_pending17_24_exact=8;only_B_migrated=true;shared_pending=true;pending_negatives={pending_refused};debt_receipt_negatives={refused};cold_zero_Native=true;storage_only=true;ledger_observations=injected;mixed_runtime=not_established"
         );
     }
     Ok(())

@@ -32,7 +32,7 @@ fn required(dir: &Path, attempt: String) -> Result<RequiredInput> {
         "C:/Users/Paul/.cache/codex-runtimes/codex-primary-runtime/dependencies/native/powershell/pwsh.exe",
     ))?;
     ensure!(
-        image.sha256 == "362a356ce7f0940ec74f73a8fc2c990a2cc24a38a11c90bbd8eca947110ad139",
+        image.sha256 == "2a6769a3330dc1084d0154bfde7d164ab750ca7f700f313f9d417c1be78b2233",
         "pinned benign fixture image"
     );
     Ok(RequiredInput {

@@ -3,6 +3,8 @@ use super::*;
 use kilogram_cli::ordered_dialog::{engine, handshake::Spec};
 use kilogram_crypto::{DeviceEncryptionIdentity, SealedMessage};
 use zeroize::Zeroizing;
+#[path = "migration_s54_boundary.rs"]
+pub(super) mod boundary;
 #[cfg(test)]
 #[path = "migration_s54_cold_witness_fixture.rs"]
 pub(super) mod cold_witness_fixture;
@@ -249,13 +251,27 @@ impl Legacy {
         self.contexts.iter().map(|c| c.events.len()).sum()
     }
     pub fn capture(node: &Node, contexts: &[String; 2]) -> Result<Self> {
+        Self::with_source(node, |purpose, source| {
+            Self::capture_source(node, contexts, purpose, source)
+        })
+    }
+    pub fn capture_boundary(node: &Node, contexts: &[String; 2]) -> Result<boundary::Proof> {
+        Self::with_source(node, |purpose, source| {
+            boundary::Proof::capture_source(node, contexts, purpose, source)
+        })
+    }
+    // One ownership policy and one exclusive source open for either entry.
+    fn with_source<T>(
+        node: &Node,
+        read: impl FnOnce(Purpose, &db::migration7::V4Source) -> Result<T>,
+    ) -> Result<T> {
         let purpose = owned_purpose(node)?;
         ensure!(!node.indexed, "actual original V4 source");
         let source = db::migration7::V4Source::open(
             kilogram_state::StateDirectoryLock::acquire(&node.branch.state)?,
             db::Config::default(),
         )?;
-        Self::capture_source(node, contexts, purpose, &source)
+        read(purpose, &source)
     }
     // Borrowed verifier: production capture retains admission and path ownership
     // before opening the source. Fresh component tests supply their own lease.

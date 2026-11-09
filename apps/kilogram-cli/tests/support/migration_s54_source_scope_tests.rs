@@ -127,6 +127,14 @@ fn s54_source_owned_requires_active_capture_before_path_access() -> Result<()> {
             == "capture scope failed or absent",
         "actual Legacy capture checks healthy admission before source/key access"
     );
+    ensure!(
+        Legacy::capture_boundary(&node, &[String::new(), String::new()])
+            .err()
+            .context("boundary capture must refuse before opening missing storage")?
+            .to_string()
+            == "capture scope failed or absent",
+        "shared boundary capture preserves the same admission-first gate"
+    );
     Ok(())
 }
 #[test]
