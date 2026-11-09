@@ -17,6 +17,8 @@ mod deferred_memory_tests;
 #[cfg(test)]
 #[path = "migration_s54_migration_source_fixture.rs"]
 pub(super) mod migration_source_fixture;
+#[path = "migration_s54_offline_restart.rs"]
+pub(super) mod offline_restart;
 #[cfg(test)]
 #[path = "migration_s54_p_storage_tests.rs"]
 mod p_storage_tests;

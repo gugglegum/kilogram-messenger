@@ -20,7 +20,7 @@ pub(super) struct Fresh {
 }
 impl Fresh {
     pub fn legacy(purpose: Purpose) -> Result<Self> {
-        Self::staged(purpose, 1, None, false).map(|(fresh, _)| fresh)
+        Self::staged(purpose, 1, None, false, true).map(|(fresh, _)| fresh)
     }
     pub fn f_with_genesis(slot: u8) -> Result<(Self, [Legacy; 2])> {
         let (fresh, genesis) = Self::staged(
@@ -28,6 +28,7 @@ impl Fresh {
             slot,
             Some(".tmp/s54-block4ao-deferred-memory-01/fixtures"),
             false,
+            true,
         )?;
         Ok((fresh, genesis.context("actual early genesis witnesses")?))
     }
@@ -37,24 +38,36 @@ impl Fresh {
             slot,
             Some(".tmp/s54-block4ap-storage-01/fixtures"),
             late,
+            true,
         )?;
         Ok((fresh, genesis.context("actual P genesis witnesses")?))
+    }
+    pub fn p_before_queue(slot: u8) -> Result<(Self, [Legacy; 2])> {
+        let (fresh, genesis) = Self::staged(
+            Purpose::WholeP,
+            slot,
+            Some(".tmp/s54-block4aq3-offline-restart-01/fixtures"),
+            false,
+            false,
+        )?;
+        Ok((fresh, genesis.context("actual offline baseline genesis")?))
     }
     fn staged(
         purpose: Purpose,
         slot: u8,
         genesis_root: Option<&str>,
         late: bool,
+        queue: bool,
     ) -> Result<(Self, Option<[Legacy; 2]>)> {
         ensure!(slot < 2, "fixture C1 slot");
         let base =
             workspace().join(genesis_root.unwrap_or(".tmp/s54-block4af-cold-witness-01/fixtures"));
         std::fs::create_dir_all(&base)?;
         let mut dir = tempfile::Builder::new().prefix("fresh-").tempdir_in(base)?;
-        if genesis_root.is_some_and(|p| p.contains("block4ap")) {
+        if genesis_root.is_some_and(|p| p.contains("block4ap") || p.contains("block4aq3")) {
             // Retain fresh AP storage even if a prerequisite or assertion fails.
             dir.disable_cleanup(true);
-            println!("ap_fresh_storage={}", dir.path().display());
+            println!("fresh_semantic_storage={}", dir.path().display());
         }
         let mut stores = Vec::new();
         for i in 0..2 {
@@ -189,7 +202,7 @@ impl Fresh {
             )?;
         }
         let before_queue = admin::required(&a_engine.store, &state::native_path(contexts[0]))?;
-        for n in [last + 1, last + 2] {
+        for n in [last + 1, last + 2].into_iter().filter(|_| queue) {
             let request = oracle::Request::new(0, 0, n)?;
             a_engine.queue(
                 contexts[0],

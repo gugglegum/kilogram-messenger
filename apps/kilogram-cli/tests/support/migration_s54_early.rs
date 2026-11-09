@@ -236,6 +236,14 @@ impl Controller {
             &self.origin.contexts,
         )?;
         let checked = proof.prepare(phase, owner, &self.origin.contexts)?;
+        self.migrate_p_checked(owner, checked)
+    }
+    fn migrate_p_checked(
+        &mut self,
+        owner: usize,
+        checked: source::boundary::Checked,
+    ) -> Result<()> {
+        checked.witness().role(owner)?;
         self.migrate_retained(owner, RetainedMigration::P(checked))
     }
     fn migrate_retained(&mut self, owner: usize, retained: RetainedMigration) -> Result<()> {
@@ -265,30 +273,79 @@ impl Controller {
         self.migration_sources().bind_memory(owner)
     }
     pub fn p1(&mut self) -> Result<()> {
+        let prior_a = self.running[0]
+            .as_ref()
+            .context("P1 running legacy A")?
+            .interval_start;
         self.stop(1)?;
-        self.stopped(1)?;
-        let stopped_b = source::Legacy::capture(&self.origin.pair.nodes[1], &self.origin.contexts)?;
+        self.stop(0)?;
+        self.stopped_reconciled()?;
+        let b = source::offline_restart::Snapshot::capture(
+            &self.origin.pair.nodes[1],
+            &self.origin.contexts,
+        )?;
+        let baseline = source::offline_restart::Snapshot::capture(
+            &self.origin.pair.nodes[0],
+            &self.origin.contexts,
+        )?;
+        let stopped_b = b.witness();
         self.original[1]
             .as_ref()
             .context("original B")?
-            .same_identity(&stopped_b)?;
-        self.wait(30, |s| {
-            let r = s.status(0, 0)?;
-            Ok(r["status"]
-                .as_str()
-                .is_some_and(|v| v.starts_with("ConnectionBackoff"))
-                .then_some(()))
+            .same_identity(stopped_b)?;
+        self.original[0]
+            .as_ref()
+            .context("original A")?
+            .same_identity(baseline.witness())?;
+        baseline.initial(&b, kilogram_cli::ordered_dialog::engine::now()?)?;
+        self.start(0)?;
+        let run = self.running[0].as_ref().context("fresh offline A")?;
+        let life = source::offline_restart::Life::new(
+            &self.intervals,
+            &self.outcomes,
+            prior_a,
+            run.interval_start,
+            memory_scope::handle_tag(&run.child.0)?,
+            self.until,
+        )?;
+        let before = self.wait(30, |s| {
+            s.stopped(1)?;
+            let run = s.running[0].as_ref().context("owned offline A")?;
+            life.check(
+                &s.intervals,
+                run.interval_start,
+                memory_scope::handle_tag(&run.child.0)?,
+                Instant::now(),
+                s.until,
+            )?;
+            let rows = [s.status(0, 0)?, s.status(0, 1)?];
+            Ok(baseline
+                .ready(&rows, &b, kilogram_cli::ordered_dialog::engine::now()?)?
+                .then_some(rows))
         })?;
-        let before = self.status(0, 0)?;
         let a17 = self.send(0, 17)?;
         let a18 = self.send(0, 18)?;
         let after = self.status(0, 0)?;
         ensure!(
-            before["send_next"] == 17 && after["send_next"] == 17 && after["receive_next"] == 16,
+            before[0]["send_next"] == 17 && after["send_next"] == 17 && after["receive_next"] == 16,
             "original17/18 accepted without packet creation"
         );
         self.stop(0)?;
-        self.migrate_p(0, source::boundary::Phase::FirstA)?;
+        self.stopped_reconciled()?;
+        {
+            let _measurement = s53_deadline::measure("migration");
+            let final_source = source::offline_restart::Snapshot::capture(
+                &self.origin.pair.nodes[0],
+                &self.origin.contexts,
+            )?;
+            let checked = baseline.finish(
+                final_source,
+                &b,
+                kilogram_cli::ordered_dialog::engine::now()?,
+                &self.origin.contexts,
+            )?;
+            self.migrate_p_checked(0, checked)?;
+        }
         let observed = self.migration[0]
             .as_ref()
             .context("actual original A sources")?
