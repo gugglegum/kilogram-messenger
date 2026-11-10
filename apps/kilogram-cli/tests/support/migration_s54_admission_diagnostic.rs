@@ -5,7 +5,7 @@ use std::fmt;
 macro_rules! codes {
     ($($name:ident => ($stage:literal, $reason:literal)),+ $(,)?) => {
         #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-        pub(super) enum Code { $($name),+ }
+        pub(in super::super) enum Code { $($name),+ }
         impl Code {
             pub(super) fn line(self) -> &'static str {
                 match self { $(Self::$name => concat!("S54_ADMISSION_DIAGNOSTIC v1 stage=", $stage, " reason=", $reason)),+ }
@@ -45,6 +45,11 @@ codes! {
     NativeClaim => ("native_claim", "binding"),
     NativeCreate => ("native_claim", "create"),
     Clock => ("clock", "binding"),
+    FReleaseTailBudget => ("f_ack_release", "tail_budget"),
+    FReleasePauseBudget => ("f_ack_release", "pause_budget"),
+    FReleaseControllerDeadline => ("f_ack_release", "controller_deadline"),
+    FReleasePhaseDeadline => ("f_ack_release", "phase_deadline"),
+    FReleaseOperationFailed => ("f_ack_release", "operation_failed"),
 }
 
 #[derive(Debug)]
@@ -73,10 +78,20 @@ pub(super) fn code(error: &anyhow::Error) -> Code {
         .map_or(Code::AdmissionUnknown, |c| c.0)
 }
 pub(super) fn report<T>(result: Result<T>) -> Result<T> {
-    if let Err(error) = &result {
-        use std::io::Write;
-        // A broken diagnostic sink cannot replace the original admission failure.
-        let _ = writeln!(std::io::stderr().lock(), "{}", code(error).line());
+    let selected = result.as_ref().err().map_or(Code::AdmissionUnknown, code);
+    report_code(selected, result)
+}
+pub(super) fn report_code_to<T>(
+    selected: Code,
+    result: Result<T>,
+    sink: &mut impl std::io::Write,
+) -> Result<T> {
+    if result.is_err() {
+        // A broken sink cannot replace the original error chain.
+        let _ = writeln!(sink, "{}", selected.line());
     }
     result
+}
+pub(in super::super) fn report_code<T>(selected: Code, result: Result<T>) -> Result<T> {
+    report_code_to(selected, result, &mut std::io::stderr().lock())
 }

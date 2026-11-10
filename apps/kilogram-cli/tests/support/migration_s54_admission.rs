@@ -7,6 +7,7 @@ use schema::*;
 #[path = "migration_s54_admission_diagnostic.rs"]
 mod diagnostic;
 use diagnostic::Code as D;
+pub(super) use diagnostic::{Code as ReleaseCode, report_code as report_release};
 #[path = "migration_s54_admission_compiler.rs"]
 mod compiler;
 #[path = "migration_s54_admission_files.rs"]

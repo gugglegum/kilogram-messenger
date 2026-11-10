@@ -1,19 +1,20 @@
 [CmdletBinding()]
-param([Parameter(Mandatory)][string]$EvidenceDirectory,[Parameter(Mandatory)][string]$HarnessPath,[Parameter(Mandatory)][string]$HarnessSha256)
+param([Parameter(Mandatory)][string]$EvidenceDirectory,[Parameter(Mandatory)][string]$HarnessPath,[Parameter(Mandatory)][string]$HarnessSha256,[switch]$HeldAckOnly)
 Set-StrictMode -Version Latest
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'invoke-migration-s54-whole.ps1') -Purpose FeasibilityF
 . (Join-Path $PSScriptRoot 'migration-s5-l1-deadline.ps1')
 $workspace=Split-Path -Parent $PSScriptRoot
 $evidence=Get-S54Path $EvidenceDirectory
-$owned=Get-S54Path (Join-Path $workspace '.tmp/s54-block4k-admission-diagnostics-01')
-if(-not $evidence.StartsWith($owned+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'Fresh owned K public diagnostics evidence only.'}
+$ownedRelative=if($HeldAckOnly){'.tmp/s54-block4bc-held-ack-implementation-01'}else{'.tmp/s54-block4k-admission-diagnostics-01'}
+$owned=Get-S54Path (Join-Path $workspace $ownedRelative)
+if(-not $evidence.StartsWith($owned+[IO.Path]::DirectorySeparatorChar,[StringComparison]::OrdinalIgnoreCase)){throw 'Fresh owned public diagnostics evidence only.'}
 $harness=Get-S54Pin $HarnessPath 134217728
 Assert-S54SamePath $harness.path (Join-Path $workspace 'target/s54-diagnostics-source-checks/verification/deps/kilogram-cli-test-migration_s5_process-tests.exe')
 if($harness.sha256 -cne $HarnessSha256){throw 'Exact nonproduction stable image pin required.'}
 Initialize-S54Output
 $shell=[Diagnostics.Process]::GetCurrentProcess().MainModule.FileName;$shellPin=Get-S54Pin $shell 134217728
-$job=[KilogramS5Deadline]::new(540,570,[long][Environment]::TickCount64)
+$job=if($HeldAckOnly){[KilogramS5Deadline]::new(90,120,[long][Environment]::TickCount64)}else{[KilogramS5Deadline]::new(540,570,[long][Environment]::TickCount64)}
 $checks=[Collections.Generic.List[object]]::new()
 function Require([bool]$Condition,[string]$Name){if(-not $Condition){throw $Name}}
 function New-OwnedText([string]$Path,[string]$Text){
@@ -31,19 +32,20 @@ $native=$p.Native+' '+(ConvertTo-Json -InputObject (New-S54Marker $i $inputs $as
 $wrapper=$p.Wrapper+' '+(ConvertTo-Json -InputObject (New-S54Marker $i $inputs $assertion $p.WrapperClass) -Compress)
 $success=(@('running 1 test',('test '+$p.Selector+' ...'),$native,'ok','test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.01s',$wrapper)-join "`n")+"`n"
 $diagnostic='S54_ADMISSION_DIAGNOSTIC v1 stage=inputs reason=required_input'
+if($HeldAckOnly){$diagnostic='S54_ADMISSION_DIAGNOSTIC v1 stage=f_ack_release reason=tail_budget'}
 $canary='SYNTHETIC_PRIVATE_CANARY_must_never_be_retained'
 try{
     # Check the complete finite producer vocabulary against the actual filter.
     $rust=Save-Public (Get-S54Pin (Join-Path $workspace 'apps/kilogram-cli/tests/support/migration_s54_admission_diagnostic.rs') 65536)
     $matches=[regex]::Matches($rust,'=> \("([a-z_]+)", "([a-z_]+)"\)')
-    Require ($matches.Count -eq 29) 'Finite producer code enumeration changed without protocol review.'
+    Require ($matches.Count -eq 34) 'Finite producer code enumeration changed without protocol review.'
     foreach($m in $matches){
         $line='S54_ADMISSION_DIAGNOSTIC v1 stage='+$m.Groups[1].Value+' reason='+$m.Groups[2].Value
         $state=[KilogramS54Output+StreamState]::new();$state.Bytes=[Text.Encoding]::UTF8.GetBytes($line+"`n");$state.Eof=$true;$state.Stopped=$true
         $saved=[KilogramS54Output]::Protocol($state,[Collections.Generic.Dictionary[string,string]]::new([StringComparer]::Ordinal))
         Require ($saved.Text -ceq ($line+"`n") -and $saved.AdmissionDiagnostics -eq 1 -and $saved.Malformed -eq 0) 'Typed producer/persistence vocabulary parity.'
     }
-    $checks.Add(@{name='all29 typed producer codes pass actual closed protocol filter';passed=$true})
+    $checks.Add(@{name='all34 typed producer codes pass actual closed protocol filter';passed=$true})
     $cases=@(
         @{name='success';stdout=$success;stderr='';code=0},
         @{name='missing-native-input';actual_native=$true;code=101},
@@ -53,11 +55,20 @@ try{
         @{name='partial';stdout='';stderr=$diagnostic;code=7},
         @{name='invalid-utf8';stdout='';stderr=$diagnostic+"`n";invalid_utf8=$true;code=7}
     )
+    if($HeldAckOnly){
+        $cases=@($cases|Where-Object {$_.name -cin @('forged','partial','count-bound')})
+        foreach($reason in @('tail_budget','pause_budget','controller_deadline','phase_deadline','operation_failed','ok')){
+            $cases+=@{name=('held-'+$reason);actual_release=$reason;code=$(if($reason -ceq 'ok'){0}else{101})}
+        }
+    }
     foreach($case in $cases){
         $job.CheckWork();$root=Join-Path $evidence $case.name
         $null=[IO.Directory]::CreateDirectory($root)
         $launcherPath=Join-Path $root 'forwarder.ps1'
-        if($case.ContainsKey('actual_native')){
+        if($case.ContainsKey('actual_release')){
+            $exe=$harness
+            $argv=@('--exact','live_l1::handoff::final_p5::admission::tests::s54_f_held_ack_release_diagnostic_child','--ignored','--nocapture','--test-threads=1')
+        }elseif($case.ContainsKey('actual_native')){
             Require (-not (Test-Path -LiteralPath (Join-Path $workspace ('.tmp/'+$p.Namespace+'/'+$p.Attempt)))) 'Actual F04 run directory must remain unallocated.'
             $exe=$harness
             $argv=@('--exact','live_l1::handoff::final_p5::admission::tests::s54_admission_diagnostics_missing_input_child','--ignored','--nocapture','--test-threads=1')
@@ -75,6 +86,8 @@ try{
         New-OwnedText $launcherPath $body
         $process=New-S54Process $shell @('-NoProfile','-NonInteractive','-File',$launcherPath)
         foreach($key in @('KILOGRAM_S54_INVENTORY_SHA256','KILOGRAM_S54_ACTIVATION_SHA256','KILOGRAM_S54_LAUNCH_SHA256','KILOGRAM_S54_CAPTURE_SHA256')){$null=$process.StartInfo.Environment.Remove($key)}
+        $null=$process.StartInfo.Environment.Remove('KILOGRAM_TEST_S54_F_ACK_RELEASE_REASON')
+        if($case.ContainsKey('actual_release')){$process.StartInfo.Environment['KILOGRAM_TEST_S54_F_ACK_RELEASE_REASON']=$case.actual_release}
         $capture=$null
         try{
             Require ($process.Start()) 'Benign forwarder start.';$job.VerifyChild($process)
@@ -86,6 +99,7 @@ try{
             $transcript=Write-S54Transcript $session
             $out=Save-Public $transcript.stdout.pin;$err=Save-Public $transcript.stderr.pin
             Require (($out+$err) -cnotmatch ([regex]::Escape($canary))) 'Private synthetic canary never persisted.'
+            Require (($out+$err) -cnotmatch 'SYNTHETIC_PRIVATE_CANARY') 'Native original error remains redacted.'
             Require ($transcript.stdout.source_eof -and $transcript.stderr.source_eof -and $capture.Eof -and -not $capture.Failed) 'Actual complete bounded capture/EOF.'
             Require ($transcript.stderr.admission_diagnostics.authority -ceq 'none' -and $transcript.whole_attempt_verdict -ceq 'not_established') 'Diagnostics have no success authority.'
             if($case.name -ceq 'success'){
@@ -94,6 +108,13 @@ try{
             }else{
                 $refused=$false;try{$null=Assert-S54NativeOutput $out $err $i $inputs $assertion}catch{$refused=$true}
                 Require $refused 'Advisory diagnostic cannot satisfy success contract.'
+            }
+            if($case.ContainsKey('actual_release')){
+                $expectedCount=if($case.actual_release -ceq 'ok'){0}else{1}
+                $expectedLine='S54_ADMISSION_DIAGNOSTIC v1 stage=f_ack_release reason='+$case.actual_release+"`n"
+                Require ($transcript.complete -and $transcript.stderr.admission_diagnostics.count -eq $expectedCount -and $transcript.stderr.admission_diagnostics.dropped -eq 0) 'Separate native case within existing four-line cap.'
+                if($expectedCount -eq 1){Require ($err.Contains($expectedLine)) 'Actual selected native release diagnostic retained.'}
+                else{Require (-not $err.Contains('S54_ADMISSION_DIAGNOSTIC')) 'Actual native Ok emits no diagnostic.'}
             }
             switch($case.name){
                 'missing-native-input' {Require ($transcript.complete -and $err.Contains($diagnostic+"`n") -and $transcript.stderr.admission_diagnostics.count -eq 1 -and -not (Test-Path -LiteralPath (Join-Path $workspace ('.tmp/'+$p.Namespace+'/'+$p.Attempt)))) 'Actual load_for error retained before native claim and any F04 allocation.'}
@@ -106,6 +127,7 @@ try{
             $checks.Add(@{name=$case.name;passed=$true;actual_exit=$process.ExitCode;actual_waited=$true;pid=$process.Id;actual_job_handle_verified=$true;bounded_eof=$capture.Eof;native_capture=$transcript.native_capture;transcript=$transcript;success_authority='none';runtime_attempt_started=$false})
         }finally{$process.Dispose()}
     }
+    if(-not $HeldAckOnly){
     # Relevant existing owner/transcript regressions, using new public fixture
     # roots accepted by that helper. No historical fixture is cloned or rebound.
     $priorBase=Get-S54Path (Join-Path $workspace ('.tmp/s54-block4b-r1-01/block4k-diagnostics-'+[IO.Path]::GetFileName((Split-Path -Parent $evidence)))) -AllowMissing
@@ -133,6 +155,7 @@ try{
             if($mode -ceq 'nonzero'){Require ($record.process_outcomes.harness.code -eq 7 -and $record.process_outcomes.harness.waited) 'Existing native nonzero actual wait preserved.'}
         }
         $checks.Add(@{name=('existing-transcript/'+$mode);passed=$true;actual_owner_exit=$leaf.code;bounded_eof=$leaf.eof;result=(Get-S54Pin (Join-Path $fixtureRoot 'fixture-result.json') 65536);transcript=$stored;cleanup=$record.cleanup;production_Run=false})
+    }
     }
     $closed=Close-S54Owned $job 3000
     Require ($closed.verified -and -not $closed.failed -and -not $closed.forced) 'Clean nonforced owned cleanup.'

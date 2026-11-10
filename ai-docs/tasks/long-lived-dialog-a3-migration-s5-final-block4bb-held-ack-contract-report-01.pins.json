@@ -1,0 +1,51 @@
+{
+  "classification": "BB_static_contract_pending_root_review",
+  "head": "447451e819d3d0b97f1a55ecd0877a1571f48fa4",
+  "contract": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4bb-held-ack-contract-report-01.md",
+    "bytes": 14292,
+    "sha256": "eac192da2cb1245416655f152ebb761459680f692a6174a445d999a48e96a750"
+  },
+  "support": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4bb-held-ack-contract-01\\before.json",
+      "bytes": 132727,
+      "sha256": "e65972f14df941ddfdd98b081accc2ff56b0a9725f39f2592090dc268b03d6bd"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4bb-held-ack-contract-01\\preservation.json",
+      "bytes": 201,
+      "sha256": "34f32994e3907a8c7f020b720f8dfcef06f57ef741ea1d208b02bba07f4ba17f"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4bb-held-ack-contract-01\\verify.py",
+      "bytes": 2632,
+      "sha256": "a0f5dee0ce2fd57bc4a8b1c6f7450a545921f5c9dd218cd0322c04e6b9f7f2dc"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4bb-held-ack-contract-01\\result.py",
+      "bytes": 2048,
+      "sha256": "2ff81f09fa83b07031c2088813ab26d34815c696694b770af0d20d7ed987b609"
+    }
+  ],
+  "source_allowlist_count": 7,
+  "diagnostic_new_pairs": 5,
+  "total_vocabulary": 34,
+  "proposed_budget_seconds": {
+    "prekill_controller_minimum": 150,
+    "prekill_earliest_pause_minimum": 70,
+    "inclusive_release_cap": 60,
+    "tail_planning_floor": 90,
+    "pause_margin": 10
+  },
+  "budget_status": "explicit experimental allocation; tail sufficiency unmeasured and not guaranteed",
+  "real_regression": "reuse next separately allocated full F; >30s closure reproduction only if fresh post30s request returns old current lease, followed by genuine release",
+  "raw_scope": "closed throughout BB; no raw command pins traversed or hashed",
+  "source_images_accepted6_index_navigation_foreign_preserved": true,
+  "implementation": false,
+  "build": false,
+  "tests": false,
+  "new_attempt": false,
+  "commit": false,
+  "push": false
+}

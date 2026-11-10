@@ -270,6 +270,186 @@ fn ack(s: &mut Controller, map: &BTreeMap<String, Value>) -> Result<observations
         Ok(Some(ack))
     })
 }
+#[derive(Clone, Copy, Debug)]
+struct ReleaseBudget {
+    original: Instant,
+    earliest_pause: Instant,
+    until: Instant,
+}
+fn release_budget(
+    armed: Instant,
+    original: Instant,
+    now: Instant,
+) -> std::result::Result<ReleaseBudget, admission::ReleaseCode> {
+    use admission::ReleaseCode as D;
+    if now >= original {
+        return Err(D::FReleaseControllerDeadline);
+    }
+    if now < armed {
+        return Err(D::FReleaseOperationFailed);
+    }
+    let earliest_pause = armed + Duration::from_secs(120);
+    if original.duration_since(now) < Duration::from_secs(150) {
+        return Err(D::FReleaseTailBudget);
+    }
+    if earliest_pause.saturating_duration_since(now) < Duration::from_secs(70) {
+        return Err(D::FReleasePauseBudget);
+    }
+    Ok(ReleaseBudget {
+        original,
+        earliest_pause,
+        until: (now + Duration::from_secs(60))
+            .min(original - Duration::from_secs(90))
+            .min(earliest_pause - Duration::from_secs(10)),
+    })
+}
+fn release_error(original: Instant, until: Instant, now: Instant) -> admission::ReleaseCode {
+    use admission::ReleaseCode as D;
+    if now >= original {
+        D::FReleaseControllerDeadline
+    } else if now >= until {
+        D::FReleasePhaseDeadline
+    } else {
+        D::FReleaseOperationFailed
+    }
+}
+fn with_release_budget<T>(
+    armed: Instant,
+    original: Instant,
+    now: Instant,
+    work: impl FnOnce(ReleaseBudget) -> Result<T>,
+) -> Result<T> {
+    let budget = match release_budget(armed, original, now) {
+        Ok(budget) => budget,
+        Err(code) => {
+            return admission::report_release(
+                code,
+                Err(anyhow::anyhow!("F held ACK budget refused")),
+            );
+        }
+    };
+    let result = within_release(budget, work);
+    admission::report_release(
+        release_error(original, budget.until, Instant::now()),
+        result,
+    )
+}
+fn within_release<T>(
+    budget: ReleaseBudget,
+    work: impl FnOnce(ReleaseBudget) -> Result<T>,
+) -> Result<T> {
+    (|| {
+        let _phase = s53_deadline::Phase::until(budget.until)?;
+        s53_deadline::check()?;
+        let value = work(budget)?;
+        s53_deadline::check()?;
+        ensure!(
+            Instant::now() < budget.until,
+            "F held ACK release before cutoff"
+        );
+        Ok(value)
+    })() // Drop the local Phase before reporting; never query an expired scope.
+}
+fn held_ack_release(
+    s: &mut Controller,
+    map: &BTreeMap<String, Value>,
+) -> Result<(observations::AckObservation, Instant)> {
+    let original = s.until;
+    let prepared = (|| {
+        ensure!(
+            s53_deadline::observer_context()?.whole == original,
+            "same original F controller clock"
+        );
+        let plan = &s.controls[1].current;
+        ensure!(
+            plan["phase"] == "catch_up"
+                && plan["lane"] == 1
+                && plan["max_pause_ms"] == 120000
+                && plan.get("hold_ack").is_none_or(|v| v == false)
+                && plan["hold_ack_from"].is_null(),
+            "first F ACK pause has an unrenewed120s lifetime"
+        );
+        let armed = Instant::now(); // Earliest possible creation of this particular Pause.
+        arm_ack(s)?;
+        let lost = ack(s, map)?;
+        s.controls[1].old["disable_ack"] = true.into();
+        s.controls[1].write()?;
+        Ok((armed, lost))
+    })();
+    let (armed, lost) = match prepared {
+        Ok(value) => value,
+        Err(error) => {
+            return admission::report_release(
+                release_error(original, original, Instant::now()),
+                Err(error),
+            );
+        }
+    };
+    let killed = Instant::now();
+    with_release_budget(armed, original, killed, |budget| {
+        let _measurement = s53_deadline::measure("f_old_ack_release");
+        s.stop(0)?;
+        let waited = Instant::now(); // stop includes the actual wait and stopped-source reconciliation.
+        let mut late_open = None;
+        let (request, response, slot) = s.wait(60, |s| {
+            let run = s.running[1].as_ref().context("same warm B")?;
+            ensure!(
+                run.decoder.incarnation()? == lost.stamp.incarnation
+                    && run
+                        .decoder
+                        .current_head(0)
+                        .is_some_and(|(binding, generation, _)| binding == lost.binding
+                            && generation == lost.lease_generation),
+                "held ACK remains on same B and old Head binding"
+            );
+            let view = s.view(1, 0)?;
+            let request = Instant::now();
+            let raw = view.status()?;
+            let response = Instant::now();
+            let row = view.context(&raw)?;
+            ensure!(
+                row["role"] == 1
+                    && row["slot"] == view.slot
+                    && row["context"] == s.origin.contexts[0],
+                "actual B C1 role and mapped slot"
+            );
+            s.counters[1] = observations::stats(&raw["stats"])?;
+            let refs = raw["window"][1][usize::from(view.slot)]
+                .as_u64()
+                .context("same snapshot mapped window refs")?;
+            if late_open.is_none()
+                && request.duration_since(waited) >= Duration::from_secs(30)
+                && row["lease_current"] == true
+                && row["lease_generation"] == lost.lease_generation
+                && refs == 32
+            {
+                late_open = Some((request, response));
+            }
+            Ok(
+                (row["lease_current"] == false && row["lease_generation"].is_null() && refs == 0)
+                    .then_some((request, response, view.slot)),
+            )
+        })?;
+        let released = Instant::now();
+        let origin = s53_deadline::observer_context()?.origin;
+        let offset = |t: Instant| t.duration_since(origin).as_millis();
+        s.remember("f-old-ack-release", json!({
+            "arm_lower_bound_ms":offset(armed),"earliest_pause_expiry_ms":offset(budget.earliest_pause),
+            "kill_start_ms":offset(killed),"kill_wait_reconcile_end_ms":offset(waited),
+            "release_request_start_ms":offset(request),"release_response_end_ms":offset(response),
+            "release_observed_ms":offset(released),"release_phase_until_ms":offset(budget.until),
+            "controller_remaining_before_kill_ms":budget.original.duration_since(killed).as_millis(),
+            "earliest_pause_remaining_before_kill_ms":budget.earliest_pause.duration_since(killed).as_millis(),
+            "controller_remaining_at_release_ms":budget.original.saturating_duration_since(released).as_millis(),
+            "earliest_pause_remaining_at_release_ms":budget.earliest_pause.saturating_duration_since(released).as_millis(),
+            "slot":slot,"late_open_witness":late_open.is_some(),
+            "late_open_request_start_ms":late_open.map(|(a,_)|offset(a)),
+            "late_open_response_end_ms":late_open.map(|(_,b)|offset(b)),
+            "tail_planning_floor_ms":90000,"tail_measured_guarantee":false
+        }))?;
+        Ok((lost, released))
+    })
+}
 fn histories(s: &mut Controller, frozen: &data::Frozen40) -> Result<[BTreeMap<String, Value>; 2]> {
     let _measurement = s53_deadline::measure("histories");
     frozen.verify(s)?;
@@ -690,19 +870,7 @@ fn run(parent: &Path, until: Instant) -> Result<Completed> {
     live(&mut s)?;
     let maps = histories(&mut s, &frozen)?;
     data::retained(&offline, &maps[0])?;
-    arm_ack(&mut s)?;
-    let lost = ack(&mut s, &maps[0])?;
-    s.controls[1].old["disable_ack"] = true.into();
-    s.controls[1].write()?;
-    s.stop(0)?;
-    s.wait(30, |s| {
-        let row = s.status(1, 0)?;
-        let raw = s.view(1, 0)?.status()?;
-        Ok((row["lease_current"] == false
-            && row["lease_generation"].is_null()
-            && raw["window"][1][s.view(1, 0)?.slot as usize] == 0)
-            .then_some(()))
-    })?;
+    let (lost, released_at) = held_ack_release(&mut s, &maps[0])?;
     reconnect(&mut s, 0)?;
     ensure!(s.counters[0] == oracle::Counts::default(), "A2 zero replay");
     arm_ack(&mut s)?;
@@ -751,10 +919,11 @@ fn run(parent: &Path, until: Instant) -> Result<Completed> {
     timing(&mut s, "f-final-read-reopen-normal", final_started)?;
     let intervals = s.current_intervals()?;
     let memory = s.finish_feasibility_memory()?;
+    let held_ack_tail_ms = released_at.elapsed().as_millis();
     let mut facts = json!({"classification":"F feasibility functional only","capture_attempt":Purpose::FeasibilityF.attempt(),
         "offline_sources":ids.iter().map(|(n,id)|json!([n,state::hex(id)])).collect::<Vec<_>>(),
         "online_additional_sources":49,"rows":s.rows,"outcomes":s.outcomes,"terminal":terminal,
-        "timings":s53_deadline::feasibility_timings()?,"memory":memory,"intervals":{"streams":intervals.streams,"observed_operations":intervals.observed_operations,"reconciled_entries":intervals.reconciled_entries,"encrypt":intervals.counts.encrypt,"decrypt":intervals.counts.decrypt},"scenario_elapsed_ms":started.elapsed().as_millis(),"controller_elapsed_ms":s53_deadline::observer_context()?.origin.elapsed().as_millis(),
+        "timings":s53_deadline::feasibility_timings()?,"held_ack_release_to_memory_completion_ms":held_ack_tail_ms,"memory":memory,"intervals":{"streams":intervals.streams,"observed_operations":intervals.observed_operations,"reconciled_entries":intervals.reconciled_entries,"encrypt":intervals.counts.encrypt,"decrypt":intervals.counts.decrypt},"scenario_elapsed_ms":started.elapsed().as_millis(),"controller_elapsed_ms":s53_deadline::observer_context()?.origin.elapsed().as_millis(),
         "P_projection":"unknown until actual F observations and uncovered P-specific costs are reviewed","whole_attempt_verdict":"not_established"});
     public_fingerprints(&mut facts)?;
     Ok(Completed(facts))

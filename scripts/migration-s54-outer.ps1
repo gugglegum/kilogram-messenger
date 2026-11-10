@@ -78,7 +78,9 @@ public sealed class KilogramS54Output {
         "images:unknown", "images:roles", "images:pin_read",
         "runtime:unknown", "runtime:policy", "runtime:environment", "runtime:config",
         "selection:binding", "activation:binding", "activation:validity", "launch:binding", "capture:binding",
-        "compiler:unknown", "native_claim:binding", "native_claim:create", "clock:binding"
+        "compiler:unknown", "native_claim:binding", "native_claim:create", "clock:binding",
+        "f_ack_release:tail_budget", "f_ack_release:pause_budget", "f_ack_release:controller_deadline",
+        "f_ack_release:phase_deadline", "f_ack_release:operation_failed"
     };
     static bool AdmissionDiagnostic(string line) {
         const string prefix="S54_ADMISSION_DIAGNOSTIC v1 stage=";

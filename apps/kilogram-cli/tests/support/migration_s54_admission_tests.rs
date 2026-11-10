@@ -103,9 +103,44 @@ fn s54_admission_diagnostics_closed_codes_preserve_original_unknown_and_nested_c
             "closed unique bounded static lines"
         );
     }
-    ensure!(D::ALL.len() == 29, "explicit finite advisory vocabulary");
+    ensure!(D::ALL.len() == 34, "explicit finite advisory vocabulary");
+    let mut sink = Vec::new();
+    diagnostic::report_code_to(D::FReleasePhaseDeadline, Ok(()), &mut sink)?;
+    ensure!(sink.is_empty(), "Ok emits no advisory");
+    let original =
+        anyhow::anyhow!("SYNTHETIC_PRIVATE_CANARY_root").context("original outer context");
+    let chain = format!("{original:#}");
+    let returned =
+        diagnostic::report_code_to::<()>(D::FReleasePhaseDeadline, Err(original), &mut sink)
+            .err()
+            .context("expected original error")?;
+    ensure!(
+        format!("{returned:#}") == chain,
+        "entire original chain preserved"
+    );
+    ensure!(
+        sink == format!("{}\n", D::FReleasePhaseDeadline.line()).as_bytes(),
+        "direct selected code only"
+    );
     diagnostic::report::<()>(Ok(()))?;
     Ok(())
+}
+#[test]
+#[ignore = "benign closed producer; bounded focused forwarder cases only, no F admission"]
+fn s54_f_held_ack_release_diagnostic_child() -> Result<()> {
+    let selected = match std::env::var("KILOGRAM_TEST_S54_F_ACK_RELEASE_REASON").as_deref() {
+        Ok("tail_budget") => D::FReleaseTailBudget,
+        Ok("pause_budget") => D::FReleasePauseBudget,
+        Ok("controller_deadline") => D::FReleaseControllerDeadline,
+        Ok("phase_deadline") => D::FReleasePhaseDeadline,
+        Ok("operation_failed") => D::FReleaseOperationFailed,
+        Ok("ok") => return diagnostic::report_code(D::FReleasePhaseDeadline, Ok(())),
+        _ => anyhow::bail!("closed public diagnostic selector required"),
+    };
+    diagnostic::report_code(
+        selected,
+        Err(anyhow::anyhow!("SYNTHETIC_PRIVATE_CANARY_child")),
+    )
 }
 #[test]
 #[ignore = "benign nonzero diagnostic producer; invoked only by bounded source checks with required inputs removed"]

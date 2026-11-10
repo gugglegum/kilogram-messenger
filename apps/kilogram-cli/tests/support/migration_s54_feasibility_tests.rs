@@ -1,5 +1,145 @@
 //! Pure public regressions. These prove predicates, never scheduler feasibility.
 use super::*;
+#[test]
+fn s54_f_held_ack_release_budget_and_pause_bounds() -> Result<()> {
+    use admission::ReleaseCode as D;
+    let now = Instant::now();
+    let armed = now - Duration::from_secs(50);
+    let original = now + Duration::from_secs(150);
+    let at_boundary = release_budget(armed, original, now)
+        .map_err(|_| anyhow::anyhow!("equality must be admissible"))?;
+    ensure!(
+        at_boundary.until == now + Duration::from_secs(60),
+        "inclusive60s"
+    );
+    ensure!(
+        at_boundary.earliest_pause == armed + Duration::from_secs(120),
+        "arm lower bound"
+    );
+    let cases = [
+        (
+            armed,
+            original - Duration::from_nanos(1),
+            D::FReleaseTailBudget,
+        ),
+        (
+            armed - Duration::from_nanos(1),
+            original,
+            D::FReleasePauseBudget,
+        ),
+        (armed, now, D::FReleaseControllerDeadline),
+        (
+            now + Duration::from_nanos(1),
+            original,
+            D::FReleaseOperationFailed,
+        ),
+    ];
+    for (arm, end, expected) in cases {
+        let stops = std::cell::Cell::new(0);
+        let reconnects = std::cell::Cell::new(0);
+        ensure!(
+            release_budget(arm, end, now).err() == Some(expected),
+            "exact refusal"
+        );
+        ensure!(
+            with_release_budget(arm, end, now, |_| {
+                stops.set(stops.get() + 1);
+                reconnects.set(reconnects.get() + 1);
+                Ok(())
+            })
+            .is_err(),
+            "refuse before work"
+        );
+        ensure!(
+            stops.get() == 0 && reconnects.get() == 0,
+            "zero stop/reconnect"
+        );
+    }
+    let first = release_budget(now, now + Duration::from_secs(400), now)
+        .map_err(|_| anyhow::anyhow!("first budget"))?;
+    let later = release_budget(now, first.original, now + Duration::from_secs(20))
+        .map_err(|_| anyhow::anyhow!("same arm budget"))?;
+    ensure!(
+        first.earliest_pause == later.earliest_pause && first.original == later.original,
+        "rewrites cannot renew existing pause or original clock"
+    );
+    ensure!(
+        release_error(now, now - Duration::from_secs(1), now) == D::FReleaseControllerDeadline,
+        "original expiry wins"
+    );
+    ensure!(
+        release_error(original, now, now) == D::FReleasePhaseDeadline,
+        "local expiry"
+    );
+    println!(
+        "s54_f_release_budget=150_70;inclusive=60;tail_floor=90_unmeasured;pause_margin=10;runtime=false"
+    );
+    Ok(())
+}
+#[test]
+fn s54_f_held_ack_release_scoped_wait_and_nonrelease() -> Result<()> {
+    let base = tempfile::tempdir()?;
+    let _guard = s53_deadline::Guard::enter(base.path(), 400)?;
+    let original = s53_deadline::observer_context()?.whole;
+    let now = Instant::now();
+    let short = ReleaseBudget {
+        original,
+        earliest_pause: now + Duration::from_secs(120),
+        until: now + Duration::from_millis(20),
+    };
+    let reconnected = std::cell::Cell::new(false);
+    let rejected: Result<()> = within_release(short, |_| {
+        loop {
+            s53_deadline::check()?;
+            std::thread::sleep(Duration::from_millis(2));
+        }
+    });
+    if rejected.is_ok() {
+        reconnected.set(true);
+    }
+    ensure!(
+        rejected.is_err() && !reconnected.get(),
+        "bounded nonrelease forbids reconnect"
+    );
+    ensure!(
+        Instant::now().duration_since(now) < Duration::from_secs(2),
+        "short bounded rejection"
+    );
+    s53_deadline::check()?; // The local Phase dropped, without resetting original.
+    let late = ReleaseBudget {
+        until: Instant::now() + Duration::from_millis(10),
+        ..short
+    };
+    let result = within_release(late, |budget| {
+        std::thread::sleep(
+            budget.until.saturating_duration_since(Instant::now()) + Duration::from_millis(5),
+        );
+        Ok(()) // A late observed predicate must not count as success.
+    });
+    ensure!(result.is_err(), "reject late predicate success");
+    let outer = s53_deadline::Phase::until(Instant::now() + Duration::from_millis(10))?;
+    let longer = ReleaseBudget {
+        until: Instant::now() + Duration::from_secs(5),
+        ..short
+    };
+    ensure!(
+        within_release(longer, |_| {
+            std::thread::sleep(Duration::from_millis(20));
+            Ok(())
+        })
+        .is_err(),
+        "nested phase cannot extend earlier cutoff"
+    );
+    drop(outer);
+    ensure!(
+        s53_deadline::observer_context()?.whole == original,
+        "unextended original"
+    );
+    println!(
+        "s54_f_release_scoped=nonrelease_rejected;late_success_rejected;nested_clipped;scheduling_only;QUIC_proof=false"
+    );
+    Ok(())
+}
 fn id(n: u16) -> old::Id {
     let mut id = [0; 32];
     id[..2].copy_from_slice(&n.to_be_bytes());
