@@ -4,6 +4,8 @@ use anyhow::{Result, bail, ensure};
 use kilogram_identity::{AccountId, AccountRecoveryPhrase, DeviceId};
 use serde::{Deserialize, Serialize};
 use zeroize::{Zeroize, ZeroizeOnDrop, Zeroizing};
+mod ordered2;
+pub use ordered2::*;
 
 pub const DESKTOP_BOOTSTRAP_VERSION: u8 = 1;
 pub const MAX_DESKTOP_BOOTSTRAP_OUTPUT_BYTES: usize = 64 * 1024;

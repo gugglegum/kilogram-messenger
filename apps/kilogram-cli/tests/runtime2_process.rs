@@ -28,6 +28,8 @@ impl Drop for OwnedChild {
 }
 #[path = "runtime2_process/bootstrap.rs"]
 mod bootstrap;
+#[path = "runtime2_process/cs2_bootstrap.rs"]
+mod cs2_bootstrap;
 #[path = "runtime2_process/diagnostic.rs"]
 mod diagnostic;
 #[path = "runtime2_process/faults.rs"]

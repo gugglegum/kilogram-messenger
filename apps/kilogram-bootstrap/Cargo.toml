@@ -17,6 +17,7 @@ iroh.workspace = true
 kilogram-bootstrap-contract = { path = "../../crates/kilogram-bootstrap-contract" }
 kilogram-crypto = { path = "../../crates/kilogram-crypto" }
 kilogram-identity = { path = "../../crates/kilogram-identity" }
+kilogram-protocol = { path = "../../crates/kilogram-protocol" }
 kilogram-ratchet = { path = "../../crates/kilogram-ratchet" }
 kilogram-state = { path = "../../crates/kilogram-state" }
 kilogram-transport-iroh = { path = "../../crates/kilogram-transport-iroh" }

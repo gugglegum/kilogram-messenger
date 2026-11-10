@@ -69,6 +69,7 @@ ed25519-dalek = { workspace = true, optional = true }
 windows = { version = "0.62.2", features = ["Foundation_Collections", "Networking_Connectivity", "System_Power"] }
 
 [dev-dependencies]
+kilogram-bootstrap-contract = { path = "../../crates/kilogram-bootstrap-contract" }
 ed25519-dalek.workspace = true
 sha2.workspace = true
 kilogram-offline = { path = "../kilogram-offline" }

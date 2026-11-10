@@ -28,6 +28,13 @@ enum Command {
         #[arg(long)]
         workspace_dir: PathBuf,
     },
+    /// Create a recoverable account and first device directly as Runtime6/OD2.
+    CreateOrdered2 {
+        #[arg(long)]
+        workspace_dir: PathBuf,
+        #[arg(long = "context", num_args = 2, required = true, value_parser = kilogram_bootstrap_contract::parse_ordered2_id)]
+        contexts: Vec<[u8; 32]>,
+    },
     /// Create a short-lived request from a new device for an existing account.
     DeviceLinkRequest {
         #[arg(long)]
@@ -284,7 +291,18 @@ impl From<RoutePolicyArg> for RoutePolicy {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let output = match Arguments::parse().command {
+    let output = Zeroizing::new(match Arguments::parse().command {
+        Command::CreateOrdered2 {
+            workspace_dir,
+            contexts,
+        } => {
+            let contexts: [[u8; 32]; 2] = contexts
+                .try_into()
+                .map_err(|_| anyhow::anyhow!("exactly two context IDs required"))?;
+            kilogram_bootstrap::ordered2::create(workspace_dir, contexts)?
+                .encode()?
+                .to_vec()
+        }
         Command::Create { workspace_dir } => kilogram_bootstrap::create_account(workspace_dir)?
             .encode()?
             .to_vec(),
@@ -548,7 +566,7 @@ async fn main() -> Result<()> {
             state_dir,
             certificate_file,
         )?)?,
-    };
+    });
     let mut stdout = std::io::stdout().lock();
     stdout.write_all(&output)?;
     stdout.write_all(b"\n")?;
