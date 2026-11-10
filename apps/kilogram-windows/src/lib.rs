@@ -13,6 +13,7 @@ use std::{
 use anyhow::{Context, Result, bail, ensure};
 use eframe::egui;
 use kilogram_bootstrap_contract::{DesktopBootstrapOutput, MAX_DESKTOP_BOOTSTRAP_OUTPUT_BYTES};
+mod fresh_onboarding;
 use kilogram_identity::{AccountDeviceListSnapshot, AccountId, AccountRecoveryPhrase, DeviceId};
 use kilogram_runtime_ipc::{
     MAX_RUNTIME_IPC_CONVERSATION_PAGE_SIZE, MAX_RUNTIME_IPC_PEER_CAPABILITY_PAGE_SIZE,
@@ -96,6 +97,7 @@ pub fn run() -> eframe::Result {
 
 #[derive(Clone, Debug)]
 struct DesktopOptions {
+    fresh_home: Option<PathBuf>,
     descriptor_path: PathBuf,
     runtime_profile_path: PathBuf,
     runtime_executable_path: PathBuf,
@@ -108,6 +110,7 @@ struct DesktopOptions {
 
 impl DesktopOptions {
     fn from_arguments(arguments: impl IntoIterator<Item = OsString>) -> Self {
+        let mut fresh_home = None;
         let mut descriptor_path = None;
         let mut runtime_profile_path = None;
         let mut runtime_executable_path = None;
@@ -128,7 +131,9 @@ impl DesktopOptions {
                 }
                 continue;
             }
-            let target = if argument == "--ipc-file" {
+            let target = if argument == "--fresh-home" {
+                &mut fresh_home
+            } else if argument == "--ipc-file" {
                 &mut descriptor_path
             } else if argument == "--runtime-profile" {
                 &mut runtime_profile_path
@@ -190,6 +195,7 @@ impl DesktopOptions {
         }
 
         Self {
+            fresh_home,
             descriptor_path: descriptor_path.unwrap_or_else(|| PathBuf::from("runtime.ipc.json")),
             runtime_profile_path,
             runtime_executable_path: runtime_executable_path
@@ -3343,6 +3349,8 @@ struct BootstrapView {
 }
 
 struct KilogramApp {
+    fresh_onboarding: fresh_onboarding::Panel,
+    fresh_selected: bool,
     model: ViewModel,
     worker: Option<RuntimeWorker>,
     change_watcher: Option<RuntimeChangeWatcher>,
@@ -3417,7 +3425,16 @@ impl KilogramApp {
             }
             _ => None,
         };
+        let fresh_selected = options.fresh_home.is_some();
+        let fresh_onboarding = fresh_onboarding::Panel::new(
+            options
+                .fresh_home
+                .unwrap_or_else(|| PathBuf::from("kilogram-first-dialog")),
+            options.bootstrap_executable_path.clone(),
+        );
         Self {
+            fresh_onboarding,
+            fresh_selected,
             model,
             worker,
             change_watcher,
@@ -9774,6 +9791,22 @@ impl Drop for KilogramApp {
 
 impl eframe::App for KilogramApp {
     fn update(&mut self, context: &egui::Context, _frame: &mut eframe::Frame) {
+        if self.fresh_selected {
+            egui::CentralPanel::default().show(context, |ui| {
+                egui::ScrollArea::vertical().show(ui, |ui| {
+                    if ui
+                        .button("Leave pilot — clear any recovery words")
+                        .clicked()
+                    {
+                        self.fresh_onboarding.pause();
+                        self.fresh_selected = false;
+                    }
+                    self.fresh_onboarding.draw(ui);
+                });
+            });
+            context.request_repaint_after(Duration::from_millis(50));
+            return;
+        }
         self.accept_dropped_descriptor(context);
         self.receive_worker_responses();
         self.receive_change_events();
@@ -9800,6 +9833,17 @@ impl eframe::App for KilogramApp {
                 .id_salt("desktop-content")
                 .show(ui, |ui| {
                     self.draw_header(ui);
+                    if ui
+                        .add_enabled(
+                            self.runtime_process.is_none()
+                                && self.model.pending.is_none()
+                                && self.model.connection == ConnectionState::Disconnected,
+                            egui::Button::new("First-dialog pilot — create or join invitation"),
+                        )
+                        .clicked()
+                    {
+                        self.fresh_selected = true;
+                    }
                     ui.add_space(8.0);
                     bootstrap_action = self.draw_bootstrap(ui);
                     ui.add_space(4.0);

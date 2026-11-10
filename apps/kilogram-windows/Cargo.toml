@@ -11,12 +11,15 @@ publish = false
 anyhow.workspace = true
 blake3.workspace = true
 eframe.workspace = true
+getrandom.workspace = true
 kilogram-bootstrap-contract = { path = "../../crates/kilogram-bootstrap-contract" }
 kilogram-identity = { path = "../../crates/kilogram-identity" }
+kilogram-protocol = { path = "../../crates/kilogram-protocol" }
 kilogram-runtime-ipc = { path = "../../crates/kilogram-runtime-ipc" }
 serde.workspace = true
 serde_json.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, features = ["process"] }
+tempfile.workspace = true
 zeroize.workspace = true
 
 [dev-dependencies]
