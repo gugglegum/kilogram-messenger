@@ -189,11 +189,11 @@ if($HeadOnly){
         Set-S54Purpose FeasibilityF
         $policy=New-S54Policy -FixtureRoot $f.root
         $facts=Test-S54Admission $f.inputs $policy
-        Require-Head ($facts.classification -ceq 'public_schema_fixture_only' -and $i.identity.attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-12') 'actual complete PS public packed F12 admission'
+        Require-Head ($facts.classification -ceq 'public_schema_fixture_only' -and $i.identity.attempt -ceq 'F-s54-mixed-hooks-feasibility-01-attempt-13') 'actual complete PS public packed F13 admission'
         $i.source.observed_head=$b;$i.source.implementation=$b;$why=$null
         try{Assert-S54Inventory $i $policy}catch{$why=$_.Exception.Message}
         Require-Head ($why -match 'S54 actual HEAD') 'actual PS admission refuses wrong observed packed HEAD' $why
-        foreach($suffix in @('01','02','03','04','05','06','07','08','09','10','11')){
+        foreach($suffix in @('01','02','03','04','05','06','07','08','09','10','11','12')){
             $i.identity.attempt=$i.identity.case+'-attempt-'+$suffix;$why=$null
             try{Assert-S54Inventory $i $policy}catch{$why=$_.Exception.Message}
             Require-Head ($why -match 'required identity') ('actual inventory refuses consumed F'+$suffix) $why
