@@ -281,14 +281,81 @@ impl Fixture {
         gap: bool,
         timing: Option<(&'static str, Instant)>,
     ) -> Result<Self> {
+        Self::new_geometry(parent, gap, timing, None)
+    }
+    fn new_history(parent: &Path, slot: u8) -> Result<Self> {
+        ensure!(slot < 2, "history fixture slot");
+        Self::new_geometry(parent, false, None, Some(slot))
+    }
+    fn new_geometry(
+        parent: &Path,
+        gap: bool,
+        timing: Option<(&'static str, Instant)>,
+        history_slot: Option<u8>,
+    ) -> Result<Self> {
         controls_phase(timing, "pair-enrollment", "start", 0);
         let mut p = Pair::new_in(parent)?;
+        let mut enabled = vec![p.c];
+        if let Some(slot) = history_slot {
+            let ca = admin::credentials(&p.a.store)?;
+            let cb = admin::credentials(&p.b.store)?;
+            let wall = now()?;
+            let (c2, invitation) = admin::create_context(
+                &p.a.store,
+                &p.accounts[0],
+                &cb.raw,
+                cb.cert.account_id(),
+                wall,
+            )?;
+            let (_, complete) = admin::import_context(
+                &mut p.b.store,
+                Some(&p.accounts[1]),
+                &invitation,
+                ca.cert.account_id(),
+                wall,
+            )?;
+            admin::import_context(&mut p.a.store, None, &complete, cb.cert.account_id(), wall)?;
+            ensure!(c2 != p.c, "two genuine contexts");
+            // Pair constructed its Engines before this second real import.
+            // Refresh only the cached Specs from committed storage, as Engine::new does.
+            for engine in [&mut p.a, &mut p.b] {
+                engine.contexts = admin::specs(&engine.store)?
+                    .into_iter()
+                    .map(|s| (s.c, s))
+                    .collect();
+                ensure!(
+                    engine.contexts.len() == 2,
+                    "two committed legacy Specs loaded"
+                );
+            }
+            enabled.push(c2);
+            enabled.sort();
+            let selected = enabled[usize::from(slot)];
+            let mut selected_binding = None;
+            for context in &enabled {
+                p.c = *context;
+                let pair = p.admit()?;
+                p.activate(&pair)?;
+                if p.c == selected {
+                    selected_binding = Some(p.binding);
+                }
+            }
+            p.c = selected;
+            p.binding = selected_binding.context("actual selected legacy lease")?;
+        }
         controls_phase(timing, "pair-enrollment", "ok", 0);
         controls_phase(timing, "old-message-preparation", "start", 0);
-        let pair = p.admit()?;
-        p.activate(&pair)?;
+        if history_slot.is_none() {
+            let pair = p.admit()?;
+            p.activate(&pair)?;
+        }
         for (role, request) in [(0, 10), (1, 11), (0, 12), (1, 13)] {
             send_old(&mut p, role, request, true)?;
+        }
+        if history_slot.is_some() {
+            for request in [14, 15] {
+                p.a.queue(p.c, [request; 16], "genuine queued migration source")?;
+            }
         }
         if gap {
             renew_legacy_authority(&mut p)?;
@@ -345,14 +412,50 @@ impl Fixture {
             };
             controls_phase(timing, open_phase, "start", 0);
             let profile = Profile3::load(&profiles[role])?;
-            owners.push(Owner7::new(profile.open(&profiles[role])?, &[c])?);
+            let mut repository = profile.open(&profiles[role])?;
+            if let Some(slot) = history_slot {
+                ensure!(
+                    repository.contexts().len() == 2
+                        && repository.contexts()[usize::from(slot)] == (c, role as u8),
+                    "actual committed history mapping"
+                );
+                for physical in 0..2 {
+                    repository.cold_ready_snapshot(physical)?;
+                    ensure!(
+                        repository.source_counts(physical)?.lanes
+                            == if physical == slot { [3, 3] } else { [1, 1] },
+                        "cold authenticated source frontiers"
+                    );
+                }
+            }
+            let mut owner = Owner7::new(repository, &enabled)?;
+            if let Some(slot) = history_slot {
+                let counts = owner.repo()?.counts(slot)?;
+                ensure!(
+                    owner.repo()?.metadata(slot)?.next == [3, 3]
+                        && counts.queued == if role == 0 { 2 } else { 0 }
+                        && counts.pending == 0
+                        && counts.debt == 0,
+                    "warm migration preserves queued A3/4"
+                );
+                ensure!(
+                    owner.window.snapshot().0 == [64, 64],
+                    "two actual enabled shares"
+                );
+            }
+            owners.push(owner);
             controls_phase(timing, open_phase, "ok", 0);
         }
         let mut owners: [Owner7; 2] = owners
             .try_into()
             .map_err(|_| anyhow::anyhow!("two owners"))?;
         controls_phase(timing, "consent-preparation", "start", 0);
-        let scope = owners[0].existing(0, |s| s.scope(0))?;
+        let slot = owners[0]
+            .specs
+            .iter()
+            .position(|s| s.c == c)
+            .context("fixture resolved scope")? as u8;
+        let scope = owners[0].existing(slot, |s| s.scope(slot))?;
         let now = now()?;
         let certs = scope.certs();
         let origin = scope.origin();
@@ -386,7 +489,9 @@ impl Fixture {
             4096,
         )?;
         for owner in &mut owners {
-            owner.existing(0, |s| s.import_consent(0, None, consent.clone(), false))?;
+            owner.existing(slot, |s| {
+                s.import_consent(slot, None, consent.clone(), false)
+            })?;
         }
         controls_phase(timing, "consent-preparation", "ok", 0);
         Ok(Self {
@@ -464,15 +569,18 @@ impl Fixture {
     }
 }
 fn observed(owner: &mut Owner7) -> Result<Json> {
-    let head = owner.head(0)?;
+    observed_at(owner, 0)
+}
+fn observed_at(owner: &mut Owner7, slot: u8) -> Result<Json> {
+    let head = owner.head(slot)?;
     let repo = owner.repo()?;
-    let snapshot = repo.snapshot(0)?;
-    let mode = repo.existing_state(0)?;
+    let snapshot = repo.snapshot(slot)?;
+    let mode = repo.existing_state(slot)?;
     Ok(
         json!({"root":repo.generation(),"head":state::hex(&wire::hash(b"",&head.encode()?)),
         "native":snapshot.native.as_ref().map(|v|state::hex(&wire::hash(b"",v))),
-        "meta":snapshot.meta,"counts":repo.counts(0)?,"state":mode,
-        "blocked":repo.control(0,store::L1Control::BlockedFork)?.map(|v|state::hex(&wire::hash(b"",&v)))}),
+        "meta":snapshot.meta,"counts":repo.counts(slot)?,"state":mode,
+        "blocked":repo.control(slot,store::L1Control::BlockedFork)?.map(|v|state::hex(&wire::hash(b"",&v)))}),
     )
 }
 fn stale_purposes(owner: &mut Owner7) -> Result<()> {

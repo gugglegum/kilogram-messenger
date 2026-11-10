@@ -8,6 +8,8 @@ use std::{
 };
 use tokio::sync::{Mutex, Semaphore, oneshot};
 use zeroize::Zeroizing;
+#[path = "history_busy_tests.rs"]
+mod history_busy;
 #[path = "handoff_regression_tests.rs"]
 mod review2;
 #[path = "handoff_seen_batch_tests.rs"]
@@ -84,6 +86,8 @@ struct Net {
     owned_bindings: Option<[Id; 2]>,
     tasks: tokio::task::JoinSet<Result<()>>,
     c: Id,
+    slot: u8,
+    ordinary_cleanup: bool,
     deadline: Instant,
 }
 impl Drop for Net {
@@ -106,15 +110,20 @@ impl Drop for Net {
 }
 impl Net {
     async fn legacy_admission_only(&mut self) -> Result<()> {
+        let slot = self.slot;
         self.disconnect().await?;
         let result = async {
-            let a = self.handles[0].call(|o| o.publish_locator(0)).await?;
-            let b = self.handles[1].call(|o| o.publish_locator(0)).await?;
+            let a = self.handles[0]
+                .call(move |o| o.publish_locator(slot))
+                .await?;
+            let b = self.handles[1]
+                .call(move |o| o.publish_locator(slot))
+                .await?;
             self.handles[0]
-                .call(move |o| o.import_locator(0, b))
+                .call(move |o| o.import_locator(slot, b))
                 .await?;
             self.handles[1]
-                .call(move |o| o.import_locator(0, a))
+                .call(move |o| o.import_locator(slot, a))
                 .await?;
             let endpoint = self.endpoints[1].clone();
             let handle = self.handles[1].clone();
@@ -145,7 +154,7 @@ impl Net {
             });
             let admission = tokio::time::timeout_at(
                 self.deadline.into(),
-                super::super::network::admit_a(&self.handles[0], &self.endpoints[0], 0),
+                super::super::network::admit_a(&self.handles[0], &self.endpoints[0], slot),
             );
             tokio::pin!(admission);
             let (connection, link, _pair) = tokio::select! {
@@ -183,7 +192,10 @@ impl Net {
                 .context("mixed failed L1 task drain")?;
             // Admission may have installed a real lease before its peer failed.
             for handle in &self.handles {
-                if let Some(lease) = handle.call(|o| Ok(o.leases[0].clone())).await? {
+                if let Some(lease) = handle
+                    .call(move |o| Ok(o.leases[usize::from(slot)].clone()))
+                    .await?
+                {
                     network2::close_binding(handle, &lease.connection, lease.binding).await;
                 }
             }
@@ -201,18 +213,19 @@ impl Net {
         }
     }
     async fn legacy(&mut self) -> Result<()> {
+        let slot = self.slot;
         self.disconnect().await?;
         let a = self.handles[0]
-            .call(|owner| owner.publish_locator(0))
+            .call(move |owner| owner.publish_locator(slot))
             .await?;
         let b = self.handles[1]
-            .call(|owner| owner.publish_locator(0))
+            .call(move |owner| owner.publish_locator(slot))
             .await?;
         self.handles[0]
-            .call(move |owner| owner.import_locator(0, b))
+            .call(move |owner| owner.import_locator(slot, b))
             .await?;
         self.handles[1]
-            .call(move |owner| owner.import_locator(0, a))
+            .call(move |owner| owner.import_locator(slot, a))
             .await?;
         let endpoint = self.endpoints[1].clone();
         let handle = self.handles[1].clone();
@@ -233,7 +246,7 @@ impl Net {
         });
         let (connection, link, pair) = tokio::time::timeout_at(
             self.deadline.into(),
-            super::super::network::admit_a(&self.handles[0], &self.endpoints[0], 0),
+            super::super::network::admit_a(&self.handles[0], &self.endpoints[0], slot),
         )
         .await??;
         let (other, other_binding) =
@@ -250,7 +263,22 @@ impl Net {
         self.owned_bindings = Some([binding, other_binding]);
         Ok(())
     }
-    async fn new(mut owners: [Owner7; 2], c: Id, deadline: Instant) -> Result<Self> {
+    async fn new(owners: [Owner7; 2], c: Id, deadline: Instant) -> Result<Self> {
+        Self::new_at_slot(owners, c, 0, deadline).await
+    }
+    async fn new_at_slot(
+        mut owners: [Owner7; 2],
+        c: Id,
+        slot: u8,
+        deadline: Instant,
+    ) -> Result<Self> {
+        for (role, owner) in owners.iter().enumerate() {
+            ensure!(
+                owner.specs.get(usize::from(slot)).is_some_and(|s| s.c == c)
+                    && owner.role(slot)? == role as u64,
+                "resolved component slot/role"
+            );
+        }
         let endpoints = [
             kilogram_transport_iroh::ordered2::bind_existing(&owners[0].route).await?,
             kilogram_transport_iroh::ordered2::bind_existing(&owners[1].route).await?,
@@ -258,10 +286,10 @@ impl Net {
         let mut locators = Vec::new();
         for (role, owner) in owners.iter_mut().enumerate() {
             owner.endpoint = Some(endpoints[role].addr());
-            locators.push(owner.publish_locator2(0)?);
+            locators.push(owner.publish_locator2(slot)?);
         }
-        owners[0].import_locator2(0, locators[1].clone())?;
-        owners[1].import_locator2(0, locators[0].clone())?;
+        owners[0].import_locator2(slot, locators[1].clone())?;
+        owners[1].import_locator2(slot, locators[0].clone())?;
         let [a, b] = owners;
         let (a, ja) = runtime::actor(a)?;
         let (b, jb) = runtime::actor(b)?;
@@ -273,12 +301,15 @@ impl Net {
             owned_bindings: None,
             tasks: tokio::task::JoinSet::new(),
             c,
+            slot,
+            ordinary_cleanup: false,
             deadline,
         };
         net.connect().await?;
         Ok(net)
     }
     async fn connect(&mut self) -> Result<()> {
+        let slot = self.slot;
         let endpoint = self.endpoints[1].clone();
         let handle = self.handles[1].clone();
         let context = self.c;
@@ -318,12 +349,21 @@ impl Net {
             }
             result
         });
-        let admission = network2::admit_a(
-            &self.handles[0],
-            &self.endpoints[0],
-            0,
-            (Instant::now() + PROBE_WHOLE7).min(self.deadline),
-        );
+        let admission = async {
+            let result = network2::admit_a(
+                &self.handles[0],
+                &self.endpoints[0],
+                slot,
+                (Instant::now() + PROBE_WHOLE7).min(self.deadline),
+            )
+            .await;
+            if std::env::var_os("KILOGRAM_S53_CASE").is_none()
+                && let Err(error) = &result
+            {
+                eprintln!("s54_history_owner_admission side=A error={error:#}");
+            }
+            result
+        };
         tokio::pin!(admission);
         // Observe the owned listener concurrently. Its real error/panic must not
         // disappear behind A's later timeout; Net still owns and aborts/joins tasks.
@@ -345,7 +385,7 @@ impl Net {
         let handle = self.handles[0].clone();
         let incoming = connection.clone();
         self.tasks
-            .spawn(network2::incoming(handle, incoming, 0, lease.binding));
+            .spawn(network2::incoming(handle, incoming, slot, lease.binding));
         self.connections = Some([connection, other]);
         self.owned_bindings = Some([lease.binding, other_binding]);
         Ok(())
@@ -355,6 +395,9 @@ impl Net {
         self.connect().await
     }
     async fn disconnect(&mut self) -> Result<()> {
+        if self.ordinary_cleanup {
+            return self.disconnect_ordinary().await;
+        }
         if let Some(connections) = self.connections.take() {
             let bindings = self
                 .owned_bindings
@@ -368,10 +411,107 @@ impl Net {
         while self.tasks.join_next().await.is_some() {}
         Ok(())
     }
+    fn ordinary_join(
+        joined: std::result::Result<Result<()>, tokio::task::JoinError>,
+        abort_requested: bool,
+        owned_close: bool,
+    ) -> Result<()> {
+        match joined {
+            Err(error) if abort_requested && error.is_cancelled() => Ok(()),
+            Err(error) => Err(error).context("ordinary background task join"),
+            Ok(Err(error)) => {
+                // Only the typed outcome of our owned close is benign. No substring matching.
+                let expected = owned_close
+                    && error
+                        .downcast_ref::<iroh::endpoint::ConnectionError>()
+                        .is_some_and(|reason| match reason {
+                            iroh::endpoint::ConnectionError::LocallyClosed => true,
+                            iroh::endpoint::ConnectionError::ApplicationClosed(close) => {
+                                close.error_code == 0_u32.into()
+                                    && close.reason.as_ref() == b"existing connection complete"
+                            }
+                            _ => false,
+                        });
+                if expected {
+                    Ok(())
+                } else {
+                    Err(error).context("ordinary background task failed")
+                }
+            }
+            Ok(Ok(())) => Ok(()),
+        }
+    }
+    async fn drain_ordinary(
+        tasks: &mut tokio::task::JoinSet<Result<()>>,
+        owned_close: bool,
+    ) -> Result<()> {
+        let mut result = Ok(());
+        // Already completed cancellation was not caused by this cleanup's abort_all.
+        while let Some(joined) = tasks.try_join_next() {
+            result = result.and(Self::ordinary_join(joined, false, owned_close));
+        }
+        tasks.abort_all();
+        while let Some(joined) = tasks.join_next().await {
+            result = result.and(Self::ordinary_join(joined, true, owned_close));
+        }
+        result
+    }
+    async fn disconnect_ordinary(&mut self) -> Result<()> {
+        let mut result = Ok(());
+        let owned_close = self.connections.is_some();
+        if let Some(connections) = self.connections.take() {
+            if let Some(bindings) = self.owned_bindings.take() {
+                for (role, connection) in connections.iter().enumerate() {
+                    network2::close_binding(&self.handles[role], connection, bindings[role]).await;
+                }
+            } else {
+                for connection in &connections {
+                    connection.close(0_u32.into(), b"existing connection complete");
+                }
+                result = Err(anyhow::anyhow!("owned actual admission bindings missing"));
+            }
+        }
+        // Never return before all tasks have been drained, even after an earlier failure.
+        result.and(Self::drain_ordinary(&mut self.tasks, owned_close).await)
+    }
+    /// Ordinary A cases explicitly propagate cleanup/join errors; managed defaults keep Drop.
+    async fn finish(mut self) -> Result<()> {
+        let mut result = self.disconnect_ordinary().await;
+        for handle in &self.handles {
+            let window = handle
+                .call(|o| Ok(o.window.snapshot().1))
+                .await
+                .and_then(|current| {
+                    ensure!(current == [0, 0], "owned references returned to baseline");
+                    Ok(())
+                });
+            result = result.and(window);
+            handle.stop.store(true, Ordering::Release);
+        }
+        for join in &mut self.joins {
+            if let Some(join) = join.take() {
+                result = result.and(
+                    join.join()
+                        .map_err(|_| anyhow::anyhow!("owned history actor panic")),
+                );
+            }
+        }
+        for endpoint in &self.endpoints {
+            endpoint.close().await;
+        }
+        result.and_then(|()| {
+            ensure!(
+                self.tasks.is_empty() && self.connections.is_none(),
+                "owned history tasks drained"
+            );
+            Ok(())
+        })
+    }
     async fn binding(&self, role: usize) -> Result<Id> {
+        let slot = self.slot;
         self.handles[role]
-            .call(|o| {
-                Ok(o.leases[0]
+            .call(move |o| {
+                Ok(o.leases[usize::from(slot)]
                     .as_ref()
                     .context("actual component lease")?
                     .binding)
@@ -383,12 +523,13 @@ impl Net {
         role: usize,
         dispatch: &protocol2::DispatchExisting7,
     ) -> Result<v2::ParsedFrame2> {
+        let slot = self.slot;
         tokio::time::timeout_at(
             self.deadline.into(),
             network2::rpc(
                 &self.handles[role],
                 &self.connections.as_ref().context("component connected")?[role],
-                0,
+                slot,
                 dispatch,
             ),
         )
@@ -396,9 +537,12 @@ impl Net {
         .context("absolute mixed component deadline")?
     }
     async fn wait(&self, role: usize, what: impl Fn(&Json) -> bool) -> Result<Json> {
+        let slot = self.slot;
         let start = Instant::now();
         loop {
-            let value = self.handles[role].call(observed).await?;
+            let value = self.handles[role]
+                .call(move |o| observed_at(o, slot))
+                .await?;
             if what(&value) {
                 return Ok(value);
             }
@@ -410,11 +554,12 @@ impl Net {
         }
     }
     async fn head(&self, role: usize) -> Result<()> {
+        let slot = self.slot;
         let binding = self.binding(role).await?;
         let dispatch = self.handles[role]
             .call(move |o| {
-                let body = o.head_body2(0)?;
-                o.dispatch_frame2(0, binding, v2::FrameKind::Head, None, body, None)
+                let body = o.head_body2(slot)?;
+                o.dispatch_frame2(slot, binding, v2::FrameKind::Head, None, body, None)
             })
             .await?;
         let reply = self.send(role, &dispatch).await?;
@@ -423,43 +568,48 @@ impl Net {
             "real Head2 response"
         );
         self.handles[role]
-            .call(move |o| o.accept_head2(0, binding, reply.body().value(), false))
+            .call(move |o| o.accept_head2(slot, binding, reply.body().value(), false))
             .await
     }
     async fn deliver(&self, role: usize, first: u64) -> Result<()> {
-        let credit = self.handles[1 - role].call(|o| o.credit2(0)).await?;
+        let slot = self.slot;
+        let credit = self.handles[1 - role]
+            .call(move |o| o.credit2(slot))
+            .await?;
         let binding = self.binding(role).await?;
         let delivery = self.handles[role]
-            .call(move |o| o.outgoing2(0, binding, first, credit))
+            .call(move |o| o.outgoing2(slot, binding, first, credit))
             .await?
             .context("genuine immutable delivery")?;
         let reply = self.send(role, &delivery.dispatch).await?;
         let request = delivery.dispatch.frame.request();
         let ids = delivery.ids;
         self.handles[role]
-            .call(move |o| o.check_complete2(0, binding, reply, request, &ids))
+            .call(move |o| o.check_complete2(slot, binding, reply, request, &ids))
             .await
     }
     async fn repair(&self, role: usize) -> Result<()> {
+        let slot = self.slot;
         let binding = self.binding(role).await?;
         let (request, plan) = self.handles[role]
-            .call(move |o| o.prefix2(0, binding))
+            .call(move |o| o.prefix2(slot, binding))
             .await?
             .context("real missing-prefix plan")?;
         let response = self.send(role, &request).await?;
         self.handles[role]
-            .call(move |o| o.accept_prefix2(0, binding, response, &plan).map(|_| ()))
+            .call(move |o| o.accept_prefix2(slot, binding, response, &plan).map(|_| ()))
             .await
     }
     async fn acks(&self, role: usize) -> Result<()> {
+        let slot = self.slot;
         let binding = self.binding(role).await?;
         if let Some(query) = self.handles[role]
-            .call(move |o| o.ack_query2(0, binding))
+            .call(move |o| o.ack_query2(slot, binding))
             .await?
         {
             let response = self.send(role, &query).await?;
             self.handles[role]
-                .call(move |o| o.accept_acks2(0, binding, response).map(|_| ()))
+                .call(move |o| o.accept_acks2(slot, binding, response).map(|_| ()))
                 .await?;
         }
         Ok(())
