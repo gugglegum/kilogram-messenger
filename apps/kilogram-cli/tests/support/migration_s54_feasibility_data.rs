@@ -77,9 +77,11 @@ pub(super) struct Frozen40 {
     pub map: BTreeMap<String, Value>,
 }
 impl Frozen40 {
-    pub fn capture(node: &Node) -> Result<Self> {
-        let first = node.history(16, None)?;
-        Self::from_pages(&first, |cursor| node.history(32, Some(cursor)))
+    pub fn capture(controller: &mut control::Controller) -> Result<Self> {
+        history_reader::operation(controller, 0, 0, |read| {
+            let first = read(16, None)?;
+            Self::from_pages(&first, |cursor| read(32, Some(cursor)))
+        })
     }
     pub fn from_pages(first: &Value, read: impl FnMut(&str) -> Result<Value>) -> Result<Self> {
         ensure!(
@@ -122,9 +124,11 @@ impl Frozen40 {
             })
             .collect()
     }
-    pub fn verify(&self, node: &Node) -> Result<()> {
+    pub fn verify(&self, controller: &mut control::Controller) -> Result<()> {
         let _measurement = s53_deadline::measure("old_cursor_query");
-        self.verify_with(|cursor| node.history(32, Some(cursor)))
+        history_reader::operation(controller, 0, 0, |read| {
+            self.verify_with(|cursor| read(32, Some(cursor)))
+        })
     }
     pub fn verify_with(&self, read: impl FnMut(&str) -> Result<Value>) -> Result<()> {
         ensure!(

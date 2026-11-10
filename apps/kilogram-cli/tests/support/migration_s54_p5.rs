@@ -25,6 +25,8 @@ mod final_phase;
 mod graph;
 #[path = "migration_s54_handoff.rs"]
 mod handoff;
+#[path = "migration_s54_history_reader.rs"]
+mod history_reader;
 #[path = "migration_s54_intervals.rs"]
 mod intervals;
 #[path = "migration_s54_observations.rs"]

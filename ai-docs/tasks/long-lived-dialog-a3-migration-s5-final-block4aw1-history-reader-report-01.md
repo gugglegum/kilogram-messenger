@@ -1,0 +1,43 @@
+# Block4AW1: bounded F history reader and B/C checks
+
+2026-11-10. Implementation review candidate on HEAD `8b9bb7024e39de2bbd5c869723f2b737c0c96ac9`. Exactly six Rust paths plus this report/pins and unchanged accepted AV design. No runtime7/product/Owner7 fixture A edits, commit/push, historical raw reads, profiles/keys/DB inspection, new F, Prepare/activation/Run or WholeP. F01-F11 remain consumed; S5.3 closed, S5.4 open. Passing B/C does not establish A, actual ControllerРІвЂ вЂ™CLIРІвЂ вЂ™Owner7 integration, F11 permit release, or full repair acceptance.
+
+## Change and source invariants
+
+New F-only migration_s54_history_reader.rs classifies Page/exact Busy/closed terminal. Busy requires actual unsuccessful status, empty stdout and exactly28B `Error: SchedulingWindowBusy` plus LF. Malformed/over48KiB success, other stderr encodings and stdout-bearing failures are terminal; no raw CLI error/argv/cursor/body is exported by this reader. The real history3 command goes through existing command()/s53_deadline::output and its owned child wait/kill cleanup.
+
+One Phase::until(min(controller.until,entry+30s)) caps any existing shorter phase. Its effective capture_deadline is shared across all retries and pages. Reader checks the same Controller.check before/after commands,on Busy,after <=25ms remaining-time-capped yields,and before successful return; late success fails. The owned Node/slot snapshot belongs to the attempt closure; progress holds the only mutable Controller borrow. No clock reset, alias/source/interval rewrite, native effect, fallback context or new diagnostic framework.
+
+F initial Frozen40/suffix/resume and continuous169/218/C2 reads now use this loop. Real16+24/40 at[7,35],all identity/source/cursor assertions,48KiB/43pages/1344rows,and original450/480/510 clocks remain. Frozen resume is still before source64 arming; C2 uses its resolved independent slot. early.rs only extracts the existing collector to history_with; old Node/P wrapper still supplies Node.history(32,cursor). The complete old/new collector bodies were compared equal after that single supplier substitution. Shared Node.history/general cli/P call sites,34reservation/64share and runtime code are unchanged.
+
+Six Rust files under apps/kilogram-cli/tests/support/: migration_s54_p5.rs,module registration; migration_s54_history_reader.rs,new bounded loop/classifier/Controller adapter; migration_s54_history_reader_tests.rs,new B/C; migration_s54_feasibility.rs,F routing; migration_s54_feasibility_data.rs,Frozen40 operation routing; migration_s54_early.rs,unchanged-body collector extraction. source.diff includes tracked and new files and passed reverse git apply --check against the current worktree.
+
+## Premises and actual verification
+
+premise-check.json records IPC3 request[3,4,slot,optional cursor bytes,limit],reply[3,4,JSON bytes]/Error,canonical CLI encoding,transport-valid scripted cursor and ownership before tests. The old diagnostic CLI was explicitly treated stale. A new offline/locked build used the fixed diagnostic CLI path; current-source-cli-tools.json preserves its initial72278016B/f1f84eca2953db7f65c4e75d5a3f279aee2da3c9df29b3f1121b23f0feef79f0 image. The compile portion of focus-01 then selected a different image before any B execution. Therefore bind-01 repeated only the3actual-CLI B tests with explicit immediate before/after CLI+harness pins and unchanged six sources. The actually bound CLI is 72705024B SHA256 `b558467559d1d3fa69ad987ca02f1f4056e59daaba110a6992e54121d8bffe49` at target/s54-diagnostics-source-checks/verification/kilogram-cli.exe. Both pins remained identical during that repeat. Tool versions/absolute executable pins are in current-source-cli-tools.json: Rust/cargo1.98.0,host x86_64-pc-windows-msvc. Source closure535 includes the two new modules. All nine production images remained byte-identical; diagnostic cache/paths only.
+
+All actual checks used pinned pwsh/Windows NativeToken,process-local Rust1.98 bin,offline/locked,Jobs2,24available processors,BelowNormal and existing bounded Job/output owner as code. No persistent environment/system changes. Cargo test compiles only with --no-run; execution only through scripts/run-cargo-tests-stable.ps1 with fixed diagnostic EXE names. Strict Clippy's recorded actual argument array ends in literal --,-D,warnings. No direct network cargo test or closed matrix.
+
+| Check | Actual child/owner exit | Seconds | Work/whole/cleanup seconds |
+|---|---|---|---|
+|compile-03|0/0|36.6820140|3600/3660/60|
+|build-01|0/0|80.5611704|3600/3660/60|
+|clippy-02|0/0|17.0128548|3600/3660/60|
+|fmtcheck-01|0/0|1.3634044|570/600/30|
+|focus-02|0/0|12.9302230|570/600/30|
+|oracle-01|0/0|7.3849650|570/600/30|
+|bind-01|0/0|9.9184915|570/600/30|
+
+focus-02 actually executed7 named tests (not merely listed):3 B actual CLI/scripted-peer and4 C scheduling/collector negatives. oracle-01 executed only the directly affected retained A40 suffix oracle; other package harnesses ran0 matching tests. Total8unique tests passed,0failed; bind-01 repeated3B cases solely to close the exact-image evidence gap,so11successful test executions in total. Full selector names and all application command receipts are in verification.json; no test was silently skipped as evidence.
+
+B first/suffix scenario observed actual CLI exits1,0,1,0 and4validated IPC requests at physical slot1,limits16/32,unchanged supplied transport-valid cursor. Its16+24items/view/F are explicitly scripted; they are not40 genuine storage sources. Persistent Busy produced22scripted IPC replies initially and22in the image-bound repeat,and stopped at the same2s operation deadline; setup is outside that local2s phase. Other command error exited1 and was terminal; malformed success exited0 and failed parsing without retry. Each B set had four fresh protocol peers (eight total); each used an ephemeral synthetic identity/loopback descriptor,validated actual received schema and returned explicitly scripted replies. No imported Owner7/store/admission bypass.
+
+Each peer owns its receiver,current-thread Tokio runtime and OS thread. All terminal/success paths stop the peer,shutdown/remove its descriptor,drop the runtime (cancelling accept/connection tasks),and join its thread. Actual CLI outputs return through existing owned child wait; deadline failure uses the existing kill/wait Drop path. focus-02/oracle-01/bind-01 cleanup was unforced,empty and verified; independent exact diagnostic image inventory succeeded with0live processes. Scripted command logs remain under fresh AW1 admin; only local pins are retained separately, with no raw copies in report/public findings. 56reserved command log pairs were retained; this count is not substituted for process exit evidence.
+
+C injects only Output/time/progress observations: near-miss Busy encodings/status/stdout,late suffix success,one shared deadline,capped yields,nested shorter Phase restoration,and progress failure with no further yield/retry. The extracted collector is directly checked for terminal rows/cursor continuity,changed identity,empty/repeated progress,byte/row/page bounds. These checks do not prove native/storage behavior. The additional existing Frozen40 oracle proves the unchanged pure retained-suffix/source assertion contract,not a real history query.
+
+## Failures preserved and scope gate
+
+compile-01 failed on optional versus old Value::option;compile-02 on TempDir versus retained PathBuf;clippy-01 on the forbidden panic negative;focus-01 rejected Filter+IsolatedTestsFile before any test execution. These were corrected autonomously and original stdout/stderr/receipts remain. Premise nested-pin and source-resolver array administrative errors are separately documented; no product explanation is inferred from them. compile-01/compile-03/build-01/focus-01 forcibly cleaned owned residual PIDs51208/50184/42988/51112 respectively; their executable identities were not retained and are unknown. Their after-lists were empty/verified. They are not attributed to CLI/server failure. All final relevant strict/focused/oracle/image-bound checks have actual exits0 and complete EOF; no unresolved compiler/test failure remains.
+
+Accepted AV design remains12888B SHA256dac82d4fc2ee9a9552ac5c0c431e80b0bef1573f038b640f687eb5be7f0d79cf/Git blob34e7c91e92f96dc949fbdb84f789e921349c5c3a. HEAD/index remain unchanged/empty; source allowlist is exact; foreign navigation/root tasks/work were not edited or staged. Candidate publication is not authorized until review. Next requested gate is AW1 review/publication,then separately assigned AW2 genuine warm two-context Owner7/dispatch/storage A. No additional F can be inferred from these results.

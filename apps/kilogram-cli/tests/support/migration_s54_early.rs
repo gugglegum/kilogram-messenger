@@ -37,13 +37,18 @@ fn page_rows(page: &Value) -> Result<&Vec<Value>> {
     page["items"].as_array().context("actual HVI1 rows")
 }
 pub(super) fn history(node: &Node) -> Result<Vec<Value>> {
+    history_with(|cursor| node.history(32, cursor))
+}
+pub(super) fn history_with(
+    mut read: impl FnMut(Option<&str>) -> Result<Value>,
+) -> Result<Vec<Value>> {
     let mut out = Vec::new();
     let mut cursor = None;
     let mut seen = BTreeSet::new();
     let mut stamp = None;
     for _ in 0..43 {
         s53_deadline::check()?;
-        let page = node.history(32, cursor.as_deref())?;
+        let page = read(cursor.as_deref())?;
         ensure!(
             serde_json::to_vec(&page)?.len() <= 48 * 1024,
             "bounded actual history page"

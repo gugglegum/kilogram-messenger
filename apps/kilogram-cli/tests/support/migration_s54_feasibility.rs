@@ -272,16 +272,16 @@ fn ack(s: &mut Controller, map: &BTreeMap<String, Value>) -> Result<observations
 }
 fn histories(s: &mut Controller, frozen: &data::Frozen40) -> Result<[BTreeMap<String, Value>; 2]> {
     let _measurement = s53_deadline::measure("histories");
-    frozen.verify(&s.view(0, 0)?)?;
+    frozen.verify(s)?;
     let mut maps = Vec::new();
     for c in 0..2 {
         let a = data::mapped(
-            &early::history(&s.view(0, c)?)?,
+            &history_reader::history(s, 0, c)?,
             c as u8,
             if c == 0 { [184, 34] } else { [4, 4] },
         )?;
         let b = data::mapped(
-            &early::history(&s.view(1, c)?)?,
+            &history_reader::history(s, 1, c)?,
             c as u8,
             if c == 0 { [184, 34] } else { [4, 4] },
         )?;
@@ -426,7 +426,7 @@ fn run(parent: &Path, until: Instant) -> Result<Completed> {
     traffic(s.counters[0], baseline[0], 2, 32)?;
     traffic(s.counters[1], baseline[1], 32, 2)?;
     // Create the actual A40 cursor NOW, before A current history grows to169.
-    let frozen = data::Frozen40::capture(&s.view(0, 0)?)?;
+    let frozen = data::Frozen40::capture(&mut s)?;
     timing(&mut s, "f-live-turn-and-A40", turn)?;
     s.stop(1)?;
     let q = data::ack_cursor(&s.view(1, 0)?)?;
@@ -452,7 +452,7 @@ fn run(parent: &Path, until: Instant) -> Result<Completed> {
         timing(&mut s, &format!("f-offline-batch-{batch}"), clock)?;
     }
     traffic(s.counters[0], before, 129, 0)?;
-    let offline = data::mapped(&early::history(&s.view(0, 0)?)?, 0, [135, 34])?;
+    let offline = data::mapped(&history_reader::history(&mut s, 0, 0)?, 0, [135, 34])?;
     let ids = data::ids(&offline, 7, 135)?;
     s.stop(0)?;
     s.start(0)?;
@@ -464,7 +464,7 @@ fn run(parent: &Path, until: Instant) -> Result<Completed> {
         "offline129 persistence and zero replay"
     );
     ensure!(
-        data::mapped(&early::history(&s.view(0, 0)?)?, 0, [135, 34])? == offline,
+        data::mapped(&history_reader::history(&mut s, 0, 0)?, 0, [135, 34])? == offline,
         "same129 offline sources after A reopen"
     );
     for owner in 0..2 {
@@ -497,7 +497,7 @@ fn run(parent: &Path, until: Instant) -> Result<Completed> {
         .current_head(0)
         .context("actual A accepted Head")?;
     ensure!(received == 7, "real accepted peer frontier7");
-    frozen.verify(&s.view(0, 0)?)?; // retained A40, never current A169 ==40.
+    frozen.verify(&mut s)?; // retained A40, never current A169 ==40.
     s.running[0]
         .as_mut()
         .context("A")?
@@ -584,7 +584,7 @@ fn run(parent: &Path, until: Instant) -> Result<Completed> {
     for (owner, baseline) in before.iter().enumerate() {
         traffic(s.counters[owner], *baseline, 4, 4)?;
         ensure!(
-            data::mapped(&early::history(&s.view(owner, 1)?)?, 1, [4, 4])?.len() == 8,
+            data::mapped(&history_reader::history(&mut s, owner, 1)?, 1, [4, 4])?.len() == 8,
             "actual C2 readable8"
         );
     }
@@ -620,7 +620,7 @@ fn run(parent: &Path, until: Instant) -> Result<Completed> {
         timing(&mut s, &format!("f-online-batch-{batch}"), clock)?;
     }
     traffic(s.counters[0], before, 49, 0)?;
-    let all = data::mapped(&early::history(&s.view(0, 0)?)?, 0, [184, 34])?;
+    let all = data::mapped(&history_reader::history(&mut s, 0, 0)?, 0, [184, 34])?;
     data::retained(&offline, &all)?;
     // Initial accepted Head already advertises136. The real signed head-prefix
     // reply may advance that watermark to185; prove its durable value after page2
