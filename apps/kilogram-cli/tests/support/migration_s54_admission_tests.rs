@@ -748,7 +748,7 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
         file.sync_all()?;
     }
     let mut checked = 0;
-    for mutation in 0..16 {
+    for mutation in 0..17 {
         let mut f = Fixture::new_for(Purpose::FeasibilityF)?;
         match mutation {
             0 => f.inventory["identity"]["selector"] = Purpose::WholeP.selector().into(),
@@ -804,6 +804,10 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
                 f.inventory["identity"]["attempt"] =
                     "F-s54-mixed-hooks-feasibility-01-attempt-10".into()
             }
+            16 => {
+                f.inventory["identity"]["attempt"] =
+                    "F-s54-mixed-hooks-feasibility-01-attempt-11".into()
+            }
             _ => unreachable!(),
         }
         f.seal()?;
@@ -824,8 +828,8 @@ fn s54_f_admission_full_public_fixture_binds_fixed_purpose_and_refuses_p_substit
         }
     }
     ensure!(
-        checked == 16,
-        "all sixteen F shared admission mutations executed"
+        checked == 17,
+        "all seventeen F shared admission mutations executed"
     );
     println!("s54_f_shared_admission_mutations_executed={checked}");
     Ok(())
@@ -842,6 +846,7 @@ fn public_fixture_export_parent(path: &Path) -> Result<()> {
         ".tmp/s54-block4ag-f09-purpose-01",
         ".tmp/s54-block4aj-f10-purpose-01",
         ".tmp/s54-block4ar-f11-purpose-01",
+        ".tmp/s54-block4ax-f12-purpose-01",
     ]
     .into_iter()
     .map(|rel| workspace().join(rel))
