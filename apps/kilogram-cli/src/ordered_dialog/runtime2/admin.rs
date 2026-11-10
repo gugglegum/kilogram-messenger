@@ -7,6 +7,8 @@ use kilogram_identity::{
 use kilogram_state::StateDirectoryLock;
 use std::path::Path;
 use zeroize::Zeroizing;
+#[path = "fresh_consent.rs"]
+pub mod fresh_consent;
 
 pub fn enroll(
     lease: StateDirectoryLock,

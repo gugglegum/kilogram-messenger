@@ -32,6 +32,8 @@ mod bootstrap;
 mod diagnostic;
 #[path = "runtime2_process/faults.rs"]
 mod faults;
+#[path = "runtime2_process/fresh_consent.rs"]
+mod fresh_consent;
 #[path = "runtime2_process/lifecycle.rs"]
 mod lifecycle;
 #[path = "runtime2_process/positive.rs"]
@@ -73,6 +75,9 @@ fn repo() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
 fn exe() -> PathBuf {
+    if std::env::var_os("KILOGRAM_CS1_CHECKS").as_deref() == Some(std::ffi::OsStr::new("1")) {
+        return repo().join("target/clean-start-runtime/kilogram-cli.exe");
+    }
     repo().join("target/compatibility/long-lived-dialog-runtime/kilogram-cli.exe")
 }
 fn text(path: &Path) -> String {
@@ -392,6 +397,9 @@ struct Pair {
 }
 impl Pair {
     fn prepared(label: &str) -> Result<Self> {
+        Self::prepared_with_ceremony(label, false)
+    }
+    fn prepared_with_ceremony(label: &str, distributed: bool) -> Result<Self> {
         ensure!(
             exe().is_file(),
             "build/copy production CLI to fixed path first"
@@ -422,20 +430,24 @@ impl Pair {
         nodes[1].role = 1;
         for (slot, c) in contexts.iter().enumerate() {
             let artifact = base.join(format!("context{slot}.bin"));
-            cli(vec![
-                "ordered".into(),
-                "context2-create".into(),
-                "--context".into(),
-                c.clone(),
-                "--credentials-file".into(),
-                text(&nodes[0].credential),
-                text(&nodes[1].credential),
-                "--account-dir".into(),
-                text(&nodes[0].root),
-                text(&nodes[1].root),
-                "--output-file".into(),
-                text(&artifact),
-            ])?;
+            if distributed {
+                fresh_consent::ceremony(&nodes, c, &artifact, slot == 1)?;
+            } else {
+                cli(vec![
+                    "ordered".into(),
+                    "context2-create".into(),
+                    "--context".into(),
+                    c.clone(),
+                    "--credentials-file".into(),
+                    text(&nodes[0].credential),
+                    text(&nodes[1].credential),
+                    "--account-dir".into(),
+                    text(&nodes[0].root),
+                    text(&nodes[1].root),
+                    "--output-file".into(),
+                    text(&artifact),
+                ])?;
+            }
             for node in &nodes {
                 node.install(&artifact)?;
             }

@@ -130,7 +130,7 @@ async fn send_range(pair: &Pair, node: usize, slot: u8, start: u64, end: u64) ->
 pub(super) fn selected(status: &serde_json::Value) -> Result<serde_json::Value> {
     Ok(serde_json::Value::Array(status["contexts"].as_array().context("contexts")?.iter().map(|c|serde_json::json!({"d":c["d"],"e":c["e"],"sid":c["sid"],"q":c["q"],"offer":c["details"]["offer"],"grant":c["details"]["grant"],"proof":c["details"]["selected_hash"],"readies":c["details"]["readies"]})).collect()))
 }
-async fn exact_history(
+pub(super) async fn exact_history(
     pair: &Pair,
     node: usize,
     slot: u8,

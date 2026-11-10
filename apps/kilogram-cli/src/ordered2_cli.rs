@@ -38,6 +38,22 @@ pub enum Command {
     },
     Consent2Create(Box<Ceremony2>),
     Context2Create(Box<Ceremony2>),
+    /// Propose Fresh Consent2 using only canonical role0's own offline Root.
+    Context2Propose {
+        #[command(flatten)]
+        fresh: Box<FreshConsentArgs>,
+        #[arg(long)]
+        not_before: Option<u64>,
+        #[arg(long, default_value_t = 30 * 86400)]
+        valid_for_seconds: u64,
+    },
+    /// Verify a Fresh proposal and cosign using only role1's own offline Root.
+    Context2Cosign {
+        #[command(flatten)]
+        fresh: Box<FreshConsentArgs>,
+        #[arg(long)]
+        proposal_file: PathBuf,
+    },
     Context2Import {
         #[arg(long)]
         state_dir: PathBuf,
@@ -201,6 +217,91 @@ pub struct RenewalArgs {
     minimum_authority_b_file: PathBuf,
     #[arg(long)]
     account_dir: PathBuf,
+}
+#[derive(Debug, Args)]
+pub struct FreshConsentArgs {
+    #[arg(long)]
+    account_dir: PathBuf,
+    #[arg(long)]
+    expect_account: AccountId,
+    #[arg(long)]
+    expect_peer_account: AccountId,
+    #[arg(long)]
+    expect_device: DeviceId,
+    #[arg(long)]
+    expect_peer_device: DeviceId,
+    #[arg(long)]
+    context: String,
+    #[arg(long = "credentials-file", num_args = 2, required = true)]
+    credentials: Vec<PathBuf>,
+    #[arg(long = "minimum-authority-file", num_args = 2, required = true)]
+    minimum: Vec<PathBuf>,
+    #[arg(long)]
+    output_file: PathBuf,
+}
+fn fresh_consent(
+    args: &FreshConsentArgs,
+    proposal: Option<&Path>,
+    not_before: Option<u64>,
+    valid_for: u64,
+) -> Result<()> {
+    use runtime2::admin::fresh_consent as fresh;
+    use std::io::Write;
+    ensure!(
+        args.credentials.len() == 2 && args.minimum.len() == 2,
+        "two public credentials and authority floors required"
+    );
+    let credentials = [
+        shared::read_public(&args.credentials[0], wire::MAX_AUTH)?,
+        shared::read_public(&args.credentials[1], wire::MAX_AUTH)?,
+    ];
+    let minimum = [
+        shared::read_public(&args.minimum[0], wire::MAX_AUTH)?,
+        shared::read_public(&args.minimum[1], wire::MAX_AUTH)?,
+    ];
+    let input = fresh::Inputs {
+        credentials: credentials.each_ref().map(|r| r.as_slice()),
+        minimum_authorities: minimum.each_ref().map(|r| r.as_slice()),
+        context: parse_id(&args.context)?,
+        account: args.expect_account,
+        peer: args.expect_peer_account,
+        device: args.expect_device,
+        peer_device: args.expect_peer_device,
+    };
+    let proposal = proposal
+        .map(|p| shared::read_public(p, fresh::MAX_PROPOSAL))
+        .transpose()?;
+    let root = args.account_dir.canonicalize()?;
+    let output = if args.output_file.is_absolute() {
+        args.output_file.clone()
+    } else {
+        std::env::current_dir()?.join(&args.output_file)
+    };
+    let parent = output
+        .parent()
+        .context("Fresh public output parent")?
+        .canonicalize()?;
+    ensure!(!parent.starts_with(&root), "Fresh output inside own Root");
+    // Reserve before signing/membership mutation. An error leaves this empty
+    // public evidence file; retry with a fresh output name, never overwrite it.
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(parent.join(output.file_name().context("Fresh output name")?))?;
+    let now = runtime2::now()?;
+    let raw = match proposal {
+        Some(raw) => fresh::cosign(input, &raw, &args.account_dir, now)?,
+        None => fresh::propose(
+            input,
+            &args.account_dir,
+            not_before.unwrap_or(now),
+            valid_for,
+            now,
+        )?,
+    };
+    file.write_all(&raw)?;
+    file.sync_all()?;
+    Ok(())
 }
 struct RenewalPublic {
     original: Vec<u8>,
@@ -410,6 +511,27 @@ fn json(value: &Value) -> serde_json::Value {
 pub async fn run(command: Command, lease: Option<StateDirectoryLock>) -> Result<()> {
     use kilogram_cli::ordered_dialog::storage_migration as migration;
     let command = match command {
+        Command::Context2Propose {
+            fresh,
+            not_before,
+            valid_for_seconds,
+        } => {
+            ensure!(
+                lease.is_none(),
+                "Fresh ceremony must not open a runtime store"
+            );
+            return fresh_consent(&fresh, None, not_before, valid_for_seconds);
+        }
+        Command::Context2Cosign {
+            fresh,
+            proposal_file,
+        } => {
+            ensure!(
+                lease.is_none(),
+                "Fresh ceremony must not open a runtime store"
+            );
+            return fresh_consent(&fresh, Some(&proposal_file), None, 0);
+        }
         Command::Runtime3(command) => {
             ensure!(lease.is_none(), "IPC3 must use the held live owner");
             return crate::ordered3_cli::run(command).await;
@@ -939,6 +1061,8 @@ pub async fn run(command: Command, lease: Option<StateDirectoryLock>) -> Result<
             call(&ipc_file, a([u(2), u(7), u(u64::from(slot))])).await?
         }
         Command::Runtime3(_)
+        | Command::Context2Propose { .. }
+        | Command::Context2Cosign { .. }
         | Command::Consent1RenewPropose { .. }
         | Command::Consent1RenewCosign { .. }
         | Command::StorageUpgrade { .. }
