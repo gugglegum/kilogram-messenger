@@ -9,11 +9,13 @@ use thiserror::Error;
 mod authority;
 mod existing;
 mod frame;
+mod fresh_proposal;
 mod mode;
 mod runtime_locator;
 pub use authority::*;
 pub use existing::*;
 pub use frame::*;
+pub use fresh_proposal::*;
 pub use mode::*;
 pub use runtime_locator::*;
 

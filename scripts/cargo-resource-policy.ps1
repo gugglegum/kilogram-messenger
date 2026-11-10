@@ -9,19 +9,19 @@ function Set-KilogramCargoResourcePolicy {
         }
     }
     if ($jobs -le 0) {
-        # Half of the logical processors is a deliberate interactive default:
-        # it keeps Windows and local VMs responsive during cold Rust builds.
-        $jobs = [math]::Max(1, [math]::Floor($logicalProcessors / 2))
+        # User decision 2026-11-10: cold builds stalled the desktop even with
+        # BelowNormal/Jobs2. Prefer one compiler worker unless explicitly set.
+        $jobs = 1
     }
     $jobs = [math]::Min($jobs, $logicalProcessors)
 
     try {
         [System.Diagnostics.Process]::GetCurrentProcess().PriorityClass =
-            [System.Diagnostics.ProcessPriorityClass]::BelowNormal
-        Write-Host 'cargo_process_priority=below-normal'
+            [System.Diagnostics.ProcessPriorityClass]::Idle
+        Write-Host 'cargo_process_priority=idle'
     }
     catch {
-        Write-Warning "Could not lower Cargo parent-process priority: $($_.Exception.Message)"
+        throw "Cannot apply the requested Idle compilation priority: $($_.Exception.Message)"
     }
     Write-Host "cargo_logical_processors=$logicalProcessors"
     Write-Host "cargo_jobs=$jobs"

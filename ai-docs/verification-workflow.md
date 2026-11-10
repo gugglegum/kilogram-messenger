@@ -1,5 +1,9 @@
 # Verification workflow
 
+## Interactive compilation: user decision 2026-11-10
+
+The user reported multi-second cursor stalls during a BelowNormal/Jobs2 compilation and requested lower priority for future builds, without interrupting the active build. Future local compilation defaults to Windows **Idle** priority and **one Cargo worker**. Apply this to new scoped owners/commands and the stable runner resource policy; do not change system settings or silently fall back to Normal if Idle cannot be applied. Explicit historical/frozen run requirements remain recorded; do not retroactively restamp or interrupt an active run. Record the effective priority/jobs in new evidence.
+
 ## Executor autonomy: user decision 2026-11-10
 
 This section supersedes older task-level instructions that require an architect callback after every failed test, timeout, fresh attempt or routine implementation correction. The user explicitly requested complete executor-owned implementation/debug/test cycles to reduce architect usage. Historical failures and their original scopes remain immutable.

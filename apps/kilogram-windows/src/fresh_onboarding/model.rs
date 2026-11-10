@@ -24,7 +24,7 @@ pub(super) fn read(path: &Path, cap: usize) -> Result<Vec<u8>> {
     ensure!(b.len() <= cap, "Local file exceeded its bound");
     Ok(b)
 }
-fn write(path: &Path, bytes: &[u8], replace: bool) -> Result<()> {
+pub(super) fn write(path: &Path, bytes: &[u8], replace: bool) -> Result<()> {
     let mut tmp = tempfile::NamedTempFile::new_in(
         path.parent()
             .ok_or_else(|| anyhow::anyhow!("Missing output parent"))?,
@@ -50,6 +50,8 @@ pub(super) struct Record {
     pub joined: bool,
     pub acknowledged: bool,
     pub public: Option<Ordered2BootstrapPublic>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub consent: Option<super::consent::State>,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -65,6 +67,7 @@ pub(super) struct Setup {
     pub record: Record,
     pub phrase: Option<Zeroizing<String>>,
     pub incomplete: bool,
+    pub consent_confirmed: bool,
     _lock: File,
 }
 impl Setup {
@@ -114,6 +117,9 @@ impl Setup {
                 "Setup public binding mismatch"
             );
         }
+        if let Some(state) = &record.consent {
+            state.validate()?;
+        }
         Ok(())
     }
     pub fn begin(home: &Path, invite: Option<Artifact>) -> Result<Self> {
@@ -155,6 +161,7 @@ impl Setup {
             joined,
             acknowledged: false,
             public: None,
+            consent: None,
         };
         Self::validate(&record, &home)?;
         ensure!(
@@ -173,6 +180,7 @@ impl Setup {
             record,
             phrase: None,
             incomplete: true,
+            consent_confirmed: false,
             _lock: lock,
         })
     }
@@ -185,6 +193,7 @@ impl Setup {
             record,
             phrase: None,
             incomplete: true,
+            consent_confirmed: false,
             _lock: lock,
         };
         // Missing ready is incomplete. Existing but malformed ready is an error,
@@ -205,9 +214,10 @@ impl Setup {
                 setup.incomplete = false;
             }
         }
+        super::consent::review(&setup, false)?;
         Ok(setup)
     }
-    fn update(&mut self, f: impl FnOnce(&mut Record)) -> Result<()> {
+    pub(super) fn update(&mut self, f: impl FnOnce(&mut Record)) -> Result<()> {
         let current: Record =
             serde_json::from_slice(&read(&self.home.join("setup.json"), RECORD_CAP)?)?;
         ensure!(
@@ -319,7 +329,7 @@ impl Setup {
         self.phrase = None;
         Ok(())
     }
-    fn identity(info: &Ordered2BootstrapPublic) -> Result<Identity> {
+    pub(super) fn identity(info: &Ordered2BootstrapPublic) -> Result<Identity> {
         Identity::new(
             &read(&info.credential_file, 16 * 1024)?,
             &read(&info.authority_file, 16 * 1024)?,

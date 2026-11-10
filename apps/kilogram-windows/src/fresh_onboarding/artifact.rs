@@ -23,7 +23,7 @@ pub(super) fn canonical_id(s: &str) -> Result<()> {
     );
     Ok(())
 }
-fn unhex(s: &str, cap: usize) -> Result<Vec<u8>> {
+pub(super) fn unhex(s: &str, cap: usize) -> Result<Vec<u8>> {
     ensure!(
         s.len() <= 2 * cap && s.len().is_multiple_of(2) && s.is_ascii(),
         "Public artifact byte cap"

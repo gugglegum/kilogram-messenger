@@ -176,34 +176,9 @@ pub fn propose(
 }
 pub fn cosign(input: Inputs<'_>, proposal: &[u8], root_dir: &Path, now: u64) -> Result<Vec<u8>> {
     let peers = peers(&input, 1)?;
-    let value = wire::decode(proposal, MAX_PROPOSAL)?;
+    let value = wire::verify_fresh_proposal2(proposal, input.context, &peers, now)?;
     let f = value.fields(7)?;
-    ensure!(
-        f[0].bytes()? == TAG && f[1].bytes()? == peers[0].raw() && f[2].bytes()? == peers[1].raw(),
-        "Fresh proposal tag/credential pair mismatch"
-    );
-    interval(&f[4], &input, &peers, now)?;
-    wire::verify_membership(input.context, &peers, f[3].bytes()?)?;
     let unsigned = wire::encode(&f[4], 4096)?;
-    peers[0]
-        .certificate()
-        .account_id()
-        .verify_ordered_context_consent2(&unsigned, f[5].bytes()?)?;
-    peers[0]
-        .certificate()
-        .account_id()
-        .verify_ordered_context_consent2(
-            &wire::encode(
-                &witness(
-                    peers.each_ref().map(|p| p.raw()),
-                    f[3].bytes()?,
-                    &f[4],
-                    &f[5],
-                ),
-                4096,
-            )?,
-            f[6].bytes()?,
-        )?;
     let root = AccountRootState::load(root_dir)?;
     local(&root, &input, &peers, 1)?;
     let consent = wire::encode(

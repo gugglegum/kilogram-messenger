@@ -3778,6 +3778,7 @@ dependencies = [
  "kilogram-identity",
  "kilogram-protocol",
  "kilogram-runtime-ipc",
+ "kilogram-state",
  "serde",
  "serde_json",
  "tempfile",

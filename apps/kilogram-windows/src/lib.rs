@@ -3426,12 +3426,13 @@ impl KilogramApp {
             _ => None,
         };
         let fresh_selected = options.fresh_home.is_some();
-        let fresh_onboarding = fresh_onboarding::Panel::new(
+        let mut fresh_onboarding = fresh_onboarding::Panel::new(
             options
                 .fresh_home
                 .unwrap_or_else(|| PathBuf::from("kilogram-first-dialog")),
             options.bootstrap_executable_path.clone(),
         );
+        fresh_onboarding.set_cli(options.runtime_executable_path.clone());
         Self {
             fresh_onboarding,
             fresh_selected,

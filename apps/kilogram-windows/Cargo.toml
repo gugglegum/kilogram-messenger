@@ -23,6 +23,7 @@ tempfile.workspace = true
 zeroize.workspace = true
 
 [dev-dependencies]
+kilogram-state = { path = "../../crates/kilogram-state" }
 tempfile.workspace = true
 
 [lints]

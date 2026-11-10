@@ -1,5 +1,7 @@
-//! Explicit first-dialog pilot. No legacy profile, IPC, signing or runtime start.
+//! Explicit first-dialog pilot. Offline consent only; no profile/IPC/runtime start.
 mod artifact;
+mod consent;
+mod consent_artifact;
 mod helper;
 mod model;
 #[cfg(test)]
@@ -18,6 +20,7 @@ use std::{
         mpsc,
     },
     thread,
+    time::{Duration, Instant},
 };
 
 struct Work {
@@ -25,6 +28,20 @@ struct Work {
     cancel: Arc<AtomicBool>,
     result: mpsc::Receiver<Result<Ordered2BootstrapOutput>>,
     join: Option<thread::JoinHandle<()>>,
+}
+struct ConsentWork {
+    generation: String,
+    cancel: Arc<AtomicBool>,
+    result: mpsc::Receiver<(Setup, Result<()>)>,
+    join: Option<thread::JoinHandle<()>>,
+}
+impl Drop for ConsentWork {
+    fn drop(&mut self) {
+        self.cancel.store(true, Ordering::Release);
+        if let Some(join) = self.join.take() {
+            let _ = join.join();
+        }
+    }
 }
 impl Drop for Work {
     fn drop(&mut self) {
@@ -39,6 +56,7 @@ impl Drop for Work {
 pub(super) struct Panel {
     home: String,
     executable: PathBuf,
+    cli_executable: PathBuf,
     input: String,
     setup: Option<Setup>,
     preview: Option<Artifact>,
@@ -46,6 +64,11 @@ pub(super) struct Panel {
     saved: bool,
     reveal: bool,
     work: Option<Work>,
+    consent_work: Option<ConsentWork>,
+    consent_input: String,
+    consent_next_check: Instant,
+    consent_check_error: Option<String>,
+    consent_period: Option<(u64, u64)>,
     error: Option<String>,
     notice: Option<String>,
 }
@@ -55,6 +78,7 @@ impl Panel {
         let mut panel = Self {
             home: home.display().to_string(),
             executable,
+            cli_executable: super::default_runtime_executable(),
             input: String::new(),
             setup: None,
             preview: None,
@@ -62,6 +86,11 @@ impl Panel {
             saved: false,
             reveal: false,
             work: None,
+            consent_work: None,
+            consent_input: String::new(),
+            consent_next_check: Instant::now(),
+            consent_check_error: None,
+            consent_period: None,
             error: None,
             notice: None,
         };
@@ -72,13 +101,69 @@ impl Panel {
     }
     pub fn pause(&mut self) {
         self.work = None;
+        self.consent_work = None;
         if let Some(setup) = &mut self.setup {
             setup.phrase = None;
         }
         self.reveal = false;
         self.saved = false;
     }
+    pub fn set_cli(&mut self, path: PathBuf) {
+        self.cli_executable = path;
+    }
+    fn start_consent(&mut self, action: consent::Action) -> Result<()> {
+        ensure!(
+            self.work.is_none() && self.consent_work.is_none(),
+            "Another account operation is running"
+        );
+        let mut setup = self
+            .setup
+            .take()
+            .ok_or_else(|| anyhow::anyhow!("Open the saved setup"))?;
+        let generation = setup.record.local_id.clone();
+        let cancel = Arc::new(AtomicBool::new(false));
+        let signal = cancel.clone();
+        let exe = self.cli_executable.clone();
+        let (tx, rx) = mpsc::channel();
+        let join = thread::Builder::new()
+            .name("fresh-consent-helper".into())
+            .spawn(move || {
+                let result = consent::execute(&mut setup, &exe, action, signal.clone());
+                if !signal.load(Ordering::Acquire) {
+                    let _ = tx.send((setup, result));
+                }
+            })?;
+        self.consent_work = Some(ConsentWork {
+            generation,
+            cancel,
+            result: rx,
+            join: Some(join),
+        });
+        Ok(())
+    }
+    fn poll_consent(&mut self) {
+        let Some(work) = &self.consent_work else {
+            return;
+        };
+        let received = match work.result.try_recv() {
+            Ok(r) => Some(Ok(r)),
+            Err(mpsc::TryRecvError::Empty) => None,
+            Err(_) => Some(Err(())),
+        };
+        if let Some(result) = received {
+            let generation = work.generation.clone();
+            self.consent_work = None;
+            match result{
+                Ok((setup,result)) if setup.record.local_id==generation && self.setup.is_none()=>{
+                    self.setup=Some(setup);self.record_result(result);
+                    if self.error.is_none(){self.notice=Some("Consent action completed locally. Export the public file or continue local installation; no network connection was started.".into());}
+                }
+                _=>self.error=Some("Consent action ended without a current result. Reopen the saved setup to inspect or resume its exact artifacts.".into()),
+            }
+        }
+    }
     fn open(&mut self) {
+        self.consent_next_check = Instant::now();
         self.pause();
         self.setup = None;
         self.preview = None;
@@ -193,6 +278,7 @@ impl Panel {
         Ok(())
     }
     fn record_result(&mut self, result: Result<()>) {
+        self.consent_next_check = Instant::now();
         if let Err(e) = result {
             self.error = Some(e.to_string());
         } else {
@@ -201,10 +287,21 @@ impl Panel {
     }
     pub fn draw(&mut self, ui: &mut egui::Ui) {
         self.poll();
+        self.poll_consent();
         ui.heading("First-dialog pilot");
         ui.label("Create an invitation, or join one before creating your first account.");
         ui.small("One peer only. Connection and messaging come in the next step. Direct connections between different PCs and volunteer storage are not enabled in this pilot.");
         ui.separator();
+        if self.consent_work.is_some() {
+            ui.spinner();
+            ui.label("Processing mutual consent locally. Existing successful steps are kept.");
+            if ui.button("Cancel and keep consent progress").clicked() {
+                self.pause();
+                self.notice =
+                    Some("Consent action cancelled. Reopen the same setup before resuming.".into());
+            }
+            return;
+        }
         if self.setup.is_none() {
             ui.label("Account setup folder");
             ui.add(egui::TextEdit::singleline(&mut self.home).desired_width(f32::INFINITY));
@@ -268,7 +365,9 @@ impl Panel {
                         .add_enabled(self.saved, egui::Button::new("Hide words and continue"))
                         .clicked();
                 } else {
-                    ui.heading(if setup.record.joined {
+                    ui.heading(if setup.record.consent.is_some() {
+                        "First peer consent setup"
+                    } else if setup.record.joined {
                         "Awaiting invitation owner's confirmation"
                     } else if setup.record.peer.is_some() {
                         "Peer selected: awaiting mutual consent"
@@ -387,12 +486,176 @@ impl Panel {
                 }
             }
         }
+        self.draw_consent(ui);
         if let Some(notice) = &self.notice {
             ui.separator();
             ui.label(notice);
         }
         if let Some(error) = &self.error {
             ui.colored_label(ui.visuals().error_fg_color, error);
+        }
+    }
+    fn draw_consent(&mut self, ui: &mut egui::Ui) {
+        let Some(setup) = &self.setup else { return };
+        if self.work.is_some() || !setup.record.acknowledged || setup.record.peer.is_none() {
+            return;
+        }
+        let r = match consent::role(setup) {
+            Ok(r) => r,
+            Err(e) => {
+                ui.label(e.to_string());
+                return;
+            }
+        };
+        ui.separator();
+        ui.heading("Mutual consent");
+        ui.label("Agree to this first peer dialog for up to 30 days. Retrying keeps the original validity and identities; it does not renew permission.");
+        let mut action = None;
+        let mut select = false;
+        let mut export = false;
+        // Rendering is not authority: avoid re-reading/verifying every file at
+        // 20Hz. Each action revalidates independently; expiry is checked every
+        // frame even between these bounded public-data refreshes.
+        if Instant::now() >= self.consent_next_check {
+            self.consent_check_error = consent::review(setup, true).err().map(|e| e.to_string());
+            self.consent_period = consent::period(setup).ok();
+            self.consent_next_check = Instant::now() + Duration::from_secs(1);
+        }
+        let mut error = self.consent_check_error.clone();
+        if let Some((start, end)) = self.consent_period
+            && let Err(e) =
+                consent::now().and_then(|wall| consent::valid_interval(start, end, wall))
+        {
+            error = Some(e.to_string());
+        }
+        let current = error.is_none();
+        if let Some(e) = &error {
+            ui.colored_label(ui.visuals().warn_fg_color, e);
+        }
+        if let Some(state) = &setup.record.consent {
+            if let Some((start, end)) = self.consent_period {
+                let remaining = end.saturating_sub(consent::now().unwrap_or(end));
+                ui.label(format!("Fixed permission period: {} days. Remaining: {}h {}m. Retrying does not extend it.",(end-start)/86400,remaining/3600,(remaining%3600)/60));
+            }
+            if setup.consent_confirmed && current {
+                ui.heading("Mutual consent installed locally; connection is the next step");
+                ui.small("This does not prove your peer imported it or that a network session is active.");
+            } else if state
+                .slots
+                .iter()
+                .all(|s| s.importing == consent::Outcome::Accepted)
+            {
+                ui.label("Both local imports were acknowledged earlier. Recheck the exact finals to confirm this reopening; the UI record alone does not prove installation.");
+            }
+            for (slot, s) in state.slots.iter().enumerate() {
+                let text = |o| match o {
+                    consent::Outcome::NotStarted => "not started",
+                    consent::Outcome::Started => "result uncertain; resume",
+                    consent::Outcome::Accepted => "acknowledged locally",
+                    consent::Outcome::Failed => "failed; retry exact inputs",
+                };
+                ui.label(format!(
+                    "Permission {}: signature {}; import {}",
+                    slot + 1,
+                    text(s.signing),
+                    text(s.importing)
+                ));
+            }
+        }
+        ui.add_enabled_ui(current, |ui| {
+            if r == 0 {
+                ui.label("Your device creates the proposal for this peer.");
+                if ui.button("Create or resume consent proposal").clicked() {
+                    action = Some(consent::Action::Propose);
+                }
+            } else {
+                ui.label("Your peer creates the proposal. Inspect it before choosing to sign.");
+                let available = setup
+                    .record
+                    .consent
+                    .as_ref()
+                    .is_some_and(|s| s.proposal.is_some());
+                if ui
+                    .add_enabled(
+                        available,
+                        egui::Button::new("Verify and sign both permissions"),
+                    )
+                    .clicked()
+                {
+                    action = Some(consent::Action::Cosign);
+                }
+            }
+            let exportable = setup.record.consent.as_ref().is_some_and(|s| {
+                if r == 0 {
+                    s.slots.iter().all(|s| s.output.is_some())
+                } else {
+                    s.final_artifact.is_some()
+                }
+            });
+            if ui
+                .add_enabled(
+                    exportable,
+                    egui::Button::new(if r == 0 {
+                        "Export consent proposal"
+                    } else {
+                        "Export signed consent"
+                    }),
+                )
+                .clicked()
+            {
+                export = true;
+            }
+            let importable = setup
+                .record
+                .consent
+                .as_ref()
+                .is_some_and(|s| s.final_artifact.is_some());
+            if ui
+                .add_enabled(
+                    importable,
+                    egui::Button::new("Install or recheck both local permissions"),
+                )
+                .clicked()
+            {
+                action = Some(consent::Action::Import);
+            }
+        });
+        ui.label(if r == 0 {
+            "Signed consent file from your peer"
+        } else {
+            "Consent proposal file from your peer"
+        });
+        ui.add(egui::TextEdit::singleline(&mut self.consent_input).desired_width(f32::INFINITY));
+        if ui.button("Inspect and keep this consent file").clicked() {
+            select = true;
+        }
+        if select {
+            let result = (|| {
+                let e = consent_artifact::Envelope::decode(&model::read(
+                    Path::new(&self.consent_input),
+                    artifact::FILE_CAP,
+                )?)?;
+                consent::select(
+                    self.setup
+                        .as_mut()
+                        .ok_or_else(|| anyhow::anyhow!("Setup"))?,
+                    &e,
+                )
+            })();
+            self.record_result(result);
+        }
+        if export {
+            let result = self
+                .setup
+                .as_ref()
+                .ok_or_else(|| anyhow::anyhow!("Setup"))
+                .and_then(consent::export)
+                .map(|p| self.notice = Some(format!("Public consent file saved: {}", p.display())));
+            self.record_result(result);
+        }
+        if let Some(action) = action {
+            let result = self.start_consent(action);
+            self.record_result(result);
         }
     }
 }

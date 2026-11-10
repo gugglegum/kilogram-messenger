@@ -137,6 +137,21 @@ pub(super) fn run(
     Ok(output)
 }
 
+/// Same bounded, sanitized collector for locally constructed public CS1 argv.
+pub(super) fn public_command(
+    exe: &Path,
+    args: &[std::ffi::OsString],
+    cancel: Arc<AtomicBool>,
+) -> Result<()> {
+    let mut command = Command::new(exe);
+    command.args(args);
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()?;
+    let _ = runtime.block_on(collect(command, cancel, DEADLINE))?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
