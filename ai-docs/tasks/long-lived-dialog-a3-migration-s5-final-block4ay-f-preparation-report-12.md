@@ -1,0 +1,35 @@
+# Block4AY: fresh F12 prepared-state result
+
+2026-11-10. Actual preparation/FullFresh validation on HEAD `dbc8ebb7ade3b797b71234f898c507d44c2b6dd0`, Purpose FeasibilityF, case F-s54-mixed-hooks-feasibility-01, attempt12, root PreparationRunId `a9e5352e23c080c980bdb938522c0e4d5b37f43eb490b5026abe24a11b154044`. This is prepared-state evidence, not runtime/functional acceptance. No activation, Run, WholeP, profile, private account or functional test was created/executed. Exactly two candidate documents: this report and pins; no product/source changes or commit/push.
+
+## Preflight and guarded Prepare
+
+Fresh admin .tmp/s54-block4ay-f-preparation-12. AS administration was reused as code with explicit new bindings. No historical pin graph/archive audit or historical source-count expectation was used. Current published source closure is 536 files, computed by the existing API and pinned before reservation. AS metadata supplied only the exact21 known mutable output path names; its old values were ignored. Fresh actual bytes were captured for seven destinations/seven Cargo origins/seven dep-info under workspace target. No historical raw/private/log/AM16/AD16 evidence was read or traversed, and old manifests were not restamped as current constraints.
+
+Read-only NativeToken preflight verified exact HEAD/index/fixed F12 purpose, absent F12/WholeP directories, actual current six tool resolutions/bytes, lock available, successful native image process inventory with0exact conflicts, compiler/dependency inputs, x64 standard libs/MSVC/SDK and adequate disk: 303371558912B free versus 8589934592B administrative reserve. Actual installed pwsh 301360B SHA2562a6769a3330dc1084d0154bfde7d164ab750ca7f700f313f9d417c1be78b2233 at C:\Users\Paul\.cache\codex-runtimes\codex-primary-runtime\dependencies\native\powershell\pwsh.exe. Process-local Rust1.98, Jobs2/BelowNormal, offline/locked; no persistent environment/system setting changes. Adapted constants including dynamic closure were recorded before reservation.
+
+The published Prepare command was invoked once after the successful native preflight and existing gate; no rejected invocation or reservation retry occurred.
+
+Published Prepare ran once with the exact root RunId after its successful gate. Existing seven-image guard saved seven actual preimages, held workspace/image leases, built/staged six stable test roles first, then normal CLI last, wrote seven stage records and successful no-rollback outcome. Nine image roles include unchanged legacy CLI/relay. Compiler/embedded snapshots, actual origins/dep-info after final normal build, frozen manifest, stable --list/exact selector and inputs.json were produced. Only compile-only Cargo and stable listing ran, not a functional selector. No manual image repair/rollback, source edit or diagnostic-cache rebuild.
+
+## Separate full validation and concrete future Run
+
+Fresh pinned child executed the complete published Assert-S54Inventory -State Fresh. Whole call time 32.969887s, not a partial-helper timing. It checked current source/HEAD/run/attempt, nine images, compiler/embedded/dep-info/frozen/list/selector/resource schema. Additional validation verifies all7 preimages/stages/outcome, normal-last timestamps, 6test+1normal current origins and all7 dep-info after final build; legacy/relay/source/index/navigation unchanged, workspace lock released, successful process inventory0conflicts and F12 runtime/WholeP artifacts absent. F12 run contains only inputs.json.
+
+Inventory: `E:\AI-Projects\kilogram-p2p-messenger\.tmp\migration-s54-feasibility\F-s54-mixed-hooks-feasibility-01-attempt-12\inputs.json`, 120526B SHA256 `5c8f569fd81c7c1d809f24fa324adf6cf388b60d71a09a800e51b691b9a5fba5`. Stable migration selector remains live_l1::handoff::final_p5::feasibility::s54_short_mixed_hooks_feasibility_public. Current closure536/images9/guard7 are actual observations. F01–F11 remain consumed; AS remains stale and was never used as runnable inventory.
+
+run-proposal.json contains executable as STRING plus separate exact executable pin, exact argument array with current inventory hash and root-issued activation hash placeholder, all19 environment presence/hash rows and per-row actions, worker/resource descriptors and current inventory/HEAD/run-bound activation fields. Root must issue fresh not_before/not_after validity and activation on a separate dispatch. Actual fresh-child probe from validation PID28204 matches all19 inventory rows; no environment values were printed. Effective/available worker descriptors were validated; effective24. The recipe prepends the existing Rust bin once to the original parent PATH, sets process offline=true and BelowNormal, then requires all fresh-child hashes/presence to match; no system/persistent changes.
+
+Important HEAD constraint: existing Assert-S54Inventory requires actual HEAD exactly `dbc8ebb7ade3b797b71234f898c507d44c2b6dd0`. Any new commit, including these documents alone, invalidates this prepared inventory. Keep this HEAD through reviewed activation/Run or have root allocate fresh preparation; do not restamp inventory. Run proposal binds this constraint explicitly. Runtime F450/480/510 and P2350/2375/2400 remain unchanged. Actual fresh offline admission, warm-A collector and mixed/full runtime remain future full-run obligations; AW1/AW2 component results do not establish the combined runtime.
+
+## Actual commands and preservation
+
+| Step | Owner/child exit | Seconds | Work/whole/cleanup seconds |
+| --- | --- | --- | --- |
+| preflight-01 | 0/0 | 9.814 | 270/300/30 |
+| prepare-01 | 0/0 | 700.274 | 3600/3660/60 |
+| validate-01 | 0/0 | 45.054 | 570/600/30 |
+
+Actual owner/child argv, exit/wait, monotonic origin/limits, Job membership, bounded stdout/stderr EOF and cleanup are pinned. All3 app invocations passed without expiry/reader failure, verified empty after-memberships. Three administrative report-code/static-check assertions failed (overlapping label substitutions, then Windows cp1251 default decoding in two inline helpers). Explicit UTF-8 decoding and label ordering corrected only reporting code; source/images/guard and the sole Prepare were unaffected. Forced owned residual cleanup: {'prepare-01': [38900]}; residual executable identity is unknown where not captured, membership/after=[] are verified. No approval denial or reservation retry occurred. Current fresh logs/public artifacts only are retained; no historical command/runtime log replay or closed matrix was run.
+
+Current source536 is not an inherited historic constant: the actual source list is in inventory/preflight. Existing source/navigation/unrelated status baseline and empty index are preserved. Old source/live hashes remain observations, not new constraints. Candidate pins distinguish preflight before-observation documents from final current image/origin/source pins, avoiding conflicting mutable-path claims. No installed application or live user messenger data was changed. Stop for root review; no activation/Run or publication until instructed.

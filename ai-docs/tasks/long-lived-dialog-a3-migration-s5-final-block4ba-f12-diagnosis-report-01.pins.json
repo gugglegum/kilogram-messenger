@@ -1,0 +1,121 @@
+{
+  "classification": "BA_read_only_diagnosis_pending_root_review",
+  "head": "dbc8ebb7ade3b797b71234f898c507d44c2b6dd0",
+  "report": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\ai-docs\\tasks\\long-lived-dialog-a3-migration-s5-final-block4ba-f12-diagnosis-report-01.md",
+    "bytes": 10640,
+    "sha256": "7196a36c607c39f96f2f6a9c8491805c14bb28b1f4f0ad2ba54fcad557f05ef4"
+  },
+  "current_nonraw_baseline_document": {
+    "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4ba-f12-diagnosis-01\\before.json",
+    "bytes": 132888,
+    "sha256": "9a78efafe86abb3181748024c04eafb89cd1965cfb348870f64a11bc582dd1cb"
+  },
+  "source_count": 536,
+  "image_count": 9,
+  "index_empty": true,
+  "tracked_foreign_navigation_preserved": true,
+  "accepted_AY_AZ_documents_preserved": true,
+  "raw_scope": "closed_at_BA_result; exclude raw command paths before any future hashing; do not recursively follow envelope pins",
+  "closed_raw_envelopes_as_documents": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4ba-f12-diagnosis-01\\raw-pins-08.json",
+      "bytes": 4782,
+      "sha256": "7e0dbb16ac116a110bdaecacd8b8eb6e0174cbca12409195002cc8b232c5d010"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4ba-f12-diagnosis-01\\raw-pins-16.json",
+      "bytes": 4782,
+      "sha256": "c54b4dc2d1ffc5d22fb6ea9c3a96008c8373cd4fd943a003688790351dec75d5"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4ba-f12-diagnosis-01\\raw-pins-refine.json",
+      "bytes": 164,
+      "sha256": "661091db2a79f9fd91495119a4b722964cde80a61020b2fe5fd74e536c1ce193"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4ba-f12-diagnosis-01\\raw-after.json",
+      "bytes": 9074,
+      "sha256": "7f71471df2fc8a844fccca01a0665a987499ba8e8612265cef407c8c6198dce4"
+    }
+  ],
+  "sanitized_support": [
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4ba-f12-diagnosis-01\\before.json",
+      "bytes": 132888,
+      "sha256": "9a78efafe86abb3181748024c04eafb89cd1965cfb348870f64a11bc582dd1cb"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4ba-f12-diagnosis-01\\findings-08.json",
+      "bytes": 32877,
+      "sha256": "7e0628934a5db9740ba34205540ef5f1cd162660d950b8d672fa9e3aeea72270"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4ba-f12-diagnosis-01\\findings-16.json",
+      "bytes": 34917,
+      "sha256": "034e24bb55122c647415e610ef154075fc9f9862539a844f1eb1bfee744bb566"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4ba-f12-diagnosis-01\\findings-refine.json",
+      "bytes": 2368,
+      "sha256": "c9a674c1d27f6365d9de6620395cc99d6e3db174eb1fc6c28c61f30748e13771"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4ba-f12-diagnosis-01\\static-error-comparison.json",
+      "bytes": 10392,
+      "sha256": "b89276def4f82470460427512512956c3984a455958f38a9d31a4c1f7301836f"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4ba-f12-diagnosis-01\\dependency-source-facts.json",
+      "bytes": 1881,
+      "sha256": "22b59a7787cddcc9ef0f147b9b12352baa1025b1c2a5bb2fea05abe57b6a2006"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4ba-f12-diagnosis-01\\preservation.json",
+      "bytes": 284,
+      "sha256": "9bebc17ab64be9a23d64fe2c922d2302d2c98f1f4614b51505f2222db3cf1ea8"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4ba-f12-diagnosis-01\\inspect.py",
+      "bytes": 8897,
+      "sha256": "31f0d05ac312b257870001599a12c3153eb1a86a0e61feecc190edc43a3d4625"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4ba-f12-diagnosis-01\\refine.py",
+      "bytes": 2810,
+      "sha256": "68ac8674fd6c3c697def7443e06988aea28c5284b71a83fb5e5b20192c7a0969"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4ba-f12-diagnosis-01\\source-facts.py",
+      "bytes": 1267,
+      "sha256": "6dfb288ee335b30d84577640ea0516d56d979a3b15b0b8a189cd59ae451ee10c"
+    },
+    {
+      "path": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\s54-block4ba-f12-diagnosis-01\\finish.py",
+      "bytes": 2988,
+      "sha256": "607e4d97b334c7aba724fb61bfa38cfd16258ec15bdd13a3f5a9c5b0954f2c80"
+    }
+  ],
+  "bounded_inspection": {
+    "unique_pairs": 16,
+    "unique_files": 32,
+    "first_ordinal": 1307,
+    "last_ordinal": 1322,
+    "per_file_cap": 65536,
+    "total_cap": 2097152,
+    "actual_bytes_read": 175541
+  },
+  "result": {
+    "last_success": "status3 ordinal1322",
+    "static_error": "absolute S5.3 process controller deadline",
+    "localized_boundary": "F old held ACK lease/window release after A stop; source-control-flow inference",
+    "AW1": "passed as necessary source-control-flow conclusion; no history replay",
+    "underlying_transport_reason": "not established",
+    "proposed_change": "F-only named60s release observation clipped to original deadline; preserve all gates",
+    "implementation": false,
+    "tests": false,
+    "new_attempt": false,
+    "commit": false,
+    "push": false
+  }
+}
