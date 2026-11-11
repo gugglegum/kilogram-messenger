@@ -653,6 +653,9 @@ enum Command {
         locator_directory: Option<PathBuf>,
         #[arg(long, default_value = "127.0.0.1:0")]
         ordered_bind: String,
+        /// Explicit peer IPv4 for a fresh direct-only LAN profile.
+        #[arg(long)]
+        ordered_lan_peer_ipv4: Option<std::net::Ipv4Addr>,
         /// New machine-local runtime launch profile.
         #[arg(long)]
         profile_file: PathBuf,
@@ -3991,6 +3994,7 @@ async fn run_command(command: Command) -> Result<()> {
             expect_device,
             locator_directory,
             ordered_bind,
+            ordered_lan_peer_ipv4,
             profile_file,
             state_dir,
             allow_account,
@@ -4034,10 +4038,14 @@ async fn run_command(command: Command) -> Result<()> {
                     route: route_policy.into(),
                     relay: relay_url.map(|url| url.to_string()),
                     bind: ordered_bind,
+                    lan_peer_ipv4: ordered_lan_peer_ipv4,
                 });
             }
             anyhow::ensure!(
-                expect_account.is_none() && expect_claim.is_none() && expect_device.is_none(),
+                expect_account.is_none()
+                    && expect_claim.is_none()
+                    && expect_device.is_none()
+                    && ordered_lan_peer_ipv4.is_none(),
                 "runtime2 pins require --profile-mode ordered-dialog-v2"
             );
             if profile_mode.is_some() {

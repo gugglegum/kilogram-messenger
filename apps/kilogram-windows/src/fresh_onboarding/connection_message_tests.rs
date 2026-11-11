@@ -499,7 +499,7 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
     stop(&mut sessions[0])?;
     stop(&mut sessions[1])?;
     let [left, _right] = nodes;
-    let mut work = Work::start(left, cli(), false)?;
+    let mut work = Work::start(left, cli(), false, None)?;
     let wait_progress = |work: &mut Work, progress: Progress| -> Result<()> {
         let until = Instant::now() + Duration::from_secs(40);
         loop {

@@ -1,10 +1,11 @@
 use super::*;
-use iroh::{EndpointAddr, endpoint::Connection};
+use iroh::{Endpoint, EndpointAddr, endpoint::Connection};
 use kilogram_identity::{AccountId, DeviceEncryptionIdentity, DeviceIdentity};
-use kilogram_transport_iroh::{RoutePolicy, ordered2::RouteConfig2};
+use kilogram_transport_iroh::{RoutePolicy, ordered2::FreshRoute2};
 use native::Native2;
 use serde::Serialize;
 use std::{
+    net::SocketAddr,
     sync::{
         Arc,
         atomic::{AtomicBool, AtomicU64, Ordering},
@@ -26,7 +27,13 @@ pub(super) struct Lease2 {
     pub pair: Vec<u8>,
 }
 impl Lease2 {
-    pub fn check(&self, s: &db::RuntimeSnapshot, wall: u64, route: &RouteConfig2) -> Result<()> {
+    pub fn check(
+        &self,
+        s: &db::RuntimeSnapshot,
+        wall: u64,
+        route: &FreshRoute2,
+        lan_endpoint: Option<&Endpoint>,
+    ) -> Result<Option<SocketAddr>> {
         let _timing = timing::span(timing::Metric::LeaseCheck);
         ensure!(
             self.valid.load(Ordering::Acquire)
@@ -48,6 +55,9 @@ impl Lease2 {
                 && self.connection.remote_id().as_bytes() == &peer.fields().endpoint,
             "lease locator binding"
         );
+        if route.lan().is_some() {
+            return route.check_lan_path(&self.connection, &own, &peer, lan_endpoint);
+        }
         let paths = self.connection.paths();
         let path = paths
             .iter()
@@ -58,7 +68,7 @@ impl Lease2 {
             RoutePolicy::RelayOnly => ensure!(path.is_relay(), "route changed"),
             RoutePolicy::Auto => ensure!(path.is_ip() || path.is_relay(), "unsupported route"),
         }
-        Ok(())
+        Ok(None)
     }
     pub fn invalidate(&self) {
         self.valid.store(false, Ordering::Release);
@@ -142,7 +152,8 @@ pub struct Owner2 {
     pub(super) device: DeviceIdentity,
     pub(super) encryption: DeviceEncryptionIdentity,
     pub(super) leases: [Option<Lease2>; 2],
-    pub(super) route: RouteConfig2,
+    pub(super) route: FreshRoute2,
+    pub(super) lan_endpoint: Option<Endpoint>,
     pub(super) enabled: Vec<u8>,
     pub(super) endpoint: Option<(Id, EndpointAddr)>,
     pub(super) stats: Stats2,
@@ -165,7 +176,7 @@ pub struct Owner2 {
 impl Owner2 {
     pub fn new(
         mut repository: db::RuntimeRepository,
-        route: RouteConfig2,
+        route: FreshRoute2,
         enabled: Vec<u8>,
     ) -> Result<Self> {
         route.effective()?;
@@ -216,6 +227,7 @@ impl Owner2 {
             encryption,
             leases: [None, None],
             route,
+            lan_endpoint: None,
             enabled,
             endpoint: None,
             stats: Stats2::default(),
@@ -357,6 +369,7 @@ impl Owner2 {
             None
         };
         let route = self.route.clone();
+        let lan_endpoint = self.lan_endpoint.clone();
         let verified = if matches!(purpose, Purpose2::Import) {
             None
         } else {
@@ -395,7 +408,7 @@ impl Owner2 {
                     .map_err(|_| db::Error::PolicyRejected("current policy/time"))?;
                 if let Some(lease) = &lease {
                     lease
-                        .check(s, wall, &route)
+                        .check(s, wall, &route, lan_endpoint.as_ref())
                         .map_err(|_| db::Error::PolicyRejected("actual lease"))?;
                 }
             }
@@ -683,10 +696,7 @@ impl Owner2 {
             let s = self.snapshot(c)?;
             let current = self.current(&s, now()?)?;
             if peer {
-                self.leases[usize::from(c)]
-                    .as_ref()
-                    .context("NeedAdmission")?
-                    .check(&s, now()?, &self.route)?;
+                self.live_lease(c, &s)?;
             }
             Ok((s, current))
         })();
@@ -698,14 +708,48 @@ impl Owner2 {
         }
         result
     }
+    pub(super) fn live_lease(
+        &mut self,
+        c: u8,
+        s: &db::RuntimeSnapshot,
+    ) -> Result<(u64, Option<SocketAddr>)> {
+        let lease = self.leases[usize::from(c)]
+            .as_ref()
+            .context("NeedAdmission")?;
+        let result = lease.check(s, now()?, &self.route, self.lan_endpoint.as_ref());
+        if result.is_err() {
+            lease.invalidate();
+        }
+        Ok((lease.wall_deadline, result?))
+    }
+    pub(super) fn observe_lan_interface(&mut self, endpoint: Option<Endpoint>) {
+        if endpoint.is_none() && self.lan_endpoint.is_some() {
+            self.invalidate();
+        }
+        self.lan_endpoint = endpoint;
+    }
+    pub(super) fn check_lan_advertisement(&self, addr: &EndpointAddr) -> Result<()> {
+        if self.route.lan().is_some() {
+            let endpoint = self
+                .lan_endpoint
+                .as_ref()
+                .context("LAN interface not currently verified")?;
+            ensure!(
+                self.route.advertisement(endpoint)? == *addr,
+                "LAN advertisement changed"
+            );
+        }
+        Ok(())
+    }
     pub fn rotate_locator(&mut self, c: u8, instance: Id, addr: &EndpointAddr) -> Result<Vec<u8>> {
+        self.check_lan_advertisement(addr)?;
         let (s, current) = self.require(c, false)?;
         let wall = now()?;
         let policy = self.route.effective()?;
         let relay = if policy == RoutePolicy::DirectOnly {
             None
         } else {
-            self.route.relay.clone()
+            self.route.base().relay.clone()
         };
         ensure!(
             addr.relay_urls()
@@ -795,6 +839,7 @@ impl Owner2 {
         Ok(())
     }
     pub fn export_locator(&mut self, c: u8, instance: Id, addr: &EndpointAddr) -> Result<Vec<u8>> {
+        self.check_lan_advertisement(addr)?;
         let (s, current) = self.require(c, false)?;
         ensure!(
             self.endpoint

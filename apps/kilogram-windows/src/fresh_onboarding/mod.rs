@@ -1,4 +1,4 @@
-//! Explicit first-dialog pilot for a single peer on this computer.
+//! Explicit first-dialog pilot for a single peer.
 mod artifact;
 mod connection;
 mod consent;
@@ -40,6 +40,64 @@ struct ConsentWork {
     result: mpsc::Receiver<(Setup, Result<()>)>,
     join: Option<thread::JoinHandle<()>>,
 }
+#[derive(Default)]
+struct ConnectionChoice {
+    setup: Option<String>,
+    lan: bool,
+    local: String,
+    peer: String,
+}
+impl ConnectionChoice {
+    fn load(&mut self, setup: &Setup) {
+        if self.setup.as_ref() != Some(&setup.record.local_id) {
+            *self = Self {
+                setup: Some(setup.record.local_id.clone()),
+                ..Self::default()
+            };
+            if let Some(lan) = connection::lan_settings(setup) {
+                self.lan = true;
+                self.local = lan.local.to_string();
+                self.peer = lan.peer.to_string();
+            }
+        }
+    }
+    fn draw(&mut self, ui: &mut egui::Ui) {
+        ui.horizontal(|ui| {
+            ui.radio_value(&mut self.lan, false, "On this computer");
+            ui.radio_value(&mut self.lan, true, "On a local network (IPv4)");
+        });
+        if self.lan {
+            ui.horizontal(|ui| {
+                ui.label("This computer’s LAN IPv4");
+                ui.text_edit_singleline(&mut self.local);
+            });
+            ui.horizontal(|ui| {
+                ui.label("Peer computer’s LAN IPv4");
+                ui.text_edit_singleline(&mut self.peer);
+            });
+            ui.small("Starts a peer UDP listener on this computer’s selected IPv4.");
+        }
+    }
+    fn selected(&self) -> Result<Option<connection::LanSettings>> {
+        if !self.lan {
+            return Ok(None);
+        }
+        let lan = connection::LanSettings {
+            local: self
+                .local
+                .trim()
+                .parse()
+                .map_err(|_| anyhow::anyhow!("Enter this computer’s LAN IPv4"))?,
+            peer: self
+                .peer
+                .trim()
+                .parse()
+                .map_err(|_| anyhow::anyhow!("Enter the peer computer’s LAN IPv4"))?,
+        };
+        lan.validate()?;
+        Ok(Some(lan))
+    }
+}
 impl Drop for ConsentWork {
     fn drop(&mut self) {
         self.cancel.store(true, Ordering::Release);
@@ -72,6 +130,7 @@ pub(super) struct Panel {
     consent_work: Option<ConsentWork>,
     connection_work: Option<connection::Work>,
     dialog: dialog::Dialog,
+    connection_choice: ConnectionChoice,
     locator_input: String,
     close_requested: bool,
     consent_input: String,
@@ -98,6 +157,7 @@ impl Panel {
             consent_work: None,
             connection_work: None,
             dialog: dialog::Dialog::default(),
+            connection_choice: ConnectionChoice::default(),
             locator_input: String::new(),
             close_requested: false,
             consent_input: String::new(),
@@ -182,6 +242,7 @@ impl Panel {
     fn open(&mut self) {
         self.consent_next_check = Instant::now();
         self.pause();
+        self.connection_choice = ConnectionChoice::default();
         self.setup = None;
         self.preview = None;
         self.verified = false;
@@ -312,7 +373,7 @@ impl Panel {
         }
         ui.heading("First-dialog pilot");
         ui.label("Create an invitation, or join one before creating your first account.");
-        ui.small("One peer on this computer. Messaging is available after mutual consent and local connection setup.");
+        ui.small("One peer. Messaging is available after mutual consent and connection setup.");
         ui.separator();
         if self.consent_work.is_some() {
             ui.spinner();
@@ -517,8 +578,17 @@ impl Panel {
             ui.separator();
             ui.heading("Local connection pilot");
             ui.label("Both permissions are checked each time you start the local connection.");
+            if let Some(setup) = &self.setup {
+                self.connection_choice.load(setup);
+                self.connection_choice.draw(ui);
+            }
+            let start_label = if self.connection_choice.lan {
+                "Start LAN connection"
+            } else {
+                "Start local connection"
+            };
             for (label, fresh) in [
-                ("Start local connection", false),
+                (start_label, false),
                 ("Retry with a new local profile file", true),
             ] {
                 if ui.button(label).clicked() {
@@ -543,6 +613,7 @@ impl Panel {
             self.connection_work.is_none() && self.consent_work.is_none() && self.work.is_none(),
             "Another operation is running"
         );
+        let selected = self.connection_choice.selected()?;
         self.dialog.reset_runtime();
         let setup = self
             .setup
@@ -552,6 +623,7 @@ impl Panel {
             setup,
             self.cli_executable.clone(),
             fresh,
+            selected,
         )?);
         Ok(())
     }
@@ -566,6 +638,7 @@ impl Panel {
             self.setup = Some(setup);
             match result {
                 Ok(stop) if stop.graceful && stop.reaped && stop.eof && stop.exit==Some(0)=>{self.notice=Some("Owned runtime stopped gracefully. The same account and permissions are ready for an explicit restart.".into());self.error=None;},
+                _ if self.connection_choice.lan => self.error=Some("LAN runtime start or stop failed. Check that both IPv4 addresses belong to the same local network and that the selected local address is assigned. Your setup and history were kept.".into()),
                 _=>self.error=Some("Runtime start/stop did not complete gracefully. Existing account and public artifacts were kept; any forced cleanup is not a successful graceful stop.".into()),
             }
         }
@@ -588,13 +661,22 @@ impl Panel {
         let Some(work) = &mut self.connection_work else {
             return;
         };
-        ui.heading("Local connection pilot - two windows on this computer");
+        let lan = self.connection_choice.lan;
+        ui.heading(if lan {
+            "Local network pilot"
+        } else {
+            "Local connection pilot - two windows on this computer"
+        });
         ui.label(format!("Saved setup: {}", self.home));
         let current = work
             .view
             .current(Instant::now(), consent::now().unwrap_or(u64::MAX));
         if current {
-            ui.heading("Connected locally - authenticated Active2 on both slots");
+            ui.heading(if lan {
+                "Connected over LAN - both conversations authenticated"
+            } else {
+                "Connected locally - authenticated Active2 on both slots"
+            });
         } else {
             ui.heading("Connection not currently confirmed");
         }

@@ -122,7 +122,7 @@ impl Actors2 {
                     )?,
                 )?;
             }
-            let mut owner = Owner2::new(repository, route.clone(), vec![0, 1])?;
+            let mut owner = Owner2::new(repository, route.clone().into(), vec![0, 1])?;
             for c in 0..2 {
                 let mut raw =
                     owner.rotate_locator(c, [role as u8 + 1; 32], &endpoints[role].addr())?;
@@ -310,6 +310,107 @@ impl Actors2 {
             .call(move |o| o.ingest(c, raw, &auth, false, None))
             .await
     }
+}
+
+#[tokio::test]
+async fn cs41_disallowed_actual_path_cannot_pin_new_authority() -> Result<()> {
+    use kilogram_transport_iroh::RoutePolicy;
+    use transport::{FreshRoute2, RouteConfig2};
+    let pair = Actors2::new(false).await?;
+    let (dialed, accepted) = tokio::time::timeout(Duration::from_secs(12), async {
+        tokio::try_join!(
+            async {
+                Ok::<_, anyhow::Error>(
+                    pair.endpoints[0]
+                        .connect(pair.endpoints[1].addr(), wire::ALPN)
+                        .await?,
+                )
+            },
+            async {
+                Ok::<_, anyhow::Error>(
+                    pair.endpoints[1]
+                        .accept()
+                        .await
+                        .context("incoming test connection")?
+                        .await?,
+                )
+            }
+        )
+    })
+    .await??;
+    kilogram_transport_iroh::await_route_policy(
+        &accepted,
+        RoutePolicy::DirectOnly,
+        Duration::from_secs(4),
+    )
+    .await?;
+    let binding = transport::binding(&accepted, *pair.endpoints[1].id().as_bytes(), false)?;
+    let deadline = Instant::now() + Duration::from_secs(20);
+    let hello = pair.handles[0]
+        .call(move |o| Ok(o.begin_admission(0, dialed, binding, deadline, None)?.1))
+        .await?;
+    let actor = &pair.artifacts[0];
+    let renewal = actor
+        .renewal(0, 3)
+        .map_err(|e| anyhow::anyhow!(e.to_string()))?;
+    let mut fields = hello.body().value().fields(12)?.to_vec();
+    fields[7] = b(renewal.raw());
+    let body = wire::FrameBody2::parse(
+        wire::FrameKind::Hello,
+        &wire::encode(&a(fields), 96 * 1024)?,
+    )?;
+    let renewed = wire::ParsedFrame2::sign(body, binding, hello.request(), &actor.devices[0])?;
+    let peer_raw = pair.handles[1]
+        .call(|o| {
+            o.snapshot(0)?
+                .spec
+                .peer_locator
+                .context("current peer locator")
+        })
+        .await?;
+    let mut peer = wire::ParsedRuntimeLocator2::parse(&peer_raw)?
+        .fields()
+        .clone();
+    peer.revision += 1;
+    peer.ips = vec!["192.168.33.1:38293".parse()?];
+    let replacement = wire::ParsedRuntimeLocator2::sign(peer, &actor.devices[0])?
+        .raw()
+        .to_vec();
+    pair.handles[1]
+        .call(move |o| {
+            let loopback = o.route.clone();
+            o.route = FreshRoute2::new(
+                RouteConfig2 {
+                    policy: RoutePolicy::DirectOnly,
+                    bind: Some("192.168.33.2:0".parse()?),
+                    relay: None,
+                },
+                Some("192.168.33.1".parse()?),
+            )?;
+            o.import_locator(0, replacement)?;
+            let generation = o.repository.generation();
+            let error = o
+                .observe_hello_authority(0, &accepted, binding, &renewed)
+                .err()
+                .context("wrong path accepted")?;
+            ensure!(format!("{error:#}").contains("selected LAN path differs"));
+            ensure!(
+                o.repository.generation() == generation,
+                "wrong path pinned authority"
+            );
+            // The same authenticated Hello has a genuinely writable authority
+            // revision on the original (permitted) loopback route.
+            o.route = loopback;
+            o.observe_hello_authority(0, &accepted, binding, &renewed)?;
+            ensure!(o.repository.generation() == generation + 1);
+            accepted.close(0u32.into(), b"test completed");
+            Ok(())
+        })
+        .await?;
+    println!(
+        "CS41_AUTHORITY_GATE_PASS actual_wrong_socket=true unchanged_generation=true signed_positive_control=true"
+    );
+    Ok(())
 }
 #[tokio::test]
 async fn a3_s4_f01_actual_expired_lease_and_connection_generation() -> Result<()> {

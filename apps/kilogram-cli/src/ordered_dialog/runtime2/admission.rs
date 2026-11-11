@@ -25,6 +25,33 @@ pub(super) struct Link2 {
     pub deadline: Instant,
 }
 impl Owner2 {
+    fn check_lan_admission(&self, s: &db::RuntimeSnapshot, connection: &Connection) -> Result<()> {
+        if self.route.lan().is_none() {
+            return Ok(());
+        }
+        let own = wire::ParsedRuntimeLocator2::parse(
+            s.spec.own_locator.as_deref().context("own locator")?,
+        )?;
+        let peer = wire::ParsedRuntimeLocator2::parse(
+            s.spec.peer_locator.as_deref().context("peer locator")?,
+        )?;
+        let wall = now()?;
+        for (locator, role) in [(&own, s.head.role), (&peer, 1 - s.head.role)] {
+            let f = locator.fields();
+            ensure!(
+                f.c == s.head.context
+                    && f.cert == s.spec.certs[usize::from(role)]
+                    && f.peer_cert == s.spec.certs[usize::from(1 - role)]
+                    && f.not_before <= wall
+                    && wall < f.expires,
+                "LAN admission locator scope or interval"
+            );
+        }
+        self.route
+            .check_lan_path(connection, &own, &peer, self.lan_endpoint.as_ref())?;
+        Ok(())
+    }
+
     pub(super) fn route_for_remote(
         &mut self,
         remote: Id,
@@ -58,6 +85,7 @@ impl Owner2 {
         request: Option<[u8; 16]>,
     ) -> Result<(u64, wire::ParsedFrame2)> {
         let (s, current) = self.require(c, false)?;
+        self.check_lan_admission(&s, &connection)?;
         ensure!(
             Instant::now() < deadline && connection.close_reason().is_none(),
             "admission deadline/connection"
@@ -166,8 +194,10 @@ impl Owner2 {
         generation: u64,
         frame: wire::ParsedFrame2,
     ) -> Result<()> {
-        let binding = self.admission(c, generation)?.binding;
-        self.observe_hello_authority(c, binding, &frame)?;
+        let admission = self.admission(c, generation)?;
+        let binding = admission.binding;
+        let connection = admission.connection.clone();
+        self.observe_hello_authority(c, &connection, binding, &frame)?;
         let (s, current) = self.require(c, false)?;
         let p = self.admission(c, generation)?;
         ensure!(
@@ -217,10 +247,12 @@ impl Owner2 {
     pub(super) fn observe_hello_authority(
         &mut self,
         c: u8,
+        connection: &Connection,
         binding: Id,
         frame: &wire::ParsedFrame2,
     ) -> Result<()> {
         let s = self.snapshot(c)?;
+        self.check_lan_admission(&s, connection)?;
         ensure!(frame.body().kind() == wire::FrameKind::Hello, "Hello first");
         let f = frame.body().value().fields(12)?;
         let credential = super::super::handshake::Credentials::decode(f[7].bytes()?)?;
@@ -242,6 +274,7 @@ impl Owner2 {
         s: &db::RuntimeSnapshot,
     ) -> Result<&Admission2> {
         let p = self.admission(c, generation)?;
+        self.check_lan_admission(s, &p.connection)?;
         ensure!(
             p.policy == s.profile.policy_generation,
             "admission policy changed"
@@ -408,7 +441,7 @@ impl Owner2 {
             valid: Arc::new(AtomicBool::new(true)),
             pair,
         };
-        lease.check(&s, wall, &self.route)?;
+        lease.check(&s, wall, &self.route, self.lan_endpoint.as_ref())?;
         let link = Link2 {
             c,
             binding: lease.binding,

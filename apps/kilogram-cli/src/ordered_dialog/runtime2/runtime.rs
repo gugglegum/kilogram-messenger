@@ -1,12 +1,16 @@
 //! Bounded two-process transport and authenticated IPC adapter for Owner2.
 use super::*;
 use admission::Link2;
-use iroh::{Endpoint, endpoint::Connection};
+use iroh::{
+    Endpoint,
+    endpoint::{Connection, IncomingAddr},
+};
 use kilogram_runtime_ipc::{RuntimeIpcCommand, RuntimeIpcResponse, RuntimeIpcServer};
 use kilogram_transport_iroh::ordered2 as transport;
 use network::{AckProgress2, Dispatch2, PrefixPlan2};
 use owner::Owner2;
 use std::{
+    net::IpAddr,
     path::Path,
     sync::{
         Arc,
@@ -188,13 +192,31 @@ async fn admit_a(
 ) -> Result<(Connection, Link2)> {
     let (remote, route) = handle
         .call(move |owner| {
-            let (s, _) = owner.require(c, false)?;
+            let (s, current) = owner.require(c, false)?;
             let locator = wire::ParsedRuntimeLocator2::parse(
                 s.spec
                     .peer_locator
                     .as_deref()
                     .context("peer locator missing")?,
             )?;
+            if owner.route.lan().is_some() {
+                locator.verify(
+                    s.head.context,
+                    &current.peers[usize::from(1 - s.head.role)],
+                    &current.peers[usize::from(s.head.role)],
+                )?;
+                let wall = now()?;
+                ensure!(
+                    locator.fields().not_before <= wall && wall < locator.fields().expires,
+                    "LAN peer locator interval"
+                );
+                owner.route.advertisement(
+                    owner
+                        .lan_endpoint
+                        .as_ref()
+                        .context("LAN interface not currently verified")?,
+                )?;
+            }
             Ok((
                 owner.route.remote(&locator)?,
                 owner.route.connection_policy(&locator)?,
@@ -278,7 +300,7 @@ async fn admit_b(
         .call(move |owner| {
             let c = owner.slot(id)?;
             ensure!(owner.snapshot(c)?.head.role == 1, "B listener role");
-            owner.observe_hello_authority(c, binding, &hello)?;
+            owner.observe_hello_authority(c, &conn, binding, &hello)?;
             let (g, own) = owner.begin_admission(c, conn, binding, deadline, Some(request))?;
             owner.accept_hello(c, g, hello)?;
             Ok((c, g, own))
@@ -971,6 +993,10 @@ fn unpublish_previous_instance(owner: &mut Owner2, directory: &Path) -> Result<(
 pub async fn run(profile: config::Profile2) -> Result<()> {
     let _diagnostic_report = timing::Report;
     profile.validate()?;
+    let lan = profile.route.lan();
+    if let Some(lan) = lan {
+        lan::verify_interface(lan)?;
+    }
     let mut repository = db::RuntimeRepository::open(
         kilogram_state::StateDirectoryLock::acquire(&profile.state_dir)?,
         profile.owner()?,
@@ -989,7 +1015,10 @@ pub async fn run(profile: config::Profile2) -> Result<()> {
     let mut owner = Owner2::new(repository, profile.route.clone(), profile.enabled.clone())?;
     std::fs::create_dir_all(&profile.locator_directory)?;
     unpublish_previous_instance(&mut owner, &profile.locator_directory)?;
-    let endpoint = transport::bind(&profile.route).await?;
+    let endpoint = transport::bind_fresh(&profile.route).await?;
+    if lan.is_some() {
+        owner.observe_lan_interface(Some(endpoint.clone()));
+    }
     let instance = shared_admin::random()?;
     for c in &profile.enabled {
         // Local readable history remains available when current messaging permission is blocked.
@@ -1018,12 +1047,31 @@ pub async fn run(profile: config::Profile2) -> Result<()> {
     let permits = Arc::new(Semaphore::new(2));
     let mut tasks = tokio::task::JoinSet::new();
     let publication_endpoint = endpoint.clone();
+    let publication_route = profile.route.clone();
     let publication_handle = handle.clone();
     let directory = profile.locator_directory.clone();
     let enabled = profile.enabled.clone();
     tasks.spawn(async move {
         loop {
             tokio::time::sleep(Duration::from_secs(2)).await;
+            if let Some(lan) = lan {
+                let current = lan::verify_interface(lan).is_ok()
+                    && publication_route
+                        .advertisement(&publication_endpoint)
+                        .is_ok();
+                let verified = current.then(|| publication_endpoint.clone());
+                if publication_handle
+                    .call(move |owner| {
+                        owner.observe_lan_interface(verified);
+                        Ok(())
+                    })
+                    .await
+                    .is_err()
+                    || !current
+                {
+                    continue;
+                }
+            }
             for c in &enabled {
                 let c = *c;
                 let addr = publication_endpoint.addr();
@@ -1061,6 +1109,9 @@ pub async fn run(profile: config::Profile2) -> Result<()> {
         let mut connections=tokio::task::JoinSet::new();
         loop{while connections.try_join_next().is_some(){} tokio::select!{
             incoming=listener_endpoint.accept()=>{let Some(incoming)=incoming else{break};
+                if let Some(lan)=lan
+                    && !matches!(incoming.remote_addr(), IncomingAddr::Ip(socket) if socket.ip() == IpAddr::V4(lan.peer()))
+                { incoming.ignore(); continue; }
                 let Ok(permit)=listener_permits.clone().try_acquire_owned()else{listener_resources.refused();incoming.refuse();continue};
                 let accounting=listener_resources.acquired();
                 let endpoint=listener_endpoint.clone();let handle=listener_handle.clone();let deadline=Instant::now()+Duration::from_secs(30);
@@ -1189,6 +1240,10 @@ fn ipc2(
         1 => {
             let _timing = timing::span(timing::Metric::Status);
             value.fields(2)?;
+            let lan_current = owner.check_lan_advertisement(addr).is_ok();
+            if !lan_current {
+                owner.observe_lan_interface(None);
+            }
             let mut contexts = Vec::new();
             for c in owner.enabled.clone() {
                 if !owner.repository.installed(c)? {
@@ -1197,14 +1252,12 @@ fn ipc2(
                 }
                 let s = owner.snapshot(c)?;
                 let counts = owner.repository.counts(c)?;
-                let live_admitted = owner.require(c, true).is_ok();
-                let lease_expires = if live_admitted {
-                    owner.leases[usize::from(c)]
-                        .as_ref()
-                        .map(|lease| lease.wall_deadline)
-                } else {
-                    None
-                };
+                let lease = owner
+                    .require(c, false)
+                    .ok()
+                    .and_then(|(verified, _)| owner.live_lease(c, &verified).ok());
+                let live_admitted = lease.is_some();
+                let lease_expires = lease.map(|(deadline, _)| deadline);
                 let publication_ready = owner.export_locator(c, instance, addr).is_ok();
                 let policy_error = now()
                     .and_then(|wall| owner.current(&s, wall))
@@ -1218,15 +1271,24 @@ fn ipc2(
                     serde_json::Value::Null
                 };
                 let details = serde_json::json!({"native":native,"native_hash":s.head.native_hash.map(|id|hex(&id)),"offer":s.head.offer.map(|id|hex(&id)),"grant":s.head.grant.map(|id|hex(&id)),"readies":s.head.ready.iter().map(|r|r.as_ref().map(|r|hex(&wire::hash(b"",r)))).collect::<Vec<_>>(),"current_consent":wire::ParsedConsent2::parse(&s.spec.consent).ok().map(|v|hex(&v.reference())),"selected_hash":hex(&wire::hash(b"",&s.selection.proof)),"policy_generation":s.profile.policy_generation,"wall_high_water":s.profile.wall_high_water});
-                contexts.push(serde_json::json!({"slot":c,"live_admitted":live_admitted,"lease_expires":lease_expires,"context":hex(&s.head.context),"role":s.head.role,"phase":s.head.phase,"active":s.head.active,"native_generation":s.head.native_generation,"d":s.head.dialog.map(|x|hex(&x)),"e":s.head.epoch.map(|x|hex(&x)),"sid":s.head.sid,"q":s.head.mode_ref.map(|x|hex(&x)),"blocked":s.head.blocked,"own_locator_revision":s.spec.own_locator_revision,"peer_locator_revision":s.spec.peer_locator_revision,"publication_ready":publication_ready,"file_exported":owner.exported[usize::from(c)].is_some(),"policy_error":policy_error,"counts":counts,"details":details}));
+                let mut row = serde_json::json!({"slot":c,"live_admitted":live_admitted,"lease_expires":lease_expires,"context":hex(&s.head.context),"role":s.head.role,"phase":s.head.phase,"active":s.head.active,"native_generation":s.head.native_generation,"d":s.head.dialog.map(|x|hex(&x)),"e":s.head.epoch.map(|x|hex(&x)),"sid":s.head.sid,"q":s.head.mode_ref.map(|x|hex(&x)),"blocked":s.head.blocked,"own_locator_revision":s.spec.own_locator_revision,"peer_locator_revision":s.spec.peer_locator_revision,"publication_ready":publication_ready,"file_exported":owner.exported[usize::from(c)].is_some(),"policy_error":policy_error,"counts":counts,"details":details});
+                if let Some((_, Some(socket))) = lease {
+                    row["selected_lan_peer"] = serde_json::json!(socket);
+                }
+                contexts.push(row);
             }
             owner.stats.aborted_packet_calls = owner.stats.packet_attempts.saturating_sub(
                 owner.stats.committed_encrypt
                     + owner.stats.committed_decrypt
                     + owner.stats.ambiguous_packet_calls,
             );
+            let observed_endpoint = if owner.route.lan().is_some() {
+                lan_current.then_some(addr)
+            } else {
+                owner.endpoint.as_ref().map(|(_, addr)| addr)
+            };
             b(serde_json::to_vec(
-                &serde_json::json!({"version":2,"runtime_pid":std::process::id(),"runtime_instance":hex(&instance),"contexts":contexts,"stats":owner.stats,"window":owner.window.snapshot(),"resources":owner.resources.snapshot(),"endpoint":owner.endpoint.as_ref().map(|(_,addr)|serde_json::json!({"id":hex(addr.id.as_bytes()),"ips":addr.ip_addrs().collect::<Vec<_>>(),"relays":addr.relay_urls().map(|u|u.as_str()).collect::<Vec<_>>()})),"route":owner.route,"root_generation":owner.repository.generation(),"backend":owner.repository.backend_stats()?}),
+                &serde_json::json!({"version":2,"runtime_pid":std::process::id(),"runtime_instance":hex(&instance),"contexts":contexts,"stats":owner.stats,"window":owner.window.snapshot(),"resources":owner.resources.snapshot(),"endpoint":observed_endpoint.map(|addr|serde_json::json!({"id":hex(addr.id.as_bytes()),"ips":addr.ip_addrs().collect::<Vec<_>>(),"relays":addr.relay_urls().map(|u|u.as_str()).collect::<Vec<_>>()})),"route":config::profile_route(&owner.route),"root_generation":owner.repository.generation(),"backend":owner.repository.backend_stats()?}),
             )?)
         }
         2 => {

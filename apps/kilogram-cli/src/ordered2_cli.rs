@@ -414,6 +414,7 @@ pub struct CreateProfile2 {
     pub route: kilogram_transport_iroh::RoutePolicy,
     pub relay: Option<String>,
     pub bind: String,
+    pub lan_peer_ipv4: Option<std::net::Ipv4Addr>,
 }
 pub fn create_profile(input: CreateProfile2) -> Result<()> {
     let CreateProfile2 {
@@ -428,6 +429,7 @@ pub fn create_profile(input: CreateProfile2) -> Result<()> {
         route,
         relay,
         bind,
+        lan_peer_ipv4,
     } = input;
     let owner = db::ExpectedOwner {
         account: *account.as_bytes(),
@@ -463,15 +465,18 @@ pub fn create_profile(input: CreateProfile2) -> Result<()> {
             enabled,
             ipc_file,
             locator_directory,
-            route: kilogram_transport_iroh::ordered2::RouteConfig2 {
-                policy: route,
-                bind: if route == kilogram_transport_iroh::RoutePolicy::RelayOnly {
-                    None
-                } else {
-                    Some(bind.parse()?)
+            route: kilogram_transport_iroh::ordered2::FreshRoute2::new(
+                kilogram_transport_iroh::ordered2::RouteConfig2 {
+                    policy: route,
+                    bind: if route == kilogram_transport_iroh::RoutePolicy::RelayOnly {
+                        None
+                    } else {
+                        Some(bind.parse()?)
+                    },
+                    relay,
                 },
-                relay,
-            },
+                lan_peer_ipv4,
+            )?,
             logical_quota: db::Config::default().logical_quota,
             physical_quota: db::Config::default().physical_quota,
         },

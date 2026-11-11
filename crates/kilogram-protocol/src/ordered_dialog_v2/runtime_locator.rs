@@ -2,6 +2,48 @@
 use super::*;
 use std::net::{IpAddr, Ipv4Addr, Ipv6Addr, SocketAddr};
 
+/// The two IPv4 addresses explicitly chosen for a fresh direct LAN profile.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct DirectLan2 {
+    local: Ipv4Addr,
+    peer: Ipv4Addr,
+}
+
+impl DirectLan2 {
+    pub fn new(local: Ipv4Addr, peer: Ipv4Addr) -> Result<Self> {
+        require(
+            local.is_private() && peer.is_private() && local != peer,
+            "LAN requires two distinct private IPv4 addresses",
+        )?;
+        Ok(Self { local, peer })
+    }
+    pub fn local(self) -> Ipv4Addr {
+        self.local
+    }
+    pub fn peer(self) -> Ipv4Addr {
+        self.peer
+    }
+    /// Uses the prefix of the interface that actually owns the local address.
+    pub fn check_on_link(self, prefix: u8) -> Result<()> {
+        require(
+            (1..=30).contains(&prefix),
+            "unsupported LAN interface prefix",
+        )?;
+        let mask = u32::MAX << (32 - prefix);
+        let local = u32::from(self.local);
+        let peer = u32::from(self.peer);
+        let network = local & mask;
+        let broadcast = network | !mask;
+        require(
+            peer & mask == network
+                && [local, peer]
+                    .iter()
+                    .all(|ip| *ip != network && *ip != broadcast),
+            "LAN requires on-link unicast addresses",
+        )
+    }
+}
+
 #[derive(Clone)]
 pub struct RuntimeLocatorFields2 {
     pub c: Id,
@@ -158,5 +200,68 @@ impl ParsedRuntimeLocator2 {
     }
     pub fn fields(&self) -> &RuntimeLocatorFields2 {
         &self.fields
+    }
+    pub fn direct_lan_socket(&self, expected_ip: Ipv4Addr) -> Result<SocketAddr> {
+        let [socket] = self.fields.ips.as_slice() else {
+            return Err(Error::Invalid("LAN locator requires exactly one socket"));
+        };
+        require(
+            self.fields.relay.is_none() && socket.ip() == IpAddr::V4(expected_ip),
+            "LAN locator outside selected IPv4 route",
+        )?;
+        Ok(*socket)
+    }
+}
+
+#[cfg(test)]
+mod lan_tests {
+    use super::*;
+
+    #[test]
+    fn cs41_on_link_unicast_uses_the_actual_prefix() -> Result<()> {
+        let local = Ipv4Addr::new(192, 168, 4, 9);
+        let with = |ip| DirectLan2::new(local, ip);
+        assert!(
+            with(Ipv4Addr::new(192, 168, 4, 255))?
+                .check_on_link(23)
+                .is_ok()
+        );
+        assert!(
+            with(Ipv4Addr::new(192, 168, 4, 255))?
+                .check_on_link(24)
+                .is_err()
+        );
+        assert!(
+            with(Ipv4Addr::new(192, 168, 5, 255))?
+                .check_on_link(23)
+                .is_err()
+        );
+        assert!(
+            with(Ipv4Addr::new(192, 168, 4, 127))?
+                .check_on_link(25)
+                .is_err()
+        );
+        assert!(
+            with(Ipv4Addr::new(192, 168, 4, 129))?
+                .check_on_link(25)
+                .is_err()
+        );
+        assert!(
+            with(Ipv4Addr::new(192, 168, 4, 0))?
+                .check_on_link(23)
+                .is_err()
+        );
+        assert!(
+            with(Ipv4Addr::new(192, 168, 4, 10))?
+                .check_on_link(31)
+                .is_err()
+        );
+        assert!(with(Ipv4Addr::LOCALHOST).is_err() && with(local).is_err());
+        assert!(
+            DirectLan2::new(Ipv4Addr::new(10, 0, 0, 0), Ipv4Addr::new(10, 0, 0, 1))?
+                .check_on_link(24)
+                .is_err()
+        );
+        Ok(())
     }
 }

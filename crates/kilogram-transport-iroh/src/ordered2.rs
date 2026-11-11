@@ -2,12 +2,20 @@
 use crate::RoutePolicy;
 use anyhow::{Context, Result, ensure};
 use iroh::{
-    Endpoint, EndpointAddr, EndpointId, RelayMode, RelayUrl,
-    endpoint::{Connection, RecvStream, SendStream, presets},
+    Endpoint, EndpointAddr, EndpointId, RelayMode, RelayUrl, TransportAddr,
+    endpoint::{
+        Connection, LocalTransportAddr, NetReportConfig, PortmapperConfig, RecvStream, SendStream,
+        presets,
+    },
 };
-use kilogram_protocol::ordered_dialog_v2::{self as wire, Id, ParsedFrame2, ParsedRuntimeLocator2};
+use kilogram_protocol::ordered_dialog_v2::{
+    self as wire, DirectLan2, Id, ParsedFrame2, ParsedRuntimeLocator2,
+};
 use serde::{Deserialize, Serialize};
-use std::{net::SocketAddr, time::Duration};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    time::Duration,
+};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -15,6 +23,128 @@ pub struct RouteConfig2 {
     pub policy: RoutePolicy,
     pub bind: Option<SocketAddr>,
     pub relay: Option<String>,
+}
+
+/// Only fresh runtime2 can opt into a LAN bind. The shared/indexed route
+/// continues to deserialize and validate its original closed configuration.
+#[derive(Clone, Debug)]
+pub struct FreshRoute2 {
+    base: RouteConfig2,
+    lan: Option<DirectLan2>,
+}
+impl From<RouteConfig2> for FreshRoute2 {
+    fn from(base: RouteConfig2) -> Self {
+        Self { base, lan: None }
+    }
+}
+impl FreshRoute2 {
+    pub fn new(base: RouteConfig2, peer: Option<Ipv4Addr>) -> Result<Self> {
+        let Some(peer) = peer else {
+            return Ok(base.into());
+        };
+        let Some(SocketAddr::V4(bind)) = base.bind else {
+            anyhow::bail!("LAN requires a concrete IPv4 bind");
+        };
+        ensure!(
+            base.policy == RoutePolicy::DirectOnly && base.relay.is_none() && bind.port() == 0,
+            "LAN requires direct-only, an OS-assigned port and no relay"
+        );
+        Ok(Self {
+            base,
+            lan: Some(DirectLan2::new(*bind.ip(), peer)?),
+        })
+    }
+    pub fn base(&self) -> &RouteConfig2 {
+        &self.base
+    }
+    pub fn lan(&self) -> Option<DirectLan2> {
+        self.lan
+    }
+    pub fn effective(&self) -> Result<RoutePolicy> {
+        if self.lan.is_some() {
+            Ok(RoutePolicy::DirectOnly)
+        } else {
+            self.base.effective()
+        }
+    }
+    pub fn remote(&self, locator: &ParsedRuntimeLocator2) -> Result<EndpointAddr> {
+        let Some(lan) = self.lan else {
+            return self.base.remote(locator);
+        };
+        let socket = locator.direct_lan_socket(lan.peer())?;
+        Ok(
+            EndpointAddr::new(EndpointId::from_bytes(&locator.fields().endpoint)?)
+                .with_ip_addr(socket),
+        )
+    }
+    pub fn connection_policy(&self, locator: &ParsedRuntimeLocator2) -> Result<RoutePolicy> {
+        let Some(lan) = self.lan else {
+            return self.base.connection_policy(locator);
+        };
+        locator.direct_lan_socket(lan.peer())?;
+        Ok(RoutePolicy::DirectOnly)
+    }
+    pub fn advertisement(&self, endpoint: &Endpoint) -> Result<EndpointAddr> {
+        let address = endpoint.addr();
+        if let Some(lan) = self.lan {
+            let sockets = endpoint.bound_sockets();
+            let [bound] = sockets.as_slice() else {
+                anyhow::bail!("LAN requires exactly one bound peer UDP socket");
+            };
+            ensure!(
+                bound.ip() == IpAddr::V4(lan.local())
+                    && bound.port() != 0
+                    && address.ip_addrs().eq(std::iter::once(bound))
+                    && address.relay_urls().next().is_none(),
+                "LAN bound UDP socket and advertised endpoint disagree"
+            );
+        }
+        Ok(address)
+    }
+    pub fn selected_lan_peer(
+        &self,
+        connection: &Connection,
+        locator: &ParsedRuntimeLocator2,
+    ) -> Result<Option<SocketAddr>> {
+        let Some(lan) = self.lan else {
+            return Ok(None);
+        };
+        let socket = locator.direct_lan_socket(lan.peer())?;
+        let paths = connection.paths();
+        let path = paths
+            .iter()
+            .find(|path| path.is_selected())
+            .context("no selected LAN path")?;
+        ensure!(
+            path.remote_addr() == &TransportAddr::Ip(socket)
+                && matches!(path.local_addr(), LocalTransportAddr::Ip(local)
+                    if local.is_none_or(|ip| ip == IpAddr::V4(lan.local()))),
+            "selected LAN path differs from signed socket or bound interface"
+        );
+        Ok(Some(socket))
+    }
+    pub fn check_lan_path(
+        &self,
+        connection: &Connection,
+        own: &ParsedRuntimeLocator2,
+        peer: &ParsedRuntimeLocator2,
+        endpoint: Option<&Endpoint>,
+    ) -> Result<Option<SocketAddr>> {
+        let Some(lan) = self.lan else {
+            return Ok(None);
+        };
+        let selected = self.selected_lan_peer(connection, peer)?;
+        let actual =
+            self.advertisement(endpoint.context("LAN interface not currently verified")?)?;
+        let own_socket = own.direct_lan_socket(lan.local())?;
+        ensure!(
+            actual.id.as_bytes() == &own.fields().endpoint
+                && actual.ip_addrs().eq(std::iter::once(&own_socket))
+                && connection.remote_id().as_bytes() == &peer.fields().endpoint,
+            "LAN endpoint or local socket no longer matches signed locators"
+        );
+        Ok(selected)
+    }
 }
 impl RouteConfig2 {
     pub fn effective(&self) -> Result<RoutePolicy> {
@@ -96,15 +226,33 @@ impl RouteConfig2 {
     }
 }
 pub async fn bind(config: &RouteConfig2) -> Result<Endpoint> {
-    bind_alpns(config, false).await
+    bind_alpns(config, config.effective()?, false, false).await
 }
 /// Existing dialogs use negotiated ALPN to select their closed wire decoder.
 /// The fresh S4 entry point keeps its original single-ALPN behavior.
 pub async fn bind_existing(config: &RouteConfig2) -> Result<Endpoint> {
-    bind_alpns(config, true).await
+    bind_alpns(config, config.effective()?, true, false).await
 }
-async fn bind_alpns(config: &RouteConfig2, existing: bool) -> Result<Endpoint> {
-    let policy = config.effective()?;
+pub async fn bind_fresh(config: &FreshRoute2) -> Result<Endpoint> {
+    let endpoint = bind_alpns(
+        config.base(),
+        config.effective()?,
+        false,
+        config.lan().is_some(),
+    )
+    .await?;
+    if let Err(error) = config.advertisement(&endpoint) {
+        endpoint.close().await;
+        return Err(error);
+    }
+    Ok(endpoint)
+}
+async fn bind_alpns(
+    config: &RouteConfig2,
+    policy: RoutePolicy,
+    existing: bool,
+    lan: bool,
+) -> Result<Endpoint> {
     let mut builder = Endpoint::builder(presets::Minimal)
         .clear_address_lookup()
         .clear_ip_transports()
@@ -124,6 +272,11 @@ async fn bind_alpns(config: &RouteConfig2, existing: bool) -> Result<Endpoint> {
         } else {
             vec![wire::ALPN.to_vec()]
         });
+    if lan {
+        builder = builder
+            .portmapper_config(PortmapperConfig::Disabled)
+            .net_report_config(NetReportConfig::minimal());
+    }
     if policy != RoutePolicy::RelayOnly {
         builder = builder.bind_addr(config.bind.context("explicit IP bind")?)?;
     }

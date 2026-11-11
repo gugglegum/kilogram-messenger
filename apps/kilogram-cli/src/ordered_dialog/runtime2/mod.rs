@@ -13,6 +13,7 @@ pub mod config;
 mod data;
 mod handshake;
 mod hooks;
+mod lan;
 mod native;
 mod network;
 pub mod owner;

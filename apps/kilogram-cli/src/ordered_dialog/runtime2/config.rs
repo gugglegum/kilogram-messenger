@@ -1,6 +1,9 @@
 use super::*;
 use kilogram_runtime_ipc::ordered2::{Profile2Document, ProfileRoute2, ProfileRoutePolicy2};
-use kilogram_transport_iroh::ordered2::RouteConfig2;
+use kilogram_transport_iroh::{
+    RoutePolicy,
+    ordered2::{FreshRoute2, RouteConfig2},
+};
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
@@ -17,7 +20,7 @@ pub struct Profile2 {
     pub enabled: Vec<u8>,
     pub ipc_file: PathBuf,
     pub locator_directory: PathBuf,
-    pub route: RouteConfig2,
+    pub route: FreshRoute2,
     pub logical_quota: [u64; 2],
     pub physical_quota: u64,
 }
@@ -36,19 +39,22 @@ impl TryFrom<Profile2Document> for Profile2 {
             enabled: d.enabled,
             ipc_file: d.ipc_file,
             locator_directory: d.locator_directory,
-            route: RouteConfig2 {
-                policy: match d.route.policy {
-                    ProfileRoutePolicy2::Auto => kilogram_transport_iroh::RoutePolicy::Auto,
-                    ProfileRoutePolicy2::DirectOnly => {
-                        kilogram_transport_iroh::RoutePolicy::DirectOnly
-                    }
-                    ProfileRoutePolicy2::RelayOnly => {
-                        kilogram_transport_iroh::RoutePolicy::RelayOnly
-                    }
+            route: FreshRoute2::new(
+                RouteConfig2 {
+                    policy: match d.route.policy {
+                        ProfileRoutePolicy2::Auto => kilogram_transport_iroh::RoutePolicy::Auto,
+                        ProfileRoutePolicy2::DirectOnly => {
+                            kilogram_transport_iroh::RoutePolicy::DirectOnly
+                        }
+                        ProfileRoutePolicy2::RelayOnly => {
+                            kilogram_transport_iroh::RoutePolicy::RelayOnly
+                        }
+                    },
+                    bind: d.route.bind,
+                    relay: d.route.relay,
                 },
-                bind: d.route.bind,
-                relay: d.route.relay,
-            },
+                d.route.lan_peer_ipv4,
+            )?,
             logical_quota: d.logical_quota.unwrap_or(defaults.logical_quota),
             physical_quota: d.physical_quota.unwrap_or(defaults.physical_quota),
         })
@@ -67,22 +73,23 @@ impl From<Profile2> for Profile2Document {
             enabled: d.enabled,
             ipc_file: d.ipc_file,
             locator_directory: d.locator_directory,
-            route: ProfileRoute2 {
-                policy: match d.route.policy {
-                    kilogram_transport_iroh::RoutePolicy::Auto => ProfileRoutePolicy2::Auto,
-                    kilogram_transport_iroh::RoutePolicy::DirectOnly => {
-                        ProfileRoutePolicy2::DirectOnly
-                    }
-                    kilogram_transport_iroh::RoutePolicy::RelayOnly => {
-                        ProfileRoutePolicy2::RelayOnly
-                    }
-                },
-                bind: d.route.bind,
-                relay: d.route.relay,
-            },
+            route: profile_route(&d.route),
             logical_quota: Some(d.logical_quota),
             physical_quota: Some(d.physical_quota),
         }
+    }
+}
+pub(super) fn profile_route(route: &FreshRoute2) -> ProfileRoute2 {
+    let base = route.base();
+    ProfileRoute2 {
+        policy: match base.policy {
+            RoutePolicy::Auto => ProfileRoutePolicy2::Auto,
+            RoutePolicy::DirectOnly => ProfileRoutePolicy2::DirectOnly,
+            RoutePolicy::RelayOnly => ProfileRoutePolicy2::RelayOnly,
+        },
+        bind: base.bind,
+        relay: base.relay.clone(),
+        lan_peer_ipv4: route.lan().map(|lan| lan.peer()),
     }
 }
 impl Profile2 {
@@ -189,6 +196,53 @@ mod tests {
         route["route"]["bind"] = "192.0.2.1:0".into();
         std::fs::write(&path, serde_json::to_vec(&route)?)?;
         ensure!(Profile2::load(&path).is_err(), "route gate bypassed");
+        Ok(())
+    }
+
+    #[test]
+    fn cs41_fresh_opt_in_is_rejected_by_indexed_profile() -> Result<()> {
+        let tmp = tempfile::tempdir()?;
+        let root = tmp.path().join("state");
+        std::fs::create_dir(&root)?;
+        let path = tmp.path().join("profile.json");
+        let mut route =
+            serde_json::json!({"policy":"direct-only","bind":"192.168.7.9:0","relay":null});
+        let mut fresh = serde_json::json!({
+            "version":2,"profile_mode":"ordered-dialog-v2","state_dir":root,
+            "account":"11".repeat(32),"claim":"22".repeat(32),"device":"33".repeat(32),
+            "contexts":["44".repeat(32),"55".repeat(32)],"enabled":[0,1],
+            "ipc_file":tmp.path().join("ipc.json"),"locator_directory":tmp.path().join("locators"),
+            "route":route
+        });
+        std::fs::write(&path, serde_json::to_vec(&fresh)?)?;
+        assert!(Profile2::load(&path).is_err());
+        route["lan_peer_ipv4"] = "192.168.7.10".into();
+        fresh["route"] = route.clone();
+        std::fs::write(&path, serde_json::to_vec(&fresh)?)?;
+        let profile = Profile2::load(&path)?;
+        assert!(profile.route.lan().is_some());
+        assert_eq!(serde_json::to_value(&profile)?["route"], route);
+        let mut indexed = serde_json::json!({
+            "version":3,"profile_mode":"ordered-dialog-indexed","state_dir":root,
+            "account":"11".repeat(32),"claim":"22".repeat(32),"device":"33".repeat(32),
+            "source_id":"44".repeat(32),"migration_id":"55".repeat(32),"config_revision":1,
+            "enabled_contexts":[],"route_policy":"direct-only","route":route,
+            "ipc_file":tmp.path().join("ipc.json"),"locator_directory":tmp.path().join("locators"),
+            "logical_quota":[17179869184u64,17179869184u64],"physical_capacity":51539607552u64
+        });
+        assert!(
+            serde_json::from_value::<super::super::super::runtime7::Profile3>(indexed.clone())
+                .is_err()
+        );
+        indexed["route"]
+            .as_object_mut()
+            .context("indexed route")?
+            .remove("lan_peer_ipv4");
+        std::fs::write(&path, serde_json::to_vec(&indexed)?)?;
+        assert!(super::super::super::runtime7::Profile3::load(&path).is_err());
+        indexed["route"]["bind"] = "127.0.0.1:0".into();
+        std::fs::write(&path, serde_json::to_vec(&indexed)?)?;
+        super::super::super::runtime7::Profile3::load(&path)?;
         Ok(())
     }
 }

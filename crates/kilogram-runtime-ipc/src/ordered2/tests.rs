@@ -163,3 +163,55 @@ fn cs32b_status_shape_and_nullability() -> Result<()> {
     Status2::decode(&serde_json::to_vec(&missing)?)?;
     Ok(())
 }
+
+#[test]
+fn cs41_status_requires_checked_lan_path_for_each_live_lease() -> Result<()> {
+    let mut status = serde_json::json!({
+        "version":2,"runtime_pid":1,"runtime_instance":"11".repeat(32),
+        "contexts":[],"endpoint":{"id":"22".repeat(32),"ips":["192.168.5.1:1234"],"relays":[]},
+        "route":{"policy":"direct-only","bind":"192.168.5.1:0","relay":null,"lan_peer_ipv4":"192.168.5.2"},
+        "root_generation":0,"stats":{},"window":{},"resources":{},"backend":{}
+    });
+    for slot in 0..2 {
+        status["contexts"].as_array_mut().context("status slots")?.push(serde_json::json!({
+            "slot":slot,"context":if slot == 0 {"44".repeat(32)} else {"55".repeat(32)},
+            "role":0,"phase":3,"active":true,"d":"66".repeat(32),"e":"77".repeat(32),
+            "sid":"fixture","q":"88".repeat(32),"blocked":null,"policy_error":null,
+            "own_locator_revision":1,"peer_locator_revision":1,"publication_ready":true,"file_exported":true,
+            "live_admitted":true,"lease_expires":123,"selected_lan_peer":"192.168.5.2:2345",
+            "native_generation":0,"counts":{},"details":{"current_consent":"99".repeat(32),
+            "native":null,"native_hash":null,"offer":null,"grant":null,"readies":[null,null],
+            "selected_hash":"77".repeat(32),"policy_generation":0,"wall_high_water":0}
+        }));
+    }
+    let decode = |value: &serde_json::Value| Status2::decode(&serde_json::to_vec(value)?);
+    assert!(decode(&status)?.installed(0)?.selected_lan_peer.is_some());
+    for invalid in [
+        serde_json::json!("192.168.5.3:2345"),
+        serde_json::json!("192.168.5.2:0"),
+        serde_json::json!("192.168.5.2:3456"),
+        serde_json::Value::Null,
+    ] {
+        let mut bad = status.clone();
+        bad["contexts"][0]["selected_lan_peer"] = invalid;
+        assert!(decode(&bad).is_err());
+    }
+    let slot = status["contexts"][0]
+        .as_object_mut()
+        .context("first slot")?;
+    slot.remove("selected_lan_peer");
+    assert!(decode(&status).is_err());
+    status["contexts"][0]["live_admitted"] = false.into();
+    status["contexts"][0]["lease_expires"] = serde_json::Value::Null;
+    assert!(decode(&status)?.installed(0)?.selected_lan_peer.is_none());
+    status["endpoint"] = serde_json::Value::Null;
+    assert!(decode(&status).is_err());
+    status["contexts"][1]
+        .as_object_mut()
+        .context("second slot")?
+        .remove("selected_lan_peer");
+    status["contexts"][1]["live_admitted"] = false.into();
+    status["contexts"][1]["lease_expires"] = serde_json::Value::Null;
+    assert!(decode(&status)?.endpoint.is_none());
+    Ok(())
+}

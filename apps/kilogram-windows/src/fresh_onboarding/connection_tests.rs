@@ -27,6 +27,120 @@ fn ready_pair_at(parent: &Path, name: &str, missing: bool) -> Result<[Setup; 2]>
 #[cfg(windows)]
 #[path = "connection_message_tests.rs"]
 mod messages;
+
+#[test]
+fn cs41_lan_desktop_profile_socket_and_signed_pair() -> Result<()> {
+    use kilogram_protocol::ordered_dialog_v2 as wire;
+
+    let Ok(local) = std::env::var("KILOGRAM_CS41_LOCAL_IPV4") else {
+        return Ok(());
+    };
+    let lan = LanSettings {
+        local: local.parse()?,
+        peer: std::env::var("KILOGRAM_CS41_PEER_IPV4")?.parse()?,
+    };
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.tmp/clean-start-cs4-1/fixtures");
+    let [mut local, mut peer] = ready_pair_at(&root, "lan-listener-", false)?;
+    let signal = Arc::new(AtomicBool::new(false));
+    let (previous, _) = prepare(&mut local, &cli(), signal.clone(), false)?;
+    let previous_raw = model::read(&previous, kilogram_runtime_ipc::ordered2::PROFILE_CAP)?;
+    let home = local.home.clone();
+    select_route(&mut local, Some(lan))?;
+    drop(local);
+    let mut local = Setup::open(&home)?;
+    ensure!(lan_settings(&local) == Some(lan));
+    select_route(
+        &mut peer,
+        Some(LanSettings {
+            local: lan.peer,
+            peer: lan.local,
+        }),
+    )?;
+    let signer = {
+        let mut repo = repository(&peer)?;
+        kilogram_identity::DeviceIdentity::from_secret_bytes(*repo.owner_material()?.signing)
+    };
+
+    let mut session = Session::start(
+        &mut local,
+        &cli(),
+        signal.clone(),
+        false,
+        &Cleanup::default(),
+    )?;
+    let view = session.poll(&signal)?;
+    ensure!(view.running && !view.current(Instant::now(), consent::now()?));
+    let path = session.export(&local, &signal)?;
+    let raw = model::read(&path, locator_artifact::CAP)?;
+    let original = locator_artifact::Envelope::decode(&raw)?.validate(&local, false)?;
+    let status = session.last_status.as_ref().context("LAN status")?;
+    let endpoint = status.endpoint.as_ref().context("LAN endpoint")?;
+    ensure!(status.route.lan_peer_ipv4 == Some(lan.peer) && endpoint.relays.is_empty());
+    for (slot, blob) in original.iter().enumerate() {
+        let own = wire::ParsedRuntimeLocator2::parse(blob)?;
+        let actual = own.direct_lan_socket(lan.local)?;
+        ensure!(endpoint.ips == [actual] && actual.port() > 0);
+        let row = status.installed(slot)?;
+        ensure!(!row.live_admitted && row.selected_lan_peer.is_none());
+    }
+    let ipc: serde_json::Value =
+        serde_json::from_slice(&model::read(&session.doc.ipc_file, 16 * 1024)?)?;
+    let address: SocketAddr = ipc["content"]["address"]
+        .as_str()
+        .context("IPC address")?
+        .parse()?;
+    ensure!(address.ip().is_loopback() && address.port() > 0);
+    let stop = session.finish(&Cleanup::default());
+    ensure!(stop.graceful && stop.reaped && stop.eof && !stop.forced && stop.exit == Some(0));
+    ensure!(!session.doc.ipc_file.exists());
+    ensure!(model::read(&previous, kilogram_runtime_ipc::ordered2::PROFILE_CAP)? == previous_raw);
+
+    let mut fixture = Vec::new();
+    for blob in original {
+        let mut f = wire::ParsedRuntimeLocator2::parse(&blob)?.fields().clone();
+        std::mem::swap(&mut f.cert, &mut f.peer_cert);
+        f.endpoint = [0x42; 32];
+        f.ips = vec![SocketAddr::from((lan.peer, 39101))];
+        fixture.push(f);
+    }
+    let pair = |fields: &[wire::RuntimeLocatorFields2]| -> Result<[Vec<u8>; 2]> {
+        Ok([
+            wire::ParsedRuntimeLocator2::sign(fields[0].clone(), &signer)?
+                .raw()
+                .to_vec(),
+            wire::ParsedRuntimeLocator2::sign(fields[1].clone(), &signer)?
+                .raw()
+                .to_vec(),
+        ])
+    };
+    let envelope = locator_artifact::Envelope::create(&peer, pair(&fixture)?)?;
+    let correct = serde_json::to_value(&envelope)?;
+    envelope.validate(&local, true)?;
+    for case in 0..7 {
+        let mut wrong = fixture.clone();
+        match case {
+            0 => wrong[1].ips = vec![SocketAddr::from((lan.peer, 39102))],
+            1 => wrong[1].ips = vec!["127.0.0.1:39101".parse()?],
+            2 => wrong[1].ips = vec!["0.0.0.0:39101".parse()?],
+            3 => wrong[1].ips = vec!["[fe80::1]:39101".parse()?],
+            4 => wrong[1].relay = Some("https://example.invalid/".into()),
+            5 => wrong[1].endpoint = [0x13; 32],
+            _ => wrong[1].c = wrong[0].c,
+        }
+        let mut changed = correct.clone();
+        changed["locators"] = serde_json::to_value(pair(&wrong)?.map(|blob| artifact::hex(&blob)))?;
+        let envelope = locator_artifact::Envelope::decode(&serde_json::to_vec(&changed)?)?;
+        ensure!(
+            envelope.validate(&local, true).is_err(),
+            "LAN negative {case} passed"
+        );
+    }
+    println!(
+        "CS41_LAN_DESKTOP_PASS local_udp_snapshot=true tcp_ipc_loopback=true inactive_without_peer=true graceful_stop=true paired_signed_locator_negatives=7 prior_profile_preserved=true"
+    );
+    Ok(())
+}
+
 fn active_pair(sessions: &mut [Session; 2], nodes: &[Setup; 2]) -> Result<()> {
     let end = Instant::now() + Duration::from_secs(90);
     let mut previous = String::new();
@@ -750,6 +864,7 @@ fn cs32b_owned_start_failure_and_cancel_preserve_setup() -> Result<()> {
         left,
         cli(),
         false,
+        None,
         Arc::new(Cleanup {
             reveal_exit: Some(reveal_exit.clone()),
             ..Cleanup::default()
@@ -834,7 +949,7 @@ fn cs32b_owned_start_failure_and_cancel_preserve_setup() -> Result<()> {
     );
 
     let saved = right.record.clone();
-    let mut work = Work::start(right, cli(), false)?;
+    let mut work = Work::start(right, cli(), false, None)?;
     work.cancel();
     let end = Instant::now() + Duration::from_secs(20);
     loop {

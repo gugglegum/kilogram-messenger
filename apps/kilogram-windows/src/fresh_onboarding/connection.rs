@@ -18,6 +18,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     fs,
     io::Read,
+    net::{Ipv4Addr, SocketAddr},
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     sync::{
@@ -30,6 +31,19 @@ use std::{
 };
 use zeroize::Zeroizing;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(super) struct LanSettings {
+    pub local: Ipv4Addr,
+    pub peer: Ipv4Addr,
+}
+impl LanSettings {
+    pub fn validate(self) -> Result<()> {
+        kilogram_protocol::ordered_dialog_v2::DirectLan2::new(self.local, self.peer)?;
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(super) struct State {
@@ -40,10 +54,15 @@ pub(super) struct State {
     pub incoming_digest: Option<String>,
     pub imports: [consent::Outcome; 2],
     pub last_outcome: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lan: Option<LanSettings>,
 }
 impl State {
     pub fn validate(&self) -> Result<()> {
         ensure!(self.version == 1, "Unsupported connection progress");
+        if let Some(lan) = self.lan {
+            lan.validate()?;
+        }
         for (name, prefix) in [(&self.profile, "profile-"), (&self.incoming, "peer-")] {
             if let Some(n) = name {
                 let id = n
@@ -84,6 +103,24 @@ fn change(setup: &mut Setup, f: impl FnOnce(&mut State)) -> Result<()> {
         });
         f(s)
     })
+}
+pub(super) fn lan_settings(setup: &Setup) -> Option<LanSettings> {
+    setup.record.connection.as_ref().and_then(|state| state.lan)
+}
+pub(super) fn select_route(setup: &mut Setup, lan: Option<LanSettings>) -> Result<()> {
+    if let Some(lan) = lan {
+        lan.validate()?;
+    }
+    if lan_settings(setup) != lan {
+        change(setup, |state| {
+            state.lan = lan;
+            state.profile = None;
+            state.profile_digest = None;
+            state.imports = [consent::Outcome::NotStarted; 2];
+            state.last_outcome = None;
+        })?;
+    }
+    Ok(())
 }
 fn digest(raw: &[u8]) -> String {
     artifact::hex(blake3::hash(raw).as_bytes())
@@ -140,6 +177,7 @@ fn check_artifact_path(setup: &Setup, path: &Path) -> Result<()> {
 fn expected(setup: &Setup) -> Result<Profile2Document> {
     let info = setup.record.public.as_ref().context("Account")?;
     let base = directory(setup)?;
+    let lan = lan_settings(setup);
     Ok(Profile2Document {
         version: 2,
         profile_mode: "ordered-dialog-v2".into(),
@@ -153,8 +191,12 @@ fn expected(setup: &Setup) -> Result<Profile2Document> {
         locator_directory: base.join("locators"),
         route: ProfileRoute2 {
             policy: ProfileRoutePolicy2::DirectOnly,
-            bind: Some("127.0.0.1:0".parse()?),
+            bind: Some(SocketAddr::from((
+                lan.map_or(Ipv4Addr::LOCALHOST, |lan| lan.local),
+                0,
+            ))),
             relay: None,
+            lan_peer_ipv4: lan.map(|lan| lan.peer),
         },
         logical_quota: Some([16 * 1024 * 1024 * 1024; 2]),
         physical_quota: Some(48 * 1024 * 1024 * 1024),
@@ -194,7 +236,7 @@ pub(super) fn prepare(
     let path = directory(setup)?.join(state.profile.as_ref().context("Profile")?);
     check_artifact_path(setup, &path)?;
     if !path.exists() {
-        let args: Vec<std::ffi::OsString> = vec![
+        let mut args: Vec<std::ffi::OsString> = vec![
             "runtime-profile-create".into(),
             "--profile-mode".into(),
             "ordered-dialog-v2".into(),
@@ -219,8 +261,15 @@ pub(super) fn prepare(
             "--route-policy".into(),
             "direct-only".into(),
             "--ordered-bind".into(),
-            "127.0.0.1:0".into(),
+            doc.route
+                .bind
+                .context("Missing direct bind")?
+                .to_string()
+                .into(),
         ];
+        if let Some(peer) = doc.route.lan_peer_ipv4 {
+            args.extend(["--ordered-lan-peer-ipv4".into(), peer.to_string().into()]);
+        }
         // A lost acknowledgement may leave a complete no-clobber output.
         let _outcome = helper::public_command(exe, &args, cancel.clone());
     }
@@ -558,7 +607,8 @@ impl Session {
             "Status is not from the live owned run"
         );
         ensure!(
-            status.route == self.doc.route && status.endpoint.is_some(),
+            status.route == self.doc.route
+                && (status.endpoint.is_some() || self.doc.route.lan_peer_ipv4.is_some()),
             "Runtime route/endpoint mismatch"
         );
         for (slot, reference) in self.consent_refs.iter().enumerate() {
@@ -594,9 +644,11 @@ impl Session {
         let status = cancellable(&self.rt, cancel, client.status())?;
         self.validate_status(&status)?;
         let (_, end) = self.consent_interval;
-        let mut view = View::waiting(
-            "Runtime running; exchange current public locators. Waiting for authenticated connection.",
-        );
+        let mut view = View::waiting(if status.endpoint.is_none() {
+            "LAN address unavailable. The local runtime is still running."
+        } else {
+            "Runtime running; exchange current public locators. Waiting for authenticated connection."
+        });
         view.running = true;
         view.request_started = started;
         view.consent_expires = end;
@@ -611,6 +663,7 @@ impl Session {
             view.connected[slot] = c.phase == 3
                 && c.active
                 && c.live_admitted
+                && (self.doc.route.lan_peer_ipv4.is_none() || c.selected_lan_peer.is_some())
                 && c.blocked.is_none()
                 && c.policy_error.is_none();
             view.lease_expires[slot] = c.lease_expires.unwrap_or(0);
@@ -631,12 +684,13 @@ impl Session {
         let blobs = envelope.validate(setup, false)?;
         let _ = self.poll(cancel)?;
         let status = self.last_status.as_ref().context("Status")?;
-        let endpoint = &status.endpoint.as_ref().context("Endpoint")?.id;
+        let endpoint = status.endpoint.as_ref().context("Endpoint")?;
         for (slot, raw) in blobs.iter().enumerate() {
             let loc = kilogram_protocol::ordered_dialog_v2::ParsedRuntimeLocator2::parse(raw)?;
             ensure!(
-                artifact::hex(&loc.fields().endpoint) == *endpoint
-                    && loc.fields().revision == status.installed(slot)?.own_locator_revision,
+                artifact::hex(&loc.fields().endpoint) == endpoint.id
+                    && loc.fields().revision == status.installed(slot)?.own_locator_revision
+                    && (self.doc.route.lan_peer_ipv4.is_none() || loc.fields().ips == endpoint.ips),
                 "Own locators changed; export again"
             );
         }
@@ -1133,14 +1187,20 @@ pub(super) struct Work {
     pub view: View,
 }
 impl Work {
-    pub fn start(setup: Setup, exe: PathBuf, fresh_profile: bool) -> Result<Self> {
-        Self::start_with_cleanup(setup, exe, fresh_profile, Arc::new(Cleanup::default()))
+    pub fn start(
+        setup: Setup,
+        exe: PathBuf,
+        fresh_profile: bool,
+        lan: Option<LanSettings>,
+    ) -> Result<Self> {
+        Self::start_with_cleanup(setup, exe, fresh_profile, lan, Arc::new(Cleanup::default()))
     }
 
     fn start_with_cleanup(
         mut setup: Setup,
         exe: PathBuf,
         fresh_profile: bool,
+        lan: Option<LanSettings>,
         cleanup: Arc<Cleanup>,
     ) -> Result<Self> {
         let cancel = Arc::new(AtomicBool::new(false));
@@ -1154,18 +1214,20 @@ impl Work {
         thread::Builder::new()
             .name("fresh-owned-runtime".into())
             .spawn(move || {
-                let result = run_worker(
-                    &mut setup,
-                    &exe,
-                    signal,
-                    fresh_profile,
-                    Inbox {
-                        actions: rx,
-                        deliveries: delivery_rx,
-                    },
-                    vtx,
-                    &owner_cleanup,
-                );
+                let result = select_route(&mut setup, lan).and_then(|()| {
+                    run_worker(
+                        &mut setup,
+                        &exe,
+                        signal,
+                        fresh_profile,
+                        Inbox {
+                            actions: rx,
+                            deliveries: delivery_rx,
+                        },
+                        vtx,
+                        &owner_cleanup,
+                    )
+                });
                 let _ = dtx.send((setup, result));
             })?;
         Ok(Self {

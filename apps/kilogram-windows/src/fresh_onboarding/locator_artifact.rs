@@ -127,6 +127,8 @@ impl Envelope {
             artifact::unhex(&self.locators[1], 8192)?,
         ];
         let mut endpoint = None;
+        let lan = super::connection::lan_settings(setup);
+        let mut lan_socket = None;
         for (slot, blob) in raw.iter().enumerate() {
             let locator = wire::ParsedRuntimeLocator2::parse(blob)?;
             let (own, other) = if incoming {
@@ -141,13 +143,25 @@ impl Envelope {
             )?;
             let f = locator.fields();
             ensure!(
-                f.not_before <= wall
-                    && wall < f.expires
-                    && f.relay.is_none()
-                    && !f.ips.is_empty()
-                    && f.ips.iter().all(|a| a.ip().is_loopback()),
-                "Locator expired/future or outside local pilot route"
+                f.not_before <= wall && wall < f.expires,
+                "Locator expired or not yet valid"
             );
+            if let Some(lan) = lan {
+                let expected = if incoming { lan.peer } else { lan.local };
+                let socket = locator.direct_lan_socket(expected)?;
+                ensure!(
+                    lan_socket.is_none_or(|prior| prior == socket),
+                    "LAN locator socket pair mismatch"
+                );
+                lan_socket = Some(socket);
+            } else {
+                ensure!(
+                    f.relay.is_none()
+                        && !f.ips.is_empty()
+                        && f.ips.iter().all(|a| a.ip().is_loopback()),
+                    "Locator outside local pilot route"
+                );
+            }
             ensure!(
                 endpoint.is_none_or(|e| e == f.endpoint),
                 "Locator endpoint pair mismatch"

@@ -4,7 +4,11 @@ use anyhow::{Result, ensure};
 use kilogram_identity::{AccountId, DeviceId};
 use kilogram_protocol::ordered_dialog_v2::{self as wire, Id, Value, a, b, u};
 use serde::{Deserialize, Deserializer, Serialize, de::IgnoredAny};
-use std::{net::SocketAddr, path::PathBuf, time::Duration};
+use std::{
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    path::PathBuf,
+    time::Duration,
+};
 
 mod messaging;
 pub use messaging::{
@@ -36,6 +40,29 @@ pub struct ProfileRoute2 {
     pub policy: ProfileRoutePolicy2,
     pub bind: Option<SocketAddr>,
     pub relay: Option<String>,
+    #[serde(
+        default,
+        deserialize_with = "present",
+        skip_serializing_if = "Option::is_none"
+    )]
+    pub lan_peer_ipv4: Option<Ipv4Addr>,
+}
+impl ProfileRoute2 {
+    pub fn direct_lan(&self) -> Result<Option<wire::DirectLan2>> {
+        let Some(peer) = self.lan_peer_ipv4 else {
+            return Ok(None);
+        };
+        let Some(SocketAddr::V4(bind)) = self.bind else {
+            anyhow::bail!("LAN requires a concrete IPv4 bind");
+        };
+        ensure!(
+            self.policy == ProfileRoutePolicy2::DirectOnly
+                && self.relay.is_none()
+                && bind.port() == 0,
+            "LAN requires direct-only, an OS-assigned port and no relay"
+        );
+        Ok(Some(wire::DirectLan2::new(*bind.ip(), peer)?))
+    }
 }
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -96,6 +123,7 @@ impl Profile2Document {
             id(pin)?;
         }
         ensure!(doc.contexts[0] != doc.contexts[1], "duplicate contexts");
+        doc.route.direct_lan()?;
         ensure!(
             !doc.enabled.is_empty()
                 && doc.enabled.len() <= 2
@@ -278,6 +306,8 @@ pub struct Installed2 {
     pub publication_ready: bool,
     pub file_exported: bool,
     pub live_admitted: bool,
+    #[serde(default, deserialize_with = "present")]
+    pub selected_lan_peer: Option<SocketAddr>,
     #[serde(deserialize_with = "nullable")]
     pub lease_expires: Option<u64>,
     pub details: Details2,
@@ -331,11 +361,20 @@ impl Status2 {
             "status scope"
         );
         id(&status.runtime_instance)?;
+        let lan = status.route.direct_lan()?;
+        if let (Some(lan), Some(e)) = (lan, status.endpoint.as_ref()) {
+            ensure!(
+                matches!(e.ips.as_slice(), [ip] if ip.ip() == IpAddr::V4(lan.local()) && ip.port() != 0)
+                    && e.relays.is_empty(),
+                "invalid LAN endpoint snapshot"
+            );
+        }
         if let Some(e) = &status.endpoint {
             id(&e.id)?;
             ensure!(e.ips.len() <= 16 && e.relays.len() <= 1, "endpoint size");
         }
         let mut seen = [false; 2];
+        let mut selected_lan_peer = None;
         for (index, c) in status.contexts.iter().enumerate() {
             let slot = match c {
                 Context2::Installed(c) => {
@@ -363,6 +402,24 @@ impl Status2 {
                         "active shape"
                     );
                     ensure!(c.live_admitted == c.lease_expires.is_some(), "lease shape");
+                    ensure!(
+                        match (lan, c.live_admitted, c.selected_lan_peer) {
+                            (Some(lan), true, Some(addr)) =>
+                                status.endpoint.is_some()
+                                    && addr.ip() == IpAddr::V4(lan.peer())
+                                    && addr.port() != 0,
+                            (None, _, None) | (Some(_), false, None) => true,
+                            _ => false,
+                        },
+                        "LAN path and live lease disagree"
+                    );
+                    if let Some(socket) = c.selected_lan_peer {
+                        ensure!(
+                            selected_lan_peer.is_none_or(|previous| previous == socket),
+                            "LAN slots disagree on the selected peer socket"
+                        );
+                        selected_lan_peer = Some(socket);
+                    }
                     c.slot
                 }
                 Context2::Missing(c) => {
