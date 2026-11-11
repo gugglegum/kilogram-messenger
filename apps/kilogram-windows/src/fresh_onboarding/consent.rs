@@ -418,6 +418,27 @@ fn lineage(setup: &Setup, inputs: &Inputs, blobs: &[Vec<u8>; 2]) -> Result<()> {
 pub(super) fn period(setup: &Setup) -> Result<(u64, u64)> {
     Ok(get_inputs(setup, false)?.interval())
 }
+
+/// Exact accepted final references for the connection adapter; no DB claim.
+pub(super) fn connection_refs(setup: &Setup) -> Result<[String; 2]> {
+    review(setup, true)?;
+    let state = setup.record.consent.as_ref().context("Consent")?;
+    let envelope = Envelope::decode(
+        &state
+            .final_artifact
+            .as_ref()
+            .context("Finals")?
+            .read(setup, artifact::FILE_CAP)?,
+    )?;
+    let blobs = envelope.payloads()?;
+    let mut refs = [String::new(), String::new()];
+    for (slot, raw) in blobs.iter().enumerate() {
+        let value = wire::decode(raw, BLOB_CAP)?;
+        refs[slot] =
+            artifact::hex(&wire::ParsedConsent2::parse(value.fields(6)?[5].bytes()?)?.reference());
+    }
+    Ok(refs)
+}
 fn envelope(setup: &Setup, kind: Kind, inputs: &Inputs, blobs: [Vec<u8>; 2]) -> Envelope {
     Envelope {
         version: 1,
@@ -855,4 +876,4 @@ pub(super) fn export(setup: &Setup) -> Result<PathBuf> {
 
 #[cfg(test)]
 #[path = "consent_tests.rs"]
-mod tests;
+pub(super) mod tests;

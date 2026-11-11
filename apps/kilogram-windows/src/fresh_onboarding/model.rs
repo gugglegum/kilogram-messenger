@@ -52,6 +52,8 @@ pub(super) struct Record {
     pub public: Option<Ordered2BootstrapPublic>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub consent: Option<super::consent::State>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connection: Option<super::connection::State>,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -162,6 +164,7 @@ impl Setup {
             acknowledged: false,
             public: None,
             consent: None,
+            connection: None,
         };
         Self::validate(&record, &home)?;
         ensure!(
@@ -215,6 +218,9 @@ impl Setup {
             }
         }
         super::consent::review(&setup, false)?;
+        if let Some(state) = &setup.record.connection {
+            state.validate()?;
+        }
         Ok(setup)
     }
     pub(super) fn update(&mut self, f: impl FnOnce(&mut Record)) -> Result<()> {
@@ -227,6 +233,9 @@ impl Setup {
         let mut next = self.record.clone();
         f(&mut next);
         Self::validate(&next, &self.home)?;
+        if let Some(state) = &next.connection {
+            state.validate()?;
+        }
         let raw = serde_json::to_vec_pretty(&next)?;
         ensure!(raw.len() <= RECORD_CAP, "Setup record cap");
         write(&self.home.join("setup.json"), &raw, true)?;

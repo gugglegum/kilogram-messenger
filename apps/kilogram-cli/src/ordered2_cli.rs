@@ -491,16 +491,54 @@ fn request_id(raw: &str) -> Result<[u8; 16]> {
 }
 pub async fn call(path: &Path, body: Value) -> Result<Value> {
     let request = wire::encode(&body, 32 * 1024)?;
-    match kilogram_runtime_ipc::call(path, RuntimeIpcCommand::OrderedDialog { request }).await? {
-        RuntimeIpcResponse::OrderedDialog { response } => {
-            let value = wire::decode(&response, 48 * 1024)?;
-            ensure!(value.fields(3)?[0].uint()? == 2, "IPC reply version");
-            Ok(value.fields(3)?[2].clone())
-        }
+    let opcode = body.list()?.get(1).context("IPC opcode")?.uint()?;
+    decode_cli_reply(
+        opcode,
+        kilogram_runtime_ipc::call(path, RuntimeIpcCommand::OrderedDialog { request }).await?,
+    )
+}
+fn decode_cli_reply(opcode: u64, response: RuntimeIpcResponse) -> Result<Value> {
+    match response {
         RuntimeIpcResponse::Error { message } => bail!("{message}"),
-        _ => bail!("unexpected IPC response"),
+        other => kilogram_runtime_ipc::ordered2::decode_reply(opcode, other),
     }
 }
+
+#[test]
+fn cs32b_cli_runtime_refusal_preserves_message_and_strict_reply() -> Result<()> {
+    let message = "request conflicts with an existing record";
+    assert_eq!(
+        decode_cli_reply(
+            8,
+            RuntimeIpcResponse::Error {
+                message: message.into()
+            }
+        )
+        .err()
+        .context("CLI accepted a runtime refusal")?
+        .to_string(),
+        message
+    );
+    assert!(decode_cli_reply(8, RuntimeIpcResponse::ShutdownAccepted).is_err());
+    let reply = |fields| -> Result<_> {
+        Ok(RuntimeIpcResponse::OrderedDialog {
+            response: wire::encode(&a(fields), 1024)?,
+        })
+    };
+    for fields in [
+        vec![u(1), u(8), u(42)],
+        vec![u(2), u(9), u(42)],
+        vec![u(2), u(8)],
+    ] {
+        assert!(decode_cli_reply(8, reply(fields)?).is_err());
+    }
+    assert_eq!(
+        decode_cli_reply(8, reply(vec![u(2), u(8), u(42)])?)?.uint()?,
+        42
+    );
+    Ok(())
+}
+
 fn json(value: &Value) -> serde_json::Value {
     match value {
         Value::U(n) => (*n).into(),

@@ -22,6 +22,7 @@ use tokio::{
     time::timeout,
 };
 
+pub mod ordered2;
 mod peer_reenrollment_contract;
 mod recipient_import_consumption_contract;
 mod recipient_import_execution_contract;
@@ -2085,6 +2086,27 @@ pub async fn call(
     command: RuntimeIpcCommand,
 ) -> Result<RuntimeIpcResponse> {
     let descriptor = load_descriptor(descriptor_path)?;
+    call_descriptor(&descriptor, command, MAX_FRAME_BYTES).await
+}
+
+/// Identity checks and transport inputs always use the same verified object.
+pub async fn call_with_descriptor(
+    descriptor: &RuntimeIpcDescriptor,
+    expected: (AccountId, DeviceId),
+    command: RuntimeIpcCommand,
+) -> Result<RuntimeIpcResponse> {
+    descriptor.verify()?;
+    ensure!(
+        descriptor.account_id() == expected.0 && descriptor.device_id() == expected.1,
+        "runtime identity mismatch"
+    );
+    call_descriptor(descriptor, command, 64 * 1024).await
+}
+async fn call_descriptor(
+    descriptor: &RuntimeIpcDescriptor,
+    command: RuntimeIpcCommand,
+    cap: usize,
+) -> Result<RuntimeIpcResponse> {
     let (address, token) = descriptor.verify()?;
     let mut stream = timeout(CONNECT_TIMEOUT, TcpStream::connect(address))
         .await
@@ -2098,7 +2120,7 @@ pub async fn call(
     timeout(IO_TIMEOUT, write_frame(&mut stream, &request))
         .await
         .context("runtime IPC request timed out")??;
-    timeout(IO_TIMEOUT, read_frame(&mut stream))
+    timeout(IO_TIMEOUT, read_frame_limited(&mut stream, cap))
         .await
         .context("runtime IPC response timed out")?
 }
@@ -2299,11 +2321,17 @@ fn load_descriptor(path: &Path) -> Result<RuntimeIpcDescriptor> {
         metadata.len() <= MAX_DESCRIPTOR_BYTES,
         "runtime IPC descriptor is too large"
     );
-    let descriptor: RuntimeIpcDescriptor = serde_json::from_slice(
-        &fs::read(path)
-            .with_context(|| format!("read runtime IPC descriptor {}", path.display()))?,
-    )
-    .context("decode runtime IPC descriptor")?;
+    let mut raw = Vec::new();
+    std::io::Read::read_to_end(
+        &mut std::io::Read::take(fs::File::open(path)?, MAX_DESCRIPTOR_BYTES + 1),
+        &mut raw,
+    )?;
+    ensure!(
+        raw.len() as u64 <= MAX_DESCRIPTOR_BYTES,
+        "runtime IPC descriptor grew beyond cap"
+    );
+    let descriptor: RuntimeIpcDescriptor =
+        serde_json::from_slice(&raw).context("decode runtime IPC descriptor")?;
     descriptor.verify()?;
     Ok(descriptor)
 }
@@ -2330,6 +2358,7 @@ async fn write_frame_limited<T: Serialize>(
     stream.flush().await.context("flush runtime IPC frame")
 }
 
+#[cfg(test)]
 async fn read_frame<T: DeserializeOwned>(stream: &mut TcpStream) -> Result<T> {
     read_frame_limited(stream, MAX_FRAME_BYTES).await
 }

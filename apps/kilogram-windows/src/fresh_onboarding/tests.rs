@@ -5,8 +5,11 @@ use model::{Record, Setup};
 use std::{fs, time::Duration};
 
 fn fixture() -> Result<PathBuf> {
-    let parent =
-        Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.tmp/clean-start-cs3-1/fixtures");
+    let parent = std::env::var_os("KILOGRAM_CS_TEST_FIXTURE_ROOT")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.tmp/clean-start-cs3-1/fixtures")
+        });
     fs::create_dir_all(&parent)?;
     Ok(tempfile::Builder::new()
         .prefix("CS31-")

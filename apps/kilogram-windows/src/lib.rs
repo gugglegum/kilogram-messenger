@@ -9792,6 +9792,7 @@ impl Drop for KilogramApp {
 
 impl eframe::App for KilogramApp {
     fn update(&mut self, context: &egui::Context, _frame: &mut eframe::Frame) {
+        self.fresh_onboarding.handle_close(context);
         if self.fresh_selected {
             egui::CentralPanel::default().show(context, |ui| {
                 egui::ScrollArea::vertical().show(ui, |ui| {

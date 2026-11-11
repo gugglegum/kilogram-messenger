@@ -1197,6 +1197,14 @@ fn ipc2(
                 }
                 let s = owner.snapshot(c)?;
                 let counts = owner.repository.counts(c)?;
+                let live_admitted = owner.require(c, true).is_ok();
+                let lease_expires = if live_admitted {
+                    owner.leases[usize::from(c)]
+                        .as_ref()
+                        .map(|lease| lease.wall_deadline)
+                } else {
+                    None
+                };
                 let publication_ready = owner.export_locator(c, instance, addr).is_ok();
                 let policy_error = now()
                     .and_then(|wall| owner.current(&s, wall))
@@ -1210,7 +1218,7 @@ fn ipc2(
                     serde_json::Value::Null
                 };
                 let details = serde_json::json!({"native":native,"native_hash":s.head.native_hash.map(|id|hex(&id)),"offer":s.head.offer.map(|id|hex(&id)),"grant":s.head.grant.map(|id|hex(&id)),"readies":s.head.ready.iter().map(|r|r.as_ref().map(|r|hex(&wire::hash(b"",r)))).collect::<Vec<_>>(),"current_consent":wire::ParsedConsent2::parse(&s.spec.consent).ok().map(|v|hex(&v.reference())),"selected_hash":hex(&wire::hash(b"",&s.selection.proof)),"policy_generation":s.profile.policy_generation,"wall_high_water":s.profile.wall_high_water});
-                contexts.push(serde_json::json!({"slot":c,"context":hex(&s.head.context),"role":s.head.role,"phase":s.head.phase,"active":s.head.active,"native_generation":s.head.native_generation,"d":s.head.dialog.map(|x|hex(&x)),"e":s.head.epoch.map(|x|hex(&x)),"sid":s.head.sid,"q":s.head.mode_ref.map(|x|hex(&x)),"blocked":s.head.blocked,"own_locator_revision":s.spec.own_locator_revision,"peer_locator_revision":s.spec.peer_locator_revision,"publication_ready":publication_ready,"file_exported":owner.exported[usize::from(c)].is_some(),"policy_error":policy_error,"counts":counts,"details":details}));
+                contexts.push(serde_json::json!({"slot":c,"live_admitted":live_admitted,"lease_expires":lease_expires,"context":hex(&s.head.context),"role":s.head.role,"phase":s.head.phase,"active":s.head.active,"native_generation":s.head.native_generation,"d":s.head.dialog.map(|x|hex(&x)),"e":s.head.epoch.map(|x|hex(&x)),"sid":s.head.sid,"q":s.head.mode_ref.map(|x|hex(&x)),"blocked":s.head.blocked,"own_locator_revision":s.spec.own_locator_revision,"peer_locator_revision":s.spec.peer_locator_revision,"publication_ready":publication_ready,"file_exported":owner.exported[usize::from(c)].is_some(),"policy_error":policy_error,"counts":counts,"details":details}));
             }
             owner.stats.aborted_packet_calls = owner.stats.packet_attempts.saturating_sub(
                 owner.stats.committed_encrypt
@@ -1218,7 +1226,7 @@ fn ipc2(
                     + owner.stats.ambiguous_packet_calls,
             );
             b(serde_json::to_vec(
-                &serde_json::json!({"version":2,"contexts":contexts,"stats":owner.stats,"window":owner.window.snapshot(),"resources":owner.resources.snapshot(),"endpoint":owner.endpoint.as_ref().map(|(_,addr)|serde_json::json!({"id":hex(addr.id.as_bytes()),"ips":addr.ip_addrs().collect::<Vec<_>>(),"relays":addr.relay_urls().map(|u|u.as_str()).collect::<Vec<_>>()})),"route":owner.route,"root_generation":owner.repository.generation(),"backend":owner.repository.backend_stats()?}),
+                &serde_json::json!({"version":2,"runtime_pid":std::process::id(),"runtime_instance":hex(&instance),"contexts":contexts,"stats":owner.stats,"window":owner.window.snapshot(),"resources":owner.resources.snapshot(),"endpoint":owner.endpoint.as_ref().map(|(_,addr)|serde_json::json!({"id":hex(addr.id.as_bytes()),"ips":addr.ip_addrs().collect::<Vec<_>>(),"relays":addr.relay_urls().map(|u|u.as_str()).collect::<Vec<_>>()})),"route":owner.route,"root_generation":owner.repository.generation(),"backend":owner.repository.backend_stats()?}),
             )?)
         }
         2 => {

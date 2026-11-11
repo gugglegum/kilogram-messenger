@@ -1,8 +1,10 @@
-//! Explicit first-dialog pilot. Offline consent only; no profile/IPC/runtime start.
+//! Explicit first-dialog local connection pilot; messaging remains separate.
 mod artifact;
+mod connection;
 mod consent;
 mod consent_artifact;
 mod helper;
+mod locator_artifact;
 mod model;
 #[cfg(test)]
 mod tests;
@@ -65,6 +67,9 @@ pub(super) struct Panel {
     reveal: bool,
     work: Option<Work>,
     consent_work: Option<ConsentWork>,
+    connection_work: Option<connection::Work>,
+    locator_input: String,
+    close_requested: bool,
     consent_input: String,
     consent_next_check: Instant,
     consent_check_error: Option<String>,
@@ -87,6 +92,9 @@ impl Panel {
             reveal: false,
             work: None,
             consent_work: None,
+            connection_work: None,
+            locator_input: String::new(),
+            close_requested: false,
             consent_input: String::new(),
             consent_next_check: Instant::now(),
             consent_check_error: None,
@@ -100,6 +108,9 @@ impl Panel {
         panel
     }
     pub fn pause(&mut self) {
+        if let Some(work) = &mut self.connection_work {
+            work.cancel();
+        }
         self.work = None;
         self.consent_work = None;
         if let Some(setup) = &mut self.setup {
@@ -288,9 +299,14 @@ impl Panel {
     pub fn draw(&mut self, ui: &mut egui::Ui) {
         self.poll();
         self.poll_consent();
+        self.poll_connection();
+        if self.connection_work.is_some() {
+            self.draw_connection(ui);
+            return;
+        }
         ui.heading("First-dialog pilot");
         ui.label("Create an invitation, or join one before creating your first account.");
-        ui.small("One peer only. Connection and messaging come in the next step. Direct connections between different PCs and volunteer storage are not enabled in this pilot.");
+        ui.small("One peer only. Local connection is available after mutual consent. Messaging comes in the next step. Direct connections between different PCs and volunteer storage are not enabled in this pilot.");
         ui.separator();
         if self.consent_work.is_some() {
             ui.spinner();
@@ -487,6 +503,28 @@ impl Panel {
             }
         }
         self.draw_consent(ui);
+        if self.work.is_none()
+            && self.consent_work.is_none()
+            && self.setup.as_ref().is_some_and(|s| {
+                s.record
+                    .consent
+                    .as_ref()
+                    .is_some_and(|c| c.final_artifact.is_some())
+            })
+        {
+            ui.separator();
+            ui.heading("Local connection pilot");
+            ui.label("Two windows on this computer only. Both permissions are checked before each start. No messages or remote-device connection yet.");
+            for (label, fresh) in [
+                ("Start local connection", false),
+                ("Retry with a new local profile file", true),
+            ] {
+                if ui.button(label).clicked() {
+                    let result = self.start_connection(fresh);
+                    self.record_result(result);
+                }
+            }
+        }
         if let Some(notice) = &self.notice {
             ui.separator();
             ui.label(notice);
@@ -494,6 +532,83 @@ impl Panel {
         if let Some(error) = &self.error {
             ui.colored_label(ui.visuals().error_fg_color, error);
         }
+    }
+    fn start_connection(&mut self, fresh: bool) -> Result<()> {
+        ensure!(
+            self.connection_work.is_none() && self.consent_work.is_none() && self.work.is_none(),
+            "Another operation is running"
+        );
+        let setup = self
+            .setup
+            .take()
+            .ok_or_else(|| anyhow::anyhow!("Open the saved setup"))?;
+        self.connection_work = Some(connection::Work::start(
+            setup,
+            self.cli_executable.clone(),
+            fresh,
+        )?);
+        Ok(())
+    }
+    pub fn poll_connection(&mut self) {
+        let done = self
+            .connection_work
+            .as_mut()
+            .and_then(connection::Work::poll);
+        if let Some((setup, result)) = done {
+            self.connection_work = None;
+            self.setup = Some(setup);
+            match result {
+                Ok(stop) if stop.graceful && stop.reaped && stop.eof && stop.exit==Some(0)=>{self.notice=Some("Owned runtime stopped gracefully. The same account and permissions are ready for an explicit restart.".into());self.error=None;},
+                _=>self.error=Some("Runtime start/stop did not complete gracefully. Existing account and public artifacts were kept; any forced cleanup is not a successful graceful stop.".into()),
+            }
+        }
+    }
+    pub fn handle_close(&mut self, ctx: &egui::Context) {
+        self.poll_connection();
+        if ctx.input(|i| i.viewport().close_requested()) && self.connection_work.is_some() {
+            self.close_requested = true;
+            ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
+            if let Some(w) = &mut self.connection_work {
+                w.cancel();
+            }
+        }
+        if self.close_requested && self.connection_work.is_none() {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+        }
+    }
+    fn draw_connection(&mut self, ui: &mut egui::Ui) {
+        let Some(work) = &mut self.connection_work else {
+            return;
+        };
+        ui.heading("Local connection pilot - two windows on this computer");
+        ui.label(format!("Saved setup: {}", self.home));
+        let current = work
+            .view
+            .current(Instant::now(), consent::now().unwrap_or(u64::MAX));
+        if current {
+            ui.heading("Connected locally - authenticated Active2 on both slots");
+        } else {
+            ui.heading("Connection not currently confirmed");
+        }
+        ui.label(&work.view.text);
+        ui.small("A connected badge reflects a recent checked runtime lease. Peer availability may change. Messaging, remote devices and volunteer storage come later.");
+        if ui.button("Export current public locators").clicked() {
+            let _ = work.action(connection::Action::Export);
+        }
+        ui.label("Public locator file from the selected peer");
+        ui.add(egui::TextEdit::singleline(&mut self.locator_input).desired_width(f32::INFINITY));
+        if ui.button("Inspect and import both peer locators").clicked() {
+            let _ = work.action(connection::Action::Import(PathBuf::from(
+                &self.locator_input,
+            )));
+        }
+        if ui.button("Retry retained peer locators").clicked() {
+            let _ = work.action(connection::Action::Resume);
+        }
+        if ui.button("Stop local connection").clicked() {
+            work.cancel();
+        }
+        ui.add_enabled(false, egui::Button::new("Send messages (next step)"));
     }
     fn draw_consent(&mut self, ui: &mut egui::Ui) {
         let Some(setup) = &self.setup else { return };

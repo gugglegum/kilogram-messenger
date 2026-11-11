@@ -1,10 +1,11 @@
 use super::*;
+use kilogram_runtime_ipc::ordered2::{Profile2Document, ProfileRoute2, ProfileRoutePolicy2};
 use kilogram_transport_iroh::ordered2::RouteConfig2;
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 #[derive(Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(try_from = "Profile2Document", into = "Profile2Document")]
 pub struct Profile2 {
     pub version: u8,
     pub profile_mode: String,
@@ -17,16 +18,72 @@ pub struct Profile2 {
     pub ipc_file: PathBuf,
     pub locator_directory: PathBuf,
     pub route: RouteConfig2,
-    #[serde(default = "logical_quota")]
     pub logical_quota: [u64; 2],
-    #[serde(default = "physical_quota")]
     pub physical_quota: u64,
 }
-fn logical_quota() -> [u64; 2] {
-    db::Config::default().logical_quota
+impl TryFrom<Profile2Document> for Profile2 {
+    type Error = anyhow::Error;
+    fn try_from(d: Profile2Document) -> Result<Self> {
+        let defaults = db::Config::default();
+        Ok(Self {
+            version: d.version,
+            profile_mode: d.profile_mode,
+            state_dir: d.state_dir,
+            account: d.account,
+            claim: d.claim,
+            device: d.device,
+            contexts: d.contexts,
+            enabled: d.enabled,
+            ipc_file: d.ipc_file,
+            locator_directory: d.locator_directory,
+            route: RouteConfig2 {
+                policy: match d.route.policy {
+                    ProfileRoutePolicy2::Auto => kilogram_transport_iroh::RoutePolicy::Auto,
+                    ProfileRoutePolicy2::DirectOnly => {
+                        kilogram_transport_iroh::RoutePolicy::DirectOnly
+                    }
+                    ProfileRoutePolicy2::RelayOnly => {
+                        kilogram_transport_iroh::RoutePolicy::RelayOnly
+                    }
+                },
+                bind: d.route.bind,
+                relay: d.route.relay,
+            },
+            logical_quota: d.logical_quota.unwrap_or(defaults.logical_quota),
+            physical_quota: d.physical_quota.unwrap_or(defaults.physical_quota),
+        })
+    }
 }
-fn physical_quota() -> u64 {
-    db::Config::default().physical_quota
+impl From<Profile2> for Profile2Document {
+    fn from(d: Profile2) -> Self {
+        Self {
+            version: d.version,
+            profile_mode: d.profile_mode,
+            state_dir: d.state_dir,
+            account: d.account,
+            claim: d.claim,
+            device: d.device,
+            contexts: d.contexts,
+            enabled: d.enabled,
+            ipc_file: d.ipc_file,
+            locator_directory: d.locator_directory,
+            route: ProfileRoute2 {
+                policy: match d.route.policy {
+                    kilogram_transport_iroh::RoutePolicy::Auto => ProfileRoutePolicy2::Auto,
+                    kilogram_transport_iroh::RoutePolicy::DirectOnly => {
+                        ProfileRoutePolicy2::DirectOnly
+                    }
+                    kilogram_transport_iroh::RoutePolicy::RelayOnly => {
+                        ProfileRoutePolicy2::RelayOnly
+                    }
+                },
+                bind: d.route.bind,
+                relay: d.route.relay,
+            },
+            logical_quota: Some(d.logical_quota),
+            physical_quota: Some(d.physical_quota),
+        }
+    }
 }
 impl Profile2 {
     pub fn load(path: &Path) -> Result<Self> {
@@ -91,5 +148,47 @@ impl Profile2 {
             physical_quota: self.physical_quota,
             retained_external_bytes: 0,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn cs32b_profile_defaults_null_and_authoritative_validation() -> Result<()> {
+        let tmp = tempfile::tempdir()?;
+        let root = tmp.path().join("state");
+        std::fs::create_dir(&root)?;
+        let path = tmp.path().join("profile.json");
+        let value = serde_json::json!({"version":2,"profile_mode":"ordered-dialog-v2","state_dir":root,"account":"11".repeat(32),"claim":"22".repeat(32),"device":"33".repeat(32),"contexts":["44".repeat(32),"55".repeat(32)],"enabled":[0,1],"ipc_file":tmp.path().join("ipc.json"),"locator_directory":tmp.path().join("locators"),"route":{"policy":"direct-only","bind":"127.0.0.1:0","relay":null}});
+        std::fs::write(&path, serde_json::to_vec(&value)?)?;
+        let profile = Profile2::load(&path)?;
+        ensure!(
+            profile.logical_quota == db::Config::default().logical_quota
+                && profile.physical_quota == db::Config::default().physical_quota,
+            "default quotas drift"
+        );
+        let emitted = serde_json::to_vec(&profile)?;
+        let doc = Profile2Document::decode(&emitted)?;
+        ensure!(
+            doc.logical_quota == Some(profile.logical_quota)
+                && doc.physical_quota == Some(profile.physical_quota),
+            "emitted schema"
+        );
+        for field in ["logical_quota", "physical_quota"] {
+            let mut bad = value.clone();
+            bad[field] = serde_json::Value::Null;
+            std::fs::write(&path, serde_json::to_vec(&bad)?)?;
+            ensure!(Profile2::load(&path).is_err(), "explicit null relaxed");
+        }
+        let mut low = value.clone();
+        low["physical_quota"] = 0.into();
+        std::fs::write(&path, serde_json::to_vec(&low)?)?;
+        ensure!(Profile2::load(&path).is_err(), "quota gate bypassed");
+        let mut route = value;
+        route["route"]["bind"] = "192.0.2.1:0".into();
+        std::fs::write(&path, serde_json::to_vec(&route)?)?;
+        ensure!(Profile2::load(&path).is_err(), "route gate bypassed");
+        Ok(())
     }
 }
