@@ -6,6 +6,12 @@ use kilogram_protocol::ordered_dialog_v2::{self as wire, Id, Value, a, b, u};
 use serde::{Deserialize, Deserializer, Serialize, de::IgnoredAny};
 use std::{net::SocketAddr, path::PathBuf, time::Duration};
 
+mod messaging;
+pub use messaging::{
+    Delivery2, HistoryCursor2, HistoryPage2, HistoryRow2, MAX_HISTORY_ROWS, MessageError2,
+    RequestStatus2, SendReceipt2,
+};
+
 fn nullable<'de, D: Deserializer<'de>, T: Deserialize<'de>>(d: D) -> Result<Option<T>, D::Error> {
     Option::<T>::deserialize(d)
 }
@@ -147,11 +153,11 @@ impl Client2 {
     pub fn descriptor(&self) -> &RuntimeIpcDescriptor {
         &self.descriptor
     }
-    async fn request(&self, opcode: u64, fields: Vec<Value>) -> Result<Value> {
+    async fn response(&self, opcode: u64, fields: Vec<Value>) -> Result<RuntimeIpcResponse> {
         let mut request = vec![u(2), u(opcode)];
         request.extend(fields);
         let request = wire::encode(&a(request), 32 * 1024)?;
-        let response = tokio::time::timeout(
+        tokio::time::timeout(
             Duration::from_secs(5),
             super::call_with_descriptor(
                 &self.descriptor,
@@ -160,8 +166,10 @@ impl Client2 {
             ),
         )
         .await
-        .map_err(|_| anyhow::anyhow!("runtime request timed out"))??;
-        decode_reply(opcode, response)
+        .map_err(|_| anyhow::anyhow!("runtime request timed out"))?
+    }
+    async fn request(&self, opcode: u64, fields: Vec<Value>) -> Result<Value> {
+        decode_reply(opcode, self.response(opcode, fields).await?)
     }
     pub async fn status(&self) -> Result<Status2> {
         let v = self.request(1, vec![]).await?;

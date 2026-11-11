@@ -3658,6 +3658,7 @@ dependencies = [
  "serde_json",
  "tempfile",
  "tokio",
+ "zeroize",
 ]
 
 [[package]]
@@ -3781,6 +3782,7 @@ dependencies = [
  "kilogram-state",
  "serde",
  "serde_json",
+ "stellar-agent-windows-identity",
  "tempfile",
  "tokio",
  "zeroize",

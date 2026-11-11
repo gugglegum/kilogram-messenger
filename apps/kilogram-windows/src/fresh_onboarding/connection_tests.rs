@@ -4,7 +4,10 @@ use super::*;
 fn ready_pair(name: &str, missing: bool) -> Result<[Setup; 2]> {
     let parent =
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.tmp/clean-start-cs3-2b/fixtures");
-    let mut nodes = pair_in(&parent, name)?;
+    ready_pair_at(&parent, name, missing)
+}
+fn ready_pair_at(parent: &Path, name: &str, missing: bool) -> Result<[Setup; 2]> {
+    let mut nodes = pair_in(parent, name)?;
     let proposer = consent::role(&nodes[0])?;
     let signer = 1 - proposer;
     run_isolated(&mut nodes, proposer, consent::Action::Propose)?;
@@ -20,6 +23,10 @@ fn ready_pair(name: &str, missing: bool) -> Result<[Setup; 2]> {
     }
     Ok(nodes)
 }
+
+#[cfg(windows)]
+#[path = "connection_message_tests.rs"]
+mod messages;
 fn active_pair(sessions: &mut [Session; 2], nodes: &[Setup; 2]) -> Result<()> {
     let end = Instant::now() + Duration::from_secs(90);
     let mut previous = String::new();

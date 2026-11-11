@@ -2,11 +2,16 @@
 use super::{
     artifact, consent, helper, locator_artifact,
     model::{self, Setup},
+    send_intent,
+    send_recovery::{IpcResult, Recovery, SendRuntime},
 };
 use anyhow::{Context, Result, ensure};
 use kilogram_runtime_ipc::{
     RuntimeIpcDescriptor,
-    ordered2::{Client2, Profile2Document, ProfileRoute2, ProfileRoutePolicy2, Status2},
+    ordered2::{
+        Client2, MessageError2, Profile2Document, ProfileRoute2, ProfileRoutePolicy2,
+        RequestStatus2, SendReceipt2, Status2, id,
+    },
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -22,6 +27,7 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
+use zeroize::Zeroizing;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -756,7 +762,118 @@ pub(super) enum Action {
     Import(PathBuf),
     Resume,
     Stop,
+    #[cfg_attr(
+        not(all(test, windows)),
+        allow(dead_code, reason = "Composer wiring belongs to CS3.3b")
+    )]
+    Send {
+        slot: u8,
+        text: Zeroizing<String>,
+    },
+    #[cfg_attr(
+        not(all(test, windows)),
+        allow(dead_code, reason = "Retry control belongs to CS3.3b")
+    )]
+    RetrySend,
 }
+
+struct SessionSend<'a> {
+    session: &'a mut Session,
+    cancel: &'a AtomicBool,
+}
+
+impl SessionSend<'_> {
+    fn context(&mut self, slot: u8) -> IpcResult<[u8; 32]> {
+        let unavailable = MessageError2::Unavailable;
+        if self.cancel.load(Ordering::Acquire)
+            || self.session.check_drains().is_err()
+            || self.session.instance.is_none()
+            || !matches!(self.session.child.try_wait(), Ok(None))
+        {
+            return Err(unavailable);
+        }
+        let client = self.session.client.as_ref().ok_or(unavailable)?;
+        if !RuntimeIpcDescriptor::load(&self.session.doc.ipc_file)
+            .is_ok_and(|descriptor| &descriptor == client.descriptor())
+        {
+            return Err(unavailable);
+        }
+        id(self
+            .session
+            .doc
+            .contexts
+            .get(usize::from(slot))
+            .ok_or(MessageError2::InvalidInput)?)
+        .map_err(|_| MessageError2::InvalidInput)
+    }
+
+    fn authorize(&mut self, slot: u8) -> IpcResult<Instant> {
+        self.context(slot)?;
+        let view = self
+            .session
+            .poll(self.cancel)
+            .map_err(|_| MessageError2::Unavailable)?;
+        let context = self
+            .session
+            .last_status
+            .as_ref()
+            .and_then(|status| status.installed(usize::from(slot)).ok())
+            .ok_or(MessageError2::Unavailable)?;
+        let wall = consent::now().map_err(|_| MessageError2::Unavailable)?;
+        let (start, end) = self.session.consent_interval;
+        if !self.session.doc.enabled.contains(&slot)
+            || context.phase != 3
+            || context.policy_error.is_some()
+            || context.blocked.is_some()
+            || !(start..end).contains(&wall)
+            || view.request_started.elapsed() >= Duration::from_secs(2)
+        {
+            return Err(MessageError2::Unavailable);
+        }
+        Ok(view.request_started)
+    }
+}
+
+impl SendRuntime for SessionSend<'_> {
+    fn check_send(&mut self, slot: u8) -> IpcResult<()> {
+        self.authorize(slot).map(|_| ())
+    }
+
+    fn lookup(&mut self, slot: u8, request: [u8; 16]) -> IpcResult<Option<RequestStatus2>> {
+        let context = self.context(slot)?;
+        let client = self
+            .session
+            .client
+            .as_ref()
+            .ok_or(MessageError2::Unavailable)?;
+        let response = cancellable(&self.session.rt, self.cancel, async {
+            Ok(client.request_status(slot, context, request).await)
+        })
+        .map_err(|_| MessageError2::Unavailable)?;
+        self.context(slot)?;
+        response
+    }
+
+    fn send(&mut self, slot: u8, request: [u8; 16], text: &str) -> IpcResult<SendReceipt2> {
+        let started = self.authorize(slot)?;
+        let context = self.context(slot)?;
+        if self.cancel.load(Ordering::Acquire) || started.elapsed() >= Duration::from_secs(2) {
+            return Err(MessageError2::Unavailable);
+        }
+        let client = self
+            .session
+            .client
+            .as_ref()
+            .ok_or(MessageError2::Unavailable)?;
+        let response = cancellable(&self.session.rt, self.cancel, async {
+            Ok(client.send_text(slot, context, request, text).await)
+        })
+        .map_err(|_| MessageError2::Unavailable)?;
+        self.context(slot)?;
+        response
+    }
+}
+
 fn run_worker(
     setup: &mut Setup,
     exe: &Path,
@@ -794,6 +911,8 @@ fn run_connected(
     views: mpsc::SyncSender<View>,
 ) -> Result<()> {
     let mut next = Instant::now();
+    let mut next_pending = Instant::now();
+    let mut recovery = Recovery::new(send_intent::Store::new(setup, &session.doc));
     let mut last_notice: Option<String> = None;
     let mut handled = 0;
     loop {
@@ -801,16 +920,22 @@ fn run_connected(
         if signal.load(Ordering::Acquire) {
             break;
         }
-        match rx.try_recv() {
-            Ok((_, Action::Stop)) => break,
-            Ok((generation, Action::Export)) => {
+        let action_pending = match rx.try_recv() {
+            Ok(action) => Some(action),
+            Err(mpsc::TryRecvError::Disconnected) => break,
+            Err(mpsc::TryRecvError::Empty) => None,
+        };
+        let idle = action_pending.is_none();
+        match action_pending {
+            Some((_, Action::Stop)) => break,
+            Some((generation, Action::Export)) => {
                 handled = generation;
                 last_notice = Some(match session.export(setup, signal) {
                     Ok(path) => format!("Public locators saved: {}", path.display()),
                     Err(_) => "Locator export failed; current files were preserved.".into(),
                 });
             }
-            Ok((generation, Action::Import(path))) => {
+            Some((generation, Action::Import(path))) => {
                 handled = generation;
                 let result = session.import(setup, &path, signal);
                 last_notice = Some(
@@ -822,7 +947,7 @@ fn run_connected(
                     .into(),
                 );
             }
-            Ok((generation, Action::Resume)) => {
+            Some((generation, Action::Resume)) => {
                 handled = generation;
                 let result = (|| {
                     let state = setup.record.connection.as_ref().context("Connection")?;
@@ -847,14 +972,40 @@ fn run_connected(
                     .into(),
                 );
             }
-            Err(mpsc::TryRecvError::Disconnected) => break,
-            Err(mpsc::TryRecvError::Empty) => {}
+            Some((generation, Action::Send { slot, text })) => {
+                handled = generation;
+                recovery.submit(
+                    &mut SessionSend {
+                        session,
+                        cancel: signal,
+                    },
+                    slot,
+                    text,
+                );
+                next_pending = Instant::now() + Duration::from_secs(1);
+            }
+            Some((generation, Action::RetrySend)) => {
+                handled = generation;
+                recovery.retry(&mut SessionSend {
+                    session,
+                    cancel: signal,
+                });
+                next_pending = Instant::now() + Duration::from_secs(1);
+            }
+            None => {}
+        }
+        if signal.load(Ordering::Acquire) {
+            break;
         }
         if Instant::now() >= next {
             let mut view=session.poll(signal).unwrap_or_else(|_|View::waiting("Current runtime status unavailable or descriptor changed; connection is not confirmed."));
             view.generation = handled;
             if let Some(notice) = &last_notice {
                 view.text = format!("{notice}\n{}", view.text);
+            }
+            if let Some(notice) = recovery.progress.notice() {
+                view.text.push('\n');
+                view.text.push_str(notice);
             }
             if let Some(state) = &setup.record.connection {
                 view.text = format!(
@@ -867,6 +1018,13 @@ fn run_connected(
             if session.child.try_wait()?.is_some() {
                 break;
             }
+        }
+        if idle && Instant::now() >= next_pending && !signal.load(Ordering::Acquire) {
+            recovery.refresh(&mut SessionSend {
+                session,
+                cancel: signal,
+            });
+            next_pending = Instant::now() + Duration::from_secs(1);
         }
         thread::sleep(Duration::from_millis(20));
     }

@@ -6,6 +6,8 @@ mod consent_artifact;
 mod helper;
 mod locator_artifact;
 mod model;
+mod send_intent;
+mod send_recovery;
 #[cfg(test)]
 mod tests;
 
