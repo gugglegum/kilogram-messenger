@@ -134,6 +134,7 @@ fn cs32b_request_start_freshness_and_schema_negatives() -> Result<()> {
         consent_expires: 200,
         running: true,
         text: String::new(),
+        messages: Messages::default(),
     };
     ensure!(
         view.current(origin + Duration::from_millis(1999), wall),
@@ -163,12 +164,14 @@ fn cs32b_request_start_freshness_and_schema_negatives() -> Result<()> {
 #[test]
 fn cs32b_late_status_generation_is_discarded() -> Result<()> {
     let (actions, _action_rx) = mpsc::sync_channel(1);
+    let (deliveries, _delivery_rx) = mpsc::sync_channel(1);
     let (views, view_rx) = mpsc::sync_channel(1);
     let (_done_tx, done) = mpsc::sync_channel(1);
     let mut work = Work {
         cancel: Arc::new(AtomicBool::new(false)),
         epoch: Arc::new(AtomicU64::new(2)),
         actions,
+        deliveries,
         views: view_rx,
         done,
         cleanup: Arc::new(Cleanup::default()),
@@ -182,6 +185,7 @@ fn cs32b_late_status_generation_is_discarded() -> Result<()> {
         consent_expires: u64::MAX,
         running: true,
         text: "old response".into(),
+        messages: Messages::default(),
     };
     views.send(observed.clone())?;
     let _ = work.poll();

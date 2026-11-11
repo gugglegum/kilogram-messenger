@@ -1,10 +1,143 @@
 use super::*;
+use crate::fresh_onboarding::artifact::hex;
 use crate::fresh_onboarding::send_recovery::Progress;
 use kilogram_runtime_ipc::ordered2::{Delivery2, HistoryCursor2, HistoryPage2, MAX_HISTORY_ROWS};
 use std::collections::BTreeMap;
 
 const SENTINEL: &str = "CS33A wire synthetic sentinel";
 const TEXT: &str = "  CS33A wire synthetic sentinel \u{e9} e\u{301} \0\n  ";
+
+#[test]
+fn cs33b_gui_fixture_and_cold_observation() -> Result<()> {
+    let Some(phase) = std::env::var_os("KILOGRAM_CS33B_GUI_PHASE") else {
+        return Ok(());
+    };
+    let base = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.tmp/clean-start-cs3-3b");
+    let index = base.join("ui-fixture.json");
+    if phase == "prepare" {
+        ensure!(!index.exists(), "Fresh GUI fixture index required");
+        let nodes = ready_pair_at(&base.join("fixtures"), "ui-", false)?;
+        let homes = nodes.map(|node| node.home);
+        model::write(&index, &serde_json::to_vec_pretty(&homes)?, false)?;
+        println!("CS33B_GUI_FIXTURE_READY");
+        return Ok(());
+    }
+    let offline = phase == "offline";
+    ensure!(offline || phase == "final", "Unknown GUI observation phase");
+    let homes: [PathBuf; 2] = serde_json::from_slice(&model::read(&index, 8192)?)?;
+    let nodes = [Setup::open(&homes[0])?, Setup::open(&homes[1])?];
+    let mut evidence = Vec::new();
+    let mut matching_rows = Vec::new();
+    let mut unique = std::collections::BTreeSet::new();
+    for (who, node) in nodes.iter().enumerate() {
+        let info = node.record.public.as_ref().context("GUI test account")?;
+        let own_role = consent::role(node)? as u8;
+        let left_role = if who == 0 { own_role } else { 1 - own_role };
+        let mut repo = repository(node)?;
+        let mut rows = Vec::new();
+        for slot in 0..2 {
+            let mut expected = if slot == 0 {
+                vec![("CS33b sender online", left_role, 2)]
+            } else {
+                vec![("CS33b peer reply", 1 - left_role, 2)]
+            };
+            if slot == 1 && (who == 0 || !offline) {
+                expected.push((
+                    "CS33b delayed after peer stop",
+                    left_role,
+                    if offline { 1 } else { 2 },
+                ));
+            }
+            let history = repo.history(slot, None, 32)?;
+            ensure!(
+                history.finished && history.items.len() == expected.len(),
+                "GUI history count for node {who}, slot {slot}"
+            );
+            let mut seen = std::collections::BTreeSet::new();
+            for row in &history.items {
+                let (i, &(_, role, delivery)) = expected
+                    .iter()
+                    .enumerate()
+                    .find(|(_, (text, _, _))| row.text.as_str() == *text)
+                    .context("GUI history body mismatch")?;
+                ensure!(
+                    seen.insert(i) && row.role == role,
+                    "GUI row duplicate or author mismatch"
+                );
+                if who == 0 {
+                    ensure!(unique.insert((row.request, row.id)), "GUI identity reused");
+                }
+                let status = if row.role == own_role {
+                    let actual = repo.request_delivery(slot, row.request)?;
+                    ensure!(
+                        actual == Some(delivery),
+                        "Unexpected GUI delivery at node {who}, slot {slot}"
+                    );
+                    actual
+                } else {
+                    None
+                };
+                rows.push(serde_json::json!({
+                    "slot":slot, "role":row.role, "request":hex(&row.request),
+                    "event":hex(&row.id), "ordinal":row.ordinal,
+                    "sequence":row.sequence, "delivery_code":status,
+                }));
+            }
+        }
+        matching_rows.push(
+            rows.iter()
+                .map(|row| {
+                    serde_json::json!([row["slot"], row["role"], row["request"], row["event"]])
+                })
+                .collect::<Vec<_>>(),
+        );
+        evidence.push(serde_json::json!({
+            "account":info.account_id.to_string(), "device":info.device_id.to_string(),
+            "contexts":node.record.contexts, "rows":rows,
+        }));
+    }
+    if !offline {
+        ensure!(
+            matching_rows[0] == matching_rows[1],
+            "GUI nodes disagree on causal event order"
+        );
+        let previous: serde_json::Value =
+            serde_json::from_slice(&model::read(&base.join("ui-offline.json"), 16384)?)?;
+        for (who, node) in evidence.iter().enumerate() {
+            let old = &previous[who];
+            for name in ["account", "device", "contexts"] {
+                ensure!(node[name] == old[name], "GUI identity changed after reopen");
+            }
+            for old_row in old["rows"].as_array().context("Offline GUI rows")? {
+                ensure!(
+                    node["rows"]
+                        .as_array()
+                        .context("Final GUI rows")?
+                        .iter()
+                        .any(|row| ["slot", "role", "request", "event", "sequence"]
+                            .iter()
+                            .all(|&name| row[name] == old_row[name])),
+                    "GUI event identity changed after reopen"
+                );
+            }
+        }
+    }
+    let name = if offline {
+        "ui-offline.json"
+    } else {
+        "ui-final.json"
+    };
+    model::write(
+        &base.join(name),
+        &serde_json::to_vec_pretty(&evidence)?,
+        false,
+    )?;
+    println!(
+        "CS33B_GUI_COLD_PASS phase={}",
+        if offline { "offline" } else { "final" }
+    );
+    Ok(())
+}
 
 struct ObservedRuntime<'a> {
     real: SessionSend<'a>,
@@ -367,11 +500,12 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
     stop(&mut sessions[1])?;
     let [left, _right] = nodes;
     let mut work = Work::start(left, cli(), false)?;
-    let wait_notice = |work: &mut Work, text: &str| -> Result<()> {
+    let wait_progress = |work: &mut Work, progress: Progress| -> Result<()> {
         let until = Instant::now() + Duration::from_secs(40);
         loop {
             ensure!(work.poll().is_none(), "Owned worker ended during messaging");
-            if work.view.text.contains(text) {
+            if work.view.messages.pending.progress == progress && work.view.messages.scope.is_some()
+            {
                 return Ok(());
             }
             ensure!(
@@ -381,24 +515,64 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
             thread::sleep(Duration::from_millis(50));
         }
     };
-    wait_notice(
-        &mut work,
-        Progress::RetryAvailable.notice().context("Retry notice")?,
-    )?;
+    wait_progress(&mut work, Progress::RetryAvailable)?;
+    let restored = work
+        .view
+        .messages
+        .pending
+        .item
+        .as_ref()
+        .context("Restored pending projection")?;
+    ensure!(
+        restored.slot == 1
+            && restored.request == offline
+            && restored.text.as_str() == "offline same-id retry"
+    );
     ensure!(
         !work.view.current(Instant::now(), consent::now()?),
         "Offline worker displayed current admission"
     );
     work.action(Action::RetrySend)?;
-    let materialized = Progress::Materialized
-        .notice()
-        .context("Materialized notice")?;
-    wait_notice(&mut work, materialized)?;
+    wait_progress(&mut work, Progress::Materialized)?;
+    let (reply, outcome) = mpsc::sync_channel(1);
     work.action(Action::Send {
         slot: 1,
         text: Zeroizing::new("offline new send".into()),
+        reply,
     })?;
-    wait_notice(&mut work, materialized)?;
+    ensure!(outcome.recv_timeout(Duration::from_secs(20))? == Submission::Protected);
+    wait_progress(&mut work, Progress::Materialized)?;
+    let scope = work.view.messages.scope.context("Owned message scope")?;
+    let (reply, history) = mpsc::sync_channel(1);
+    work.action(Action::History(Box::new(HistoryJob {
+        scope,
+        slot: 1,
+        cursor: None,
+        reply,
+    })))?;
+    let page = history.recv_timeout(Duration::from_secs(10))??;
+    ensure!(
+        page.items.len() == 2 && page.finished,
+        "Typed worker page missing two offline sends"
+    );
+    let (reply, delivery) = mpsc::sync_channel(1);
+    ensure!(work.check_delivery(DeliveryJob {
+        scope,
+        slot: 1,
+        request: page.items[0].request,
+        event: page.items[0].event,
+        reply,
+    }));
+    ensure!(delivery.recv_timeout(Duration::from_secs(10))? == Some(Delivery2::Materialized));
+    let (reply, delivery) = mpsc::sync_channel(1);
+    ensure!(work.check_delivery(DeliveryJob {
+        scope,
+        slot: 1,
+        request: page.items[0].request,
+        event: [0; 32],
+        reply,
+    }));
+    ensure!(delivery.recv_timeout(Duration::from_secs(10))?.is_none());
     work.cancel();
     let until = Instant::now() + Duration::from_secs(25);
     let returned = loop {

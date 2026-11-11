@@ -3,14 +3,15 @@ use super::{
     artifact, consent, helper, locator_artifact,
     model::{self, Setup},
     send_intent,
-    send_recovery::{IpcResult, Recovery, SendRuntime},
+    send_recovery::{IpcResult, Projection, Recovery, SendRuntime, Submission},
 };
 use anyhow::{Context, Result, ensure};
 use kilogram_runtime_ipc::{
     RuntimeIpcDescriptor,
     ordered2::{
-        Client2, MessageError2, Profile2Document, ProfileRoute2, ProfileRoutePolicy2,
-        RequestStatus2, SendReceipt2, Status2, id,
+        Client2, Delivery2, HistoryCursor2, HistoryPage2, MAX_HISTORY_ROWS, MessageError2,
+        Profile2Document, ProfileRoute2, ProfileRoutePolicy2, RequestStatus2, SendReceipt2,
+        Status2, id,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -302,7 +303,21 @@ impl Drain {
         }
     }
 }
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub(super) struct DialogScope {
+    pub instance: [u8; 32],
+    pub contexts: [[u8; 32]; 2],
+    pub own_role: u8,
+}
+
+#[derive(Clone, Default)]
+pub(super) struct Messages {
+    pub scope: Option<DialogScope>,
+    pub send_slots: [bool; 2],
+    pub pending: Projection,
+}
+
+#[derive(Clone)]
 pub(super) struct View {
     pub text: String,
     pub generation: u64,
@@ -311,6 +326,7 @@ pub(super) struct View {
     pub lease_expires: [u64; 2],
     pub consent_expires: u64,
     pub running: bool,
+    pub messages: Messages,
 }
 impl View {
     pub fn current(&self, now: Instant, wall: u64) -> bool {
@@ -329,6 +345,7 @@ impl View {
             lease_expires: [0; 2],
             consent_expires: 0,
             running: false,
+            messages: Messages::default(),
         }
     }
 }
@@ -583,8 +600,14 @@ impl Session {
         view.running = true;
         view.request_started = started;
         view.consent_expires = end;
+        let wall = consent::now()?;
         for slot in 0..2 {
             let c = status.installed(slot)?;
+            view.messages.send_slots[slot] = self.doc.enabled.contains(&(slot as u8))
+                && c.phase == 3
+                && c.blocked.is_none()
+                && c.policy_error.is_none()
+                && (self.consent_interval.0..end).contains(&wall);
             view.connected[slot] = c.phase == 3
                 && c.active
                 && c.live_admitted
@@ -762,19 +785,33 @@ pub(super) enum Action {
     Import(PathBuf),
     Resume,
     Stop,
-    #[cfg_attr(
-        not(all(test, windows)),
-        allow(dead_code, reason = "Composer wiring belongs to CS3.3b")
-    )]
     Send {
         slot: u8,
         text: Zeroizing<String>,
+        reply: mpsc::SyncSender<Submission>,
     },
-    #[cfg_attr(
-        not(all(test, windows)),
-        allow(dead_code, reason = "Retry control belongs to CS3.3b")
-    )]
     RetrySend,
+    History(Box<HistoryJob>),
+}
+
+pub(super) struct HistoryJob {
+    pub scope: DialogScope,
+    pub slot: u8,
+    pub cursor: Option<HistoryCursor2>,
+    pub reply: mpsc::SyncSender<IpcResult<HistoryPage2>>,
+}
+
+pub(super) struct DeliveryJob {
+    pub scope: DialogScope,
+    pub slot: u8,
+    pub request: [u8; 16],
+    pub event: [u8; 32],
+    pub reply: mpsc::SyncSender<Option<Delivery2>>,
+}
+
+struct Inbox {
+    actions: mpsc::Receiver<(u64, Action)>,
+    deliveries: mpsc::Receiver<DeliveryJob>,
 }
 
 struct SessionSend<'a> {
@@ -783,6 +820,23 @@ struct SessionSend<'a> {
 }
 
 impl SessionSend<'_> {
+    fn history(&mut self, slot: u8, cursor: Option<&HistoryCursor2>) -> IpcResult<HistoryPage2> {
+        let context = self.context(slot)?;
+        let client = self
+            .session
+            .client
+            .as_ref()
+            .ok_or(MessageError2::Unavailable)?;
+        let response = cancellable(&self.session.rt, self.cancel, async {
+            Ok(client
+                .history_page(slot, context, cursor, MAX_HISTORY_ROWS)
+                .await)
+        })
+        .map_err(|_| MessageError2::Unavailable)?;
+        self.context(slot)?;
+        response
+    }
+
     fn context(&mut self, slot: u8) -> IpcResult<[u8; 32]> {
         let unavailable = MessageError2::Unavailable;
         if self.cancel.load(Ordering::Acquire)
@@ -879,12 +933,12 @@ fn run_worker(
     exe: &Path,
     signal: Arc<AtomicBool>,
     fresh_profile: bool,
-    rx: mpsc::Receiver<(u64, Action)>,
+    inbox: Inbox,
     views: mpsc::SyncSender<View>,
     cleanup: &Cleanup,
 ) -> Result<Stop> {
     let mut session = Session::start(setup, exe, signal.clone(), fresh_profile, cleanup)?;
-    let running = run_connected(&mut session, setup, &signal, rx, views);
+    let running = run_connected(&mut session, setup, &signal, inbox, views);
     let stop = session.finish(cleanup);
     let saved = change(setup, |s| {
         s.last_outcome = Some(
@@ -907,12 +961,20 @@ fn run_connected(
     session: &mut Session,
     setup: &mut Setup,
     signal: &AtomicBool,
-    rx: mpsc::Receiver<(u64, Action)>,
+    inbox: Inbox,
     views: mpsc::SyncSender<View>,
 ) -> Result<()> {
     let mut next = Instant::now();
     let mut next_pending = Instant::now();
     let mut recovery = Recovery::new(send_intent::Store::new(setup, &session.doc));
+    let scope = DialogScope {
+        instance: id(session
+            .instance
+            .as_deref()
+            .context("Owned runtime instance")?)?,
+        contexts: [id(&session.doc.contexts[0])?, id(&session.doc.contexts[1])?],
+        own_role: session.role,
+    };
     let mut last_notice: Option<String> = None;
     let mut handled = 0;
     loop {
@@ -920,7 +982,7 @@ fn run_connected(
         if signal.load(Ordering::Acquire) {
             break;
         }
-        let action_pending = match rx.try_recv() {
+        let action_pending = match inbox.actions.try_recv() {
             Ok(action) => Some(action),
             Err(mpsc::TryRecvError::Disconnected) => break,
             Err(mpsc::TryRecvError::Empty) => None,
@@ -972,9 +1034,9 @@ fn run_connected(
                     .into(),
                 );
             }
-            Some((generation, Action::Send { slot, text })) => {
+            Some((generation, Action::Send { slot, text, reply })) => {
                 handled = generation;
-                recovery.submit(
+                let result = recovery.submit(
                     &mut SessionSend {
                         session,
                         cancel: signal,
@@ -982,6 +1044,7 @@ fn run_connected(
                     slot,
                     text,
                 );
+                let _ = reply.try_send(result);
                 next_pending = Instant::now() + Duration::from_secs(1);
             }
             Some((generation, Action::RetrySend)) => {
@@ -991,6 +1054,19 @@ fn run_connected(
                     cancel: signal,
                 });
                 next_pending = Instant::now() + Duration::from_secs(1);
+            }
+            Some((generation, Action::History(job))) => {
+                handled = generation;
+                let result = if job.scope == scope {
+                    SessionSend {
+                        session,
+                        cancel: signal,
+                    }
+                    .history(job.slot, job.cursor.as_ref())
+                } else {
+                    Err(MessageError2::InvalidInput)
+                };
+                let _ = job.reply.try_send(result);
             }
             None => {}
         }
@@ -1003,10 +1079,8 @@ fn run_connected(
             if let Some(notice) = &last_notice {
                 view.text = format!("{notice}\n{}", view.text);
             }
-            if let Some(notice) = recovery.progress.notice() {
-                view.text.push('\n');
-                view.text.push_str(notice);
-            }
+            view.messages.scope = Some(scope);
+            view.messages.pending = recovery.projection();
             if let Some(state) = &setup.record.connection {
                 view.text = format!(
                     "{}\nLocal locator import outcomes: slot0={:?}; slot1={:?}. These alone do not prove connectivity.",
@@ -1025,6 +1099,24 @@ fn run_connected(
                 cancel: signal,
             });
             next_pending = Instant::now() + Duration::from_secs(1);
+        } else if idle
+            && !signal.load(Ordering::Acquire)
+            && let Ok(job) = inbox.deliveries.try_recv()
+        {
+            let delivery = if job.scope == scope {
+                SessionSend {
+                    session,
+                    cancel: signal,
+                }
+                .lookup(job.slot, job.request)
+                .ok()
+                .flatten()
+                .filter(|status| status.receipt.event == Some(job.event))
+                .map(|status| status.delivery)
+            } else {
+                None
+            };
+            let _ = job.reply.try_send(delivery);
         }
         thread::sleep(Duration::from_millis(20));
     }
@@ -1034,6 +1126,7 @@ pub(super) struct Work {
     cancel: Arc<AtomicBool>,
     epoch: Arc<AtomicU64>,
     actions: mpsc::SyncSender<(u64, Action)>,
+    deliveries: mpsc::SyncSender<DeliveryJob>,
     views: mpsc::Receiver<View>,
     done: mpsc::Receiver<(Setup, Result<Stop>)>,
     cleanup: Arc<Cleanup>,
@@ -1054,6 +1147,7 @@ impl Work {
         let signal = cancel.clone();
         let epoch = Arc::new(AtomicU64::new(0));
         let (tx, rx) = mpsc::sync_channel(1);
+        let (delivery_tx, delivery_rx) = mpsc::sync_channel(1);
         let (vtx, vrx) = mpsc::sync_channel(1);
         let (dtx, drx) = mpsc::sync_channel(1);
         let owner_cleanup = cleanup.clone();
@@ -1065,7 +1159,10 @@ impl Work {
                     &exe,
                     signal,
                     fresh_profile,
-                    rx,
+                    Inbox {
+                        actions: rx,
+                        deliveries: delivery_rx,
+                    },
                     vtx,
                     &owner_cleanup,
                 );
@@ -1075,6 +1172,7 @@ impl Work {
             cancel,
             epoch,
             actions: tx,
+            deliveries: delivery_tx,
             views: vrx,
             done: drx,
             cleanup,
@@ -1085,13 +1183,18 @@ impl Work {
     }
     pub fn action(&mut self, action: Action) -> Result<()> {
         ensure!(!self.cleanup.stopping(), "Owned runtime is stopping");
-        self.view = View::waiting("Processing local runtime operation...");
         let previous = self.epoch.fetch_add(1, Ordering::AcqRel);
         if self.actions.try_send((previous + 1, action)).is_err() {
             self.epoch.store(previous, Ordering::Release);
             anyhow::bail!("A runtime operation is already pending");
         }
+        self.view = View::waiting("Processing local runtime operation...");
         Ok(())
+    }
+    pub fn check_delivery(&self, job: DeliveryJob) -> bool {
+        !self.cleanup.stopping()
+            && !self.cancel.load(Ordering::Acquire)
+            && self.deliveries.try_send(job).is_ok()
     }
     pub fn cancel(&mut self) {
         self.epoch.fetch_add(1, Ordering::AcqRel);

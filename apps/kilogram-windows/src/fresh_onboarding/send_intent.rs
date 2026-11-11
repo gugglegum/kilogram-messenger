@@ -51,7 +51,7 @@ pub(super) struct Intent {
     version: u8,
     binding: Binding,
     pub(super) slot: u8,
-    context: [u8; 32],
+    pub(super) context: [u8; 32],
     pub(super) request: [u8; 16],
     pub(super) phase: Phase,
     pub(super) text: String,
