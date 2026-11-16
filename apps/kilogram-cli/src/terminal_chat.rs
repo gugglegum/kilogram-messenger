@@ -315,11 +315,55 @@ fn parse_tty(text: &str) -> CommandResult<Command> {
 struct Continuation {
     token: String,
     cursor: HistoryCursor2,
+    view: [u8; 32],
+    frontiers: [u64; 2],
+}
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct CommandScope {
+    generation: u64,
+    connection: Option<u64>,
 }
 
 struct HistoryAdvance {
+    scope: CommandScope,
     slot: usize,
-    next: Option<Continuation>,
+    context: String,
+    from: Option<HistoryCursor2>,
+    view: [u8; 32],
+    frontiers: [u64; 2],
+    cursor: HistoryCursor2,
+    next_token: Option<String>,
+}
+
+impl HistoryAdvance {
+    fn apply(self, frontend: &mut Frontend, connection: Option<u64>) {
+        if self.scope.connection.is_none()
+            || self.scope.connection != connection
+            || frontend
+                .status
+                .as_ref()
+                .is_none_or(|status| status.contexts[self.slot] != self.context)
+        {
+            return;
+        }
+        let current = &mut frontend.continuation[self.slot];
+        if let Some(input) = self.from
+            && current.as_ref().is_none_or(|previous| {
+                previous.cursor != input
+                    || previous.view != self.view
+                    || previous.frontiers != self.frontiers
+            })
+        {
+            return;
+        }
+        *current = self.next_token.map(|token| Continuation {
+            token,
+            cursor: self.cursor,
+            view: self.view,
+            frontiers: self.frontiers,
+        });
+    }
 }
 
 struct Frontend {
@@ -333,6 +377,7 @@ impl Frontend {
     fn execute(
         &mut self,
         command: Command,
+        scope: CommandScope,
         control: &Arc<OperationControl>,
         stop: &SessionStop,
         announce: impl FnOnce(&RequestKey) -> bool,
@@ -425,7 +470,7 @@ impl Frontend {
                 limit,
                 cursor,
                 more,
-            } => return self.history(context, limit, cursor, more, control),
+            } => return self.history(context, limit, cursor, more, scope, control),
             Command::Locator(command) => Ok(json!(self.service.locator(command, control)?)),
             Command::Cancel(_) | Command::Disconnect | Command::Quit => {
                 unreachable!("control command")
@@ -440,6 +485,7 @@ impl Frontend {
         limit: usize,
         token: Option<String>,
         more: bool,
+        scope: CommandScope,
         control: &Arc<OperationControl>,
     ) -> Prepared<HistoryAdvance> {
         if !(1..=MAX_HISTORY_ROWS).contains(&limit) {
@@ -467,25 +513,29 @@ impl Frontend {
         };
         let page = self
             .service
-            .history_controlled(slot as u8, cursor, limit, Some(control))
+            .history_controlled(slot as u8, cursor.clone(), limit, Some(control))
             .map_err(|_| "history_unavailable")?;
         let next = if page.finished {
             None
         } else {
             let mut nonce = [0u8; 16];
             getrandom::fill(&mut nonce).map_err(|_| "cursor_unavailable")?;
-            let token = hex(&nonce);
-            Some(Continuation {
-                token,
-                cursor: page.cursor.clone(),
-            })
+            Some(hex(&nonce))
         };
-        let result = page_value(
-            &contexts[slot],
-            &page,
-            next.as_ref().map(|value| value.token.as_str()),
-        );
-        Ok((result, Some(HistoryAdvance { slot, next })))
+        let result = page_value(&contexts[slot], &page, next.as_deref());
+        Ok((
+            result,
+            Some(HistoryAdvance {
+                scope,
+                slot,
+                context: contexts[slot].clone(),
+                from: cursor,
+                view: page.view,
+                frontiers: page.frontiers,
+                cursor: page.cursor,
+                next_token: next,
+            }),
+        ))
     }
 }
 

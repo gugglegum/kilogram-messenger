@@ -1,7 +1,7 @@
 //! Bounded terminal admission, cancellation and output publication.
 use super::{
-    Command, Frontend, HistoryAdvance, Input, Prepared, RequestKey, encode_reply, hex,
-    prepare_result, read_commands,
+    Command, CommandScope, Frontend, HistoryAdvance, Input, Prepared, RequestKey, encode_reply,
+    hex, prepare_result, read_commands,
 };
 use kilogram_first_dialog::{
     chat::{Chat, SessionStop},
@@ -44,6 +44,18 @@ struct Entry {
 }
 
 impl Entry {
+    fn read_only_during_notification(&self) -> bool {
+        matches!(
+            self.command,
+            Ok(Command::Status
+                | Command::History { .. }
+                | Command::Message {
+                    operation: RequestOperation::Status,
+                    ..
+                })
+        )
+    }
+
     fn identity(&self) -> Option<RequestKey> {
         match &self.command {
             Ok(Command::Message {
@@ -83,6 +95,7 @@ struct Active {
     finalised: bool,
     retired: bool,
     ack: bool,
+    opens_connection: bool,
 }
 
 struct Reply {
@@ -100,9 +113,35 @@ struct Closing {
     clean: Option<bool>,
     reply: Option<Tag>,
     acknowledged: bool,
+    generation: Option<u64>,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+struct FrameTag {
+    connection: u64,
+    batch: u64,
+    index: u8,
+}
+
+// Only the test producer fills this slot in E2a. The same slot retains
+// ownership while the sole writer holds the bytes.
+enum Notification {
+    Queued(FrameTag, Vec<u8>),
+    Writing(FrameTag, usize),
+}
+
+struct Notice {
+    generation: u64,
+    text: String,
+    ack: mpsc::SyncSender<bool>,
+}
+
+struct Background {
+    scope: CommandScope,
+    control: Arc<OperationControl>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Slot {
     Ready,
     Active,
@@ -110,19 +149,22 @@ enum Slot {
     Diagnostic,
     Queued,
     Close,
-    Notice,
+    Notice(u64),
+    Notification(FrameTag),
 }
 
 enum Payload {
     Reply(Reply),
     Frame(&'static str),
     Text(Vec<u8>),
-    Notice(String, mpsc::SyncSender<bool>),
+    Notice(Notice),
 }
 
 struct State {
     ids: HashMap<String, u64>,
     generation: u64,
+    connection: Option<u64>,
+    background: Option<Background>,
     running: Option<Active>,
     queued: Option<Entry>,
     rejected: Option<Reply>,
@@ -130,7 +172,8 @@ struct State {
     diagnostic: Option<Payload>,
     cancel_slot: bool,
     diagnostic_slot: bool,
-    notice: Option<(String, mpsc::SyncSender<bool>)>,
+    notice: Option<Notice>,
+    notification: Option<Notification>,
     closing: Option<Closing>,
     cleanup_unconfirmed: bool,
     output_failed: bool,
@@ -143,6 +186,8 @@ impl State {
         Self {
             ids: HashMap::new(),
             generation: 0,
+            connection: None,
+            background: None,
             running: None,
             queued: None,
             rejected: None,
@@ -151,12 +196,67 @@ impl State {
             cancel_slot: false,
             diagnostic_slot: false,
             notice: None,
+            notification: None,
             closing: None,
             cleanup_unconfirmed: false,
             output_failed: false,
             ready: false,
             stop: Arc::new(SessionStop::default()),
         }
+    }
+
+    fn next_generation(&mut self, now: Instant) -> Option<u64> {
+        let Some(generation) = self.generation.checked_add(1) else {
+            self.close(now, None, true, true);
+            return None;
+        };
+        self.generation = generation;
+        Some(generation)
+    }
+
+    fn notice_live(&self, generation: u64) -> bool {
+        !self.output_failed
+            && self.closing.is_none()
+            && self.running.as_ref().is_some_and(|active| {
+                active.tag.generation == generation
+                    && !active.finalised
+                    && !active.control.stopped()
+            })
+    }
+
+    fn discard_notice(&mut self, generation: u64) {
+        if self
+            .notice
+            .as_ref()
+            .is_some_and(|notice| notice.generation == generation)
+        {
+            self.notice.take();
+        }
+    }
+
+    fn notification_allowed(&self) -> bool {
+        !self.output_failed
+            && self.closing.is_none()
+            && self.running.is_none()
+            && self.queued.is_none()
+            && self.cancel_reply.is_none()
+            && self.rejected.is_none()
+            && self.diagnostic.is_none()
+            && self.notice.is_none()
+    }
+
+    fn can_dispatch(&self, writing: Option<Slot>, output_selected: bool) -> bool {
+        self.ready
+            && self.closing.is_none()
+            && !self.cleanup_unconfirmed
+            && self.running.is_none()
+            && self.background.is_none()
+            && !output_selected
+            && self.queued.as_ref().is_some_and(|entry| {
+                writing.is_none()
+                    || matches!(writing, Some(Slot::Notification(_)))
+                        && entry.read_only_during_notification()
+            })
     }
 
     fn release(&mut self, tag: &Tag) {
@@ -210,11 +310,10 @@ impl State {
             return true;
         }
 
-        self.generation += 1;
-        let tag = Tag {
-            generation: self.generation,
-            id,
+        let Some(generation) = self.next_generation(now) else {
+            return false;
         };
+        let tag = Tag { generation, id };
         if let Some(id) = &tag.id {
             self.ids.insert(id.clone(), tag.generation);
         }
@@ -261,13 +360,16 @@ impl State {
                     self.diagnostic(Payload::Reply(reject(entry, code)), now);
                 } else {
                     self.queued = Some(entry);
+                    if let Some(background) = &self.background {
+                        background.control.cancel(now);
+                    }
                 }
             }
         }
         true
     }
 
-    fn cancel(&self, target: Option<&str>, now: Instant) -> super::CommandResult<&'static str> {
+    fn cancel(&mut self, target: Option<&str>, now: Instant) -> super::CommandResult<&'static str> {
         let generation = match target {
             Some(id) => self.ids.get(id).copied().ok_or("target_not_active")?,
             None => self
@@ -291,7 +393,9 @@ impl State {
         if active.finalised {
             return Err("target_completed");
         }
-        Ok(if active.control.cancel(now) {
+        let requested = active.control.cancel(now);
+        self.discard_notice(generation);
+        Ok(if requested {
             "requested"
         } else {
             "already_requested"
@@ -316,11 +420,20 @@ impl State {
         if let Some(active) = &self.running {
             active.control.cancel(now);
         }
+        if let Some(background) = &self.background {
+            background.control.cancel(now);
+        }
+        self.connection = None;
+        self.notice.take();
+        if matches!(self.notification, Some(Notification::Queued(..))) {
+            self.notification.take();
+        }
         self.stop.stop();
         self.rejected = self
             .queued
             .take()
             .map(|entry| reject(entry, "session_closing"));
+        let generation = reply.as_ref().map(|tag| tag.generation);
         self.closing = Some(Closing {
             until: now + CLOSE_LIMIT,
             exit,
@@ -329,6 +442,7 @@ impl State {
             clean: None,
             acknowledged: reply.is_none(),
             reply,
+            generation,
         });
     }
 
@@ -339,6 +453,21 @@ impl State {
     }
 
     fn tick(&mut self, now: Instant) {
+        if let Some(background) = &self.background {
+            if now >= background.control.deadline()
+                || background.scope.connection != self.connection
+            {
+                background.control.cancel(now);
+            }
+            if background
+                .control
+                .cancel_time()
+                .is_some_and(|at| now >= at + CANCEL_LIMIT)
+                && self.closing.is_none()
+            {
+                self.close(now, None, true, true);
+            }
+        }
         if let Some(active) = &mut self.running {
             if !active.finalised
                 && (now >= active.control.deadline()
@@ -351,8 +480,16 @@ impl State {
                 active.finish(Err("cancelled"), true);
             }
             if active.ack && active.retired {
+                if active.opens_connection && self.closing.is_none() {
+                    self.connection = Some(active.tag.generation);
+                }
                 self.running = None;
             }
+        }
+        if let Some(notice) = &self.notice
+            && !self.notice_live(notice.generation)
+        {
+            self.notice.take();
         }
         if let Some(closing) = &mut self.closing
             && closing.clean.is_none()
@@ -369,8 +506,8 @@ impl State {
         if let Some(reply) = self.cancel_reply.take() {
             return Some((Slot::Cancel, Payload::Reply(reply)));
         }
-        if let Some((text, ack)) = self.notice.take() {
-            return Some((Slot::Notice, Payload::Notice(text, ack)));
+        if let Some(notice) = self.notice.take() {
+            return Some((Slot::Notice(notice.generation), Payload::Notice(notice)));
         }
         if let Some(reply) = self
             .running
@@ -385,7 +522,9 @@ impl State {
         if let Some(payload) = self.diagnostic.take() {
             return Some((Slot::Diagnostic, payload));
         }
-        let closing = self.closing.as_mut()?;
+        let Some(closing) = self.closing.as_mut() else {
+            return self.next_notification();
+        };
         let clean = closing.clean?;
         let tag = closing.reply.take()?;
         let value = if clean {
@@ -404,27 +543,71 @@ impl State {
         ))
     }
 
-    fn acknowledge(&mut self, slot: Slot) {
+    fn next_notification(&mut self) -> Option<(Slot, Payload)> {
+        if !self.notification_allowed()
+            || !matches!(self.notification, Some(Notification::Queued(..)))
+        {
+            return None;
+        }
+        let Some(Notification::Queued(tag, bytes)) = self.notification.take() else {
+            unreachable!();
+        };
+        if Some(tag.connection) != self.connection {
+            return None;
+        }
+        self.notification = Some(Notification::Writing(tag, bytes.len()));
+        Some((Slot::Notification(tag), Payload::Text(bytes)))
+    }
+
+    fn retire_notification(&mut self, tag: FrameTag, deferred: Option<Vec<u8>>) {
+        let Some(Notification::Writing(current, size)) = self.notification else {
+            return;
+        };
+        if current != tag {
+            return;
+        }
+        self.notification = deferred
+            .filter(|bytes| {
+                bytes.len() == size
+                    && self.connection == Some(tag.connection)
+                    && self.closing.is_none()
+                    && !self.output_failed
+            })
+            .map(|bytes| Notification::Queued(tag, bytes));
+    }
+
+    fn acknowledge(&mut self, slot: Slot, generation: Option<u64>) -> bool {
         match slot {
             Slot::Ready => self.ready = true,
             Slot::Active => {
-                if let Some(active) = &mut self.running {
+                if let Some(active) = &mut self.running
+                    && generation == Some(active.tag.generation)
+                    && active.finalised
+                    && !active.ack
+                {
                     active.ack = true;
+                    return true;
                 }
             }
             Slot::Close => {
-                if let Some(closing) = &mut self.closing {
+                if let Some(closing) = &mut self.closing
+                    && generation.is_some()
+                    && generation == closing.generation
+                {
                     closing.acknowledged = true;
                 }
             }
-            Slot::Cancel | Slot::Diagnostic | Slot::Queued | Slot::Notice => {}
+            Slot::Notification(tag) => self.retire_notification(tag, None),
+            Slot::Cancel | Slot::Diagnostic | Slot::Queued | Slot::Notice(_) => {}
         }
+        false
     }
 
     fn end_close(&mut self, now: Instant, writing: bool) -> Option<i32> {
         let closing = self.closing.as_ref()?;
         let clean = closing.clean?;
         let drained = self.running.is_none()
+            && self.background.is_none()
             && self.rejected.is_none()
             && !self.cancel_slot
             && !self.diagnostic_slot
@@ -486,11 +669,45 @@ fn reject(entry: Entry, code: &'static str) -> Reply {
 enum Job {
     Run(
         Entry,
+        CommandScope,
         Arc<OperationControl>,
         Arc<SessionStop>,
         Option<HistoryAdvance>,
     ),
     Close(Instant),
+    #[cfg(test)]
+    Background(CommandScope, Box<dyn FnOnce(&OperationControl) + Send>),
+}
+
+fn announce_notice(
+    shared: &Shared,
+    generation: u64,
+    control: &OperationControl,
+    key: &RequestKey,
+) -> bool {
+    let (ack, done) = mpsc::sync_channel(1);
+    {
+        let mut state = shared.lock().unwrap();
+        if !state.notice_live(generation) || state.notice.is_some() {
+            return false;
+        }
+        state.notice = Some(Notice {
+            generation,
+            text: format!("Request {}\n", key.request_id),
+            ack,
+        });
+    }
+    loop {
+        if control.stopped() {
+            shared.lock().unwrap().discard_notice(generation);
+            return false;
+        }
+        match done.recv_timeout(POLL) {
+            Ok(written) => return written && !control.stopped(),
+            Err(mpsc::RecvTimeoutError::Disconnected) => return false,
+            Err(mpsc::RecvTimeoutError::Timeout) => {}
+        }
+    }
 }
 
 fn execute_jobs(
@@ -502,7 +719,7 @@ fn execute_jobs(
 ) {
     for job in jobs {
         match job {
-            Job::Run(entry, control, stop, advance) => {
+            Job::Run(entry, scope, control, stop, advance) => {
                 #[cfg(test)]
                 if matches!(entry.command, Ok(Command::Status))
                     && let Some((marker, hold_after_cancel)) = test_barrier.take()
@@ -517,8 +734,8 @@ fn execute_jobs(
                         thread::sleep(POLL);
                     }
                 }
-                if let Some(HistoryAdvance { slot, next }) = advance {
-                    frontend.continuation[slot] = next;
+                if let Some(advance) = advance {
+                    advance.apply(&mut frontend, scope.connection);
                 }
                 let opening = frontend.status.is_none()
                     && matches!(entry.command, Ok(Command::Connect { .. }));
@@ -527,19 +744,8 @@ fn execute_jobs(
                     if control.stopped() {
                         return Err("cancelled");
                     }
-                    frontend.execute(command, &control, &stop, |key| {
-                        if jsonl {
-                            return true;
-                        }
-                        let (ack, done) = mpsc::sync_channel(1);
-                        {
-                            let mut state = shared.lock().unwrap();
-                            if state.output_failed || control.stopped() {
-                                return false;
-                            }
-                            state.notice = Some((format!("Request {}\n", key.request_id), ack));
-                        }
-                        done.recv().unwrap_or(false)
+                    frontend.execute(command, scope, &control, &stop, |key| {
+                        jsonl || announce_notice(&shared, scope.generation, &control, key)
                     })
                 });
                 let generation = entry.tag.generation;
@@ -553,16 +759,17 @@ fn execute_jobs(
                     else {
                         return;
                     };
-                    rollback = opening && (value.is_err() || control.stopped());
-                    if control.stopped() {
+                    let stopped = control.stopped();
+                    rollback = opening && (value.is_err() || stopped);
+                    if stopped {
                         frontend.selected = selected;
                     }
                     if !active.finalised {
-                        let stopped = control.stopped();
                         if stopped {
                             control.cancel(Instant::now());
                         }
                         active.finish(value, stopped);
+                        active.opens_connection = opening && !rollback;
                     }
                     active.retired = !rollback;
                 }
@@ -592,6 +799,27 @@ fn execute_jobs(
                     }
                 }
             }
+            #[cfg(test)]
+            Job::Background(scope, run) => {
+                let control = shared
+                    .lock()
+                    .unwrap()
+                    .background
+                    .as_ref()
+                    .filter(|work| work.scope == scope)
+                    .map(|work| work.control.clone());
+                if let Some(control) = control {
+                    run(&control);
+                    let mut state = shared.lock().unwrap();
+                    if state
+                        .background
+                        .as_ref()
+                        .is_some_and(|work| work.scope == scope)
+                    {
+                        state.background.take();
+                    }
+                }
+            }
         }
     }
 }
@@ -600,15 +828,88 @@ struct WriteJob {
     bytes: Vec<u8>,
     slot: Slot,
     tag: Option<Tag>,
-    ack: mpsc::SyncSender<io::Result<()>>,
+    ack: mpsc::SyncSender<WriteReceipt>,
+}
+
+#[derive(Debug)]
+enum WriteOutcome {
+    Written,
+    Skipped,
+    Deferred(Vec<u8>),
+    Failed,
+}
+
+struct WriteReceipt {
+    outcome: WriteOutcome,
+    completed: Instant,
 }
 
 struct Flight {
     slot: Slot,
-    done: mpsc::Receiver<io::Result<()>>,
+    generation: Option<u64>,
+    done: mpsc::Receiver<WriteReceipt>,
     until: Instant,
+    timed_out: bool,
     advance: Option<HistoryAdvance>,
     notice: Option<mpsc::SyncSender<bool>>,
+}
+
+fn write_frame(shared: &Shared, stdout: &mut impl Write, job: WriteJob) -> bool {
+    enum Admission {
+        Start,
+        Skip,
+        Defer,
+    }
+    let admission = {
+        let mut state = shared.lock().unwrap();
+        let admission = match job.slot {
+            _ if state.output_failed => Admission::Skip,
+            Slot::Notice(generation) if !state.notice_live(generation) => Admission::Skip,
+            Slot::Notification(tag) => {
+                if state.connection != Some(tag.connection)
+                    || state.closing.is_some()
+                    || !matches!(state.notification, Some(Notification::Writing(current, _)) if current == tag)
+                {
+                    Admission::Skip
+                } else if !state.notification_allowed() {
+                    Admission::Defer
+                } else {
+                    Admission::Start
+                }
+            }
+            _ => Admission::Start,
+        };
+        if matches!(admission, Admission::Start) {
+            state.publishing(job.slot, job.tag.as_ref());
+        }
+        admission
+    };
+    let WriteJob { bytes, ack, .. } = job;
+    let outcome = match admission {
+        Admission::Skip => {
+            drop(bytes);
+            WriteOutcome::Skipped
+        }
+        Admission::Defer => WriteOutcome::Deferred(bytes),
+        Admission::Start => {
+            let written = stdout
+                .write_all(&bytes)
+                .and_then(|()| stdout.flush())
+                .is_ok();
+            drop(bytes);
+            if written {
+                WriteOutcome::Written
+            } else {
+                WriteOutcome::Failed
+            }
+        }
+    };
+    let healthy = !matches!(outcome, WriteOutcome::Failed);
+    let _ = ack.try_send(WriteReceipt {
+        outcome,
+        completed: Instant::now(),
+    });
+    healthy
 }
 
 fn send_output(
@@ -640,12 +941,14 @@ fn send_output(
         }
         Payload::Frame(code) => format!("Error: {code}.\n").into_bytes(),
         Payload::Text(bytes) => bytes,
-        Payload::Notice(text, ack) => {
-            notice = Some(ack);
-            text.into_bytes()
+        Payload::Notice(frame) => {
+            notice = Some(frame.ack);
+            frame.text.into_bytes()
         }
     };
+    let generation = tag.as_ref().map(|tag| tag.generation);
     let (ack, done) = mpsc::sync_channel(1);
+    let until = Instant::now() + WRITE_LIMIT;
     output
         .try_send(WriteJob {
             bytes,
@@ -656,8 +959,10 @@ fn send_output(
         .map_err(io::Error::other)?;
     Ok(Flight {
         slot,
+        generation,
         done,
-        until: Instant::now() + WRITE_LIMIT,
+        until,
+        timed_out: false,
         advance,
         notice,
     })
@@ -669,26 +974,61 @@ fn service_output(
     advance: &mut Option<HistoryAdvance>,
     now: Instant,
 ) {
-    let Some(item) = flight.as_ref() else {
+    let Some(item) = flight.as_mut() else {
         return;
     };
-    let success = match item.done.try_recv() {
-        Ok(result) => result.is_ok(),
+    let outcome = match item.done.try_recv() {
+        Ok(receipt) => {
+            if !item.timed_out
+                && matches!(receipt.outcome, WriteOutcome::Written)
+                && receipt.completed > item.until
+            {
+                item.timed_out = true;
+                shared.lock().unwrap().failed_output(now);
+            }
+            receipt.outcome
+        }
         Err(TryRecvError::Empty) if now < item.until => return,
-        Err(_) => false,
+        Err(TryRecvError::Empty) => {
+            if !item.timed_out {
+                item.timed_out = true;
+                shared.lock().unwrap().failed_output(now);
+            }
+            return;
+        }
+        Err(TryRecvError::Disconnected) => WriteOutcome::Failed,
     };
     let item = flight.take().unwrap();
     let mut state = shared.lock().unwrap();
     if let Some(notice) = item.notice {
-        let _ = notice.try_send(success);
-    }
-    if success {
-        if item.advance.is_some() {
-            *advance = item.advance;
+        if let Slot::Notice(generation) = item.slot {
+            let success = matches!(outcome, WriteOutcome::Written)
+                && !item.timed_out
+                && state.notice_live(generation);
+            let _ = notice.try_send(success);
         }
-        state.acknowledge(item.slot);
-    } else {
-        state.failed_output(now);
+    }
+    if item.timed_out || !matches!(outcome, WriteOutcome::Written) {
+        let failed = matches!(outcome, WriteOutcome::Failed);
+        if let Slot::Notification(tag) = item.slot {
+            let returned = match outcome {
+                WriteOutcome::Deferred(bytes) if !item.timed_out => Some(bytes),
+                _ => None,
+            };
+            state.retire_notification(tag, returned);
+        }
+        if failed && !item.timed_out {
+            state.failed_output(now);
+        }
+        return;
+    }
+    if state.acknowledge(item.slot, item.generation)
+        && let Some(proof) = item.advance
+        && Some(proof.scope.generation) == item.generation
+        && proof.scope.connection.is_some()
+        && proof.scope.connection == state.connection
+    {
+        *advance = Some(proof);
     }
 }
 
@@ -751,11 +1091,7 @@ fn run_threads(
         .spawn(move || {
             let mut stdout = io::stdout().lock();
             for job in writes {
-                state.lock().unwrap().publishing(job.slot, job.tag.as_ref());
-                let result = stdout.write_all(&job.bytes).and_then(|()| stdout.flush());
-                let failed = result.is_err();
-                let _ = job.ack.try_send(result);
-                if failed {
+                if !write_frame(&state, &mut stdout, job) {
                     break;
                 }
             }
@@ -835,17 +1171,24 @@ fn run_threads(
             } else {
                 None
             };
-            if state.ready
-                && state.closing.is_none()
-                && !state.cleanup_unconfirmed
-                && state.running.is_none()
-                && flight.is_none()
-                && pending_output.is_none()
-                && let Some(entry) = state.queued.take()
+            if state.can_dispatch(
+                flight.as_ref().map(|item| item.slot),
+                pending_output.is_some(),
+            ) && let Some(entry) = state.queued.take()
             {
                 let control = Arc::new(entry.control(now));
                 let tag = entry.tag.clone();
-                let job = Job::Run(entry, control.clone(), state.stop.clone(), advance.take());
+                let scope = CommandScope {
+                    generation: tag.generation,
+                    connection: state.connection,
+                };
+                let job = Job::Run(
+                    entry,
+                    scope,
+                    control.clone(),
+                    state.stop.clone(),
+                    advance.take(),
+                );
                 if worker.try_send(job).is_ok() {
                     state.running = Some(Active {
                         tag,
@@ -854,6 +1197,7 @@ fn run_threads(
                         finalised: false,
                         retired: false,
                         ack: false,
+                        opens_connection: false,
                     });
                 } else {
                     state.close(now, None, true, true);
