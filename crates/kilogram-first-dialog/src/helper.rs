@@ -107,7 +107,7 @@ async fn collect(
     result
 }
 
-pub(super) fn run(
+pub fn run(
     exe: &Path,
     workspace: &Path,
     contexts: &[String; 2],

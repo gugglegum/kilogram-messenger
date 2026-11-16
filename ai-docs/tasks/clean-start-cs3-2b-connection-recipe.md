@@ -2,7 +2,7 @@
 
 [Контракт](E:/AI-Projects/kilogram-p2p-messenger/ai-docs/tasks/clean-start-cs3-2b-connection-contract.md) и [принятые уточнения](E:/AI-Projects/kilogram-p2p-messenger/ai-docs/tasks/clean-start-cs3-2b-contract-review-01.md). Два синтетических аккаунта, один ПК, DirectOnly `127.0.0.1:0`. Для приёмки нужны две текущие Lease2 у **каждого** процесса, штатное завершение и повторное подключение после reopen. Переписка в этом сценарии не используется.
 
-Для проверки исправлений из [implementation review 01](E:/AI-Projects/kilogram-p2p-messenger/ai-docs/tasks/clean-start-cs3-2b-implementation-review-01.md) запустить целевые фильтры `cs32b_owned_start_failure_and_cancel_preserve_setup` для `kilogram-windows` и `cs32b_cli_runtime_refusal_preserves_message_and_strict_reply` для `kilogram-cli` через stable runner. Первый тест включает фактический сбой дочернего CLI и управляемую задержку наблюдения его выхода. Второй проверяет исходный текст отказа и отклонение неправильного вида, версии, opcode и формы ответа. Выполнить шаги 1–4 ниже на новом образе, затем штатно остановить один runtime и закрыть оба окна. При подтверждённом соединении после импорта отображается **Both locator imports were acknowledged.**
+Для проверки исправлений из [implementation review 01](E:/AI-Projects/kilogram-p2p-messenger/ai-docs/tasks/clean-start-cs3-2b-implementation-review-01.md) запустить целевые фильтры `cs32b_owned_start_failure_and_cancel_preserve_setup` для `kilogram-first-dialog` и `cs32b_cli_runtime_refusal_preserves_message_and_strict_reply` для `kilogram-cli` через stable runner. Первый тест включает фактический сбой дочернего CLI и управляемую задержку наблюдения его выхода. Второй проверяет исходный текст отказа и отклонение неправильного вида, версии, opcode и формы ответа. Выполнить шаги 1–4 ниже на новом образе, затем штатно остановить один runtime и закрыть оба окна. При подтверждённом соединении после импорта отображается **Both locator imports were acknowledged.**
 
 ## Подготовка и focused checks
 
@@ -13,7 +13,7 @@
 $null = Set-KilogramCargoResourcePolicy -RequestedJobs 1
 $env:CARGO_NET_OFFLINE = 'true'
 $env:CARGO_TARGET_DIR = Join-Path $PWD 'target/s54-diagnostics-source-checks'
-cargo clippy --locked --offline --jobs 1 -p kilogram-windows -p kilogram-cli -p kilogram-runtime-ipc --all-targets --profile verification -- -D warnings
+cargo clippy --locked --offline --jobs 1 -p kilogram-windows -p kilogram-first-dialog -p kilogram-cli -p kilogram-runtime-ipc --all-targets --profile verification -- -D warnings
 cargo build --locked --offline --jobs 1 -p kilogram-windows -p kilogram-cli --bin kilogram-windows --bin kilogram-cli --profile verification
 ```
 
@@ -21,14 +21,14 @@ cargo build --locked --offline --jobs 1 -p kilogram-windows -p kilogram-cli --bi
 
 ```powershell
 $runner = Join-Path $PWD 'scripts/run-cargo-tests-stable.ps1'
-$pkg = @('kilogram-windows','kilogram-cli','kilogram-runtime-ipc')
+$pkg = @('kilogram-first-dialog','kilogram-cli','kilogram-runtime-ipc')
 & $runner -Package $pkg -Filter cs32b_ -Profile verification -CargoJobs 1 -SkipCacheStatus
 & $runner -Package $pkg -Filter cs32b_ -Profile verification -CargoJobs 1 -Run -NoCapture -SkipCacheStatus
 ```
 
 `cs32b_actual_independent_connect_restart_and_failures` сам создаёт новые pair directories, проводит реальную независимую ceremony и восстанавливает отсутствующие slots через тот же Start, что UI. Сверить `CS32B_LIVE_PASS`: actual4 current Active2, частичный locator commit и повтор с единственным недостающим commit, те же profile/consents, обновлённые revisions, stop/descriptor conflict/forced outcome. Диагностика `CS32B_ACTIVE_PROGRESS` печатает age от начала запросов. `active=true, lease=false` после restart — ожидаемая промежуточная стадия. Для проверки compatibility отдельно применить фильтры `cs31_`, `cs32a_partial_output_conflict_ambiguous_import_and_expiry` и `old_instance_does_not_remove_replacement_descriptor`; для старых fixtures установить process-local `KILOGRAM_CS_TEST_FIXTURE_ROOT` в свежий подкаталог `.tmp/clean-start-cs3-2b`. Старые данные из CS3.1/CS3.2a не использовать.
 
-Подготовить пару через stable runner с `-Filter cs32b_prepare_ui_fixture -Run` и `$env:KILOGRAM_CS32B_UI_FIXTURE='1'` в дочернем запуске. Helper выполняет независимую церемонию и устанавливает два согласия у каждого участника. Для свежей пары задать `KILOGRAM_CS32B_UI_FIXTURE_TAG` с уникальным именем из латинских букв, цифр и дефиса длиной до 32 символов. Индекс `ui-fixture-<tag>.json` создаётся без перезаписи. Тот же tag передать наблюдателю из шага 4. Без tag используется исходный `ui-fixture.json`. Прежние индексы, пары и результаты сохраняются.
+Подготовить пару через stable runner с `-Package kilogram-first-dialog -Filter cs32b_prepare_ui_fixture -Run` и `$env:KILOGRAM_CS32B_UI_FIXTURE='1'` в дочернем запуске. Helper выполняет независимую церемонию и устанавливает два согласия у каждого участника. Для свежей пары задать `KILOGRAM_CS32B_UI_FIXTURE_TAG` с уникальным именем из латинских букв, цифр и дефиса длиной до 32 символов. Индекс `ui-fixture-<tag>.json` создаётся без перезаписи. Тот же tag передать наблюдателю из шага 4. Без tag используется исходный `ui-fixture.json`. Прежние индексы, пары и результаты сохраняются.
 
 ## Два окна
 

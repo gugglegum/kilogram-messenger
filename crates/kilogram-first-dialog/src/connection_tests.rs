@@ -28,6 +28,118 @@ fn ready_pair_at(parent: &Path, name: &str, missing: bool) -> Result<[Setup; 2]>
 #[path = "connection_message_tests.rs"]
 mod messages;
 
+#[cfg(windows)]
+#[test]
+fn t11a_terminal_fixture_and_observer_binding() -> Result<()> {
+    use crate::chat::{Chat, Mode};
+    let Some(root) = std::env::var_os("KILOGRAM_T11A_FIXTURE_ROOT").map(PathBuf::from) else {
+        return Ok(());
+    };
+    fs::create_dir(&root)?;
+    let mut nodes = ready_pair_at(&root, "first-dialog-", false)?;
+    let [left, right] = &mut nodes;
+    let cleanup = Cleanup::default();
+    let cancel = Arc::new(AtomicBool::new(false));
+    let mut sessions = [
+        Session::start(left, &cli(), cancel.clone(), false, &cleanup)?,
+        Session::start(right, &cli(), cancel.clone(), false, &cleanup)?,
+    ];
+    exchange(&mut sessions, &mut nodes)?;
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        let a = sessions[0].poll(&cancel)?;
+        let b = sessions[1].poll(&cancel)?;
+        let time = Instant::now();
+        let wall = consent::now()?;
+        if a.current(time, wall) && b.current(time, wall) {
+            break;
+        }
+        ensure!(time < deadline, "Fresh terminal fixture Active2 deadline");
+        thread::sleep(Duration::from_millis(100));
+    }
+    for (slot, nonce, text) in [
+        (0, 1, "first"),
+        (0, 2, "Unicode: б\u{1b}"),
+        (1, 3, "second dialog"),
+    ] {
+        SessionSend {
+            session: &mut sessions[0],
+            cancel: &cancel,
+        }
+        .send(slot, [nonce; 16], text)?;
+    }
+    let deadline = Instant::now() + Duration::from_secs(20);
+    loop {
+        let mut sender = SessionSend {
+            session: &mut sessions[0],
+            cancel: &cancel,
+        };
+        if sender.history(0, None, 4)?.items.len() == 2
+            && sender.history(1, None, 4)?.items.len() == 1
+        {
+            break;
+        }
+        ensure!(
+            Instant::now() < deadline,
+            "Fresh terminal fixture history deadline"
+        );
+        thread::sleep(Duration::from_millis(100));
+    }
+
+    let mut observer = Chat::new(nodes[0].home.clone(), cli());
+    let wrong = artifact::hex(&[0; 32]);
+    ensure!(
+        observer.connect(Mode::Observer, Some(&wrong)).is_err(),
+        "Foreign instance accepted"
+    );
+    let path = &sessions[0].doc.ipc_file;
+    let original = model::read(path, 65536)?;
+    let foreign = model::read(&sessions[1].doc.ipc_file, 65536)?;
+    model::write(path, &foreign, true)?;
+    let rejected = observer.connect(Mode::Observer, None).is_err();
+    model::write(path, &original, true)?;
+    ensure!(rejected, "Foreign descriptor identity accepted");
+    let instance = observer.connect(Mode::Observer, None)?.runtime_instance;
+    ensure!(
+        sessions[0].instance.as_ref() == Some(&instance),
+        "Observer attached to a different run"
+    );
+    let page = observer.history(0, None, 1)?;
+    ensure!(
+        !page.finished && page.items.len() == 1,
+        "First page missing continuation"
+    );
+    ensure!(
+        observer.history(1, Some(page.cursor.clone()), 1).is_err(),
+        "Cross-context cursor accepted"
+    );
+    ensure!(
+        observer.history(0, Some(page.cursor), 1)?.finished,
+        "Continuation ended early"
+    );
+
+    for session in &mut sessions {
+        let stopped = session.finish(&cleanup);
+        ensure!(
+            stopped.graceful && stopped.reaped && stopped.eof && stopped.exit == Some(0),
+            "Fixture cleanup"
+        );
+    }
+    ensure!(
+        observer.status().is_err(),
+        "Observer accepted a stopped descriptor"
+    );
+    observer.disconnect()?;
+    let homes = nodes.map(|node| node.home);
+    model::write(
+        &root.join("fixture.json"),
+        &serde_json::to_vec(&homes)?,
+        false,
+    )?;
+    println!("T11A_FIXTURE_READY protected_ready_pair=true exact_observer_binding=true");
+    Ok(())
+}
+
 #[test]
 fn cs41_lan_desktop_profile_socket_and_signed_pair() -> Result<()> {
     use kilogram_protocol::ordered_dialog_v2 as wire;
@@ -288,6 +400,7 @@ fn cs32b_late_status_generation_is_discarded() -> Result<()> {
         deliveries,
         views: view_rx,
         done,
+        completion: None,
         cleanup: Arc::new(Cleanup::default()),
         view: View::waiting("pending"),
     };

@@ -5,13 +5,13 @@ use serde::{Deserialize, Serialize};
 pub(super) const BLOB_CAP: usize = 96 * 1024;
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub(super) enum Kind {
+pub enum Kind {
     Proposal,
     Final,
 }
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(super) struct Envelope {
+pub struct Envelope {
     pub version: u8,
     pub kind: Kind,
     pub mode: String,

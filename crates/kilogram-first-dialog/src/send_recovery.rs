@@ -4,7 +4,7 @@ use kilogram_runtime_ipc::ordered2::{Delivery2, MessageError2, RequestStatus2, S
 use std::sync::Arc;
 use zeroize::Zeroizing;
 
-pub(super) type IpcResult<T> = Result<T, MessageError2>;
+pub type IpcResult<T> = Result<T, MessageError2>;
 
 pub(super) trait SendRuntime {
     fn check_send(&mut self, slot: u8) -> IpcResult<()>;
@@ -13,7 +13,7 @@ pub(super) trait SendRuntime {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(super) enum Progress {
+pub enum Progress {
     Empty,
     DraftRejected,
     Unconfirmed,
@@ -26,12 +26,12 @@ pub(super) enum Progress {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(super) enum Submission {
+pub enum Submission {
     Protected,
     Retained,
 }
 
-pub(super) struct Submitted {
+pub struct Submitted {
     pub slot: u8,
     pub context: [u8; 32],
     pub request: [u8; 16],
@@ -39,7 +39,7 @@ pub(super) struct Submitted {
 }
 
 #[derive(Clone)]
-pub(super) struct Projection {
+pub struct Projection {
     pub busy: bool,
     pub progress: Progress,
     pub item: Option<Arc<Submitted>>,
@@ -56,7 +56,7 @@ impl Default for Projection {
     }
 }
 impl Progress {
-    pub(super) fn notice(self) -> Option<&'static str> {
+    pub fn notice(self) -> Option<&'static str> {
         match self {
             Self::Empty => None,
             Self::DraftRejected => Some("The new draft was not submitted."),

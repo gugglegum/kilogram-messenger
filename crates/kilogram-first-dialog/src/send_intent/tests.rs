@@ -1,5 +1,5 @@
 use super::*;
-use crate::fresh_onboarding::send_recovery::{IpcResult, Progress, Recovery, SendRuntime};
+use crate::send_recovery::{IpcResult, Progress, Recovery, SendRuntime};
 use kilogram_runtime_ipc::ordered2::{Delivery2, MessageError2, RequestStatus2, SendReceipt2};
 
 const TEXT: &str = "  CS33A private synthetic sentinel \u{301} \n\0 ";

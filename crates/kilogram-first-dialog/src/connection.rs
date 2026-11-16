@@ -1,7 +1,7 @@
 //! One owned local runtime. No adoption of a process found through a descriptor.
 use super::{
     artifact, consent, helper, locator_artifact,
-    model::{self, Setup},
+    model::{self, Record, Setup},
     send_intent,
     send_recovery::{IpcResult, Projection, Recovery, SendRuntime, Submission},
 };
@@ -9,9 +9,8 @@ use anyhow::{Context, Result, ensure};
 use kilogram_runtime_ipc::{
     RuntimeIpcDescriptor,
     ordered2::{
-        Client2, Delivery2, HistoryCursor2, HistoryPage2, MAX_HISTORY_ROWS, MessageError2,
-        Profile2Document, ProfileRoute2, ProfileRoutePolicy2, RequestStatus2, SendReceipt2,
-        Status2, id,
+        Client2, Delivery2, HistoryCursor2, HistoryPage2, MessageError2, Profile2Document,
+        ProfileRoute2, ProfileRoutePolicy2, RequestStatus2, SendReceipt2, Status2, id,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -33,7 +32,7 @@ use zeroize::Zeroizing;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(super) struct LanSettings {
+pub struct LanSettings {
     pub local: Ipv4Addr,
     pub peer: Ipv4Addr,
 }
@@ -46,7 +45,7 @@ impl LanSettings {
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(super) struct State {
+pub struct State {
     pub version: u8,
     pub profile: Option<String>,
     pub profile_digest: Option<String>,
@@ -104,7 +103,7 @@ fn change(setup: &mut Setup, f: impl FnOnce(&mut State)) -> Result<()> {
         f(s)
     })
 }
-pub(super) fn lan_settings(setup: &Setup) -> Option<LanSettings> {
+pub fn lan_settings(setup: &Setup) -> Option<LanSettings> {
     setup.record.connection.as_ref().and_then(|state| state.lan)
 }
 pub(super) fn select_route(setup: &mut Setup, lan: Option<LanSettings>) -> Result<()> {
@@ -122,7 +121,7 @@ pub(super) fn select_route(setup: &mut Setup, lan: Option<LanSettings>) -> Resul
     }
     Ok(())
 }
-fn digest(raw: &[u8]) -> String {
+pub(super) fn digest(raw: &[u8]) -> String {
     artifact::hex(blake3::hash(raw).as_bytes())
 }
 fn directory(setup: &Setup) -> Result<PathBuf> {
@@ -139,7 +138,10 @@ fn directory(setup: &Setup) -> Result<PathBuf> {
     Ok(canonical)
 }
 fn check_artifact_path(setup: &Setup, path: &Path) -> Result<()> {
-    let info = setup.record.public.as_ref().context("Account")?;
+    validate_artifact_path(&setup.home, &setup.record, path)
+}
+pub(super) fn validate_artifact_path(home: &Path, record: &Record, path: &Path) -> Result<()> {
+    let info = record.public.as_ref().context("Account")?;
     let state = fs::canonicalize(&info.state_dir)?;
     let root = fs::canonicalize(&info.account_root_dir)?;
     let mut at = path;
@@ -167,7 +169,7 @@ fn check_artifact_path(setup: &Setup, path: &Path) -> Result<()> {
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
             Err(e) => return Err(e.into()),
         }
-        if at == setup.home {
+        if at == home {
             break;
         }
         at = at.parent().context("Local artifact ancestor")?;
@@ -175,9 +177,11 @@ fn check_artifact_path(setup: &Setup, path: &Path) -> Result<()> {
     Ok(())
 }
 fn expected(setup: &Setup) -> Result<Profile2Document> {
-    let info = setup.record.public.as_ref().context("Account")?;
-    let base = directory(setup)?;
-    let lan = lan_settings(setup);
+    expected_profile(&setup.record, &directory(setup)?)
+}
+pub(super) fn expected_profile(record: &Record, base: &Path) -> Result<Profile2Document> {
+    let info = record.public.as_ref().context("Account")?;
+    let lan = record.connection.as_ref().and_then(|state| state.lan);
     Ok(Profile2Document {
         version: 2,
         profile_mode: "ordered-dialog-v2".into(),
@@ -185,7 +189,7 @@ fn expected(setup: &Setup) -> Result<Profile2Document> {
         account: info.account_id.to_string(),
         claim: info.claim.clone(),
         device: info.device_id.to_string(),
-        contexts: setup.record.contexts.clone(),
+        contexts: record.contexts.clone(),
         enabled: vec![0, 1],
         ipc_file: base.join("ipc.json"),
         locator_directory: base.join("locators"),
@@ -353,21 +357,21 @@ impl Drain {
     }
 }
 #[derive(Clone, Copy, PartialEq, Eq)]
-pub(super) struct DialogScope {
+pub struct DialogScope {
     pub instance: [u8; 32],
     pub contexts: [[u8; 32]; 2],
     pub own_role: u8,
 }
 
 #[derive(Clone, Default)]
-pub(super) struct Messages {
+pub struct Messages {
     pub scope: Option<DialogScope>,
     pub send_slots: [bool; 2],
     pub pending: Projection,
 }
 
 #[derive(Clone)]
-pub(super) struct View {
+pub struct View {
     pub text: String,
     pub generation: u64,
     pub request_started: Instant,
@@ -399,7 +403,7 @@ impl View {
     }
 }
 #[derive(Clone, Debug)]
-pub(super) struct Stop {
+pub struct Stop {
     pub graceful: bool,
     pub forced: bool,
     pub reaped: bool,
@@ -834,7 +838,7 @@ impl Drop for Session {
     }
 }
 
-pub(super) enum Action {
+pub enum Action {
     Export,
     Import(PathBuf),
     Resume,
@@ -848,14 +852,15 @@ pub(super) enum Action {
     History(Box<HistoryJob>),
 }
 
-pub(super) struct HistoryJob {
+pub struct HistoryJob {
     pub scope: DialogScope,
     pub slot: u8,
     pub cursor: Option<HistoryCursor2>,
+    pub limit: usize,
     pub reply: mpsc::SyncSender<IpcResult<HistoryPage2>>,
 }
 
-pub(super) struct DeliveryJob {
+pub struct DeliveryJob {
     pub scope: DialogScope,
     pub slot: u8,
     pub request: [u8; 16],
@@ -874,7 +879,12 @@ struct SessionSend<'a> {
 }
 
 impl SessionSend<'_> {
-    fn history(&mut self, slot: u8, cursor: Option<&HistoryCursor2>) -> IpcResult<HistoryPage2> {
+    fn history(
+        &mut self,
+        slot: u8,
+        cursor: Option<&HistoryCursor2>,
+        limit: usize,
+    ) -> IpcResult<HistoryPage2> {
         let context = self.context(slot)?;
         let client = self
             .session
@@ -882,9 +892,7 @@ impl SessionSend<'_> {
             .as_ref()
             .ok_or(MessageError2::Unavailable)?;
         let response = cancellable(&self.session.rt, self.cancel, async {
-            Ok(client
-                .history_page(slot, context, cursor, MAX_HISTORY_ROWS)
-                .await)
+            Ok(client.history_page(slot, context, cursor, limit).await)
         })
         .map_err(|_| MessageError2::Unavailable)?;
         self.context(slot)?;
@@ -1116,7 +1124,7 @@ fn run_connected(
                         session,
                         cancel: signal,
                     }
-                    .history(job.slot, job.cursor.as_ref())
+                    .history(job.slot, job.cursor.as_ref(), job.limit)
                 } else {
                     Err(MessageError2::InvalidInput)
                 };
@@ -1176,13 +1184,14 @@ fn run_connected(
     }
     Ok(())
 }
-pub(super) struct Work {
+pub struct Work {
     cancel: Arc<AtomicBool>,
     epoch: Arc<AtomicU64>,
     actions: mpsc::SyncSender<(u64, Action)>,
     deliveries: mpsc::SyncSender<DeliveryJob>,
     views: mpsc::Receiver<View>,
     done: mpsc::Receiver<(Setup, Result<Stop>)>,
+    completion: Option<(Setup, Result<Stop>)>,
     cleanup: Arc<Cleanup>,
     pub view: View,
 }
@@ -1237,6 +1246,7 @@ impl Work {
             deliveries: delivery_tx,
             views: vrx,
             done: drx,
+            completion: None,
             cleanup,
             view: View::waiting(
                 "Checking both local permissions and starting the owned runtime...",
@@ -1266,7 +1276,7 @@ impl Work {
         self.view = View::waiting("Stopping owned runtime...");
         self.cancel.store(true, Ordering::Release);
     }
-    pub fn poll(&mut self) -> Option<(Setup, Result<Stop>)> {
+    pub(super) fn refresh_view(&mut self) {
         while let Ok(v) = self.views.try_recv() {
             if !self.cancel.load(Ordering::Acquire)
                 && v.generation == self.epoch.load(Ordering::Acquire)
@@ -1280,7 +1290,16 @@ impl Work {
         } else if self.cleanup.stopping() {
             self.view = View::waiting("Stopping owned runtime...");
         }
-        self.done.try_recv().ok()
+        if self.completion.is_none() {
+            self.completion = self.done.try_recv().ok();
+        }
+    }
+    pub(super) fn finished(&self) -> bool {
+        self.completion.is_some()
+    }
+    pub fn poll(&mut self) -> Option<(Setup, Result<Stop>)> {
+        self.refresh_view();
+        self.completion.take()
     }
 }
 impl Drop for Work {

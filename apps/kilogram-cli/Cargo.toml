@@ -31,6 +31,7 @@ getrandom.workspace = true
 image.workspace = true
 iroh.workspace = true
 kilogram-crypto = { path = "../../crates/kilogram-crypto" }
+kilogram-first-dialog = { path = "../../crates/kilogram-first-dialog" }
 kilogram-identity = { path = "../../crates/kilogram-identity" }
 kilogram-mailbox = { path = "../../crates/kilogram-mailbox" }
 kilogram-mailbox-client = { path = "../../crates/kilogram-mailbox-client" }

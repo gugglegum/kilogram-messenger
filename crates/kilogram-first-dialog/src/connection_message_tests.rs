@@ -1,6 +1,6 @@
 use super::*;
-use crate::fresh_onboarding::artifact::hex;
-use crate::fresh_onboarding::send_recovery::Progress;
+use crate::artifact::hex;
+use crate::send_recovery::Progress;
 use kilogram_runtime_ipc::ordered2::{Delivery2, HistoryCursor2, HistoryPage2, MAX_HISTORY_ROWS};
 use std::collections::BTreeMap;
 
@@ -548,6 +548,7 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
         scope,
         slot: 1,
         cursor: None,
+        limit: kilogram_runtime_ipc::ordered2::MAX_HISTORY_ROWS,
         reply,
     })))?;
     let page = history.recv_timeout(Duration::from_secs(10))??;

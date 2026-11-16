@@ -3267,6 +3267,7 @@ dependencies = [
  "iroh",
  "kilogram-bootstrap-contract",
  "kilogram-crypto",
+ "kilogram-first-dialog",
  "kilogram-identity",
  "kilogram-mailbox",
  "kilogram-mailbox-client",
@@ -3314,6 +3315,26 @@ dependencies = [
  "serde",
  "thiserror 2.0.20",
  "x25519-dalek 3.0.0",
+ "zeroize",
+]
+
+[[package]]
+name = "kilogram-first-dialog"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "blake3",
+ "getrandom 0.4.3",
+ "kilogram-bootstrap-contract",
+ "kilogram-identity",
+ "kilogram-protocol",
+ "kilogram-runtime-ipc",
+ "kilogram-state",
+ "serde",
+ "serde_json",
+ "stellar-agent-windows-identity",
+ "tempfile",
+ "tokio",
  "zeroize",
 ]
 
@@ -3776,13 +3797,13 @@ dependencies = [
  "eframe",
  "getrandom 0.4.3",
  "kilogram-bootstrap-contract",
+ "kilogram-first-dialog",
  "kilogram-identity",
  "kilogram-protocol",
  "kilogram-runtime-ipc",
  "kilogram-state",
  "serde",
  "serde_json",
- "stellar-agent-windows-identity",
  "tempfile",
  "tokio",
  "zeroize",

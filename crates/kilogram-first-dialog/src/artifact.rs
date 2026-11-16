@@ -5,11 +5,11 @@ use kilogram_identity::{AccountAuthoritySnapshot, AccountId, DeviceId};
 use kilogram_protocol::ordered_dialog_v2 as wire;
 use serde::{Deserialize, Serialize};
 
-pub(super) const FILE_CAP: usize = 512 * 1024;
+pub const FILE_CAP: usize = 512 * 1024;
 pub(super) fn hex(bytes: &[u8]) -> String {
     bytes.iter().map(|b| format!("{b:02x}")).collect()
 }
-pub(super) fn id() -> Result<String> {
+pub fn id() -> Result<String> {
     let mut b = [0; 32];
     getrandom::fill(&mut b)?;
     Ok(hex(&b))
@@ -45,7 +45,7 @@ pub(super) fn unhex(s: &str, cap: usize) -> Result<Vec<u8>> {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(super) struct Identity {
+pub struct Identity {
     pub account: AccountId,
     pub device: DeviceId,
     pub credential: String,
@@ -83,19 +83,19 @@ impl Identity {
 }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
-pub(super) enum Kind {
+pub enum Kind {
     Invite,
     Reply,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(super) struct Recipient {
+pub struct Recipient {
     pub account: AccountId,
     pub device: DeviceId,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(super) struct Artifact {
+pub struct Artifact {
     pub version: u8,
     pub kind: Kind,
     pub mode: String,

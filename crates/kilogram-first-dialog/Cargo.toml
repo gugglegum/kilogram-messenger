@@ -1,0 +1,30 @@
+[package]
+name = "kilogram-first-dialog"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[dependencies]
+anyhow.workspace = true
+blake3.workspace = true
+getrandom.workspace = true
+kilogram-bootstrap-contract = { path = "../kilogram-bootstrap-contract" }
+kilogram-identity = { path = "../kilogram-identity" }
+kilogram-protocol = { path = "../kilogram-protocol" }
+kilogram-runtime-ipc = { path = "../kilogram-runtime-ipc" }
+serde.workspace = true
+serde_json.workspace = true
+tempfile.workspace = true
+tokio = { workspace = true, features = ["process"] }
+zeroize.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+stellar-agent-windows-identity = "=0.1.0-alpha.6"
+
+[dev-dependencies]
+kilogram-state = { path = "../kilogram-state" }
+
+[lints]
+workspace = true

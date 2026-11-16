@@ -216,6 +216,7 @@ use tokio::{
 use zeroize::Zeroizing;
 
 mod ordered2_cli;
+mod terminal_chat;
 mod ordered3_cli;
 mod ordered_cli;
 mod ordered_ingress;
@@ -485,6 +486,13 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Read the history of an existing first-dialog Setup.
+    Chat {
+        #[arg(long)]
+        setup: PathBuf,
+        #[arg(long)]
+        jsonl: bool,
+    },
     /// Explicit administration and authenticated IPC for fresh OD1 profiles.
     Ordered {
         #[command(subcommand)]
@@ -2792,7 +2800,8 @@ impl Command {
             | Self::StateVaultKeyExport { state_dir, .. }
             | Self::StateVaultKeyImport { state_dir, .. }
             | Self::StateVaultRestore { state_dir, .. } => Some(state_dir),
-            Self::AccountCreate { .. }
+            Self::Chat { .. }
+            | Self::AccountCreate { .. }
             | Self::RolloutTrustedPolicyImport { .. }
             | Self::CurrentPeerInvitationInspect { .. }
             | Self::RuntimeProfileCreate { .. }
@@ -3680,6 +3689,13 @@ fn main() -> Result<()> {
 async fn async_main() -> Result<()> {
     let cli = Cli::parse();
     let command = cli.command;
+    if let Command::Chat { setup, jsonl } = command {
+        let code = tokio::task::spawn_blocking(move || terminal_chat::run(setup, jsonl)).await?;
+        if code != 0 {
+            std::process::exit(code);
+        }
+        return Ok(());
+    }
     let state_directory = command.state_directory().map(Path::to_path_buf);
     let uses_state_vault_dual_write = command.uses_state_vault_dual_write();
     let mut _state_lock = command
@@ -5126,7 +5142,7 @@ async fn run_command(command: Command) -> Result<()> {
             state_dir,
             certificate_file,
         } => enroll_device(account_dir, state_dir, certificate_file),
-        Command::Ordered { .. } => {
+        Command::Ordered { .. } | Command::Chat { .. } => {
             unreachable!("OD1 commands are dispatched before legacy repositories")
         }
         Command::DeviceAuthorityUpdate {

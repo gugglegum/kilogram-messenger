@@ -7,6 +7,7 @@ members = [
     "apps/kilogram-windows",
     "crates/kilogram-bootstrap-contract",
     "crates/kilogram-crypto",
+    "crates/kilogram-first-dialog",
     "crates/kilogram-identity",
     "crates/kilogram-mailbox",
     "crates/kilogram-mailbox-client",

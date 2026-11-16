@@ -1,22 +1,17 @@
 //! Explicit first-dialog pilot for a single peer.
-mod artifact;
-mod connection;
-mod consent;
-mod consent_artifact;
 mod dialog;
-mod helper;
-mod locator_artifact;
-mod model;
-mod send_intent;
-mod send_recovery;
 #[cfg(test)]
 mod tests;
 
 use anyhow::{Result, ensure};
-use artifact::{Artifact, Kind};
 use eframe::egui;
 use kilogram_bootstrap_contract::Ordered2BootstrapOutput;
-use model::Setup;
+use kilogram_first_dialog::{
+    artifact::{self, Artifact, Kind},
+    connection, consent, consent_artifact, helper,
+    model::{self, Setup},
+    send_intent, send_recovery,
+};
 use std::{
     path::{Path, PathBuf},
     sync::{

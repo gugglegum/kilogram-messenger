@@ -13,7 +13,7 @@ use std::{
 use zeroize::Zeroizing;
 
 const RECORD_CAP: usize = 128 * 1024;
-pub(super) fn read(path: &Path, cap: usize) -> Result<Vec<u8>> {
+pub fn read(path: &Path, cap: usize) -> Result<Vec<u8>> {
     let meta = fs::symlink_metadata(path)?;
     ensure!(
         meta.is_file() && !meta.file_type().is_symlink() && meta.len() <= cap as u64,
@@ -40,7 +40,7 @@ pub(super) fn write(path: &Path, bytes: &[u8], replace: bool) -> Result<()> {
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(super) struct Record {
+pub struct Record {
     pub version: u8,
     pub local_id: String,
     pub invitation: String,
@@ -64,7 +64,7 @@ struct Receipt {
     public: Ordered2BootstrapPublic,
     recovery_scope: String,
 }
-pub(super) struct Setup {
+pub struct Setup {
     pub home: PathBuf,
     pub record: Record,
     pub phrase: Option<Zeroizing<String>>,
@@ -189,8 +189,7 @@ impl Setup {
     }
     pub fn open(home: &Path) -> Result<Self> {
         let (home, lock) = Self::lock(home)?;
-        let record: Record = serde_json::from_slice(&read(&home.join("setup.json"), RECORD_CAP)?)?;
-        Self::validate(&record, &home)?;
+        let record = Self::read_record(&home)?;
         let mut setup = Self {
             home,
             record,
@@ -222,6 +221,11 @@ impl Setup {
             state.validate()?;
         }
         Ok(setup)
+    }
+    pub(super) fn read_record(home: &Path) -> Result<Record> {
+        let record = serde_json::from_slice(&read(&home.join("setup.json"), RECORD_CAP)?)?;
+        Self::validate(&record, home)?;
+        Ok(record)
     }
     pub(super) fn update(&mut self, f: impl FnOnce(&mut Record)) -> Result<()> {
         let current: Record =

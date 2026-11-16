@@ -286,7 +286,7 @@ impl Drop for Store {
     }
 }
 
-pub(super) fn valid_text(text: &str) -> bool {
+pub fn valid_text(text: &str) -> bool {
     !text.is_empty() && text.len() <= TEXT_CAP
 }
 

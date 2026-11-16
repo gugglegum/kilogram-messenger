@@ -22,13 +22,13 @@ use std::{
 
 const INPUT_CAP: usize = 160 * 1024;
 pub(super) const TTL: u64 = 30 * 86400;
-pub(super) fn now() -> Result<u64> {
+pub fn now() -> Result<u64> {
     Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs())
 }
 fn digest(raw: &[u8]) -> String {
     artifact::hex(blake3::hash(raw).as_bytes())
 }
-pub(super) fn valid_interval(nb: u64, end: u64, wall: u64) -> Result<()> {
+pub fn valid_interval(nb: u64, end: u64, wall: u64) -> Result<()> {
     ensure!(
         end > nb && end - nb <= TTL && wall.saturating_add(120) >= nb && wall < end,
         "Consent expired or not yet valid; existing artifacts were preserved"
@@ -37,7 +37,7 @@ pub(super) fn valid_interval(nb: u64, end: u64, wall: u64) -> Result<()> {
 }
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(super) struct Reference {
+pub struct Reference {
     pub name: String,
     pub digest: String,
 }
@@ -70,7 +70,7 @@ impl Reference {
     }
 }
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
-pub(super) enum Outcome {
+pub enum Outcome {
     #[default]
     NotStarted,
     Started,
@@ -79,7 +79,7 @@ pub(super) enum Outcome {
 }
 #[derive(Clone, Debug, Default, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(super) struct Slot {
+pub struct Slot {
     pub output: Option<Reference>,
     pub signing: Outcome,
     pub importing: Outcome,
@@ -87,7 +87,7 @@ pub(super) struct Slot {
 }
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
-pub(super) struct State {
+pub struct State {
     pub version: u8,
     pub inputs: Reference,
     pub proposal: Option<Reference>,
@@ -207,7 +207,7 @@ impl Inputs {
         (self.not_before, self.not_before + self.ttl)
     }
 }
-pub(super) fn role(setup: &Setup) -> Result<usize> {
+pub fn role(setup: &Setup) -> Result<usize> {
     let info = setup.record.public.as_ref().context("Account not ready")?;
     let peer = setup
         .record
@@ -415,7 +415,7 @@ fn lineage(setup: &Setup, inputs: &Inputs, blobs: &[Vec<u8>; 2]) -> Result<()> {
     }
     Ok(())
 }
-pub(super) fn period(setup: &Setup) -> Result<(u64, u64)> {
+pub fn period(setup: &Setup) -> Result<(u64, u64)> {
     Ok(get_inputs(setup, false)?.interval())
 }
 
@@ -454,7 +454,7 @@ fn envelope(setup: &Setup, kind: Kind, inputs: &Inputs, blobs: [Vec<u8>; 2]) -> 
         blobs: blobs.each_ref().map(|b| artifact::hex(b)),
     }
 }
-pub(super) fn select(setup: &mut Setup, e: &Envelope) -> Result<()> {
+pub fn select(setup: &mut Setup, e: &Envelope) -> Result<()> {
     check_envelope(setup, e, true)?;
     let r = role(setup)?;
     let blobs = e.payloads()?;
@@ -515,7 +515,7 @@ pub(super) fn select(setup: &mut Setup, e: &Envelope) -> Result<()> {
     Ok(())
 }
 /// Check references and crypto on reopen, but do not claim repository installation.
-pub(super) fn review(setup: &Setup, time: bool) -> Result<()> {
+pub fn review(setup: &Setup, time: bool) -> Result<()> {
     if setup.record.consent.is_none() {
         return Ok(());
     }
@@ -568,7 +568,7 @@ pub(super) fn review(setup: &Setup, time: bool) -> Result<()> {
     Ok(())
 }
 #[derive(Clone, Copy, Debug)]
-pub(super) enum Action {
+pub enum Action {
     Propose,
     Cosign,
     Import,
@@ -654,7 +654,7 @@ fn public_file(setup: &Setup, name: &str, raw: &[u8]) -> Result<PathBuf> {
     }
     Ok(path)
 }
-pub(super) fn execute(
+pub fn execute(
     setup: &mut Setup,
     exe: &Path,
     action: Action,
@@ -830,7 +830,7 @@ fn execute_with(
     }
     Ok(())
 }
-pub(super) fn export(setup: &Setup) -> Result<PathBuf> {
+pub fn export(setup: &Setup) -> Result<PathBuf> {
     review(setup, true)?;
     let inputs = get_inputs(setup, true)?;
     let state = setup.record.consent.as_ref().context("Consent")?;

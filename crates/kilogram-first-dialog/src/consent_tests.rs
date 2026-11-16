@@ -5,7 +5,7 @@ use kilogram_state::{StateDirectoryLock, indexed_dialog as db};
 fn repo() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
-pub(in crate::fresh_onboarding) fn cli() -> PathBuf {
+pub(crate) fn cli() -> PathBuf {
     repo().join("target/clean-start-runtime/kilogram-cli.exe")
 }
 fn bootstrap(setup: &mut Setup) -> Result<()> {
@@ -19,13 +19,13 @@ fn bootstrap(setup: &mut Setup) -> Result<()> {
     setup.accept(out, &generation)?;
     setup.acknowledge(true)
 }
-pub(in crate::fresh_onboarding) fn pair(name: &str) -> Result<[Setup; 2]> {
+pub(crate) fn pair(name: &str) -> Result<[Setup; 2]> {
     let parent = std::env::var_os("KILOGRAM_CS_TEST_FIXTURE_ROOT")
         .map(PathBuf::from)
         .unwrap_or_else(|| repo().join(".tmp/clean-start-cs3-2a/fixtures"));
     pair_in(&parent, name)
 }
-pub(in crate::fresh_onboarding) fn pair_in(parent: &Path, name: &str) -> Result<[Setup; 2]> {
+pub(crate) fn pair_in(parent: &Path, name: &str) -> Result<[Setup; 2]> {
     fs::create_dir_all(parent)?;
     let base = tempfile::Builder::new()
         .prefix(name)
@@ -40,7 +40,7 @@ pub(in crate::fresh_onboarding) fn pair_in(parent: &Path, name: &str) -> Result<
     alice.select_reply(reply, true)?;
     Ok([alice, bob])
 }
-pub(in crate::fresh_onboarding) fn run_isolated(
+pub(crate) fn run_isolated(
     nodes: &mut [Setup; 2],
     who: usize,
     action: Action,
@@ -64,7 +64,7 @@ pub(in crate::fresh_onboarding) fn run_isolated(
     fs::rename(&hidden, &peer_root)?;
     result
 }
-pub(in crate::fresh_onboarding) fn repository(setup: &Setup) -> Result<db::RuntimeRepository> {
+pub(crate) fn repository(setup: &Setup) -> Result<db::RuntimeRepository> {
     let info = setup.record.public.as_ref().context("Account")?;
     Ok(db::RuntimeRepository::open(
         StateDirectoryLock::acquire(&info.state_dir)?,
@@ -75,7 +75,7 @@ pub(in crate::fresh_onboarding) fn repository(setup: &Setup) -> Result<db::Runti
         db::Config::default(),
     )?)
 }
-pub(in crate::fresh_onboarding) fn selected(setup: &Setup) -> Result<Envelope> {
+pub(crate) fn selected(setup: &Setup) -> Result<Envelope> {
     Envelope::decode(&model::read(&export(setup)?, artifact::FILE_CAP)?)
 }
 fn cancelled() -> Arc<AtomicBool> {

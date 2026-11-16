@@ -336,6 +336,7 @@ impl Dialog {
             scope,
             slot: self.slot,
             cursor,
+            limit: MAX_HISTORY_ROWS,
             reply,
         };
         if work.action(Action::History(Box::new(job))).is_ok() {
