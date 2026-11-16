@@ -439,6 +439,135 @@ fn cs32b_late_status_generation_is_discarded() -> Result<()> {
     );
     Ok(())
 }
+
+#[cfg(windows)]
+#[test]
+fn t11d_fresh_terminal_setups() -> Result<()> {
+    let Some(root) = std::env::var_os("KILOGRAM_T11D_FIXTURE_ROOT").map(PathBuf::from) else {
+        return Ok(());
+    };
+    fs::create_dir(&root)?;
+    let nodes = ready_pair_at(&root, "locator-", false)?;
+    ensure!(nodes.iter().all(|node| node.record.connection.is_none()));
+    let homes = nodes.map(|node| node.home);
+    model::write(
+        &root.join("fixture.json"),
+        &serde_json::to_vec(&homes)?,
+        false,
+    )?;
+    println!("T11D_FRESH_READY_PAIR no_runtime_or_locator_helpers=true");
+    Ok(())
+}
+
+fn check_locator_retry_progress(
+    session: &mut Session,
+    setup: &mut Setup,
+    file: &Path,
+    signer: &kilogram_identity::DeviceIdentity,
+    signal: &AtomicBool,
+) -> Result<()> {
+    use crate::operation::OperationKind;
+    let op = || {
+        OperationControl::new(
+            OperationKind::Locator,
+            Instant::now() + Duration::from_secs(20),
+            None,
+        )
+    };
+    let before = op();
+    before.cancel(Instant::now());
+    let old = setup.record.connection.clone();
+    ensure!(
+        session
+            .import_file(setup, file, signal, Some(&before), |_| Ok(()))
+            .is_err()
+    );
+    ensure!(before.finish(false).locator.is_none() && setup.record.connection == old);
+
+    let after = op();
+    let cancelled = session
+        .import_file(setup, file, signal, Some(&after), |slot| {
+            ensure!(slot == 0);
+            after.cancel(Instant::now());
+            Ok(())
+        })
+        .map_err(anyhow::Error::msg)?;
+    let frozen = after
+        .finish(false)
+        .locator
+        .context("Missing import cancellation report")?;
+    ensure!(frozen == cancelled && cancelled.state == LocatorState::Partial);
+    let slots = cancelled.import.context("Import progress")?.slots;
+    ensure!(
+        slots[0].attempt == LocatorAttempt::Confirmed
+            && slots[1].attempt == LocatorAttempt::NotAttempted
+            && slots.iter().all(|s| s.retained_confirmed)
+    );
+
+    let lost = session
+        .import_file(setup, file, signal, None, |slot| {
+            ensure!(slot == 0, "Controlled loss of second ACK");
+            Ok(())
+        })
+        .map_err(anyhow::Error::msg)?;
+    ensure!(lost.state == LocatorState::Partial);
+    let slots = lost.import.context("Import progress")?.slots;
+    ensure!(
+        slots[0].attempt == LocatorAttempt::Confirmed
+            && slots[1].attempt == LocatorAttempt::Unconfirmed
+            && slots.iter().all(|s| s.retained_confirmed)
+    );
+    session.poll(signal)?;
+    let generation = session
+        .last_status
+        .as_ref()
+        .context("Current generation")?
+        .root_generation;
+    let restored = session
+        .locator(setup, LocatorCommand::Retry, signal, None)
+        .map_err(anyhow::Error::msg)?;
+    ensure!(restored.state == LocatorState::Imported);
+    session.poll(signal)?;
+    ensure!(
+        session
+            .last_status
+            .as_ref()
+            .context("Restored generation")?
+            .root_generation
+            == generation
+    );
+
+    // Keep the first exact blob and change signed bytes at the same revision
+    // in the second slot. The real runtime accepts the exact first repeat and
+    // explicitly refuses the second, despite both signatures being valid.
+    use kilogram_protocol::ordered_dialog_v2::ParsedRuntimeLocator2;
+    let mut value: serde_json::Value =
+        serde_json::from_slice(&model::read(file, locator_artifact::CAP)?)?;
+    let blob = artifact::unhex(value["locators"][1].as_str().context("slot1")?, 8192)?;
+    let mut fields = ParsedRuntimeLocator2::parse(&blob)?.fields().clone();
+    fields.expires -= 1;
+    let conflict = ParsedRuntimeLocator2::sign(fields, signer)?;
+    value["locators"][1] = artifact::hex(conflict.raw()).into();
+    let conflict_path = setup.home.join("same-revision-conflict.json");
+    model::write(&conflict_path, &serde_json::to_vec(&value)?, false)?;
+    let refused = session
+        .locator(setup, LocatorCommand::Import(conflict_path), signal, None)
+        .map_err(anyhow::Error::msg)?;
+    ensure!(refused.state == LocatorState::Partial);
+    let slots = refused.import.context("Conflict progress")?.slots;
+    ensure!(
+        slots[0].attempt == LocatorAttempt::Confirmed
+            && slots[0].retained_confirmed
+            && slots[1].attempt == LocatorAttempt::Unconfirmed
+            && !slots[1].retained_confirmed
+    );
+    session.import(setup, file, signal)?;
+    println!(
+        "T11D_TYPED_LOCATOR_PROGRESS_PASS cancel_first_ack=true lost_second_ack=true historical_accepted_retained=true retry_generation_unchanged=true explicit_second_conflict=true"
+    );
+    Ok(())
+}
+
 #[test]
 fn cs32b_actual_independent_connect_restart_and_failures() -> Result<()> {
     let mut nodes = ready_pair("cs32b-live-", true)?;
@@ -515,6 +644,13 @@ fn cs32b_actual_independent_connect_restart_and_failures() -> Result<()> {
     );
     sessions[1].import(&mut nodes[1], &paths[0], &signal)?;
     active_pair(&mut sessions, &nodes)?;
+    check_locator_retry_progress(
+        &mut sessions[0],
+        &mut nodes[0],
+        &paths[1],
+        &peer_signer,
+        &signal,
+    )?;
     let original_instances = [sessions[0].instance.clone(), sessions[1].instance.clone()];
     let original_profiles = [
         nodes[0]
@@ -605,6 +741,22 @@ fn cs32b_actual_independent_connect_restart_and_failures() -> Result<()> {
             env.validate(&nodes[0], true).is_err(),
             "signed locator policy negative accepted"
         );
+        if kind == 1 {
+            let expired = nodes[0].home.join("signed-expired-locators.json");
+            model::write(&expired, &serde_json::to_vec(&v)?, false)?;
+            let saved = nodes[0].record.connection.clone();
+            let result = sessions[0].locator(
+                &mut nodes[0],
+                LocatorCommand::Import(expired),
+                &signal,
+                None,
+            );
+            ensure!(
+                result.err() == Some("invalid_locator_bundle")
+                    && nodes[0].record.connection == saved
+            );
+            println!("T11D_SIGNED_EXPIRED_PREFLIGHT_PASS");
+        }
     }
     let stops = [
         sessions[0].finish(&Cleanup::default()),

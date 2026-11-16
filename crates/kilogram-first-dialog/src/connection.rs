@@ -696,95 +696,6 @@ impl Session {
         self.last_status = Some(status);
         Ok(view)
     }
-    pub fn export(&mut self, setup: &Setup, cancel: &AtomicBool) -> Result<PathBuf> {
-        let _ = self.poll(cancel)?;
-        let client = self.client.as_ref().context("Owned client")?;
-        let first = cancellable(&self.rt, cancel, client.export_locator(0))?;
-        let second = cancellable(&self.rt, cancel, client.export_locator(1))?;
-        let envelope = locator_artifact::Envelope::create(setup, [first, second])?;
-        let blobs = envelope.validate(setup, false)?;
-        let _ = self.poll(cancel)?;
-        let status = self.last_status.as_ref().context("Status")?;
-        let endpoint = status.endpoint.as_ref().context("Endpoint")?;
-        for (slot, raw) in blobs.iter().enumerate() {
-            let loc = kilogram_protocol::ordered_dialog_v2::ParsedRuntimeLocator2::parse(raw)?;
-            ensure!(
-                artifact::hex(&loc.fields().endpoint) == endpoint.id
-                    && loc.fields().revision == status.installed(slot)?.own_locator_revision
-                    && (self.doc.route.lan_peer_ipv4.is_none() || loc.fields().ips == endpoint.ips),
-                "Own locators changed; export again"
-            );
-        }
-        let raw = envelope.encode()?;
-        let path = directory(setup)?.join(format!("public-{}.json", artifact::id()?));
-        model::write(&path, &raw, false)?;
-        Ok(path)
-    }
-    pub fn import(&mut self, setup: &mut Setup, path: &Path, cancel: &AtomicBool) -> Result<()> {
-        self.import_with(setup, path, cancel, |_| Ok(()))
-    }
-    fn import_with(
-        &mut self,
-        setup: &mut Setup,
-        path: &Path,
-        cancel: &AtomicBool,
-        mut after: impl FnMut(usize) -> Result<()>,
-    ) -> Result<()> {
-        let raw = model::read(path, locator_artifact::CAP)?;
-        let envelope = locator_artifact::Envelope::decode(&raw)?;
-        let blobs = envelope.validate(setup, true)?;
-        let _ = self.poll(cancel)?;
-        let status = self.last_status.as_ref().context("Status")?;
-        for (slot, blob) in blobs.iter().enumerate() {
-            let loc = kilogram_protocol::ordered_dialog_v2::ParsedRuntimeLocator2::parse(blob)?;
-            ensure!(
-                loc.fields().revision >= status.installed(slot)?.peer_locator_revision,
-                "Peer locator rollback"
-            );
-        }
-        let hash = digest(&raw);
-        let name = format!("peer-{hash}.json");
-        let retained = directory(setup)?.join(&name);
-        if retained.exists() {
-            ensure!(
-                model::read(&retained, locator_artifact::CAP)? == raw,
-                "Locator input conflict"
-            );
-        } else {
-            model::write(&retained, &raw, false)?;
-        }
-        let same = setup
-            .record
-            .connection
-            .as_ref()
-            .is_some_and(|s| s.incoming_digest.as_ref() == Some(&hash));
-        change(setup, |s| {
-            if !same {
-                s.imports = [consent::Outcome::NotStarted; 2];
-            }
-            s.incoming = Some(name);
-            s.incoming_digest = Some(hash);
-        })?;
-        for (slot, blob) in blobs.iter().enumerate() {
-            envelope.validate(setup, true)?;
-            change(setup, |s| s.imports[slot] = consent::Outcome::Started)?;
-            let client = self.client.as_ref().context("Owned client")?;
-            let result = cancellable(&self.rt, cancel, client.import_locator(slot as u8, blob));
-            if result.is_err() {
-                change(setup, |s| {
-                    s.imports[slot] = consent::Outcome::Failed;
-                    s.last_outcome = Some("locator-partial".into());
-                })?;
-                anyhow::bail!(
-                    "Local locator import unconfirmed; retry the same retained file. Existing accepted slots were kept."
-                );
-            }
-            after(slot)?;
-            change(setup, |s| s.imports[slot] = consent::Outcome::Accepted)?;
-        }
-        change(setup, |s| s.last_outcome = Some("locator-imported".into()))?;
-        Ok(())
-    }
     fn finish(&mut self, cleanup: &Cleanup) -> Stop {
         cleanup.stopping.store(true, Ordering::Release);
         let mut ack = false;
@@ -855,10 +766,14 @@ impl Drop for Session {
     }
 }
 
+mod locators;
+pub use locators::{LocatorAttempt, LocatorCommand, LocatorReport, LocatorResult, LocatorState};
+
 pub enum Action {
     Export,
     Import(PathBuf),
     Resume,
+    Locator(Box<LocatorJob>),
     Stop,
     Send {
         slot: u8,
@@ -869,6 +784,13 @@ pub enum Action {
     Request(Box<RequestJob>),
     History(Box<HistoryJob>),
     TerminalHistory(Box<HistoryJob>, Arc<OperationControl>),
+}
+
+pub struct LocatorJob {
+    pub scope: DialogScope,
+    pub command: LocatorCommand,
+    pub control: Arc<OperationControl>,
+    pub reply: mpsc::SyncSender<LocatorResult>,
 }
 
 pub struct RequestJob {
@@ -1094,49 +1016,46 @@ fn run_connected(
         let idle = action_pending.is_none();
         match action_pending {
             Some((_, Action::Stop)) => break,
-            Some((generation, Action::Export)) => {
+            Some((
+                generation,
+                action @ (Action::Export | Action::Import(_) | Action::Resume | Action::Locator(_)),
+            )) => {
                 handled = generation;
-                last_notice = Some(match session.export(setup, signal) {
-                    Ok(path) => format!("Public locators saved: {}", path.display()),
-                    Err(_) => "Locator export failed; current files were preserved.".into(),
+                let (command, job) = match action {
+                    Action::Export => (LocatorCommand::Export, None),
+                    Action::Import(path) => (LocatorCommand::Import(path), None),
+                    Action::Resume => (LocatorCommand::Retry, None),
+                    Action::Locator(job) => {
+                        (job.command, Some((job.scope, job.control, job.reply)))
+                    }
+                    _ => unreachable!(),
+                };
+                let export = matches!(command, LocatorCommand::Export);
+                let retry = matches!(command, LocatorCommand::Retry);
+                let result = if job
+                    .as_ref()
+                    .is_none_or(|(expected, _, _)| expected == &scope)
+                {
+                    session.locator(
+                        setup,
+                        command,
+                        signal,
+                        job.as_ref().map(|(_, op, _)| op.as_ref()),
+                    )
+                } else {
+                    Err("locator_unavailable")
+                };
+                last_notice = Some(match &result {
+                    Ok(report) if report.state == LocatorState::Exported => format!("Public locators saved: {}", report.path.as_deref().unwrap_or_default()),
+                    Ok(report) if report.state == LocatorState::Imported && retry => "Retained locator imports acknowledged.".into(),
+                    Ok(report) if report.state == LocatorState::Imported => "Both locator imports were acknowledged.".into(),
+                    _ if export => "Locator export not confirmed; existing files were preserved.".into(),
+                    _ if retry => "Retained locator retry unconfirmed; existing progress was kept.".into(),
+                    _ => "Local locator import unconfirmed/partial; existing progress was preserved. Retry the same file.".into(),
                 });
-            }
-            Some((generation, Action::Import(path))) => {
-                handled = generation;
-                let result = session.import(setup, &path, signal);
-                last_notice = Some(
-                    if result.is_ok() {
-                        "Both locator imports were acknowledged."
-                    } else {
-                        "Locator import unconfirmed/partial; existing progress was preserved. Retry the same file."
-                    }
-                    .into(),
-                );
-            }
-            Some((generation, Action::Resume)) => {
-                handled = generation;
-                let result = (|| {
-                    let state = setup.record.connection.as_ref().context("Connection")?;
-                    let name = state
-                        .incoming
-                        .as_ref()
-                        .context("No retained locator file")?;
-                    let path = directory(setup)?.join(name);
-                    let raw = model::read(&path, locator_artifact::CAP)?;
-                    ensure!(
-                        state.incoming_digest.as_ref() == Some(&digest(&raw)),
-                        "Retained locator changed"
-                    );
-                    session.import(setup, &path, signal)
-                })();
-                last_notice = Some(
-                    if result.is_ok() {
-                        "Retained locator imports acknowledged."
-                    } else {
-                        "Retained locator retry failed; existing progress was kept."
-                    }
-                    .into(),
-                );
+                if let Some((_, _, reply)) = job {
+                    let _ = reply.try_send(result);
+                }
             }
             Some((generation, Action::Send { slot, text, reply })) => {
                 handled = generation;

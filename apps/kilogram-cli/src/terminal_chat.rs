@@ -1,4 +1,5 @@
 use kilogram_first_dialog::chat::{Chat, ChatStatus, Mode, SessionStop};
+use kilogram_first_dialog::connection::LocatorCommand;
 use kilogram_first_dialog::operation::{OperationControl, RequestIdentity as RequestKey};
 use kilogram_first_dialog::{send_intent::valid_text, send_recovery::RequestOperation};
 use kilogram_runtime_ipc::ordered2::{HistoryCursor2, HistoryPage2, MAX_HISTORY_ROWS};
@@ -6,6 +7,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
     io::{self, BufRead, Write},
+    path::PathBuf,
     sync::Arc,
 };
 use zeroize::Zeroizing;
@@ -15,13 +17,14 @@ pub use coordinator::run;
 
 const LINE_CAP: usize = 32 * 1024;
 const OUTPUT_CAP: usize = 256 * 1024;
-const HELP: &str = "/help /connect start|attach /status [request_id] /chats /use 1|2 /send <text> /retry <request_id> /history [limit] /history more [limit] /cancel /disconnect /quit";
+const HELP: &str = "/help /connect start|attach /status [request_id] /chats /use 1|2 /send <text> /retry <request_id> /history [limit] /history more [limit] /locator export|import <path>|retry /cancel /disconnect /quit";
 type CommandResult<T> = Result<T, &'static str>;
 type Prepared<T> = CommandResult<(Value, Option<T>)>;
 
 #[derive(Debug, PartialEq, Eq)]
 enum Command {
     Help,
+    Locator(LocatorCommand),
     Connect {
         observer: bool,
         instance: Option<String>,
@@ -89,6 +92,21 @@ struct RequestArgs {
 #[serde(deny_unknown_fields)]
 struct CancelArgs {
     target_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LocatorImportArgs {
+    path: String,
+}
+
+fn locator_import(path: &str) -> CommandResult<Command> {
+    if path.is_empty() || path.contains('\0') {
+        return Err("invalid_args");
+    }
+    Ok(Command::Locator(LocatorCommand::Import(PathBuf::from(
+        path,
+    ))))
 }
 
 fn valid_id(id: &str) -> bool {
@@ -202,7 +220,14 @@ fn parse_wire(request: Request) -> CommandResult<Command> {
         "disconnect" if empty => Ok(Command::Disconnect),
         "quit" if empty => Ok(Command::Quit),
         "status" | "chats" | "disconnect" | "quit" => Err("invalid_args"),
-        "locator_export" | "locator_import" => Err("unsupported"),
+        "locator_export" if empty => Ok(Command::Locator(LocatorCommand::Export)),
+        "locator_retry" if empty => Ok(Command::Locator(LocatorCommand::Retry)),
+        "locator_import" => {
+            let args: LocatorImportArgs =
+                serde_json::from_value(request.args).map_err(|_| "invalid_args")?;
+            locator_import(&args.path)
+        }
+        "locator_export" | "locator_retry" => Err("invalid_args"),
         _ => Err("unknown_operation"),
     }
 }
@@ -218,6 +243,23 @@ fn parse_tty(text: &str) -> CommandResult<Command> {
         && let Some(body) = tail.strip_prefix(|c: char| c.is_ascii_whitespace())
     {
         return send(None, None, body.into());
+    }
+    if let Some(tail) = text.strip_prefix("/locator")
+        && let Some(args) = tail.strip_prefix(|c: char| c.is_ascii_whitespace())
+    {
+        let args = args.trim_start_matches(|c: char| c.is_ascii_whitespace());
+        if let Some(path) = args
+            .strip_prefix("import")
+            .and_then(|tail| tail.strip_prefix(|c: char| c.is_ascii_whitespace()))
+        {
+            return locator_import(path);
+        }
+        return match args.trim_ascii() {
+            "export" => Ok(Command::Locator(LocatorCommand::Export)),
+            "retry" => Ok(Command::Locator(LocatorCommand::Retry)),
+            "import" => Err("invalid_args"),
+            _ => Err("invalid_command"),
+        };
     }
     let args: Vec<_> = text.split_ascii_whitespace().take(4).collect();
     match args.as_slice() {
@@ -266,7 +308,6 @@ fn parse_tty(text: &str) -> CommandResult<Command> {
         ["/disconnect"] => Ok(Command::Disconnect),
         ["/quit"] => Ok(Command::Quit),
         ["/send"] => Err("invalid_text"),
-        ["/locator", ..] => Err("unsupported"),
         _ => Err("invalid_command"),
     }
 }
@@ -385,6 +426,7 @@ impl Frontend {
                 cursor,
                 more,
             } => return self.history(context, limit, cursor, more, control),
+            Command::Locator(command) => Ok(json!(self.service.locator(command, control)?)),
             Command::Cancel(_) | Command::Disconnect | Command::Quit => {
                 unreachable!("control command")
             }
@@ -461,25 +503,36 @@ fn page_value(context: &str, page: &HistoryPage2, cursor: Option<&str>) -> Value
     json!({ "context": context, "frontiers": page.frontiers, "finished": page.finished, "cursor": cursor, "items": rows })
 }
 
+fn terminal_text(text: &str) -> String {
+    let mut safe = String::with_capacity(text.len());
+    for c in text.chars() {
+        if c.is_control() || matches!(c, '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}') {
+            safe.extend(c.escape_default());
+        } else {
+            safe.push(c);
+        }
+    }
+    safe
+}
+
 fn write_tty(mut out: impl Write, result: &CommandResult<Value>) -> io::Result<()> {
     match result {
         Ok(value) if value.get("help").is_some() => {
-            writeln!(out, "{HELP}")
+            writeln!(
+                out,
+                "{HELP}\nExample: /locator import C:\\Pair Files\\peer.json"
+            )
+        }
+        Ok(value) if value.get("path").and_then(Value::as_str).is_some() => {
+            let path = terminal_text(value["path"].as_str().unwrap_or_default());
+            let state = value["state"].as_str().unwrap_or("unconfirmed");
+            writeln!(out, "Locator {state}: {path}")
         }
         Ok(value) if value.get("items").is_some() => {
             if let Some(rows) = value["items"].as_array() {
                 for row in rows {
                     let text = row["text"].as_str().unwrap_or_default();
-                    let mut safe = String::with_capacity(text.len());
-                    for c in text.chars() {
-                        if c.is_control()
-                            || matches!(c, '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
-                        {
-                            safe.extend(c.escape_default());
-                        } else {
-                            safe.push(c);
-                        }
-                    }
+                    let safe = terminal_text(text);
                     writeln!(out, "{}: {safe}", row["role"])?;
                 }
             }
@@ -704,12 +757,11 @@ mod tests {
     }
 
     #[test]
-    fn t11a_command_parity_and_unavailable_locator() -> anyhow::Result<()> {
+    fn t11a_command_parity() -> anyhow::Result<()> {
         let request = serde_json::from_value(
             json!({"v":1,"id":"a","op":"connect","args":{"mode":"attach"}}),
         )?;
         assert_eq!(parse_wire(request), parse_tty("/connect attach"));
-        assert_eq!(parse_tty("/locator export"), Err("unsupported"));
         assert_eq!(parse_tty("/connect start extra"), Err("invalid_command"));
         assert_eq!(
             parse_tty("/history more"),
@@ -723,6 +775,39 @@ mod tests {
         let request =
             serde_json::from_value(json!({"v":1,"id":"b","op":"send","args":{"text":"test"}}))?;
         assert_eq!(parse_wire(request), Err("invalid_args"));
+        Ok(())
+    }
+
+    #[test]
+    fn t11d_locator_paths_are_literal_and_safe_in_tty() -> anyhow::Result<()> {
+        let path = r"C:\Тест Software\peer.json";
+        let command = Ok(Command::Locator(LocatorCommand::Import(PathBuf::from(
+            path,
+        ))));
+        assert_eq!(parse_tty(&format!("/locator import {path}")), command);
+        let wire = serde_json::from_value(
+            json!({"v":1,"id":"loc","op":"locator_import","args":{"path":path}}),
+        )?;
+        assert_eq!(parse_wire(wire), command);
+        assert_eq!(
+            parse_tty("/locator export"),
+            Ok(Command::Locator(LocatorCommand::Export))
+        );
+        assert_eq!(
+            parse_tty("/locator retry"),
+            Ok(Command::Locator(LocatorCommand::Retry))
+        );
+        assert_eq!(parse_tty("/locator import"), Err("invalid_args"));
+        assert_eq!(parse_tty("/locator import "), Err("invalid_args"));
+        assert_eq!(parse_tty("/locator import a\0b"), Err("invalid_args"));
+        let mut output = Vec::new();
+        write_tty(
+            &mut output,
+            &Ok(json!({"state":"exported","path":"public-\u{202e}\u{1b}.json"})),
+        )?;
+        let text = String::from_utf8(output)?;
+        assert!(text.contains(r"public-\u{202e}\u{1b}.json"));
+        assert!(!text.contains('\u{202e}') && !text.contains('\u{1b}'));
         Ok(())
     }
 

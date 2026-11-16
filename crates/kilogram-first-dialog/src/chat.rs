@@ -1,7 +1,10 @@
 //! Terminal chat over the regular Setup worker or a read-only pinned local IPC session.
 use crate::{
     artifact,
-    connection::{self, Action, DialogScope, HistoryJob, RequestJob, Work},
+    connection::{
+        self, Action, DialogScope, HistoryJob, LocatorCommand, LocatorJob, LocatorResult,
+        RequestJob, Work,
+    },
     consent,
     model::{self, Setup},
     operation::{self, OperationControl},
@@ -260,6 +263,28 @@ impl Chat {
                     })
             }
         }
+    }
+
+    pub fn locator(
+        &mut self,
+        command: LocatorCommand,
+        control: &Arc<OperationControl>,
+    ) -> LocatorResult {
+        let work = match self.session.as_mut().ok_or("not_connected")? {
+            Session::Observer(_) => return Err("observer_read_only"),
+            Session::Owner(work) => work,
+        };
+        let scope = owner_scope(work, Duration::from_secs(6), Some(control))
+            .map_err(|_| "locator_unavailable")?;
+        let (reply, done) = mpsc::sync_channel(1);
+        work.action(Action::Locator(Box::new(LocatorJob {
+            scope,
+            command,
+            control: control.clone(),
+            reply,
+        })))
+        .map_err(|_| "locator_unavailable")?;
+        done.recv().map_err(|_| "locator_unavailable")?
     }
 
     pub fn disconnect(&mut self) -> Result<()> {

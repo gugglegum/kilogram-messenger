@@ -1,5 +1,8 @@
 //! Per-command gates and the snapshot used when execution outlives a terminal reply.
-use crate::send_recovery::{RequestReport, RequestResult, RequestState};
+use crate::{
+    connection::LocatorReport,
+    send_recovery::{RequestReport, RequestResult, RequestState},
+};
 use serde::Serialize;
 use std::{
     future::Future,
@@ -21,6 +24,7 @@ pub enum OperationKind {
     Read,
     Send,
     Retry,
+    Locator,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -35,6 +39,7 @@ struct Progress {
     identity: Option<RequestIdentity>,
     phase: Phase,
     receipt: Option<RequestReport>,
+    locator: Option<LocatorReport>,
     provisional_owner: Option<Arc<AtomicBool>>,
     finalised: bool,
 }
@@ -48,6 +53,7 @@ pub struct OperationControl {
 pub struct FinalSnapshot {
     pub identity: Option<RequestIdentity>,
     pub cancellation: Option<RequestResult>,
+    pub locator: Option<LocatorReport>,
 }
 
 impl OperationControl {
@@ -60,6 +66,7 @@ impl OperationControl {
                 identity,
                 phase: Phase::Initial,
                 receipt: None,
+                locator: None,
                 provisional_owner: None,
                 finalised: false,
             }),
@@ -131,6 +138,22 @@ impl OperationControl {
         }
     }
 
+    pub(crate) fn admit_locator(&self, report: &LocatorReport) -> bool {
+        let mut p = self.progress.lock().unwrap();
+        if p.cancelled.is_some() || p.finalised || Instant::now() >= self.deadline {
+            return false;
+        }
+        p.locator = Some(report.clone());
+        true
+    }
+
+    pub(crate) fn locator_progress(&self, report: &LocatorReport) {
+        let mut p = self.progress.lock().unwrap();
+        if !p.finalised {
+            p.locator = Some(report.clone());
+        }
+    }
+
     /// Called while the terminal owns the execution generation. The frozen
     /// snapshot and cancellation use the same lock as receipt publication.
     pub fn finish(&self, fallback: bool) -> FinalSnapshot {
@@ -138,10 +161,14 @@ impl OperationControl {
         assert!(!p.finalised);
         p.finalised = true;
         p.provisional_owner = None;
-        let cancellation = if fallback || p.cancelled.is_some() {
+        let interrupted = fallback || p.cancelled.is_some();
+        let locator = p.locator.take().filter(|_| interrupted);
+        let cancellation = if interrupted && locator.is_none() {
             Some(if let Some(receipt) = p.receipt.take() {
                 Ok(receipt)
-            } else if self.kind == OperationKind::Read || p.identity.is_none() {
+            } else if matches!(self.kind, OperationKind::Read | OperationKind::Locator)
+                || p.identity.is_none()
+            {
                 Err("cancelled")
             } else if self.kind == OperationKind::Send && p.phase == Phase::Initial {
                 Err("cancelled_not_submitted")
@@ -158,6 +185,7 @@ impl OperationControl {
         FinalSnapshot {
             identity: p.identity.take(),
             cancellation,
+            locator,
         }
     }
 }

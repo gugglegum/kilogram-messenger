@@ -61,6 +61,7 @@ impl Entry {
     fn control(&self, now: Instant) -> OperationControl {
         let (kind, seconds) = match &self.command {
             Ok(Command::Connect { .. }) => (OperationKind::Read, 45),
+            Ok(Command::Locator(_)) => (OperationKind::Locator, 30),
             Ok(Command::Message {
                 operation: RequestOperation::Send(_),
                 ..
@@ -455,9 +456,13 @@ impl State {
 impl Active {
     fn finish(&mut self, value: Prepared<HistoryAdvance>, fallback: bool) {
         let snapshot = self.control.finish(fallback);
-        let value = snapshot
-            .cancellation
-            .map_or(value, |result| result.map(|report| (json!(report), None)));
+        let value = if let Some(report) = snapshot.locator {
+            Ok((json!(report), None))
+        } else {
+            snapshot
+                .cancellation
+                .map_or(value, |result| result.map(|report| (json!(report), None)))
+        };
         self.result = Some(Reply {
             tag: self.tag.clone(),
             request: snapshot.identity,
