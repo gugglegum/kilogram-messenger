@@ -9,5 +9,6 @@ pub mod consent_artifact;
 pub mod helper;
 mod locator_artifact;
 pub mod model;
+pub mod operation;
 pub mod send_intent;
 pub mod send_recovery;

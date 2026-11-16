@@ -68,6 +68,8 @@ pub(super) struct Store {
     binding: Binding,
     #[cfg(test)]
     fault: std::cell::Cell<Option<Mutation>>,
+    #[cfg(test)]
+    after_publish: Option<Box<dyn Fn() + Send>>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -115,6 +117,8 @@ impl Store {
             },
             #[cfg(test)]
             fault: std::cell::Cell::default(),
+            #[cfg(test)]
+            after_publish: None,
         })
     }
 
@@ -261,6 +265,10 @@ impl Store {
         let path = dir.join(FILE);
         if mutation == Mutation::Publish {
             temp.persist_noclobber(path)?;
+            #[cfg(test)]
+            if let Some(after_publish) = &self.after_publish {
+                after_publish();
+            }
         } else {
             temp.persist(path)?;
         }

@@ -149,6 +149,10 @@ struct ObservedRuntime<'a> {
     lost_id: Option<[u8; 16]>,
 }
 impl SendRuntime for ObservedRuntime<'_> {
+    fn operation(&self) -> Option<&OperationControl> {
+        self.real.control
+    }
+
     fn check_send(&mut self, slot: u8) -> IpcResult<()> {
         self.real.check_send(slot)
     }
@@ -167,12 +171,22 @@ impl SendRuntime for ObservedRuntime<'_> {
         }
         if self.stop_before_send {
             self.lost_id = Some(request);
+            if let Some(control) = self.real.control {
+                control.cancel(Instant::now());
+                assert!(matches!(
+                    self.real.send(slot, request, text),
+                    Err(MessageError2::Unavailable)
+                ));
+            }
             return Err(MessageError2::Unavailable);
         }
         self.submits += 1;
         let result = self.real.send(slot, request, text)?;
         if self.lose_reply {
             self.lost_id = Some(request);
+            if let Some(control) = self.real.control {
+                control.cancel(Instant::now());
+            }
             return Err(MessageError2::Unavailable);
         }
         Ok(result)
@@ -232,6 +246,7 @@ fn wait_delivery(
         let status = SessionSend {
             session,
             cancel: signal,
+            control: None,
         }
         .lookup(slot, request)?;
         if let Some(status) = status
@@ -334,6 +349,7 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
             real: SessionSend {
                 session: &mut sessions[0],
                 cancel: &signal,
+                control: None,
             },
             store: &store,
             stop_before_send: false,
@@ -383,6 +399,7 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
             real: SessionSend {
                 session: &mut sessions[0],
                 cancel: &signal,
+                control: None,
             },
             store: &store,
             stop_before_send: false,
@@ -431,6 +448,7 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
         SessionSend {
             session: &mut sessions[0],
             cancel: &signal,
+            control: None,
         }
         .send(0, request, text)?;
         let status = wait_delivery(&mut sessions[0], 0, request, &signal)?;
@@ -473,6 +491,7 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
     SessionSend {
         session: &mut sessions[0],
         cancel: &signal,
+        control: None,
     }
     .send(0, appended, "snapshot append")?;
     let appended_status = wait_delivery(&mut sessions[0], 0, appended, &signal)?;
@@ -612,8 +631,20 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
 
 #[test]
 fn t11b_fixture_interrupts_protected_send_before_ipc_and_after_receipt() -> Result<()> {
-    use crate::send_recovery::RequestState;
-    let Some(root) = std::env::var_os("KILOGRAM_T11B_FIXTURE_ROOT").map(PathBuf::from) else {
+    protected_fault_fixture("KILOGRAM_T11B_FIXTURE_ROOT", false)
+}
+
+#[test]
+fn t11c_fixture_cancels_after_readback_and_after_runtime_acceptance() -> Result<()> {
+    protected_fault_fixture("KILOGRAM_T11C_FIXTURE_ROOT", true)
+}
+
+fn protected_fault_fixture(root_env: &str, controlled: bool) -> Result<()> {
+    use crate::{
+        operation::{OperationKind, RequestIdentity},
+        send_recovery::RequestState,
+    };
+    let Some(root) = std::env::var_os(root_env).map(PathBuf::from) else {
         return Ok(());
     };
     fs::create_dir(&root)?;
@@ -642,10 +673,21 @@ fn t11b_fixture_interrupts_protected_send_before_ipc_and_after_receipt() -> Resu
         let slot = index as u8;
         let store = send_intent::Store::new(node, &session.doc)?;
         let mut recovery = Recovery::new(send_intent::Store::new(node, &session.doc));
+        let control = controlled.then(|| {
+            OperationControl::new(
+                OperationKind::Send,
+                Instant::now() + Duration::from_secs(20),
+                Some(RequestIdentity {
+                    context: session.doc.contexts[index].clone(),
+                    request_id: hex(&request),
+                }),
+            )
+        });
         let mut runtime = ObservedRuntime {
             real: SessionSend {
                 session,
                 cancel: &signal,
+                control: control.as_ref(),
             },
             store: &store,
             stop_before_send: index == 0,
@@ -663,6 +705,14 @@ fn t11b_fixture_interrupts_protected_send_before_ipc_and_after_receipt() -> Resu
             )
             .map_err(anyhow::Error::msg)?;
         ensure!(report.state == RequestState::Unconfirmed && report.protected == Some(true));
+        if let Some(control) = &control {
+            let frozen = control
+                .finish(false)
+                .cancellation
+                .context("Missing cancellation outcome")?
+                .map_err(anyhow::Error::msg)?;
+            ensure!(frozen.state == RequestState::Unconfirmed && frozen.protected == Some(true));
+        }
         ensure!(
             runtime.submits == index && runtime.lookups == 2 && runtime.lost_id == Some(request)
         );
@@ -686,7 +736,8 @@ fn t11b_fixture_interrupts_protected_send_before_ipc_and_after_receipt() -> Resu
     ensure!(
         SessionSend {
             session: &mut sessions[0],
-            cancel: &signal
+            cancel: &signal,
+            control: None,
         }
         .lookup(0, requests[0])?
         .is_none()

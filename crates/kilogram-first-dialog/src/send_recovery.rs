@@ -1,5 +1,6 @@
 //! Reconcile one protected intent with the durable local runtime queue.
 use super::send_intent::{Intent, Phase, Store, valid_text};
+use crate::operation::OperationControl;
 use kilogram_runtime_ipc::ordered2::{Delivery2, MessageError2, RequestStatus2, SendReceipt2};
 use serde::Serialize;
 use std::sync::Arc;
@@ -8,6 +9,9 @@ use zeroize::Zeroizing;
 pub type IpcResult<T> = Result<T, MessageError2>;
 
 pub(super) trait SendRuntime {
+    fn operation(&self) -> Option<&OperationControl> {
+        None
+    }
     fn check_send(&mut self, slot: u8) -> IpcResult<()>;
     fn lookup(&mut self, slot: u8, request: [u8; 16]) -> IpcResult<Option<RequestStatus2>>;
     fn send(&mut self, slot: u8, request: [u8; 16], text: &str) -> IpcResult<SendReceipt2>;
@@ -60,7 +64,7 @@ pub enum RequestState {
     Delivered,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct RequestReport {
     pub state: RequestState,
     pub protected: Option<bool>,
@@ -251,6 +255,9 @@ impl Recovery {
         request: [u8; 16],
         text: Zeroizing<String>,
     ) -> Submission {
+        if runtime.operation().is_some_and(|op| !op.begin_prepare()) {
+            return Submission::Retained;
+        }
         match self
             .store
             .as_ref()
@@ -259,6 +266,9 @@ impl Recovery {
         {
             Some(intent) => {
                 self.remember(&intent);
+                if let Some(op) = runtime.operation() {
+                    op.protected();
+                }
                 self.dispatch(runtime, intent);
                 Submission::Protected
             }
@@ -300,6 +310,9 @@ impl Recovery {
                         "text_conflict"
                     });
                 }
+                if let Some(op) = runtime.operation() {
+                    op.protected();
+                }
                 self.reconcile_intent(
                     runtime,
                     intent,
@@ -326,7 +339,11 @@ impl Recovery {
             }
             RequestOperation::Retry if status.is_none() => Err("unknown_request"),
             RequestOperation::Status | RequestOperation::Retry => {
-                Ok(RequestReport::from_status(status))
+                let report = RequestReport::from_status(status);
+                if let (Some(_), Some(op)) = (status, runtime.operation()) {
+                    op.verified(report.clone());
+                }
+                Ok(report)
             }
         }
     }
@@ -400,7 +417,7 @@ impl Recovery {
             return;
         }
         match runtime.lookup(intent.slot, intent.request) {
-            Ok(Some(status)) => self.accept(intent, status),
+            Ok(Some(status)) => self.accept(intent, status, runtime.operation()),
             Ok(None) if self.known.is_some() || matches!(intent.phase, Phase::Accepted { .. }) => {
                 self.block_conflict(&mut intent);
             }
@@ -413,6 +430,18 @@ impl Recovery {
     fn dispatch(&mut self, runtime: &mut impl SendRuntime, mut intent: Intent) {
         match runtime.send(intent.slot, intent.request, &intent.text) {
             Ok(receipt) => {
+                if let Some(op) = runtime.operation() {
+                    let mut report = RequestReport::from_status(Some(RequestStatus2 {
+                        receipt,
+                        delivery: if receipt.event.is_some() {
+                            Delivery2::Materialized
+                        } else {
+                            Delivery2::Queued
+                        },
+                    }));
+                    report.protected = Some(true);
+                    op.verified(report);
+                }
                 self.known = Some((intent.request, receipt));
                 self.event = receipt.event;
                 let phase = Phase::Accepted {
@@ -437,7 +466,12 @@ impl Recovery {
         }
     }
 
-    fn accept(&mut self, mut intent: Intent, status: RequestStatus2) {
+    fn accept(
+        &mut self,
+        mut intent: Intent,
+        status: RequestStatus2,
+        control: Option<&OperationControl>,
+    ) {
         let phase = Phase::Accepted {
             queue_sequence: status.receipt.queue_sequence,
         };
@@ -449,6 +483,11 @@ impl Recovery {
         {
             self.block_conflict(&mut intent);
             return;
+        }
+        if let Some(op) = control {
+            let mut report = RequestReport::from_status(Some(status));
+            report.protected = Some(true);
+            op.verified(report);
         }
         self.known = Some((intent.request, status.receipt));
         self.event = status.receipt.event;
@@ -469,6 +508,11 @@ impl Recovery {
             self.known = None;
             self.busy = false;
             self.protected = false;
+            if let Some(op) = control {
+                let mut report = RequestReport::from_status(Some(status));
+                report.protected = Some(false);
+                op.verified(report);
+            }
         }
     }
 

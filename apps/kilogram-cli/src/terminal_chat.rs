@@ -1,21 +1,21 @@
-use kilogram_first_dialog::chat::{Chat, ChatStatus, Mode};
+use kilogram_first_dialog::chat::{Chat, ChatStatus, Mode, SessionStop};
+use kilogram_first_dialog::operation::{OperationControl, RequestIdentity as RequestKey};
 use kilogram_first_dialog::{send_intent::valid_text, send_recovery::RequestOperation};
 use kilogram_runtime_ipc::ordered2::{HistoryCursor2, HistoryPage2, MAX_HISTORY_ROWS};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::{
-    collections::HashSet,
     io::{self, BufRead, Write},
-    path::PathBuf,
-    sync::{Arc, Mutex, mpsc},
-    thread,
-    time::Duration,
+    sync::Arc,
 };
 use zeroize::Zeroizing;
 
+mod coordinator;
+pub use coordinator::run;
+
 const LINE_CAP: usize = 32 * 1024;
 const OUTPUT_CAP: usize = 256 * 1024;
-const HELP: &str = "/help /connect start|attach /status [request_id] /chats /use 1|2 /send <text> /retry <request_id> /history [limit] /history more [limit] /disconnect /quit";
+const HELP: &str = "/help /connect start|attach /status [request_id] /chats /use 1|2 /send <text> /retry <request_id> /history [limit] /history more [limit] /cancel /disconnect /quit";
 type CommandResult<T> = Result<T, &'static str>;
 type Prepared<T> = CommandResult<(Value, Option<T>)>;
 
@@ -40,6 +40,7 @@ enum Command {
         cursor: Option<String>,
         more: bool,
     },
+    Cancel(Option<String>),
     Disconnect,
     Quit,
 }
@@ -82,6 +83,16 @@ struct SendArgs {
 struct RequestArgs {
     context: String,
     request_id: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct CancelArgs {
+    target_id: String,
+}
+
+fn valid_id(id: &str) -> bool {
+    !id.is_empty() && id.len() <= 64 && id.is_ascii()
 }
 
 fn request_id(text: &str) -> CommandResult<[u8; 16]> {
@@ -178,6 +189,14 @@ fn parse_wire(request: Request) -> CommandResult<Command> {
                 },
             })
         }
+        "cancel" => {
+            let args: CancelArgs =
+                serde_json::from_value(request.args).map_err(|_| "invalid_args")?;
+            if !valid_id(&args.target_id) || args.target_id == request.id {
+                return Err("invalid_args");
+            }
+            Ok(Command::Cancel(Some(args.target_id)))
+        }
         "status" if empty => Ok(Command::Status),
         "chats" if empty => Ok(Command::Chats),
         "disconnect" if empty => Ok(Command::Disconnect),
@@ -243,6 +262,7 @@ fn parse_tty(text: &str) -> CommandResult<Command> {
                 more,
             })
         }
+        ["/cancel"] => Ok(Command::Cancel(None)),
         ["/disconnect"] => Ok(Command::Disconnect),
         ["/quit"] => Ok(Command::Quit),
         ["/send"] => Err("invalid_text"),
@@ -268,17 +288,12 @@ struct Frontend {
     continuation: [Option<Continuation>; 2],
 }
 
-#[derive(Serialize)]
-struct RequestKey {
-    context: String,
-    request_id: String,
-}
-
 impl Frontend {
     fn execute(
         &mut self,
         command: Command,
-        key: &mut Option<RequestKey>,
+        control: &Arc<OperationControl>,
+        stop: &SessionStop,
         announce: impl FnOnce(&RequestKey) -> bool,
     ) -> Prepared<HistoryAdvance> {
         let result: CommandResult<Value> = match command {
@@ -294,7 +309,7 @@ impl Frontend {
                 };
                 let status = self
                     .service
-                    .connect(mode, instance.as_deref())
+                    .connect_controlled(mode, instance.as_deref(), Some(control), stop)
                     .map_err(|_| "connect_failed")?;
                 let value = json!(status);
                 self.status = Some(status);
@@ -305,7 +320,10 @@ impl Frontend {
                 if self.status.is_none() {
                     return Ok((json!({ "connected": false }), None));
                 }
-                let status = self.service.status().map_err(|_| "session_unavailable")?;
+                let status = self
+                    .service
+                    .status_controlled(Some(control))
+                    .map_err(|_| "session_unavailable")?;
                 Ok(json!({ "connected": true, "status": status }))
             }
             Command::Chats => {
@@ -325,13 +343,6 @@ impl Frontend {
                 request,
                 operation,
             } => {
-                // Preserve caller-supplied identity even if the command has no session.
-                if let (Some(context), Some(request)) = (&context, request) {
-                    *key = Some(RequestKey {
-                        context: context.clone(),
-                        request_id: hex(&request),
-                    });
-                }
                 let status = self.status.as_ref().ok_or("not_connected")?;
                 let slot = match context {
                     Some(context) => status
@@ -349,17 +360,23 @@ impl Frontend {
                         request
                     }
                 };
-                let resolved = key.insert(RequestKey {
+                let resolved = RequestKey {
                     context: status.contexts[slot].clone(),
                     request_id: hex(&request),
-                });
+                };
+                control.identify(resolved.clone());
                 if status.mode == Mode::Observer && !matches!(operation, RequestOperation::Status) {
                     return Err("observer_read_only");
                 }
-                if matches!(&operation, RequestOperation::Send(_)) && !announce(resolved) {
+                if matches!(&operation, RequestOperation::Send(_)) && !announce(&resolved) {
                     return Err("stdout_unavailable");
                 }
-                let report = self.service.request(slot as u8, request, operation)?;
+                let report = self.service.request_controlled(
+                    slot as u8,
+                    request,
+                    operation,
+                    Some(control),
+                )?;
                 Ok(json!(report))
             }
             Command::History {
@@ -367,14 +384,9 @@ impl Frontend {
                 limit,
                 cursor,
                 more,
-            } => return self.history(context, limit, cursor, more),
-            Command::Disconnect | Command::Quit => {
-                self.status = None;
-                self.continuation = [None, None];
-                self.service
-                    .disconnect()
-                    .map_err(|_| "cleanup_unconfirmed")?;
-                Ok(json!({ "connected": false }))
+            } => return self.history(context, limit, cursor, more, control),
+            Command::Cancel(_) | Command::Disconnect | Command::Quit => {
+                unreachable!("control command")
             }
         };
         Ok((result?, None))
@@ -386,6 +398,7 @@ impl Frontend {
         limit: usize,
         token: Option<String>,
         more: bool,
+        control: &Arc<OperationControl>,
     ) -> Prepared<HistoryAdvance> {
         if !(1..=MAX_HISTORY_ROWS).contains(&limit) {
             return Err("invalid_args");
@@ -412,7 +425,7 @@ impl Frontend {
         };
         let page = self
             .service
-            .history(slot as u8, cursor, limit)
+            .history_controlled(slot as u8, cursor, limit, Some(control))
             .map_err(|_| "history_unavailable")?;
         let next = if page.finished {
             None
@@ -498,6 +511,8 @@ struct WireResult<'a> {
     #[serde(flatten)]
     request: Option<&'a RequestKey>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    target_id: Option<&'a str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     value: Option<&'a Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     code: Option<&'static str>,
@@ -523,10 +538,21 @@ impl Write for ResultBuffer {
     }
 }
 
+#[cfg(test)]
 fn encode_result(
     jsonl: bool,
     id: Option<&str>,
     request: Option<&RequestKey>,
+    result: &CommandResult<Value>,
+) -> io::Result<Vec<u8>> {
+    encode_reply(jsonl, id, request, None, result)
+}
+
+fn encode_reply(
+    jsonl: bool,
+    id: Option<&str>,
+    request: Option<&RequestKey>,
+    target_id: Option<&str>,
     result: &CommandResult<Value>,
 ) -> io::Result<Vec<u8>> {
     let mut output = ResultBuffer::default();
@@ -537,6 +563,7 @@ fn encode_result(
             id,
             ok: result.is_ok(),
             request,
+            target_id,
             value: result.as_ref().ok(),
             code: result.as_ref().err().copied(),
         };
@@ -565,11 +592,11 @@ fn prepare_result<T>(
         Ok((value, advance)) => (Ok(value), advance),
         Err(code) => (Err(code), None),
     };
-    match encode_result(jsonl, id, request, &value) {
+    match encode_reply(jsonl, id, request, None, &value) {
         Ok(bytes) => Ok((bytes, advance)),
         // No history position changes when the rendered page will not be published.
         Err(_) => Ok((
-            encode_result(jsonl, id, request, &Err("response_too_large"))?,
+            encode_reply(jsonl, id, request, None, &Err("response_too_large"))?,
             None,
         )),
     }
@@ -627,30 +654,18 @@ enum Input {
 fn read_commands(
     mut reader: impl BufRead,
     jsonl: bool,
-    tx: mpsc::SyncSender<Input>,
-    ids: &Mutex<HashSet<String>>,
-) {
+    mut consume: impl FnMut(Input) -> bool,
+) -> bool {
     loop {
         let input = match frame(&mut reader) {
-            Ok(None) => return,
+            Ok(None) => return true,
             Ok(Some(Frame::TooLong)) => Input::FrameError("line_too_long"),
             Ok(Some(Frame::Line(line))) => match std::str::from_utf8(&line) {
                 Ok(text) if jsonl => match serde_json::from_str::<Request>(text) {
-                    Ok(request)
-                        if !request.id.is_empty()
-                            && request.id.len() <= 64
-                            && request.id.is_ascii() =>
-                    {
-                        let id = request.id.clone();
-                        if ids.lock().is_ok_and(|mut ids| ids.insert(id.clone())) {
-                            Input::Command {
-                                id: Some(id),
-                                command: parse_wire(request),
-                            }
-                        } else {
-                            Input::FrameError("duplicate_id")
-                        }
-                    }
+                    Ok(request) if valid_id(&request.id) => Input::Command {
+                        id: Some(request.id.clone()),
+                        command: parse_wire(request),
+                    },
                     _ => Input::FrameError("invalid_request"),
                 },
                 Ok("") => continue,
@@ -660,150 +675,13 @@ fn read_commands(
                 },
                 Err(_) => Input::FrameError("invalid_utf8"),
             },
-            Err(_) => {
-                let _ = tx.send(Input::ReadError);
-                return;
-            }
+            Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
+            Err(_) => Input::ReadError,
         };
-        if tx.send(input).is_err() {
-            return;
+        let failed = matches!(input, Input::ReadError);
+        if !consume(input) || failed {
+            return false;
         }
-    }
-}
-
-type Output = (Vec<u8>, Option<String>, mpsc::SyncSender<io::Result<()>>);
-
-fn publish(
-    out: &mut impl Write,
-    bytes: &[u8],
-    completed_id: Option<String>,
-    ids: &Mutex<HashSet<String>>,
-) -> io::Result<()> {
-    // Execution has finished. Release the reservation before the first byte becomes
-    // visible, and leave any subsequent reservation alone. Writes remain ordered.
-    if let Some(id) = completed_id {
-        ids.lock()
-            .map_err(|_| io::Error::other("Correlation IDs unavailable"))?
-            .remove(&id);
-    }
-    out.write_all(bytes)?;
-    out.flush()
-}
-
-fn emit(writer: &mpsc::SyncSender<Output>, bytes: Vec<u8>, completed_id: Option<String>) -> bool {
-    let (ack, done) = mpsc::sync_channel(1);
-    writer.try_send((bytes, completed_id, ack)).is_ok()
-        && done
-            .recv_timeout(Duration::from_secs(3))
-            .is_ok_and(|ack| ack.is_ok())
-}
-
-pub fn run(setup: PathBuf, jsonl: bool) -> i32 {
-    let Ok(executable) = std::env::current_exe() else {
-        return 2;
-    };
-    let mut frontend = Frontend {
-        service: Chat::new(setup, executable),
-        status: None,
-        selected: 0,
-        continuation: [None, None],
-    };
-    let ids = Arc::new(Mutex::new(HashSet::new()));
-    let writer_ids = ids.clone();
-    let (output, writes) = mpsc::sync_channel::<Output>(1);
-    if thread::Builder::new()
-        .name("chat-stdout".into())
-        .spawn(move || {
-            let mut stdout = io::stdout().lock();
-            while let Ok((bytes, completed_id, ack)) = writes.recv() {
-                let result = publish(&mut stdout, &bytes, completed_id, &writer_ids);
-                let failed = result.is_err();
-                let _ = ack.send(result);
-                if failed {
-                    break;
-                }
-            }
-        })
-        .is_err()
-    {
-        return 2;
-    }
-    let ready = if jsonl {
-        b"{\"v\":1,\"type\":\"ready\"}\n".to_vec()
-    } else {
-        b"First-dialog terminal. Use /help.\n".to_vec()
-    };
-    if !emit(&output, ready, None) {
-        return 2;
-    }
-
-    let (input, commands) = mpsc::sync_channel(1);
-    if thread::Builder::new()
-        .name("chat-stdin".into())
-        .spawn(move || {
-            read_commands(io::stdin().lock(), jsonl, input, &ids);
-        })
-        .is_err()
-    {
-        return 2;
-    }
-    let mut code = 0;
-    for input in commands {
-        let (bytes, id, quit, advance) = match input {
-            Input::Command { id, command } => {
-                let quit = command == Ok(Command::Quit);
-                let mut request = None;
-                let result = command.and_then(|cmd| {
-                    frontend.execute(cmd, &mut request, |key| {
-                        jsonl
-                            || emit(
-                                &output,
-                                format!("Request {}\n", key.request_id).into_bytes(),
-                                None,
-                            )
-                    })
-                });
-                if matches!(result, Err("stdout_unavailable")) {
-                    code = 2;
-                    break;
-                }
-                let Ok((bytes, advance)) =
-                    prepare_result(jsonl, id.as_deref(), request.as_ref(), result)
-                else {
-                    code = 2;
-                    break;
-                };
-                (bytes, id, quit, advance)
-            }
-            Input::FrameError(code) => {
-                let bytes = if jsonl {
-                    format!("{}\n", json!({ "v":1, "type":"frame_error", "code":code }))
-                        .into_bytes()
-                } else {
-                    format!("Error: {code}.\n").into_bytes()
-                };
-                (bytes, None, false, None)
-            }
-            Input::ReadError => {
-                code = 2;
-                break;
-            }
-        };
-        if !emit(&output, bytes, id) {
-            code = 2;
-            break;
-        }
-        if let Some(HistoryAdvance { slot, next }) = advance {
-            frontend.continuation[slot] = next;
-        }
-        if quit {
-            break;
-        }
-    }
-    if frontend.service.disconnect().is_err() {
-        3
-    } else {
-        code
     }
 }
 
@@ -890,59 +768,18 @@ mod tests {
     }
 
     #[test]
-    fn t11a_errors_preserve_one_active_result_id() -> anyhow::Result<()> {
+    fn t11a_input_keeps_frames_distinct() -> anyhow::Result<()> {
         let mut input = vec![0xff, b'\n'];
         input.extend_from_slice(b"{\"v\":1,\"id\":\"same\",\"op\":\"status\",\"args\":{}}\n");
-        input.extend_from_slice(b"{\"v\":1,\"id\":\"same\",\"op\":\"quit\",\"args\":{}}\n");
-        let (tx, rx) = mpsc::sync_channel(3);
-        read_commands(Cursor::new(input), true, tx, &Mutex::new(HashSet::new()));
-        assert!(matches!(rx.recv()?, Input::FrameError("invalid_utf8")));
+        let mut entries = Vec::new();
+        assert!(read_commands(Cursor::new(input), true, |frame| {
+            entries.push(frame);
+            true
+        }));
+        assert!(matches!(entries[0], Input::FrameError("invalid_utf8")));
         assert!(
-            matches!(rx.recv()?, Input::Command { id: Some(id), command: Ok(Command::Status) } if id == "same")
+            matches!(&entries[1], Input::Command { id: Some(id), command: Ok(Command::Status) } if id == "same")
         );
-        assert!(matches!(rx.recv()?, Input::FrameError("duplicate_id")));
-        assert!(rx.recv().is_err());
-        Ok(())
-    }
-
-    #[test]
-    fn t11a_id_released_at_publication_without_erasing_reuse() -> anyhow::Result<()> {
-        struct ReusingClient<'a> {
-            ids: &'a Mutex<HashSet<String>>,
-            observed: Vec<u8>,
-        }
-
-        impl Write for ReusingClient<'_> {
-            fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
-                // The reader can reuse the ID as soon as the reply becomes visible,
-                // before flush and the writer acknowledgement.
-                let mut active = self
-                    .ids
-                    .try_lock()
-                    .map_err(|_| io::Error::other("ID lock held during write"))?;
-                assert!(
-                    active.insert("reuse".into()),
-                    "Old reservation still active at publication"
-                );
-                self.observed.extend_from_slice(bytes);
-                Ok(bytes.len())
-            }
-
-            fn flush(&mut self) -> io::Result<()> {
-                assert!(self.ids.try_lock().is_ok(), "ID lock held during flush");
-                Ok(())
-            }
-        }
-
-        let ids = Mutex::new(HashSet::from(["reuse".into()]));
-        let mut client = ReusingClient {
-            ids: &ids,
-            observed: Vec::new(),
-        };
-        let bytes = encode_result(true, Some("reuse"), None, &Ok(json!({"connected":false})))?;
-        publish(&mut client, &bytes, Some("reuse".into()), &ids)?;
-        assert_eq!(client.observed, bytes);
-        assert!(ids.try_lock().is_ok_and(|ids| ids.contains("reuse")));
         Ok(())
     }
 
@@ -998,7 +835,6 @@ mod tests {
                     "cursor": format!("cursor-{to}"), "items": &all_rows[from..to],
                 })
             };
-            let ids = Mutex::new(HashSet::from(["history".into()]));
             let mut output = Vec::new();
             let (bytes, advance) = prepare_result(
                 jsonl,
@@ -1006,7 +842,7 @@ mod tests {
                 None,
                 Ok((page(position, all_rows.len()), Some(all_rows.len()))),
             )?;
-            publish(&mut output, &bytes, Some("history".into()), &ids)?;
+            output.extend_from_slice(&bytes);
             assert_eq!(advance, None);
             assert_eq!(position, 1);
             assert_eq!(output.iter().filter(|&&b| b == b'\n').count(), 1);
@@ -1024,10 +860,6 @@ mod tests {
             let mut seen = vec![0usize];
             while position < all_rows.len() {
                 let end = (position + 4).min(all_rows.len());
-                assert!(
-                    ids.try_lock()
-                        .is_ok_and(|mut ids| ids.insert("history".into()))
-                );
                 let (bytes, advance) = prepare_result(
                     jsonl,
                     Some("history"),
@@ -1035,7 +867,7 @@ mod tests {
                     Ok((page(position, end), Some(end))),
                 )?;
                 output.clear();
-                publish(&mut output, &bytes, Some("history".into()), &ids)?;
+                output.extend_from_slice(&bytes);
                 assert!(!output.contains(&1));
                 if jsonl {
                     assert_eq!(output.iter().filter(|&&b| b == b'\n').count(), 1);

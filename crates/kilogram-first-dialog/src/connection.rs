@@ -2,6 +2,7 @@
 use super::{
     artifact, consent, helper, locator_artifact,
     model::{self, Record, Setup},
+    operation::{self, OperationControl},
     send_intent,
     send_recovery::{
         IpcResult, Projection, Recovery, RequestOperation, RequestResult, SendRuntime, Submission,
@@ -441,6 +442,7 @@ fn wait_owned(child: &mut Child, limit: Duration) -> Result<Option<std::process:
 struct Cleanup {
     stopping: AtomicBool,
     unconfirmed: AtomicBool,
+    spawned: AtomicBool,
     #[cfg(test)]
     reveal_exit: Option<Arc<AtomicBool>>,
 }
@@ -480,7 +482,7 @@ fn cancellable<T>(
     cancel: &AtomicBool,
     f: impl std::future::Future<Output = Result<T>>,
 ) -> Result<T> {
-    rt.block_on(async{tokio::pin!(f);loop{tokio::select!{v=&mut f=>return v,_=tokio::time::sleep(Duration::from_millis(20))=>ensure!(!cancel.load(Ordering::Acquire),"Connection operation cancelled")}}})
+    operation::wait(rt, Some(cancel), None, f)?
 }
 impl Session {
     fn start(
@@ -522,7 +524,12 @@ impl Session {
             use std::os::windows::process::CommandExt;
             command.creation_flags(0x0800_4000);
         }
+        ensure!(
+            !cancel.load(Ordering::Acquire),
+            "Connection cancelled before spawn"
+        );
         let child = command.spawn()?;
+        cleanup.spawned.store(true, Ordering::Release);
 
         let mut session = Self {
             child,
@@ -638,6 +645,14 @@ impl Session {
         Ok(())
     }
     pub fn poll(&mut self, cancel: &AtomicBool) -> Result<View> {
+        self.poll_controlled(cancel, None)
+    }
+
+    fn poll_controlled(
+        &mut self,
+        cancel: &AtomicBool,
+        control: Option<&OperationControl>,
+    ) -> Result<View> {
         let started = Instant::now();
         self.check_drains()?;
         let client = self.client.as_ref().context("Owned client")?;
@@ -647,7 +662,7 @@ impl Session {
                 .is_ok_and(|d| d == client.descriptor()),
             "Runtime descriptor replaced; pinned client retained"
         );
-        let status = cancellable(&self.rt, cancel, client.status())?;
+        let status = operation::wait(&self.rt, Some(cancel), control, client.status())??;
         self.validate_status(&status)?;
         let (_, end) = self.consent_interval;
         let mut view = View::waiting(if status.endpoint.is_none() {
@@ -853,6 +868,7 @@ pub enum Action {
     RetrySend,
     Request(Box<RequestJob>),
     History(Box<HistoryJob>),
+    TerminalHistory(Box<HistoryJob>, Arc<OperationControl>),
 }
 
 pub struct RequestJob {
@@ -860,6 +876,7 @@ pub struct RequestJob {
     pub slot: u8,
     pub request: [u8; 16],
     pub operation: RequestOperation,
+    pub control: Option<Arc<OperationControl>>,
     pub reply: mpsc::SyncSender<RequestResult>,
 }
 
@@ -887,33 +904,45 @@ struct Inbox {
 struct SessionSend<'a> {
     session: &'a mut Session,
     cancel: &'a AtomicBool,
+    control: Option<&'a OperationControl>,
 }
 
 impl SessionSend<'_> {
+    fn wait<T>(&self, future: impl std::future::Future<Output = IpcResult<T>>) -> IpcResult<T> {
+        operation::wait(&self.session.rt, Some(self.cancel), self.control, future)
+            .map_err(|_| MessageError2::Unavailable)?
+    }
+
+    fn check_running(&self) -> IpcResult<()> {
+        if self.cancel.load(Ordering::Acquire)
+            || self.control.is_some_and(OperationControl::stopped)
+        {
+            return Err(MessageError2::Unavailable);
+        }
+        Ok(())
+    }
+
     fn history(
         &mut self,
         slot: u8,
         cursor: Option<&HistoryCursor2>,
         limit: usize,
     ) -> IpcResult<HistoryPage2> {
+        self.check_running()?;
         let context = self.context(slot)?;
         let client = self
             .session
             .client
             .as_ref()
             .ok_or(MessageError2::Unavailable)?;
-        let response = cancellable(&self.session.rt, self.cancel, async {
-            Ok(client.history_page(slot, context, cursor, limit).await)
-        })
-        .map_err(|_| MessageError2::Unavailable)?;
+        let response = self.wait(client.history_page(slot, context, cursor, limit));
         self.context(slot)?;
         response
     }
 
     fn context(&mut self, slot: u8) -> IpcResult<[u8; 32]> {
         let unavailable = MessageError2::Unavailable;
-        if self.cancel.load(Ordering::Acquire)
-            || self.session.check_drains().is_err()
+        if self.session.check_drains().is_err()
             || self.session.instance.is_none()
             || !matches!(self.session.child.try_wait(), Ok(None))
         {
@@ -935,10 +964,11 @@ impl SessionSend<'_> {
     }
 
     fn authorize(&mut self, slot: u8) -> IpcResult<Instant> {
+        self.check_running()?;
         self.context(slot)?;
         let view = self
             .session
-            .poll(self.cancel)
+            .poll_controlled(self.cancel, self.control)
             .map_err(|_| MessageError2::Unavailable)?;
         let context = self
             .session
@@ -962,21 +992,22 @@ impl SessionSend<'_> {
 }
 
 impl SendRuntime for SessionSend<'_> {
+    fn operation(&self) -> Option<&OperationControl> {
+        self.control
+    }
     fn check_send(&mut self, slot: u8) -> IpcResult<()> {
         self.authorize(slot).map(|_| ())
     }
 
     fn lookup(&mut self, slot: u8, request: [u8; 16]) -> IpcResult<Option<RequestStatus2>> {
+        self.check_running()?;
         let context = self.context(slot)?;
         let client = self
             .session
             .client
             .as_ref()
             .ok_or(MessageError2::Unavailable)?;
-        let response = cancellable(&self.session.rt, self.cancel, async {
-            Ok(client.request_status(slot, context, request).await)
-        })
-        .map_err(|_| MessageError2::Unavailable)?;
+        let response = self.wait(client.request_status(slot, context, request));
         self.context(slot)?;
         response
     }
@@ -984,7 +1015,10 @@ impl SendRuntime for SessionSend<'_> {
     fn send(&mut self, slot: u8, request: [u8; 16], text: &str) -> IpcResult<SendReceipt2> {
         let started = self.authorize(slot)?;
         let context = self.context(slot)?;
-        if self.cancel.load(Ordering::Acquire) || started.elapsed() >= Duration::from_secs(2) {
+        if self.cancel.load(Ordering::Acquire)
+            || started.elapsed() >= Duration::from_secs(2)
+            || self.control.is_some_and(|op| !op.begin_ipc())
+        {
             return Err(MessageError2::Unavailable);
         }
         let client = self
@@ -992,10 +1026,7 @@ impl SendRuntime for SessionSend<'_> {
             .client
             .as_ref()
             .ok_or(MessageError2::Unavailable)?;
-        let response = cancellable(&self.session.rt, self.cancel, async {
-            Ok(client.send_text(slot, context, request, text).await)
-        })
-        .map_err(|_| MessageError2::Unavailable)?;
+        let response = self.wait(client.send_text(slot, context, request, text));
         self.context(slot)?;
         response
     }
@@ -1113,6 +1144,7 @@ fn run_connected(
                     &mut SessionSend {
                         session,
                         cancel: signal,
+                        control: None,
                     },
                     slot,
                     text,
@@ -1125,6 +1157,7 @@ fn run_connected(
                 recovery.retry(&mut SessionSend {
                     session,
                     cancel: signal,
+                    control: None,
                 });
                 next_pending = Instant::now() + Duration::from_secs(1);
             }
@@ -1135,6 +1168,7 @@ fn run_connected(
                         &mut SessionSend {
                             session,
                             cancel: signal,
+                            control: job.control.as_deref(),
                         },
                         job.slot,
                         job.request,
@@ -1146,12 +1180,18 @@ fn run_connected(
                 let _ = job.reply.try_send(result);
                 next_pending = Instant::now() + Duration::from_secs(1);
             }
-            Some((generation, Action::History(job))) => {
+            Some((generation, action @ (Action::History(_) | Action::TerminalHistory(..)))) => {
                 handled = generation;
+                let (job, control) = match action {
+                    Action::History(job) => (job, None),
+                    Action::TerminalHistory(job, control) => (job, Some(control)),
+                    _ => unreachable!(),
+                };
                 let result = if job.scope == scope {
                     SessionSend {
                         session,
                         cancel: signal,
+                        control: control.as_deref(),
                     }
                     .history(job.slot, job.cursor.as_ref(), job.limit)
                 } else {
@@ -1188,6 +1228,7 @@ fn run_connected(
             recovery.refresh(&mut SessionSend {
                 session,
                 cancel: signal,
+                control: None,
             });
             next_pending = Instant::now() + Duration::from_secs(1);
         } else if idle
@@ -1198,6 +1239,7 @@ fn run_connected(
                 SessionSend {
                     session,
                     cancel: signal,
+                    control: None,
                 }
                 .lookup(job.slot, job.request)
                 .ok()
@@ -1235,13 +1277,43 @@ impl Work {
     }
 
     fn start_with_cleanup(
-        mut setup: Setup,
+        setup: Setup,
         exe: PathBuf,
         fresh_profile: bool,
         lan: Option<LanSettings>,
         cleanup: Arc<Cleanup>,
     ) -> Result<Self> {
-        let cancel = Arc::new(AtomicBool::new(false));
+        Self::spawn_work(
+            setup,
+            exe,
+            fresh_profile,
+            lan,
+            cleanup,
+            Arc::new(AtomicBool::new(false)),
+        )
+    }
+
+    pub(super) fn start_terminal(
+        setup: Setup,
+        exe: PathBuf,
+        lan: Option<LanSettings>,
+        cancel: Arc<AtomicBool>,
+    ) -> Result<Self> {
+        Self::spawn_work(setup, exe, false, lan, Arc::new(Cleanup::default()), cancel)
+    }
+
+    fn spawn_work(
+        mut setup: Setup,
+        exe: PathBuf,
+        fresh_profile: bool,
+        lan: Option<LanSettings>,
+        cleanup: Arc<Cleanup>,
+        cancel: Arc<AtomicBool>,
+    ) -> Result<Self> {
+        ensure!(
+            !cancel.load(Ordering::Acquire),
+            "Connection cancelled before worker start"
+        );
         let signal = cancel.clone();
         let epoch = Arc::new(AtomicU64::new(0));
         let (tx, rx) = mpsc::sync_channel(1);
@@ -1283,7 +1355,10 @@ impl Work {
         })
     }
     pub fn action(&mut self, action: Action) -> Result<()> {
-        ensure!(!self.cleanup.stopping(), "Owned runtime is stopping");
+        ensure!(
+            !self.cleanup.stopping() && !self.cancel.load(Ordering::Acquire),
+            "Owned runtime is stopping"
+        );
         let previous = self.epoch.fetch_add(1, Ordering::AcqRel);
         if self.actions.try_send((previous + 1, action)).is_err() {
             self.epoch.store(previous, Ordering::Release);
@@ -1325,6 +1400,9 @@ impl Work {
     }
     pub(super) fn finished(&self) -> bool {
         self.completion.is_some()
+    }
+    pub(super) fn spawned(&self) -> bool {
+        self.cleanup.spawned.load(Ordering::Acquire)
     }
     pub fn poll(&mut self) -> Option<(Setup, Result<Stop>)> {
         self.refresh_view();

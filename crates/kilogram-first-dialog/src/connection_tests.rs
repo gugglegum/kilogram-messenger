@@ -65,6 +65,7 @@ fn t11a_terminal_fixture_and_observer_binding() -> Result<()> {
         SessionSend {
             session: &mut sessions[0],
             cancel: &cancel,
+            control: None,
         }
         .send(slot, [nonce; 16], text)?;
     }
@@ -73,6 +74,7 @@ fn t11a_terminal_fixture_and_observer_binding() -> Result<()> {
         let mut sender = SessionSend {
             session: &mut sessions[0],
             cancel: &cancel,
+            control: None,
         };
         if sender.history(0, None, 4)?.items.len() == 2
             && sender.history(1, None, 4)?.items.len() == 1

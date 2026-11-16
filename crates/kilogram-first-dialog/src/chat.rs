@@ -4,6 +4,7 @@ use crate::{
     connection::{self, Action, DialogScope, HistoryJob, RequestJob, Work},
     consent,
     model::{self, Setup},
+    operation::{self, OperationControl},
     send_recovery::{RequestOperation, RequestReport, RequestResult, RequestState},
 };
 use anyhow::{Context, Result, ensure};
@@ -15,7 +16,11 @@ use serde::Serialize;
 use std::{
     fs,
     path::{Path, PathBuf},
-    sync::mpsc,
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+        mpsc,
+    },
     thread,
     time::{Duration, Instant},
 };
@@ -47,6 +52,33 @@ enum Session {
     Observer(Box<Observer>),
 }
 
+/// Stop can be requested before Setup is opened or a child is spawned.
+#[derive(Default)]
+pub struct SessionStop(Mutex<StopState>);
+
+#[derive(Default)]
+struct StopState {
+    requested: bool,
+    owner: Option<Arc<AtomicBool>>,
+}
+
+impl SessionStop {
+    pub fn stop(&self) {
+        let mut state = self.0.lock().unwrap();
+        state.requested = true;
+        if let Some(owner) = &state.owner {
+            owner.store(true, Ordering::Release);
+        }
+    }
+
+    fn register(&self, owner: Arc<AtomicBool>) -> Result<()> {
+        let mut state = self.0.lock().unwrap();
+        ensure!(!state.requested, "Connection is closing");
+        state.owner = Some(owner);
+        Ok(())
+    }
+}
+
 impl Chat {
     pub fn new(setup_dir: PathBuf, executable: PathBuf) -> Self {
         Self {
@@ -57,7 +89,22 @@ impl Chat {
         }
     }
 
-    pub fn connect(&mut self, mode: Mode, expected_instance: Option<&str>) -> Result<ChatStatus> {
+    pub fn connect(&mut self, mode: Mode, instance: Option<&str>) -> Result<ChatStatus> {
+        let was_connected = self.session.is_some();
+        let result = self.connect_controlled(mode, instance, None, &SessionStop::default());
+        if result.is_err() && !was_connected {
+            let _ = self.disconnect();
+        }
+        result
+    }
+
+    pub fn connect_controlled(
+        &mut self,
+        mode: Mode,
+        expected_instance: Option<&str>,
+        control: Option<&OperationControl>,
+        stop: &SessionStop,
+    ) -> Result<ChatStatus> {
         ensure!(
             self.session.is_none() && !self.cleanup_unconfirmed,
             "Session already open or cleanup unconfirmed"
@@ -69,36 +116,47 @@ impl Chat {
                     self.setup_dir.join("setup.json").is_file(),
                     "Saved Setup required"
                 );
+                let owner = Arc::new(AtomicBool::new(false));
+                stop.register(owner.clone())?;
+                ensure!(
+                    control.is_none_or(|op| op.provisional_owner(owner.clone())),
+                    "Connection cancelled"
+                );
                 let setup = Setup::open(&self.setup_dir)?;
                 let lan = connection::lan_settings(&setup);
-                Session::Owner(Box::new(Work::start(
+                Session::Owner(Box::new(Work::start_terminal(
                     setup,
                     self.executable.clone(),
-                    false,
                     lan,
+                    owner,
                 )?))
             }
             Mode::Observer => Session::Observer(Box::new(Observer::open(
                 &self.setup_dir,
                 expected_instance,
+                control,
             )?)),
         };
         self.session = Some(session);
-        let status = self.status_with_limit(Duration::from_secs(45));
-        if status.is_err() {
-            let _ = self.disconnect();
-        }
-        status
+        self.status_with_limit(Duration::from_secs(45), control)
     }
 
     pub fn status(&mut self) -> Result<ChatStatus> {
-        self.status_with_limit(Duration::from_secs(6))
+        self.status_controlled(None)
     }
 
-    fn status_with_limit(&mut self, limit: Duration) -> Result<ChatStatus> {
+    pub fn status_controlled(&mut self, control: Option<&OperationControl>) -> Result<ChatStatus> {
+        self.status_with_limit(Duration::from_secs(6), control)
+    }
+
+    fn status_with_limit(
+        &mut self,
+        limit: Duration,
+        control: Option<&OperationControl>,
+    ) -> Result<ChatStatus> {
         match self.session.as_mut().context("Connect first")? {
             Session::Owner(work) => {
-                let scope = owner_scope(work, limit)?;
+                let scope = owner_scope(work, limit, control)?;
                 Ok(ChatStatus {
                     mode: Mode::Owner,
                     runtime_instance: artifact::hex(&scope.instance),
@@ -106,7 +164,7 @@ impl Chat {
                     live_admitted: work.view.current(Instant::now(), consent::now()?),
                 })
             }
-            Session::Observer(observer) => observer.status(),
+            Session::Observer(observer) => observer.status(control),
         }
     }
 
@@ -116,20 +174,38 @@ impl Chat {
         cursor: Option<HistoryCursor2>,
         limit: usize,
     ) -> Result<HistoryPage2> {
+        self.history_controlled(slot, cursor, limit, None)
+    }
+
+    pub fn history_controlled(
+        &mut self,
+        slot: u8,
+        cursor: Option<HistoryCursor2>,
+        limit: usize,
+        control: Option<&Arc<OperationControl>>,
+    ) -> Result<HistoryPage2> {
         match self.session.as_mut().context("Connect first")? {
             Session::Owner(work) => {
-                let scope = owner_scope(work, Duration::from_secs(6))?;
+                let scope = owner_scope(work, Duration::from_secs(6), control.map(Arc::as_ref))?;
                 let (reply, page) = mpsc::sync_channel(1);
-                work.action(Action::History(Box::new(HistoryJob {
+                let job = Box::new(HistoryJob {
                     scope,
                     slot,
                     cursor,
                     limit,
                     reply,
-                })))?;
-                Ok(page.recv_timeout(Duration::from_secs(7))??)
+                });
+                if let Some(control) = control {
+                    work.action(Action::TerminalHistory(job, control.clone()))?;
+                    Ok(page.recv()??)
+                } else {
+                    work.action(Action::History(job))?;
+                    Ok(page.recv_timeout(Duration::from_secs(7))??)
+                }
             }
-            Session::Observer(observer) => observer.history(slot, cursor.as_ref(), limit),
+            Session::Observer(observer) => {
+                observer.history(slot, cursor.as_ref(), limit, control.map(Arc::as_ref))
+            }
         }
     }
 
@@ -139,23 +215,41 @@ impl Chat {
         request: [u8; 16],
         operation: RequestOperation,
     ) -> RequestResult {
+        self.request_controlled(slot, request, operation, None)
+    }
+
+    pub fn request_controlled(
+        &mut self,
+        slot: u8,
+        request: [u8; 16],
+        operation: RequestOperation,
+        control: Option<&Arc<OperationControl>>,
+    ) -> RequestResult {
         match self.session.as_mut().ok_or("not_connected")? {
             Session::Observer(_) if !matches!(operation, RequestOperation::Status) => {
                 Err("observer_read_only")
             }
-            Session::Observer(observer) => observer.request_status(slot, request),
+            Session::Observer(observer) => {
+                observer.request_status(slot, request, control.map(Arc::as_ref))
+            }
             Session::Owner(work) => {
-                let scope =
-                    owner_scope(work, Duration::from_secs(6)).map_err(|_| "session_unavailable")?;
+                let scope = owner_scope(work, Duration::from_secs(6), control.map(Arc::as_ref))
+                    .map_err(|_| "session_unavailable")?;
                 let (reply, done) = mpsc::sync_channel(1);
                 work.action(Action::Request(Box::new(RequestJob {
                     scope,
                     slot,
                     request,
                     operation,
+                    control: control.cloned(),
                     reply,
                 })))
                 .map_err(|_| "session_unavailable")?;
+                // The terminal may publish a conservative result earlier. Its
+                // internal slot still represents this actual worker operation.
+                if control.is_some() {
+                    return done.recv().map_err(|_| "session_unavailable")?;
+                }
                 done.recv_timeout(Duration::from_secs(30))
                     .unwrap_or_else(|_| {
                         Ok(RequestReport {
@@ -169,16 +263,19 @@ impl Chat {
     }
 
     pub fn disconnect(&mut self) -> Result<()> {
+        self.disconnect_until(Instant::now() + Duration::from_secs(30))
+    }
+
+    pub fn disconnect_until(&mut self, end: Instant) -> Result<()> {
         if let Some(Session::Owner(mut work)) = self.session.take() {
             work.cancel();
-            let end = Instant::now() + Duration::from_secs(30);
             loop {
                 if let Some((setup, result)) = work.poll() {
-                    let stopped = result.is_ok_and(|stop| {
-                        stop.graceful && stop.reaped && stop.eof && stop.exit == Some(0)
-                    });
-                    self.cleanup_unconfirmed |=
-                        !stopped || setup.home.join("connection/ipc.json").exists();
+                    let stopped = !work.spawned()
+                        || (result.is_ok_and(|stop| {
+                            stop.graceful && stop.reaped && stop.eof && stop.exit == Some(0)
+                        }) && !setup.home.join("connection/ipc.json").exists());
+                    self.cleanup_unconfirmed |= !stopped;
                     break;
                 }
                 if Instant::now() >= end {
@@ -197,10 +294,17 @@ impl Chat {
     }
 }
 
-fn owner_scope(work: &mut Work, limit: Duration) -> Result<DialogScope> {
+fn owner_scope(
+    work: &mut Work,
+    limit: Duration,
+    control: Option<&OperationControl>,
+) -> Result<DialogScope> {
     let end = Instant::now() + limit;
     loop {
-        // Keep the worker's terminal receipt for disconnect, even if it ended before readiness.
+        ensure!(
+            control.is_none_or(|op| !op.stopped()),
+            "Connection operation cancelled"
+        );
         work.refresh_view();
         ensure!(!work.finished(), "Owned runtime exited");
         if let Some(scope) = work.view.messages.scope.filter(|_| work.view.running) {
@@ -219,7 +323,11 @@ struct Observer {
 }
 
 impl Observer {
-    fn open(setup_dir: &Path, expected_instance: Option<&str>) -> Result<Self> {
+    fn open(
+        setup_dir: &Path,
+        expected_instance: Option<&str>,
+        control: Option<&OperationControl>,
+    ) -> Result<Self> {
         let home = fs::canonicalize(setup_dir)?;
         let record = Setup::read_record(&home)?;
         ensure!(
@@ -256,7 +364,7 @@ impl Observer {
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()?;
-        let status = runtime.block_on(client.status())?;
+        let status = operation::wait(&runtime, None, control, client.status())??;
         if let Some(instance) = expected_instance {
             ensure!(
                 id(instance)? == id(&status.runtime_instance)?,
@@ -297,9 +405,9 @@ impl Observer {
         Ok(())
     }
 
-    fn status(&self) -> Result<ChatStatus> {
+    fn status(&self, control: Option<&OperationControl>) -> Result<ChatStatus> {
         self.check_descriptor()?;
-        let status = self.runtime.block_on(self.client.status())?;
+        let status = operation::wait(&self.runtime, None, control, self.client.status())??;
         self.check_status(&status)?;
         let now = consent::now()?;
         let live_admitted = (0..2).all(|slot| {
@@ -327,33 +435,46 @@ impl Observer {
         slot: u8,
         cursor: Option<&HistoryCursor2>,
         limit: usize,
+        control: Option<&OperationControl>,
     ) -> Result<HistoryPage2> {
-        self.status()?;
+        self.status(control)?;
         let context = self
             .profile
             .contexts
             .get(usize::from(slot))
             .context("Context slot")?;
-        let page =
-            self.runtime
-                .block_on(self.client.history_page(slot, id(context)?, cursor, limit))?;
-        self.status()?;
+        let page = operation::wait(
+            &self.runtime,
+            None,
+            control,
+            self.client.history_page(slot, id(context)?, cursor, limit),
+        )??;
+        self.status(control)?;
         Ok(page)
     }
 
-    fn request_status(&self, slot: u8, request: [u8; 16]) -> RequestResult {
+    fn request_status(
+        &self,
+        slot: u8,
+        request: [u8; 16],
+        control: Option<&OperationControl>,
+    ) -> RequestResult {
         let context = self
             .profile
             .contexts
             .get(usize::from(slot))
             .ok_or("invalid_context")?;
         let context = id(context).map_err(|_| "invalid_context")?;
-        self.status().map_err(|_| "status_unavailable")?;
-        let status = self
-            .runtime
-            .block_on(self.client.request_status(slot, context, request))
-            .map_err(|_| "status_unavailable")?;
-        self.status().map_err(|_| "status_unavailable")?;
+        self.status(control).map_err(|_| "status_unavailable")?;
+        let status = operation::wait(
+            &self.runtime,
+            None,
+            control,
+            self.client.request_status(slot, context, request),
+        )
+        .map_err(|_| "status_unavailable")?
+        .map_err(|_| "status_unavailable")?;
+        self.status(control).map_err(|_| "status_unavailable")?;
         Ok(RequestReport::from_status(status))
     }
 }

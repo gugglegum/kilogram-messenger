@@ -2,6 +2,118 @@ use super::*;
 use crate::send_recovery::{IpcResult, Progress, Recovery, SendRuntime};
 use kilogram_runtime_ipc::ordered2::{Delivery2, MessageError2, RequestStatus2, SendReceipt2};
 
+struct ControlledRuntime {
+    base: FakeRuntime,
+    control: std::sync::Arc<crate::operation::OperationControl>,
+    cancel_on_preflight: bool,
+}
+
+impl SendRuntime for ControlledRuntime {
+    fn operation(&self) -> Option<&crate::operation::OperationControl> {
+        Some(&self.control)
+    }
+
+    fn check_send(&mut self, slot: u8) -> IpcResult<()> {
+        if self.cancel_on_preflight {
+            self.control.cancel(std::time::Instant::now());
+        }
+        self.base.check_send(slot)
+    }
+
+    fn lookup(&mut self, slot: u8, request: [u8; 16]) -> IpcResult<Option<RequestStatus2>> {
+        self.base.lookup(slot, request)
+    }
+
+    fn send(&mut self, slot: u8, request: [u8; 16], text: &str) -> IpcResult<SendReceipt2> {
+        if !self.control.begin_ipc() {
+            return Err(MessageError2::Unavailable);
+        }
+        self.base.send(slot, request, text)
+    }
+}
+
+#[test]
+fn t11c_cancel_on_both_sides_of_dpapi_publication() -> Result<()> {
+    use crate::{
+        operation::{OperationControl, OperationKind, RequestIdentity},
+        send_recovery::{RequestOperation, RequestState},
+    };
+    use std::{
+        sync::{Arc, mpsc},
+        time::{Duration, Instant},
+    };
+    let tmp = tempfile::tempdir()?;
+    let home = fs::canonicalize(tmp.path())?;
+    let operation = || {
+        Arc::new(OperationControl::new(
+            OperationKind::Send,
+            Instant::now() + Duration::from_secs(15),
+            Some(RequestIdentity {
+                context: "88".repeat(32),
+                request_id: "ab".repeat(16),
+            }),
+        ))
+    };
+    let runtime = |control, cancel_on_preflight| ControlledRuntime {
+        base: FakeRuntime {
+            store: store(&home),
+            status: Ok(None),
+            reply: Err(MessageError2::Unavailable),
+            trace: Vec::new(),
+            seen: None,
+        },
+        control,
+        cancel_on_preflight,
+    };
+    let request = [0xab; 16];
+    let send = || RequestOperation::Send(Zeroizing::new(TEXT.into()));
+    let mut recovery = Recovery::new(Ok(store(&home)));
+    let before = operation();
+    let mut attempt = runtime(before.clone(), true);
+    let _ = recovery.request(&mut attempt, 0, request, send());
+    let frozen = before.finish(false);
+    ensure!(
+        frozen.cancellation.context("Missing cancellation")?.err()
+            == Some("cancelled_not_submitted")
+    );
+    ensure!(attempt.base.trace == ["lookup", "lookup"] && attempt.base.store.load()?.is_none());
+
+    let during = operation();
+    let mut attempt = runtime(during.clone(), false);
+    let (published, stage) = mpsc::sync_channel(1);
+    let (release, permit) = mpsc::sync_channel(1);
+    let mut gated = store(&home);
+    gated.after_publish = Some(Box::new(move || {
+        published.send(()).unwrap();
+        permit.recv_timeout(Duration::from_secs(10)).unwrap();
+    }));
+    let worker = std::thread::spawn(move || {
+        let report = Recovery::new(Ok(gated)).request(&mut attempt, 0, request, send());
+        (attempt, report)
+    });
+    stage.recv_timeout(Duration::from_secs(10))?;
+    during.cancel(Instant::now());
+    let snapshot = during.finish(true);
+    let report = snapshot
+        .cancellation
+        .context("Missing publication snapshot")?
+        .map_err(anyhow::Error::msg)?;
+    ensure!(report.state == RequestState::Unconfirmed && report.protected.is_none());
+    // Use the production DPAPI reader while the original call is still held
+    // between publication and its own readback.
+    let saved = store(&home)
+        .load()?
+        .context("Ciphertext publication missing")?;
+    ensure!(saved.request == request && saved.text == TEXT);
+    release.send(())?;
+    let (attempt, late) = worker
+        .join()
+        .map_err(|_| anyhow::anyhow!("Publication worker panicked"))?;
+    ensure!(late.map_err(anyhow::Error::msg)?.protected == Some(true));
+    ensure!(attempt.base.trace == ["lookup", "lookup"] && attempt.base.seen.is_none());
+    Ok(())
+}
+
 const TEXT: &str = "  CS33A private synthetic sentinel \u{301} \n\0 ";
 
 fn store(home: &Path) -> Store {
@@ -18,6 +130,7 @@ fn store(home: &Path) -> Store {
             contexts: ["88".repeat(32), "99".repeat(32)],
         },
         fault: std::cell::Cell::default(),
+        after_publish: None,
     }
 }
 
