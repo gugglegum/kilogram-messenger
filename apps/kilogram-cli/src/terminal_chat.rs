@@ -1,4 +1,5 @@
 use kilogram_first_dialog::chat::{Chat, ChatStatus, Mode};
+use kilogram_first_dialog::{send_intent::valid_text, send_recovery::RequestOperation};
 use kilogram_runtime_ipc::ordered2::{HistoryCursor2, HistoryPage2, MAX_HISTORY_ROWS};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -10,10 +11,11 @@ use std::{
     thread,
     time::Duration,
 };
+use zeroize::Zeroizing;
 
 const LINE_CAP: usize = 32 * 1024;
 const OUTPUT_CAP: usize = 256 * 1024;
-const HELP: &str = "/help /connect start|attach /status /chats /use 1|2 /history [limit] /history more [limit] /disconnect /quit";
+const HELP: &str = "/help /connect start|attach /status [request_id] /chats /use 1|2 /send <text> /retry <request_id> /history [limit] /history more [limit] /disconnect /quit";
 type CommandResult<T> = Result<T, &'static str>;
 type Prepared<T> = CommandResult<(Value, Option<T>)>;
 
@@ -27,6 +29,11 @@ enum Command {
     Status,
     Chats,
     Use(u8),
+    Message {
+        context: Option<String>,
+        request: Option<[u8; 16]>,
+        operation: RequestOperation,
+    },
     History {
         context: Option<String>,
         limit: usize,
@@ -60,6 +67,58 @@ struct HistoryArgs {
     #[serde(default = "page_limit")]
     limit: usize,
     cursor: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SendArgs {
+    context: String,
+    request_id: String,
+    text: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct RequestArgs {
+    context: String,
+    request_id: String,
+}
+
+fn request_id(text: &str) -> CommandResult<[u8; 16]> {
+    if text.len() != 32 || !text.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return Err("invalid_request_id");
+    }
+    let mut id = [0; 16];
+    for (index, byte) in id.iter_mut().enumerate() {
+        *byte = u8::from_str_radix(&text[2 * index..2 * index + 2], 16)
+            .map_err(|_| "invalid_request_id")?;
+    }
+    Ok(id)
+}
+
+fn hex(bytes: &[u8]) -> String {
+    use std::fmt::Write;
+    let mut text = String::with_capacity(2 * bytes.len());
+    for byte in bytes {
+        let _ = write!(text, "{byte:02x}");
+    }
+    text
+}
+
+fn send(
+    context: Option<String>,
+    request: Option<[u8; 16]>,
+    text: String,
+) -> CommandResult<Command> {
+    let text = Zeroizing::new(text);
+    if !valid_text(&text) {
+        return Err("invalid_text");
+    }
+    Ok(Command::Message {
+        context,
+        request,
+        operation: RequestOperation::Send(text),
+    })
 }
 
 fn page_limit() -> usize {
@@ -97,21 +156,49 @@ fn parse_wire(request: Request) -> CommandResult<Command> {
                 more: false,
             })
         }
+        "send" => {
+            let args: SendArgs =
+                serde_json::from_value(request.args).map_err(|_| "invalid_args")?;
+            send(
+                Some(args.context),
+                Some(request_id(&args.request_id)?),
+                args.text,
+            )
+        }
+        "request_status" | "retry" => {
+            let args: RequestArgs =
+                serde_json::from_value(request.args).map_err(|_| "invalid_args")?;
+            Ok(Command::Message {
+                context: Some(args.context),
+                request: Some(request_id(&args.request_id)?),
+                operation: if request.op == "retry" {
+                    RequestOperation::Retry
+                } else {
+                    RequestOperation::Status
+                },
+            })
+        }
         "status" if empty => Ok(Command::Status),
         "chats" if empty => Ok(Command::Chats),
         "disconnect" if empty => Ok(Command::Disconnect),
         "quit" if empty => Ok(Command::Quit),
         "status" | "chats" | "disconnect" | "quit" => Err("invalid_args"),
-        "send" | "retry" | "request_status" | "locator_export" | "locator_import" => {
-            Err("unsupported")
-        }
+        "locator_export" | "locator_import" => Err("unsupported"),
         _ => Err("unknown_operation"),
     }
 }
 
 fn parse_tty(text: &str) -> CommandResult<Command> {
-    if !text.starts_with('/') || text.starts_with("//") {
-        return Err("sending_unavailable");
+    if !text.starts_with('/') {
+        return send(None, None, text.into());
+    }
+    if text.starts_with("//") {
+        return send(None, None, text[1..].into());
+    }
+    if let Some(tail) = text.strip_prefix("/send")
+        && let Some(body) = tail.strip_prefix(|c: char| c.is_ascii_whitespace())
+    {
+        return send(None, None, body.into());
     }
     let args: Vec<_> = text.split_ascii_whitespace().take(4).collect();
     match args.as_slice() {
@@ -125,6 +212,15 @@ fn parse_tty(text: &str) -> CommandResult<Command> {
             instance: None,
         }),
         ["/status"] => Ok(Command::Status),
+        [command @ ("/status" | "/retry"), id] => Ok(Command::Message {
+            context: None,
+            request: Some(request_id(id)?),
+            operation: if *command == "/retry" {
+                RequestOperation::Retry
+            } else {
+                RequestOperation::Status
+            },
+        }),
         ["/chats"] => Ok(Command::Chats),
         ["/use", "1"] => Ok(Command::Use(0)),
         ["/use", "2"] => Ok(Command::Use(1)),
@@ -149,7 +245,8 @@ fn parse_tty(text: &str) -> CommandResult<Command> {
         }
         ["/disconnect"] => Ok(Command::Disconnect),
         ["/quit"] => Ok(Command::Quit),
-        ["/send" | "/retry" | "/locator", ..] => Err("unsupported"),
+        ["/send"] => Err("invalid_text"),
+        ["/locator", ..] => Err("unsupported"),
         _ => Err("invalid_command"),
     }
 }
@@ -171,10 +268,21 @@ struct Frontend {
     continuation: [Option<Continuation>; 2],
 }
 
+#[derive(Serialize)]
+struct RequestKey {
+    context: String,
+    request_id: String,
+}
+
 impl Frontend {
-    fn execute(&mut self, command: Command) -> Prepared<HistoryAdvance> {
+    fn execute(
+        &mut self,
+        command: Command,
+        key: &mut Option<RequestKey>,
+        announce: impl FnOnce(&RequestKey) -> bool,
+    ) -> Prepared<HistoryAdvance> {
         let result: CommandResult<Value> = match command {
-            Command::Help => Ok(json!({ "help": HELP, "sending": false })),
+            Command::Help => Ok(json!({ "help": HELP, "sending": true })),
             Command::Connect { observer, instance } => {
                 if self.status.is_some() {
                     return Err("already_connected");
@@ -211,6 +319,48 @@ impl Frontend {
             Command::Use(slot) => {
                 self.selected = slot;
                 Ok(json!({ "selected": slot + 1 }))
+            }
+            Command::Message {
+                context,
+                request,
+                operation,
+            } => {
+                // Preserve caller-supplied identity even if the command has no session.
+                if let (Some(context), Some(request)) = (&context, request) {
+                    *key = Some(RequestKey {
+                        context: context.clone(),
+                        request_id: hex(&request),
+                    });
+                }
+                let status = self.status.as_ref().ok_or("not_connected")?;
+                let slot = match context {
+                    Some(context) => status
+                        .contexts
+                        .iter()
+                        .position(|c| c == &context)
+                        .ok_or("invalid_context")?,
+                    None => usize::from(self.selected),
+                };
+                let request = match request {
+                    Some(request) => request,
+                    None => {
+                        let mut request = [0; 16];
+                        getrandom::fill(&mut request).map_err(|_| "request_id_unavailable")?;
+                        request
+                    }
+                };
+                let resolved = key.insert(RequestKey {
+                    context: status.contexts[slot].clone(),
+                    request_id: hex(&request),
+                });
+                if status.mode == Mode::Observer && !matches!(operation, RequestOperation::Status) {
+                    return Err("observer_read_only");
+                }
+                if matches!(&operation, RequestOperation::Send(_)) && !announce(resolved) {
+                    return Err("stdout_unavailable");
+                }
+                let report = self.service.request(slot as u8, request, operation)?;
+                Ok(json!(report))
             }
             Command::History {
                 context,
@@ -269,7 +419,7 @@ impl Frontend {
         } else {
             let mut nonce = [0u8; 16];
             getrandom::fill(&mut nonce).map_err(|_| "cursor_unavailable")?;
-            let token = nonce.map(|byte| format!("{byte:02x}")).concat();
+            let token = hex(&nonce);
             Some(Continuation {
                 token,
                 cursor: page.cursor.clone(),
@@ -290,7 +440,7 @@ fn page_value(context: &str, page: &HistoryPage2, cursor: Option<&str>) -> Value
         .iter()
         .map(|row| {
             json!({
-                "event_id": row.event.map(|byte| format!("{byte:02x}")).concat(),
+                "event_id": hex(&row.event),
                 "role": row.role, "ordinal": row.ordinal, "text": row.text.as_str(),
             })
         })
@@ -301,7 +451,7 @@ fn page_value(context: &str, page: &HistoryPage2, cursor: Option<&str>) -> Value
 fn write_tty(mut out: impl Write, result: &CommandResult<Value>) -> io::Result<()> {
     match result {
         Ok(value) if value.get("help").is_some() => {
-            writeln!(out, "{HELP}\nSending is unavailable in this version.")
+            writeln!(out, "{HELP}")
         }
         Ok(value) if value.get("items").is_some() => {
             if let Some(rows) = value["items"].as_array() {
@@ -327,7 +477,7 @@ fn write_tty(mut out: impl Write, result: &CommandResult<Value>) -> io::Result<(
             }
         }
         Ok(value) => writeln!(out, "{value}"),
-        Err("sending_unavailable" | "unsupported") => {
+        Err("unsupported") => {
             writeln!(out, "Operation unavailable in this version. Use /help.")
         }
         Err("response_too_large") => writeln!(
@@ -345,6 +495,8 @@ struct WireResult<'a> {
     kind: &'static str,
     id: Option<&'a str>,
     ok: bool,
+    #[serde(flatten)]
+    request: Option<&'a RequestKey>,
     #[serde(skip_serializing_if = "Option::is_none")]
     value: Option<&'a Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -374,6 +526,7 @@ impl Write for ResultBuffer {
 fn encode_result(
     jsonl: bool,
     id: Option<&str>,
+    request: Option<&RequestKey>,
     result: &CommandResult<Value>,
 ) -> io::Result<Vec<u8>> {
     let mut output = ResultBuffer::default();
@@ -383,12 +536,20 @@ fn encode_result(
             kind: "result",
             id,
             ok: result.is_ok(),
+            request,
             value: result.as_ref().ok(),
             code: result.as_ref().err().copied(),
         };
         serde_json::to_writer(&mut output, &message).map_err(io::Error::other)?;
         output.write_all(b"\n")?;
     } else {
+        if let Some(request) = request {
+            writeln!(
+                output,
+                "Request {} ({})",
+                request.request_id, request.context
+            )?;
+        }
         write_tty(&mut output, result)?;
     }
     Ok(output.0)
@@ -397,16 +558,20 @@ fn encode_result(
 fn prepare_result<T>(
     jsonl: bool,
     id: Option<&str>,
+    request: Option<&RequestKey>,
     result: Prepared<T>,
 ) -> io::Result<(Vec<u8>, Option<T>)> {
     let (value, advance) = match result {
         Ok((value, advance)) => (Ok(value), advance),
         Err(code) => (Err(code), None),
     };
-    match encode_result(jsonl, id, &value) {
+    match encode_result(jsonl, id, request, &value) {
         Ok(bytes) => Ok((bytes, advance)),
         // No history position changes when the rendered page will not be published.
-        Err(_) => Ok((encode_result(jsonl, id, &Err("response_too_large"))?, None)),
+        Err(_) => Ok((
+            encode_result(jsonl, id, request, &Err("response_too_large"))?,
+            None,
+        )),
     }
 }
 
@@ -587,8 +752,24 @@ pub fn run(setup: PathBuf, jsonl: bool) -> i32 {
         let (bytes, id, quit, advance) = match input {
             Input::Command { id, command } => {
                 let quit = command == Ok(Command::Quit);
-                let result = command.and_then(|cmd| frontend.execute(cmd));
-                let Ok((bytes, advance)) = prepare_result(jsonl, id.as_deref(), result) else {
+                let mut request = None;
+                let result = command.and_then(|cmd| {
+                    frontend.execute(cmd, &mut request, |key| {
+                        jsonl
+                            || emit(
+                                &output,
+                                format!("Request {}\n", key.request_id).into_bytes(),
+                                None,
+                            )
+                    })
+                });
+                if matches!(result, Err("stdout_unavailable")) {
+                    code = 2;
+                    break;
+                }
+                let Ok((bytes, advance)) =
+                    prepare_result(jsonl, id.as_deref(), request.as_ref(), result)
+                else {
                     code = 2;
                     break;
                 };
@@ -645,13 +826,12 @@ mod tests {
     }
 
     #[test]
-    fn t11a_command_parity_and_unsupported_writes() -> anyhow::Result<()> {
+    fn t11a_command_parity_and_unavailable_locator() -> anyhow::Result<()> {
         let request = serde_json::from_value(
             json!({"v":1,"id":"a","op":"connect","args":{"mode":"attach"}}),
         )?;
         assert_eq!(parse_wire(request), parse_tty("/connect attach"));
-        assert_eq!(parse_tty("//escaped"), Err("sending_unavailable"));
-        assert_eq!(parse_tty("/send привет"), Err("unsupported"));
+        assert_eq!(parse_tty("/locator export"), Err("unsupported"));
         assert_eq!(parse_tty("/connect start extra"), Err("invalid_command"));
         assert_eq!(
             parse_tty("/history more"),
@@ -664,7 +844,48 @@ mod tests {
         );
         let request =
             serde_json::from_value(json!({"v":1,"id":"b","op":"send","args":{"text":"test"}}))?;
-        assert_eq!(parse_wire(request), Err("unsupported"));
+        assert_eq!(parse_wire(request), Err("invalid_args"));
+        Ok(())
+    }
+
+    #[test]
+    fn t11b_send_text_and_ids_are_independent() -> anyhow::Result<()> {
+        for (input, expected) in [
+            ("  привет  ", "  привет  "),
+            ("//quit", "/quit"),
+            ("/send  привет  ", " привет  "),
+        ] {
+            assert!(
+                matches!(parse_tty(input).map_err(anyhow::Error::msg)?, Command::Message {
+                context: None, request: None, operation: RequestOperation::Send(text),
+            } if text.as_str() == expected)
+            );
+        }
+        assert_eq!(parse_tty("/send "), Err("invalid_text"));
+        assert_eq!(parse_tty("/retry атака"), Err("invalid_request_id"));
+        assert_eq!(parse_tty(&"Ж".repeat(2049)), Err("invalid_text"));
+        let durable = "aB".repeat(16);
+        let request: Request = serde_json::from_value(json!({
+            "v":1,"id":"correlation","op":"send",
+            "args":{"context":"ctx","request_id":durable,"text":"a\n b"}
+        }))?;
+        assert_eq!(request.id, "correlation");
+        assert!(
+            matches!(parse_wire(request).map_err(anyhow::Error::msg)?, Command::Message {
+            context: Some(context), request: Some(id), operation: RequestOperation::Send(text),
+        } if context == "ctx" && id == [0xab; 16] && text.as_str() == "a\n b")
+        );
+        let key = RequestKey {
+            context: "ctx".into(),
+            request_id: durable.to_ascii_lowercase(),
+        };
+        let bytes = encode_result(true, Some("correlation"), Some(&key), &Err("text_conflict"))?;
+        let value: Value = serde_json::from_slice(&bytes)?;
+        assert_eq!(
+            value,
+            json!({"v":1,"type":"result","id":"correlation","ok":false,
+            "context":"ctx","request_id":key.request_id,"code":"text_conflict"})
+        );
         Ok(())
     }
 
@@ -718,7 +939,7 @@ mod tests {
             ids: &ids,
             observed: Vec::new(),
         };
-        let bytes = encode_result(true, Some("reuse"), &Ok(json!({"connected":false})))?;
+        let bytes = encode_result(true, Some("reuse"), None, &Ok(json!({"connected":false})))?;
         publish(&mut client, &bytes, Some("reuse".into()), &ids)?;
         assert_eq!(client.observed, bytes);
         assert!(ids.try_lock().is_ok_and(|ids| ids.contains("reuse")));
@@ -729,15 +950,19 @@ mod tests {
     fn t11a_output_cap_counts_result_envelope_and_newline() -> anyhow::Result<()> {
         for jsonl in [true, false] {
             let id = Some("quoted\"id");
-            let envelope = encode_result(jsonl, id, &Ok(json!("")))?.len();
+            let envelope = encode_result(jsonl, id, None, &Ok(json!("")))?.len();
             let maximum = OUTPUT_CAP - envelope;
             let (exact, advance) =
-                prepare_result(jsonl, id, Ok((json!("x".repeat(maximum)), Some(1))))?;
+                prepare_result(jsonl, id, None, Ok((json!("x".repeat(maximum)), Some(1))))?;
             assert_eq!(exact.len(), OUTPUT_CAP);
             assert_eq!(exact.last(), Some(&b'\n'));
             assert_eq!(advance, Some(1));
-            let (error, advance) =
-                prepare_result(jsonl, id, Ok((json!("x".repeat(maximum + 1)), Some(2))))?;
+            let (error, advance) = prepare_result(
+                jsonl,
+                id,
+                None,
+                Ok((json!("x".repeat(maximum + 1)), Some(2))),
+            )?;
             assert!(error.len() < 512);
             assert!(advance.is_none());
         }
@@ -778,6 +1003,7 @@ mod tests {
             let (bytes, advance) = prepare_result(
                 jsonl,
                 Some("history"),
+                None,
                 Ok((page(position, all_rows.len()), Some(all_rows.len()))),
             )?;
             publish(&mut output, &bytes, Some("history".into()), &ids)?;
@@ -802,8 +1028,12 @@ mod tests {
                     ids.try_lock()
                         .is_ok_and(|mut ids| ids.insert("history".into()))
                 );
-                let (bytes, advance) =
-                    prepare_result(jsonl, Some("history"), Ok((page(position, end), Some(end))))?;
+                let (bytes, advance) = prepare_result(
+                    jsonl,
+                    Some("history"),
+                    None,
+                    Ok((page(position, end), Some(end))),
+                )?;
                 output.clear();
                 publish(&mut output, &bytes, Some("history".into()), &ids)?;
                 assert!(!output.contains(&1));

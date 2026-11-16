@@ -142,6 +142,7 @@ fn cs33b_gui_fixture_and_cold_observation() -> Result<()> {
 struct ObservedRuntime<'a> {
     real: SessionSend<'a>,
     store: &'a send_intent::Store,
+    stop_before_send: bool,
     lose_reply: bool,
     submits: usize,
     lookups: usize,
@@ -163,6 +164,10 @@ impl SendRuntime for ObservedRuntime<'_> {
             .ok_or(MessageError2::Unavailable)?;
         if saved.request != request || saved.slot != slot || saved.text != text {
             return Err(MessageError2::InvalidInput);
+        }
+        if self.stop_before_send {
+            self.lost_id = Some(request);
+            return Err(MessageError2::Unavailable);
         }
         self.submits += 1;
         let result = self.real.send(slot, request, text)?;
@@ -331,6 +336,7 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
                 cancel: &signal,
             },
             store: &store,
+            stop_before_send: false,
             lose_reply: true,
             submits: 0,
             lookups: 0,
@@ -379,6 +385,7 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
                 cancel: &signal,
             },
             store: &store,
+            stop_before_send: false,
             lose_reply: false,
             submits: 0,
             lookups: 0,
@@ -599,6 +606,110 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
     );
     println!(
         "CS33A_ACTUAL_PASS commit_before_ignored_reply=true reopened_same_intent_no_op2=true exact_id_conflict=true mixed_framed_pages=true max_escaped_split=true snapshot_append=true offline_worker_actions=true"
+    );
+    Ok(())
+}
+
+#[test]
+fn t11b_fixture_interrupts_protected_send_before_ipc_and_after_receipt() -> Result<()> {
+    use crate::send_recovery::RequestState;
+    let Some(root) = std::env::var_os("KILOGRAM_T11B_FIXTURE_ROOT").map(PathBuf::from) else {
+        return Ok(());
+    };
+    fs::create_dir(&root)?;
+    let exe = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../target/terminal-t1-checks/kilogram-cli.exe");
+    let mut nodes = ready_pair_at(&root, "recovery-", false)?;
+    let signal = Arc::new(AtomicBool::new(false));
+    let cleanup = Cleanup::default();
+    let [left, right] = &mut nodes;
+    let mut sessions = [
+        Session::start(left, &exe, signal.clone(), false, &cleanup)?,
+        Session::start(right, &exe, signal.clone(), false, &cleanup)?,
+    ];
+    connect(&mut sessions, &mut nodes, &signal)?;
+    let texts = [
+        "  T1.1b before IPC  \u{301}\n",
+        "  T1.1b accepted \0 reply hidden  ",
+    ];
+    let requests = [[0xb1; 16], [0xb2; 16]];
+    for (index, ((node, session), (request, text))) in nodes
+        .iter()
+        .zip(&mut sessions)
+        .zip(requests.into_iter().zip(texts))
+        .enumerate()
+    {
+        let slot = index as u8;
+        let store = send_intent::Store::new(node, &session.doc)?;
+        let mut recovery = Recovery::new(send_intent::Store::new(node, &session.doc));
+        let mut runtime = ObservedRuntime {
+            real: SessionSend {
+                session,
+                cancel: &signal,
+            },
+            store: &store,
+            stop_before_send: index == 0,
+            lose_reply: index == 1,
+            submits: 0,
+            lookups: 0,
+            lost_id: None,
+        };
+        let report = recovery
+            .request(
+                &mut runtime,
+                slot,
+                request,
+                RequestOperation::Send(Zeroizing::new(text.into())),
+            )
+            .map_err(anyhow::Error::msg)?;
+        ensure!(report.state == RequestState::Unconfirmed && report.protected == Some(true));
+        ensure!(
+            runtime.submits == index && runtime.lookups == 2 && runtime.lost_id == Some(request)
+        );
+        drop(runtime);
+        let saved = store
+            .load()?
+            .context("Protected intent did not survive the fault")?;
+        ensure!(
+            saved.request == request
+                && saved.slot == slot
+                && saved.text == text
+                && saved.phase == send_intent::Phase::Prepared
+        );
+        let ciphertext = model::read(&node.home.join("pending-send/intent.dpapi"), 32 * 1024)?;
+        ensure!(
+            !ciphertext
+                .windows(text.len())
+                .any(|bytes| bytes == text.as_bytes())
+        );
+    }
+    ensure!(
+        SessionSend {
+            session: &mut sessions[0],
+            cancel: &signal
+        }
+        .lookup(0, requests[0])?
+        .is_none()
+    );
+    let accepted = wait_delivery(&mut sessions[1], 1, requests[1], &signal)?;
+    let event = accepted.receipt.event.context("Delivered fixture event")?;
+    for session in &mut sessions {
+        stop(session)?;
+    }
+    model::write(
+        &root.join("fixture.json"),
+        &serde_json::to_vec_pretty(&serde_json::json!({
+            "homes": nodes.map(|node| node.home),
+            "requests": requests.map(|request| hex(&request)),
+            "texts": texts,
+            "accepted_event": hex(&event),
+            "accepted_queue_sequence": accepted.receipt.queue_sequence,
+            "ipc_send_counts": [0, 1],
+        }))?,
+        false,
+    )?;
+    println!(
+        "T11B_PROTECTED_FAULT_FIXTURE_READY before_ipc=0 after_acceptance=1 dpapi_readback=true"
     );
     Ok(())
 }

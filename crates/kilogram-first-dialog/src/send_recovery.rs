@@ -1,6 +1,7 @@
 //! Reconcile one protected intent with the durable local runtime queue.
 use super::send_intent::{Intent, Phase, Store, valid_text};
 use kilogram_runtime_ipc::ordered2::{Delivery2, MessageError2, RequestStatus2, SendReceipt2};
+use serde::Serialize;
 use std::sync::Arc;
 use zeroize::Zeroizing;
 
@@ -30,6 +31,61 @@ pub enum Submission {
     Protected,
     Retained,
 }
+
+#[derive(PartialEq, Eq)]
+pub enum RequestOperation {
+    Send(Zeroizing<String>),
+    Status,
+    Retry,
+}
+
+impl std::fmt::Debug for RequestOperation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Self::Send(_) => "Send",
+            Self::Status => "Status",
+            Self::Retry => "Retry",
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RequestState {
+    Unknown,
+    Unconfirmed,
+    RetryAvailable,
+    Queued,
+    Materialized,
+    Delivered,
+}
+
+#[derive(Debug, Serialize)]
+pub struct RequestReport {
+    pub state: RequestState,
+    pub protected: Option<bool>,
+    pub event_id: Option<String>,
+}
+
+impl RequestReport {
+    pub(super) fn from_status(status: Option<RequestStatus2>) -> Self {
+        let state = match status.map(|value| value.delivery) {
+            None => RequestState::Unknown,
+            Some(Delivery2::Queued) => RequestState::Queued,
+            Some(Delivery2::Materialized) => RequestState::Materialized,
+            Some(Delivery2::Delivered) => RequestState::Delivered,
+        };
+        Self {
+            state,
+            protected: None,
+            event_id: status
+                .and_then(|value| value.receipt.event)
+                .map(|event| super::artifact::hex(&event)),
+        }
+    }
+}
+
+pub type RequestResult = Result<RequestReport, &'static str>;
 
 pub struct Submitted {
     pub slot: u8,
@@ -77,6 +133,7 @@ pub(super) struct Recovery {
     known: Option<([u8; 16], SendReceipt2)>,
     pub(super) progress: Progress,
     busy: bool,
+    protected: bool,
     item: Option<Arc<Submitted>>,
     event: Option<[u8; 32]>,
 }
@@ -92,6 +149,7 @@ impl Recovery {
             conflict: false,
             known: None,
             busy: true,
+            protected: false,
             item: None,
             event: None,
         }
@@ -108,6 +166,7 @@ impl Recovery {
 
     fn remember(&mut self, intent: &Intent) {
         self.busy = true;
+        self.protected = true;
         if !self.item.as_ref().is_some_and(|item| {
             item.slot == intent.slot
                 && item.context == intent.context
@@ -124,6 +183,30 @@ impl Recovery {
         }
     }
 
+    fn pending(&mut self) -> Result<Option<Intent>, &'static str> {
+        let pending = self.store.as_ref().ok().and_then(|store| store.load().ok());
+        let expected = self.item.as_ref().filter(|_| self.protected);
+        match pending {
+            Some(intent)
+                if expected.is_none_or(|item| {
+                    intent.as_ref().is_some_and(|saved| {
+                        saved.slot == item.slot
+                            && saved.context == item.context
+                            && saved.request == item.request
+                            && saved.text == item.text.as_str()
+                    })
+                }) =>
+            {
+                Ok(intent)
+            }
+            _ => {
+                self.busy = true;
+                self.progress = Progress::StorageBlocked;
+                Err("storage_blocked")
+            }
+        }
+    }
+
     pub(super) fn submit(
         &mut self,
         runtime: &mut impl SendRuntime,
@@ -133,22 +216,21 @@ impl Recovery {
         if self.conflict {
             return Submission::Retained;
         }
-        let Ok(store) = &self.store else {
-            return Submission::Retained;
-        };
-        match store.load() {
-            Ok(None) if self.known.is_none() => self.busy = false,
+        match self.pending() {
+            Ok(None) => self.busy = false,
             Ok(Some(intent)) => {
                 self.remember(&intent);
                 return Submission::Retained;
             }
-            Ok(None) | Err(_) => {
-                self.busy = true;
-                self.progress = Progress::StorageBlocked;
-                return Submission::Retained;
-            }
+            Err(_) => return Submission::Retained,
         }
-        if !valid_text(&text) || store.context(slot).is_err() || runtime.check_send(slot).is_err() {
+        if !valid_text(&text)
+            || !self
+                .store
+                .as_ref()
+                .is_ok_and(|store| store.context(slot).is_ok())
+            || runtime.check_send(slot).is_err()
+        {
             self.progress = Progress::DraftRejected;
             return Submission::Retained;
         }
@@ -159,18 +241,111 @@ impl Recovery {
             self.progress = Progress::DraftRejected;
             return Submission::Retained;
         }
-        match store.prepare(slot, request, text) {
-            Ok(intent) => {
+        self.prepare_and_dispatch(runtime, slot, request, text)
+    }
+
+    fn prepare_and_dispatch(
+        &mut self,
+        runtime: &mut impl SendRuntime,
+        slot: u8,
+        request: [u8; 16],
+        text: Zeroizing<String>,
+    ) -> Submission {
+        match self
+            .store
+            .as_ref()
+            .ok()
+            .and_then(|store| store.prepare(slot, request, text).ok())
+        {
+            Some(intent) => {
                 self.remember(&intent);
                 self.dispatch(runtime, intent);
                 Submission::Protected
             }
-            Err(_) => {
+            None => {
                 self.busy = true;
                 self.progress = Progress::StorageBlocked;
                 Submission::Retained
             }
         }
+    }
+
+    pub(super) fn request(
+        &mut self,
+        runtime: &mut impl SendRuntime,
+        slot: u8,
+        request: [u8; 16],
+        operation: RequestOperation,
+    ) -> RequestResult {
+        if slot >= 2 {
+            return Err("invalid_context");
+        }
+        if matches!(&operation, RequestOperation::Send(text) if !valid_text(text)) {
+            return Err("invalid_text");
+        }
+        if self.conflict {
+            return Err("request_conflict");
+        }
+        let pending = self.pending()?;
+        if let Some(intent) = pending {
+            self.remember(&intent);
+            if intent.request == request {
+                if intent.slot != slot {
+                    return Err("context_conflict");
+                }
+                if let RequestOperation::Send(text) = operation {
+                    return Err(if intent.text == text.as_str() {
+                        "request_known"
+                    } else {
+                        "text_conflict"
+                    });
+                }
+                self.reconcile_intent(
+                    runtime,
+                    intent,
+                    matches!(operation, RequestOperation::Retry),
+                );
+                return self.request_report();
+            }
+            if matches!(operation, RequestOperation::Send(_)) {
+                return Err("pending_request");
+            }
+        }
+        let status = lookup_request(runtime, slot, request)?;
+        if status.is_none() && lookup_request(runtime, 1 - slot, request)?.is_some() {
+            return Err("context_conflict");
+        }
+        match operation {
+            RequestOperation::Send(text) => {
+                if status.is_some() {
+                    return Err("request_known");
+                }
+                runtime.check_send(slot).map_err(|_| "send_unavailable")?;
+                self.prepare_and_dispatch(runtime, slot, request, text);
+                self.request_report()
+            }
+            RequestOperation::Retry if status.is_none() => Err("unknown_request"),
+            RequestOperation::Status | RequestOperation::Retry => {
+                Ok(RequestReport::from_status(status))
+            }
+        }
+    }
+
+    fn request_report(&self) -> RequestResult {
+        let state = match self.progress {
+            Progress::Unconfirmed => RequestState::Unconfirmed,
+            Progress::RetryAvailable => RequestState::RetryAvailable,
+            Progress::Queued => RequestState::Queued,
+            Progress::Materialized => RequestState::Materialized,
+            Progress::Delivered => RequestState::Delivered,
+            Progress::Conflict => return Err("request_conflict"),
+            _ => return Err("storage_blocked"),
+        };
+        Ok(RequestReport {
+            state,
+            protected: Some(self.protected),
+            event_id: self.event.map(|event| super::artifact::hex(&event)),
+        })
     }
 
     pub(super) fn refresh(&mut self, runtime: &mut impl SendRuntime) {
@@ -185,16 +360,8 @@ impl Recovery {
         if self.conflict {
             return;
         }
-        let Ok(store) = &self.store else {
-            return;
-        };
-        let mut intent = match store.load() {
+        let intent = match self.pending() {
             Ok(None) => {
-                if self.known.is_some() {
-                    self.busy = true;
-                    self.progress = Progress::StorageBlocked;
-                    return;
-                }
                 self.busy = false;
                 if !matches!(
                     self.progress,
@@ -207,13 +374,18 @@ impl Recovery {
                 return;
             }
             Ok(Some(intent)) => intent,
-            Err(_) => {
-                self.busy = true;
-                self.progress = Progress::StorageBlocked;
-                return;
-            }
+            Err(_) => return,
         };
         self.remember(&intent);
+        self.reconcile_intent(runtime, intent, retry);
+    }
+
+    fn reconcile_intent(
+        &mut self,
+        runtime: &mut impl SendRuntime,
+        mut intent: Intent,
+        retry: bool,
+    ) {
         if intent.phase == Phase::Conflict {
             self.conflict = true;
             self.progress = Progress::Conflict;
@@ -296,6 +468,7 @@ impl Recovery {
         if matches!(self.progress, Progress::Materialized | Progress::Delivered) {
             self.known = None;
             self.busy = false;
+            self.protected = false;
         }
     }
 
@@ -307,4 +480,14 @@ impl Recovery {
             let _ = store.transition(intent, Phase::Conflict);
         }
     }
+}
+
+fn lookup_request(
+    runtime: &mut impl SendRuntime,
+    slot: u8,
+    request: [u8; 16],
+) -> Result<Option<RequestStatus2>, &'static str> {
+    runtime
+        .lookup(slot, request)
+        .map_err(|_| "status_unavailable")
 }

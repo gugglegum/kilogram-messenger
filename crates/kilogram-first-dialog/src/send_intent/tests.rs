@@ -281,3 +281,75 @@ fn cs33a_recovery_publish_retry_and_faults() -> Result<()> {
     );
     Ok(())
 }
+
+#[test]
+fn t11b_confirmed_protected_record_cannot_be_replaced_or_forgotten() -> Result<()> {
+    use crate::send_recovery::{RequestOperation, RequestState};
+    let tmp = tempfile::tempdir()?;
+    let home = fs::canonicalize(tmp.path())?;
+    let mut runtime = FakeRuntime {
+        store: store(&home),
+        trace: Vec::new(),
+        status: Ok(None),
+        reply: Ok(SendReceipt2 {
+            queue_sequence: 9,
+            event: None,
+        }),
+        seen: None,
+    };
+    let mut recovery = Recovery::new(Ok(store(&home)));
+    let request = [0xa1; 16];
+    let send = || RequestOperation::Send(Zeroizing::new(TEXT.into()));
+    let result = recovery
+        .request(&mut runtime, 0, request, send())
+        .map_err(anyhow::Error::msg)?;
+    ensure!(
+        result.state == RequestState::Queued
+            && result.protected == Some(true)
+            && runtime.seen == Some(request)
+    );
+    ensure!(runtime.trace == ["lookup", "lookup", "send"]);
+    runtime.trace.clear();
+    let path = runtime.store.directory().join(FILE);
+    let saved = fs::read(&path)?;
+    fs::remove_file(&path)?;
+    ensure!(recovery.request(&mut runtime, 0, [0xa2; 16], send()).err() == Some("storage_blocked"));
+    recovery.refresh(&mut runtime);
+    ensure!(recovery.progress == Progress::StorageBlocked && recovery.projection().busy);
+    ensure!(
+        recovery
+            .projection()
+            .item
+            .as_ref()
+            .is_some_and(|item| item.request == request)
+    );
+    runtime
+        .store
+        .prepare(0, [0xa3; 16], Zeroizing::new(TEXT.into()))?;
+    let replacement = fs::read(&path)?;
+    ensure!(
+        recovery
+            .request(&mut runtime, 0, request, RequestOperation::Retry)
+            .err()
+            == Some("storage_blocked")
+    );
+    ensure!(fs::read(&path)? == replacement && runtime.trace.is_empty());
+    fs::write(&path, &saved)?;
+    runtime.status = Ok(Some(RequestStatus2 {
+        receipt: SendReceipt2 {
+            queue_sequence: 9,
+            event: Some([0x96; 32]),
+        },
+        delivery: Delivery2::Delivered,
+    }));
+    let status = recovery
+        .request(&mut runtime, 0, request, RequestOperation::Status)
+        .map_err(anyhow::Error::msg)?;
+    ensure!(
+        status.state == RequestState::Delivered
+            && status.protected == Some(false)
+            && runtime.trace == ["lookup"]
+            && !path.exists()
+    );
+    Ok(())
+}

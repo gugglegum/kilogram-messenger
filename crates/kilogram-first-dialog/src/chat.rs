@@ -1,9 +1,10 @@
-//! Read-only chat projection over the regular Setup worker or a pinned local IPC session.
+//! Terminal chat over the regular Setup worker or a read-only pinned local IPC session.
 use crate::{
     artifact,
-    connection::{self, Action, DialogScope, HistoryJob, Work},
+    connection::{self, Action, DialogScope, HistoryJob, RequestJob, Work},
     consent,
     model::{self, Setup},
+    send_recovery::{RequestOperation, RequestReport, RequestResult, RequestState},
 };
 use anyhow::{Context, Result, ensure};
 use kilogram_runtime_ipc::{
@@ -129,6 +130,41 @@ impl Chat {
                 Ok(page.recv_timeout(Duration::from_secs(7))??)
             }
             Session::Observer(observer) => observer.history(slot, cursor.as_ref(), limit),
+        }
+    }
+
+    pub fn request(
+        &mut self,
+        slot: u8,
+        request: [u8; 16],
+        operation: RequestOperation,
+    ) -> RequestResult {
+        match self.session.as_mut().ok_or("not_connected")? {
+            Session::Observer(_) if !matches!(operation, RequestOperation::Status) => {
+                Err("observer_read_only")
+            }
+            Session::Observer(observer) => observer.request_status(slot, request),
+            Session::Owner(work) => {
+                let scope =
+                    owner_scope(work, Duration::from_secs(6)).map_err(|_| "session_unavailable")?;
+                let (reply, done) = mpsc::sync_channel(1);
+                work.action(Action::Request(Box::new(RequestJob {
+                    scope,
+                    slot,
+                    request,
+                    operation,
+                    reply,
+                })))
+                .map_err(|_| "session_unavailable")?;
+                done.recv_timeout(Duration::from_secs(30))
+                    .unwrap_or_else(|_| {
+                        Ok(RequestReport {
+                            state: RequestState::Unconfirmed,
+                            protected: None,
+                            event_id: None,
+                        })
+                    })
+            }
         }
     }
 
@@ -303,5 +339,21 @@ impl Observer {
                 .block_on(self.client.history_page(slot, id(context)?, cursor, limit))?;
         self.status()?;
         Ok(page)
+    }
+
+    fn request_status(&self, slot: u8, request: [u8; 16]) -> RequestResult {
+        let context = self
+            .profile
+            .contexts
+            .get(usize::from(slot))
+            .ok_or("invalid_context")?;
+        let context = id(context).map_err(|_| "invalid_context")?;
+        self.status().map_err(|_| "status_unavailable")?;
+        let status = self
+            .runtime
+            .block_on(self.client.request_status(slot, context, request))
+            .map_err(|_| "status_unavailable")?;
+        self.status().map_err(|_| "status_unavailable")?;
+        Ok(RequestReport::from_status(status))
     }
 }

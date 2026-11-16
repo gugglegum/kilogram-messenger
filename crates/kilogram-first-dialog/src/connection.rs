@@ -3,7 +3,9 @@ use super::{
     artifact, consent, helper, locator_artifact,
     model::{self, Record, Setup},
     send_intent,
-    send_recovery::{IpcResult, Projection, Recovery, SendRuntime, Submission},
+    send_recovery::{
+        IpcResult, Projection, Recovery, RequestOperation, RequestResult, SendRuntime, Submission,
+    },
 };
 use anyhow::{Context, Result, ensure};
 use kilogram_runtime_ipc::{
@@ -849,7 +851,16 @@ pub enum Action {
         reply: mpsc::SyncSender<Submission>,
     },
     RetrySend,
+    Request(Box<RequestJob>),
     History(Box<HistoryJob>),
+}
+
+pub struct RequestJob {
+    pub scope: DialogScope,
+    pub slot: u8,
+    pub request: [u8; 16],
+    pub operation: RequestOperation,
+    pub reply: mpsc::SyncSender<RequestResult>,
 }
 
 pub struct HistoryJob {
@@ -1115,6 +1126,24 @@ fn run_connected(
                     session,
                     cancel: signal,
                 });
+                next_pending = Instant::now() + Duration::from_secs(1);
+            }
+            Some((generation, Action::Request(job))) => {
+                handled = generation;
+                let result = if job.scope == scope {
+                    recovery.request(
+                        &mut SessionSend {
+                            session,
+                            cancel: signal,
+                        },
+                        job.slot,
+                        job.request,
+                        job.operation,
+                    )
+                } else {
+                    Err("session_unavailable")
+                };
+                let _ = job.reply.try_send(result);
                 next_pending = Instant::now() + Duration::from_secs(1);
             }
             Some((generation, Action::History(job))) => {
