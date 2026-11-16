@@ -424,13 +424,16 @@ impl Panel {
                     if let Some(phrase) = &setup.phrase {
                         ui.checkbox(&mut self.reveal, "Reveal recovery words privately");
                         if self.reveal {
-                            // Never selectable/copyable by the ordinary label action.
                             ui.add(
                                 egui::Label::new(
                                     egui::RichText::new(phrase.as_str()).monospace().size(18.0),
                                 )
-                                .selectable(false),
+                                .selectable(true),
                             );
+                            ui.small("Copied words may be kept in clipboard history or synced to other devices.");
+                            if ui.button("Copy recovery words").clicked() {
+                                ui.ctx().copy_text(phrase.as_str().to_owned());
+                            }
                         } else {
                             ui.label(
                                 "Words hidden. Reveal them only when nobody can see your screen.",
