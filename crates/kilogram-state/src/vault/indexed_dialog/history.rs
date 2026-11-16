@@ -13,6 +13,9 @@ mod profiling;
 #[path = "history_scale.rs"]
 mod scale;
 #[cfg(test)]
+#[path = "history_tail_tests.rs"]
+mod tail_tests;
+#[cfg(test)]
 #[path = "history_tests.rs"]
 mod tests;
 #[path = "history_writer.rs"]
@@ -27,6 +30,16 @@ pub struct HistoryPage {
     pub cursor: HistoryCursor,
     pub items: Vec<HistoryRow>,
     pub stats: HistoryReadStats,
+}
+
+pub struct HistoryPosition {
+    pub context: Id,
+    pub view: Id,
+    pub frontiers: [u64; 2],
+    pub next: [u64; 2],
+    pub cursor: HistoryCursor,
+    #[cfg(test)]
+    stats: HistoryReadStats,
 }
 
 pub(super) fn identity_key(c: u8) -> Result<Key> {
@@ -153,6 +166,52 @@ impl IndexedDialogVault {
     ) -> Result<HistoryPage> {
         self.history_read(context, Some(cursor), limit)
     }
+
+    pub(in crate::vault::indexed_dialog) fn history_position(
+        &self,
+        context: u8,
+        completed: Option<&HistoryCursor>,
+    ) -> Result<HistoryPosition> {
+        if self.poisoned {
+            return Err(Error::ReopenRequired);
+        }
+        if context > 1 {
+            return Err(Error::Bound("history context"));
+        }
+        let tx = self.vault.database.begin_read().map_err(db)?;
+        let nodes = tx.open_table(NODES).map_err(db)?;
+        let values = tx.open_table(VALUES).map_err(db)?;
+        let mut work = Work::new(&nodes, &values, &self.crypto, self.root.clone());
+        work.tree.enable_read_reuse();
+        let (identity, heads) = work.history_view(context)?;
+        let position = match completed {
+            Some(cursor) => {
+                cursor::authenticate(&self.crypto, &identity, cursor)?.follow(heads.frontiers)?
+            }
+            None => Position {
+                frontiers: heads.frontiers,
+                next: heads.frontiers,
+            },
+        };
+        if work.history_gets > 3 {
+            return Err(Error::Bound("history position read work"));
+        }
+        Ok(HistoryPosition {
+            context: identity.init.scope.context,
+            view: heads.view,
+            frontiers: position.frontiers,
+            next: position.next,
+            cursor: cursor::seal(&self.crypto, &identity, &position)?,
+            #[cfg(test)]
+            stats: HistoryReadStats {
+                point_gets: work.history_gets,
+                nodes_read: work.tree.reads,
+                values_read: work.values_read,
+                ..Default::default()
+            },
+        })
+    }
+
     fn history_read(
         &self,
         context: u8,
@@ -208,6 +267,10 @@ impl IndexedDialogVault {
                     position.frontiers,
                 )?);
                 stats.candidate_loads += 1;
+                #[cfg(test)]
+                {
+                    stats.first_candidate[role] = Some(position.next[role]);
+                }
             }
         }
         stats.max_candidates = candidates.iter().flatten().count();

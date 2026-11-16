@@ -242,6 +242,8 @@ pub struct HistoryReadStats {
     pub point_gets: u64,
     pub candidate_loads: u64,
     pub max_candidates: usize,
+    #[cfg(test)]
+    pub(crate) first_candidate: [Option<u64>; 2],
     pub nodes_read: u64,
     pub values_read: u64,
     pub returned_payload_bytes: usize,

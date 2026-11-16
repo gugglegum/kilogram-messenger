@@ -5,6 +5,10 @@ use wire::{Id, Value, b, opt, u};
 use zeroize::Zeroizing;
 
 pub const MAX_HISTORY_ROWS: usize = 32;
+pub const HISTORY_ANCHOR_OPCODE: u64 = 16;
+pub const HISTORY_FOLLOW_OPCODE: u64 = 17;
+/// Canonical CBOR maximum including [version, opcode, position].
+pub const HISTORY_POSITION_REPLY_CAP: usize = 388;
 const HISTORY_JSON_CAP: usize = 48 * 1024 - 512;
 const CURSOR_BYTES: usize = 275;
 const CURSOR_HEADER: &[u8; 8] = b"KGH2\x01\x02\0\0";
@@ -20,6 +24,7 @@ pub enum MessageError2 {
     RequestIdConflict,
     HistoryUnavailable,
     HistoryCursorInvalid,
+    HistoryPositionUnsupported,
 }
 impl std::fmt::Display for MessageError2 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -30,6 +35,7 @@ impl std::fmt::Display for MessageError2 {
             Self::RequestIdConflict => "Message request ID conflict",
             Self::HistoryUnavailable => "History unavailable",
             Self::HistoryCursorInvalid => "Refresh history from the beginning",
+            Self::HistoryPositionUnsupported => "Runtime does not support following history",
         })
     }
 }
@@ -57,6 +63,26 @@ pub struct HistoryCursor2 {
     context: Id,
     view: Id,
     frontiers: [u64; 2],
+}
+impl HistoryCursor2 {
+    // Compare public metadata in the authenticated IPC reply. Only storage verifies the MAC.
+    fn matches_position(&self, next: [u64; 2]) -> bool {
+        self.raw.starts_with(CURSOR_HEADER)
+            && self.raw[40..72] == self.view
+            && self.raw[72..104] == self.context
+            && self.raw[211..243]
+                .chunks_exact(8)
+                .zip(self.frontiers.into_iter().chain(next))
+                .all(|(encoded, ordinal)| encoded == ordinal.to_be_bytes())
+    }
+}
+
+pub struct HistoryPosition2 {
+    pub context: Id,
+    pub view: Id,
+    pub frontiers: [u64; 2],
+    pub next: [u64; 2],
+    pub cursor: HistoryCursor2,
 }
 pub struct HistoryRow2 {
     pub event: Id,
@@ -140,6 +166,30 @@ impl Client2 {
             .await?;
         history_page(value.bytes().map_err(invalid)?, context, cursor, limit)
     }
+
+    pub async fn history_anchor(&self, slot: u8, context: Id) -> Result<HistoryPosition2> {
+        let slot = self.message_slot(slot, context)?;
+        let value = self
+            .message_request(HISTORY_ANCHOR_OPCODE, vec![slot])
+            .await?;
+        history_position(&value, context, None)
+    }
+
+    pub async fn history_follow(
+        &self,
+        slot: u8,
+        context: Id,
+        completed: &HistoryCursor2,
+    ) -> Result<HistoryPosition2> {
+        let slot = self.message_slot(slot, context)?;
+        if completed.context != context || !completed.matches_position(completed.frontiers) {
+            return Err(MessageError2::HistoryCursorInvalid);
+        }
+        let value = self
+            .message_request(HISTORY_FOLLOW_OPCODE, vec![slot, b(completed.raw)])
+            .await?;
+        history_position(&value, context, Some(completed))
+    }
 }
 
 fn message_reply(op: u64, response: RuntimeIpcResponse) -> Result<Value> {
@@ -147,12 +197,71 @@ fn message_reply(op: u64, response: RuntimeIpcResponse) -> Result<Value> {
         let message = Zeroizing::new(message);
         return Err(match (op, message.as_str()) {
             (2, "RequestIdConflict") => MessageError2::RequestIdConflict,
-            (3 | 4, "HistoryUnavailable") => MessageError2::HistoryUnavailable,
-            (4, "InvalidCursor" | "SnapshotUnavailable") => MessageError2::HistoryCursorInvalid,
+            (3 | 4 | HISTORY_ANCHOR_OPCODE | HISTORY_FOLLOW_OPCODE, "HistoryUnavailable") => {
+                MessageError2::HistoryUnavailable
+            }
+            (4 | HISTORY_FOLLOW_OPCODE, "InvalidCursor" | "SnapshotUnavailable") => {
+                MessageError2::HistoryCursorInvalid
+            }
+            (HISTORY_ANCHOR_OPCODE | HISTORY_FOLLOW_OPCODE, "UnsupportedOperation") => {
+                MessageError2::HistoryPositionUnsupported
+            }
             _ => MessageError2::Unavailable,
         });
     }
+    if matches!(op, HISTORY_ANCHOR_OPCODE | HISTORY_FOLLOW_OPCODE)
+        && let RuntimeIpcResponse::OrderedDialog { response } = &response
+        && response.len() > HISTORY_POSITION_REPLY_CAP
+    {
+        return Err(MessageError2::InvalidReply);
+    }
     decode_reply(op, response).map_err(invalid)
+}
+
+fn history_position(
+    value: &Value,
+    context: Id,
+    completed: Option<&HistoryCursor2>,
+) -> Result<HistoryPosition2> {
+    fn ordinals(value: &Value) -> Result<[u64; 2]> {
+        let pair = value.fields(2).map_err(invalid)?;
+        Ok([
+            pair[0].uint().map_err(invalid)?,
+            pair[1].uint().map_err(invalid)?,
+        ])
+    }
+    let fields = value.fields(5).map_err(invalid)?;
+    if fields[0].fixed::<32>().map_err(invalid)? != context {
+        return Err(MessageError2::InvalidReply);
+    }
+    let view = fields[1].fixed().map_err(invalid)?;
+    let frontiers = ordinals(&fields[2])?;
+    let next = ordinals(&fields[3])?;
+    let cursor = HistoryCursor2 {
+        raw: fields[4].fixed().map_err(invalid)?,
+        context,
+        view,
+        frontiers,
+    };
+    let expected_next = completed.map_or(frontiers, |previous| previous.frontiers);
+    if next != expected_next
+        || next.contains(&0)
+        || next
+            .into_iter()
+            .zip(frontiers)
+            .any(|(next, end)| next > end)
+        || completed.is_some_and(|previous| previous.view != view)
+        || !cursor.matches_position(next)
+    {
+        return Err(MessageError2::InvalidReply);
+    }
+    Ok(HistoryPosition2 {
+        context,
+        view,
+        frontiers,
+        next,
+        cursor,
+    })
 }
 
 fn invalid<T>(_: T) -> MessageError2 {

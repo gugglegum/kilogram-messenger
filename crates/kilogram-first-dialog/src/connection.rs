@@ -12,8 +12,9 @@ use anyhow::{Context, Result, ensure};
 use kilogram_runtime_ipc::{
     RuntimeIpcDescriptor,
     ordered2::{
-        Client2, Delivery2, HistoryCursor2, HistoryPage2, MessageError2, Profile2Document,
-        ProfileRoute2, ProfileRoutePolicy2, RequestStatus2, SendReceipt2, Status2, id,
+        Client2, Delivery2, HistoryCursor2, HistoryPage2, HistoryPosition2, MessageError2,
+        Profile2Document, ProfileRoute2, ProfileRoutePolicy2, RequestStatus2, SendReceipt2,
+        Status2, id,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -784,6 +785,7 @@ pub enum Action {
     Request(Box<RequestJob>),
     History(Box<HistoryJob>),
     TerminalHistory(Box<HistoryJob>, Arc<OperationControl>),
+    HistoryPosition(Box<HistoryPositionJob>),
 }
 
 pub struct LocatorJob {
@@ -808,6 +810,26 @@ pub struct HistoryJob {
     pub cursor: Option<HistoryCursor2>,
     pub limit: usize,
     pub reply: mpsc::SyncSender<IpcResult<HistoryPage2>>,
+}
+
+pub struct HistoryPositionJob {
+    pub scope: DialogScope,
+    pub slot: u8,
+    pub completed: Option<HistoryCursor2>,
+    pub control: Arc<OperationControl>,
+    pub reply: mpsc::SyncSender<IpcResult<HistoryPosition2>>,
+}
+
+pub(super) async fn read_history_position(
+    client: &Client2,
+    slot: u8,
+    context: [u8; 32],
+    completed: Option<&HistoryCursor2>,
+) -> IpcResult<HistoryPosition2> {
+    match completed {
+        Some(cursor) => client.history_follow(slot, context, cursor).await,
+        None => client.history_anchor(slot, context).await,
+    }
 }
 
 pub struct DeliveryJob {
@@ -883,6 +905,24 @@ impl SessionSend<'_> {
             .get(usize::from(slot))
             .ok_or(MessageError2::InvalidInput)?)
         .map_err(|_| MessageError2::InvalidInput)
+    }
+
+    fn history_position(
+        &mut self,
+        slot: u8,
+        completed: Option<&HistoryCursor2>,
+    ) -> IpcResult<HistoryPosition2> {
+        self.check_running()?;
+        let context = self.context(slot)?;
+        let client = self
+            .session
+            .client
+            .as_ref()
+            .ok_or(MessageError2::Unavailable)?;
+        let response = self.wait(read_history_position(client, slot, context, completed));
+        self.check_running()?;
+        self.context(slot)?;
+        response
     }
 
     fn authorize(&mut self, slot: u8) -> IpcResult<Instant> {
@@ -1113,6 +1153,20 @@ fn run_connected(
                         control: control.as_deref(),
                     }
                     .history(job.slot, job.cursor.as_ref(), job.limit)
+                } else {
+                    Err(MessageError2::InvalidInput)
+                };
+                let _ = job.reply.try_send(result);
+            }
+            Some((generation, Action::HistoryPosition(job))) => {
+                handled = generation;
+                let result = if job.scope == scope {
+                    SessionSend {
+                        session,
+                        cancel: signal,
+                        control: Some(&job.control),
+                    }
+                    .history_position(job.slot, job.completed.as_ref())
                 } else {
                     Err(MessageError2::InvalidInput)
                 };

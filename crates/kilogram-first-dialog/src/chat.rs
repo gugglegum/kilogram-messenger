@@ -2,18 +2,21 @@
 use crate::{
     artifact,
     connection::{
-        self, Action, DialogScope, HistoryJob, LocatorCommand, LocatorJob, LocatorResult,
-        RequestJob, Work,
+        self, Action, DialogScope, HistoryJob, HistoryPositionJob, LocatorCommand, LocatorJob,
+        LocatorResult, RequestJob, Work,
     },
     consent,
     model::{self, Setup},
     operation::{self, OperationControl},
-    send_recovery::{RequestOperation, RequestReport, RequestResult, RequestState},
+    send_recovery::{IpcResult, RequestOperation, RequestReport, RequestResult, RequestState},
 };
 use anyhow::{Context, Result, ensure};
 use kilogram_runtime_ipc::{
     RuntimeIpcDescriptor,
-    ordered2::{Client2, HistoryCursor2, HistoryPage2, PROFILE_CAP, Profile2Document, Status2, id},
+    ordered2::{
+        Client2, HistoryCursor2, HistoryPage2, HistoryPosition2, MessageError2, PROFILE_CAP,
+        Profile2Document, Status2, id,
+    },
 };
 use serde::Serialize;
 use std::{
@@ -41,6 +44,8 @@ pub struct ChatStatus {
     pub runtime_instance: String,
     pub contexts: [String; 2],
     pub live_admitted: bool,
+    #[serde(skip)]
+    pub own_roles: [u8; 2],
 }
 
 pub struct Chat {
@@ -165,6 +170,7 @@ impl Chat {
                     runtime_instance: artifact::hex(&scope.instance),
                     contexts: scope.contexts.map(|context| artifact::hex(&context)),
                     live_admitted: work.view.current(Instant::now(), consent::now()?),
+                    own_roles: [scope.own_role; 2],
                 })
             }
             Session::Observer(observer) => observer.status(control),
@@ -210,6 +216,44 @@ impl Chat {
                 observer.history(slot, cursor.as_ref(), limit, control.map(Arc::as_ref))
             }
         }
+    }
+
+    pub fn history_position_controlled(
+        &mut self,
+        slot: u8,
+        completed: Option<HistoryCursor2>,
+        control: &Arc<OperationControl>,
+    ) -> IpcResult<HistoryPosition2> {
+        if slot >= 2 {
+            return Err(MessageError2::InvalidInput);
+        }
+        let unavailable = MessageError2::Unavailable;
+        if control.stopped() {
+            return Err(unavailable);
+        }
+        let result = match self.session.as_mut().ok_or(unavailable)? {
+            Session::Owner(work) => {
+                let scope = owner_scope(work, Duration::from_secs(6), Some(control))
+                    .map_err(|_| unavailable)?;
+                let (reply, done) = mpsc::sync_channel(1);
+                work.action(Action::HistoryPosition(Box::new(HistoryPositionJob {
+                    scope,
+                    slot,
+                    completed,
+                    control: control.clone(),
+                    reply,
+                })))
+                .map_err(|_| unavailable)?;
+                done.recv().map_err(|_| unavailable)?
+            }
+            Session::Observer(observer) => {
+                observer.history_position(slot, completed.as_ref(), control)
+            }
+        };
+        if control.stopped() {
+            return Err(unavailable);
+        }
+        result
     }
 
     pub fn request(
@@ -452,6 +496,7 @@ impl Observer {
             runtime_instance: self.instance.clone(),
             contexts: self.profile.contexts.clone(),
             live_admitted,
+            own_roles: [status.installed(0)?.role, status.installed(1)?.role],
         })
     }
 
@@ -476,6 +521,31 @@ impl Observer {
         )??;
         self.status(control)?;
         Ok(page)
+    }
+
+    fn history_position(
+        &self,
+        slot: u8,
+        completed: Option<&HistoryCursor2>,
+        control: &OperationControl,
+    ) -> IpcResult<HistoryPosition2> {
+        let unavailable = MessageError2::Unavailable;
+        self.status(Some(control)).map_err(|_| unavailable)?;
+        let context = self
+            .profile
+            .contexts
+            .get(usize::from(slot))
+            .ok_or(MessageError2::InvalidInput)?;
+        let context = id(context).map_err(|_| MessageError2::InvalidInput)?;
+        let result = operation::wait(
+            &self.runtime,
+            None,
+            Some(control),
+            connection::read_history_position(&self.client, slot, context, completed),
+        )
+        .map_err(|_| unavailable)?;
+        self.status(Some(control)).map_err(|_| unavailable)?;
+        result
     }
 
     fn request_status(

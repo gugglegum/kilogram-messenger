@@ -311,6 +311,13 @@ impl RuntimeRepository {
         self.store
             .history_read_bounded(c, supplied, limit, Some(48 * 1024 - 512))
     }
+    pub fn history_position(
+        &self,
+        c: u8,
+        completed: Option<&HistoryCursor>,
+    ) -> Result<HistoryPosition> {
+        self.store.history_position(c, completed)
+    }
     pub fn history_point(&mut self, c: u8, event: Id) -> Result<Option<HistoryRow>> {
         self.store.history_point(c, event)
     }

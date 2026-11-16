@@ -5,6 +5,9 @@ use iroh::{
     Endpoint,
     endpoint::{Connection, IncomingAddr},
 };
+use kilogram_runtime_ipc::ordered2::{
+    HISTORY_ANCHOR_OPCODE, HISTORY_FOLLOW_OPCODE, HISTORY_POSITION_REPLY_CAP,
+};
 use kilogram_runtime_ipc::{RuntimeIpcCommand, RuntimeIpcResponse, RuntimeIpcServer};
 use kilogram_transport_iroh::ordered2 as transport;
 use network::{AckProgress2, Dispatch2, PrefixPlan2};
@@ -1397,9 +1400,35 @@ fn ipc2(
             )?;
             a([])
         }
+        HISTORY_ANCHOR_OPCODE | HISTORY_FOLLOW_OPCODE => {
+            let (slot, completed) = if opcode == HISTORY_ANCHOR_OPCODE {
+                (c(&value.fields(3)?[2])?, None)
+            } else {
+                let fields = value.fields(4)?;
+                (
+                    c(&fields[2])?,
+                    Some(db::HistoryCursor::from_bytes(fields[3].bytes()?)?),
+                )
+            };
+            let position = owner
+                .repository
+                .history_position(slot, completed.as_ref())?;
+            a([
+                b(position.context),
+                b(position.view),
+                a(position.frontiers.map(u)),
+                a(position.next.map(u)),
+                b(position.cursor.as_bytes()),
+            ])
+        }
         _ => anyhow::bail!("UnsupportedOperation"),
     };
-    Ok(wire::encode(&a([u(2), u(opcode), result]), 48 * 1024)?)
+    let cap = if matches!(opcode, HISTORY_ANCHOR_OPCODE | HISTORY_FOLLOW_OPCODE) {
+        HISTORY_POSITION_REPLY_CAP
+    } else {
+        48 * 1024
+    };
+    Ok(wire::encode(&a([u(2), u(opcode), result]), cap)?)
 }
 #[cfg(test)]
 #[path = "runtime_tests.rs"]

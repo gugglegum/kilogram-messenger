@@ -12,7 +12,8 @@ use std::{
 
 mod messaging;
 pub use messaging::{
-    Delivery2, HistoryCursor2, HistoryPage2, HistoryRow2, MAX_HISTORY_ROWS, MessageError2,
+    Delivery2, HISTORY_ANCHOR_OPCODE, HISTORY_FOLLOW_OPCODE, HISTORY_POSITION_REPLY_CAP,
+    HistoryCursor2, HistoryPage2, HistoryPosition2, HistoryRow2, MAX_HISTORY_ROWS, MessageError2,
     RequestStatus2, SendReceipt2,
 };
 

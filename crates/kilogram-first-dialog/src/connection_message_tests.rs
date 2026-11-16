@@ -1,5 +1,7 @@
 use super::*;
 use crate::artifact::hex;
+use crate::chat::{Chat, Mode};
+use crate::operation::OperationKind;
 use crate::send_recovery::Progress;
 use kilogram_runtime_ipc::ordered2::{Delivery2, HistoryCursor2, HistoryPage2, MAX_HISTORY_ROWS};
 use std::collections::BTreeMap;
@@ -269,6 +271,18 @@ fn page(session: &Session, slot: u8, cursor: Option<&HistoryCursor2>) -> Result<
     ))?)
 }
 
+fn history_control() -> Arc<OperationControl> {
+    Arc::new(OperationControl::new(
+        OperationKind::Read,
+        Instant::now() + Duration::from_secs(10),
+        None,
+    ))
+}
+
+fn event_ids(page: &HistoryPage2) -> Vec<[u8; 32]> {
+    page.items.iter().map(|row| row.event).collect()
+}
+
 fn collect(
     session: &Session,
     mut page: HistoryPage2,
@@ -336,7 +350,11 @@ fn no_plaintext(nodes: &[Setup; 2], sessions: &[Session; 2]) -> Result<()> {
 
 #[test]
 fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
-    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.tmp/clean-start-cs3-3a/fixtures");
+    let root = std::env::var_os("KILOGRAM_T11E1_FIXTURE_ROOT")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.tmp/clean-start-cs3-3a/fixtures")
+        });
     let mut nodes = ready_pair_at(&root, "messages-", false)?;
     let signal = AtomicBool::new(false);
     let mut sessions = [launch(&mut nodes[0])?, launch(&mut nodes[1])?];
@@ -428,6 +446,20 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
         );
     }
     connect(&mut sessions, &mut nodes, &signal)?;
+    let mut observer = Chat::new(nodes[1].home.clone(), cli());
+    let observed = observer.connect(Mode::Observer, sessions[1].instance.as_deref())?;
+    ensure!(observed.own_roles == [1 - role; 2]);
+    let baseline = observer.history_position_controlled(0, None, &history_control())?;
+    ensure!(baseline.next == baseline.frontiers);
+    ensure!(baseline.frontiers[usize::from(role)] == 2);
+    let idle = observer.history_position_controlled(
+        0,
+        Some(baseline.cursor.clone()),
+        &history_control(),
+    )?;
+    ensure!(idle.cursor == baseline.cursor);
+    let empty = observer.history_position_controlled(1, None, &history_control())?;
+    ensure!(empty.next == [1, 1] && empty.frontiers == [1, 1]);
     let max_a = "\0".repeat(4096);
     let max_b = "\u{1}".repeat(4096);
     let mut expected = BTreeMap::from([(
@@ -487,6 +519,32 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
             "Foreign context cursor accepted"
         );
     }
+    let delta =
+        observer.history_position_controlled(0, Some(baseline.cursor), &history_control())?;
+    ensure!(delta.next == baseline.frontiers && delta.frontiers[usize::from(role)] == 7);
+    let delta_first = observer.history_controlled(
+        0,
+        Some(delta.cursor.clone()),
+        MAX_HISTORY_ROWS,
+        Some(&history_control()),
+    )?;
+    ensure!(!delta_first.finished && !delta_first.items.is_empty());
+    ensure!(
+        delta_first
+            .items
+            .iter()
+            .filter(|row| row.text.len() == 4096)
+            .count()
+            == 1
+    );
+    for (slot, cursor) in [(0, delta_first.cursor.clone()), (1, delta.cursor.clone())] {
+        ensure!(
+            observer
+                .history_position_controlled(slot, Some(cursor), &history_control())
+                .err()
+                == Some(MessageError2::HistoryCursorInvalid)
+        );
+    }
     let appended = [0x60; 16];
     SessionSend {
         session: &mut sessions[0],
@@ -495,6 +553,39 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
     }
     .send(0, appended, "snapshot append")?;
     let appended_status = wait_delivery(&mut sessions[0], 0, appended, &signal)?;
+    let repeat = observer.history(0, Some(delta.cursor), MAX_HISTORY_ROWS)?;
+    ensure!(repeat.cursor == delta_first.cursor && event_ids(&repeat) == event_ids(&delta_first));
+    let last = observer.history(0, Some(delta_first.cursor.clone()), MAX_HISTORY_ROWS)?;
+    ensure!(last.finished && last.frontiers == delta.frontiers);
+    let mut ids = event_ids(&delta_first);
+    ids.extend(event_ids(&last));
+    ensure!(
+        ids == expected
+            .values()
+            .map(|(event, _)| *event)
+            .filter(|event| Some(*event) != original.receipt.event)
+            .collect::<Vec<_>>()
+    );
+    let late = observer.history_position_controlled(0, Some(last.cursor), &history_control())?;
+    let late = observer.history(0, Some(late.cursor), 1)?;
+    ensure!(
+        late.finished
+            && late.items.len() == 1
+            && Some(late.items[0].event) == appended_status.receipt.event
+    );
+    let cancelled = history_control();
+    ensure!(cancelled.cancel(Instant::now()));
+    ensure!(
+        observer
+            .history_position_controlled(0, None, &cancelled)
+            .err()
+            == Some(MessageError2::Unavailable)
+    );
+    observer.disconnect()?;
+    ensure!(
+        sessions[1].child.try_wait()?.is_none(),
+        "Observer stopped the owner"
+    );
     for (session, snapshot) in sessions.iter().zip(snapshots) {
         ensure!(
             collect(session, snapshot, &expected, role)? == 2,
@@ -569,6 +660,26 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
     ensure!(outcome.recv_timeout(Duration::from_secs(20))? == Submission::Protected);
     wait_progress(&mut work, Progress::Materialized)?;
     let scope = work.view.messages.scope.context("Owned message scope")?;
+    let cancelled = history_control();
+    ensure!(cancelled.cancel(Instant::now()));
+    let foreign = DialogScope {
+        instance: [0; 32],
+        ..scope
+    };
+    for (scope, control, error) in [
+        (scope, cancelled, MessageError2::Unavailable),
+        (foreign, history_control(), MessageError2::InvalidInput),
+    ] {
+        let (reply, outcome) = mpsc::sync_channel(1);
+        work.action(Action::HistoryPosition(Box::new(HistoryPositionJob {
+            scope,
+            slot: 1,
+            completed: None,
+            control,
+            reply,
+        })))?;
+        ensure!(outcome.recv_timeout(Duration::from_secs(10))?.err() == Some(error));
+    }
     let (reply, history) = mpsc::sync_channel(1);
     work.action(Action::History(Box::new(HistoryJob {
         scope,
@@ -622,6 +733,30 @@ fn cs33a_actual_reopen_and_framed_history() -> Result<()> {
             && history.items[1].text == "offline new send"
             && repo.request_delivery(1, offline)? == Some(1),
         "Offline worker changed, duplicated or falsely delivered a message"
+    );
+    let home = returned.home.clone();
+    let cold = repo.history_position(1, None)?;
+    drop(repo);
+    drop(returned);
+    let mut owner = Chat::new(home.clone(), cli());
+    let owned = owner.connect(Mode::Owner, None)?;
+    ensure!(owned.own_roles == [role; 2]);
+    let anchor = owner.history_position_controlled(1, None, &history_control())?;
+    ensure!(
+        anchor.frontiers == cold.frontiers && anchor.view == cold.view && anchor.next == cold.next
+    );
+    let idle =
+        owner.history_position_controlled(1, Some(anchor.cursor.clone()), &history_control())?;
+    ensure!(anchor.cursor == idle.cursor);
+    let mut observer = Chat::new(home, cli());
+    observer.connect(Mode::Observer, Some(&owned.runtime_instance))?;
+    let attached = observer.history_position_controlled(1, None, &history_control())?;
+    ensure!(attached.cursor == anchor.cursor);
+    observer.disconnect()?;
+    ensure!(owner.status()?.runtime_instance == owned.runtime_instance);
+    owner.disconnect()?;
+    println!(
+        "T11E1_NATIVE_PROTOCOL2_PASS tail_only=true capped_pages=true append_frozen=true owner_observer=true cancelled_scope_rejected=true"
     );
     println!(
         "CS33A_ACTUAL_PASS commit_before_ignored_reply=true reopened_same_intent_no_op2=true exact_id_conflict=true mixed_framed_pages=true max_escaped_split=true snapshot_append=true offline_worker_actions=true"

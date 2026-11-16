@@ -4,7 +4,7 @@ use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 const HEADER: &[u8; 8] = b"KGH2\x01\x02\0\0";
 pub(super) const CURSOR_BYTES: usize = 275;
 
-/// Untrusted transport bytes until authenticated by history_page. No signing API.
+/// Untrusted transport bytes until authenticated by the history reader. No signing API.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HistoryCursor([u8; CURSOR_BYTES]);
 impl HistoryCursor {
@@ -44,6 +44,25 @@ impl HistoryCursor {
 pub(super) struct Position {
     pub frontiers: [u64; 2],
     pub next: [u64; 2],
+}
+impl Position {
+    pub(super) fn follow(self, frontiers: [u64; 2]) -> Result<Self> {
+        if self.next.contains(&0) || self.next != self.frontiers {
+            return Err(Error::InvalidCursor);
+        }
+        if self
+            .frontiers
+            .into_iter()
+            .zip(frontiers)
+            .any(|(old, new)| old > new)
+        {
+            return Err(Error::SnapshotUnavailable);
+        }
+        Ok(Self {
+            frontiers,
+            next: self.frontiers,
+        })
+    }
 }
 fn tag(crypto: &Crypto, body: &[u8]) -> blake3::Hash {
     let mut h = blake3::Hasher::new_keyed(&crypto.cursor);

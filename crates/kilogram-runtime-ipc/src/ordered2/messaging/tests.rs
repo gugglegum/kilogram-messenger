@@ -139,3 +139,110 @@ fn cs33a_history_cursor_count_shape_and_caps() -> anyhow::Result<()> {
     ensure!(history_page(&vec![b' '; HISTORY_JSON_CAP + 1], context, None, 32).is_err());
     Ok(())
 }
+
+fn position_value(context: Id, view: Id, frontiers: [u64; 2], next: [u64; 2]) -> Value {
+    // Fixtures exercise public metadata checking, opaque to users of Client2.
+    let mut raw = [0u8; CURSOR_BYTES];
+    raw[..8].copy_from_slice(CURSOR_HEADER);
+    raw[40..72].copy_from_slice(&view);
+    raw[72..104].copy_from_slice(&context);
+    for (bytes, ordinal) in raw[211..243]
+        .chunks_exact_mut(8)
+        .zip(frontiers.into_iter().chain(next))
+    {
+        bytes.copy_from_slice(&ordinal.to_be_bytes());
+    }
+    a([
+        b(context),
+        b(view),
+        a(frontiers.map(u)),
+        a(next.map(u)),
+        b(raw),
+    ])
+}
+
+#[test]
+fn t11e1_position_replies_match_cursor_and_previous_cut() -> anyhow::Result<()> {
+    let context = [1; 32];
+    let view = [2; 32];
+    let old = [4, 7];
+    let new = [6, 8];
+    let anchor = history_position(&position_value(context, view, old, old), context, None)?;
+    let follow = position_value(context, view, new, old);
+    let decode = |v: &Value| history_position(v, context, Some(&anchor.cursor));
+    let next = decode(&follow)?;
+    ensure!(
+        next.context == context && next.view == view && next.frontiers == new && next.next == old
+    );
+    for value in [
+        position_value([3; 32], view, new, old),
+        position_value(context, [3; 32], new, old),
+        position_value(context, view, [6, 6], old),
+        position_value(context, view, [3, 8], old),
+        position_value(context, view, new, [4, 6]),
+        position_value(context, view, new, [0, 7]),
+        a([]),
+    ] {
+        ensure!(decode(&value).err() == Some(MessageError2::InvalidReply));
+    }
+    ensure!(history_position(&follow, context, None).is_err());
+    let fields = follow.fields(5)?;
+    for offset in [0, 40, 72, 211, 227, 234] {
+        let mut values = fields.to_vec();
+        let mut bytes = fields[4].fixed::<CURSOR_BYTES>()?;
+        bytes[offset] ^= 1;
+        values[4] = b(bytes);
+        ensure!(decode(&a(values)).err() == Some(MessageError2::InvalidReply));
+    }
+    let mut values = fields.to_vec();
+    values[4] = b([0; CURSOR_BYTES - 1]);
+    ensure!(decode(&a(values)).err() == Some(MessageError2::InvalidReply));
+    Ok(())
+}
+
+#[test]
+fn t11e1_position_wire_max_includes_framing_and_legacy_rejects() -> anyhow::Result<()> {
+    let context = [1; 32];
+    let max_ordinals = [u64::MAX; 2];
+    let position = position_value(context, [2; 32], max_ordinals, max_ordinals);
+    let anchor = history_position(&position, context, None)?;
+    for opcode in [HISTORY_ANCHOR_OPCODE, HISTORY_FOLLOW_OPCODE] {
+        let encode = |version, op| {
+            wire::encode(
+                &a([u(version), u(op), position.clone()]),
+                HISTORY_POSITION_REPLY_CAP,
+            )
+        };
+        let bytes = encode(2, opcode)?;
+        ensure!(bytes.len() == HISTORY_POSITION_REPLY_CAP);
+        let max_response = RuntimeIpcResponse::OrderedDialog { response: bytes };
+        let frame_bytes = 4 + postcard::to_allocvec(&max_response)?.len();
+        ensure!(frame_bytes == 395 && frame_bytes <= 512);
+        let fields = message_reply(opcode, max_response)?;
+        let previous = (opcode == HISTORY_FOLLOW_OPCODE).then_some(&anchor.cursor);
+        ensure!(history_position(&fields, context, previous)?.cursor == anchor.cursor);
+        for response in [
+            encode(1, opcode)?,
+            encode(2, 4)?,
+            vec![0; HISTORY_POSITION_REPLY_CAP + 1],
+        ] {
+            ensure!(
+                message_reply(opcode, RuntimeIpcResponse::OrderedDialog { response }).err()
+                    == Some(MessageError2::InvalidReply)
+            );
+        }
+        for (reason, expected) in [
+            (
+                "UnsupportedOperation",
+                MessageError2::HistoryPositionUnsupported,
+            ),
+            ("HistoryUnavailable", MessageError2::HistoryUnavailable),
+        ] {
+            let reply = RuntimeIpcResponse::Error {
+                message: reason.to_owned(),
+            };
+            ensure!(message_reply(opcode, reply).err() == Some(expected));
+        }
+    }
+    Ok(())
+}

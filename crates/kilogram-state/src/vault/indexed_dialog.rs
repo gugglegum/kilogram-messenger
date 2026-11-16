@@ -53,11 +53,11 @@ use chacha20poly1305::{
     aead::{Aead, Payload},
 };
 pub use credits::{CreditAction, CreditReport, PendingView};
-pub use history::HistoryPage;
 pub use history::protocol2::{
     HistoryCheckpointRead, HistoryNativeRecord, HistoryProtocol2Binding, HistoryProtocol2Operation,
     HistoryReadable2, HistorySeenRecord,
 };
+pub use history::{HistoryPage, HistoryPosition};
 pub use history_cursor::HistoryCursor;
 pub use history_types::{
     HistoryAuth, HistoryCapture, HistoryExtras, HistoryInit, HistoryNativeTransition,
