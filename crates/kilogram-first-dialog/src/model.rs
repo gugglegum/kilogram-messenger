@@ -15,6 +15,55 @@ use zeroize::Zeroizing;
 mod terminal;
 pub use terminal::SetupAccessError;
 
+#[derive(Debug)]
+pub enum ReplyError {
+    Invalid(anyhow::Error),
+    NotReady,
+    Mismatch,
+    PeerConflict,
+    Unconfirmed,
+    Persist(anyhow::Error),
+}
+
+impl From<ReplyError> for anyhow::Error {
+    fn from(error: ReplyError) -> Self {
+        match error {
+            ReplyError::Invalid(error) | ReplyError::Persist(error) => error,
+            ReplyError::NotReady => anyhow::anyhow!("Account is not ready"),
+            ReplyError::Mismatch => {
+                anyhow::anyhow!("Reply belongs to a different invitation or recipient")
+            }
+            ReplyError::PeerConflict => anyhow::anyhow!("A different peer was already selected"),
+            ReplyError::Unconfirmed => {
+                anyhow::anyhow!("Compare the peer identity independently first")
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum ExportError {
+    Failed(anyhow::Error),
+    Conflict(anyhow::Error),
+}
+
+impl From<anyhow::Error> for ExportError {
+    fn from(error: anyhow::Error) -> Self {
+        Self::Failed(error)
+    }
+}
+
+impl From<ExportError> for anyhow::Error {
+    fn from(error: ExportError) -> Self {
+        match error {
+            ExportError::Failed(error) => error,
+            ExportError::Conflict(error) => {
+                anyhow::anyhow!("Public export already exists with different contents: {error}")
+            }
+        }
+    }
+}
+
 const RECORD_CAP: usize = 128 * 1024;
 pub fn read(path: &Path, cap: usize) -> Result<Vec<u8>> {
     let meta = fs::symlink_metadata(path)?;
@@ -128,15 +177,20 @@ impl Setup {
         Ok(())
     }
     pub fn begin(home: &Path, invite: Option<Artifact>) -> Result<Self> {
-        if let Some(invite) = &invite {
+        Self::validate_invite(invite.as_ref())?;
+        let (home, lock) = Self::lock(home)?;
+        Self::begin_locked(home, lock, invite)
+    }
+
+    fn validate_invite(invite: Option<&Artifact>) -> Result<()> {
+        if let Some(invite) = invite {
             invite.validate()?;
             ensure!(
                 invite.kind == Kind::Invite,
                 "Join requires an invitation, not a reply"
             );
         }
-        let (home, lock) = Self::lock(home)?;
-        Self::begin_locked(home, lock, invite)
+        Ok(())
     }
 
     fn begin_locked(home: PathBuf, lock: File, invite: Option<Artifact>) -> Result<Self> {
@@ -253,13 +307,18 @@ impl Setup {
         Self::validate(&record, home)?;
         Ok(record)
     }
-    pub(super) fn update(&mut self, f: impl FnOnce(&mut Record)) -> Result<()> {
+    fn check_current(&self) -> Result<()> {
         let current: Record =
             serde_json::from_slice(&read(&self.home.join("setup.json"), RECORD_CAP)?)?;
         ensure!(
             current == self.record,
             "Setup changed on disk; reopen it before continuing"
         );
+        Ok(())
+    }
+
+    pub(super) fn update(&mut self, f: impl FnOnce(&mut Record)) -> Result<()> {
+        self.check_current()?;
         let mut next = self.record.clone();
         f(&mut next);
         Self::validate(&next, &self.home)?;
@@ -375,6 +434,14 @@ impl Setup {
         )
     }
     pub fn export(&self) -> Result<PathBuf> {
+        Ok(self.export_artifact(false)?.0)
+    }
+
+    pub fn export_terminal(&self) -> std::result::Result<(PathBuf, Artifact), ExportError> {
+        self.export_artifact(true)
+    }
+
+    fn public_artifact(&self) -> Result<Artifact> {
         ensure!(
             self.record.acknowledged && self.phrase.is_none(),
             "Save and hide recovery words before public export"
@@ -394,7 +461,7 @@ impl Setup {
         } else {
             None
         };
-        let artifact = Artifact {
+        Ok(Artifact {
             version: 1,
             kind,
             mode: ORDERED2_BOOTSTRAP_MODE.into(),
@@ -402,57 +469,96 @@ impl Setup {
             contexts: self.record.contexts.clone(),
             sender,
             recipient,
-        };
+        })
+    }
+
+    fn export_artifact(
+        &self,
+        terminal: bool,
+    ) -> std::result::Result<(PathBuf, Artifact), ExportError> {
+        let artifact = self.public_artifact()?;
         let bytes = artifact.encode()?;
         let public = self.home.join("exchange");
-        fs::create_dir_all(&public)?;
         let path = public.join(if self.record.joined {
             "reply.kilogram"
         } else {
             "invite.kilogram"
         });
+        let check_path = || {
+            if terminal {
+                super::connection::validate_artifact_path(&self.home, &self.record, &path)?;
+            }
+            Ok::<(), anyhow::Error>(())
+        };
+        check_path()?;
+        fs::create_dir_all(&public).map_err(anyhow::Error::from)?;
+        check_path()?;
         match write(&path, &bytes, false) {
             Ok(()) => (),
-            Err(e) => {
-                ensure!(
-                    path.is_file() && read(&path, artifact::FILE_CAP)? == bytes,
-                    "Public export already exists with different contents: {e}"
-                );
+            Err(error) => {
+                check_path()?;
+                match fs::symlink_metadata(&path) {
+                    Ok(meta)
+                        if meta.is_file()
+                            && read(&path, artifact::FILE_CAP).is_ok_and(|raw| raw == bytes) =>
+                    {
+                        ()
+                    }
+                    Ok(_) => return Err(ExportError::Conflict(error)),
+                    Err(_) => return Err(ExportError::Failed(error)),
+                }
             }
         }
-        Ok(path)
+        Ok((path, artifact))
     }
     pub fn check_reply(&self, reply: &Artifact) -> Result<()> {
-        reply.validate()?;
-        let info = self
+        Ok(self.check_reply_checked(reply)?)
+    }
+
+    pub fn check_reply_checked(&self, reply: &Artifact) -> std::result::Result<(), ReplyError> {
+        reply.validate().map_err(ReplyError::Invalid)?;
+        let info = self.record.public.as_ref().ok_or(ReplyError::NotReady)?;
+        if self.record.joined
+            || !self.record.acknowledged
+            || reply.kind != Kind::Reply
+            || reply.invitation != self.record.invitation
+            || reply.contexts != self.record.contexts
+            || reply.recipient
+                != Some(Recipient {
+                    account: info.account_id,
+                    device: info.device_id,
+                })
+        {
+            return Err(ReplyError::Mismatch);
+        }
+        if self
             .record
-            .public
+            .peer
             .as_ref()
-            .ok_or_else(|| anyhow::anyhow!("Account is not ready"))?;
-        ensure!(
-            !self.record.joined
-                && self.record.acknowledged
-                && reply.kind == Kind::Reply
-                && reply.invitation == self.record.invitation
-                && reply.contexts == self.record.contexts
-                && reply.recipient
-                    == Some(Recipient {
-                        account: info.account_id,
-                        device: info.device_id
-                    }),
-            "Reply belongs to a different invitation or recipient"
-        );
-        if let Some(peer) = &self.record.peer {
-            ensure!(
-                peer == &reply.sender,
-                "A different peer was already selected"
-            );
+            .is_some_and(|peer| peer != &reply.sender)
+        {
+            return Err(ReplyError::PeerConflict);
         }
         Ok(())
     }
     pub fn select_reply(&mut self, reply: Artifact, confirmed: bool) -> Result<()> {
-        ensure!(confirmed, "Compare the peer identity independently first");
-        self.check_reply(&reply)?;
+        Ok(self.select_reply_checked(reply, confirmed)?)
+    }
+
+    pub fn select_reply_checked(
+        &mut self,
+        reply: Artifact,
+        confirmed: bool,
+    ) -> std::result::Result<(), ReplyError> {
+        if !confirmed {
+            return Err(ReplyError::Unconfirmed);
+        }
+        self.check_reply_checked(&reply)?;
+        if self.record.peer.is_some() {
+            self.check_current().map_err(ReplyError::Persist)?;
+            return Ok(());
+        }
         self.update(|r| r.peer = Some(reply.sender))
+            .map_err(ReplyError::Persist)
     }
 }

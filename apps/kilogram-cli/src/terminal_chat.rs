@@ -562,10 +562,15 @@ fn page_value(context: &str, page: &HistoryPage2, cursor: Option<&str>) -> Value
     json!({ "context": context, "frontiers": page.frontiers, "finished": page.finished, "cursor": cursor, "items": rows })
 }
 
-fn terminal_text(text: &str) -> String {
+pub(crate) fn terminal_escaped(c: char) -> bool {
+    c.is_control()
+        || matches!(c, '\u{061c}' | '\u{200e}' | '\u{200f}' | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
+}
+
+pub(crate) fn terminal_text(text: &str) -> String {
     let mut safe = String::with_capacity(text.len());
     for c in text.chars() {
-        if c.is_control() || matches!(c, '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}') {
+        if terminal_escaped(c) {
             safe.extend(c.escape_default());
         } else {
             safe.push(c);

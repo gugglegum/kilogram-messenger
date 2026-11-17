@@ -1,4 +1,5 @@
 use super::*;
+use kilogram_first_dialog::artifact::Kind;
 use std::io::Cursor;
 use zeroize::Zeroizing;
 
@@ -186,4 +187,101 @@ fn t12a_frames_and_explicit_recovery_flags() {
         &state.replies[1].payload,
         Payload::Error("recovery_output_disabled")
     ));
+}
+
+#[test]
+fn t12b_literal_path_confirmation_and_safe_output() {
+    let path = "E:\\Pair files\\right\u{200f}\u{202e}\u{85} sign.kilogram";
+    let line = format!("/invite  inspect {path}\r\n");
+    let request = wire::read(&mut Cursor::new(line), false)
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        request.command,
+        Ok(Command::Inspect(Kind::Invite, PathBuf::from(path)))
+    );
+    let id = "a".repeat(64);
+    for (confirmed, expected) in [
+        (false, Err("invalid_args")),
+        (true, Ok(Command::Confirm(Kind::Reply, id.clone()))),
+    ] {
+        let line = json!({"v":1,"id":"r","op":"reply_accept",
+                          "args":{"preview_id":id,"confirmed":confirmed}})
+        .to_string();
+        let request = wire::read(&mut Cursor::new(line), true)
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        assert_eq!(request.command, expected);
+    }
+    let sample = json!({"kind":"invite","path":path,"contexts":["a","b"]});
+    for jsonl in [false, true] {
+        let output = wire::encode(jsonl, Some("r"), Payload::Public(sample.clone())).unwrap();
+        let output = std::str::from_utf8(&output).unwrap();
+        assert!(
+            !output
+                .chars()
+                .any(|c| c != '\n' && crate::terminal_chat::terminal_escaped(c))
+        );
+        assert!(output.contains(if jsonl { "\\u200f" } else { "\\u{200f}" }));
+        if jsonl {
+            assert_eq!(
+                serde_json::from_str::<Value>(output).unwrap()["value"]["path"],
+                path
+            );
+        }
+    }
+}
+
+#[test]
+fn t12b_confirmation_waits_for_preview_writer_and_failed_write_drops_it() {
+    for ok in [false, true] {
+        let mut state = State::new(false);
+        state.replies.clear();
+        let id = "b".repeat(64);
+        assert!(state.admit(request(
+            "shown",
+            Command::Inspect(Kind::Invite, "file".into())
+        )));
+        let (jobs, queued) = mpsc::sync_channel(1);
+        state.dispatch(&jobs).unwrap();
+        let Job::Run { entry, .. } = queued.try_recv().unwrap() else {
+            panic!("missing inspect job")
+        };
+        assert!(state.admit(request(
+            "busy",
+            Command::Inspect(Kind::Invite, "other".into())
+        )));
+        assert!(matches!(state.replies[0].payload, Payload::Error("busy")));
+        state.replies.clear();
+        state.running = None;
+        state.publishing(Some(&entry.tag));
+        assert!(state.admit(request("shown", Command::Confirm(Kind::Invite, id.clone()))));
+        let now = Instant::now();
+        let flight = Flight {
+            generation: 5,
+            until: now + WRITE_LIMIT,
+            show: false,
+        };
+        assert!(state.writer_ack(
+            Receipt {
+                generation: 5,
+                completed: now,
+                ok,
+                written: ok
+            },
+            &flight
+        ));
+        state.dispatch(&jobs).unwrap();
+        if ok {
+            let Job::Run { entry, .. } = queued.try_recv().unwrap() else {
+                panic!("missing confirm job")
+            };
+            assert_eq!(entry.command, Command::Confirm(Kind::Invite, id));
+        } else {
+            assert!(queued.try_recv().is_err());
+            assert!(state.closing.as_ref().unwrap().failed);
+        }
+    }
 }

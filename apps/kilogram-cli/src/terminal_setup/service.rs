@@ -14,6 +14,9 @@ use std::{
 };
 use zeroize::Zeroizing;
 
+mod pairing;
+use pairing::{Preview, identity};
+
 pub(super) fn unopened() -> Value {
     json!({"state":"unopened","account_id":null,"device_id":null,"contexts":null})
 }
@@ -22,6 +25,7 @@ pub(super) struct Service {
     home: PathBuf,
     helper: PathBuf,
     setup: Option<Setup>,
+    preview: Option<Preview>,
 }
 
 impl Service {
@@ -30,6 +34,7 @@ impl Service {
             home,
             helper,
             setup: None,
+            preview: None,
         }
     }
 
@@ -51,10 +56,18 @@ impl Service {
             "recovery_unavailable"
         };
         let public = setup.record.public.as_ref();
-        Ok(json!({
+        let mut value = json!({
             "state":phase, "account_id":public.map(|p| p.account_id.to_string()),
             "device_id":public.map(|p| p.device_id.to_string()), "contexts":&setup.record.contexts,
-        }))
+        });
+        if let Some(peer) = &setup.record.peer {
+            value["peer_selection"] = json!({
+                "role": if setup.record.joined { "joiner" } else { "inviter" },
+                "invitation_id": &setup.record.invitation,
+                "peer": identity(peer.account, peer.device),
+            });
+        }
+        Ok(value)
     }
 
     pub fn operation(
@@ -65,6 +78,9 @@ impl Service {
         cancel: Arc<AtomicBool>,
         session: &Shared,
     ) -> Result<Payload, &'static str> {
+        if matches!(command, Command::Begin | Command::Open) {
+            self.preview = None;
+        }
         match command {
             Command::Begin if self.setup.is_some() => return Err("setup_exists"),
             Command::Begin => {
@@ -94,6 +110,13 @@ impl Service {
                 if !setup.record.acknowledged {
                     setup.acknowledge(true).map_err(|_| "setup_invalid")?;
                 }
+            }
+            Command::Inspect(kind, path) => return self.inspect(kind, &path).map(Payload::Public),
+            Command::Confirm(kind, id) => self.confirm(kind, &id)?,
+            Command::Export(kind) => return self.export(kind).map(Payload::Public),
+            Command::ClearPreview => {
+                self.preview = None;
+                return Ok(Payload::Public(json!({"cleared":true})));
             }
             _ => unreachable!("only local setup operations are sent to the worker"),
         }

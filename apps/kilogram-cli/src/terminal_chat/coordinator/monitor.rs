@@ -627,11 +627,6 @@ impl Write for Frame {
     }
 }
 
-fn escaped(c: char) -> bool {
-    c.is_control()
-        || matches!(c, '\u{061c}' | '\u{200e}' | '\u{200f}' | '\u{2028}'..='\u{202e}' | '\u{2066}'..='\u{2069}')
-}
-
 fn incoming(jsonl: bool, request: &Request, event: &[u8; 32], text: &str) -> io::Result<Vec<u8>> {
     let mut out = Frame(Vec::new());
     if jsonl {
@@ -649,8 +644,10 @@ fn incoming(jsonl: bool, request: &Request, event: &[u8; 32], text: &str) -> io:
     for c in text.chars() {
         match c {
             '"' | '\\' if jsonl => write!(out, "\\{c}")?,
-            c if escaped(c) && jsonl => write!(out, "\\u{:04x}", u32::from(c))?,
-            c if escaped(c) => write!(out, "{}", c.escape_default())?,
+            c if super::super::terminal_escaped(c) && jsonl => {
+                write!(out, "\\u{:04x}", u32::from(c))?
+            }
+            c if super::super::terminal_escaped(c) => write!(out, "{}", c.escape_default())?,
             c => write!(out, "{c}")?,
         }
     }

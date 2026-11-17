@@ -495,8 +495,8 @@ fn run_windows(home: PathBuf, jsonl: bool, allow_recovery: bool) -> io::Result<i
     use std::os::windows::io::AsHandle;
 
     let executable = std::env::current_exe()?.with_file_name("kilogram-bootstrap.exe");
-    let allow =
-        allow_recovery || (!jsonl && io::stdin().is_terminal() && io::stdout().is_terminal());
+    let console_output = io::stdout().is_terminal();
+    let allow = allow_recovery || (!jsonl && io::stdin().is_terminal() && console_output);
     let shared = Arc::new(Mutex::new(State::new(allow)));
     let signal = if !jsonl && io::stdin().is_terminal() {
         let mut receiver = tokio::signal::windows::ctrl_c()?;
@@ -512,14 +512,21 @@ fn run_windows(home: PathBuf, jsonl: bool, allow_recovery: bool) -> io::Result<i
     // A dedicated unbuffered handle avoids copying a partial secret frame into
     // the standard library's line buffer when writing to a closed pipe.
     let mut stdout = std::fs::File::from(io::stdout().as_handle().try_clone_to_owned()?);
-    let (output, writes) = mpsc::sync_channel(1);
+    let (output, writes) = mpsc::sync_channel::<WriteJob>(1);
     let (acks, receipts) = mpsc::sync_channel(1);
     let state = shared.clone();
     let writer = thread::Builder::new()
         .name("setup-stdout".into())
         .spawn(move || {
             for job in writes {
-                if acks.send(write(&state, &mut stdout, job, jsonl)).is_err() {
+                let receipt = if console_output && !matches!(job.reply.payload, Payload::Secret(_))
+                {
+                    // Stdout converts Unicode public text for a Windows console.
+                    write(&state, &mut io::stdout().lock(), job, jsonl)
+                } else {
+                    write(&state, &mut stdout, job, jsonl)
+                };
+                if acks.send(receipt).is_err() {
                     break;
                 }
             }

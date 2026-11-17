@@ -1,11 +1,15 @@
-use crate::terminal_chat::{Frame, frame, valid_id};
+use crate::terminal_chat::{Frame, frame, terminal_escaped, terminal_text, valid_id};
 use kilogram_bootstrap_contract::ORDERED2_RECOVERY_SCOPE;
+use kilogram_first_dialog::artifact::Kind;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json, value::RawValue};
-use std::io::{self, BufRead, Write};
+use std::{
+    io::{self, BufRead, Write},
+    path::PathBuf,
+};
 use zeroize::Zeroizing;
 
-pub(super) const HELP: &str = "/status /begin /open /create /recovery show /recovery saved /cancel /quit\nSave recovery words offline before confirming.";
+pub(super) const HELP: &str = "/status /begin /open /create /recovery show /recovery saved /cancel /quit\n/invite export|inspect <path>|join <preview_id>\n/reply export|inspect <path>|accept <preview_id>\n/preview clear\nSave recovery words offline before confirming.";
 const OUTPUT_CAP: usize = 256 * 1024;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -16,6 +20,10 @@ pub(super) enum Command {
     Create,
     Show,
     Acknowledge,
+    Export(Kind),
+    Inspect(Kind, PathBuf),
+    Confirm(Kind, String),
+    ClearPreview,
     Cancel(Option<String>),
     Quit,
     Help,
@@ -52,6 +60,37 @@ struct Cancel {
 #[serde(deny_unknown_fields)]
 struct Empty {}
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Inspect {
+    path: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Confirm {
+    preview_id: String,
+    confirmed: bool,
+}
+
+fn inspect(kind: Kind, path: &str) -> Result<Command, &'static str> {
+    if path.is_empty() || path.contains('\0') {
+        return Err("invalid_args");
+    }
+    Ok(Command::Inspect(kind, PathBuf::from(path)))
+}
+
+fn confirm(kind: Kind, id: String) -> Result<Command, &'static str> {
+    if id.len() != 64
+        || !id
+            .bytes()
+            .all(|b| b.is_ascii_digit() || matches!(b, b'a'..=b'f'))
+    {
+        return Err("invalid_args");
+    }
+    Ok(Command::Confirm(kind, id))
+}
+
 fn parse(request: &WireRequest<'_>) -> Result<Command, &'static str> {
     if request.v != 1 {
         return Err("unsupported_version");
@@ -68,15 +107,78 @@ fn parse(request: &WireRequest<'_>) -> Result<Command, &'static str> {
             .filter(|cancel| valid_id(&cancel.target_id))
             .map(|cancel| Command::Cancel(Some(cancel.target_id)))
             .ok_or("invalid_args"),
+        "invite_inspect" | "reply_inspect" => {
+            let kind = if request.op == "invite_inspect" {
+                Kind::Invite
+            } else {
+                Kind::Reply
+            };
+            let input: Inspect = serde_json::from_str(args).map_err(|_| "invalid_args")?;
+            inspect(kind, &input.path)
+        }
+        "invite_join" | "reply_accept" => {
+            let kind = if request.op == "invite_join" {
+                Kind::Invite
+            } else {
+                Kind::Reply
+            };
+            let input: Confirm = serde_json::from_str(args).map_err(|_| "invalid_args")?;
+            if !input.confirmed {
+                return Err("invalid_args");
+            }
+            confirm(kind, input.preview_id)
+        }
         _ if serde_json::from_str::<Empty>(args).is_err() => Err("invalid_args"),
         "status" => Ok(Command::Status),
         "begin" => Ok(Command::Begin),
         "open" => Ok(Command::Open),
         "create" => Ok(Command::Create),
         "recovery_show" => Ok(Command::Show),
+        "invite_export" => Ok(Command::Export(Kind::Invite)),
+        "reply_export" => Ok(Command::Export(Kind::Reply)),
+        "preview_clear" => Ok(Command::ClearPreview),
         "quit" => Ok(Command::Quit),
         _ => Err("unknown_operation"),
     }
+}
+
+fn parse_tty(command: &str) -> Option<Result<Command, &'static str>> {
+    let command = command.trim_ascii();
+    if let Some((topic, tail)) = command.split_once(|c: char| c.is_ascii_whitespace())
+        && let kind @ ("/invite" | "/reply") = topic
+    {
+        let kind = if kind == "/invite" {
+            Kind::Invite
+        } else {
+            Kind::Reply
+        };
+        let tail = tail.trim_ascii_start();
+        if let Some((action, path)) = tail.split_once(|c: char| c.is_ascii_whitespace())
+            && action == "inspect"
+        {
+            return Some(inspect(kind, path.trim_ascii_start()));
+        }
+    }
+    let tokens: Vec<_> = command.split_ascii_whitespace().collect();
+    Some(match tokens.as_slice() {
+        [] => return None,
+        ["/status"] => Ok(Command::Status),
+        ["/begin"] => Ok(Command::Begin),
+        ["/open"] => Ok(Command::Open),
+        ["/create"] => Ok(Command::Create),
+        ["/recovery", "show"] => Ok(Command::Show),
+        ["/recovery", "saved"] => Ok(Command::Acknowledge),
+        ["/invite", "export"] => Ok(Command::Export(Kind::Invite)),
+        ["/reply", "export"] => Ok(Command::Export(Kind::Reply)),
+        ["/invite", "join", id] => confirm(Kind::Invite, (*id).into()),
+        ["/reply", "accept", id] => confirm(Kind::Reply, (*id).into()),
+        ["/preview", "clear"] => Ok(Command::ClearPreview),
+        ["/invite" | "/reply" | "/preview", ..] => Err("invalid_args"),
+        ["/cancel"] => Ok(Command::Cancel(None)),
+        ["/quit"] => Ok(Command::Quit),
+        ["/help"] => Ok(Command::Help),
+        _ => Err("invalid_command"),
+    })
 }
 
 pub(super) fn read(
@@ -106,19 +208,8 @@ pub(super) fn read(
                 command,
             })));
         }
-        let tokens: Vec<_> = text.split_ascii_whitespace().collect();
-        let command = match tokens.as_slice() {
-            [] => continue,
-            ["/status"] => Ok(Command::Status),
-            ["/begin"] => Ok(Command::Begin),
-            ["/open"] => Ok(Command::Open),
-            ["/create"] => Ok(Command::Create),
-            ["/recovery", "show"] => Ok(Command::Show),
-            ["/recovery", "saved"] => Ok(Command::Acknowledge),
-            ["/cancel"] => Ok(Command::Cancel(None)),
-            ["/quit"] => Ok(Command::Quit),
-            ["/help"] => Ok(Command::Help),
-            _ => Err("invalid_command"),
+        let Some(command) = parse_tty(text) else {
+            continue;
         };
         return Ok(Some(Ok(Request { id: None, command })));
     }
@@ -147,6 +238,74 @@ struct SecretReply<'a> {
 struct SecretValue<'a> {
     recovery_words: &'a str,
     recovery_scope: &'static str,
+}
+
+fn identity(out: &mut impl Write, label: &str, pins: &Value) -> io::Result<()> {
+    writeln!(
+        out,
+        "{label} account {}",
+        pins["account_id"].as_str().unwrap_or_default()
+    )?;
+    write!(
+        out,
+        "{label} device {}",
+        pins["device_id"].as_str().unwrap_or_default()
+    )
+}
+
+fn contexts(out: &mut impl Write, value: &Value) -> io::Result<()> {
+    write!(
+        out,
+        "\nContext 1 {}\nContext 2 {}",
+        value[0].as_str().unwrap_or_default(),
+        value[1].as_str().unwrap_or_default()
+    )
+}
+
+fn artifact_tty(out: &mut impl Write, value: &Value, kind: &str) -> io::Result<()> {
+    if let Some(path) = value["path"].as_str() {
+        writeln!(out, "Exported {kind}: {}", terminal_text(path))?;
+    } else {
+        writeln!(
+            out,
+            "Preview {kind} {}",
+            value["preview_id"].as_str().unwrap_or_default()
+        )?;
+    }
+    identity(out, "Sender", &value["sender"])?;
+    if !value["recipient"].is_null() {
+        writeln!(out)?;
+        identity(out, "Recipient", &value["recipient"])?;
+    }
+    write!(
+        out,
+        "\nInvitation {}",
+        value["invitation_id"].as_str().unwrap_or_default()
+    )?;
+    contexts(out, &value["contexts"])?;
+    if value.get("preview_id").is_some() {
+        write!(
+            out,
+            "\nCredential and authority signatures verified. The envelope and contexts are unsigned.\n\
+                     The contact's identity still requires your verification.\n\
+                     Compare account, device, invitation and ordered contexts with your contact over an independent channel before confirming.\n\
+                     An authenticated connection is not established yet."
+        )?;
+    }
+    Ok(())
+}
+
+fn json_public(out: &mut impl Write, value: &Value) -> io::Result<()> {
+    let line = serde_json::to_string(value)?;
+    // serde already escapes JSON control syntax. Escape remaining display
+    // controls inside strings without changing machine-readable path values.
+    let mut start = 0;
+    for (index, c) in line.char_indices().filter(|(_, c)| terminal_escaped(*c)) {
+        out.write_all(&line.as_bytes()[start..index])?;
+        write!(out, "\\u{:04x}", u32::from(c))?;
+        start = index + c.len_utf8();
+    }
+    out.write_all(&line.as_bytes()[start..])
 }
 
 pub(super) fn encode(
@@ -188,7 +347,7 @@ pub(super) fn encode(
             Payload::FrameError(code) => json!({"v":1,"type":"frame_error","code":code}),
             _ => return Err(io::Error::other("invalid JSONL output")),
         };
-        serde_json::to_writer(&mut *bytes, &value)?;
+        json_public(&mut *bytes, &value)?;
     } else {
         match payload {
             Payload::Ready => bytes.write_all(b"First-dialog setup. Use /help.")?,
@@ -201,6 +360,20 @@ pub(super) fn encode(
                     {
                         write!(&mut *bytes, "\nAccount {account}\nDevice {device}")?;
                     }
+                    if let Some(peer) = value.get("peer_selection") {
+                        writeln!(
+                            &mut *bytes,
+                            "\nPairing {}",
+                            peer["role"].as_str().unwrap_or_default()
+                        )?;
+                        identity(&mut *bytes, "Peer", &peer["peer"])?;
+                        write!(
+                            &mut *bytes,
+                            "\nInvitation {}",
+                            peer["invitation_id"].as_str().unwrap_or_default()
+                        )?;
+                        contexts(&mut *bytes, &value["contexts"])?;
+                    }
                     match phase {
                         "recovery_unavailable" => bytes.write_all(
                             b"\nContinue only if you previously saved the words offline.",
@@ -210,6 +383,8 @@ pub(super) fn encode(
                         )?,
                         _ => {}
                     }
+                } else if let Some(kind) = value["kind"].as_str() {
+                    artifact_tty(&mut *bytes, &value, kind)?;
                 } else {
                     serde_json::to_writer(&mut *bytes, &value)?;
                 }

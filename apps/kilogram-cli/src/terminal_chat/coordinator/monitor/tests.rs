@@ -95,7 +95,7 @@ fn t11e2b_frame_caps_and_safe_text_roundtrip() -> anyhow::Result<()> {
         let frame = incoming(jsonl, &request, &[1; 32], text)?;
         assert_eq!(frame.iter().filter(|&&b| b == b'\n').count(), 1);
         let visible = std::str::from_utf8(&frame[..frame.len() - 1])?;
-        assert!(!visible.chars().any(escaped));
+        assert!(!visible.chars().any(crate::terminal_chat::terminal_escaped));
         if jsonl {
             let data: Value = serde_json::from_slice(&frame)?;
             assert_eq!(data["text"], text);

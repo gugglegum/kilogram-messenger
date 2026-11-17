@@ -1,5 +1,5 @@
 //! Guarded access to a Setup selected by the terminal user.
-use super::{File, OpenOptions, Path, Setup, fs};
+use super::{Artifact, File, OpenOptions, Path, Setup, fs};
 use std::io;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -90,6 +90,15 @@ fn lock(home: &Path) -> AccessResult<File> {
 
 impl Setup {
     pub fn begin_terminal(home: &Path) -> AccessResult<Self> {
+        Self::begin_terminal_with(home, None)
+    }
+
+    pub fn join_terminal(home: &Path, invite: Artifact) -> AccessResult<Self> {
+        Self::begin_terminal_with(home, Some(invite))
+    }
+
+    fn begin_terminal_with(home: &Path, invite: Option<Artifact>) -> AccessResult<Self> {
+        Self::validate_invite(invite.as_ref()).map_err(|_| SetupAccessError::Invalid)?;
         directory(home)?;
         if !home.exists() {
             fs::create_dir_all(home).map_err(|_| SetupAccessError::Invalid)?;
@@ -99,7 +108,7 @@ impl Setup {
         check_new(&home)?;
         let lock = lock(&home)?;
         check_new(&home)?;
-        Self::begin_locked(home, lock, None).map_err(|_| SetupAccessError::Invalid)
+        Self::begin_locked(home, lock, invite).map_err(|_| SetupAccessError::Invalid)
     }
 
     pub fn open_terminal(home: &Path) -> AccessResult<Self> {
