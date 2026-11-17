@@ -19,6 +19,8 @@ pub use fresh_proposal::*;
 pub use mode::*;
 pub use runtime_locator::*;
 
+pub mod lan_discovery;
+
 pub const ALPN: &[u8] = b"kilogram/m1/ordered-dialog/cbor/2";
 pub const MAX_WIRE: usize = 1024 * 1024;
 pub const MAX_CORE: usize = 2048;

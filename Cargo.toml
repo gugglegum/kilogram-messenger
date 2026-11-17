@@ -33,6 +33,7 @@ members = [
     "crates/kilogram-store",
     "crates/kilogram-ticket-publication",
     "crates/kilogram-transport-iroh",
+    "crates/kilogram-windows-lan",
 ]
 resolver = "3"
 
