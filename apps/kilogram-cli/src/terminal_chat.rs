@@ -327,6 +327,7 @@ struct CommandScope {
 
 struct HistoryAdvance {
     scope: CommandScope,
+    gap: Option<u64>,
     slot: usize,
     context: String,
     from: Option<HistoryCursor2>,
@@ -410,6 +411,13 @@ impl Frontend {
                     .service
                     .status_controlled(Some(control))
                     .map_err(|_| "session_unavailable")?;
+                let pinned = self.status.as_ref().ok_or("not_connected")?;
+                if pinned.runtime_instance != status.runtime_instance
+                    || pinned.contexts != status.contexts
+                    || pinned.own_roles != status.own_roles
+                {
+                    return Err("session_changed");
+                }
                 Ok(json!({ "connected": true, "status": status }))
             }
             Command::Chats => {
@@ -527,6 +535,7 @@ impl Frontend {
             result,
             Some(HistoryAdvance {
                 scope,
+                gap: None,
                 slot,
                 context: contexts[slot].clone(),
                 from: cursor,
@@ -619,6 +628,8 @@ struct WireResult<'a> {
     value: Option<&'a Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     code: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    monitor: Option<&'a Value>,
 }
 
 #[derive(Default)]
@@ -648,7 +659,7 @@ fn encode_result(
     request: Option<&RequestKey>,
     result: &CommandResult<Value>,
 ) -> io::Result<Vec<u8>> {
-    encode_reply(jsonl, id, request, None, result)
+    encode_reply(jsonl, id, request, None, result, None)
 }
 
 fn encode_reply(
@@ -657,6 +668,7 @@ fn encode_reply(
     request: Option<&RequestKey>,
     target_id: Option<&str>,
     result: &CommandResult<Value>,
+    monitor: Option<&Value>,
 ) -> io::Result<Vec<u8>> {
     let mut output = ResultBuffer::default();
     if jsonl {
@@ -669,6 +681,7 @@ fn encode_reply(
             target_id,
             value: result.as_ref().ok(),
             code: result.as_ref().err().copied(),
+            monitor,
         };
         serde_json::to_writer(&mut output, &message).map_err(io::Error::other)?;
         output.write_all(b"\n")?;
@@ -680,26 +693,55 @@ fn encode_reply(
                 request.request_id, request.context
             )?;
         }
-        write_tty(&mut output, result)?;
+        match (monitor, result) {
+            (Some(monitor), Ok(value)) => {
+                let mut value = value.clone();
+                value["monitor"] = monitor.clone();
+                write_tty(&mut output, &Ok(value))?;
+            }
+            (Some(monitor), Err(_)) => {
+                write_tty(&mut output, result)?;
+                writeln!(output, "Monitor {monitor}")?;
+            }
+            _ => write_tty(&mut output, result)?,
+        }
     }
     Ok(output.0)
 }
 
+#[cfg(test)]
 fn prepare_result<T>(
     jsonl: bool,
     id: Option<&str>,
     request: Option<&RequestKey>,
     result: Prepared<T>,
 ) -> io::Result<(Vec<u8>, Option<T>)> {
+    prepare_result_with_monitor(jsonl, id, request, result, None)
+}
+
+fn prepare_result_with_monitor<T>(
+    jsonl: bool,
+    id: Option<&str>,
+    request: Option<&RequestKey>,
+    result: Prepared<T>,
+    monitor: Option<&Value>,
+) -> io::Result<(Vec<u8>, Option<T>)> {
     let (value, advance) = match result {
         Ok((value, advance)) => (Ok(value), advance),
         Err(code) => (Err(code), None),
     };
-    match encode_reply(jsonl, id, request, None, &value) {
+    match encode_reply(jsonl, id, request, None, &value, monitor) {
         Ok(bytes) => Ok((bytes, advance)),
         // No history position changes when the rendered page will not be published.
         Err(_) => Ok((
-            encode_reply(jsonl, id, request, None, &Err("response_too_large"))?,
+            encode_reply(
+                jsonl,
+                id,
+                request,
+                None,
+                &Err("response_too_large"),
+                monitor,
+            )?,
             None,
         )),
     }

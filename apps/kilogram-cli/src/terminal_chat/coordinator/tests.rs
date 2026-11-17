@@ -17,7 +17,8 @@ fn activate(state: &mut State, now: Instant) -> Arc<OperationControl> {
         finalised: false,
         retired: false,
         ack: false,
-        opens_connection: false,
+        opens_connection: None,
+        status: false,
     });
     control
 }
@@ -132,6 +133,104 @@ fn t11c_control_and_close_do_not_wait_on_queue_or_writer() {
 
 const TEST_LIMIT: Duration = Duration::from_secs(10);
 
+fn monitor_binding() -> monitor::Binding {
+    monitor::Binding::from(&kilogram_first_dialog::chat::ChatStatus {
+        mode: kilogram_first_dialog::chat::Mode::Observer,
+        contexts: ["a".repeat(64), "b".repeat(64)],
+        runtime_instance: "c".repeat(64),
+        live_admitted: false,
+        own_roles: [0, 1],
+    })
+}
+
+#[test]
+fn t11e2b_monitor_job_preemption_and_stale_retirement() {
+    let now = Instant::now();
+    let mut state = State::new();
+    state.ready = true;
+    let epoch = state.next_generation(now).unwrap();
+    state.connection = Some(epoch);
+    state.monitor.connect(epoch, monitor_binding(), now);
+    let (output, jobs) = mpsc::sync_channel(1);
+    state.schedule_monitor(now, &output);
+    let Job::Monitor(old, control, request) = jobs.try_recv().unwrap() else {
+        panic!("expected monitor job")
+    };
+    assert!(state.admit(command("user", Command::Status), now));
+    assert!(control.stopped() && !state.can_dispatch(None, false));
+    state.monitor_retired(
+        old,
+        request.slot,
+        request.reserved(),
+        Err(monitor::Fault::Unavailable),
+        now,
+    );
+    assert!(state.can_dispatch(None, false));
+    assert_eq!(state.monitor.status()["contexts"][0]["state"], "anchoring");
+    let pending = state.queued.take().unwrap();
+    state.release(&pending.tag);
+    state.monitor.disconnect("disconnected");
+    let next = state.next_generation(now).unwrap();
+    state.connection = Some(next);
+    state.monitor.connect(next, monitor_binding(), now);
+    state.schedule_monitor(now, &output);
+    assert!(matches!(jobs.try_recv(), Err(TryRecvError::Empty)));
+    let later = now + Duration::from_millis(250);
+    state.schedule_monitor(later, &output);
+    let Job::Monitor(new, _, request) = jobs.try_recv().unwrap() else {
+        panic!("expected current job")
+    };
+    state.monitor_retired(
+        old,
+        request.slot,
+        0,
+        Err(monitor::Fault::Gap("stale")),
+        later,
+    );
+    assert!(
+        state
+            .background
+            .as_ref()
+            .is_some_and(|work| work.scope == new)
+    );
+    assert_eq!(state.monitor.status()["contexts"][0]["state"], "anchoring");
+    state.monitor_retired(new, request.slot, 0, Err(monitor::Fault::NoHistory), later);
+    assert!(state.background.is_none());
+    assert_eq!(
+        state.monitor.status()["contexts"][0]["state"],
+        "waiting_history"
+    );
+}
+
+#[test]
+fn t11e2b_old_gap_ack_cannot_consume_current_signal() {
+    let now = Instant::now();
+    let mut state = State::new();
+    state.ready = true;
+    state.connection = Some(1);
+    state.monitor.connect(1, monitor_binding(), now);
+    state
+        .monitor
+        .complete(1, 2, 0, 0, Err(monitor::Fault::Gap("invalid_cursor")), now);
+    let (Slot::Notification(stale), _) = state.next_output().unwrap() else {
+        panic!("missing gap")
+    };
+    state.monitor.disconnect("disconnected");
+    state.connection = Some(3);
+    state.monitor.connect(3, monitor_binding(), now);
+    assert!(state.retire_notification(stale, None));
+    state.monitor.written(stale, now);
+    let (Slot::Notification(current), _) = state.next_output().unwrap() else {
+        panic!("missing new epoch gap")
+    };
+    assert_eq!(current.connection, 3);
+    assert!(!state.retire_notification(stale, None));
+    assert!(state.notification_current(current));
+    assert!(state.retire_notification(current, None));
+    state.monitor.written(current, now);
+    assert!(state.next_output().is_none());
+}
+
 fn ready_state() -> Shared {
     let mut state = State::new();
     state.ready = true;
@@ -145,6 +244,7 @@ fn stage_notification(state: &Shared) -> (FrameTag, WriteJob, Option<Flight>) {
         connection: state.connection.unwrap(),
         batch: state.next_generation(Instant::now()).unwrap(),
         index: 0,
+        slot: u8::MAX,
     };
     assert!(state.notification.is_none());
     state.notification = Some(Notification::Queued(tag, b"test notification\n".to_vec()));
@@ -454,6 +554,7 @@ fn t11e2a_background_preemption_waits_for_retirement_and_close_has_a_bound() {
             state.background = Some(Background {
                 scope: tag,
                 control: control.clone(),
+                preempted: false,
             });
             tag
         };
