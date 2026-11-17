@@ -52,7 +52,14 @@ function Check-Image([string]$Name) {
 # Create a run directory only after its own exclusive marker was created.
 Assert-PlainPath $base
 if ($req.op -eq 'init') {
-    foreach ($name in @('kilogram-cli.exe','kilogram-bootstrap.exe','t11f-fixture.exe','deadline.ps1')) {
+    $requiredImages = if ($req.pins.PSObject.Properties['mailbox-fake.ps1']) {
+        @('mailbox-fake.ps1','mailbox.cs','setup-pipe.cs','deadline.ps1')
+    } else {
+        $onboarding = if ($req.pins.PSObject.Properties['setup-pipe.cs']) { 'setup-pipe.cs' } else { 't11f-fixture.exe' }
+        @('kilogram-cli.exe','kilogram-bootstrap.exe',$onboarding,'deadline.ps1')
+        if ($req.pins.PSObject.Properties['mailbox.cs']) { 'mailbox.cs' }
+    }
+    foreach ($name in $requiredImages) {
         $null = Check-Image $name
     }
     $actualIp = [Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces() |
@@ -76,6 +83,25 @@ if ($req.op -eq 'init') {
 }
 
 Assert-PlainPath $run
+$mailboxMode = $req.PSObject.Properties['generation']
+if ($mailboxMode) {
+    if ($req.tag -cnotmatch '^[a-z0-9-]{1,40}$' -or $req.generation -cnotmatch '^[0-9a-f]{32}$') {
+        throw 'Invalid mailbox tag or generation'
+    }
+    $receipts = Join-Path $run 'receipts'
+    Assert-PlainPath $receipts
+    $mailboxPath = Join-Path $receipts "mailbox-$($req.tag)"
+    $mailboxSource = Check-Image 'mailbox.cs'
+    Add-Type -TypeDefinition ([IO.File]::ReadAllText($mailboxSource)) -ReferencedAssemblies 'System.dll','System.Core.dll','System.Web.Extensions.dll'
+    if ($req.op -eq 'mailbox') {
+        $inputReader = if ($req.action -eq 'submit') { [Console]::In } else { [IO.TextReader]::Null }
+        try {
+            [Console]::WriteLine([KilogramTestMailbox]::Exchange($mailboxPath, $req.generation,
+                $req.action, $req.sequence, $req.digest, $req.cursor, $inputReader))
+        } catch { throw 'Mailbox exchange rejected' }
+        return
+    }
+}
 switch ($req.op) {
     'put' {
         if ($req.name -cnotmatch '^[a-z0-9-]{1,40}\.(json|kilogram)$') { throw 'Unexpected input filename' }
@@ -136,12 +162,43 @@ $errorText = $null
 $before = @()
 $after = @()
 $socket = $null
+$protectedSetup = $req.op -eq 'setup'
+$filteredEof = $false
+$mailbox = $null
+$mailboxEof = $false
+$mailboxReader = $null
+$mailboxWriter = $null
+$mailboxErrorReader = $null
+$fake = $mailboxMode -and $req.op -ceq 'mailbox-fake'
+$fakeProtected = $fake -and $req.fake_mode -cin @('valid','early','malformed','oversized','truncated','eof','timeout','wrong-id','wrong-scope','raw')
+$protectedSetup = $protectedSetup -or $fakeProtected
 $observeSocket = $req.op -eq 'chat' -and $null -ne $req.PSObject.Properties['observe_socket'] -and $req.observe_socket
 try {
-    if ($req.op -eq 'chat') {
+    if ($fake) {
+        if (!$fakeProtected -and $req.fake_mode -cnotin @('echo','disconnect')) { throw 'Unknown fake child case' }
+        $fakeFile = Check-Image 'mailbox-fake.ps1'
+        $exe = "$env:windir/System32/WindowsPowerShell/v1.0/powershell.exe"
+        $literal = $fakeFile.Replace("'", "''")
+        $source = "& ([scriptblock]::Create([IO.File]::ReadAllText('$literal'))) '$($req.fake_mode)'"
+        $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($source))
+        $argv = @('-NoProfile','-NonInteractive','-EncodedCommand',$encoded)
+        $work = if ($req.fake_mode -cin @('disconnect','timeout')) { 18 } else { 115 }
+        $watchdog = [KilogramS5Deadline]::new($work, ($work + 12), $start)
+        if ($fakeProtected) {
+            $bridge = Check-Image 'setup-pipe.cs'
+            Add-Type -TypeDefinition ([IO.File]::ReadAllText($bridge)) -ReferencedAssemblies 'System.dll','System.Core.dll','System.Web.Extensions.dll'
+        }
+    } elseif ($req.op -eq 'chat') {
         $exe = Check-Image 'kilogram-cli.exe'
         $argv = @('chat', '--jsonl', '--setup', $setup)
         $watchdog = [KilogramS5Deadline]::new(760, 790, $start)
+    } elseif ($protectedSetup) {
+        $exe = Check-Image 'kilogram-cli.exe'
+        $null = Check-Image 'kilogram-bootstrap.exe'
+        $bridge = Check-Image 'setup-pipe.cs'
+        Add-Type -TypeDefinition ([IO.File]::ReadAllText($bridge)) -ReferencedAssemblies 'System.dll','System.Core.dll','System.Web.Extensions.dll'
+        $argv = @('setup', '--jsonl', '--dir', $setup, '--allow-recovery-output')
+        $watchdog = [KilogramS5Deadline]::new(450, 480, $start)
     } elseif ($req.op -eq 'fixture') {
         $exe = Check-Image 't11f-fixture.exe'
         $null = Check-Image 'kilogram-cli.exe'
@@ -163,12 +220,38 @@ try {
     $info.Arguments = ($argv | ForEach-Object { '"' + $_ + '"' }) -join ' '
     $info.WorkingDirectory = $run
     $info.UseShellExecute = $false
+    if ($mailboxMode) {
+        $mailbox = [KilogramTestMailbox]::new($mailboxPath, $req.generation, $watchdog.WorkTick)
+    }
+    if ($protectedSetup) {
+        [KilogramSetupPipe]::Redirect($info)
+    } elseif ($mailbox) {
+        $info.RedirectStandardInput = $true
+        $info.RedirectStandardOutput = $true
+        $info.RedirectStandardError = $true
+        $info.CreateNoWindow = $true
+    }
     $child = [Diagnostics.Process]::Start($info)
     $watchdog.VerifyChild($child)
     $verified = $true
+    $filter = if ($protectedSetup -and $mailbox) {
+        [KilogramSetupPipe]::Run($child, $mailbox.SetupInput(), $mailbox.SetupOutput(), $setup)
+    } elseif ($protectedSetup) {
+        [KilogramSetupPipe]::Run($child, [Console]::OpenStandardInput(), [Console]::Out, $setup)
+    }
+    if ($mailbox -and !$protectedSetup) {
+        $mailboxReader = $mailbox.ForwardOutput($child.StandardOutput.BaseStream)
+        $mailboxWriter = $mailbox.FeedInput($child.StandardInput.BaseStream, $child)
+        $mailboxErrorReader = $mailbox.EmptyError($child.StandardError.BaseStream)
+    }
     $socketWatch = [Diagnostics.Stopwatch]::StartNew()
     while (!$child.WaitForExit(200)) {
         $watchdog.CheckWork()
+        if ($mailbox -and $mailbox.Stopped) { throw 'Mailbox stopped' }
+        if (($mailboxReader -and $mailboxReader.IsFaulted) -or
+            ($mailboxWriter -and $mailboxWriter.IsFaulted) -or
+            ($mailboxErrorReader -and $mailboxErrorReader.IsFaulted)) { throw 'Mailbox stream failure' }
+        if ($protectedSetup -and $filter.IsFaulted) { throw 'Protected Setup exchange failed' }
         if ($observeSocket -and !$socket -and $socketWatch.ElapsedMilliseconds -ge 1000) {
             $socketWatch.Restart()
             $owners = @($watchdog.Children() | Where-Object { $_ -ne $child.Id })
@@ -191,9 +274,20 @@ try {
         }
     }
     $watchdog.CheckWork()
+    if ($protectedSetup) {
+        if (!$filter.Wait(2000)) { throw 'Protected Setup did not drain' }
+        $filteredEof = $true
+        $mailboxEof = [bool]$mailbox
+    } elseif ($mailbox) {
+        if (!$mailboxReader.Wait(2000) -or !$mailboxErrorReader.Wait(2000) -or !$mailboxWriter.Wait(2000) -or
+            !$mailboxReader.Result -or !$mailboxErrorReader.Result) { throw 'Mailbox streams did not drain cleanly' }
+        $mailboxEof = $true
+    }
     $exitCode = $child.ExitCode
+    if ($mailbox -and !$mailbox.QuitAcknowledged) { throw 'Mailbox child exited without acknowledged quit' }
 } catch {
-    $errorText = $_.Exception.Message
+    $errorText = if ($protectedSetup) { 'Protected Setup launch or exchange failed' }
+        elseif ($mailboxMode) { 'Mailbox launch, stop or exchange failed' } else { $_.Exception.Message }
 } finally {
     if ($watchdog) {
         # Let the terminal finish its own shutdown before classifying retained Job children.
@@ -207,10 +301,17 @@ try {
         if ($before.Count) { $watchdog.CleanupChildren(6000) }
         $after = @($watchdog.Children())
     }
-    Write-NewJson $log @{
-        tag=$req.tag; host=$env:COMPUTERNAME; owner=$PID; child=if($child){$child.Id}else{$null}
-        child_exit=$exitCode; membership=$verified; forced=$forced; before=$before; after=$after
-        descriptor=[IO.File]::Exists((Join-Path $setup 'connection/ipc.json')); error=$errorText
+    if (!$mailboxMode -or $mailbox) {
+        Write-NewJson $log @{
+            tag=$req.tag; host=$env:COMPUTERNAME; owner=$PID; child=if($child){$child.Id}else{$null}
+            child_exit=$exitCode; membership=$verified; forced=$forced; before=$before; after=$after
+            descriptor=[IO.File]::Exists((Join-Path $setup 'connection/ipc.json')); error=$errorText
+            filtered_setup_eof=if($protectedSetup){$filteredEof}else{$null}
+            mailbox_eof=if($mailboxMode){$mailboxEof}else{$null}
+            mailbox_quit=if($mailbox){$mailbox.QuitAcknowledged}else{$null}
+            work_expired=if($watchdog){$watchdog.WorkExpired}else{$null}
+        }
+        if ($mailbox) { $mailbox.Finish($verified -and !$forced -and !$errorText -and $exitCode -eq 0 -and $mailboxEof) }
     }
     if ($watchdog) { $watchdog.Finish() }
 }
