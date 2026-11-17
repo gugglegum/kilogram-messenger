@@ -415,6 +415,7 @@ pub struct CreateProfile2 {
     pub relay: Option<String>,
     pub bind: String,
     pub lan_peer_ipv4: Option<std::net::Ipv4Addr>,
+    pub lan_discovery: kilogram_runtime_ipc::ordered2::LanDiscovery2,
 }
 pub fn create_profile(input: CreateProfile2) -> Result<()> {
     let CreateProfile2 {
@@ -430,6 +431,7 @@ pub fn create_profile(input: CreateProfile2) -> Result<()> {
         relay,
         bind,
         lan_peer_ipv4,
+        lan_discovery,
     } = input;
     let owner = db::ExpectedOwner {
         account: *account.as_bytes(),
@@ -478,6 +480,7 @@ pub fn create_profile(input: CreateProfile2) -> Result<()> {
                 lan_peer_ipv4,
             )?,
             logical_quota: db::Config::default().logical_quota,
+            lan_discovery,
             physical_quota: db::Config::default().physical_quota,
         },
         &profile_file,

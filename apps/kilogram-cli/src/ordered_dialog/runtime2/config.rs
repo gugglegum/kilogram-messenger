@@ -1,5 +1,7 @@
 use super::*;
-use kilogram_runtime_ipc::ordered2::{Profile2Document, ProfileRoute2, ProfileRoutePolicy2};
+use kilogram_runtime_ipc::ordered2::{
+    LanDiscovery2, Profile2Document, ProfileRoute2, ProfileRoutePolicy2,
+};
 use kilogram_transport_iroh::{
     RoutePolicy,
     ordered2::{FreshRoute2, RouteConfig2},
@@ -21,6 +23,7 @@ pub struct Profile2 {
     pub ipc_file: PathBuf,
     pub locator_directory: PathBuf,
     pub route: FreshRoute2,
+    pub lan_discovery: LanDiscovery2,
     pub logical_quota: [u64; 2],
     pub physical_quota: u64,
 }
@@ -39,6 +42,7 @@ impl TryFrom<Profile2Document> for Profile2 {
             enabled: d.enabled,
             ipc_file: d.ipc_file,
             locator_directory: d.locator_directory,
+            lan_discovery: d.lan_discovery,
             route: FreshRoute2::new(
                 RouteConfig2 {
                     policy: match d.route.policy {
@@ -74,6 +78,7 @@ impl From<Profile2> for Profile2Document {
             ipc_file: d.ipc_file,
             locator_directory: d.locator_directory,
             route: profile_route(&d.route),
+            lan_discovery: d.lan_discovery,
             logical_quota: Some(d.logical_quota),
             physical_quota: Some(d.physical_quota),
         }
@@ -118,6 +123,11 @@ impl Profile2 {
             "enabled contexts"
         );
         self.route.effective()?;
+        self.lan_discovery.validate(self.route.lan())?;
+        ensure!(
+            self.lan_discovery.is_manual() || self.enabled.len() == 2,
+            "LAN Auto requires both context slots"
+        );
         ensure!(
             self.logical_quota
                 .iter()
@@ -161,6 +171,47 @@ impl Profile2 {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn t13d_profile_auto_schema_is_strict_and_round_trips() -> Result<()> {
+        let parent = tempfile::tempdir()?;
+        let state = parent.path().join("state");
+        std::fs::create_dir(&state)?;
+        let path = parent.path().join("profile.json");
+        let manual = serde_json::json!({
+            "version":2,"profile_mode":"ordered-dialog-v2","state_dir":state,
+            "account":"11".repeat(32),"claim":"22".repeat(32),"device":"33".repeat(32),
+            "contexts":["44".repeat(32),"55".repeat(32)],"enabled":[0,1],
+            "ipc_file":parent.path().join("ipc.json"),"locator_directory":parent.path().join("locators"),
+            "route":{"policy":"direct-only","bind":"192.168.7.9:0","relay":null,"lan_peer_ipv4":"192.168.7.10"}
+        });
+        std::fs::write(&path, serde_json::to_vec(&manual)?)?;
+        ensure!(Profile2::load(&path)?.lan_discovery.is_manual());
+        let scope = serde_json::json!({"mode":"auto","adapter_id":"1".repeat(32),"network_id":"2".repeat(32),"prefix":24});
+        let mut auto = manual;
+        auto["lan_discovery"] = scope.clone();
+        std::fs::write(&path, serde_json::to_vec(&auto)?)?;
+        let profile = Profile2::load(&path)?;
+        ensure!(!profile.lan_discovery.is_manual());
+        ensure!(serde_json::to_value(profile)?["lan_discovery"] == scope);
+        for (key, value) in [
+            ("mode", "unknown".into()),
+            ("mode", "manual".into()),
+            ("prefix", 32.into()),
+            ("network_id", "zz".repeat(16).into()),
+            ("adapter_id", "0".repeat(32).into()),
+            ("unknown", 1.into()),
+        ] {
+            let mut bad = auto.clone();
+            bad["lan_discovery"][key] = value;
+            ensure!(Profile2Document::decode(&serde_json::to_vec(&bad)?).is_err());
+            std::fs::write(&path, serde_json::to_vec(&bad)?)?;
+            ensure!(Profile2::load(&path).is_err());
+        }
+        auto["lan_discovery"] = serde_json::Value::Null;
+        ensure!(Profile2Document::decode(&serde_json::to_vec(&auto)?).is_err());
+        Ok(())
+    }
     #[test]
     fn cs32b_profile_defaults_null_and_authoritative_validation() -> Result<()> {
         let tmp = tempfile::tempdir()?;

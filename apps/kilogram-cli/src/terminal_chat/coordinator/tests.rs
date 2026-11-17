@@ -139,6 +139,7 @@ fn monitor_binding() -> monitor::Binding {
         contexts: ["a".repeat(64), "b".repeat(64)],
         runtime_instance: "c".repeat(64),
         live_admitted: false,
+        lan_discovery: None,
         own_roles: [0, 1],
     })
 }

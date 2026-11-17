@@ -106,7 +106,9 @@ impl Drop for ComApartment {
     }
 }
 
-fn inspect_on_com_thread(route: DirectLan2, expected: Option<NetworkScope>) -> Result<Binding> {
+/// Inspect on the calling dedicated worker, with a thread-local COM apartment.
+/// The caller holds the worker handle until it completes and bounds pending work.
+pub fn inspect_on_com_thread(route: DirectLan2, expected: Option<NetworkScope>) -> Result<Binding> {
     let adapter = adapter_for(route.local())?;
     route.check_on_link(adapter.prefix)?;
     let _apartment = ComApartment::enter().context("initialize NLM apartment")?;

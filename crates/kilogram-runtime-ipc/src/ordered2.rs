@@ -66,6 +66,51 @@ impl ProfileRoute2 {
     }
 }
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+#[serde(tag = "mode", rename_all = "kebab-case", deny_unknown_fields)]
+pub enum LanDiscovery2 {
+    Manual {},
+    Auto {
+        adapter_id: String,
+        network_id: String,
+        prefix: u8,
+    },
+}
+impl Default for LanDiscovery2 {
+    fn default() -> Self {
+        Self::Manual {}
+    }
+}
+impl LanDiscovery2 {
+    pub fn is_manual(&self) -> bool {
+        matches!(self, Self::Manual {})
+    }
+
+    pub fn validate(&self, route: Option<wire::DirectLan2>) -> Result<()> {
+        if let Self::Auto {
+            adapter_id,
+            network_id,
+            prefix,
+        } = self
+        {
+            for id in [adapter_id, network_id] {
+                ensure!(
+                    id.len() == 32
+                        && id
+                            .bytes()
+                            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+                        && id.bytes().any(|b| b != b'0'),
+                    "invalid canonical LAN network or adapter ID"
+                );
+            }
+            route
+                .ok_or_else(|| anyhow::anyhow!("LAN Auto requires an exact Direct LAN route"))?
+                .check_on_link(*prefix)?;
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Profile2Document {
     pub version: u8,
@@ -79,6 +124,8 @@ pub struct Profile2Document {
     pub ipc_file: PathBuf,
     pub locator_directory: PathBuf,
     pub route: ProfileRoute2,
+    #[serde(default, skip_serializing_if = "LanDiscovery2::is_manual")]
+    pub lan_discovery: LanDiscovery2,
     #[serde(
         default,
         deserialize_with = "present",
@@ -124,13 +171,17 @@ impl Profile2Document {
             id(pin)?;
         }
         ensure!(doc.contexts[0] != doc.contexts[1], "duplicate contexts");
-        doc.route.direct_lan()?;
+        doc.lan_discovery.validate(doc.route.direct_lan()?)?;
         ensure!(
             !doc.enabled.is_empty()
                 && doc.enabled.len() <= 2
                 && doc.enabled.iter().all(|c| *c < 2)
                 && (doc.enabled.len() == 1 || doc.enabled[0] != doc.enabled[1]),
             "enabled slots"
+        );
+        ensure!(
+            doc.lan_discovery.is_manual() || doc.enabled.len() == 2,
+            "LAN Auto requires both context slots"
         );
         Ok(doc)
     }
@@ -343,6 +394,8 @@ pub struct Status2 {
     #[serde(deserialize_with = "nullable")]
     pub endpoint: Option<Endpoint2>,
     pub route: ProfileRoute2,
+    #[serde(default, deserialize_with = "present")]
+    pub lan_discovery: Option<DiscoveryView2>,
     pub root_generation: u64,
     #[serde(rename = "stats")]
     _stats: IgnoredAny,
@@ -352,6 +405,23 @@ pub struct Status2 {
     _resources: IgnoredAny,
     #[serde(rename = "backend")]
     _backend: IgnoredAny,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum DiscoveryStatus2 {
+    WaitingNetwork,
+    WaitingPolicy,
+    Discovering,
+    Retrying,
+    Connected,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DiscoveryView2 {
+    pub selection: LanDiscovery2,
+    pub state: DiscoveryStatus2,
 }
 impl Status2 {
     pub fn decode(raw: &[u8]) -> Result<Self> {
@@ -363,6 +433,10 @@ impl Status2 {
         );
         id(&status.runtime_instance)?;
         let lan = status.route.direct_lan()?;
+        ensure!(
+            status.lan_discovery.is_none() || lan.is_some(),
+            "LAN discovery status without LAN route"
+        );
         if let (Some(lan), Some(e)) = (lan, status.endpoint.as_ref()) {
             ensure!(
                 matches!(e.ips.as_slice(), [ip] if ip.ip() == IpAddr::V4(lan.local()) && ip.port() != 0)
@@ -436,6 +510,21 @@ impl Status2 {
                 "status slots"
             );
             seen[usize::from(slot)] = true;
+        }
+        if let Some(view) = &status.lan_discovery {
+            view.selection.validate(lan)?;
+            ensure!(
+                !view.selection.is_manual(),
+                "active discovery view requires LAN Auto"
+            );
+            let connected = status
+                .contexts
+                .iter()
+                .all(|c| matches!(c, Context2::Installed(c) if c.active && c.live_admitted));
+            ensure!(
+                (view.state == DiscoveryStatus2::Connected) == connected,
+                "LAN discovery status disagrees with live contexts"
+            );
         }
         Ok(status)
     }

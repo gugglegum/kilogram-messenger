@@ -3291,6 +3291,7 @@ dependencies = [
  "kilogram-ticket-publication",
  "kilogram-ticket-store",
  "kilogram-transport-iroh",
+ "kilogram-windows-lan",
  "postcard",
  "qrcode",
  "redb",

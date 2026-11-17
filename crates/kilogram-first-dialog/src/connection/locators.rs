@@ -100,6 +100,9 @@ impl Session {
         cancel: &AtomicBool,
         op: Option<&OperationControl>,
     ) -> LocatorResult {
+        if !self.doc.lan_discovery.is_manual() && !matches!(command, LocatorCommand::Export) {
+            return Err("locator_requires_manual_profile");
+        }
         match command {
             LocatorCommand::Export => self.export_report(setup, cancel, op),
             LocatorCommand::Import(path) => self.import_file(setup, &path, cancel, op, |_| Ok(())),

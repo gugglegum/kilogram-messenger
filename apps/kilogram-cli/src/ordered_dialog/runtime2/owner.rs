@@ -1,5 +1,5 @@
 use super::*;
-use discovery::{Discovery2, LocatorPair2, same_pair};
+use discovery::{AdmissionPermit2, Discovery2, DiscoveryQuota2, LocatorPair2, same_pair};
 use iroh::{Endpoint, EndpointAddr, endpoint::Connection};
 use kilogram_identity::{AccountId, DeviceEncryptionIdentity, DeviceIdentity};
 use kilogram_transport_iroh::{RoutePolicy, ordered2::FreshRoute2};
@@ -145,9 +145,9 @@ impl RepositorySlot {
         }
     }
 }
-#[derive(Clone, Copy)]
 pub(super) enum Purpose2 {
     Import,
+    RemoteAuthority(Box<AdmissionPermit2>),
     Local,
     Peer,
     DiscoveryLocator { expires: u64 },
@@ -161,7 +161,11 @@ pub struct Owner2 {
     pub(super) lan_endpoint: Option<Endpoint>,
     #[cfg(test)]
     pub(super) test_lan_advertisement: Option<EndpointAddr>,
+    #[cfg(test)]
+    pub(super) test_revoke_lan_at_commit: bool,
     pub(super) discovery: Discovery2,
+    pub(super) discovery_quota: DiscoveryQuota2,
+    pub(super) publication_valid: Arc<AtomicBool>,
     pub(super) enabled: Vec<u8>,
     pub(super) endpoint: Option<(Id, EndpointAddr)>,
     pub(super) stats: Stats2,
@@ -242,8 +246,12 @@ impl Owner2 {
             next_connection: 1,
             admissions: [None, None],
             discovery: Discovery2::default(),
+            discovery_quota: DiscoveryQuota2::default(),
+            publication_valid: Arc::new(AtomicBool::new(true)),
             #[cfg(test)]
             test_lan_advertisement: None,
+            #[cfg(test)]
+            test_revoke_lan_at_commit: false,
             window,
             resources: Arc::new(resources::Resources2::default()),
             current_cache: [None, None],
@@ -379,6 +387,24 @@ impl Owner2 {
         } else {
             None
         };
+        let remote = match &purpose {
+            Purpose2::RemoteAuthority(permit) => Some(permit.as_ref()),
+            _ => None,
+        };
+        let freshness = if let Some(permit) = remote {
+            permit.check()?;
+            Some(permit.network.clone())
+        } else if self.auto_discovery()
+            && matches!(purpose, Purpose2::Peer | Purpose2::DiscoveryLocator { .. })
+        {
+            let token = self
+                .network_freshness()
+                .context("LAN network unavailable")?;
+            ensure!(token.is_current(), "LAN network observation expired");
+            Some(token.clone())
+        } else {
+            None
+        };
         let lease = if matches!(purpose, Purpose2::Peer) {
             Some(self.leases[c].clone().context("NeedAdmission")?)
         } else {
@@ -386,7 +412,8 @@ impl Owner2 {
         };
         let route = self.route.clone();
         let lan_endpoint = self.lan_endpoint.clone();
-        let verified = if matches!(purpose, Purpose2::Import) {
+        let is_import = matches!(purpose, Purpose2::Import | Purpose2::RemoteAuthority(_));
+        let verified = if is_import {
             None
         } else {
             Some(self.current(s, now()?)?)
@@ -411,11 +438,39 @@ impl Owner2 {
             db::RuntimeOperation::PeerHead { .. } => "PeerHead",
             db::RuntimeOperation::Block { .. } => "Block",
         };
+        let invalidates_publication = matches!(
+            &op,
+            db::RuntimeOperation::PinAuthority { .. }
+                | db::RuntimeOperation::RenewConsent { .. }
+                | db::RuntimeOperation::Locator { own: true, .. }
+        );
+        let publication = self.publication_valid.clone();
+        let target = invalidates_publication
+            .then(|| self.discovery_target())
+            .flatten();
+        let mut closed_pair = false;
         let committed_wall = op.captured_wall().unwrap_or(s.profile.wall_high_water);
+        #[cfg(test)]
+        let revoke_at_gate = std::mem::take(&mut self.test_revoke_lan_at_commit);
         let mut gate = || -> db::Result<()> {
             hooks::checkpoint(&format!("{name}.staged"),Some(c as u8),serde_json::json!({"root_generation":s.root_generation,"native_hash":s.head.native_hash.map(|id|hex(&id)),"native_generation":s.head.native_generation,"active":s.head.active}))
                 .map_err(|_|db::Error::PolicyRejected("verification gate controller"))?;
-            if !matches!(purpose, Purpose2::Import) {
+            #[cfg(test)]
+            if revoke_at_gate && let Some(token) = &freshness {
+                token.revoke();
+            }
+            if freshness
+                .as_ref()
+                .is_some_and(|network| !network.is_current())
+            {
+                return Err(db::Error::PolicyRejected("LAN network observation expired"));
+            }
+            if let Some(permit) = remote {
+                permit.check().map_err(|_| {
+                    db::Error::PolicyRejected("LAN remote authority permission expired")
+                })?;
+            }
+            if !is_import {
                 let wall = now().map_err(|_| db::Error::PolicyRejected("ClockBlocked"))?;
                 verified
                     .as_ref()
@@ -443,6 +498,12 @@ impl Owner2 {
                             discovery_pair.as_ref(),
                         )
                         .map_err(|_| db::Error::PolicyRejected("actual lease"))?;
+                }
+            }
+            if invalidates_publication {
+                publication.store(false, Ordering::Release);
+                if let Some(target) = &target {
+                    closed_pair |= target.send_replace(None).is_some();
                 }
             }
             Ok(())
@@ -508,7 +569,11 @@ impl Owner2 {
                 }
             }
         }
+        if closed_pair {
+            self.close_discovery_pair();
+        }
         if self.repository.requires_reopen() {
+            self.publication_valid.store(false, Ordering::Release);
             self.invalidate();
             self.close_discovery_pair();
             self.needs_reopen = true;
@@ -527,6 +592,7 @@ impl Owner2 {
         Ok(result?)
     }
     pub(super) fn recover(&mut self) -> Result<()> {
+        self.publication_valid.store(false, Ordering::Release);
         self.invalidate();
         self.close_discovery_pair();
         for pending in &mut self.admissions {
@@ -864,7 +930,13 @@ impl Owner2 {
                 own: true,
                 raw: locator.raw().to_vec(),
             },
-            Purpose2::Local,
+            if self.auto_discovery() {
+                Purpose2::DiscoveryLocator {
+                    expires: locator.fields().expires,
+                }
+            } else {
+                Purpose2::Local
+            },
             (0, 0),
         )?;
         hooks::checkpoint(
@@ -912,6 +984,13 @@ impl Owner2 {
         Ok(())
     }
     pub fn export_locator(&mut self, c: u8, instance: Id, addr: &EndpointAddr) -> Result<Vec<u8>> {
+        ensure!(
+            !self.auto_discovery()
+                || self
+                    .network_freshness()
+                    .is_some_and(|token| token.is_current()),
+            "LAN network unavailable"
+        );
         self.check_lan_advertisement(addr)?;
         let (s, current) = self.require(c, false)?;
         ensure!(
@@ -998,6 +1077,25 @@ impl Owner2 {
         Ok(())
     }
     pub fn import_authority(&mut self, raw: Vec<u8>) -> Result<()> {
+        self.import_authority_with(raw, None)
+    }
+    pub(super) fn import_observed_authority(
+        &mut self,
+        raw: Vec<u8>,
+        c: u8,
+        permit: Option<AdmissionPermit2>,
+    ) -> Result<()> {
+        ensure!(
+            self.auto_discovery() == permit.is_some(),
+            "remote authority origin does not match admission mode"
+        );
+        self.import_authority_with(raw, permit.map(|permit| (c, permit)))
+    }
+    fn import_authority_with(
+        &mut self,
+        raw: Vec<u8>,
+        origin: Option<(u8, AdmissionPermit2)>,
+    ) -> Result<()> {
         ensure!(raw.len() <= 16 * 1024, "authority cap");
         let snapshot = kilogram_identity::AccountAuthoritySnapshot::decode_and_verify(&raw)?;
         ensure!(snapshot.encode()? == raw, "exact authority bytes");
@@ -1038,7 +1136,11 @@ impl Owner2 {
                 break;
             }
         }
-        if let Some(c) = installed {
+        let (slot, purpose) = match origin {
+            Some((c, permit)) => (Some(c), Purpose2::RemoteAuthority(Box::new(permit))),
+            None => (installed, Purpose2::Import),
+        };
+        if let Some(c) = slot {
             let s = self.snapshot(c)?;
             self.commit(
                 &s,
@@ -1048,10 +1150,11 @@ impl Owner2 {
                     raw,
                     expected_policy: p.policy_generation,
                 },
-                Purpose2::Import,
+                purpose,
                 (0, 0),
             )?;
         } else {
+            self.publication_valid.store(false, Ordering::Release);
             let generation = self.repository.generation();
             self.repository.commit(
                 generation,

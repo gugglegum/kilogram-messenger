@@ -18,6 +18,7 @@ pub(super) struct Dispatch2 {
     deadline: Instant,
     wall_deadline: u64,
     high_water: Arc<AtomicU64>,
+    network: Option<Arc<discovery::NetworkFreshness2>>,
     route: kilogram_transport_iroh::RoutePolicy,
     _references: Option<window::RefPermit2>,
 }
@@ -40,6 +41,10 @@ impl Dispatch2 {
             "dispatch permit invalid"
         );
         let wall = now()?;
+        ensure!(
+            self.network.as_ref().is_none_or(|proof| proof.is_current()),
+            "LAN network observation expired"
+        );
         ensure!(
             wall < self.wall_deadline && wall >= self.high_water.load(Ordering::Acquire),
             "dispatch clock/permission expired"
@@ -254,6 +259,7 @@ impl Owner2 {
             deadline: lease.deadline,
             wall_deadline: lease.wall_deadline,
             high_water: self.clock_high_water.clone(),
+            network: self.network_freshness().cloned(),
             route: self.route.connection_policy(&peer)?,
             _references: references,
         })

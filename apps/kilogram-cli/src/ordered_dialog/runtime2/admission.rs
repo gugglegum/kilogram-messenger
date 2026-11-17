@@ -1,5 +1,5 @@
 use super::*;
-use discovery::LocatorPair2;
+use discovery::{AdmissionPermit2, LocatorPair2};
 use iroh::endpoint::Connection;
 use owner::{Lease2, Owner2};
 use std::{
@@ -99,7 +99,7 @@ impl Owner2 {
         deadline: Instant,
         request: Option<[u8; 16]>,
         expected: Option<&Arc<LocatorPair2>>,
-    ) -> Result<(u64, wire::ParsedFrame2)> {
+    ) -> Result<(u64, wire::ParsedFrame2, Option<AdmissionPermit2>)> {
         let (s, current) = self.require(c, false)?;
         self.check_lan_admission(&s, &connection, expected)?;
         ensure!(
@@ -178,6 +178,7 @@ impl Owner2 {
             request.unwrap_or(shared_admin::random()?),
             &self.device,
         )?;
+        let permit = self.admission_permit(expected, deadline, &connection)?;
         let mut hellos = [None, None];
         hellos[usize::from(s.head.role)] = Some(hello.clone());
         self.admissions[usize::from(c)] = Some(Admission2 {
@@ -191,7 +192,7 @@ impl Owner2 {
             transcript: None,
             discovery_pair: expected.cloned(),
         });
-        Ok((generation, hello))
+        Ok((generation, hello, permit))
     }
     fn admission(&self, c: u8, generation: u64) -> Result<&Admission2> {
         let pending = self.admissions[usize::from(c)]
@@ -215,7 +216,8 @@ impl Owner2 {
         let binding = admission.binding;
         let connection = admission.connection.clone();
         let expected = admission.discovery_pair.clone();
-        self.observe_hello_authority(c, &connection, binding, &frame, expected.as_ref())?;
+        let deadline = admission.deadline;
+        self.observe_hello_authority(c, &connection, binding, &frame, expected.as_ref(), deadline)?;
         let (s, current) = self.require(c, false)?;
         let p = self.admission(c, generation)?;
         ensure!(
@@ -269,9 +271,11 @@ impl Owner2 {
         binding: Id,
         frame: &wire::ParsedFrame2,
         expected: Option<&Arc<LocatorPair2>>,
+        deadline: Instant,
     ) -> Result<()> {
         let s = self.snapshot(c)?;
         self.check_lan_admission(&s, connection, expected)?;
+        let permit = self.admission_permit(expected, deadline, connection)?;
         ensure!(frame.body().kind() == wire::FrameKind::Hello, "Hello first");
         let f = frame.body().value().fields(12)?;
         let credential = super::super::handshake::Credentials::decode(f[7].bytes()?)?;
@@ -283,7 +287,7 @@ impl Owner2 {
         );
         frame.clone().verify(binding, credential.cert.device_id())?;
         // Retain a valid newer Root revocation even if this context is busy or blocked.
-        self.import_authority(credential.authority.encode()?)?;
+        self.import_observed_authority(credential.authority.encode()?, c, permit)?;
         Ok(())
     }
     fn admission_current(

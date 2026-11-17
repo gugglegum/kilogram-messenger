@@ -68,6 +68,7 @@ zeroize.workspace = true
 ed25519-dalek = { workspace = true, optional = true }
 
 [target.'cfg(windows)'.dependencies]
+kilogram-windows-lan = { path = "../../crates/kilogram-windows-lan" }
 windows = { version = "0.62.2", features = ["Foundation_Collections", "Networking_Connectivity", "System_Power"] }
 
 [dev-dependencies]

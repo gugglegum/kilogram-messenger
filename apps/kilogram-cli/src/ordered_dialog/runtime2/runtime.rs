@@ -1,12 +1,14 @@
 //! Bounded two-process transport and authenticated IPC adapter for Owner2.
 use super::*;
 use admission::Link2;
+use discovery::AdmissionPermit2;
 use iroh::{
     Endpoint,
     endpoint::{Connection, IncomingAddr},
 };
 use kilogram_runtime_ipc::ordered2::{
-    HISTORY_ANCHOR_OPCODE, HISTORY_FOLLOW_OPCODE, HISTORY_POSITION_REPLY_CAP,
+    DiscoveryStatus2, DiscoveryView2, HISTORY_ANCHOR_OPCODE, HISTORY_FOLLOW_OPCODE,
+    HISTORY_POSITION_REPLY_CAP, LanDiscovery2,
 };
 use kilogram_runtime_ipc::{RuntimeIpcCommand, RuntimeIpcResponse, RuntimeIpcServer};
 use kilogram_transport_iroh::ordered2 as transport;
@@ -129,6 +131,7 @@ fn owner_thread(mut owner: Owner2) -> Result<(Handle2, std::thread::JoinHandle<(
                     timing::idle_sleep(Duration::from_millis(2));
                 }
             }
+            owner.withdraw_lan_discovery();
             owner.invalidate();
         })
         .context("spawn OD2 owner")?;
@@ -176,16 +179,47 @@ async fn admission_rpc(
     connection: &Connection,
     frame: &wire::ParsedFrame2,
     deadline: Instant,
+    permit: Option<&AdmissionPermit2>,
 ) -> Result<wire::ParsedFrame2> {
     tokio::time::timeout_at(tokio::time::Instant::from_std(deadline), async {
-        let (mut send, mut receive) = connection.open_bi().await?;
-        transport::write(&mut send, frame).await?;
+        let (mut send, mut receive) =
+            admission_stream(permit, async { Ok(connection.open_bi().await?) }).await?;
+        write_admission(&mut send, frame, permit).await?;
         let reply = transport::read(&mut receive).await?;
         ensure!(reply.request() == frame.request(), "admission correlation");
         Ok(reply)
     })
     .await
     .context("whole admission deadline")?
+}
+
+async fn admission_stream<T>(
+    permit: Option<&AdmissionPermit2>,
+    open: impl std::future::Future<Output = Result<T>>,
+) -> Result<T> {
+    if let Some(permit) = permit {
+        permit.check()?;
+    }
+    let stream = open.await?;
+    if let Some(permit) = permit {
+        permit.check()?;
+    }
+    Ok(stream)
+}
+
+async fn write_admission(
+    send: &mut iroh::endpoint::SendStream,
+    frame: &wire::ParsedFrame2,
+    permit: Option<&AdmissionPermit2>,
+) -> Result<()> {
+    let Some(permit) = permit else {
+        return transport::write(send, frame).await;
+    };
+    let result = transport::write_checked(send, frame, || permit.check()).await;
+    if result.is_err() {
+        let _ = send.reset(0u32.into());
+    }
+    result
 }
 fn dial_peer(
     owner: &mut Owner2,
@@ -253,24 +287,24 @@ async fn admit_a(
     .await?;
     let binding = transport::binding(&connection, *endpoint.id().as_bytes(), true)?;
     let conn = connection.clone();
-    let (g, hello) = handle
+    let (g, hello, permit) = handle
         .call(move |owner| owner.begin_admission(c, conn, binding, deadline, None, pair.as_ref()))
         .await?;
-    let reply = admission_rpc(&connection, &hello, deadline).await?;
+    let reply = admission_rpc(&connection, &hello, deadline, permit.as_ref()).await?;
     handle
         .call(move |owner| owner.accept_hello(c, g, reply))
         .await?;
     let proof = handle
         .call(move |owner| owner.admission_proof(c, g))
         .await?;
-    let reply = admission_rpc(&connection, &proof, deadline).await?;
+    let reply = admission_rpc(&connection, &proof, deadline, permit.as_ref()).await?;
     handle
         .call(move |owner| owner.accept_proof(c, g, reply))
         .await?;
     let admitted = handle
         .call(move |owner| owner.admitted_frame(c, g, None))
         .await?;
-    let reply = admission_rpc(&connection, &admitted, deadline).await?;
+    let reply = admission_rpc(&connection, &admitted, deadline, permit.as_ref()).await?;
     let link = handle
         .call(move |owner| owner.accept_admitted(c, g, reply))
         .await?;
@@ -311,18 +345,18 @@ async fn admit_b(
     let id = hello.body().value().fields(12)?[0].fixed::<32>()?;
     let request = hello.request();
     let conn = connection.clone();
-    let (c, g, own) = handle
+    let (c, g, own, permit) = handle
         .call(move |owner| {
             let c = owner.slot(id)?;
             ensure!(owner.snapshot(c)?.head.role == 1, "B listener role");
-            owner.observe_hello_authority(c, &conn, binding, &hello, pair.as_ref())?;
-            let (g, own) =
+            owner.observe_hello_authority(c, &conn, binding, &hello, pair.as_ref(), deadline)?;
+            let (g, own, permit) =
                 owner.begin_admission(c, conn, binding, deadline, Some(request), pair.as_ref())?;
             owner.accept_hello(c, g, hello)?;
-            Ok((c, g, own))
+            Ok((c, g, own, permit))
         })
         .await?;
-    transport::write(&mut send, &own).await?;
+    write_admission(&mut send, &own, permit.as_ref()).await?;
     let (mut send, proof) = read_round(connection).await?;
     handle
         .call(move |owner| owner.accept_proof(c, g, proof))
@@ -330,7 +364,7 @@ async fn admit_b(
     let own = handle
         .call(move |owner| owner.admission_proof(c, g))
         .await?;
-    transport::write(&mut send, &own).await?;
+    write_admission(&mut send, &own, permit.as_ref()).await?;
     let (mut send, admitted) = read_round(connection).await?;
     let request = admitted.request();
     let own = handle
@@ -339,7 +373,7 @@ async fn admit_b(
     let link = handle
         .call(move |owner| owner.accept_admitted(c, g, admitted))
         .await?;
-    transport::write(&mut send, &own).await?;
+    write_admission(&mut send, &own, permit.as_ref()).await?;
     Ok(link)
 }
 async fn verify(handle: &Handle2, link: &Link2, frame: &wire::ParsedFrame2) -> Result<()> {
@@ -1006,124 +1040,26 @@ fn unpublish_previous_instance(owner: &mut Owner2, directory: &Path) -> Result<(
     }
     Ok(())
 }
-pub async fn run(profile: config::Profile2) -> Result<()> {
-    let _diagnostic_report = timing::Report;
-    profile.validate()?;
-    let lan = profile.route.lan();
-    if let Some(lan) = lan {
-        lan::verify_interface(lan)?;
-    }
-    let mut repository = db::RuntimeRepository::open(
-        kilogram_state::StateDirectoryLock::acquire(&profile.state_dir)?,
-        profile.owner()?,
-        profile.db_config(),
-    )?;
-    let saved = repository.profile()?;
-    ensure!(
-        saved.enrollment.device == parse_id(&profile.device)?
-            && saved.contexts
-                == [
-                    parse_id(&profile.contexts[0])?,
-                    parse_id(&profile.contexts[1])?
-                ],
-        "profile Device/context pins"
-    );
-    let mut owner = Owner2::new(repository, profile.route.clone(), profile.enabled.clone())?;
-    std::fs::create_dir_all(&profile.locator_directory)?;
-    unpublish_previous_instance(&mut owner, &profile.locator_directory)?;
-    let endpoint = transport::bind_fresh(&profile.route).await?;
-    if lan.is_some() {
-        owner.observe_lan_interface(Some(endpoint.clone()));
-    }
-    let instance = shared_admin::random()?;
-    for c in &profile.enabled {
-        // Local readable history remains available when current messaging permission is blocked.
-        if let Err(error) = owner.require(*c, false) {
-            eprintln!("od2_publication_pending context={c} {error:#}");
-            continue;
-        }
-        owner.rotate_locator(*c, instance, &endpoint.addr())?;
-        let raw = owner.export_locator(*c, instance, &endpoint.addr())?;
-        let id = owner.snapshot(*c)?.head.context;
-        match replace_public(
-            &profile
-                .locator_directory
-                .join(format!("{}.locator", hex(&id))),
-            &raw,
-        ) {
-            Ok(()) => owner.mark_exported(*c, &raw)?,
-            Err(e) => eprintln!("od2_export_pending context={c} {e:#}"),
-        }
-    }
-    let account = owner.account()?;
-    let (ipc, mut work) =
-        RuntimeIpcServer::start_ordered2(profile.ipc_file.clone(), account, owner.device()).await?;
-    let resources = owner.resources.clone();
-    let (handle, join) = owner_thread(owner)?;
+pub(super) fn start_transport(
+    tasks: &mut tokio::task::JoinSet<()>,
+    handle: &Handle2,
+    endpoint: &Endpoint,
+    lan: Option<wire::DirectLan2>,
+    enabled: &[u8],
+    target: Option<discovery::TargetChanges2>,
+    stop: tokio::sync::watch::Receiver<bool>,
+) {
+    let resources = handle.resources.clone();
     let permits = Arc::new(Semaphore::new(2));
-    let mut tasks = tokio::task::JoinSet::new();
-    let publication_endpoint = endpoint.clone();
-    let publication_route = profile.route.clone();
-    let publication_handle = handle.clone();
-    let directory = profile.locator_directory.clone();
-    let enabled = profile.enabled.clone();
-    tasks.spawn(async move {
-        loop {
-            tokio::time::sleep(Duration::from_secs(2)).await;
-            if let Some(lan) = lan {
-                let current = lan::verify_interface(lan).is_ok()
-                    && publication_route
-                        .advertisement(&publication_endpoint)
-                        .is_ok();
-                let verified = current.then(|| publication_endpoint.clone());
-                if publication_handle
-                    .call(move |owner| {
-                        owner.observe_lan_interface(verified);
-                        Ok(())
-                    })
-                    .await
-                    .is_err()
-                    || !current
-                {
-                    continue;
-                }
-            }
-            for c in &enabled {
-                let c = *c;
-                let addr = publication_endpoint.addr();
-                let publication = publication_handle
-                    .call(move |owner| {
-                        if owner.locator_needs_rotation(c, instance, &addr)? {
-                            owner.rotate_locator(c, instance, &addr)?;
-                        }
-                        let raw = owner.export_locator(c, instance, &addr)?;
-                        let id = owner.snapshot(c)?.head.context;
-                        if owner.exported[usize::from(c)]
-                            == Some(wire::hash(wire::DESCRIPTOR, &raw))
-                        {
-                            return Ok(None);
-                        }
-                        Ok(Some((id, raw)))
-                    })
-                    .await;
-                if let Ok(Some((id, raw))) = publication
-                    && replace_public(&directory.join(format!("{}.locator", hex(&id))), &raw)
-                        .is_ok()
-                {
-                    let _ = publication_handle
-                        .call(move |owner| owner.mark_exported(c, &raw))
-                        .await;
-                }
-            }
-        }
-    });
     let listener_endpoint = endpoint.clone();
     let listener_handle = handle.clone();
     let listener_permits = permits.clone();
     let listener_resources = resources.clone();
+    let mut listener_stop = stop.clone();
     tasks.spawn(async move{
         let mut connections=tokio::task::JoinSet::new();
         loop{while connections.try_join_next().is_some(){} tokio::select!{
+            _ = listener_stop.wait_for(|stop| *stop) => break,
             incoming=listener_endpoint.accept()=>{let Some(incoming)=incoming else{break};
                 if let Some(lan)=lan
                     && !matches!(incoming.remote_addr(), IncomingAddr::Ip(socket) if socket.ip() == IpAddr::V4(lan.peer()))
@@ -1152,13 +1088,31 @@ pub async fn run(profile: config::Profile2) -> Result<()> {
                     if let Err(e)=result{eprintln!("od2_inbound_end {e:#}");}
                 });
             },_ =connections.join_next(),if !connections.is_empty()=>{},
-        }}connections.abort_all();
+        }}
+        connections.abort_all();
+        while connections.join_next().await.is_some() {}
     });
-    for c in profile.enabled.clone() {
+    for &c in enabled {
+        if let Some(target) = &target {
+            let mut stop = stop.clone();
+            let dial = auto_dial(
+                c,
+                endpoint.clone(),
+                handle.clone(),
+                permits.clone(),
+                target.clone(),
+            );
+            tasks.spawn(async move {
+                tokio::select! {
+                    _ = stop.wait_for(|stop| *stop) => {}
+                    _ = dial => {}
+                }
+            });
+            continue;
+        }
         let endpoint = endpoint.clone();
         let handle = handle.clone();
         let permits = permits.clone();
-        let resources = resources.clone();
         tasks.spawn(async move {
             loop {
                 if handle.stop.load(Ordering::Acquire) {
@@ -1177,40 +1131,253 @@ pub async fn run(profile: config::Profile2) -> Result<()> {
                     continue;
                 }
                 if let Ok(permit) = permits.clone().try_acquire_owned() {
-                    let accounting = resources.acquired();
-                    let deadline = Instant::now() + Duration::from_secs(30);
-                    let outcome = tokio::time::timeout_at(
-                        tokio::time::Instant::from_std(deadline),
-                        admit_a(&handle, &endpoint, c, deadline),
-                    )
-                    .await;
-                    if let Ok(Ok((connection, link))) = outcome {
-                        let outcome: Result<()> = async {
-                            fresh_a(&handle, &connection, &link).await?;
-                            let mut cursor = 1;
-                            loop {
-                                data_round_a(&handle, &connection, &link, &mut cursor).await?;
-                                tokio::time::sleep(Duration::from_millis(25)).await;
-                            }
-                        }
-                        .await;
-                        connection.close(0u32.into(), b"bounded reconnect");
-                        if let Err(e) = outcome {
-                            eprintln!("od2_outbound_end context={c} {e:#}");
-                        }
-                    }
-                    drop(accounting);
-                    drop(permit);
+                    let _permit = permit;
+                    outbound(c, &handle, &endpoint).await;
                 }
                 tokio::time::sleep(Duration::from_millis(500)).await;
             }
         });
     }
-    eprintln!(
-        "od2_runtime_ready pid={} endpoint={}",
-        std::process::id(),
-        endpoint.id()
+}
+
+async fn outbound(c: u8, handle: &Handle2, endpoint: &Endpoint) {
+    let _accounting = handle.resources.acquired();
+    let deadline = Instant::now() + Duration::from_secs(30);
+    let outcome = tokio::time::timeout_at(
+        tokio::time::Instant::from_std(deadline),
+        admit_a(handle, endpoint, c, deadline),
+    )
+    .await;
+    if let Ok(Ok((connection, link))) = outcome {
+        let _close = CloseOnFailure(connection.clone(), true);
+        let outcome: Result<()> = async {
+            fresh_a(handle, &connection, &link).await?;
+            let mut cursor = 1;
+            loop {
+                data_round_a(handle, &connection, &link, &mut cursor).await?;
+                tokio::time::sleep(Duration::from_millis(25)).await;
+            }
+        }
+        .await;
+        if let Err(error) = outcome {
+            eprintln!("od2_outbound_end context={c} {error:#}");
+        }
+    }
+}
+
+fn retry_delay(failures: u32, jitter: u16) -> Duration {
+    let upper = 1000u64
+        .checked_shl(failures.min(4))
+        .unwrap_or(16_000)
+        .min(15_000);
+    let lower = upper / 2;
+    Duration::from_millis(lower + u64::from(jitter) % (upper - lower + 1))
+}
+
+async fn auto_dial(
+    slot: u8,
+    endpoint: Endpoint,
+    handle: Handle2,
+    permits: Arc<Semaphore>,
+    mut target: discovery::TargetChanges2,
+) {
+    let role = handle
+        .call(move |owner| Ok(owner.snapshot(slot)?.head.role))
+        .await;
+    if !matches!(role, Ok(0)) {
+        return;
+    }
+    'target: loop {
+        let Ok(observed) = target.wait_for(Option::is_some).await else {
+            return;
+        };
+        drop(observed);
+        let mut failures = 0u32;
+        loop {
+            tokio::select! {
+                biased;
+                next = target.changed() => {
+                    if next.is_err() { return; }
+                    continue 'target;
+                }
+                permit = permits.clone().acquire_owned() => {
+                    let Ok(_permit) = permit else { return };
+                    tokio::select! {
+                        biased;
+                        next = target.changed() => {
+                            if next.is_err() { return; }
+                            continue 'target;
+                        }
+                        _ = outbound(slot, &handle, &endpoint) => {}
+                    }
+                }
+            }
+            let jitter = shared_admin::random::<2>()
+                .map(u16::from_ne_bytes)
+                .unwrap_or(0);
+            let delay = retry_delay(failures, jitter);
+            failures = failures.saturating_add(1);
+            tokio::select! {
+                biased;
+                next = target.changed() => {
+                    if next.is_err() { return; }
+                    continue 'target;
+                }
+                _ = tokio::time::sleep(delay) => {}
+            }
+        }
+    }
+}
+
+pub async fn run(profile: config::Profile2) -> Result<()> {
+    let _diagnostic_report = timing::Report;
+    profile.validate()?;
+    let lan = profile.route.lan();
+    let auto = !profile.lan_discovery.is_manual();
+    if !auto && let Some(lan) = lan {
+        lan::verify_interface(lan)?;
+    }
+    let mut repository = db::RuntimeRepository::open(
+        kilogram_state::StateDirectoryLock::acquire(&profile.state_dir)?,
+        profile.owner()?,
+        profile.db_config(),
+    )?;
+    let saved = repository.profile()?;
+    ensure!(
+        saved.enrollment.device == parse_id(&profile.device)?
+            && saved.contexts
+                == [
+                    parse_id(&profile.contexts[0])?,
+                    parse_id(&profile.contexts[1])?
+                ],
+        "profile Device/context pins"
     );
+    let mut owner = Owner2::new(repository, profile.route.clone(), profile.enabled.clone())?;
+    std::fs::create_dir_all(&profile.locator_directory)?;
+    unpublish_previous_instance(&mut owner, &profile.locator_directory)?;
+    let instance = shared_admin::random()?;
+    let endpoint = if auto {
+        owner.select_auto_discovery();
+        None
+    } else {
+        let endpoint = transport::bind_fresh(&profile.route).await?;
+        if lan.is_some() {
+            owner.observe_lan_interface(Some(endpoint.clone()));
+        }
+        for c in &profile.enabled {
+            // Local readable history remains available when current messaging permission is blocked.
+            if let Err(error) = owner.require(*c, false) {
+                eprintln!("od2_publication_pending context={c} {error:#}");
+                continue;
+            }
+            owner.rotate_locator(*c, instance, &endpoint.addr())?;
+            let raw = owner.export_locator(*c, instance, &endpoint.addr())?;
+            let id = owner.snapshot(*c)?.head.context;
+            match replace_public(
+                &profile
+                    .locator_directory
+                    .join(format!("{}.locator", hex(&id))),
+                &raw,
+            ) {
+                Ok(()) => owner.mark_exported(*c, &raw)?,
+                Err(e) => eprintln!("od2_export_pending context={c} {e:#}"),
+            }
+        }
+        Some(endpoint)
+    };
+    let account = owner.account()?;
+    let (ipc, mut work) =
+        RuntimeIpcServer::start_ordered2(profile.ipc_file.clone(), account, owner.device()).await?;
+    let (handle, join) = owner_thread(owner)?;
+    let mut tasks = tokio::task::JoinSet::new();
+    let (stop_auto, auto_stop) = tokio::sync::watch::channel(false);
+    #[cfg(windows)]
+    let auto_task = auto.then(|| {
+        tokio::spawn(super::lan_runtime::run(
+            profile.clone(),
+            instance,
+            handle.clone(),
+            auto_stop,
+        ))
+    });
+    #[cfg(not(windows))]
+    let _ = auto_stop;
+    if let Some(endpoint) = &endpoint {
+        let publication_endpoint = endpoint.clone();
+        let publication_route = profile.route.clone();
+        let publication_handle = handle.clone();
+        let directory = profile.locator_directory.clone();
+        let enabled = profile.enabled.clone();
+        tasks.spawn(async move {
+            loop {
+                tokio::time::sleep(Duration::from_secs(2)).await;
+                if let Some(lan) = lan {
+                    let current = lan::verify_interface(lan).is_ok()
+                        && publication_route
+                            .advertisement(&publication_endpoint)
+                            .is_ok();
+                    let verified = current.then(|| publication_endpoint.clone());
+                    if publication_handle
+                        .call(move |owner| {
+                            owner.observe_lan_interface(verified);
+                            Ok(())
+                        })
+                        .await
+                        .is_err()
+                        || !current
+                    {
+                        continue;
+                    }
+                }
+                for c in &enabled {
+                    let c = *c;
+                    let addr = publication_endpoint.addr();
+                    let publication = publication_handle
+                        .call(move |owner| {
+                            if owner.locator_needs_rotation(c, instance, &addr)? {
+                                owner.rotate_locator(c, instance, &addr)?;
+                            }
+                            let raw = owner.export_locator(c, instance, &addr)?;
+                            let id = owner.snapshot(c)?.head.context;
+                            if owner.exported[usize::from(c)]
+                                == Some(wire::hash(wire::DESCRIPTOR, &raw))
+                            {
+                                return Ok(None);
+                            }
+                            Ok(Some((id, raw)))
+                        })
+                        .await;
+                    if let Ok(Some((id, raw))) = publication
+                        && replace_public(&directory.join(format!("{}.locator", hex(&id))), &raw)
+                            .is_ok()
+                    {
+                        let _ = publication_handle
+                            .call(move |owner| owner.mark_exported(c, &raw))
+                            .await;
+                    }
+                }
+            }
+        });
+        start_transport(
+            &mut tasks,
+            &handle,
+            endpoint,
+            lan,
+            &profile.enabled,
+            None,
+            stop_auto.subscribe(),
+        );
+        eprintln!(
+            "od2_runtime_ready pid={} endpoint={}",
+            std::process::id(),
+            endpoint.id()
+        );
+    } else {
+        eprintln!(
+            "od2_runtime_ready pid={} endpoint=waiting-network",
+            std::process::id()
+        );
+    }
     loop {
         let work = tokio::select! {work=work.recv()=>work,_=tokio::time::sleep(Duration::from_millis(100))=>{if handle.stop.load(Ordering::Acquire){break;}continue;}};
         let Some(work) = work else { break };
@@ -1219,9 +1386,14 @@ pub async fn run(profile: config::Profile2) -> Result<()> {
         let result = match command {
             RuntimeIpcCommand::Shutdown => RuntimeIpcResponse::ShutdownAccepted,
             RuntimeIpcCommand::OrderedDialog { request } => {
-                let addr = endpoint.addr();
+                let manual = endpoint.as_ref().map(Endpoint::addr);
+                let setting = profile.lan_discovery.clone();
                 let outcome = handle
-                    .call(move |owner| ipc2(owner, &request, instance, &addr))
+                    .call(move |owner| {
+                        let addr = manual
+                            .or_else(|| owner.endpoint.as_ref().map(|(_, addr)| addr.clone()));
+                        ipc2(owner, &request, instance, addr.as_ref(), &setting)
+                    })
                     .await;
                 match outcome {
                     Ok(response) => RuntimeIpcResponse::OrderedDialog { response },
@@ -1239,19 +1411,34 @@ pub async fn run(profile: config::Profile2) -> Result<()> {
             break;
         }
     }
-    handle.stop.store(true, Ordering::Release);
+    stop_auto.send_replace(true);
     tasks.abort_all();
     while tasks.join_next().await.is_some() {}
-    endpoint.close().await;
-    ipc.shutdown().await?;
+    if let Some(endpoint) = endpoint {
+        endpoint.close().await;
+    }
+    #[cfg(windows)]
+    let network_shutdown = match auto_task {
+        Some(task) => task
+            .await
+            .context("LAN Auto supervisor failed")
+            .and_then(|result| result),
+        None => Ok(()),
+    };
+    handle.stop.store(true, Ordering::Release);
+    let ipc_shutdown = ipc.shutdown().await;
     join.join().map_err(|_| anyhow::anyhow!("owner panicked"))?;
+    ipc_shutdown?;
+    #[cfg(windows)]
+    network_shutdown?;
     Ok(())
 }
 fn ipc2(
     owner: &mut Owner2,
     raw: &[u8],
     instance: Id,
-    addr: &iroh::EndpointAddr,
+    addr: Option<&iroh::EndpointAddr>,
+    setting: &LanDiscovery2,
 ) -> Result<Vec<u8>> {
     let value = wire::decode(raw, 32 * 1024)?;
     let f = value.list()?;
@@ -1269,8 +1456,10 @@ fn ipc2(
         1 => {
             let _timing = timing::span(timing::Metric::Status);
             value.fields(2)?;
-            let lan_current = owner.check_lan_advertisement(addr).is_ok();
-            if !lan_current {
+            let auto = owner.auto_discovery();
+            let mut lan_current =
+                addr.is_some_and(|addr| owner.check_lan_advertisement(addr).is_ok());
+            if !auto && !lan_current {
                 owner.observe_lan_interface(None);
             }
             let mut contexts = Vec::new();
@@ -1287,7 +1476,8 @@ fn ipc2(
                     .and_then(|(verified, _)| owner.live_lease(c, &verified).ok());
                 let live_admitted = lease.is_some();
                 let lease_expires = lease.map(|(deadline, _)| deadline);
-                let publication_ready = owner.export_locator(c, instance, addr).is_ok();
+                let publication_ready =
+                    addr.is_some_and(|addr| owner.export_locator(c, instance, addr).is_ok());
                 let policy_error = now()
                     .and_then(|wall| owner.current(&s, wall))
                     .err()
@@ -1311,14 +1501,59 @@ fn ipc2(
                     + owner.stats.committed_decrypt
                     + owner.stats.ambiguous_packet_calls,
             );
+            let mut discovery = None;
+            if auto {
+                lan_current &= owner
+                    .network_freshness()
+                    .is_some_and(|token| token.is_current());
+                if !lan_current {
+                    for row in &mut contexts {
+                        if let Some(fields) = row.as_object_mut()
+                            && fields.contains_key("live_admitted")
+                        {
+                            fields.insert("live_admitted".into(), false.into());
+                            fields.insert("lease_expires".into(), serde_json::Value::Null);
+                            fields.remove("selected_lan_peer");
+                            fields.insert("publication_ready".into(), false.into());
+                        }
+                    }
+                }
+                let state = if !lan_current {
+                    DiscoveryStatus2::WaitingNetwork
+                } else if contexts
+                    .iter()
+                    .all(|row| row["active"] == true && row["live_admitted"] == true)
+                {
+                    DiscoveryStatus2::Connected
+                } else if contexts
+                    .iter()
+                    .any(|row| !row["policy_error"].is_null() || row["publication_ready"] != true)
+                {
+                    DiscoveryStatus2::WaitingPolicy
+                } else if owner
+                    .snapshot(0)
+                    .and_then(|s| owner.pair_for(&s, now()?).map(|pair| pair.is_some()))
+                    .unwrap_or(false)
+                {
+                    DiscoveryStatus2::Retrying
+                } else {
+                    DiscoveryStatus2::Discovering
+                };
+                discovery = Some(DiscoveryView2 {
+                    selection: setting.clone(),
+                    state,
+                });
+            }
             let observed_endpoint = if owner.route.lan().is_some() {
-                lan_current.then_some(addr)
+                addr.filter(|_| lan_current)
             } else {
                 owner.endpoint.as_ref().map(|(_, addr)| addr)
             };
-            b(serde_json::to_vec(
-                &serde_json::json!({"version":2,"runtime_pid":std::process::id(),"runtime_instance":hex(&instance),"contexts":contexts,"stats":owner.stats,"window":owner.window.snapshot(),"resources":owner.resources.snapshot(),"endpoint":observed_endpoint.map(|addr|serde_json::json!({"id":hex(addr.id.as_bytes()),"ips":addr.ip_addrs().collect::<Vec<_>>(),"relays":addr.relay_urls().map(|u|u.as_str()).collect::<Vec<_>>()})),"route":config::profile_route(&owner.route),"root_generation":owner.repository.generation(),"backend":owner.repository.backend_stats()?}),
-            )?)
+            let mut report = serde_json::json!({"version":2,"runtime_pid":std::process::id(),"runtime_instance":hex(&instance),"contexts":contexts,"stats":owner.stats,"window":owner.window.snapshot(),"resources":owner.resources.snapshot(),"endpoint":observed_endpoint.map(|addr|serde_json::json!({"id":hex(addr.id.as_bytes()),"ips":addr.ip_addrs().collect::<Vec<_>>(),"relays":addr.relay_urls().map(|u|u.as_str()).collect::<Vec<_>>()})),"route":config::profile_route(&owner.route),"root_generation":owner.repository.generation(),"backend":owner.repository.backend_stats()?});
+            if let Some(discovery) = discovery {
+                report["lan_discovery"] = serde_json::to_value(discovery)?;
+            }
+            b(serde_json::to_vec(&report)?)
         }
         2 => {
             let f = value.fields(5)?;
@@ -1360,7 +1595,7 @@ fn ipc2(
         }
         6 => {
             let f = value.fields(3)?;
-            b(owner.export_locator(c(&f[2])?, instance, addr)?)
+            b(owner.export_locator(c(&f[2])?, instance, addr.context("LocatorUnavailable")?)?)
         }
         7 => {
             let f = value.fields(3)?;
@@ -1413,7 +1648,7 @@ fn ipc2(
         15 => {
             let f = value.fields(5)?;
             let c = c(&f[2])?;
-            let raw = owner.export_locator(c, instance, addr)?;
+            let raw = owner.export_locator(c, instance, addr.context("LocatorUnavailable")?)?;
             ensure!(
                 wire::hash(b"", &raw) == f[4].fixed::<32>()?,
                 "locator changed before export"

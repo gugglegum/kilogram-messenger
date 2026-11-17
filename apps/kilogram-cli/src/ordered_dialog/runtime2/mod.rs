@@ -15,6 +15,10 @@ pub mod discovery;
 mod handshake;
 mod hooks;
 mod lan;
+#[cfg(windows)]
+pub mod lan_metadata;
+#[cfg(windows)]
+mod lan_runtime;
 mod native;
 mod network;
 pub mod owner;

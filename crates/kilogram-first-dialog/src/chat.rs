@@ -45,6 +45,8 @@ pub struct ChatStatus {
     pub runtime_instance: String,
     pub contexts: [String; 2],
     pub live_admitted: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lan_discovery: Option<kilogram_runtime_ipc::ordered2::DiscoveryStatus2>,
     #[serde(skip)]
     pub own_roles: [u8; 2],
 }
@@ -171,6 +173,7 @@ impl Chat {
                     runtime_instance: artifact::hex(&scope.instance),
                     contexts: scope.contexts.map(|context| artifact::hex(&context)),
                     live_admitted: work.view.current(Instant::now(), consent::now()?),
+                    lan_discovery: work.view.discovery,
                     own_roles: [scope.own_role; 2],
                 })
             }
@@ -492,7 +495,12 @@ impl Observer {
     fn check_status(&self, status: &Status2) -> Result<()> {
         self.check_descriptor()?;
         ensure!(
-            status.runtime_instance == self.instance && status.route == self.profile.route,
+            status.runtime_instance == self.instance
+                && status.route == self.profile.route
+                && status.lan_discovery.as_ref().map_or_else(
+                    || self.profile.lan_discovery.is_manual(),
+                    |view| view.selection == self.profile.lan_discovery,
+                ),
             "Observed runtime changed; attach again"
         );
         for slot in 0..2 {
@@ -526,6 +534,7 @@ impl Observer {
             runtime_instance: self.instance.clone(),
             contexts: self.profile.contexts.clone(),
             live_admitted,
+            lan_discovery: status.lan_discovery.as_ref().map(|view| view.state),
             own_roles: [status.installed(0)?.role, status.installed(1)?.role],
         })
     }

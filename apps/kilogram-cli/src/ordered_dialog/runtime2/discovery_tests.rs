@@ -30,7 +30,12 @@ fn configure_auto(owner: &mut Owner2, id: iroh::EndpointId) -> Result<iroh::Endp
 
 fn status(owner: &mut Owner2, addr: &iroh::EndpointAddr) -> Result<serde_json::Value> {
     let request = wire::encode(&a([u(2), u(1)]), 128)?;
-    let result = ipc2(owner, &request, INSTANCE, addr)?;
+    let setting = LanDiscovery2::Auto {
+        adapter_id: "1".repeat(32),
+        network_id: "2".repeat(32),
+        prefix: 24,
+    };
+    let result = ipc2(owner, &request, INSTANCE, Some(addr), &setting)?;
     let value = wire::decode(&result, 48 * 1024)?;
     Ok(serde_json::from_slice(value.fields(3)?[2].bytes()?)?)
 }
@@ -40,6 +45,244 @@ fn peer_revisions(owner: &mut Owner2) -> Result<[u64; 2]> {
         owner.snapshot(0)?.spec.peer_locator_revision,
         owner.snapshot(1)?.spec.peer_locator_revision,
     ])
+}
+
+#[tokio::test]
+async fn t13d_review_queued_publication_checks_expiry_and_policy_at_send() -> Result<()> {
+    let pair = Actors2::new(false).await?;
+    let local = pair.endpoints[1].id();
+    let actor = &pair.artifacts[0];
+    let wall = now()?;
+    let authority = actor
+        .renewal(0, 3)
+        .map_err(|e| anyhow::anyhow!(e.to_string()))?
+        .authority()
+        .encode()?;
+    let body = a([
+        u(2),
+        b(actor.c),
+        b(actor.credentials[0].cert_ref()),
+        b(actor.credentials[1].cert_ref()),
+        u(1),
+        u(2),
+        wire::Origin::Fresh.value(),
+        u(1),
+        u(wall - 1),
+        u(wall + 25),
+    ]);
+    let signed = wire::signing_bytes(wire::CONSENT, &body, 4096)?;
+    let short_consent = wire::encode(
+        &a([
+            body,
+            b(actor.roots[0].sign(&signed)),
+            b(actor.roots[1].sign(&signed)),
+        ]),
+        4096,
+    )?;
+    pair.handles[1]
+        .call(move |owner| {
+            let addr = configure_auto(owner, local)?;
+            let network = NetworkGeneration2(1);
+            let (publication, _) = owner.announce_lan(network)?;
+            let mut sent = 0;
+            publication.send_if_current(now, |_| {
+                sent += 1;
+                Ok(())
+            })?;
+            ensure!(sent == 1);
+            let (expired, _) = owner.announce_lan(network)?;
+            let expired_at = now()? + 45;
+            expired.send_if_current(
+                || Ok(expired_at),
+                |_| anyhow::bail!("expired announcement sent"),
+            )?;
+            let (old_policy, _) = owner.announce_lan(network)?;
+            owner.import_authority(authority)?;
+            old_policy.send_if_current(now, |_| anyhow::bail!("old authority publication sent"))?;
+            let (old_consent, _) = owner.announce_lan(network)?;
+            let (_, current) = owner.require(0, false)?;
+            owner.import_consent(0, short_consent, current.consent.reference(), false)?;
+            old_consent.send_if_current(now, |_| anyhow::bail!("old consent publication sent"))?;
+            let (short, _) = owner.announce_lan(network)?;
+            short.send_if_current(
+                || Ok(wall + 25),
+                |_| anyhow::bail!("expired consent publication sent"),
+            )?;
+            let (old_own, _) = owner.announce_lan(network)?;
+            owner.rotate_locator(0, INSTANCE, &addr)?;
+            old_own.send_if_current(now, |_| anyhow::bail!("old locator publication sent"))?;
+            let (old_network, _) = owner.announce_lan(network)?;
+            owner.enable_lan_discovery(NetworkGeneration2(2))?;
+            old_network.send_if_current(now, |_| anyhow::bail!("old network publication sent"))?;
+            let (current, _) = owner.announce_lan(NetworkGeneration2(2))?;
+            current.send_if_current(now, |_| {
+                sent += 1;
+                Ok(())
+            })?;
+            ensure!(sent == 2);
+            Ok(())
+        })
+        .await
+}
+
+#[tokio::test]
+async fn t13d_review_admission_write_and_staged_remote_authority_require_current_network()
+-> Result<()> {
+    let fixtures = Actors2::new(false).await?;
+    let local = fixtures.endpoints[1].id();
+    let (dialed, accepted) = connect_probe(&fixtures).await?;
+    let ann = Announcement {
+        actors: &fixtures.artifacts,
+        slots: current_slots(&fixtures).await?,
+        endpoint: *accepted.remote_id().as_bytes(),
+        issued: now()?,
+    };
+    let socket = SocketAddr::from((PEER, 42000));
+    let datagram = ann.seal(ann.slots, &ann.locators([2, 2], socket)?, PEER, ann.issued)?;
+    let deadline = Instant::now() + Duration::from_secs(30);
+    let conn = accepted.clone();
+    let permit = fixtures.handles[1]
+        .call(move |owner| {
+            configure_auto(owner, local)?;
+            let epoch = NetworkGeneration2(1);
+            let observed = owner.capture_lan_discovery(epoch)?;
+            owner.accept_lan_discovery(&observed, &datagram)?;
+            let pair = owner.listener_pair(socket)?.context("current pair")?;
+            owner
+                .admission_permit(Some(&pair), deadline, &conn)?
+                .context("Auto admission")
+        })
+        .await?;
+    let binding = transport::binding(&accepted, *local.as_bytes(), false)?;
+    let frame = wire::ParsedFrame2::sign(
+        wire::FrameBody2::parse(
+            wire::FrameKind::Admitted,
+            &wire::encode(
+                &a([b([7; 32]), b(fixtures.artifacts[0].c), u(1), u(2)]),
+                256,
+            )?,
+        )?,
+        binding,
+        [1; 16],
+        &fixtures.artifacts[0].devices[1],
+    )?;
+    tokio::time::timeout(Duration::from_secs(5), async {
+        let (mut send, _recv) = accepted.open_bi().await?;
+        let (_, received) =
+            tokio::try_join!(write_admission(&mut send, &frame, Some(&permit)), async {
+                let (_send, mut receive) = dialed.accept_bi().await?;
+                transport::read(&mut receive).await
+            })?;
+        ensure!(received.raw() == frame.raw());
+        Ok::<_, anyhow::Error>(())
+    })
+    .await??;
+
+    let (opened, entered) = oneshot::channel();
+    let (release, hold) = oneshot::channel();
+    let waiting = accepted.clone();
+    let pending_permit = permit.clone();
+    let delayed = tokio::spawn(async move {
+        admission_stream(Some(&pending_permit), async {
+            let _ = opened.send(());
+            hold.await?;
+            Ok(waiting.open_bi().await?)
+        })
+        .await
+    });
+    tokio::time::timeout(Duration::from_secs(5), entered).await??;
+    permit.network.revoke();
+    release
+        .send(())
+        .map_err(|_| anyhow::anyhow!("stream waiter ended before release"))?;
+    let error = tokio::time::timeout(Duration::from_secs(5), delayed)
+        .await??
+        .err()
+        .context("dialer stream used a revoked permit")?;
+    ensure!(
+        error
+            .to_string()
+            .contains("LAN admission permission expired")
+    );
+    let (mut reply, _) = accepted.open_bi().await?;
+    ensure!(
+        write_admission(&mut reply, &frame, Some(&permit))
+            .await
+            .is_err()
+    );
+
+    let update = |revision| -> Result<Vec<u8>> {
+        Ok(fixtures.artifacts[0]
+            .renewal(0, revision)
+            .map_err(|e| anyhow::anyhow!(e.to_string()))?
+            .authority()
+            .encode()?)
+    };
+    let third = update(3)?;
+    let fourth = update(4)?;
+    fixtures.handles[1]
+        .call(move |owner| {
+            let epoch = NetworkGeneration2(2);
+            owner.enable_lan_discovery(epoch)?;
+            let observed = owner.capture_lan_discovery(epoch)?;
+            owner.accept_lan_discovery(&observed, &datagram)?;
+            let pair = owner
+                .listener_pair(socket)?
+                .context("pair after reconnect")?;
+            let permit = owner.admission_permit(Some(&pair), deadline, &accepted)?;
+            let before = owner.repository.generation();
+            owner.test_revoke_lan_at_commit = true;
+            let error = owner
+                .import_observed_authority(third.clone(), 0, permit)
+                .err()
+                .context("revoked network pinned authority")?;
+            ensure!(
+                error
+                    .to_string()
+                    .contains("LAN network observation expired"),
+                "{error:#}"
+            );
+            ensure!(owner.repository.generation() == before);
+            ensure!(
+                owner
+                    .repository
+                    .profile()?
+                    .peer
+                    .context("peer policy")?
+                    .revision
+                    == 2
+            );
+            owner.import_authority(third)?;
+            ensure!(
+                owner
+                    .repository
+                    .profile()?
+                    .peer
+                    .context("peer policy")?
+                    .revision
+                    == 3
+            );
+            let epoch = NetworkGeneration2(3);
+            owner.enable_lan_discovery(epoch)?;
+            let observed = owner.capture_lan_discovery(epoch)?;
+            owner.accept_lan_discovery(&observed, &datagram)?;
+            let pair = owner
+                .listener_pair(socket)?
+                .context("current pair after new epoch")?;
+            let permit = owner.admission_permit(Some(&pair), deadline, &accepted)?;
+            owner.import_observed_authority(fourth, 0, permit)?;
+            ensure!(
+                owner
+                    .repository
+                    .profile()?
+                    .peer
+                    .context("peer policy")?
+                    .revision
+                    == 4
+            );
+            Ok(())
+        })
+        .await
 }
 
 struct Announcement<'a> {
@@ -202,6 +445,7 @@ async fn t13c_partial_pair_blocks_actual_authorization_and_repairs_after_reopen(
                             binding,
                             &renewed,
                             Some(&before_update),
+                            Instant::now() + Duration::from_secs(10),
                         )
                         .err()
                         .context("early authority passed closed gate")?;
@@ -233,7 +477,9 @@ async fn t13c_partial_pair_blocks_actual_authorization_and_repairs_after_reopen(
                     ensure!(view["contexts"][0]["live_admitted"].as_bool() == Some(false));
                     ensure!(view["contexts"][1]["live_admitted"].as_bool() == Some(false));
                     let import = wire::encode(&a([u(2), u(5), u(1), b(&raw)]), 4096)?;
-                    ensure!(ipc2(o, &import, INSTANCE, &addr).is_err());
+                    ensure!(
+                        ipc2(o, &import, INSTANCE, Some(&addr), &LanDiscovery2::Manual {}).is_err()
+                    );
                     ensure!(o.repository.generation() == initial + 1);
                     // Fail the real second staged Locator commit at its authorization fence.
                     o.commit_peer_locator(
@@ -431,5 +677,151 @@ async fn t13c_replay_bad_candidates_and_policy_change() -> Result<()> {
         })
         .await?;
     dialed.close(0u32.into(), b"lease probe done");
+    Ok(())
+}
+
+#[tokio::test]
+async fn t13d_staged_locator_commit_checks_shared_revocation_and_reopens() -> Result<()> {
+    let pair = Actors2::new(false).await?;
+    let ann = Announcement {
+        actors: &pair.artifacts,
+        slots: current_slots(&pair).await?,
+        endpoint: *pair.endpoints[0].id().as_bytes(),
+        issued: now()?,
+    };
+    let local = pair.endpoints[1].id();
+    let socket = SocketAddr::from((PEER, 42000));
+    let datagram = ann.seal(ann.slots, &ann.locators([2, 2], socket)?, PEER, ann.issued)?;
+    pair.handles[1]
+        .call(move |owner| {
+            configure_auto(owner, local)?;
+            let first = NetworkGeneration2(1);
+            let observation = owner.capture_lan_discovery(first)?;
+            let generation = owner.repository.generation();
+            owner.test_revoke_lan_at_commit = true;
+            let error = owner
+                .accept_lan_discovery(&observation, &datagram)
+                .err()
+                .context("staged commit persisted under revoked network")?;
+            ensure!(format!("{error:#}").contains("LAN network observation expired"));
+            ensure!(
+                owner.repository.generation() == generation && peer_revisions(owner)? == [1, 1]
+            );
+            ensure!(owner.listener_pair(socket).is_err());
+            let next = NetworkGeneration2(2);
+            owner.enable_lan_discovery(next)?;
+            ensure!(owner.accept_lan_discovery(&observation, &datagram).is_err());
+            let fresh = owner.capture_lan_discovery(next)?;
+            owner.accept_lan_discovery(&fresh, &datagram)?;
+            ensure!(owner.repository.generation() == generation + 2);
+            let selected = owner.listener_pair(socket)?.context("target")?;
+            let snapshot = owner.snapshot(0)?;
+            owner.check_pair_attempt(&snapshot, Some(&selected))?;
+            // Model validated traffic immediately before a queued packet is
+            // delivered to the owner. A socket-side quota alone cannot see it.
+            owner.discovery_quota = discovery::DiscoveryQuota2::default();
+            let start = Instant::now();
+            for _ in 0..discovery::DISCOVERY_VALIDATIONS_PER_SECOND {
+                ensure!(owner.discovery_quota.take(start));
+            }
+            let excess = owner
+                .accept_lan_discovery(&fresh, &datagram)
+                .err()
+                .context("owner validated a ninth queued packet")?;
+            ensure!(excess.to_string().contains("validation quota"));
+            ensure!(owner.repository.generation() == generation + 2);
+            // This is the observation lease held by the independent network monitor.
+            // Revocation precedes any owner-side detach job.
+            owner
+                .network_freshness()
+                .context("LAN observation")?
+                .revoke();
+            ensure!(
+                owner
+                    .check_pair_attempt(&snapshot, Some(&selected))
+                    .is_err()
+            );
+            ensure!(
+                owner
+                    .route_for_remote(ann.endpoint, Some(&selected))
+                    .is_err()
+            );
+            Ok(())
+        })
+        .await
+}
+
+#[cfg(windows)]
+#[tokio::test]
+async fn t13d_auto_runtime_without_network_keeps_authenticated_local_ipc() -> Result<()> {
+    use kilogram_runtime_ipc::{
+        RuntimeIpcDescriptor,
+        ordered2::{Client2, Profile2Document},
+    };
+    let mut pair = Actors2::new(false).await?;
+    pair.connect(0).await?;
+    pair.fresh(0, false).await?;
+    let root = pair._path.clone();
+    let peer_locator = pair.handles[1]
+        .call(|owner| {
+            owner
+                .snapshot(0)?
+                .spec
+                .peer_locator
+                .context("cached manual locator")
+        })
+        .await?;
+    let account = pair.artifacts[0].credentials[1].certificate().account_id();
+    let device = pair.artifacts[0].credentials[1].certificate().device_id();
+    let contexts = [pair.artifacts[0].c, pair.artifacts[1].c];
+    drop(pair);
+    let profile = Profile2Document::decode(&serde_json::to_vec(&serde_json::json!({
+        "version":2, "profile_mode":"ordered-dialog-v2", "state_dir":root.join("state1"),
+        "account":account.to_string(), "claim":"2a".repeat(32), "device":device.to_string(),
+        "contexts":contexts.map(|id| hex(&id)), "enabled":[0,1],
+        "ipc_file":root.join("auto-ipc.json"), "locator_directory":root.join("auto-locators"),
+        "route":{"policy":"direct-only","bind":"172.31.255.250:0","relay":null,"lan_peer_ipv4":"172.31.255.249"},
+        "lan_discovery":{"mode":"auto","adapter_id":"13".repeat(16),"network_id":"39".repeat(16),"prefix":24}
+    }))?)?;
+    let ipc_file = profile.ipc_file.clone();
+    let expected = profile.lan_discovery.clone();
+    let run = tokio::spawn(runtime::run(profile.try_into()?));
+    let deadline = Instant::now() + Duration::from_secs(10);
+    let client = loop {
+        if let Ok(descriptor) = RuntimeIpcDescriptor::load(&ipc_file) {
+            break Client2::new(descriptor, account, device, contexts)?;
+        }
+        ensure!(
+            Instant::now() < deadline && !run.is_finished(),
+            "offline runtime failed to publish IPC"
+        );
+        tokio::time::sleep(Duration::from_millis(25)).await;
+    };
+    let operation = async {
+        let status = client.status().await?;
+        let discovery = status.lan_discovery.as_ref().context("LAN Auto status missing")?;
+        ensure!(discovery.selection == expected && discovery.state == DiscoveryStatus2::WaitingNetwork);
+        ensure!(status.endpoint.is_none() && !status.installed(0)?.live_admitted && !status.installed(1)?.live_admitted);
+        let import = wire::encode(&a([u(2), u(5), u(0), b(&peer_locator)]), 4096)?;
+        let reply = kilogram_runtime_ipc::call_with_descriptor(
+            client.descriptor(),
+            (account, device),
+            RuntimeIpcCommand::OrderedDialog { request: import },
+        ).await?;
+        ensure!(matches!(reply, RuntimeIpcResponse::Error { message } if message.contains("manual profile")));
+        let _ = client.history_page(0, contexts[0], None, 5).await?;
+        let request = [0x6a; 16];
+        let _ = client.send_text(0, contexts[0], request, "queued without LAN").await?;
+        ensure!(client.request_status(0, contexts[0], request).await?.is_some());
+        Ok::<_, anyhow::Error>(())
+    }.await;
+    let shutdown = client.shutdown().await;
+    tokio::time::timeout(Duration::from_secs(10), run).await???;
+    shutdown?;
+    operation?;
+    ensure!(
+        !ipc_file.exists(),
+        "offline IPC descriptor remained after quit"
+    );
     Ok(())
 }

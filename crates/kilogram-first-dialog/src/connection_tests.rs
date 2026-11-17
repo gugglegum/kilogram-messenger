@@ -314,6 +314,55 @@ fn t11a_terminal_fixture_and_observer_binding() -> Result<()> {
 }
 
 #[test]
+fn t13d_saved_auto_profile_and_owned_child_run_without_lan() -> Result<()> {
+    let [mut setup, _peer] = ready_pair("t13d-offline-", false)?;
+    let lan = LanSettings {
+        local: "172.31.255.250".parse()?,
+        peer: "172.31.255.249".parse()?,
+    };
+    // Scoped synthetic network IDs do not correspond to a live interface.
+    let selection = LanDiscovery2::Auto {
+        adapter_id: "13".repeat(16),
+        network_id: "39".repeat(16),
+        prefix: 24,
+    };
+    select_lan_discovery(&mut setup, Some(lan), selection.clone())?;
+    let home = setup.home.clone();
+    drop(setup);
+    let mut setup = Setup::open(&home)?;
+    ensure!(lan_settings(&setup) == Some(lan) && lan_discovery(&setup) == selection);
+    let cancel = Arc::new(AtomicBool::new(false));
+    let cleanup = Cleanup::default();
+    let mut session = Session::start(&mut setup, &cli(), cancel.clone(), false, &cleanup)?;
+    let outcome = (|| -> Result<()> {
+        let view = session.poll(&cancel)?;
+        ensure!(session.doc.lan_discovery == selection && view.running);
+        ensure!(
+            view.discovery == Some(DiscoveryStatus2::WaitingNetwork)
+                && view.connected == [false; 2]
+        );
+        ensure!(matches!(
+            session.locator(&mut setup, LocatorCommand::Retry, &cancel, None),
+            Err("locator_requires_manual_profile")
+        ));
+        Ok(())
+    })();
+    let ipc = session.doc.ipc_file.clone();
+    let closed = session.finish(&cleanup);
+    outcome?;
+    ensure!(closed.graceful && !closed.forced && closed.eof && closed.reaped && !ipc.exists());
+    select_lan_discovery(&mut setup, Some(lan), LanDiscovery2::Manual {})?;
+    let (file, doc) = prepare(&mut setup, &cli(), cancel, false)?;
+    ensure!(
+        doc.lan_discovery.is_manual()
+            && Profile2Document::decode(&fs::read(file)?)?
+                .lan_discovery
+                .is_manual()
+    );
+    Ok(())
+}
+
+#[test]
 fn cs41_lan_desktop_profile_socket_and_signed_pair() -> Result<()> {
     use kilogram_protocol::ordered_dialog_v2 as wire;
 
@@ -532,6 +581,7 @@ fn cs32b_request_start_freshness_and_schema_negatives() -> Result<()> {
         lease_expires: [200; 2],
         consent_expires: 200,
         running: true,
+        discovery: None,
         text: String::new(),
         messages: Messages::default(),
     };
@@ -584,6 +634,7 @@ fn cs32b_late_status_generation_is_discarded() -> Result<()> {
         lease_expires: [u64::MAX; 2],
         consent_expires: u64::MAX,
         running: true,
+        discovery: None,
         text: "old response".into(),
         messages: Messages::default(),
     };

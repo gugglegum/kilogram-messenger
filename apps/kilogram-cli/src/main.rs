@@ -661,8 +661,8 @@ enum Command {
         /// Contexts enabled by the OD1 owner; repeat at most twice.
         #[arg(long = "ordered-context")]
         ordered_contexts: Vec<String>,
-        #[arg(long)]
-        expect_account: Option<AccountId>,
+        #[arg(long, value_parser = |raw: &str| raw.parse::<AccountId>().map(Box::new))]
+        expect_account: Option<Box<AccountId>>,
         #[arg(long)]
         expect_claim: Option<String>,
         #[arg(long)]
@@ -674,6 +674,9 @@ enum Command {
         /// Explicit peer IPv4 for a fresh direct-only LAN profile.
         #[arg(long)]
         ordered_lan_peer_ipv4: Option<std::net::Ipv4Addr>,
+        /// Exact LAN discovery selection projected by local Setup.
+        #[arg(long, hide = true, requires = "ordered_lan_peer_ipv4")]
+        ordered_lan_discovery: Option<String>,
         /// New machine-local runtime launch profile.
         #[arg(long)]
         profile_file: PathBuf,
@@ -4037,6 +4040,7 @@ async fn run_command(command: Command) -> Result<()> {
             locator_directory,
             ordered_bind,
             ordered_lan_peer_ipv4,
+            ordered_lan_discovery,
             profile_file,
             state_dir,
             allow_account,
@@ -4074,20 +4078,26 @@ async fn run_command(command: Command) -> Result<()> {
                     locator_directory: locator_directory
                         .context("--locator-directory is required")?,
                     enabled: ordered_contexts,
-                    account: expect_account.context("--expect-account is required")?,
+                    account: *expect_account.context("--expect-account is required")?,
                     claim: expect_claim.context("--expect-claim is required")?,
                     device: expect_device.context("--expect-device is required")?,
                     route: route_policy.into(),
                     relay: relay_url.map(|url| url.to_string()),
                     bind: ordered_bind,
                     lan_peer_ipv4: ordered_lan_peer_ipv4,
+                    lan_discovery: ordered_lan_discovery
+                        .as_deref()
+                        .map(serde_json::from_str)
+                        .transpose()?
+                        .unwrap_or_default(),
                 });
             }
             anyhow::ensure!(
                 expect_account.is_none()
                     && expect_claim.is_none()
                     && expect_device.is_none()
-                    && ordered_lan_peer_ipv4.is_none(),
+                    && ordered_lan_peer_ipv4.is_none()
+                    && ordered_lan_discovery.is_none(),
                 "runtime2 pins require --profile-mode ordered-dialog-v2"
             );
             if profile_mode.is_some() {

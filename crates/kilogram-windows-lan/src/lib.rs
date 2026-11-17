@@ -9,7 +9,9 @@ use std::net::{Ipv4Addr, SocketAddrV4};
 #[allow(unsafe_code)]
 mod native;
 
-pub use native::{Binding, Cancellation, DiscoverySocket, NetworkScope, Receive, inspect};
+pub use native::{
+    Binding, Cancellation, DiscoverySocket, NetworkScope, Receive, inspect, inspect_on_com_thread,
+};
 
 const IPV4_UDP_HEADERS: usize = 28;
 const MIN_MTU: u32 = (DATAGRAM_BYTES + IPV4_UDP_HEADERS) as u32;

@@ -606,6 +606,23 @@ fn write_tty(mut out: impl Write, result: &CommandResult<Value>) -> io::Result<(
                 writeln!(out, "Use /history more for the next page.")
             }
         }
+        Ok(value) if value.get("lan_discovery").and_then(Value::as_str).is_some() => {
+            let message = match value["lan_discovery"].as_str() {
+                Some("waiting_network") => {
+                    "Local runtime ready. Waiting for the saved Private LAN."
+                }
+                Some("waiting_policy") => {
+                    "Local runtime ready. Waiting for current permission and locators."
+                }
+                Some("discovering") => "Local runtime ready. Discovering the agreed LAN peer.",
+                Some("retrying") => "Local runtime ready. Authenticating or retrying the peer.",
+                Some("connected") if value["live_admitted"] == true => {
+                    "Connected on both LAN contexts."
+                }
+                _ => "Local runtime ready. Awaiting a current connection check.",
+            };
+            writeln!(out, "{message}")
+        }
         Ok(value) => writeln!(out, "{value}"),
         Err("unsupported") => {
             writeln!(out, "Operation unavailable in this version. Use /help.")
@@ -613,6 +630,10 @@ fn write_tty(mut out: impl Write, result: &CommandResult<Value>) -> io::Result<(
         Err("response_too_large") => writeln!(
             out,
             "Error: response_too_large. Retry /history or /history more with a smaller limit."
+        ),
+        Err("locator_requires_manual_profile") => writeln!(
+            out,
+            "Locator import and retry require a Manual profile. Quit chat before changing the route in Setup."
         ),
         Err(code) => writeln!(out, "Error: {code}. Use /help."),
     }

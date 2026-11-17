@@ -33,6 +33,48 @@ impl Drop for Actors2 {
         }
     }
 }
+
+#[tokio::test]
+async fn t13d_auto_transport_children_stop_and_retry_is_bounded() -> Result<()> {
+    let fixtures = Actors2::new(false).await?;
+    let mut tasks = tokio::task::JoinSet::new();
+    let (_target, target_changes) = tokio::sync::watch::channel(None);
+    let (stop, stopping) = tokio::sync::watch::channel(false);
+    start_transport(
+        &mut tasks,
+        &fixtures.handles[0],
+        &fixtures.endpoints[0],
+        None,
+        &[0, 1],
+        Some(target_changes),
+        stopping,
+    );
+    ensure!(tasks.len() == 3);
+    tokio::task::yield_now().await;
+    stop.send_replace(true);
+    let joined = tokio::time::timeout(Duration::from_secs(3), async {
+        let mut joined = 0;
+        while let Some(result) = tasks.join_next().await {
+            result?;
+            joined += 1;
+        }
+        Ok::<_, anyhow::Error>(joined)
+    })
+    .await??;
+    ensure!(joined == 3);
+    ensure!(retry_delay(0, 0) == Duration::from_millis(500));
+    for attempt in 0..12 {
+        for jitter in [0, 500, 7_500, u16::MAX] {
+            ensure!(
+                (Duration::from_millis(500)..=Duration::from_secs(15))
+                    .contains(&retry_delay(attempt, jitter))
+            );
+        }
+    }
+    ensure!(retry_delay(100, 7_500) == Duration::from_secs(15));
+    println!("T13D_TRANSPORT joined=3 retry_ms=500..15000");
+    Ok(())
+}
 impl Actors2 {
     async fn new(short_locator: bool) -> Result<Self> {
         let parent =
@@ -395,7 +437,7 @@ async fn cs41_disallowed_actual_path_cannot_pin_new_authority() -> Result<()> {
             o.import_locator(0, replacement)?;
             let generation = o.repository.generation();
             let error = o
-                .observe_hello_authority(0, &accepted, binding, &renewed, None)
+                .observe_hello_authority(0, &accepted, binding, &renewed, None, deadline)
                 .err()
                 .context("wrong path accepted")?;
             ensure!(format!("{error:#}").contains("selected LAN path differs"));
@@ -406,7 +448,7 @@ async fn cs41_disallowed_actual_path_cannot_pin_new_authority() -> Result<()> {
             // The same authenticated Hello has a genuinely writable authority
             // revision on the original (permitted) loopback route.
             o.route = loopback;
-            o.observe_hello_authority(0, &accepted, binding, &renewed, None)?;
+            o.observe_hello_authority(0, &accepted, binding, &renewed, None, deadline)?;
             ensure!(o.repository.generation() == generation + 1);
             accepted.close(0u32.into(), b"test completed");
             Ok(())

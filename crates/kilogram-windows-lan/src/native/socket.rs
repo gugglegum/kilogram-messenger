@@ -137,7 +137,12 @@ fn option(socket: SOCKET, level: i32, name: i32, bytes: &[u8]) -> io::Result<()>
 
 impl DiscoverySocket {
     pub fn open(binding: Binding) -> Result<Self> {
-        let binding = binding.refresh()?;
+        Self::open_observed(binding.refresh()?)
+    }
+
+    /// Open the exact socket following a controller's fresh, checked observation.
+    /// The controller must discard this socket if that observation expires.
+    pub fn open_observed(binding: Binding) -> Result<Self> {
         let winsock = Arc::new(Winsock::start()?);
         // SAFETY: Winsock is initialized and the new IPv4 datagram socket is
         // returned with unique ownership and inheritance disabled.

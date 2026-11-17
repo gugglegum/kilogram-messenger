@@ -374,6 +374,25 @@ fn t12d2_route_commands_require_literal_ipv4_and_exact_args() {
 }
 
 #[test]
+fn t13d_setup_auto_is_an_explicit_route_command() -> anyhow::Result<()> {
+    use anyhow::Context;
+    let tty = wire::read(
+        &mut Cursor::new("/route auto 192.168.4.9 192.168.4.10\n"),
+        false,
+    )?
+    .context("TTY request")?
+    .map_err(anyhow::Error::msg)?
+    .command;
+    let json = wire::read(&mut Cursor::new(
+        r#"{"v":1,"id":"r","op":"route_lan_auto","args":{"local_ipv4":"192.168.4.9","peer_ipv4":"192.168.4.10"}}"#
+    ), true)?.context("JSONL request")?.map_err(anyhow::Error::msg)?.command;
+    assert!(matches!(tty, Ok(Command::RouteAuto(_))));
+    assert_eq!(tty, json);
+    assert!(wire::HELP.contains("visible to devices on the selected LAN"));
+    Ok(())
+}
+
+#[test]
 fn t12c_consent_command_requires_explicit_confirmation_and_literal_path() {
     use kilogram_first_dialog::consent_artifact::Kind;
     let path = "E:\\Public Files\\final.kilogram";

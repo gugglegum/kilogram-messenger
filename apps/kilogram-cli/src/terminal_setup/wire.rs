@@ -14,7 +14,7 @@ use std::{
 };
 use zeroize::Zeroizing;
 
-pub(super) const HELP: &str = "/status /begin /open /create /recovery show /recovery saved /cancel /quit\n/invite export|inspect <path>|join <preview_id>\n/reply export|inspect <path>|accept <preview_id>\n/consent propose|export|cosign|import\n/consent inspect <proposal|final> <path>\n/consent accept <proposal|final> <preview_id>\n/route lan <local_ipv4> <peer_ipv4>\n/route loopback\n/preview clear\nSave recovery words offline before confirming.";
+pub(super) const HELP: &str = "/status /begin /open /create /recovery show /recovery saved /cancel /quit\n/invite export|inspect <path>|join <preview_id>\n/reply export|inspect <path>|accept <preview_id>\n/consent propose|export|cosign|import\n/consent inspect <proposal|final> <path>\n/consent accept <proposal|final> <preview_id>\n/route lan <local_ipv4> <peer_ipv4>\n/route auto <local_ipv4> <peer_ipv4>\n/route loopback\nLAN Auto periodically sends announcements visible to devices on the selected LAN.\n/preview clear\nSave recovery words offline before confirming.";
 const OUTPUT_CAP: usize = 256 * 1024;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -33,6 +33,7 @@ pub(super) enum Command {
     ConsentExport,
     ConsentAction(Action),
     Route(Option<LanSettings>),
+    RouteAuto(LanSettings),
     ClearPreview,
     Cancel(Option<String>),
     Quit,
@@ -41,7 +42,10 @@ pub(super) enum Command {
 
 impl Command {
     pub fn cancellable(&self) -> bool {
-        matches!(self, Self::Create | Self::ConsentAction(_))
+        matches!(
+            self,
+            Self::Create | Self::ConsentAction(_) | Self::RouteAuto(_)
+        )
     }
 }
 
@@ -188,12 +192,17 @@ fn parse(request: &WireRequest<'_>) -> Result<Command, &'static str> {
                 preview_id(input.preview_id)?,
             ))
         }
-        "route_lan" => {
+        "route_lan" | "route_lan_auto" => {
             let lan: LanArgs = serde_json::from_str(args).map_err(|_| "invalid_args")?;
-            Ok(Command::Route(Some(LanSettings {
+            let lan = LanSettings {
                 local: lan.local_ipv4,
                 peer: lan.peer_ipv4,
-            })))
+            };
+            Ok(if request.op == "route_lan_auto" {
+                Command::RouteAuto(lan)
+            } else {
+                Command::Route(Some(lan))
+            })
         }
         _ if serde_json::from_str::<Empty>(args).is_err() => Err("invalid_args"),
         "status" => Ok(Command::Status),
@@ -263,11 +272,16 @@ fn parse_tty(command: &str) -> Option<Result<Command, &'static str>> {
             ))
         })(),
         ["/preview", "clear"] => Ok(Command::ClearPreview),
-        ["/route", "lan", local, peer] => (|| {
-            Ok(Command::Route(Some(LanSettings {
+        ["/route", mode @ ("lan" | "auto"), local, peer] => (|| {
+            let lan = LanSettings {
                 local: local.parse().map_err(|_| "invalid_args")?,
                 peer: peer.parse().map_err(|_| "invalid_args")?,
-            })))
+            };
+            Ok(if *mode == "auto" {
+                Command::RouteAuto(lan)
+            } else {
+                Command::Route(Some(lan))
+            })
         })(),
         ["/route", "loopback"] => Ok(Command::Route(None)),
         [
@@ -531,6 +545,9 @@ pub(super) fn encode_at(
                         )?;
                         if let Some(peer) = view["peer_ipv4"].as_str() {
                             write!(&mut *bytes, " peer {peer}")?;
+                        }
+                        if let Some(warning) = view["lan_announcement_notice"].as_str() {
+                            write!(&mut *bytes, "\n{warning}")?;
                         }
                         write!(&mut *bytes, "\nProfile {}", field("profile_state"))?;
                         if value["consent"]["stage"] == "final_saved"

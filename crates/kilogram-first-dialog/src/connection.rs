@@ -12,9 +12,9 @@ use anyhow::{Context, Result, ensure};
 use kilogram_runtime_ipc::{
     RuntimeIpcDescriptor,
     ordered2::{
-        Client2, Delivery2, HistoryCursor2, HistoryPage2, HistoryPosition2, MessageError2,
-        Profile2Document, ProfileRoute2, ProfileRoutePolicy2, RequestStatus2, SendReceipt2,
-        Status2, id,
+        Client2, Delivery2, DiscoveryStatus2, HistoryCursor2, HistoryPage2, HistoryPosition2,
+        LanDiscovery2, MessageError2, Profile2Document, ProfileRoute2, ProfileRoutePolicy2,
+        RequestStatus2, SendReceipt2, Status2, id,
     },
 };
 use serde::{Deserialize, Serialize};
@@ -59,6 +59,8 @@ pub struct State {
     pub last_outcome: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lan: Option<LanSettings>,
+    #[serde(default, skip_serializing_if = "LanDiscovery2::is_manual")]
+    pub lan_discovery: LanDiscovery2,
 }
 impl State {
     pub fn validate(&self) -> Result<()> {
@@ -66,6 +68,13 @@ impl State {
         if let Some(lan) = self.lan {
             lan.validate()?;
         }
+        self.lan_discovery.validate(
+            self.lan
+                .map(|lan| {
+                    kilogram_protocol::ordered_dialog_v2::DirectLan2::new(lan.local, lan.peer)
+                })
+                .transpose()?,
+        )?;
         for (name, prefix) in [(&self.profile, "profile-"), (&self.incoming, "peer-")] {
             if let Some(n) = name {
                 let id = n
@@ -110,6 +119,14 @@ fn change(setup: &mut Setup, f: impl FnOnce(&mut State)) -> Result<()> {
 pub fn lan_settings(setup: &Setup) -> Option<LanSettings> {
     setup.record.connection.as_ref().and_then(|state| state.lan)
 }
+pub fn lan_discovery(setup: &Setup) -> LanDiscovery2 {
+    setup
+        .record
+        .connection
+        .as_ref()
+        .map(|state| state.lan_discovery.clone())
+        .unwrap_or_default()
+}
 #[derive(Debug)]
 pub struct ConnectionPathError;
 
@@ -122,14 +139,29 @@ impl std::fmt::Display for ConnectionPathError {
 impl std::error::Error for ConnectionPathError {}
 
 pub fn select_route(setup: &mut Setup, lan: Option<LanSettings>) -> Result<()> {
+    let discovery = if lan_settings(setup) == lan {
+        lan_discovery(setup)
+    } else {
+        LanDiscovery2::Manual {}
+    };
+    select_lan_discovery(setup, lan, discovery)
+}
+
+pub fn select_lan_discovery(
+    setup: &mut Setup,
+    lan: Option<LanSettings>,
+    discovery: LanDiscovery2,
+) -> Result<()> {
     check_pre_spawn_cleanup(setup)?;
-    if let Some(lan) = lan {
-        lan.validate()?;
-    }
+    discovery.validate(
+        lan.map(|lan| kilogram_protocol::ordered_dialog_v2::DirectLan2::new(lan.local, lan.peer))
+            .transpose()?,
+    )?;
     connection_paths(&setup.home, &setup.record).context(ConnectionPathError)?;
-    if lan_settings(setup) != lan {
+    if lan_settings(setup) != lan || lan_discovery(setup) != discovery {
         change(setup, |state| {
             state.lan = lan;
+            state.lan_discovery = discovery;
             state.profile = None;
             state.profile_digest = None;
             state.imports = [consent::Outcome::NotStarted; 2];
@@ -296,6 +328,11 @@ pub(super) fn expected_profile(record: &Record, base: &Path) -> Result<Profile2D
             relay: None,
             lan_peer_ipv4: lan.map(|lan| lan.peer),
         },
+        lan_discovery: record
+            .connection
+            .as_ref()
+            .map(|s| s.lan_discovery.clone())
+            .unwrap_or_default(),
         logical_quota: Some([16 * 1024 * 1024 * 1024; 2]),
         physical_quota: Some(48 * 1024 * 1024 * 1024),
     })
@@ -425,6 +462,12 @@ fn prepare_with(
         if let Some(peer) = doc.route.lan_peer_ipv4 {
             args.extend(["--ordered-lan-peer-ipv4".into(), peer.to_string().into()]);
         }
+        if !doc.lan_discovery.is_manual() {
+            args.extend([
+                "--ordered-lan-discovery".into(),
+                serde_json::to_string(&doc.lan_discovery)?.into(),
+            ]);
+        }
         // A lost acknowledgement may leave a complete no-clobber output.
         let outcome = remember_helper_cleanup(setup, (helpers.profile)(exe, &args, cancel.clone()));
         if let Err(error) = outcome
@@ -536,6 +579,7 @@ pub struct View {
     pub lease_expires: [u64; 2],
     pub consent_expires: u64,
     pub running: bool,
+    pub discovery: Option<DiscoveryStatus2>,
     pub messages: Messages,
 }
 impl View {
@@ -555,6 +599,7 @@ impl View {
             lease_expires: [0; 2],
             consent_expires: 0,
             running: false,
+            discovery: None,
             messages: Messages::default(),
         }
     }
@@ -785,6 +830,10 @@ impl Session {
         );
         ensure!(
             status.route == self.doc.route
+                && status.lan_discovery.as_ref().map_or_else(
+                    || self.doc.lan_discovery.is_manual(),
+                    |view| view.selection == self.doc.lan_discovery,
+                )
                 && (status.endpoint.is_some() || self.doc.route.lan_peer_ipv4.is_some()),
             "Runtime route/endpoint mismatch"
         );
@@ -835,6 +884,19 @@ impl Session {
             "Runtime running; exchange current public locators. Waiting for authenticated connection."
         });
         view.running = true;
+        view.discovery = status
+            .lan_discovery
+            .as_ref()
+            .map(|discovery| discovery.state);
+        if let Some(discovery) = view.discovery {
+            view.text = match discovery {
+                DiscoveryStatus2::WaitingNetwork => "Local runtime ready. Waiting for the saved Private LAN.",
+                DiscoveryStatus2::WaitingPolicy => "Local runtime ready. LAN publication is waiting for current permission and locators.",
+                DiscoveryStatus2::Discovering => "Local runtime ready. Discovering the agreed LAN peer.",
+                DiscoveryStatus2::Retrying => "Local runtime ready. Authenticating or retrying the peer.",
+                DiscoveryStatus2::Connected => "Both LAN contexts are connected.",
+            }.into();
+        }
         view.request_started = started;
         view.consent_expires = end;
         let wall = consent::now()?;

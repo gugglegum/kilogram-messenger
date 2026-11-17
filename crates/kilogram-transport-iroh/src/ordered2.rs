@@ -320,10 +320,22 @@ pub fn binding(connection: &Connection, local: Id, dialer: bool) -> Result<Id> {
     Ok(result)
 }
 pub async fn write(send: &mut SendStream, frame: &ParsedFrame2) -> Result<()> {
+    write_checked(send, frame, || Ok(())).await
+}
+
+/// Check the caller's permission again when stream flow control may have yielded.
+pub async fn write_checked(
+    send: &mut SendStream,
+    frame: &ParsedFrame2,
+    check: impl Fn() -> Result<()>,
+) -> Result<()> {
     ensure!(frame.raw().len() <= wire::MAX_WIRE - 4, "OD2 frame cap");
+    check()?;
     send.write_all(&(frame.raw().len() as u32).to_be_bytes())
         .await?;
+    check()?;
     send.write_all(frame.raw()).await?;
+    check()?;
     send.finish()?;
     Ok(())
 }

@@ -12,6 +12,7 @@ use kilogram_first_dialog::{
     model::{Setup, SetupAccessError},
 };
 use kilogram_protocol::ordered_dialog_v2::DirectLan2;
+use kilogram_runtime_ipc::ordered2::LanDiscovery2;
 use serde_json::{Value, json};
 use std::{
     net::Ipv4Addr,
@@ -39,6 +40,8 @@ pub(super) struct Service {
     cli: PathBuf,
     setup: Option<Setup>,
     preview: Option<Preview>,
+    #[cfg(windows)]
+    inspection: Option<kilogram_cli::ordered_dialog::runtime2::lan_metadata::Inspection>,
 }
 
 impl Service {
@@ -55,6 +58,8 @@ impl Service {
             cli,
             setup: None,
             preview: None,
+            #[cfg(windows)]
+            inspection: None,
         }
     }
 
@@ -92,12 +97,19 @@ impl Service {
         }
         if !setup.incomplete {
             let lan = connection::lan_settings(setup);
+            let discovery = connection::lan_discovery(setup);
             value["connection"] = json!({
                 "mode": if lan.is_some() { "direct_lan" } else { "loopback" },
                 "local_ipv4": lan.map_or(Ipv4Addr::LOCALHOST, |lan| lan.local),
                 "peer_ipv4": lan.map(|lan| lan.peer),
                 "profile_state": connection::profile_state(setup),
+                "lan_discovery": discovery,
             });
+            if !discovery.is_manual() {
+                value["connection"]["lan_announcement_notice"] = json!(
+                    "LAN Auto periodically sends announcements visible to devices on the selected LAN."
+                );
+            }
         }
         Ok(value)
     }
@@ -156,6 +168,7 @@ impl Service {
                 self.finish_consent(action, generation, session, result)?;
             }
             Command::Route(lan) => self.save_route(lan)?,
+            Command::RouteAuto(lan) => self.save_auto_route(lan, &cancel, generation, session)?,
             Command::ClearPreview => {
                 self.preview = None;
                 return Ok(Payload::Public(json!({"cleared":true})));
@@ -165,7 +178,7 @@ impl Service {
         self.snapshot().map(Payload::Public)
     }
 
-    fn save_route(&mut self, lan: Option<LanSettings>) -> Result<(), &'static str> {
+    fn route_setup(&mut self) -> Result<&mut Setup, &'static str> {
         let setup = self.consent_setup()?;
         if !setup
             .record
@@ -175,18 +188,104 @@ impl Service {
         {
             return Err("consent_not_ready");
         }
+        Ok(setup)
+    }
+
+    fn save_route(&mut self, lan: Option<LanSettings>) -> Result<(), &'static str> {
+        let setup = self.route_setup()?;
         if let Some(lan) = lan {
             let route = DirectLan2::new(lan.local, lan.peer).map_err(|_| "invalid_lan_route")?;
             kilogram_cli::ordered_dialog::runtime2::verify_lan_interface(route)
                 .map_err(|_| "lan_interface_unavailable")?;
         }
-        connection::select_route(setup, lan).map_err(|error| {
+        Self::record_route(setup, lan, LanDiscovery2::Manual {})
+    }
+
+    fn record_route(
+        setup: &mut Setup,
+        lan: Option<LanSettings>,
+        discovery: LanDiscovery2,
+    ) -> Result<(), &'static str> {
+        let state = &setup
+            .record
+            .public
+            .as_ref()
+            .ok_or("invalid_state")?
+            .state_dir;
+        let _owner = kilogram_state::StateDirectoryLock::acquire(state)
+            .map_err(|_| "runtime_must_be_stopped")?;
+        connection::select_lan_discovery(setup, lan, discovery).map_err(|error| {
             if error.downcast_ref::<ConnectionPathError>().is_some() {
                 "connection_path_invalid"
             } else {
                 "route_save_failed"
             }
         })
+    }
+
+    #[cfg(windows)]
+    fn save_auto_route(
+        &mut self,
+        lan: LanSettings,
+        cancel: &AtomicBool,
+        generation: u64,
+        session: &Shared,
+    ) -> Result<(), &'static str> {
+        use kilogram_cli::ordered_dialog::runtime2::lan_metadata::{Inspection, setting};
+        use std::{sync::atomic::Ordering, thread, time::Duration};
+        self.route_setup()?;
+        if cancel.load(Ordering::Acquire) {
+            return Err("cancelled");
+        }
+        if let Some(inspection) = &mut self.inspection {
+            if inspection.try_result().is_none() {
+                return Err("lan_metadata_pending");
+            }
+            self.inspection = None;
+        }
+        let route = DirectLan2::new(lan.local, lan.peer).map_err(|_| "invalid_lan_route")?;
+        self.inspection =
+            Some(Inspection::start(route, None).map_err(|_| "lan_interface_unavailable")?);
+        let binding = loop {
+            let inspection = self
+                .inspection
+                .as_mut()
+                .ok_or("lan_interface_unavailable")?;
+            if let Some(result) = inspection.try_result() {
+                let fresh = inspection.started.elapsed() < Duration::from_secs(2);
+                self.inspection = None;
+                if !fresh {
+                    return Err("lan_metadata_timeout");
+                }
+                break result.map_err(|_| "lan_interface_unavailable")?;
+            }
+            if cancel.load(Ordering::Acquire) {
+                return Err("cancelled");
+            }
+            if inspection.started.elapsed() >= Duration::from_secs(2) {
+                return Err("lan_metadata_timeout");
+            }
+            thread::sleep(Duration::from_millis(25));
+        };
+        if !session
+            .lock()
+            .map_err(|_| "cleanup_unconfirmed")?
+            .settle(generation)
+        {
+            return Err("cancelled");
+        }
+        Self::record_route(self.route_setup()?, Some(lan), setting(binding))
+    }
+
+    #[cfg(not(windows))]
+    fn save_auto_route(
+        &mut self,
+        _lan: LanSettings,
+        _cancel: &AtomicBool,
+        _generation: u64,
+        _session: &Shared,
+    ) -> Result<(), &'static str> {
+        Err("lan_auto_windows_only")
     }
 
     fn finish_consent(
@@ -317,6 +416,13 @@ pub(super) fn execute(
             debug_assert_eq!(tag.generation, generation);
             state.complete(tag, result, snapshot);
         }
+    }
+    #[cfg(windows)]
+    if let Some(mut inspection) = service.inspection.take()
+        && inspection.try_result().is_none()
+        && let Ok(mut state) = shared.lock()
+    {
+        state.close(None, true, true);
     }
 }
 
