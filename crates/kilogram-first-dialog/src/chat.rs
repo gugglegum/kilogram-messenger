@@ -6,6 +6,7 @@ use crate::{
         LocatorResult, RequestJob, Work,
     },
     consent,
+    helper::HelperError,
     model::{self, Setup},
     operation::{self, OperationControl},
     send_recovery::{IpcResult, RequestOperation, RequestReport, RequestResult, RequestState},
@@ -340,10 +341,11 @@ impl Chat {
             work.cancel();
             loop {
                 if let Some((setup, result)) = work.poll() {
-                    let stopped = !work.spawned()
-                        || (result.is_ok_and(|stop| {
-                            stop.graceful && stop.reaped && stop.eof && stop.exit == Some(0)
-                        }) && !setup.home.join("connection/ipc.json").exists());
+                    let stopped = !setup.pre_spawn_cleanup_unconfirmed()
+                        && (!work.spawned()
+                            || (result.is_ok_and(|stop| {
+                                stop.graceful && stop.reaped && stop.eof && stop.exit == Some(0)
+                            }) && !setup.home.join("connection/ipc.json").exists()));
                     self.cleanup_unconfirmed |= !stopped;
                     break;
                 }
@@ -375,6 +377,10 @@ fn owner_scope(
             "Connection operation cancelled"
         );
         work.refresh_view();
+        ensure!(
+            !work.pre_spawn_cleanup_unconfirmed(),
+            HelperError::CleanupUnconfirmed
+        );
         ensure!(!work.finished(), "Owned runtime exited");
         if let Some(scope) = work.view.messages.scope.filter(|_| work.view.running) {
             return Ok(scope);
@@ -382,6 +388,47 @@ fn owner_scope(
         ensure!(Instant::now() < end, "Owned runtime status timed out");
         thread::sleep(Duration::from_millis(20));
     }
+}
+
+#[cfg(all(test, windows))]
+pub(super) fn verify_pre_spawn_cleanup_handoff(
+    home: PathBuf,
+    exe: PathBuf,
+    work: Work,
+) -> Result<()> {
+    let mut chat = Chat::new(home, exe);
+    chat.session = Some(Session::Owner(Box::new(work)));
+    let error = chat
+        .status()
+        .err()
+        .context("Unknown helper exit appeared as an available runtime")?;
+    ensure!(error.downcast_ref::<HelperError>() == Some(&HelperError::CleanupUnconfirmed));
+    let Some(Session::Owner(work)) = chat.session.as_ref() else {
+        anyhow::bail!("No owned work to retire");
+    };
+    ensure!(
+        !work.spawned(),
+        "Runtime spawned after uncertain helper cleanup"
+    );
+    let end = Instant::now() + Duration::from_secs(2);
+    ensure!(
+        chat.disconnect_until(end).is_err(),
+        "Disconnect falsely reported clean shutdown"
+    );
+    ensure!(
+        Instant::now() < end,
+        "Completed pre-spawn failure stalled shutdown"
+    );
+    ensure!(chat.cleanup_unconfirmed && chat.session.is_none());
+    ensure!(
+        chat.disconnect().is_err(),
+        "The cleanup fence was cleared on a second disconnect"
+    );
+    ensure!(
+        chat.connect(Mode::Owner, None).is_err(),
+        "A new owner bypassed the fence"
+    );
+    Ok(())
 }
 
 struct Observer {

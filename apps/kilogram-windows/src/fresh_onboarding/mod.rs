@@ -366,6 +366,17 @@ impl Panel {
             self.draw_connection(ui);
             return;
         }
+        if self
+            .setup
+            .as_ref()
+            .is_some_and(Setup::pre_spawn_cleanup_unconfirmed)
+        {
+            ui.colored_label(
+                ui.visuals().warn_fg_color,
+                "Helper exit could not be verified. This setup remains blocked in this window.",
+            );
+            return;
+        }
         ui.heading("First-dialog pilot");
         ui.label("Create an invitation, or join one before creating your first account.");
         ui.small("One peer. Messaging is available after mutual consent and connection setup.");
@@ -611,6 +622,13 @@ impl Panel {
             self.connection_work.is_none() && self.consent_work.is_none() && self.work.is_none(),
             "Another operation is running"
         );
+        ensure!(
+            !self
+                .setup
+                .as_ref()
+                .is_some_and(Setup::pre_spawn_cleanup_unconfirmed),
+            helper::HelperError::CleanupUnconfirmed
+        );
         let selected = self.connection_choice.selected()?;
         self.dialog.reset_runtime();
         let setup = self
@@ -633,7 +651,13 @@ impl Panel {
         if let Some((setup, result)) = done {
             self.connection_work = None;
             self.dialog.reset_runtime();
+            let blocked = setup.pre_spawn_cleanup_unconfirmed();
             self.setup = Some(setup);
+            if blocked {
+                self.notice = None;
+                self.error = Some(helper::HelperError::CleanupUnconfirmed.to_string());
+                return;
+            }
             match result {
                 Ok(stop) if stop.graceful && stop.reaped && stop.eof && stop.exit==Some(0)=>{self.notice=Some("Owned runtime stopped gracefully. The same account and permissions are ready for an explicit restart.".into());self.error=None;},
                 _ if self.connection_choice.lan => self.error=Some("LAN runtime start or stop failed. Check that both IPv4 addresses belong to the same local network and that the selected local address is assigned. Your setup and history were kept.".into()),

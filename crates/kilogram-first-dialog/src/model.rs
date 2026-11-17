@@ -122,9 +122,14 @@ pub struct Setup {
     pub phrase: Option<Zeroizing<String>>,
     pub incomplete: bool,
     pub consent_confirmed: bool,
+    pub(super) pre_spawn_cleanup_unconfirmed: bool,
     _lock: File,
 }
 impl Setup {
+    pub fn pre_spawn_cleanup_unconfirmed(&self) -> bool {
+        self.pre_spawn_cleanup_unconfirmed
+    }
+
     fn lock(home: &Path) -> Result<(PathBuf, File)> {
         fs::create_dir_all(home)?;
         let home = fs::canonicalize(home)?;
@@ -245,6 +250,7 @@ impl Setup {
             phrase: None,
             incomplete: true,
             consent_confirmed: false,
+            pre_spawn_cleanup_unconfirmed: false,
             _lock: lock,
         })
     }
@@ -261,6 +267,7 @@ impl Setup {
             phrase: None,
             incomplete: true,
             consent_confirmed: false,
+            pre_spawn_cleanup_unconfirmed: false,
             _lock: lock,
         };
         setup.inspect_ready(terminal)?;

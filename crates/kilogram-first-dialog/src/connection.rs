@@ -216,7 +216,60 @@ pub(super) fn prepare(
     cancel: Arc<AtomicBool>,
     fresh_profile: bool,
 ) -> Result<(PathBuf, Profile2Document)> {
-    consent::execute(setup, exe, consent::Action::Import, cancel.clone())?;
+    prepare_with(setup, exe, cancel, fresh_profile, PrepareHelpers::default())
+}
+
+#[derive(Clone, Copy)]
+struct PrepareHelpers {
+    import: fn(&mut Setup, &Path, consent::Action, Arc<AtomicBool>) -> Result<()>,
+    profile: fn(&Path, &[std::ffi::OsString], Arc<AtomicBool>) -> Result<()>,
+}
+
+impl Default for PrepareHelpers {
+    fn default() -> Self {
+        Self {
+            import: consent::execute,
+            profile: helper::public_command,
+        }
+    }
+}
+
+fn remember_helper_cleanup(setup: &mut Setup, result: Result<()>) -> Result<()> {
+    if let Err(error) = &result
+        && error.downcast_ref::<helper::HelperError>()
+            == Some(&helper::HelperError::CleanupUnconfirmed)
+    {
+        setup.pre_spawn_cleanup_unconfirmed = true;
+    }
+    result
+}
+
+fn check_pre_spawn_cleanup(setup: &Setup) -> Result<()> {
+    ensure!(
+        !setup.pre_spawn_cleanup_unconfirmed(),
+        helper::HelperError::CleanupUnconfirmed
+    );
+    Ok(())
+}
+
+fn prepare_with(
+    setup: &mut Setup,
+    exe: &Path,
+    cancel: Arc<AtomicBool>,
+    fresh_profile: bool,
+    helpers: PrepareHelpers,
+) -> Result<(PathBuf, Profile2Document)> {
+    check_pre_spawn_cleanup(setup)?;
+    ensure!(
+        !cancel.load(Ordering::Acquire),
+        helper::HelperError::Cancelled
+    );
+    let imported = (helpers.import)(setup, exe, consent::Action::Import, cancel.clone());
+    remember_helper_cleanup(setup, imported)?;
+    ensure!(
+        !cancel.load(Ordering::Acquire),
+        helper::HelperError::Cancelled
+    );
     let (nb, end) = consent::period(setup)?;
     let wall = consent::now()?;
     ensure!(
@@ -279,9 +332,20 @@ pub(super) fn prepare(
             args.extend(["--ordered-lan-peer-ipv4".into(), peer.to_string().into()]);
         }
         // A lost acknowledgement may leave a complete no-clobber output.
-        let _outcome = helper::public_command(exe, &args, cancel.clone());
+        let outcome = remember_helper_cleanup(setup, (helpers.profile)(exe, &args, cancel.clone()));
+        if let Err(error) = outcome
+            && matches!(
+                error.downcast_ref::<helper::HelperError>(),
+                Some(helper::HelperError::CleanupUnconfirmed | helper::HelperError::Cancelled)
+            )
+        {
+            return Err(error);
+        }
     }
-    ensure!(!cancel.load(Ordering::Acquire), "Connection cancelled");
+    ensure!(
+        !cancel.load(Ordering::Acquire),
+        helper::HelperError::Cancelled
+    );
     let raw = model::read(&path, kilogram_runtime_ipc::ordered2::PROFILE_CAP)?;
     ensure!(
         Profile2Document::decode(&raw)? == doc,
@@ -446,6 +510,8 @@ struct Cleanup {
     spawned: AtomicBool,
     #[cfg(test)]
     reveal_exit: Option<Arc<AtomicBool>>,
+    #[cfg(test)]
+    prepare_helpers: Option<PrepareHelpers>,
 }
 impl Cleanup {
     fn stopping(&self) -> bool {
@@ -493,7 +559,15 @@ impl Session {
         fresh_profile: bool,
         cleanup: &Cleanup,
     ) -> Result<Self> {
-        let (path, doc) = prepare(setup, exe, cancel.clone(), fresh_profile)?;
+        #[cfg(test)]
+        let prepared = if let Some(helpers) = cleanup.prepare_helpers {
+            prepare_with(setup, exe, cancel.clone(), fresh_profile, helpers)
+        } else {
+            prepare(setup, exe, cancel.clone(), fresh_profile)
+        };
+        #[cfg(not(test))]
+        let prepared = prepare(setup, exe, cancel.clone(), fresh_profile);
+        let (path, doc) = prepared?;
         // Immutable bindings, not an authority cache. Runtime checks current
         // consent/authority and the live lease on every status observation.
         let consent_refs = consent::connection_refs(setup)?;
@@ -1283,6 +1357,7 @@ impl Work {
         cleanup: Arc<Cleanup>,
         cancel: Arc<AtomicBool>,
     ) -> Result<Self> {
+        check_pre_spawn_cleanup(&setup)?;
         ensure!(
             !cancel.load(Ordering::Acquire),
             "Connection cancelled before worker start"
@@ -1373,6 +1448,11 @@ impl Work {
     }
     pub(super) fn finished(&self) -> bool {
         self.completion.is_some()
+    }
+    pub(super) fn pre_spawn_cleanup_unconfirmed(&self) -> bool {
+        self.completion
+            .as_ref()
+            .is_some_and(|(setup, _)| setup.pre_spawn_cleanup_unconfirmed())
     }
     pub(super) fn spawned(&self) -> bool {
         self.cleanup.spawned.load(Ordering::Acquire)

@@ -25,6 +25,177 @@ fn ready_pair_at(parent: &Path, name: &str, missing: bool) -> Result<[Setup; 2]>
 }
 
 #[cfg(windows)]
+fn await_preparation_failure(work: &mut Work) -> Result<(Setup, anyhow::Error)> {
+    let deadline = Instant::now() + Duration::from_secs(160);
+    loop {
+        if let Some((setup, result)) = work.poll() {
+            ensure!(!work.spawned(), "Runtime spawned after failed preparation");
+            let error = result
+                .err()
+                .context("Failed preparation returned success")?;
+            return Ok((setup, error));
+        }
+        ensure!(
+            Instant::now() < deadline,
+            "Preparation worker did not return"
+        );
+        thread::sleep(Duration::from_millis(20));
+    }
+}
+
+#[cfg(windows)]
+#[test]
+fn t12d1_pre_spawn_helper_cleanup_keeps_exact_output_and_fences_owners() -> Result<()> {
+    use crate::{
+        chat::{Chat, Mode},
+        helper::HelperError,
+    };
+
+    let fixture = tempfile::tempdir()?;
+    let [mut left, right] = ready_pair_at(fixture.path(), "pre-spawn-", true)?;
+    let exe = cli();
+    let live = Arc::new(AtomicBool::new(false));
+    let (reference, doc) = prepare_with(
+        &mut left,
+        &exe,
+        live.clone(),
+        false,
+        PrepareHelpers {
+            profile: |exe, args, cancel| {
+                helper::public_command(exe, args, cancel)?;
+                Err(HelperError::Failed("simulated lost profile acknowledgement after exit").into())
+            },
+            ..PrepareHelpers::default()
+        },
+    )?;
+    let exact = model::read(&reference, kilogram_runtime_ipc::ordered2::PROFILE_CAP)?;
+    let exact_digest = digest(&exact);
+    ensure!(Profile2Document::decode(&exact)? == doc);
+    ensure!(!left.pre_spawn_cleanup_unconfirmed());
+    ensure!(
+        left.record
+            .connection
+            .as_ref()
+            .unwrap()
+            .profile_digest
+            .as_deref()
+            == Some(exact_digest.as_str())
+    );
+    let home = left.home.clone();
+
+    let mut cancelled = Work::start_with_cleanup(
+        left,
+        exe.clone(),
+        true,
+        None,
+        Arc::new(Cleanup {
+            prepare_helpers: Some(PrepareHelpers {
+                profile: |exe, args, cancel| {
+                    helper::public_command(exe, args, cancel)?;
+                    Err(HelperError::Cancelled.into())
+                },
+                ..PrepareHelpers::default()
+            }),
+            ..Cleanup::default()
+        }),
+    )?;
+    let (left, error) = await_preparation_failure(&mut cancelled)?;
+    ensure!(error.downcast_ref::<HelperError>() == Some(&HelperError::Cancelled));
+    ensure!(!left.pre_spawn_cleanup_unconfirmed());
+    let state = left.record.connection.as_ref().context("Pending profile")?;
+    let cancelled_profile = left
+        .home
+        .join("connection")
+        .join(state.profile.as_ref().context("Profile")?);
+    ensure!(
+        state.profile_digest.is_none() && model::read(&cancelled_profile, exact.len())? == exact
+    );
+    ensure!(!doc.ipc_file.exists());
+    drop(left);
+    drop(cancelled);
+
+    let mut chat = Chat::new(home.clone(), exe.clone());
+    let status = chat.connect(Mode::Owner, None)?;
+    ensure!(status.contexts == doc.contexts && !status.live_admitted);
+    chat.disconnect()?;
+    ensure!(!doc.ipc_file.exists());
+    let left = Setup::open(&home)?;
+    ensure!(
+        left.record
+            .connection
+            .as_ref()
+            .unwrap()
+            .profile_digest
+            .as_deref()
+            == Some(exact_digest.as_str())
+    );
+
+    let mut lost_cleanup = Work::start_with_cleanup(
+        left,
+        exe.clone(),
+        true,
+        None,
+        Arc::new(Cleanup {
+            prepare_helpers: Some(PrepareHelpers {
+                profile: |exe, args, cancel| {
+                    helper::public_command(exe, args, cancel.clone())?;
+                    // Unconfirmed cleanup takes precedence over simultaneous cancel.
+                    cancel.store(true, Ordering::Release);
+                    Err(HelperError::CleanupUnconfirmed).context("simulated unknown helper exit")
+                },
+                ..PrepareHelpers::default()
+            }),
+            ..Cleanup::default()
+        }),
+    )?;
+    let (blocked, error) = await_preparation_failure(&mut lost_cleanup)?;
+    ensure!(error.downcast_ref::<HelperError>() == Some(&HelperError::CleanupUnconfirmed));
+    ensure!(blocked.pre_spawn_cleanup_unconfirmed());
+    let state = blocked
+        .record
+        .connection
+        .as_ref()
+        .context("Pending profile")?;
+    let unadopted = home
+        .join("connection")
+        .join(state.profile.as_ref().context("Profile")?);
+    ensure!(state.profile_digest.is_none() && model::read(&unadopted, exact.len())? == exact);
+    ensure!(model::read(&reference, exact.len())? == exact && !doc.ipc_file.exists());
+    let before = fs::read(home.join("setup.json"))?;
+    drop(lost_cleanup); // same Setup object returned to a common caller such as GUI
+    let retry = Work::start(blocked, exe.clone(), false, None)
+        .err()
+        .context("Setup handoff lost fence")?;
+    ensure!(retry.downcast_ref::<HelperError>() == Some(&HelperError::CleanupUnconfirmed));
+    ensure!(fs::read(home.join("setup.json"))? == before && !doc.ipc_file.exists());
+
+    let home = right.home.clone();
+    let before = fs::read(home.join("setup.json"))?;
+    let consent_cleanup = Work::start_with_cleanup(
+        right,
+        exe.clone(),
+        false,
+        None,
+        Arc::new(Cleanup {
+            prepare_helpers: Some(PrepareHelpers {
+                import: |_, _, _, _| {
+                    Err(HelperError::CleanupUnconfirmed)
+                        .context("simulated consent helper cleanup error with write failure")
+                },
+                profile: |_, _, _| panic!("profile helper reached after uncertain consent cleanup"),
+            }),
+            ..Cleanup::default()
+        }),
+    )?;
+    crate::chat::verify_pre_spawn_cleanup_handoff(home.clone(), exe, consent_cleanup)?;
+    ensure!(fs::read(home.join("setup.json"))? == before && !home.join("connection").exists());
+    println!(
+        "T12D1_PASS exact_ack_recovery=true typed_cancel=true owned_start_stop=true profile_cleanup_blocks_work=true consent_cleanup_blocks_chat=true"
+    );
+    Ok(())
+}
+
+#[cfg(windows)]
 #[path = "connection_message_tests.rs"]
 mod messages;
 
