@@ -12,6 +12,9 @@ use std::{
 };
 use zeroize::Zeroizing;
 
+mod terminal;
+pub use terminal::SetupAccessError;
+
 const RECORD_CAP: usize = 128 * 1024;
 pub fn read(path: &Path, cap: usize) -> Result<Vec<u8>> {
     let meta = fs::symlink_metadata(path)?;
@@ -133,6 +136,10 @@ impl Setup {
             );
         }
         let (home, lock) = Self::lock(home)?;
+        Self::begin_locked(home, lock, invite)
+    }
+
+    fn begin_locked(home: PathBuf, lock: File, invite: Option<Artifact>) -> Result<Self> {
         ensure!(
             !home.join("setup.json").try_exists()?,
             "Open the existing account setup; do not create another account for a contact"
@@ -189,6 +196,10 @@ impl Setup {
     }
     pub fn open(home: &Path) -> Result<Self> {
         let (home, lock) = Self::lock(home)?;
+        Self::open_locked(home, lock, false)
+    }
+
+    fn open_locked(home: PathBuf, lock: File, terminal: bool) -> Result<Self> {
         let record = Self::read_record(&home)?;
         let mut setup = Self {
             home,
@@ -198,29 +209,44 @@ impl Setup {
             consent_confirmed: false,
             _lock: lock,
         };
+        setup.inspect_ready(terminal)?;
+        Ok(setup)
+    }
+
+    fn inspect_ready(&mut self, terminal: bool) -> Result<()> {
+        if terminal {
+            self.workspace_reserved()
+                .map_err(|_| anyhow::anyhow!("Invalid setup workspace"))?;
+        }
         // Missing ready is incomplete. Existing but malformed ready is an error,
         // never a reason to erase the stored acknowledgement or retry creation.
-        match fs::symlink_metadata(setup.record.workspace.join("bootstrap-ready.json")) {
+        match fs::symlink_metadata(self.record.workspace.join("bootstrap-ready.json")) {
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
                 ensure!(
-                    setup.record.public.is_none() && !setup.record.acknowledged,
+                    self.record.public.is_none() && !self.record.acknowledged,
                     "Previously ready account is now missing its receipt"
                 );
             }
             Err(e) => return Err(e.into()),
             Ok(_) => {
-                let info = setup.ready()?;
-                if setup.record.public.is_none() {
-                    setup.update(|r| r.public = Some(info))?;
+                let info = self.ready()?;
+                if terminal {
+                    ensure!(
+                        info.root_key_protection == "windows-dpapi-current-user",
+                        "Invalid Root protection"
+                    );
                 }
-                setup.incomplete = false;
+                if self.record.public.is_none() {
+                    self.update(|r| r.public = Some(info))?;
+                }
+                self.incomplete = false;
             }
         }
-        super::consent::review(&setup, false)?;
-        if let Some(state) = &setup.record.connection {
+        super::consent::review(self, false)?;
+        if let Some(state) = &self.record.connection {
             state.validate()?;
         }
-        Ok(setup)
+        Ok(())
     }
     pub(super) fn read_record(home: &Path) -> Result<Record> {
         let record = serde_json::from_slice(&read(&home.join("setup.json"), RECORD_CAP)?)?;

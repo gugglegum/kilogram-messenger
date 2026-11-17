@@ -216,7 +216,6 @@ use tokio::{
 use zeroize::Zeroizing;
 
 mod ordered2_cli;
-mod terminal_chat;
 mod ordered3_cli;
 mod ordered_cli;
 mod ordered_ingress;
@@ -238,6 +237,8 @@ mod runtime_publication_resolution;
 mod runtime_queue;
 mod runtime_ticket_automation;
 mod runtime_ticket_checkpoint;
+mod terminal_chat;
+mod terminal_setup;
 
 #[cfg(test)]
 use kilogram_runtime_ipc::RuntimeIpcEndpointAnnouncementExport;
@@ -492,6 +493,15 @@ enum Command {
         setup: PathBuf,
         #[arg(long)]
         jsonl: bool,
+    },
+    /// Prepare a local first-dialog Setup on Windows.
+    Setup {
+        #[arg(long)]
+        dir: PathBuf,
+        #[arg(long)]
+        jsonl: bool,
+        #[arg(long)]
+        allow_recovery_output: bool,
     },
     /// Explicit administration and authenticated IPC for fresh OD1 profiles.
     Ordered {
@@ -2801,6 +2811,7 @@ impl Command {
             | Self::StateVaultKeyImport { state_dir, .. }
             | Self::StateVaultRestore { state_dir, .. } => Some(state_dir),
             Self::Chat { .. }
+            | Self::Setup { .. }
             | Self::AccountCreate { .. }
             | Self::RolloutTrustedPolicyImport { .. }
             | Self::CurrentPeerInvitationInspect { .. }
@@ -3691,6 +3702,21 @@ async fn async_main() -> Result<()> {
     let command = cli.command;
     if let Command::Chat { setup, jsonl } = command {
         let code = tokio::task::spawn_blocking(move || terminal_chat::run(setup, jsonl)).await?;
+        if code != 0 {
+            std::process::exit(code);
+        }
+        return Ok(());
+    }
+    if let Command::Setup {
+        dir,
+        jsonl,
+        allow_recovery_output,
+    } = command
+    {
+        let code = tokio::task::spawn_blocking(move || {
+            terminal_setup::run(dir, jsonl, allow_recovery_output)
+        })
+        .await?;
         if code != 0 {
             std::process::exit(code);
         }
@@ -5142,7 +5168,7 @@ async fn run_command(command: Command) -> Result<()> {
             state_dir,
             certificate_file,
         } => enroll_device(account_dir, state_dir, certificate_file),
-        Command::Ordered { .. } | Command::Chat { .. } => {
+        Command::Ordered { .. } | Command::Chat { .. } | Command::Setup { .. } => {
             unreachable!("OD1 commands are dispatched before legacy repositories")
         }
         Command::DeviceAuthorityUpdate {

@@ -109,7 +109,7 @@ fn locator_import(path: &str) -> CommandResult<Command> {
     ))))
 }
 
-fn valid_id(id: &str) -> bool {
+pub(crate) fn valid_id(id: &str) -> bool {
     !id.is_empty() && id.len() <= 64 && id.is_ascii()
 }
 
@@ -747,12 +747,12 @@ fn prepare_result_with_monitor<T>(
     }
 }
 
-enum Frame {
+pub(crate) enum Frame {
     Line(Vec<u8>),
     TooLong,
 }
 
-fn frame(input: &mut impl BufRead) -> io::Result<Option<Frame>> {
+pub(crate) fn frame(input: &mut impl BufRead) -> io::Result<Option<Frame>> {
     let mut line = Vec::new();
     let mut oversized = false;
     loop {

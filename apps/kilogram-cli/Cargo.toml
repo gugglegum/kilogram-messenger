@@ -30,6 +30,7 @@ clap.workspace = true
 getrandom.workspace = true
 image.workspace = true
 iroh.workspace = true
+kilogram-bootstrap-contract = { path = "../../crates/kilogram-bootstrap-contract" }
 kilogram-crypto = { path = "../../crates/kilogram-crypto" }
 kilogram-first-dialog = { path = "../../crates/kilogram-first-dialog" }
 kilogram-identity = { path = "../../crates/kilogram-identity" }
@@ -70,7 +71,6 @@ ed25519-dalek = { workspace = true, optional = true }
 windows = { version = "0.62.2", features = ["Foundation_Collections", "Networking_Connectivity", "System_Power"] }
 
 [dev-dependencies]
-kilogram-bootstrap-contract = { path = "../../crates/kilogram-bootstrap-contract" }
 ed25519-dalek.workspace = true
 sha2.workspace = true
 kilogram-offline = { path = "../kilogram-offline" }
