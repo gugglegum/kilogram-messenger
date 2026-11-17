@@ -45,7 +45,7 @@ struct Reply {
 
 struct Running {
     tag: Tag,
-    create: Option<Arc<AtomicBool>>,
+    cancel: Option<Arc<AtomicBool>>,
     settling: bool,
 }
 
@@ -165,7 +165,7 @@ impl State {
         if let Some(run) = &self.running
             && run.tag.generation == target
         {
-            let signal = run.create.as_ref().ok_or("not_active")?;
+            let signal = run.cancel.as_ref().ok_or("not_active")?;
             if run.settling {
                 return Err("too_late");
             }
@@ -175,7 +175,7 @@ impl State {
         if self
             .pending
             .as_ref()
-            .is_some_and(|entry| entry.tag.generation == target && entry.command == Command::Create)
+            .is_some_and(|entry| entry.tag.generation == target && entry.command.cancellable())
         {
             let entry = self.pending.take().unwrap();
             self.push(Some(entry.tag), Payload::Error("cancelled"));
@@ -184,7 +184,7 @@ impl State {
         Err("not_active")
     }
 
-    fn settle_creation(&mut self, generation: u64) -> bool {
+    fn settle(&mut self, generation: u64) -> bool {
         let Some(run) = &mut self.running else {
             return false;
         };
@@ -192,7 +192,7 @@ impl State {
             return false;
         }
         run.settling = true;
-        run.create
+        run.cancel
             .as_ref()
             .is_some_and(|cancel| !cancel.load(Ordering::Acquire))
     }
@@ -226,7 +226,7 @@ impl State {
         }
         if let Some(run) = &self.running
             && !run.settling
-            && let Some(signal) = &run.create
+            && let Some(signal) = &run.cancel
         {
             signal.store(true, Ordering::Release);
         }
@@ -264,6 +264,13 @@ impl State {
             return Ok(());
         };
         let create = entry.command == Command::Create;
+        let cancellable = entry.command.cancellable();
+        if entry.command == Command::ConsentAction(kilogram_first_dialog::consent::Action::Import)
+            && let Some(consent) = self.snapshot.get_mut("consent")
+            && consent["local_installation"] == "confirmed_current_session"
+        {
+            consent["local_installation"] = json!("previously_accepted");
+        }
         let cancel = Arc::new(AtomicBool::new(false));
         let tag = entry.tag.clone();
         jobs.try_send(Job::Run {
@@ -274,7 +281,7 @@ impl State {
         .map_err(io::Error::other)?;
         self.running = Some(Running {
             tag,
-            create: create.then_some(cancel),
+            cancel: cancellable.then_some(cancel),
             settling: false,
         });
         if create && self.snapshot["state"] == "prepared" {
@@ -342,39 +349,33 @@ fn write(shared: &Shared, stdout: &mut impl Write, job: WriteJob, jsonl: bool) -
     } = job;
     let secret = matches!(payload, Payload::Secret(_));
     let id = tag.as_ref().and_then(|tag| tag.id.as_deref());
-    let bytes = wire::encode(jsonl, id, payload);
-    let mut written_original = true;
-    let written = match bytes {
-        Ok(bytes) => {
-            let mut state = shared.lock().unwrap();
-            if state.closing.as_ref().is_some_and(|close| !close.drain) {
-                return Receipt {
-                    generation,
-                    completed: Instant::now(),
-                    ok: true,
-                    written: false,
-                };
-            }
-            let cancelled = secret && state.closing.is_some();
-            state.publishing(tag.as_ref());
-            drop(state);
-            // No lock is held during the potentially blocking write.
-            let bytes = if cancelled {
-                drop(bytes);
-                written_original = false;
-                wire::encode(jsonl, id, Payload::Error("cancelled"))
-            } else {
-                Ok(bytes)
-            };
-            bytes.and_then(|bytes| stdout.write_all(&bytes).and_then(|()| stdout.flush()))
-        }
-        Err(error) => Err(error),
+    let mut state = shared.lock().unwrap();
+    if state.closing.as_ref().is_some_and(|close| !close.drain) {
+        return Receipt {
+            generation,
+            completed: Instant::now(),
+            ok: true,
+            written: false,
+        };
+    }
+    let cancelled = secret && state.closing.is_some();
+    let payload = if cancelled {
+        Payload::Error("cancelled")
+    } else {
+        payload
     };
+    let bytes = wire::encode(jsonl, id, payload);
+    if bytes.is_ok() {
+        state.publishing(tag.as_ref());
+    }
+    drop(state);
+    // No lock is held during the potentially blocking write.
+    let written = bytes.and_then(|bytes| stdout.write_all(&bytes).and_then(|()| stdout.flush()));
     Receipt {
         generation,
         completed: Instant::now(),
         ok: written.is_ok(),
-        written: written.is_ok() && written_original,
+        written: written.is_ok() && !cancelled,
     }
 }
 
@@ -494,7 +495,8 @@ fn coordinate(
 fn run_windows(home: PathBuf, jsonl: bool, allow_recovery: bool) -> io::Result<i32> {
     use std::os::windows::io::AsHandle;
 
-    let executable = std::env::current_exe()?.with_file_name("kilogram-bootstrap.exe");
+    let executable = std::env::current_exe()?;
+    let bootstrap = executable.with_file_name("kilogram-bootstrap.exe");
     let console_output = io::stdout().is_terminal();
     let allow = allow_recovery || (!jsonl && io::stdin().is_terminal() && console_output);
     let shared = Arc::new(Mutex::new(State::new(allow)));
@@ -535,7 +537,13 @@ fn run_windows(home: PathBuf, jsonl: bool, allow_recovery: bool) -> io::Result<i
     let state = shared.clone();
     let worker = thread::Builder::new()
         .name("setup-operation".into())
-        .spawn(move || service::execute(Service::new(home, executable), queued, state))?;
+        .spawn(move || {
+            service::execute(
+                Service::with_cli(home, bootstrap, executable),
+                queued,
+                state,
+            )
+        })?;
     let state = shared.clone();
     thread::Builder::new()
         .name("setup-stdin".into())

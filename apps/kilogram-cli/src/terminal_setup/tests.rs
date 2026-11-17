@@ -142,7 +142,7 @@ fn t12a_cancel_is_bound_on_admission_and_status_is_a_snapshot() {
     ));
     assert!(state.admit(request("cancel", Command::Cancel(Some("create".into())))));
     assert!(cancel.load(Ordering::Acquire));
-    assert!(!state.settle_creation(entry.tag.generation));
+    assert!(!state.settle(entry.tag.generation));
     assert_eq!(state.cancel(Some("create")), Err("too_late"));
     state.running = None;
     state.publishing(Some(&entry.tag));
@@ -283,5 +283,75 @@ fn t12b_confirmation_waits_for_preview_writer_and_failed_write_drops_it() {
             assert!(queued.try_recv().is_err());
             assert!(state.closing.as_ref().unwrap().failed);
         }
+    }
+}
+
+#[test]
+fn t12c_publication_checks_clock_boundary_on_retained_snapshot() {
+    let snapshot = json!({
+        "state": "recovery_saved",
+        "consent": {
+            "not_before": 1000,
+            "expires_at": 2000,
+            "local_installation": "confirmed_current_session",
+            "slots": [{"importing":"accepted"}, {"importing":"accepted"}]
+        }
+    });
+    for (wall, validity, proof) in [
+        (Some(879), "not_current", "previously_accepted"),
+        (Some(880), "current", "confirmed_current_session"),
+        (Some(1999), "current", "confirmed_current_session"),
+        (Some(2000), "not_current", "previously_accepted"),
+        (None, "not_current", "previously_accepted"),
+    ] {
+        let encode = |jsonl| {
+            wire::encode_at(
+                jsonl,
+                Some("status"),
+                Payload::Public(snapshot.clone()),
+                wall,
+            )
+            .unwrap()
+        };
+        let output: Value = serde_json::from_slice(&encode(true)).unwrap();
+        let view = &output["value"]["consent"];
+        assert_eq!(view["validity"], validity);
+        assert_eq!(view["local_installation"], proof);
+        assert_eq!(view["slots"], snapshot["consent"]["slots"]);
+        let tty = encode(false);
+        assert!(
+            std::str::from_utf8(&tty)
+                .unwrap()
+                .contains(&format!("Local installation {proof}"))
+        );
+    }
+}
+
+#[test]
+fn t12c_consent_command_requires_explicit_confirmation_and_literal_path() {
+    use kilogram_first_dialog::consent_artifact::Kind;
+    let path = "E:\\Public Files\\final.kilogram";
+    let line = format!("/consent  inspect final {path}\r\n");
+    let request = wire::read(&mut Cursor::new(line), false)
+        .unwrap()
+        .unwrap()
+        .unwrap();
+    assert_eq!(
+        request.command,
+        Ok(Command::ConsentInspect(Kind::Final, path.into()))
+    );
+    let id = "a".repeat(64);
+    for (confirmed, expected) in [
+        (false, Err("invalid_args")),
+        (true, Ok(Command::ConsentAccept(Kind::Proposal, id.clone()))),
+    ] {
+        let line = json!({"v":1,"id":"r","op":"consent_accept",
+            "args":{"kind":"proposal","preview_id":id,"confirmed":confirmed}})
+        .to_string();
+        let request = wire::read(&mut Cursor::new(line), true)
+            .unwrap()
+            .unwrap()
+            .unwrap();
+        assert_eq!(request.command, expected);
     }
 }

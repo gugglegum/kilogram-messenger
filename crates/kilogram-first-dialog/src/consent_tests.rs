@@ -5,12 +5,18 @@ use kilogram_state::{StateDirectoryLock, indexed_dialog as db};
 fn repo() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("../..")
 }
+fn image(name: &str) -> PathBuf {
+    std::env::var_os("KILOGRAM_CS_TEST_IMAGE_ROOT")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| repo().join("target/clean-start-runtime"))
+        .join(name)
+}
 pub(crate) fn cli() -> PathBuf {
-    repo().join("target/clean-start-runtime/kilogram-cli.exe")
+    image("kilogram-cli.exe")
 }
 fn bootstrap(setup: &mut Setup) -> Result<()> {
     let out = helper::run(
-        &repo().join("target/clean-start-runtime/kilogram-bootstrap.exe"),
+        &image("kilogram-bootstrap.exe"),
         &setup.record.workspace,
         &setup.record.contexts,
         Arc::new(AtomicBool::new(false)),
@@ -40,11 +46,7 @@ pub(crate) fn pair_in(parent: &Path, name: &str) -> Result<[Setup; 2]> {
     alice.select_reply(reply, true)?;
     Ok([alice, bob])
 }
-pub(crate) fn run_isolated(
-    nodes: &mut [Setup; 2],
-    who: usize,
-    action: Action,
-) -> Result<()> {
+pub(crate) fn run_isolated(nodes: &mut [Setup; 2], who: usize, action: Action) -> Result<()> {
     let peer_root = nodes[1 - who]
         .record
         .public
@@ -65,7 +67,11 @@ pub(crate) fn run_isolated(
     result
 }
 pub(crate) fn repository(setup: &Setup) -> Result<db::RuntimeRepository> {
-    let info = setup.record.public.as_ref().context("Account")?;
+    repository_from_record(&setup.record)
+}
+
+fn repository_from_record(record: &model::Record) -> Result<db::RuntimeRepository> {
+    let info = record.public.as_ref().context("Account")?;
     Ok(db::RuntimeRepository::open(
         StateDirectoryLock::acquire(&info.state_dir)?,
         db::ExpectedOwner {
@@ -74,6 +80,27 @@ pub(crate) fn repository(setup: &Setup) -> Result<db::RuntimeRepository> {
         },
         db::Config::default(),
     )?)
+}
+
+#[test]
+fn t12c_read_terminal_repository_generation() -> Result<()> {
+    let Some(home) = std::env::var_os("KILOGRAM_T12C_TERMINAL_MEASURE") else {
+        return Ok(());
+    };
+    // The terminal holds the Setup lock. At a command boundary its helper
+    // has exited, so the independent state-directory lease is available.
+    let record: model::Record = serde_json::from_slice(&model::read(
+        &Path::new(&home).join("setup.json"),
+        artifact::FILE_CAP,
+    )?)?;
+    let mut store = repository_from_record(&record)?;
+    println!(
+        "T12C_REPOSITORY {} {} {}",
+        store.generation(),
+        store.installed(0)?,
+        store.installed(1)?
+    );
+    Ok(())
 }
 pub(crate) fn selected(setup: &Setup) -> Result<Envelope> {
     Envelope::decode(&model::read(&export(setup)?, artifact::FILE_CAP)?)
@@ -291,6 +318,30 @@ fn cs32a_partial_output_conflict_ambiguous_import_and_expiry() -> Result<()> {
                 == Outcome::Started,
         "ambiguous actual import remains uncertain on reopen"
     );
+    let conflict = nodes[p].home.join("consent/import-1.context");
+    fs::write(&conflict, b"distinct slot1 bytes")?;
+    let error = execute(&mut nodes[p], &cli(), Action::Import, cancelled()).unwrap_err();
+    ensure!(matches!(
+        error.downcast_ref::<Failure>(),
+        Some(Failure::Conflict)
+    ));
+    let outcome = &nodes[p].record.consent.as_ref().context("State")?.slots;
+    ensure!(
+        outcome[0].importing == Outcome::Accepted
+            && outcome[1].importing == Outcome::Failed
+            && !nodes[p].consent_confirmed,
+        "renotified first import durable; second import conflict remains failed"
+    );
+    let mut store = repository(&nodes[p])?;
+    ensure!(
+        fs::read(&conflict)? == b"distinct slot1 bytes"
+            && store.installed(0)?
+            && !store.installed(1)?
+            && store.generation() == generation,
+        "conflict preserves second input and idempotent first import"
+    );
+    drop(store);
+    fs::rename(&conflict, conflict.with_extension("retained"))?;
     run_isolated(&mut nodes, p, Action::Import)?;
     ensure!(
         nodes[p].consent_confirmed && repository(&nodes[p])?.generation() == generation + 1,
@@ -321,6 +372,34 @@ fn cs32a_public_negative_bindings_crypto_and_aggregate() -> Result<()> {
     run_isolated(&mut nodes, p, Action::Propose)?;
     let proposal = selected(&nodes[p])?;
     let before = fs::read(nodes[s].home.join("setup.json"))?;
+    let consent_dir = nodes[s].home.join("consent");
+    fs::create_dir(&consent_dir)?;
+    for name in ["received-proposal.kilogram", "inputs.json"] {
+        let path = consent_dir.join(name);
+        fs::write(&path, b"existing different bytes")?;
+        for error in [
+            preview(&nodes[s], &proposal).unwrap_err(),
+            select(&mut nodes[s], &proposal).unwrap_err(),
+        ] {
+            ensure!(matches!(
+                error.downcast_ref::<Failure>(),
+                Some(Failure::Conflict)
+            ));
+        }
+        ensure!(fs::read(&path)? == b"existing different bytes");
+        ensure!(fs::read(nodes[s].home.join("setup.json"))? == before);
+        ensure!(
+            fs::read_dir(&consent_dir)?.count() == 1,
+            "no freeze on selection conflict"
+        );
+        fs::rename(&path, nodes[s].home.join(format!("{name}.retained")))?;
+    }
+    let public = preview(&nodes[s], &proposal)?;
+    ensure!(public.artifact_digest == digest(&proposal.encode()?));
+    ensure!(
+        fs::read_dir(&consent_dir)?.count() == 0,
+        "preview performs no writes"
+    );
     let mut invalid = proposal.clone();
     invalid.contexts.swap(0, 1);
     ensure!(select(&mut nodes[s], &invalid).is_err(), "swapped contexts");
@@ -431,6 +510,20 @@ fn cs32a_public_negative_bindings_crypto_and_aggregate() -> Result<()> {
         "both finals checked before first import"
     );
     Ok(())
+}
+
+#[test]
+fn t12c_cleanup_failure_survives_failed_outcome_write() {
+    let err = failed_helper(
+        Err(helper::HelperError::CleanupUnconfirmed.into()),
+        || anyhow::bail!("cannot record Failed"),
+        "import failed",
+    )
+    .unwrap_err();
+    assert_eq!(
+        err.downcast_ref::<helper::HelperError>(),
+        Some(&helper::HelperError::CleanupUnconfirmed)
+    );
 }
 
 #[test]

@@ -1,6 +1,10 @@
 use crate::terminal_chat::{Frame, frame, terminal_escaped, terminal_text, valid_id};
 use kilogram_bootstrap_contract::ORDERED2_RECOVERY_SCOPE;
-use kilogram_first_dialog::artifact::Kind;
+use kilogram_first_dialog::{
+    artifact::Kind,
+    consent::{self, Action},
+    consent_artifact::Kind as ConsentKind,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json, value::RawValue};
 use std::{
@@ -9,7 +13,7 @@ use std::{
 };
 use zeroize::Zeroizing;
 
-pub(super) const HELP: &str = "/status /begin /open /create /recovery show /recovery saved /cancel /quit\n/invite export|inspect <path>|join <preview_id>\n/reply export|inspect <path>|accept <preview_id>\n/preview clear\nSave recovery words offline before confirming.";
+pub(super) const HELP: &str = "/status /begin /open /create /recovery show /recovery saved /cancel /quit\n/invite export|inspect <path>|join <preview_id>\n/reply export|inspect <path>|accept <preview_id>\n/consent propose|export|cosign|import\n/consent inspect <proposal|final> <path>\n/consent accept <proposal|final> <preview_id>\n/preview clear\nSave recovery words offline before confirming.";
 const OUTPUT_CAP: usize = 256 * 1024;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -23,10 +27,20 @@ pub(super) enum Command {
     Export(Kind),
     Inspect(Kind, PathBuf),
     Confirm(Kind, String),
+    ConsentInspect(ConsentKind, PathBuf),
+    ConsentAccept(ConsentKind, String),
+    ConsentExport,
+    ConsentAction(Action),
     ClearPreview,
     Cancel(Option<String>),
     Quit,
     Help,
+}
+
+impl Command {
+    pub fn cancellable(&self) -> bool {
+        matches!(self, Self::Create | Self::ConsentAction(_))
+    }
 }
 
 pub(super) struct Request {
@@ -73,14 +87,29 @@ struct Confirm {
     confirmed: bool,
 }
 
-fn inspect(kind: Kind, path: &str) -> Result<Command, &'static str> {
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ConsentInspect {
+    kind: ConsentKind,
+    path: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ConsentAccept {
+    kind: ConsentKind,
+    preview_id: String,
+    confirmed: bool,
+}
+
+fn path(path: &str) -> Result<PathBuf, &'static str> {
     if path.is_empty() || path.contains('\0') {
         return Err("invalid_args");
     }
-    Ok(Command::Inspect(kind, PathBuf::from(path)))
+    Ok(PathBuf::from(path))
 }
 
-fn confirm(kind: Kind, id: String) -> Result<Command, &'static str> {
+fn preview_id(id: String) -> Result<String, &'static str> {
     if id.len() != 64
         || !id
             .bytes()
@@ -88,7 +117,15 @@ fn confirm(kind: Kind, id: String) -> Result<Command, &'static str> {
     {
         return Err("invalid_args");
     }
-    Ok(Command::Confirm(kind, id))
+    Ok(id)
+}
+
+fn consent_kind(kind: &str) -> Result<ConsentKind, &'static str> {
+    match kind {
+        "proposal" => Ok(ConsentKind::Proposal),
+        "final" => Ok(ConsentKind::Final),
+        _ => Err("invalid_args"),
+    }
 }
 
 fn parse(request: &WireRequest<'_>) -> Result<Command, &'static str> {
@@ -114,7 +151,7 @@ fn parse(request: &WireRequest<'_>) -> Result<Command, &'static str> {
                 Kind::Reply
             };
             let input: Inspect = serde_json::from_str(args).map_err(|_| "invalid_args")?;
-            inspect(kind, &input.path)
+            Ok(Command::Inspect(kind, path(&input.path)?))
         }
         "invite_join" | "reply_accept" => {
             let kind = if request.op == "invite_join" {
@@ -126,7 +163,21 @@ fn parse(request: &WireRequest<'_>) -> Result<Command, &'static str> {
             if !input.confirmed {
                 return Err("invalid_args");
             }
-            confirm(kind, input.preview_id)
+            Ok(Command::Confirm(kind, preview_id(input.preview_id)?))
+        }
+        "consent_inspect" => {
+            let input: ConsentInspect = serde_json::from_str(args).map_err(|_| "invalid_args")?;
+            Ok(Command::ConsentInspect(input.kind, path(&input.path)?))
+        }
+        "consent_accept" => {
+            let input: ConsentAccept = serde_json::from_str(args).map_err(|_| "invalid_args")?;
+            if !input.confirmed {
+                return Err("invalid_args");
+            }
+            Ok(Command::ConsentAccept(
+                input.kind,
+                preview_id(input.preview_id)?,
+            ))
         }
         _ if serde_json::from_str::<Empty>(args).is_err() => Err("invalid_args"),
         "status" => Ok(Command::Status),
@@ -136,6 +187,10 @@ fn parse(request: &WireRequest<'_>) -> Result<Command, &'static str> {
         "recovery_show" => Ok(Command::Show),
         "invite_export" => Ok(Command::Export(Kind::Invite)),
         "reply_export" => Ok(Command::Export(Kind::Reply)),
+        "consent_propose" => Ok(Command::ConsentAction(Action::Propose)),
+        "consent_cosign" => Ok(Command::ConsentAction(Action::Cosign)),
+        "consent_import" => Ok(Command::ConsentAction(Action::Import)),
+        "consent_export" => Ok(Command::ConsentExport),
         "preview_clear" => Ok(Command::ClearPreview),
         "quit" => Ok(Command::Quit),
         _ => Err("unknown_operation"),
@@ -145,18 +200,22 @@ fn parse(request: &WireRequest<'_>) -> Result<Command, &'static str> {
 fn parse_tty(command: &str) -> Option<Result<Command, &'static str>> {
     let command = command.trim_ascii();
     if let Some((topic, tail)) = command.split_once(|c: char| c.is_ascii_whitespace())
-        && let kind @ ("/invite" | "/reply") = topic
+        && let Some((action, args)) = split(tail)
+        && action == "inspect"
     {
-        let kind = if kind == "/invite" {
-            Kind::Invite
-        } else {
-            Kind::Reply
-        };
-        let tail = tail.trim_ascii_start();
-        if let Some((action, path)) = tail.split_once(|c: char| c.is_ascii_whitespace())
-            && action == "inspect"
-        {
-            return Some(inspect(kind, path.trim_ascii_start()));
+        match topic {
+            "/invite" => return Some(path(args).map(|p| Command::Inspect(Kind::Invite, p))),
+            "/reply" => return Some(path(args).map(|p| Command::Inspect(Kind::Reply, p))),
+            "/consent" => {
+                return Some((|| {
+                    let (kind, literal_path) = split(args).ok_or("invalid_args")?;
+                    Ok(Command::ConsentInspect(
+                        consent_kind(kind)?,
+                        path(literal_path)?,
+                    ))
+                })());
+            }
+            _ => {}
         }
     }
     let tokens: Vec<_> = command.split_ascii_whitespace().collect();
@@ -170,15 +229,36 @@ fn parse_tty(command: &str) -> Option<Result<Command, &'static str>> {
         ["/recovery", "saved"] => Ok(Command::Acknowledge),
         ["/invite", "export"] => Ok(Command::Export(Kind::Invite)),
         ["/reply", "export"] => Ok(Command::Export(Kind::Reply)),
-        ["/invite", "join", id] => confirm(Kind::Invite, (*id).into()),
-        ["/reply", "accept", id] => confirm(Kind::Reply, (*id).into()),
+        ["/invite", "join", id] => {
+            preview_id((*id).into()).map(|id| Command::Confirm(Kind::Invite, id))
+        }
+        ["/reply", "accept", id] => {
+            preview_id((*id).into()).map(|id| Command::Confirm(Kind::Reply, id))
+        }
+        ["/consent", "propose"] => Ok(Command::ConsentAction(Action::Propose)),
+        ["/consent", "cosign"] => Ok(Command::ConsentAction(Action::Cosign)),
+        ["/consent", "import"] => Ok(Command::ConsentAction(Action::Import)),
+        ["/consent", "export"] => Ok(Command::ConsentExport),
+        ["/consent", "accept", kind, id] => (|| {
+            Ok(Command::ConsentAccept(
+                consent_kind(kind)?,
+                preview_id((*id).into())?,
+            ))
+        })(),
         ["/preview", "clear"] => Ok(Command::ClearPreview),
-        ["/invite" | "/reply" | "/preview", ..] => Err("invalid_args"),
+        ["/invite" | "/reply" | "/preview" | "/consent", ..] => Err("invalid_args"),
         ["/cancel"] => Ok(Command::Cancel(None)),
         ["/quit"] => Ok(Command::Quit),
         ["/help"] => Ok(Command::Help),
         _ => Err("invalid_command"),
     })
+}
+
+fn split(input: &str) -> Option<(&str, &str)> {
+    let (head, tail) = input
+        .trim_ascii_start()
+        .split_once(|c: char| c.is_ascii_whitespace())?;
+    Some((head, tail.trim_ascii_start()))
 }
 
 pub(super) fn read(
@@ -283,7 +363,19 @@ fn artifact_tty(out: &mut impl Write, value: &Value, kind: &str) -> io::Result<(
         value["invitation_id"].as_str().unwrap_or_default()
     )?;
     contexts(out, &value["contexts"])?;
-    if value.get("preview_id").is_some() {
+    if let Some(digest) = value["artifact_digest"].as_str() {
+        write!(
+            out,
+            "\nValidity {} to {} (Unix seconds)\nArtifact digest {digest}",
+            value["not_before"], value["expires_at"]
+        )?;
+        if value.get("preview_id").is_some() {
+            write!(
+                out,
+                "\nBoth signed payloads verified against the selected peer and contexts. Accept this preview to keep the document."
+            )?;
+        }
+    } else if value.get("preview_id").is_some() {
         write!(
             out,
             "\nCredential and authority signatures verified. The envelope and contexts are unsigned.\n\
@@ -313,6 +405,31 @@ pub(super) fn encode(
     id: Option<&str>,
     payload: Payload,
 ) -> io::Result<Zeroizing<Vec<u8>>> {
+    encode_at(jsonl, id, payload, consent::now().ok())
+}
+
+pub(super) fn encode_at(
+    jsonl: bool,
+    id: Option<&str>,
+    mut payload: Payload,
+    wall: Option<u64>,
+) -> io::Result<Zeroizing<Vec<u8>>> {
+    if let Payload::Public(value) = &mut payload
+        && let Some(view) = value.get_mut("consent")
+    {
+        let period = view["not_before"].as_u64().zip(view["expires_at"].as_u64());
+        let current = period
+            .zip(wall)
+            .is_some_and(|((start, end), wall)| consent::valid_interval(start, end, wall).is_ok());
+        view["validity"] = json!(match (period, current) {
+            (None, _) => "unset",
+            (Some(_), true) => "current",
+            (Some(_), false) => "not_current",
+        });
+        if !current && view["local_installation"] == "confirmed_current_session" {
+            view["local_installation"] = json!("previously_accepted");
+        }
+    }
     // Fixed capacity for the sensitive response prevents reallocation of any
     // serialized phrase. The only serializer input is a borrowed str.
     let mut bytes = Zeroizing::new(Vec::with_capacity(8192));
@@ -374,6 +491,9 @@ pub(super) fn encode(
                         )?;
                         contexts(&mut *bytes, &value["contexts"])?;
                     }
+                    if let Some(view) = value.get("consent") {
+                        consent_tty(&mut *bytes, view)?;
+                    }
                     match phase {
                         "recovery_unavailable" => bytes.write_all(
                             b"\nContinue only if you previously saved the words offline.",
@@ -390,7 +510,13 @@ pub(super) fn encode(
                 }
             }
             Payload::Error(code) | Payload::FrameError(code) => {
-                write!(&mut *bytes, "Error: {code}.")?
+                write!(&mut *bytes, "Error: {code}.")?;
+                if code == "consent_import_failed" {
+                    write!(
+                        &mut *bytes,
+                        " If the messaging runtime holds this account, close it and retry the same finals."
+                    )?;
+                }
             }
             Payload::Secret(_) => unreachable!(),
         }
@@ -400,4 +526,38 @@ pub(super) fn encode(
         return Err(io::Error::other("output bound"));
     }
     Ok(bytes)
+}
+
+fn consent_tty(out: &mut impl Write, view: &Value) -> io::Result<()> {
+    let name = |field: &str| view[field].as_str().unwrap_or_default();
+    write!(
+        out,
+        "\nConsent {} {} {}",
+        name("role"),
+        name("stage"),
+        name("validity")
+    )?;
+    if let (Some(start), Some(end)) = (view["not_before"].as_u64(), view["expires_at"].as_u64()) {
+        write!(out, "\nValidity {start} to {end} (Unix seconds)")?;
+    }
+    for (label, field) in [
+        ("Selected proposal", "selected_proposal_digest"),
+        ("Final", "final_digest"),
+    ] {
+        if let Some(digest) = view[field].as_str() {
+            write!(out, "\n{label} digest {digest}")?;
+        }
+    }
+    for (slot, value) in view["slots"].as_array().into_iter().flatten().enumerate() {
+        let name = |field: &str| value[field].as_str().unwrap_or_default();
+        write!(
+            out,
+            "\nConsent slot {} {} signing={} importing={}",
+            slot + 1,
+            name("context_id"),
+            name("signing"),
+            name("importing")
+        )?;
+    }
+    write!(out, "\nLocal installation {}", name("local_installation"))
 }

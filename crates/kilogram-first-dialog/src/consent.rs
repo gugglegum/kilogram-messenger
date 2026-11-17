@@ -11,7 +11,7 @@ use kilogram_protocol::ordered_dialog_v2 as wire;
 use serde::{Deserialize, Serialize};
 use std::{
     ffi::OsString,
-    fs,
+    fmt, fs,
     path::{Path, PathBuf},
     sync::{
         Arc,
@@ -22,6 +22,35 @@ use std::{
 
 const INPUT_CAP: usize = 160 * 1024;
 pub(super) const TTL: u64 = 30 * 86400;
+
+#[derive(Clone, Copy, Debug)]
+pub enum Failure {
+    InvalidArtifact,
+    Mismatch,
+    WrongRole,
+    NotReady,
+    NotCurrent,
+    Conflict,
+    ExportConflict,
+}
+
+impl fmt::Display for Failure {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(match self {
+            Self::InvalidArtifact => "Invalid signed consent artifact",
+            Self::Mismatch => "Consent differs from the selected peer, contexts or proposal",
+            Self::WrongRole => "Wrong canonical consent role",
+            Self::NotReady => "Complete the required consent step first",
+            Self::NotCurrent => {
+                "Consent expired or not yet valid; existing artifacts were preserved"
+            }
+            Self::Conflict => "Consent output conflict; existing files were preserved",
+            Self::ExportConflict => "Exchange output already has different bytes",
+        })
+    }
+}
+impl std::error::Error for Failure {}
+
 pub fn now() -> Result<u64> {
     Ok(SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs())
 }
@@ -31,7 +60,7 @@ fn digest(raw: &[u8]) -> String {
 pub fn valid_interval(nb: u64, end: u64, wall: u64) -> Result<()> {
     ensure!(
         end > nb && end - nb <= TTL && wall.saturating_add(120) >= nb && wall < end,
-        "Consent expired or not yet valid; existing artifacts were preserved"
+        Failure::NotCurrent
     );
     Ok(())
 }
@@ -61,7 +90,8 @@ impl Reference {
     }
     fn read(&self, setup: &Setup, cap: usize) -> Result<Vec<u8>> {
         self.valid()?;
-        let raw = model::read(&setup.home.join("consent").join(&self.name), cap)?;
+        let path = local_path(setup, "consent", &self.name)?;
+        let raw = model::read(&path, cap)?;
         ensure!(
             digest(&raw) == self.digest,
             "Recorded consent artifact changed"
@@ -227,39 +257,57 @@ pub fn role(setup: &Setup) -> Result<usize> {
     ))
 }
 fn get_inputs(setup: &Setup, time: bool) -> Result<Inputs> {
-    let state = setup
-        .record
-        .consent
-        .as_ref()
-        .context("Consent not started")?;
+    let state = setup.record.consent.as_ref().ok_or(Failure::NotReady)?;
     state.validate()?;
     let inputs: Inputs = serde_json::from_slice(&state.inputs.read(setup, INPUT_CAP)?)?;
     inputs.check(setup, time)?;
     Ok(inputs)
 }
+fn local_path(setup: &Setup, directory: &str, name: &str) -> Result<PathBuf> {
+    let path = setup.home.join(directory).join(name);
+    super::connection::validate_artifact_path(&setup.home, &setup.record, &path)?;
+    Ok(path)
+}
+
+fn check_target(path: &Path, raw: &[u8], conflict: Failure) -> Result<()> {
+    match fs::metadata(path) {
+        Ok(meta) if meta.is_file() => {
+            ensure!(
+                meta.len() == raw.len() as u64 && model::read(path, artifact::FILE_CAP)? == raw,
+                conflict
+            );
+        }
+        Ok(_) => return Err(conflict.into()),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(e.into()),
+    }
+    Ok(())
+}
+
+fn write_exact(path: &Path, raw: &[u8], conflict: Failure) -> Result<()> {
+    if let Err(error) = model::write(path, raw, false) {
+        if !path.try_exists()? {
+            return Err(error);
+        }
+        check_target(path, raw, conflict)?;
+    }
+    Ok(())
+}
+
 fn put(setup: &Setup, name: &str, raw: &[u8]) -> Result<Reference> {
     let reference = Reference {
         name: name.into(),
         digest: digest(raw),
     };
     reference.valid()?;
-    let parent = setup.home.join("consent");
-    fs::create_dir_all(&parent)?;
-    let path = parent.join(name);
-    if let Err(e) = model::write(&path, raw, false) {
-        ensure!(
-            model::read(&path, artifact::FILE_CAP)? == raw,
-            "Consent output conflict; existing files preserved: {e}"
-        );
-    }
+    let path = local_path(setup, "consent", name)?;
+    fs::create_dir_all(setup.home.join("consent"))?;
+    write_exact(&path, raw, Failure::Conflict)?;
     Ok(reference)
 }
-fn freeze(setup: &mut Setup, nb: u64, ttl: u64) -> Result<Inputs> {
-    if setup.record.consent.is_some() {
-        return get_inputs(setup, true);
-    }
+fn candidate_inputs(setup: &Setup, nb: u64, ttl: u64) -> Result<Inputs> {
     let info = setup.ready()?;
-    let mut inputs = Inputs {
+    let inputs = Inputs {
         version: 1,
         local_id: setup.record.local_id.clone(),
         invitation: setup.record.invitation.clone(),
@@ -269,10 +317,20 @@ fn freeze(setup: &mut Setup, nb: u64, ttl: u64) -> Result<Inputs> {
         not_before: nb,
         ttl,
     };
-    let path = setup.home.join("consent/inputs.json");
-    if path.try_exists()? {
-        inputs = serde_json::from_slice(&model::read(&path, INPUT_CAP)?)?;
+    inputs.check(setup, true)?;
+    Ok(inputs)
+}
+
+fn freeze(setup: &mut Setup, nb: u64, ttl: u64) -> Result<Inputs> {
+    if setup.record.consent.is_some() {
+        return get_inputs(setup, true);
     }
+    let path = local_path(setup, "consent", "inputs.json")?;
+    let inputs = if path.try_exists()? {
+        serde_json::from_slice(&model::read(&path, INPUT_CAP)?)?
+    } else {
+        candidate_inputs(setup, nb, ttl)?
+    };
     inputs.check(setup, true)?;
     let raw = serde_json::to_vec(&inputs)?;
     ensure!(raw.len() <= INPUT_CAP, "Frozen inputs cap");
@@ -313,7 +371,7 @@ fn check_envelope(setup: &Setup, e: &Envelope, incoming: bool) -> Result<()> {
                 }
             && e.invitation == setup.record.invitation
             && e.contexts == setup.record.contexts,
-        "Consent sender/recipient/invitation/context pins differ"
+        Failure::Mismatch
     );
     Ok(())
 }
@@ -454,62 +512,123 @@ fn envelope(setup: &Setup, kind: Kind, inputs: &Inputs, blobs: [Vec<u8>; 2]) -> 
         blobs: blobs.each_ref().map(|b| artifact::hex(b)),
     }
 }
-pub fn select(setup: &mut Setup, e: &Envelope) -> Result<()> {
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct PublicArtifact {
+    pub kind: Kind,
+    pub invitation_id: String,
+    pub contexts: [String; 2],
+    pub sender: PublicIdentity,
+    pub recipient: PublicIdentity,
+    pub not_before: u64,
+    pub expires_at: u64,
+    pub artifact_digest: String,
+}
+
+#[derive(Clone, Debug, serde::Serialize)]
+pub struct PublicIdentity {
+    pub account_id: String,
+    pub device_id: String,
+}
+
+impl PublicArtifact {
+    fn new(e: &Envelope, inputs: &Inputs, raw: &[u8]) -> Self {
+        let (not_before, expires_at) = inputs.interval();
+        Self {
+            kind: e.kind,
+            invitation_id: e.invitation.clone(),
+            contexts: e.contexts.clone(),
+            sender: PublicIdentity {
+                account_id: e.sender.account.to_string(),
+                device_id: e.sender.device.to_string(),
+            },
+            recipient: PublicIdentity {
+                account_id: e.recipient.account.to_string(),
+                device_id: e.recipient.device.to_string(),
+            },
+            not_before,
+            expires_at,
+            artifact_digest: digest(raw),
+        }
+    }
+}
+
+fn proposal_period(blob: &[u8]) -> Result<(u64, u64)> {
+    let value = wire::decode(blob, BLOB_CAP)?;
+    let body = value.fields(7)?[4].fields(10)?;
+    let nb = body[8].uint()?;
+    let ttl = body[9]
+        .uint()?
+        .checked_sub(nb)
+        .context("Proposal interval")?;
+    ensure!((1..=TTL).contains(&ttl), Failure::InvalidArtifact);
+    Ok((nb, ttl))
+}
+
+fn selection(setup: &Setup, e: &Envelope) -> Result<(Inputs, Vec<u8>, &'static str)> {
     check_envelope(setup, e, true)?;
     let r = role(setup)?;
-    let blobs = e.payloads()?;
-    match e.kind {
+    let blobs = e.payloads().context(Failure::InvalidArtifact)?;
+    let raw = e.encode()?;
+    let wall = now()?;
+    let (inputs, name, prior) = match e.kind {
         Kind::Proposal => {
-            ensure!(r == 1, "The canonical proposer must create the proposal");
-            let body = wire::decode(&blobs[0], BLOB_CAP)?.fields(7)?[4].clone();
-            let b = body.fields(10)?;
-            let nb = b[8].uint()?;
-            let ttl = b[9].uint()?.checked_sub(nb).context("Proposal interval")?;
-            // Verify BOTH public proposals before freezing selection or signing.
-            let info = setup.ready()?;
-            let candidate = Inputs {
-                version: 1,
-                local_id: setup.record.local_id.clone(),
-                invitation: setup.record.invitation.clone(),
-                contexts: setup.record.contexts.clone(),
-                own: Setup::identity(&info)?,
-                peer: setup.record.peer.clone().context("Peer")?,
-                not_before: nb,
-                ttl,
-            };
-            candidate.check(setup, true)?;
-            proposals(&candidate, &blobs, now()?)?;
-            let inputs = freeze(setup, nb, ttl)?;
-            proposals(&inputs, &blobs, now()?)?;
-            let reference = put(setup, "received-proposal.kilogram", &e.encode()?)?;
-            if let Some(old) = &setup.record.consent.as_ref().context("Consent")?.proposal {
-                ensure!(
-                    old == &reference,
-                    "A different proposal was already selected"
-                );
+            ensure!(r == 1, Failure::WrongRole);
+            let (nb, ttl) = proposal_period(&blobs[0]).context(Failure::InvalidArtifact)?;
+            let candidate = candidate_inputs(setup, nb, ttl)?;
+            proposals(&candidate, &blobs, wall).context(Failure::InvalidArtifact)?;
+            if setup.record.consent.is_some() {
+                ensure!(get_inputs(setup, false)? == candidate, Failure::Conflict);
+            } else {
+                let path = local_path(setup, "consent", "inputs.json")?;
+                check_target(&path, &serde_json::to_vec(&candidate)?, Failure::Conflict)?;
             }
-            change(setup, |s| s.proposal = Some(reference))?;
-        }
-        Kind::Final => {
-            ensure!(
-                r == 0,
-                "Only the proposer receives the cosigner's final file"
-            );
-            let inputs = get_inputs(setup, true)?;
-            finals(&inputs, &blobs, Some(now()?))?;
-            lineage(setup, &inputs, &blobs)?;
-            let reference = put(setup, "final.kilogram", &e.encode()?)?;
-            if let Some(old) = &setup
+            let prior = setup
                 .record
                 .consent
                 .as_ref()
-                .context("Consent")?
-                .final_artifact
-            {
-                ensure!(old == &reference, "Different finals already selected");
-            }
-            change(setup, |s| s.final_artifact = Some(reference))?;
+                .and_then(|s| s.proposal.as_ref());
+            (candidate, "received-proposal.kilogram", prior)
         }
+        Kind::Final => {
+            ensure!(r == 0, Failure::WrongRole);
+            let inputs = get_inputs(setup, true)?;
+            let state = setup.record.consent.as_ref().ok_or(Failure::NotReady)?;
+            ensure!(
+                state.slots.iter().all(|s| s.output.is_some()),
+                Failure::NotReady
+            );
+            valid_interval(inputs.not_before, inputs.interval().1, wall)?;
+            finals(&inputs, &blobs, None).context(Failure::InvalidArtifact)?;
+            lineage(setup, &inputs, &blobs).context(Failure::Mismatch)?;
+            (inputs, "final.kilogram", state.final_artifact.as_ref())
+        }
+    };
+    if let Some(prior) = prior {
+        ensure!(
+            prior.read(setup, artifact::FILE_CAP)? == raw,
+            Failure::Conflict
+        );
+    }
+    let path = local_path(setup, "consent", name)?;
+    check_target(&path, &raw, Failure::Conflict)?;
+    Ok((inputs, raw, name))
+}
+
+/// Validate incoming consent and return public metadata without changing Setup.
+pub fn preview(setup: &Setup, e: &Envelope) -> Result<PublicArtifact> {
+    let (inputs, raw, _) = selection(setup, e)?;
+    Ok(PublicArtifact::new(e, &inputs, &raw))
+}
+
+pub fn select(setup: &mut Setup, e: &Envelope) -> Result<()> {
+    let (inputs, raw, name) = selection(setup, e)?;
+    if e.kind == Kind::Proposal {
+        freeze(setup, inputs.not_before, inputs.ttl)?;
+    }
+    let reference = put(setup, name, &raw)?;
+    match e.kind {
+        Kind::Proposal => change(setup, |s| s.proposal = Some(reference))?,
+        Kind::Final => change(setup, |s| s.final_artifact = Some(reference))?,
     }
     setup.consent_confirmed = false;
     Ok(())
@@ -567,7 +686,7 @@ pub fn review(setup: &Setup, time: bool) -> Result<()> {
     }
     Ok(())
 }
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Action {
     Propose,
     Cosign,
@@ -576,7 +695,7 @@ pub enum Action {
 fn stopped(cancel: &AtomicBool) -> Result<()> {
     ensure!(
         !cancel.load(Ordering::Acquire),
-        "Consent action cancelled; saved progress retained"
+        helper::HelperError::Cancelled
     );
     Ok(())
 }
@@ -645,14 +764,24 @@ fn argv(
     Ok(args)
 }
 fn public_file(setup: &Setup, name: &str, raw: &[u8]) -> Result<PathBuf> {
-    let path = setup.home.join("consent").join(name);
-    if let Err(e) = model::write(&path, raw, false) {
-        ensure!(
-            model::read(&path, artifact::FILE_CAP)? == raw,
-            "Existing public input conflict: {e}"
-        );
-    }
+    let path = local_path(setup, "consent", name)?;
+    write_exact(&path, raw, Failure::Conflict)?;
     Ok(path)
+}
+
+fn failed_helper(
+    result: Result<()>,
+    record: impl FnOnce() -> Result<()>,
+    message: &'static str,
+) -> Result<()> {
+    if let Err(error) = result {
+        let mut error = error.context(message);
+        if record().is_err() {
+            error = error.context("Could not record failed consent attempt");
+        }
+        return Err(error);
+    }
+    Ok(())
 }
 pub fn execute(
     setup: &mut Setup,
@@ -672,20 +801,23 @@ fn execute_with(
     let r = role(setup)?;
     stopped(&cancel)?;
     let _ = setup.ready()?;
-    if matches!(action, Action::Propose) {
-        ensure!(r == 0, "Only canonical role0 proposes");
-        freeze(setup, now()?, TTL)?;
+    match action {
+        Action::Propose => {
+            ensure!(r == 0, Failure::WrongRole);
+            freeze(setup, now()?, TTL)?;
+        }
+        Action::Cosign => ensure!(r == 1, Failure::WrongRole),
+        Action::Import => setup.consent_confirmed = false,
     }
     let inputs = get_inputs(setup, true)?;
     review(setup, true)?;
     if matches!(action, Action::Import) {
-        setup.consent_confirmed = false;
         let state = setup.record.consent.as_ref().context("Consent")?;
         let e = Envelope::decode(
             &state
                 .final_artifact
                 .as_ref()
-                .context("Select both final contexts first")?
+                .ok_or(Failure::NotReady)?
                 .read(setup, artifact::FILE_CAP)?,
         )?;
         let blobs = e.payloads()?;
@@ -694,7 +826,13 @@ fn execute_with(
         for (slot, raw) in blobs.iter().enumerate() {
             stopped(&cancel)?;
             finals(&inputs, &blobs, Some(now()?))?;
-            let path = public_file(setup, &format!("import-{slot}.context"), raw)?;
+            let path = match public_file(setup, &format!("import-{slot}.context"), raw) {
+                Ok(path) => path,
+                Err(error) => {
+                    change(setup, |s| s.slots[slot].importing = Outcome::Failed)?;
+                    return Err(error);
+                }
+            };
             change(setup, |s| s.slots[slot].importing = Outcome::Started)?;
             let info = setup.record.public.as_ref().context("Account")?;
             let args = vec![
@@ -709,12 +847,11 @@ fn execute_with(
                 "--invitation-file".into(),
                 path.into_os_string(),
             ];
-            if helper::public_command(exe, &args, cancel.clone()).is_err() {
-                change(setup, |s| s.slots[slot].importing = Outcome::Failed)?;
-                anyhow::bail!(
-                    "Local import not confirmed. Stop the messaging runtime if it holds this account; retry the same finals. Existing files were preserved."
-                );
-            }
+            failed_helper(
+                helper::public_command(exe, &args, cancel.clone()),
+                || change(setup, |s| s.slots[slot].importing = Outcome::Failed),
+                "Local import not confirmed. Stop the messaging runtime if it holds this account; retry the same finals. Existing files were preserved.",
+            )?;
             after(slot)?; // controlled test interruption can model lost result after commit
             change(setup, |s| s.slots[slot].importing = Outcome::Accepted)?;
         }
@@ -723,7 +860,21 @@ fn execute_with(
         return Ok(());
     }
     let cosign = matches!(action, Action::Cosign);
-    ensure!(r == usize::from(cosign), "Wrong canonical signing role");
+    let proposal = if cosign {
+        let state = setup.record.consent.as_ref().context("Consent")?;
+        let e = Envelope::decode(
+            &state
+                .proposal
+                .as_ref()
+                .ok_or(Failure::NotReady)?
+                .read(setup, artifact::FILE_CAP)?,
+        )?;
+        let blobs = e.payloads()?;
+        proposals(&inputs, &blobs, now()?)?;
+        Some(blobs)
+    } else {
+        None
+    };
     for (name, raw) in [
         (
             "own.credential",
@@ -744,17 +895,7 @@ fn execute_with(
     ] {
         let _ = public_file(setup, name, &raw)?;
     }
-    if cosign {
-        let state = setup.record.consent.as_ref().context("Consent")?;
-        let e = Envelope::decode(
-            &state
-                .proposal
-                .as_ref()
-                .context("Inspect and select a proposal first")?
-                .read(setup, artifact::FILE_CAP)?,
-        )?;
-        let blobs = e.payloads()?;
-        proposals(&inputs, &blobs, now()?)?;
+    if let Some(blobs) = proposal {
         for (slot, raw) in blobs.iter().enumerate() {
             let _ = public_file(setup, &format!("input-{slot}.proposal"), raw)?;
         }
@@ -769,18 +910,17 @@ fn execute_with(
             continue;
         }
         let name = format!("attempt-{}-{slot}.bin", artifact::id()?);
-        let path = setup.home.join("consent").join(&name);
+        let path = local_path(setup, "consent", &name)?;
         change(setup, |s| {
             s.slots[slot].signing = Outcome::Started;
             s.slots[slot].last_output = Some(name.clone());
         })?;
         let args = argv(&inputs, setup, slot, &path, cosign)?;
-        if helper::public_command(exe, &args, cancel.clone()).is_err() {
-            change(setup, |s| s.slots[slot].signing = Outcome::Failed)?;
-            anyhow::bail!(
-                "Signing not confirmed. Its output may be empty; files retained. Retry uses the frozen inputs and a fresh output name."
-            );
-        }
+        failed_helper(
+            helper::public_command(exe, &args, cancel.clone()),
+            || change(setup, |s| s.slots[slot].signing = Outcome::Failed),
+            "Signing not confirmed. Its output may be empty; files retained. Retry uses the frozen inputs and a fresh output name.",
+        )?;
         let raw = model::read(&path, BLOB_CAP)?;
         if cosign {
             let value = wire::decode(&raw, BLOB_CAP)?;
@@ -831,6 +971,10 @@ fn execute_with(
     Ok(())
 }
 pub fn export(setup: &Setup) -> Result<PathBuf> {
+    Ok(export_public(setup)?.0)
+}
+
+pub fn export_public(setup: &Setup) -> Result<(PathBuf, PublicArtifact)> {
     review(setup, true)?;
     let inputs = get_inputs(setup, true)?;
     let state = setup.record.consent.as_ref().context("Consent")?;
@@ -839,12 +983,12 @@ pub fn export(setup: &Setup) -> Result<PathBuf> {
             state.slots[0]
                 .output
                 .as_ref()
-                .context("Proposal slot0 incomplete")?
+                .ok_or(Failure::NotReady)?
                 .read(setup, BLOB_CAP)?,
             state.slots[1]
                 .output
                 .as_ref()
-                .context("Proposal slot1 incomplete")?
+                .ok_or(Failure::NotReady)?
                 .read(setup, BLOB_CAP)?,
         ];
         proposals(&inputs, &blobs, now()?)?;
@@ -858,20 +1002,15 @@ pub fn export(setup: &Setup) -> Result<PathBuf> {
             state
                 .final_artifact
                 .as_ref()
-                .context("Cosign both contexts first")?
+                .ok_or(Failure::NotReady)?
                 .read(setup, artifact::FILE_CAP)?,
         )
     };
-    let parent = setup.home.join("exchange");
-    fs::create_dir_all(&parent)?;
-    let path = parent.join(name);
-    if let Err(e) = model::write(&path, &raw, false) {
-        ensure!(
-            model::read(&path, artifact::FILE_CAP)? == raw,
-            "Exchange output already has different bytes: {e}"
-        );
-    }
-    Ok(path)
+    let path = local_path(setup, "exchange", name)?;
+    let public = PublicArtifact::new(&Envelope::decode(&raw)?, &inputs, &raw);
+    fs::create_dir_all(setup.home.join("exchange"))?;
+    write_exact(&path, &raw, Failure::ExportConflict)?;
+    Ok((path, public))
 }
 
 #[cfg(test)]

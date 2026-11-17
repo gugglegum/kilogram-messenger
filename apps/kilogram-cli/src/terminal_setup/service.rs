@@ -4,6 +4,9 @@ use super::{
 };
 use kilogram_bootstrap_contract::Ordered2BootstrapOutput;
 use kilogram_first_dialog::{
+    artifact::Artifact,
+    consent::Action,
+    consent_artifact::Envelope,
     helper::{self, HelperError},
     model::{Setup, SetupAccessError},
 };
@@ -14,8 +17,14 @@ use std::{
 };
 use zeroize::Zeroizing;
 
+mod agreement;
 mod pairing;
-use pairing::{Preview, identity};
+use pairing::identity;
+
+enum Preview {
+    Pairing { id: String, artifact: Artifact },
+    Consent { id: String, envelope: Envelope },
+}
 
 pub(super) fn unopened() -> Value {
     json!({"state":"unopened","account_id":null,"device_id":null,"contexts":null})
@@ -24,15 +33,23 @@ pub(super) fn unopened() -> Value {
 pub(super) struct Service {
     home: PathBuf,
     helper: PathBuf,
+    cli: PathBuf,
     setup: Option<Setup>,
     preview: Option<Preview>,
 }
 
 impl Service {
+    #[cfg(test)]
     pub fn new(home: PathBuf, helper: PathBuf) -> Self {
+        let cli = helper.with_file_name("kilogram-cli.exe");
+        Self::with_cli(home, helper, cli)
+    }
+
+    pub fn with_cli(home: PathBuf, helper: PathBuf, cli: PathBuf) -> Self {
         Self {
             home,
             helper,
+            cli,
             setup: None,
             preview: None,
         }
@@ -66,6 +83,9 @@ impl Service {
                 "invitation_id": &setup.record.invitation,
                 "peer": identity(peer.account, peer.device),
             });
+        }
+        if let Some(consent) = agreement::snapshot(setup)? {
+            value["consent"] = consent;
         }
         Ok(value)
     }
@@ -114,6 +134,15 @@ impl Service {
             Command::Inspect(kind, path) => return self.inspect(kind, &path).map(Payload::Public),
             Command::Confirm(kind, id) => self.confirm(kind, &id)?,
             Command::Export(kind) => return self.export(kind).map(Payload::Public),
+            Command::ConsentInspect(kind, path) => {
+                return self.inspect_consent(kind, &path).map(Payload::Public);
+            }
+            Command::ConsentAccept(kind, id) => self.accept_consent(kind, &id)?,
+            Command::ConsentExport => return self.export_consent().map(Payload::Public),
+            Command::ConsentAction(action) => {
+                let result = self.run_consent(action, cancel);
+                self.finish_consent(action, generation, session, result)?;
+            }
             Command::ClearPreview => {
                 self.preview = None;
                 return Ok(Payload::Public(json!({"cleared":true})));
@@ -121,6 +150,26 @@ impl Service {
             _ => unreachable!("only local setup operations are sent to the worker"),
         }
         self.snapshot().map(Payload::Public)
+    }
+
+    fn finish_consent(
+        &mut self,
+        action: Action,
+        generation: u64,
+        session: &Shared,
+        result: Result<(), &'static str>,
+    ) -> Result<(), &'static str> {
+        if !session.lock().unwrap().settle(generation) {
+            if action == Action::Import
+                && let Some(setup) = &mut self.setup
+            {
+                setup.consent_confirmed = false;
+            }
+            if result != Err("cleanup_unconfirmed") {
+                return Err("cancelled");
+            }
+        }
+        result
     }
 
     fn refresh(&mut self) -> Result<&mut Setup, &'static str> {
@@ -166,7 +215,7 @@ impl Service {
             cancel,
         );
         let mut state = session.lock().unwrap();
-        let adopt = state.settle_creation(generation);
+        let adopt = state.settle(generation);
         drop(state);
         let result = match result {
             Err(HelperError::CleanupUnconfirmed) => return Err("cleanup_unconfirmed"),
@@ -238,6 +287,30 @@ pub(super) fn execute(
 mod tests {
     use super::*;
     use crate::terminal_setup::Tag;
+
+    #[test]
+    fn t12c_cancel_wins_import_completion_and_cleanup_error_wins_cancel() {
+        for (worker_result, expected) in [
+            (Ok(()), Err("cancelled")),
+            (Err("cleanup_unconfirmed"), Err("cleanup_unconfirmed")),
+        ] {
+            let folder = tempfile::tempdir().unwrap();
+            let home = folder.path().join("setup");
+            let mut service = Service::new(home.clone(), folder.path().join("unused.exe"));
+            let mut setup = Setup::begin(&home, None).unwrap();
+            setup.consent_confirmed = true;
+            service.setup = Some(setup);
+            let before = std::fs::read(home.join("setup.json")).unwrap();
+            let (session, _) = running();
+            session.lock().unwrap().cancel(None).unwrap();
+            assert_eq!(
+                service.finish_consent(Action::Import, 1, &session, worker_result),
+                expected
+            );
+            assert!(!service.setup.unwrap().consent_confirmed);
+            assert_eq!(std::fs::read(home.join("setup.json")).unwrap(), before);
+        }
+    }
     use kilogram_identity::AccountRecoveryPhrase;
     use std::{fs, sync::Mutex};
 
@@ -249,7 +322,7 @@ mod tests {
                 generation: 1,
                 id: None,
             },
-            create: Some(cancel.clone()),
+            cancel: Some(cancel.clone()),
             settling: false,
         });
         (Arc::new(Mutex::new(state)), cancel)

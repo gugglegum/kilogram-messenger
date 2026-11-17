@@ -1,4 +1,4 @@
-use super::{Service, access_error};
+use super::{Preview, Service, access_error};
 use kilogram_first_dialog::{
     artifact::{self, Artifact, Kind},
     model::{self, ExportError, ReplyError, Setup},
@@ -6,11 +6,6 @@ use kilogram_first_dialog::{
 use kilogram_identity::{AccountId, DeviceId};
 use serde_json::{Value, json};
 use std::path::Path;
-
-pub(super) struct Preview {
-    id: String,
-    artifact: Artifact,
-}
 
 pub(super) fn identity(account: AccountId, device: DeviceId) -> Value {
     json!({"account_id": account.to_string(), "device_id": device.to_string()})
@@ -81,19 +76,20 @@ impl Service {
             "credential_signatures_verified": true, "envelope_signed": false,
             "independent_verification_required": true, "connection_authenticated": false,
         });
-        self.preview = Some(Preview { id, artifact });
+        self.preview = Some(Preview::Pairing { id, artifact });
         Ok(value)
     }
 
     pub(super) fn confirm(&mut self, kind: Kind, id: &str) -> Result<(), &'static str> {
-        if !self
-            .preview
-            .as_ref()
-            .is_some_and(|preview| preview.id == id && preview.artifact.kind == kind)
-        {
+        if !matches!(
+            &self.preview,
+            Some(Preview::Pairing { id: old, artifact }) if old == id && artifact.kind == kind
+        ) {
             return Err("preview_required");
         }
-        let Preview { artifact, .. } = self.preview.take().ok_or("preview_required")?;
+        let Some(Preview::Pairing { artifact, .. }) = self.preview.take() else {
+            unreachable!("checked pairing preview");
+        };
         match kind {
             Kind::Invite => {
                 if self.setup.is_some() {
