@@ -24,6 +24,11 @@ pub mod runtime;
 mod timing;
 pub(super) mod window;
 
+/// Use the same assigned-interface and prefix checks as fresh LAN startup.
+pub fn verify_lan_interface(lan: wire::DirectLan2) -> Result<()> {
+    lan::verify_interface(lan)
+}
+
 pub fn now() -> Result<u64> {
     if let Some(wall) = hooks::clock()? {
         return Ok(wall);

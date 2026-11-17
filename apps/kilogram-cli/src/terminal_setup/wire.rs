@@ -2,6 +2,7 @@ use crate::terminal_chat::{Frame, frame, terminal_escaped, terminal_text, valid_
 use kilogram_bootstrap_contract::ORDERED2_RECOVERY_SCOPE;
 use kilogram_first_dialog::{
     artifact::Kind,
+    connection::LanSettings,
     consent::{self, Action},
     consent_artifact::Kind as ConsentKind,
 };
@@ -13,7 +14,7 @@ use std::{
 };
 use zeroize::Zeroizing;
 
-pub(super) const HELP: &str = "/status /begin /open /create /recovery show /recovery saved /cancel /quit\n/invite export|inspect <path>|join <preview_id>\n/reply export|inspect <path>|accept <preview_id>\n/consent propose|export|cosign|import\n/consent inspect <proposal|final> <path>\n/consent accept <proposal|final> <preview_id>\n/preview clear\nSave recovery words offline before confirming.";
+pub(super) const HELP: &str = "/status /begin /open /create /recovery show /recovery saved /cancel /quit\n/invite export|inspect <path>|join <preview_id>\n/reply export|inspect <path>|accept <preview_id>\n/consent propose|export|cosign|import\n/consent inspect <proposal|final> <path>\n/consent accept <proposal|final> <preview_id>\n/route lan <local_ipv4> <peer_ipv4>\n/route loopback\n/preview clear\nSave recovery words offline before confirming.";
 const OUTPUT_CAP: usize = 256 * 1024;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -31,6 +32,7 @@ pub(super) enum Command {
     ConsentAccept(ConsentKind, String),
     ConsentExport,
     ConsentAction(Action),
+    Route(Option<LanSettings>),
     ClearPreview,
     Cancel(Option<String>),
     Quit,
@@ -100,6 +102,13 @@ struct ConsentAccept {
     kind: ConsentKind,
     preview_id: String,
     confirmed: bool,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LanArgs {
+    local_ipv4: std::net::Ipv4Addr,
+    peer_ipv4: std::net::Ipv4Addr,
 }
 
 fn path(path: &str) -> Result<PathBuf, &'static str> {
@@ -179,6 +188,13 @@ fn parse(request: &WireRequest<'_>) -> Result<Command, &'static str> {
                 preview_id(input.preview_id)?,
             ))
         }
+        "route_lan" => {
+            let lan: LanArgs = serde_json::from_str(args).map_err(|_| "invalid_args")?;
+            Ok(Command::Route(Some(LanSettings {
+                local: lan.local_ipv4,
+                peer: lan.peer_ipv4,
+            })))
+        }
         _ if serde_json::from_str::<Empty>(args).is_err() => Err("invalid_args"),
         "status" => Ok(Command::Status),
         "begin" => Ok(Command::Begin),
@@ -191,6 +207,7 @@ fn parse(request: &WireRequest<'_>) -> Result<Command, &'static str> {
         "consent_cosign" => Ok(Command::ConsentAction(Action::Cosign)),
         "consent_import" => Ok(Command::ConsentAction(Action::Import)),
         "consent_export" => Ok(Command::ConsentExport),
+        "route_loopback" => Ok(Command::Route(None)),
         "preview_clear" => Ok(Command::ClearPreview),
         "quit" => Ok(Command::Quit),
         _ => Err("unknown_operation"),
@@ -246,7 +263,17 @@ fn parse_tty(command: &str) -> Option<Result<Command, &'static str>> {
             ))
         })(),
         ["/preview", "clear"] => Ok(Command::ClearPreview),
-        ["/invite" | "/reply" | "/preview" | "/consent", ..] => Err("invalid_args"),
+        ["/route", "lan", local, peer] => (|| {
+            Ok(Command::Route(Some(LanSettings {
+                local: local.parse().map_err(|_| "invalid_args")?,
+                peer: peer.parse().map_err(|_| "invalid_args")?,
+            })))
+        })(),
+        ["/route", "loopback"] => Ok(Command::Route(None)),
+        [
+            "/invite" | "/reply" | "/preview" | "/consent" | "/route",
+            ..,
+        ] => Err("invalid_args"),
         ["/cancel"] => Ok(Command::Cancel(None)),
         ["/quit"] => Ok(Command::Quit),
         ["/help"] => Ok(Command::Help),
@@ -493,6 +520,28 @@ pub(super) fn encode_at(
                     }
                     if let Some(view) = value.get("consent") {
                         consent_tty(&mut *bytes, view)?;
+                    }
+                    if let Some(view) = value.get("connection") {
+                        let field = |key: &str| view[key].as_str().unwrap_or_default();
+                        write!(
+                            &mut *bytes,
+                            "\nRoute {} {}",
+                            field("mode"),
+                            field("local_ipv4")
+                        )?;
+                        if let Some(peer) = view["peer_ipv4"].as_str() {
+                            write!(&mut *bytes, " peer {peer}")?;
+                        }
+                        write!(&mut *bytes, "\nProfile {}", field("profile_state"))?;
+                        if value["consent"]["stage"] == "final_saved"
+                            && value["consent"]["validity"] == "current"
+                            && view["profile_state"] != "conflict"
+                        {
+                            write!(
+                                &mut *bytes,
+                                "\nQuit setup before running kilogram-cli chat --setup with the same directory."
+                            )?;
+                        }
                     }
                     match phase {
                         "recovery_unavailable" => bytes.write_all(

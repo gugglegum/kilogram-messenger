@@ -290,7 +290,9 @@ fn t12b_confirmation_waits_for_preview_writer_and_failed_write_drops_it() {
 fn t12c_publication_checks_clock_boundary_on_retained_snapshot() {
     let snapshot = json!({
         "state": "recovery_saved",
+        "connection": {"mode":"loopback","local_ipv4":"127.0.0.1","peer_ipv4":null,"profile_state":"prepared"},
         "consent": {
+            "stage": "final_saved",
             "not_before": 1000,
             "expires_at": 2000,
             "local_installation": "confirmed_current_session",
@@ -315,16 +317,60 @@ fn t12c_publication_checks_clock_boundary_on_retained_snapshot() {
         };
         let output: Value = serde_json::from_slice(&encode(true)).unwrap();
         let view = &output["value"]["consent"];
+        assert_eq!(output["value"]["connection"], snapshot["connection"]);
+        assert!(output["value"].get("live_admitted").is_none());
         assert_eq!(view["validity"], validity);
         assert_eq!(view["local_installation"], proof);
         assert_eq!(view["slots"], snapshot["consent"]["slots"]);
         let tty = encode(false);
-        assert!(
-            std::str::from_utf8(&tty)
-                .unwrap()
-                .contains(&format!("Local installation {proof}"))
+        let tty = std::str::from_utf8(&tty).unwrap();
+        assert!(tty.contains(&format!("Local installation {proof}")));
+        assert_eq!(
+            tty.contains("Quit setup before running"),
+            validity == "current"
         );
     }
+}
+
+#[test]
+fn t12d2_route_commands_require_literal_ipv4_and_exact_args() {
+    let parse = |line: &str, jsonl| {
+        wire::read(&mut Cursor::new(line), jsonl)
+            .unwrap()
+            .unwrap()
+            .unwrap()
+            .command
+    };
+    let tty = parse("/route lan 192.168.4.9 192.168.4.10\n", false);
+    assert!(matches!(tty, Ok(Command::Route(Some(_)))));
+    assert_eq!(
+        tty,
+        parse(
+            r#"{"v":1,"id":"r","op":"route_lan","args":{"local_ipv4":"192.168.4.9","peer_ipv4":"192.168.4.10"}}"#,
+            true
+        )
+    );
+    assert_eq!(parse("/route loopback\n", false), Ok(Command::Route(None)));
+    assert_eq!(
+        parse(r#"{"v":1,"id":"r","op":"route_loopback","args":{}}"#, true),
+        Ok(Command::Route(None))
+    );
+    for input in [
+        "/route lan ::1 192.168.4.10",
+        "/route lan 192.168.4.9:5000 192.168.4.10",
+        "/route lan 192.168.4.9/24 192.168.4.10",
+        "/route lan localhost 192.168.4.10",
+        "/route loopback extra",
+    ] {
+        assert_eq!(parse(input, false), Err("invalid_args"));
+    }
+    assert_eq!(
+        parse(
+            r#"{"v":1,"id":"r","op":"route_lan","args":{"local_ipv4":"192.168.4.9","peer_ipv4":"192.168.4.10","port":123}}"#,
+            true
+        ),
+        Err("invalid_args")
+    );
 }
 
 #[test]

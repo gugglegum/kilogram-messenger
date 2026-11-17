@@ -110,10 +110,23 @@ fn change(setup: &mut Setup, f: impl FnOnce(&mut State)) -> Result<()> {
 pub fn lan_settings(setup: &Setup) -> Option<LanSettings> {
     setup.record.connection.as_ref().and_then(|state| state.lan)
 }
-pub(super) fn select_route(setup: &mut Setup, lan: Option<LanSettings>) -> Result<()> {
+#[derive(Debug)]
+pub struct ConnectionPathError;
+
+impl std::fmt::Display for ConnectionPathError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("Unexpected local connection path")
+    }
+}
+
+impl std::error::Error for ConnectionPathError {}
+
+pub fn select_route(setup: &mut Setup, lan: Option<LanSettings>) -> Result<()> {
+    check_pre_spawn_cleanup(setup)?;
     if let Some(lan) = lan {
         lan.validate()?;
     }
+    connection_paths(&setup.home, &setup.record).context(ConnectionPathError)?;
     if lan_settings(setup) != lan {
         change(setup, |state| {
             state.lan = lan;
@@ -130,21 +143,20 @@ pub(super) fn digest(raw: &[u8]) -> String {
 }
 fn directory(setup: &Setup) -> Result<PathBuf> {
     let path = setup.home.join("connection");
+    check_target_kind(&setup.home, &setup.record, &path, true)?;
     fs::create_dir_all(&path)?;
-    let canonical = fs::canonicalize(&path)?;
-    let info = setup.record.public.as_ref().context("Account")?;
+    check_target_kind(&setup.home, &setup.record, &path, true)?;
     ensure!(
-        canonical == setup.home.join("connection")
-            && !canonical.starts_with(fs::canonicalize(&info.state_dir)?)
-            && !canonical.starts_with(fs::canonicalize(&info.account_root_dir)?),
+        fs::canonicalize(&path)? == path,
         "Connection directory escaped its local location"
     );
-    Ok(canonical)
+    Ok(path)
 }
 fn check_artifact_path(setup: &Setup, path: &Path) -> Result<()> {
     validate_artifact_path(&setup.home, &setup.record, path)
 }
 pub(super) fn validate_artifact_path(home: &Path, record: &Record, path: &Path) -> Result<()> {
+    ensure!(path.starts_with(home), "Artifact outside Setup");
     let info = record.public.as_ref().context("Account")?;
     let state = fs::canonicalize(&info.state_dir)?;
     let root = fs::canonicalize(&info.account_root_dir)?;
@@ -180,8 +192,86 @@ pub(super) fn validate_artifact_path(home: &Path, record: &Record, path: &Path) 
     }
     Ok(())
 }
-fn expected(setup: &Setup) -> Result<Profile2Document> {
-    expected_profile(&setup.record, &directory(setup)?)
+fn check_target_kind(home: &Path, record: &Record, path: &Path, directory: bool) -> Result<()> {
+    validate_artifact_path(home, record, path)?;
+    match fs::symlink_metadata(path) {
+        Ok(meta) => ensure!(
+            (directory && meta.is_dir()) || (!directory && meta.is_file()),
+            "Unexpected connection target type"
+        ),
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(e.into()),
+    }
+    Ok(())
+}
+
+fn connection_paths(home: &Path, record: &Record) -> Result<Option<PathBuf>> {
+    let base = home.join("connection");
+    check_target_kind(home, record, &base, true)?;
+    check_target_kind(home, record, &base.join("ipc.json"), false)?;
+    check_target_kind(home, record, &base.join("locators"), true)?;
+    let Some(state) = &record.connection else {
+        return Ok(None);
+    };
+    state.validate()?;
+    let Some(name) = &state.profile else {
+        return Ok(None);
+    };
+    let path = base.join(name);
+    check_target_kind(home, record, &path, false)?;
+    Ok(Some(path))
+}
+
+fn read_expected_profile(
+    path: &Path,
+    expected: &Profile2Document,
+    recorded_digest: Option<&str>,
+) -> Result<(Profile2Document, String)> {
+    let raw = model::read(path, kilogram_runtime_ipc::ordered2::PROFILE_CAP)?;
+    let profile = Profile2Document::decode(&raw)?;
+    ensure!(
+        &profile == expected,
+        "Profile conflict; keep the file and explicitly retry using a new local profile"
+    );
+    let hash = digest(&raw);
+    ensure!(
+        recorded_digest.is_none_or(|old| old == hash),
+        "Recorded profile changed"
+    );
+    Ok((profile, hash))
+}
+
+pub(super) fn prepared_profile(home: &Path, record: &Record) -> Result<Option<Profile2Document>> {
+    let path = connection_paths(home, record)?;
+    let recorded_digest = record
+        .connection
+        .as_ref()
+        .and_then(|s| s.profile_digest.as_deref());
+    if let Some(path) = path
+        && path.try_exists()?
+    {
+        let expected = expected_profile(record, &home.join("connection"))?;
+        let (profile, _) = read_expected_profile(&path, &expected, recorded_digest)?;
+        return Ok(recorded_digest.map(|_| profile));
+    }
+    ensure!(recorded_digest.is_none(), "Recorded profile is missing");
+    Ok(None)
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ProfileState {
+    NotPrepared,
+    Prepared,
+    Conflict,
+}
+
+pub fn profile_state(setup: &Setup) -> ProfileState {
+    match prepared_profile(&setup.home, &setup.record) {
+        Ok(Some(_)) => ProfileState::Prepared,
+        Ok(None) => ProfileState::NotPrepared,
+        Err(_) => ProfileState::Conflict,
+    }
 }
 pub(super) fn expected_profile(record: &Record, base: &Path) -> Result<Profile2Document> {
     let info = record.public.as_ref().context("Account")?;
@@ -264,6 +354,11 @@ fn prepare_with(
         !cancel.load(Ordering::Acquire),
         helper::HelperError::Cancelled
     );
+    if fresh_profile {
+        connection_paths(&setup.home, &setup.record)?;
+    } else {
+        prepared_profile(&setup.home, &setup.record)?;
+    }
     let imported = (helpers.import)(setup, exe, consent::Action::Import, cancel.clone());
     remember_helper_cleanup(setup, imported)?;
     ensure!(
@@ -276,9 +371,9 @@ fn prepare_with(
         nb <= wall && wall < end,
         "Permission is not currently valid"
     );
-    let doc = expected(setup)?;
-    check_artifact_path(setup, &doc.ipc_file)?;
-    check_artifact_path(setup, &doc.locator_directory)?;
+    connection_paths(&setup.home, &setup.record)?;
+    let base = directory(setup)?;
+    let doc = expected_profile(&setup.record, &base)?;
     if fresh_profile
         || setup
             .record
@@ -288,15 +383,14 @@ fn prepare_with(
             .is_none()
     {
         let name = format!("profile-{}.json", artifact::id()?);
+        check_target_kind(&setup.home, &setup.record, &base.join(&name), false)?;
         change(setup, |s| {
             s.profile = Some(name);
             s.profile_digest = None;
         })?;
     }
-    let state = setup.record.connection.as_ref().context("Connection")?;
-    let path = directory(setup)?.join(state.profile.as_ref().context("Profile")?);
-    check_artifact_path(setup, &path)?;
-    if !path.exists() {
+    let path = connection_paths(&setup.home, &setup.record)?.context("Profile")?;
+    if !path.try_exists()? {
         let mut args: Vec<std::ffi::OsString> = vec![
             "runtime-profile-create".into(),
             "--profile-mode".into(),
@@ -346,21 +440,16 @@ fn prepare_with(
         !cancel.load(Ordering::Acquire),
         helper::HelperError::Cancelled
     );
-    let raw = model::read(&path, kilogram_runtime_ipc::ordered2::PROFILE_CAP)?;
-    ensure!(
-        Profile2Document::decode(&raw)? == doc,
-        "Profile conflict; keep the file and explicitly retry using a new local profile"
-    );
-    let hash = digest(&raw);
-    ensure!(
+    check_target_kind(&setup.home, &setup.record, &path, false)?;
+    let (_, hash) = read_expected_profile(
+        &path,
+        &doc,
         setup
             .record
             .connection
             .as_ref()
-            .and_then(|s| s.profile_digest.as_ref())
-            .is_none_or(|old| *old == hash),
-        "Recorded profile changed"
-    );
+            .and_then(|s| s.profile_digest.as_deref()),
+    )?;
     change(setup, |s| {
         s.profile_digest = Some(hash);
         s.last_outcome = Some("prepared".into());

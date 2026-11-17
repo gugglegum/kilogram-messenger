@@ -7,7 +7,7 @@ use crate::{
     },
     consent,
     helper::HelperError,
-    model::{self, Setup},
+    model::Setup,
     operation::{self, OperationControl},
     send_recovery::{IpcResult, RequestOperation, RequestReport, RequestResult, RequestState},
 };
@@ -15,8 +15,8 @@ use anyhow::{Context, Result, ensure};
 use kilogram_runtime_ipc::{
     RuntimeIpcDescriptor,
     ordered2::{
-        Client2, HistoryCursor2, HistoryPage2, HistoryPosition2, MessageError2, PROFILE_CAP,
-        Profile2Document, Status2, id,
+        Client2, HistoryCursor2, HistoryPage2, HistoryPosition2, MessageError2, Profile2Document,
+        Status2, id,
     },
 };
 use serde::Serialize;
@@ -450,25 +450,8 @@ impl Observer {
             record.acknowledged && record.peer.is_some(),
             "Saved peer Setup required"
         );
-        let state = record
-            .connection
-            .as_ref()
-            .context("No prepared connection")?;
-        state.validate()?;
-        let base = home.join("connection");
-        let path = base.join(state.profile.as_ref().context("No prepared profile")?);
-        connection::validate_artifact_path(&home, &record, &path)?;
-        let raw = model::read(&path, PROFILE_CAP)?;
-        ensure!(
-            state.profile_digest.as_deref() == Some(&connection::digest(&raw)),
-            "Profile digest mismatch"
-        );
-        let profile = Profile2Document::decode(&raw)?;
-        ensure!(
-            profile == connection::expected_profile(&record, &base)?,
-            "Profile binding mismatch"
-        );
-        connection::validate_artifact_path(&home, &record, &profile.ipc_file)?;
+        let profile =
+            connection::prepared_profile(&home, &record)?.context("No prepared profile")?;
         let public = record.public.as_ref().context("Account not ready")?;
         let descriptor = RuntimeIpcDescriptor::load(&profile.ipc_file)?;
         let client = Client2::new(

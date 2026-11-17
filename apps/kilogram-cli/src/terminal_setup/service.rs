@@ -5,13 +5,16 @@ use super::{
 use kilogram_bootstrap_contract::Ordered2BootstrapOutput;
 use kilogram_first_dialog::{
     artifact::Artifact,
+    connection::{self, ConnectionPathError, LanSettings},
     consent::Action,
     consent_artifact::Envelope,
     helper::{self, HelperError},
     model::{Setup, SetupAccessError},
 };
+use kilogram_protocol::ordered_dialog_v2::DirectLan2;
 use serde_json::{Value, json};
 use std::{
+    net::Ipv4Addr,
     path::PathBuf,
     sync::{Arc, atomic::AtomicBool},
 };
@@ -87,6 +90,15 @@ impl Service {
         if let Some(consent) = agreement::snapshot(setup)? {
             value["consent"] = consent;
         }
+        if !setup.incomplete {
+            let lan = connection::lan_settings(setup);
+            value["connection"] = json!({
+                "mode": if lan.is_some() { "direct_lan" } else { "loopback" },
+                "local_ipv4": lan.map_or(Ipv4Addr::LOCALHOST, |lan| lan.local),
+                "peer_ipv4": lan.map(|lan| lan.peer),
+                "profile_state": connection::profile_state(setup),
+            });
+        }
         Ok(value)
     }
 
@@ -143,6 +155,7 @@ impl Service {
                 let result = self.run_consent(action, cancel);
                 self.finish_consent(action, generation, session, result)?;
             }
+            Command::Route(lan) => self.save_route(lan)?,
             Command::ClearPreview => {
                 self.preview = None;
                 return Ok(Payload::Public(json!({"cleared":true})));
@@ -150,6 +163,30 @@ impl Service {
             _ => unreachable!("only local setup operations are sent to the worker"),
         }
         self.snapshot().map(Payload::Public)
+    }
+
+    fn save_route(&mut self, lan: Option<LanSettings>) -> Result<(), &'static str> {
+        let setup = self.consent_setup()?;
+        if !setup
+            .record
+            .consent
+            .as_ref()
+            .is_some_and(|s| s.final_artifact.is_some())
+        {
+            return Err("consent_not_ready");
+        }
+        if let Some(lan) = lan {
+            let route = DirectLan2::new(lan.local, lan.peer).map_err(|_| "invalid_lan_route")?;
+            kilogram_cli::ordered_dialog::runtime2::verify_lan_interface(route)
+                .map_err(|_| "lan_interface_unavailable")?;
+        }
+        connection::select_route(setup, lan).map_err(|error| {
+            if error.downcast_ref::<ConnectionPathError>().is_some() {
+                "connection_path_invalid"
+            } else {
+                "route_save_failed"
+            }
+        })
     }
 
     fn finish_consent(

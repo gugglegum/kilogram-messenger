@@ -87,7 +87,7 @@ pub(super) fn snapshot(setup: &Setup) -> Result<Option<Value>, &'static str> {
 }
 
 impl Service {
-    fn consent_setup(&mut self) -> Result<&mut Setup, &'static str> {
+    pub(super) fn consent_setup(&mut self) -> Result<&mut Setup, &'static str> {
         let setup = self.refresh()?;
         if setup.incomplete {
             return Err("invalid_state");
