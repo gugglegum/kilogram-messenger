@@ -3,6 +3,8 @@
 use super::*;
 use kilogram_protocol::ordered_dialog_v2 as wire;
 use zeroize::Zeroizing;
+#[path = "discovery_tests.rs"]
+mod discovery_tests;
 #[allow(dead_code)]
 mod support {
     include!(concat!(
@@ -181,7 +183,7 @@ impl Actors2 {
                     .await
                     .context("actual incoming")?
                     .await?;
-                let lb = admit_b(&self.handles[1], &self.endpoints[1], &cb, deadline).await?;
+                let lb = admit_b(&self.handles[1], &self.endpoints[1], &cb, deadline, None).await?;
                 Ok::<_, anyhow::Error>((cb, lb))
             }
         )?;
@@ -347,7 +349,10 @@ async fn cs41_disallowed_actual_path_cannot_pin_new_authority() -> Result<()> {
     let binding = transport::binding(&accepted, *pair.endpoints[1].id().as_bytes(), false)?;
     let deadline = Instant::now() + Duration::from_secs(20);
     let hello = pair.handles[0]
-        .call(move |o| Ok(o.begin_admission(0, dialed, binding, deadline, None)?.1))
+        .call(move |o| {
+            Ok(o.begin_admission(0, dialed, binding, deadline, None, None)?
+                .1)
+        })
         .await?;
     let actor = &pair.artifacts[0];
     let renewal = actor
@@ -390,7 +395,7 @@ async fn cs41_disallowed_actual_path_cannot_pin_new_authority() -> Result<()> {
             o.import_locator(0, replacement)?;
             let generation = o.repository.generation();
             let error = o
-                .observe_hello_authority(0, &accepted, binding, &renewed)
+                .observe_hello_authority(0, &accepted, binding, &renewed, None)
                 .err()
                 .context("wrong path accepted")?;
             ensure!(format!("{error:#}").contains("selected LAN path differs"));
@@ -401,7 +406,7 @@ async fn cs41_disallowed_actual_path_cannot_pin_new_authority() -> Result<()> {
             // The same authenticated Hello has a genuinely writable authority
             // revision on the original (permitted) loopback route.
             o.route = loopback;
-            o.observe_hello_authority(0, &accepted, binding, &renewed)?;
+            o.observe_hello_authority(0, &accepted, binding, &renewed, None)?;
             ensure!(o.repository.generation() == generation + 1);
             accepted.close(0u32.into(), b"test completed");
             Ok(())
@@ -735,6 +740,7 @@ async fn a3_s4_f08_existing_origin_and_f12_actual_endpoint_mismatch() -> Result<
         &pair.endpoints[1],
         &accepted,
         Instant::now() + Duration::from_secs(10),
+        None,
     )
     .await
     .err()

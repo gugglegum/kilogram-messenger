@@ -187,45 +187,55 @@ async fn admission_rpc(
     .await
     .context("whole admission deadline")?
 }
+fn dial_peer(
+    owner: &mut Owner2,
+    c: u8,
+) -> Result<(
+    iroh::EndpointAddr,
+    kilogram_transport_iroh::RoutePolicy,
+    Option<Arc<discovery::LocatorPair2>>,
+)> {
+    let (s, current) = owner.require(c, false)?;
+    let pair = owner.pair_for(&s, now()?)?.cloned();
+    let locator = wire::ParsedRuntimeLocator2::parse(
+        s.spec
+            .peer_locator
+            .as_deref()
+            .context("peer locator missing")?,
+    )?;
+    if owner.route.lan().is_some() {
+        locator.verify(
+            s.head.context,
+            &current.peers[usize::from(1 - s.head.role)],
+            &current.peers[usize::from(s.head.role)],
+        )?;
+        let wall = now()?;
+        ensure!(
+            locator.fields().not_before <= wall && wall < locator.fields().expires,
+            "LAN peer locator interval"
+        );
+        if !owner.auto_discovery() {
+            owner.route.advertisement(
+                owner
+                    .lan_endpoint
+                    .as_ref()
+                    .context("LAN interface not currently verified")?,
+            )?;
+        }
+    }
+    Ok((
+        owner.route.remote(&locator)?,
+        owner.route.connection_policy(&locator)?,
+        pair,
+    ))
+}
 async fn admit_a(
     handle: &Handle2,
     endpoint: &Endpoint,
     c: u8,
     deadline: Instant,
 ) -> Result<(Connection, Link2)> {
-    let (remote, route) = handle
-        .call(move |owner| {
-            let (s, current) = owner.require(c, false)?;
-            let locator = wire::ParsedRuntimeLocator2::parse(
-                s.spec
-                    .peer_locator
-                    .as_deref()
-                    .context("peer locator missing")?,
-            )?;
-            if owner.route.lan().is_some() {
-                locator.verify(
-                    s.head.context,
-                    &current.peers[usize::from(1 - s.head.role)],
-                    &current.peers[usize::from(s.head.role)],
-                )?;
-                let wall = now()?;
-                ensure!(
-                    locator.fields().not_before <= wall && wall < locator.fields().expires,
-                    "LAN peer locator interval"
-                );
-                owner.route.advertisement(
-                    owner
-                        .lan_endpoint
-                        .as_ref()
-                        .context("LAN interface not currently verified")?,
-                )?;
-            }
-            Ok((
-                owner.route.remote(&locator)?,
-                owner.route.connection_policy(&locator)?,
-            ))
-        })
-        .await?;
+    let (remote, route, pair) = handle.call(move |owner| dial_peer(owner, c)).await?;
     let connection = tokio::time::timeout(
         Duration::from_secs(15),
         endpoint.connect(remote, wire::ALPN),
@@ -244,7 +254,7 @@ async fn admit_a(
     let binding = transport::binding(&connection, *endpoint.id().as_bytes(), true)?;
     let conn = connection.clone();
     let (g, hello) = handle
-        .call(move |owner| owner.begin_admission(c, conn, binding, deadline, None))
+        .call(move |owner| owner.begin_admission(c, conn, binding, deadline, None, pair.as_ref()))
         .await?;
     let reply = admission_rpc(&connection, &hello, deadline).await?;
     handle
@@ -280,10 +290,12 @@ async fn admit_b(
     endpoint: &Endpoint,
     connection: &Connection,
     deadline: Instant,
+    pair: Option<Arc<discovery::LocatorPair2>>,
 ) -> Result<Link2> {
     let remote = *connection.remote_id().as_bytes();
+    let expected = pair.clone();
     let route = handle
-        .call(move |owner| owner.route_for_remote(remote))
+        .call(move |owner| owner.route_for_remote(remote, expected.as_ref()))
         .await?;
     kilogram_transport_iroh::await_route_policy(
         connection,
@@ -303,8 +315,9 @@ async fn admit_b(
         .call(move |owner| {
             let c = owner.slot(id)?;
             ensure!(owner.snapshot(c)?.head.role == 1, "B listener role");
-            owner.observe_hello_authority(c, &conn, binding, &hello)?;
-            let (g, own) = owner.begin_admission(c, conn, binding, deadline, Some(request))?;
+            owner.observe_hello_authority(c, &conn, binding, &hello, pair.as_ref())?;
+            let (g, own) =
+                owner.begin_admission(c, conn, binding, deadline, Some(request), pair.as_ref())?;
             owner.accept_hello(c, g, hello)?;
             Ok((c, g, own))
         })
@@ -1119,8 +1132,21 @@ pub async fn run(profile: config::Profile2) -> Result<()> {
                 let accounting=listener_resources.acquired();
                 let endpoint=listener_endpoint.clone();let handle=listener_handle.clone();let deadline=Instant::now()+Duration::from_secs(30);
                 connections.spawn(async move{let _permit=permit;let _accounting=accounting;
-                    let result=async{let connection=tokio::time::timeout(Duration::from_secs(15),incoming).await.context("TLS admission deadline")??;
-                        let admitted=tokio::time::timeout_at(tokio::time::Instant::from_std(deadline),admit_b(&handle,&endpoint,&connection,deadline)).await;
+                    let result=async{
+                        let (connection, pair) = tokio::time::timeout(Duration::from_secs(15), async {
+                            let pair = if lan.is_some() {
+                                let source = incoming.remote_addr();
+                                handle.call(move |owner| {
+                                    if !owner.auto_discovery() { return Ok(None); }
+                                    let IncomingAddr::Ip(socket) = source else {
+                                        anyhow::bail!("LAN discovery requires an IP source");
+                                    };
+                                    owner.listener_pair(socket)
+                                }).await?
+                            } else { None };
+                            Ok::<_, anyhow::Error>((incoming.await?, pair))
+                        }).await.context("TLS admission deadline")??;
+                        let admitted=tokio::time::timeout_at(tokio::time::Instant::from_std(deadline),admit_b(&handle,&endpoint,&connection,deadline,pair)).await;
                         let result=match admitted{Ok(Ok(link))=>serve_b(&handle,&connection,&link).await,Ok(Err(e))=>Err(e),Err(e)=>Err(e.into())};
                         connection.close(0u32.into(),b"bounded connection ended");result}.await;
                     if let Err(e)=result{eprintln!("od2_inbound_end {e:#}");}

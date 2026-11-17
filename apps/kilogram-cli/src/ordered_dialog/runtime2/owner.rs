@@ -1,4 +1,5 @@
 use super::*;
+use discovery::{Discovery2, LocatorPair2, same_pair};
 use iroh::{Endpoint, EndpointAddr, endpoint::Connection};
 use kilogram_identity::{AccountId, DeviceEncryptionIdentity, DeviceIdentity};
 use kilogram_transport_iroh::{RoutePolicy, ordered2::FreshRoute2};
@@ -25,6 +26,7 @@ pub(super) struct Lease2 {
     pub peer_locator: Id,
     pub valid: Arc<AtomicBool>,
     pub pair: Vec<u8>,
+    pub discovery_pair: Option<Arc<LocatorPair2>>,
 }
 impl Lease2 {
     pub fn check(
@@ -33,8 +35,10 @@ impl Lease2 {
         wall: u64,
         route: &FreshRoute2,
         lan_endpoint: Option<&Endpoint>,
+        discovery_pair: Option<&Arc<LocatorPair2>>,
     ) -> Result<Option<SocketAddr>> {
         let _timing = timing::span(timing::Metric::LeaseCheck);
+        same_pair(self.discovery_pair.as_ref(), discovery_pair)?;
         ensure!(
             self.valid.load(Ordering::Acquire)
                 && self.connection.close_reason().is_none()
@@ -146,6 +150,7 @@ pub(super) enum Purpose2 {
     Import,
     Local,
     Peer,
+    DiscoveryLocator { expires: u64 },
 }
 pub struct Owner2 {
     pub(super) repository: RepositorySlot,
@@ -154,6 +159,9 @@ pub struct Owner2 {
     pub(super) leases: [Option<Lease2>; 2],
     pub(super) route: FreshRoute2,
     pub(super) lan_endpoint: Option<Endpoint>,
+    #[cfg(test)]
+    pub(super) test_lan_advertisement: Option<EndpointAddr>,
+    pub(super) discovery: Discovery2,
     pub(super) enabled: Vec<u8>,
     pub(super) endpoint: Option<(Id, EndpointAddr)>,
     pub(super) stats: Stats2,
@@ -233,6 +241,9 @@ impl Owner2 {
             stats: Stats2::default(),
             next_connection: 1,
             admissions: [None, None],
+            discovery: Discovery2::default(),
+            #[cfg(test)]
+            test_lan_advertisement: None,
             window,
             resources: Arc::new(resources::Resources2::default()),
             current_cache: [None, None],
@@ -363,6 +374,11 @@ impl Owner2 {
             .iter()
             .position(|id| *id == s.head.context)
             .context("context slot")?;
+        let discovery_pair = if matches!(purpose, Purpose2::Peer) && self.auto_discovery() {
+            self.pair_for(s, now()?)?.cloned()
+        } else {
+            None
+        };
         let lease = if matches!(purpose, Purpose2::Peer) {
             Some(self.leases[c].clone().context("NeedAdmission")?)
         } else {
@@ -406,9 +422,26 @@ impl Owner2 {
                     .ok_or(db::Error::PolicyRejected("current verification"))?
                     .check_time(s, wall)
                     .map_err(|_| db::Error::PolicyRejected("current policy/time"))?;
+                if let Purpose2::DiscoveryLocator { expires } = purpose
+                    && wall >= expires
+                {
+                    return Err(db::Error::PolicyRejected("LAN discovery import expired"));
+                }
                 if let Some(lease) = &lease {
+                    if discovery_pair
+                        .as_ref()
+                        .is_some_and(|pair| !pair.valid_at(wall))
+                    {
+                        return Err(db::Error::PolicyRejected("LAN discovery pair expired"));
+                    }
                     lease
-                        .check(s, wall, &route, lan_endpoint.as_ref())
+                        .check(
+                            s,
+                            wall,
+                            &route,
+                            lan_endpoint.as_ref(),
+                            discovery_pair.as_ref(),
+                        )
                         .map_err(|_| db::Error::PolicyRejected("actual lease"))?;
                 }
             }
@@ -477,6 +510,7 @@ impl Owner2 {
         }
         if self.repository.requires_reopen() {
             self.invalidate();
+            self.close_discovery_pair();
             self.needs_reopen = true;
         }
         if result.as_ref().is_ok_and(|report| !report.duplicate) {
@@ -494,6 +528,7 @@ impl Owner2 {
     }
     pub(super) fn recover(&mut self) -> Result<()> {
         self.invalidate();
+        self.close_discovery_pair();
         for pending in &mut self.admissions {
             if let Some(p) = pending.take() {
                 p.connection.close(0u32.into(), b"repository recovery");
@@ -716,13 +751,33 @@ impl Owner2 {
         let lease = self.leases[usize::from(c)]
             .as_ref()
             .context("NeedAdmission")?;
-        let result = lease.check(s, now()?, &self.route, self.lan_endpoint.as_ref());
+        let result = (|| {
+            let wall = now()?;
+            lease.check(
+                s,
+                wall,
+                &self.route,
+                self.lan_endpoint.as_ref(),
+                self.pair_for(s, wall)?,
+            )
+        })();
         if result.is_err() {
             lease.invalidate();
         }
         Ok((lease.wall_deadline, result?))
     }
     pub(super) fn observe_lan_interface(&mut self, endpoint: Option<Endpoint>) {
+        if self.auto_discovery()
+            && self.endpoint.as_ref().is_some_and(|(_, registered)| {
+                endpoint
+                    .as_ref()
+                    .and_then(|e| self.route.advertisement(e).ok())
+                    .as_ref()
+                    != Some(registered)
+            })
+        {
+            self.withdraw_lan_discovery();
+        }
         if endpoint.is_none() && self.lan_endpoint.is_some() {
             self.invalidate();
         }
@@ -730,6 +785,11 @@ impl Owner2 {
     }
     pub(super) fn check_lan_advertisement(&self, addr: &EndpointAddr) -> Result<()> {
         if self.route.lan().is_some() {
+            #[cfg(test)]
+            if let Some(verified) = &self.test_lan_advertisement {
+                ensure!(verified == addr, "LAN advertisement changed");
+                return Ok(());
+            }
             let endpoint = self
                 .lan_endpoint
                 .as_ref()
@@ -783,6 +843,19 @@ impl Owner2 {
             &current.peers[usize::from(s.head.role)],
             &current.peers[usize::from(1 - s.head.role)],
         )?;
+        if self.auto_discovery() {
+            if self
+                .endpoint
+                .as_ref()
+                .is_some_and(|(old_instance, old_addr)| {
+                    *old_instance != instance || old_addr != addr
+                })
+            {
+                self.withdraw_lan_discovery();
+            } else {
+                self.close_discovery_pair();
+            }
+        }
         self.commit(
             &s,
             db::RuntimeOperation::Locator {
@@ -867,6 +940,10 @@ impl Owner2 {
         Ok(raw)
     }
     pub fn import_locator(&mut self, c: u8, raw: Vec<u8>) -> Result<()> {
+        ensure!(
+            !self.auto_discovery(),
+            "Single locator import requires the manual profile"
+        );
         let (s, current) = self.require(c, false)?;
         let loc = wire::ParsedRuntimeLocator2::parse(&raw)?;
         loc.verify(
@@ -878,27 +955,46 @@ impl Owner2 {
         let f = loc.fields();
         let wall = now()?;
         ensure!(f.not_before <= wall && wall < f.expires, "locator time");
-        ensure!(
-            f.revision >= s.spec.peer_locator_revision
-                && (f.revision != s.spec.peer_locator_revision
-                    || s.spec.peer_locator.as_ref() == Some(&raw)),
-            "locator rollback/conflict"
-        );
+        Self::check_peer_locator_revision(&s, &loc)?;
         if s.spec.peer_locator.as_ref() == Some(&raw) {
             return Ok(());
         }
+        self.commit_peer_locator(&s, c, raw, wall, Purpose2::Local)?;
+        self.invalidate();
+        Ok(())
+    }
+    pub(super) fn check_peer_locator_revision(
+        s: &db::RuntimeSnapshot,
+        loc: &wire::ParsedRuntimeLocator2,
+    ) -> Result<()> {
+        let revision = loc.fields().revision;
+        ensure!(
+            revision >= s.spec.peer_locator_revision
+                && (revision != s.spec.peer_locator_revision
+                    || s.spec.peer_locator.as_deref() == Some(loc.raw())),
+            "locator rollback/conflict"
+        );
+        Ok(())
+    }
+    pub(super) fn commit_peer_locator(
+        &mut self,
+        s: &db::RuntimeSnapshot,
+        c: u8,
+        raw: Vec<u8>,
+        wall: u64,
+        purpose: Purpose2,
+    ) -> Result<()> {
         self.commit(
-            &s,
+            s,
             db::RuntimeOperation::Locator {
                 context: c,
                 fence: s.fence(wall),
                 own: false,
                 raw,
             },
-            Purpose2::Local,
+            purpose,
             (0, 0),
         )?;
-        self.invalidate();
         Ok(())
     }
     pub fn import_authority(&mut self, raw: Vec<u8>) -> Result<()> {
@@ -970,6 +1066,7 @@ impl Owner2 {
             )?;
         }
         self.invalidate();
+        self.close_discovery_pair();
         Ok(())
     }
     pub fn import_consent(
@@ -1011,6 +1108,7 @@ impl Owner2 {
         self.commit(&s, op, Purpose2::Import, (0, 0))?;
         if !historical {
             self.invalidate();
+            self.close_discovery_pair();
         }
         Ok(())
     }

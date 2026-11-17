@@ -1,4 +1,5 @@
 use super::*;
+use discovery::LocatorPair2;
 use iroh::endpoint::Connection;
 use owner::{Lease2, Owner2};
 use std::{
@@ -15,6 +16,7 @@ pub(super) struct Admission2 {
     pub hellos: [Option<wire::ParsedFrame2>; 2],
     pub proofs: [Option<wire::ParsedFrame2>; 2],
     pub transcript: Option<Id>,
+    pub discovery_pair: Option<Arc<LocatorPair2>>,
 }
 #[derive(Clone)]
 pub(super) struct Link2 {
@@ -25,7 +27,14 @@ pub(super) struct Link2 {
     pub deadline: Instant,
 }
 impl Owner2 {
-    fn check_lan_admission(&self, s: &db::RuntimeSnapshot, connection: &Connection) -> Result<()> {
+    fn check_lan_admission(
+        &self,
+        s: &db::RuntimeSnapshot,
+        connection: &Connection,
+        expected: Option<&Arc<LocatorPair2>>,
+    ) -> Result<()> {
+        self.check_pair_attempt(s, expected)?;
+        self.check_pair_remote(s, *connection.remote_id().as_bytes())?;
         if self.route.lan().is_none() {
             return Ok(());
         }
@@ -55,7 +64,13 @@ impl Owner2 {
     pub(super) fn route_for_remote(
         &mut self,
         remote: Id,
+        expected: Option<&Arc<LocatorPair2>>,
     ) -> Result<kilogram_transport_iroh::RoutePolicy> {
+        if self.auto_discovery() {
+            let (s, _) = self.require(0, false)?;
+            self.check_pair_attempt(&s, expected)?;
+            self.check_pair_remote(&s, remote)?;
+        }
         let mut policy = None;
         for c in self.enabled.clone() {
             if !self.repository.installed(c)? {
@@ -83,9 +98,10 @@ impl Owner2 {
         binding: Id,
         deadline: Instant,
         request: Option<[u8; 16]>,
+        expected: Option<&Arc<LocatorPair2>>,
     ) -> Result<(u64, wire::ParsedFrame2)> {
         let (s, current) = self.require(c, false)?;
-        self.check_lan_admission(&s, &connection)?;
+        self.check_lan_admission(&s, &connection, expected)?;
         ensure!(
             Instant::now() < deadline && connection.close_reason().is_none(),
             "admission deadline/connection"
@@ -173,6 +189,7 @@ impl Owner2 {
             hellos,
             proofs: [None, None],
             transcript: None,
+            discovery_pair: expected.cloned(),
         });
         Ok((generation, hello))
     }
@@ -197,7 +214,8 @@ impl Owner2 {
         let admission = self.admission(c, generation)?;
         let binding = admission.binding;
         let connection = admission.connection.clone();
-        self.observe_hello_authority(c, &connection, binding, &frame)?;
+        let expected = admission.discovery_pair.clone();
+        self.observe_hello_authority(c, &connection, binding, &frame, expected.as_ref())?;
         let (s, current) = self.require(c, false)?;
         let p = self.admission(c, generation)?;
         ensure!(
@@ -250,9 +268,10 @@ impl Owner2 {
         connection: &Connection,
         binding: Id,
         frame: &wire::ParsedFrame2,
+        expected: Option<&Arc<LocatorPair2>>,
     ) -> Result<()> {
         let s = self.snapshot(c)?;
-        self.check_lan_admission(&s, connection)?;
+        self.check_lan_admission(&s, connection, expected)?;
         ensure!(frame.body().kind() == wire::FrameKind::Hello, "Hello first");
         let f = frame.body().value().fields(12)?;
         let credential = super::super::handshake::Credentials::decode(f[7].bytes()?)?;
@@ -274,7 +293,7 @@ impl Owner2 {
         s: &db::RuntimeSnapshot,
     ) -> Result<&Admission2> {
         let p = self.admission(c, generation)?;
-        self.check_lan_admission(s, &p.connection)?;
+        self.check_lan_admission(s, &p.connection, p.discovery_pair.as_ref())?;
         ensure!(
             p.policy == s.profile.policy_generation,
             "admission policy changed"
@@ -411,12 +430,15 @@ impl Owner2 {
             s.spec.peer_locator.as_deref().context("peer locator")?,
         )?;
         let wall = now()?;
-        let expires = wall
+        let mut expires = wall
             .checked_add(hooks::load()?.lease_seconds.unwrap_or(300))
             .context("lease expiry")?
             .min(current.consent.interval().1)
             .min(own.fields().expires)
             .min(peer.fields().expires);
+        if let Some(pair) = &p.discovery_pair {
+            expires = expires.min(pair.expires());
+        }
         ensure!(wall < expires, "lease interval");
         let pair = wire::encode(
             &a([
@@ -440,8 +462,15 @@ impl Owner2 {
             peer_locator: peer.id(),
             valid: Arc::new(AtomicBool::new(true)),
             pair,
+            discovery_pair: p.discovery_pair.clone(),
         };
-        lease.check(&s, wall, &self.route, self.lan_endpoint.as_ref())?;
+        lease.check(
+            &s,
+            wall,
+            &self.route,
+            self.lan_endpoint.as_ref(),
+            self.pair_for(&s, wall)?,
+        )?;
         let link = Link2 {
             c,
             binding: lease.binding,

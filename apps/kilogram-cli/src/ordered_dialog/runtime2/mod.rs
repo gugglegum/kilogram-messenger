@@ -11,6 +11,7 @@ pub mod admin;
 mod admission;
 pub mod config;
 mod data;
+pub mod discovery;
 mod handshake;
 mod hooks;
 mod lan;
