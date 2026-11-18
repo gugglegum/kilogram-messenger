@@ -3,3 +3,8 @@
 *.toml text eol=lf
 *.md text eol=lf
 *.lock text eol=lf
+scripts/test-terminal-t1-3e-admin-capture.ps1 text eol=lf
+scripts/test-terminal-t1-3e-build-launcher.py text eol=lf
+scripts/test-terminal-t1-3e-firewall.ps1 text eol=lf
+scripts/test-terminal-t1-3e-images.ps1 text eol=lf
+scripts/test-terminal-t1-3e-observe.ps1 text eol=lf
