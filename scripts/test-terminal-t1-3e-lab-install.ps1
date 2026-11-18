@@ -175,7 +175,7 @@ function Invoke-LabTransaction($Backend,$Want,[string]$Operation) {
     return @{state=$journal.phase;baseline_preserved=$true}
 }
 function Undo-LabInstallFiles([string]$Base,[string]$StateDirectory,[string[]]$Names) {
-    $j=Lab-Read (Join-Path $StateDirectory 'initial-and-journal.json')
+    $j=Lab-Read (Join-Path $StateDirectory 'initial-and-journal.json') -MaxBytes 2097152
     if($j.phase -cin @('removing','removed')){return} # Final campaign teardown preserves ordinary updates/evidence.
     if($j.phase -cnotin @('installing','rollback_incomplete','recovering')){throw 'LAB_INSTALL_PHASE'}
     $targets=@()
@@ -199,30 +199,48 @@ function Undo-LabInstallFiles([string]$Base,[string]$StateDirectory,[string[]]$N
 }
 function Save-LabInstallJournal([string]$Directory,$Journal,$PackageFiles) {
     $initial=Join-Path $Directory 'initial.json'
-    if(Test-Path -LiteralPath $initial){if(!(Lab-Equal (Lab-Read $initial) $Journal.initial)){throw 'LAB_INITIAL_BASELINE_CHANGED'}}
-    else{Lab-Write $initial $Journal.initial}
+    if(Test-Path -LiteralPath $initial){if(!(Lab-Equal (Lab-Read $initial -MaxBytes 2097152) $Journal.initial)){throw 'LAB_INITIAL_BASELINE_CHANGED'}}
+    else{Lab-Write $initial $Journal.initial -MaxBytes 2097152}
     $path=Join-Path $Directory 'initial-and-journal.json'
-    $previous=Lab-Read $path
+    $previous=Lab-Read $path -MaxBytes 2097152
     if($previous -and $previous.phase -cne $Journal.phase) {
         $history=Join-Path $Directory 'journal-history';[void][IO.Directory]::CreateDirectory($history);Lab-Plain $history
-        Lab-Write (Join-Path $history "$([guid]::NewGuid().ToString('N')).json") $previous
+        Lab-Write (Join-Path $history "$([guid]::NewGuid().ToString('N')).json") $previous -MaxBytes 2097152
     }
     # A retried failed installation may use a corrected reviewed package. Its own copied bytes,
     # not the first failed package's bytes, are the rollback scope; the initial host baseline is immutable.
     if($Journal.phase -ceq 'installing' -and @($Journal.changes).Count -eq 0 -and $PackageFiles) {
         $Journal | Add-Member -NotePropertyName file_pins -NotePropertyValue $PackageFiles -Force
     }
-    Lab-Write $path $Journal
+    Lab-Write $path $Journal -MaxBytes 2097152
 }
 
-function Get-LabRuleView($Rule,[string]$Store) {
+function New-LabFilterIndex([object[]]$Rules,[string]$Store) {
+    $wanted=@{};foreach($rule in $Rules){if(!$rule.InstanceID -or $wanted.ContainsKey($rule.InstanceID)){throw 'LAB_RULE_ID_AMBIGUOUS'};$wanted[$rule.InstanceID]=$true}
+    $index=@{}
+    foreach($kind in @('Application','Service','Port','Address','Interface','InterfaceType','Security')) {
+        $rows=@{}
+        if($wanted.Count) {
+            foreach($filter in ($Rules | & "Get-NetFirewall${kind}Filter" -PolicyStore $Store -ThrottleLimit 4)) {
+                if($wanted.ContainsKey($filter.InstanceID)) {
+                    if($rows.ContainsKey($filter.InstanceID)){throw 'LAB_FILTER_AMBIGUOUS'}
+                    $rows[$filter.InstanceID]=$filter
+                }
+            }
+        }
+        if($rows.Count -ne $wanted.Count){throw 'LAB_FILTER_MISSING'}
+        $index[$kind]=$rows
+    }
+    return $index
+}
+function Get-LabRuleView($Rule,[string]$Store,$Index=$null) {
     $view=[ordered]@{}
     foreach($key in @('Name','DisplayName','Description','Group','Enabled','Profile','Direction','Action','EdgeTraversalPolicy')) { $view[$key]=[string]$Rule.$key }
     $kinds=[ordered]@{Application=@('Program','Package');Service=@('Service');Port=@('Protocol','LocalPort','RemotePort','DynamicTransport');
         Address=@('LocalAddress','RemoteAddress');Interface=@('InterfaceAlias');InterfaceType=@('InterfaceType');
         Security=@('Authentication','Encryption','OverrideBlockRules','LocalUser','RemoteUser','RemoteMachine')}
     foreach($kind in $kinds.Keys) {
-        $filter=@(& "Get-NetFirewall${kind}Filter" -AssociatedNetFirewallRule $Rule -PolicyStore $Store)
+        $filter=@(if($null -eq $Index){& "Get-NetFirewall${kind}Filter" -AssociatedNetFirewallRule $Rule -PolicyStore $Store}else{$Index[$kind][$Rule.InstanceID]})
         if($filter.Count -ne 1) { throw 'LAB_FILTER_AMBIGUOUS' }
         foreach($key in $kinds[$kind]) {
             $value=@($filter[0].$key | ForEach-Object {[string]$_} | Sort-Object) -join ','
@@ -242,13 +260,18 @@ function Get-LabSnapshot($Cfg,$Want) {
                 disabled=@($p.DisabledInterfaceAliases | Sort-Object)}
         }
     })
+    $byStore=@{};foreach($store in @('PersistentStore','ActiveStore')){$byStore[$store]=@(Get-NetFirewallRule -PolicyStore $store | Sort-Object Name)}
     $rules=@(foreach($store in @('PersistentStore','ActiveStore')) {
-        foreach($r in @(Get-NetFirewallRule -PolicyStore $store | Sort-Object Name)) {
+        foreach($r in $byStore[$store]) {
             if ($r.Name -cin @($Want.rules | ForEach-Object Name)) { @{store=$store;view=(Get-LabRuleView $r $store)} }
         }
     })
-    $policy=@(Get-NetFirewallRule -PolicyStore ActiveStore | Where-Object { [string]$_.Enabled -eq 'True' -and
-        ([string]$_.Profile -eq 'Any' -or [string]$_.Profile -match '\bPrivate\b') } | Sort-Object Name | ForEach-Object { Get-LabRuleView $_ ActiveStore })
+    $selected=@($byStore['ActiveStore'] | Where-Object { [string]$_.Enabled -eq 'True' -and
+        ([string]$_.Profile -eq 'Any' -or [string]$_.Profile -match '\bPrivate\b') })
+    $index=New-LabFilterIndex $selected ActiveStore
+    $policy=@($selected | ForEach-Object { Get-LabRuleView $_ ActiveStore $index })
+    # One native association check guards the bulk identifier mapping without repeating all queries per rule.
+    if($selected.Count -and !(Lab-Equal $policy[0] (Get-LabRuleView $selected[0] ActiveStore))){throw 'LAB_FILTER_INDEX_DIFFERS'}
     $net=@(Get-NetConnectionProfile | Sort-Object InterfaceIndex | ForEach-Object { [ordered]@{index=[int]$_.InterfaceIndex;alias=$_.InterfaceAlias;category=[string]$_.NetworkCategory} })
     $adapter=Get-NetAdapter -InterfaceIndex $Cfg.interface_index
     $addr=@(Get-NetIPAddress -InterfaceIndex $Cfg.interface_index -AddressFamily IPv4 | ForEach-Object { "$($_.IPAddress)/$($_.PrefixLength)" } | Sort-Object)
@@ -380,24 +403,24 @@ function Test-LabAddress([string]$Text,[string]$IP,[string]$LocalIP) {
     }
     if($unknown){return 0};return -1
 }
-function Test-LabSshRule($Rule,$Cfg,[bool]$Outbound,[bool]$Allow) {
+function Test-LabSshRule($Rule,$Cfg,[bool]$Client,[bool]$Allow,[bool]$Reply=$false) {
     $system=[Environment]::GetFolderPath('System')
-    $program=Join-Path $system $(if($Outbound){'OpenSSH/ssh.exe'}else{'OpenSSH/sshd.exe'})
+    $program=Join-Path $system $(if($Client){'OpenSSH/ssh.exe'}else{'OpenSSH/sshd.exe'})
     $app=[Environment]::ExpandEnvironmentVariables((Lab-RuleField $Rule Program)).Trim('"')
     $protocol=Lab-RuleField $Rule Protocol
     if($protocol -ceq '6'){$protocol='TCP'}elseif($protocol -ceq '256'){$protocol='Any'}
     $tests=@(
         (Test-LabSet (Lab-RuleField $Rule Enabled) 'True'),
         (Test-LabSet (Lab-RuleField $Rule Profile) 'Private'),
-        (Test-LabSet (Lab-RuleField $Rule Direction) $(if($Outbound){'Outbound'}else{'Inbound'})),
+        (Test-LabSet (Lab-RuleField $Rule Direction) $(if($Client -xor $Reply){'Outbound'}else{'Inbound'})),
         (Test-LabSet $protocol 'TCP'),
         (Test-LabSet $app $program),
-        (Test-LabSet (Lab-RuleField $Rule Service) $(if($Outbound){'__no_service__'}else{'sshd'})),
+        (Test-LabSet (Lab-RuleField $Rule Service) $(if($Client){'__no_service__'}else{'sshd'})),
         (Test-LabSet (Lab-RuleField $Rule InterfaceAlias) $Cfg.interface_alias),
         (Test-LabAddress (Lab-RuleField $Rule LocalAddress) $Cfg.ip $Cfg.ip),
         (Test-LabAddress (Lab-RuleField $Rule RemoteAddress) $Cfg.peer $Cfg.ip),
-        (Test-LabPorts (Lab-RuleField $Rule LocalPort) $(if($Outbound){1}else{22}) $(if($Outbound){65535}else{22}) $Allow),
-        (Test-LabPorts (Lab-RuleField $Rule RemotePort) $(if($Outbound){22}else{1}) $(if($Outbound){22}else{65535}) $Allow)
+        (Test-LabPorts (Lab-RuleField $Rule LocalPort) $(if($Client){1}else{22}) $(if($Client){65535}else{22}) $Allow),
+        (Test-LabPorts (Lab-RuleField $Rule RemotePort) $(if($Client){22}else{1}) $(if($Client){22}else{65535}) $Allow)
     )
     # Constrained interface/security expressions are deliberately unsupported, never assumed to allow.
     foreach($key in @('Package','InterfaceType','DynamicTransport','LocalUser','RemoteUser','RemoteMachine')) {
@@ -409,28 +432,30 @@ function Test-LabSshRule($Rule,$Cfg,[bool]$Outbound,[bool]$Allow) {
     if(-1 -in $tests){return -1};if(0 -in $tests){return 0};return 1
 }
 function Assert-LabSshPath($Cfg,$Snapshot) {
+    $client=$Cfg.side -ceq 'A' # Actual route: A runs the controller/ssh client; B runs sshd.
     $expected=Join-Path ([Environment]::GetFolderPath('System')) 'OpenSSH/sshd.exe'
     $hasSsh=if($Snapshot -is [Collections.IDictionary]){$Snapshot.Contains('ssh')}else{[bool]$Snapshot.PSObject.Properties['ssh']}
-    if(!$hasSsh -or !$Snapshot.ssh -or !$Snapshot.ssh.running -or $Snapshot.ssh.service_path.Trim('"') -ine $expected){throw 'LAB_SSH_SERVICE_UNCERTAIN'}
+    if(!$client -and (!$hasSsh -or !$Snapshot.ssh -or !$Snapshot.ssh.running -or $Snapshot.ssh.service_path.Trim('"') -ine $expected)){throw 'LAB_SSH_SERVICE_UNCERTAIN'}
     $connection=$env:SSH_CONNECTION
-    if(!$connection){$connection=$Snapshot.ssh.connection}
+    if(!$connection -and $hasSsh){$connection=$Snapshot.ssh.connection}
     if($connection) {
+        if($client){throw 'LAB_SSH_ROUTE_UNCERTAIN'}
         $parts=$connection.Split(' ')
         if($parts.Count -ne 4 -or $parts[0] -cne $Cfg.peer -or $parts[2] -cne $Cfg.ip -or $parts[3] -cne '22' -or
             $parts[1] -notmatch '^\d{1,5}$' -or [int]$parts[1] -lt 1 -or [int]$parts[1] -gt 65535){throw 'LAB_SSH_ROUTE_UNCERTAIN'}
     }
-    $allowed=$false;$uncertain=$false
+    $allowed=$client;$uncertain=$false # Effective outbound default Allow is checked by Assert-LabNetwork.
     foreach($rule in $Snapshot.policy) {
         $action=Lab-RuleField $rule Action
-        if($action -ieq 'Allow') {
+        if($action -ieq 'Allow' -and !$client) {
             $match=Test-LabSshRule $rule $Cfg $false $true
             if($match -eq 1){$allowed=$true}elseif($match -eq 0){$uncertain=$true}
         }elseif($action -ieq 'Block') {
-            foreach($outbound in @($false,$true)) {
-                $match=Test-LabSshRule $rule $Cfg $outbound $false
+            foreach($reply in @($false,$true)) {
+                $match=Test-LabSshRule $rule $Cfg $client $false $reply
                 if($match -eq 1){throw 'LAB_SSH_BLOCKED'}elseif($match -eq 0){throw 'LAB_SSH_FILTER_UNCERTAIN'}
             }
-        }else{throw 'LAB_SSH_FILTER_UNCERTAIN'}
+        }elseif($action -ine 'Allow'){throw 'LAB_SSH_FILTER_UNCERTAIN'}
     }
     if(!$allowed){if($uncertain){throw 'LAB_SSH_FILTER_UNCERTAIN'};throw 'LAB_SSH_EFFECT_UNCONFIRMED'}
 }
@@ -441,7 +466,7 @@ function Assert-LabNetwork($Cfg,$Snapshot) {
     $lan=@($Snapshot.network | Where-Object index -eq $Cfg.interface_index)
     if ($lan.Count -ne 1 -or $lan[0].category -cne 'Private' -or
         @($Snapshot.network | Where-Object { $_.category -ceq 'Private' -and $_.index -ne $Cfg.interface_index }).Count -or
-        $Snapshot.adapter.name -cne $Cfg.interface_alias -or $Snapshot.adapter.guid -ine $Cfg.interface_guid -or
+        $Snapshot.adapter.name -cne $Cfg.interface_alias -or [guid]$Snapshot.adapter.guid -ne [guid]$Cfg.interface_guid -or
         $Snapshot.adapter.status -cne 'Up' -or "$($Cfg.ip)/24" -cnotin $Snapshot.adapter.addresses) { throw 'LAB_PROFILE_WIDE_NETWORK_EFFECT' }
     $numbers=[regex]::Matches(($Snapshot.dynamic_udp -join "`n"),'\d+') | ForEach-Object Value
     if (($numbers -join ',') -cne '49152,16384') { throw 'LAB_UDP_RANGE' }
@@ -550,7 +575,7 @@ try {
     }
     $packagePins=if($Mode -ceq 'Provision'){$package.files}else{$null}
     $backend=@{
-        Read={ Lab-Read $journalPath }
+        Read={ Lab-Read $journalPath -MaxBytes 2097152 }
         Write={param($j) Save-LabInstallJournal $stateDir $j $packagePins}
         Snapshot={Get-LabSnapshot $cfg $want}
         Preflight={param($now)
@@ -586,7 +611,7 @@ try {
             }
         }
         Verify={param($w)
-            $j=Lab-Read $journalPath;Assert-LabInstalled $cfg $w $j.initial
+            $j=Lab-Read $journalPath -MaxBytes 2097152;Assert-LabInstalled $cfg $w $j.initial
             $path=Join-Path $cfg.base 'ordinary-agent/campaign-baseline.json'
             $intent=Join-Path $stateDir 'public-baseline-intent.json'
             if(!(Test-Path -LiteralPath $path)) {

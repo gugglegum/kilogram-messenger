@@ -11,21 +11,22 @@ function Lab-Plain([string]$Path) {
         $item = if ($item -is [IO.FileInfo]) { $item.Directory } else { $item.Parent }
     }
 }
-function Lab-Read([string]$Path) {
+function Lab-Read([string]$Path,[ValidateRange(2,2097152)][int]$MaxBytes=131072) {
     if (![IO.File]::Exists($Path)) { return $null }
     Lab-Plain $Path
     $stream = [IO.File]::Open($Path,'Open','Read',('ReadWrite, Delete'))
     try {
-        if ($stream.Length -lt 2 -or $stream.Length -gt 131072) { throw 'LAB_JSON_SIZE' }
+        if ($stream.Length -lt 2 -or $stream.Length -gt $MaxBytes) { throw 'LAB_JSON_SIZE' }
         $reader = [IO.StreamReader]::new($stream,[Text.UTF8Encoding]::new($false,$true))
         try { return ($reader.ReadToEnd() | ConvertFrom-Json) } finally { $reader.Dispose() }
     } finally { $stream.Dispose() }
 }
-function Lab-Write([string]$Path,$Value) {
+function Lab-Write([string]$Path,$Value,[ValidateRange(2,2097152)][int]$MaxBytes=131072) {
     Lab-Plain ([IO.Path]::GetDirectoryName($Path))
     if ([IO.File]::Exists($Path)) { Lab-Plain $Path }
     $temp = "$Path.$([guid]::NewGuid().ToString('N')).pending"
     $bytes = [Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $Value -Depth 18 -Compress)+[char]10)
+    if($bytes.Length -lt 2 -or $bytes.Length -gt $MaxBytes){throw 'LAB_JSON_SIZE'}
     $f = [IO.File]::Open($temp,'CreateNew','Write','None')
     try { $f.Write($bytes,0,$bytes.Length); $f.Flush($true) } finally { $f.Dispose() }
     try {

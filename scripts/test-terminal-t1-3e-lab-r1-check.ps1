@@ -9,7 +9,7 @@ function Reject([scriptblock]$Body,[string]$Expected){
 }
 function Clone($Object){$Object | ConvertTo-Json -Depth 18 -Compress | ConvertFrom-Json}
 $cases=[ordered]@{}
-$cfg=Get-LabConfig A
+$cfg=Get-LabConfig B
 $server=Join-Path ([Environment]::GetFolderPath('System')) 'OpenSSH/sshd.exe'
 $client=Join-Path ([Environment]::GetFolderPath('System')) 'OpenSSH/ssh.exe'
 $allow=[ordered]@{Name='sshd-allow';Enabled='True';Profile='Private';Direction='Inbound';Action='Allow';
@@ -58,7 +58,7 @@ foreach($pair in @(@('Authentication','Required'),@('InterfaceType','Wireless'),
 }
 $s=Clone $snapshot;$s.policy[0].Package='conditional-package';Reject {Assert-LabNetwork $cfg $s} 'LAB_SSH_FILTER_UNCERTAIN'
 $cases.ssh_unsupported_applicable_filters_uncertain=$true
-$s=Clone $snapshot;$b=Clone $block;$b.Direction='Outbound';$b.Program=$client;$b.LocalPort='1-65535';$b.RemotePort='22';$s.policy+=@($b)
+$s=Clone $snapshot;$b=Clone $block;$b.Direction='Outbound';$b.Program=$server;$b.LocalPort='22';$b.RemotePort='1-65535';$s.policy+=@($b)
 Reject {Assert-LabNetwork $cfg $s} 'LAB_SSH_BLOCKED'
 $s=Clone $snapshot;$s.ssh.service_path='C:\wrong\sshd.exe';Reject {Assert-LabNetwork $cfg $s} 'LAB_SSH_SERVICE_UNCERTAIN'
 $s=Clone $snapshot;$s.ssh.connection='192.0.2.99 55001 '+$cfg.ip+' 22';Reject {Assert-LabNetwork $cfg $s} 'LAB_SSH_ROUTE_UNCERTAIN'
