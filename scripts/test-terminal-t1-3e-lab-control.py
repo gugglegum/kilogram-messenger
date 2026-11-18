@@ -15,7 +15,7 @@ class Agent:
         self.script_sha, self.config_sha = script_sha, config_sha
         self.session = None
 
-    def invoke(self, action, request=None, timeout=17):
+    def invoke(self, action, request=None, timeout=28):
         script = self.base / 'ordinary-agent/test-terminal-t1-3e-lab-agent.ps1'
         config = self.base / 'ordinary-agent/lab.json'
         def literal(s):

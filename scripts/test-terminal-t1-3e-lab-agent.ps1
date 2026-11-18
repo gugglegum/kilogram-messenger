@@ -1,8 +1,11 @@
 param(
-    [Parameter(Mandatory)][ValidateSet('Run','Command','Worker','Wake')][string]$Action,
+    [Parameter(Mandatory)][ValidateSet('Run','Command','Worker','Wake','Probe')][string]$Action,
     [Parameter(Mandatory)][string]$Config,
     [string]$Request='{}',
-    [string]$Attempt
+    [string]$Attempt,
+    [string]$BaselinePin,
+    [string]$ProbeId,
+    [string]$SessionId
 )
 . "$PSScriptRoot/test-terminal-t1-3e-lab-common.ps1"
 $cfg = Lab-Config $Config
@@ -52,6 +55,40 @@ function Repair-LabUpdate([string]$Stage) {
     }
     $j.state='rolled_back';Lab-Write $path $j
 }
+function Invoke-LabBoundedReadiness($SessionJob,[string]$Pin,[string]$Session) {
+    Lab-Hex $Pin 64;Lab-Hex $Session
+    if(@($SessionJob.Children()).Count){throw 'LAB_ACTIVE'}
+    $probe=[guid]::NewGuid().ToString('N');$created=$null;$probeGuard=$null
+    try {
+        $p=Start-LabProcess $PSCommandPath ('-Action Probe -Config "'+$Config+'" -BaselinePin '+$Pin+' -ProbeId '+$probe+' -SessionId '+$Session) $homeDir ([ref]$created)
+        $SessionJob.Verify($p);$probeGuard=$SessionJob.Bound($p,15000)
+        if(!$p.WaitForExit(17000)){throw 'LAB_READINESS_TIMEOUT'}
+        $answer=Lab-Read (Join-Path $control "$Session/$probe.probe.json")
+        if($probeGuard.Expired -or $p.ExitCode -ne 0 -or !$answer -or $answer.id -cne $probe -or $answer.session -cne $Session -or $answer.baseline_sha256 -cne $Pin){throw 'LAB_READINESS_FAILED'}
+        return $answer
+    } finally {
+        try{$SessionJob.CleanupChildren(2000)}catch{$state.blocked='readiness_cleanup_unconfirmed';Lab-Write $statePath $state;throw 'LAB_READINESS_CLEANUP_UNKNOWN'}
+        finally{if($probeGuard){$probeGuard.Dispose()};if($created){$created.Dispose()}}
+    }
+}
+if ($Action -ceq 'Probe') {
+    Lab-Hex $ProbeId;Lab-Hex $SessionId;Lab-Hex $BaselinePin 64
+    if($env:SSH_CONNECTION -or $env:SSH_TTY){throw 'LAB_NOT_INTERACTIVE'}
+    $context=[IO.File]::ReadAllText((Join-Path $homeDir 'dpapi-context.ps1'))
+    $begin=$context.IndexOf('using System;');$end=$context.IndexOf("'@",$begin)
+    Add-Type -TypeDefinition ($context.Substring($begin,$end-$begin))
+    $logon=[TerminalT1Dpapi]::ReadLogonContext()
+    if($logon[0] -ne 2 -or $logon[1] -eq 0 -or !(Test-Path -LiteralPath "Registry::HKEY_USERS\$($cfg.sid)")){throw 'LAB_NOT_INTERACTIVE'}
+    $plain=[Text.Encoding]::UTF8.GetBytes('Kilogram readiness synthetic DPAPI probe')
+    $sealed=[TerminalT1Dpapi]::Transform($true,$plain)
+    $opened=[TerminalT1Dpapi]::Transform($false,$sealed)
+    if([Convert]::ToBase64String($plain) -cne [Convert]::ToBase64String($opened)){throw 'LAB_DPAPI_PROBE'}
+    [Array]::Clear($opened,0,$opened.Length);[Array]::Clear($sealed,0,$sealed.Length)
+    . "$PSScriptRoot/test-terminal-t1-3e-lab-install.ps1" -Mode Library
+    $null=Assert-LabReadOnly $cfg $BaselinePin
+    Lab-Write (Join-Path $control "$SessionId/$ProbeId.probe.json") @{id=$ProbeId;session=$SessionId;baseline_sha256=$BaselinePin;backend='com-native-v1';dpapi=$true;logon_type=2;windows_session=[int]$logon[1];sid=$cfg.sid}
+    return
+}
 if ($Action -ceq 'Wake') {
     # Read-only task check plus ordinary Run; the task cannot accept an action override.
     $service = New-Object -ComObject Schedule.Service; $service.Connect()
@@ -88,7 +125,7 @@ if ($Action -ceq 'Command') {
         $reply = Lab-Read (Join-Path $folder "$($given.id).response.json")
         if ($reply) { $reply | ConvertTo-Json -Depth 14 -Compress; return }
         Start-Sleep -Milliseconds 60
-    } while ($limit.Elapsed.TotalSeconds -lt 12)
+    } while ($limit.Elapsed.TotalSeconds -lt 22)
     throw 'LAB_REPLY_UNKNOWN'
 }
 if ($Action -ceq 'Worker') {
@@ -258,6 +295,11 @@ try {
                 if ($r.v -ne 1 -or $r.session -cne $session -or $r.id -cne $id) { throw 'LAB_SESSION' }
                 if ($state.blocked -and $r.op -cne 'status') { throw 'LAB_BLOCKED' }
                 switch -CaseSensitive ($r.op) {
+                    'check' {
+                        Lab-Keys $r.args @('baseline_sha256')
+                        if($cfg.suite -cne 'field' -or $state.active){throw 'LAB_ACTIVE'}
+                        $value=Invoke-LabBoundedReadiness $job $r.args.baseline_sha256 $session
+                    }
                     'status' {
                         Lab-Keys $r.args @('attempt'); Lab-Id $r.args.attempt
                         $run=Join-Path $runs $r.args.attempt
@@ -276,8 +318,7 @@ try {
                         if ($r.args.work_seconds -isnot [int] -or $r.args.work_seconds -lt 2 -or $r.args.work_seconds -gt $cfg.max_work_seconds) { throw 'LAB_BUDGET' }
                         $null=Lab-PinSet $r.args.pins $cfg.suite
                         if($cfg.suite -ceq 'field') {
-                            . "$PSScriptRoot/test-terminal-t1-3e-lab-install.ps1" -Mode Library
-                            $null=Assert-LabReadOnly $cfg $r.args.baseline_sha256
+                            $null=Invoke-LabBoundedReadiness $job $r.args.baseline_sha256 $session
                         } elseif($r.args.baseline_sha256 -cne ''){throw 'LAB_BASELINE_SCOPE'}
                         $run=Join-Path $runs $r.args.attempt
                         if (Test-Path -LiteralPath $run) { throw 'LAB_DUPLICATE_ATTEMPT' }

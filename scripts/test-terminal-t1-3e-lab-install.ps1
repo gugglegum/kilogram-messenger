@@ -1,14 +1,17 @@
 param(
-    [Parameter(Mandatory)][ValidateSet('Library','Package','Audit','Provision','Verify','Teardown')][string]$Mode,
+    [Parameter(Mandatory)][ValidateSet('Library','Package','Audit','Setup','Provision','Verify','Teardown')][string]$Mode,
     [ValidateSet('A','B')][string]$Side,
     [string]$PackageRoot,
     [string]$PackageSha,
     [string]$AuditSha,
     [switch]$Ordinary,
     [string]$BaselineSha,
-    [string]$Output
+    [string]$Output,
+    [string]$SetupSession
 )
 . "$PSScriptRoot/test-terminal-t1-3e-lab-common.ps1"
+. "$PSScriptRoot/test-terminal-t1-3e-lab-readiness.ps1"
+. "$PSScriptRoot/test-terminal-t1-3e-lab-setup.ps1"
 
 function Get-LabConfig([string]$Which) {
     if ($Which -cnotin @('A','B')) { throw 'LAB_SIDE' }
@@ -313,7 +316,8 @@ function Assert-LabReadOnly($Cfg,[string]$Pin) {
     $want=@{task=(Lab-TaskSpec $Cfg);rules=@(Lab-Rules $Cfg)}
     if(!(Lab-Equal $baseline.task $want.task)){throw 'LAB_BASELINE_SCOPE'}
     Assert-LabTask (Find-LabTask $want.task.name) $want.task
-    if(!(Lab-Equal $baseline.relevant (Get-LabRelevant $Cfg $want))){throw 'LAB_BASELINE_DRIFT'}
+    if($baseline.v -ne 2 -or !$baseline.ordinary){throw 'LAB_BASELINE_BACKEND'}
+    if(!(Lab-Equal $baseline.ordinary (Get-LabOrdinaryState $Cfg $want))){throw 'LAB_BASELINE_DRIFT'}
     @{state='verified';baseline_sha256=$Pin;initial_audit_sha256=$baseline.initial_audit_sha256;read_only=$true}
 }
 function Find-LabTask([string]$Name) {
@@ -403,7 +407,7 @@ function Test-LabAddress([string]$Text,[string]$IP,[string]$LocalIP) {
     }
     if($unknown){return 0};return -1
 }
-function Test-LabSshRule($Rule,$Cfg,[bool]$Client,[bool]$Allow,[bool]$Reply=$false) {
+function Test-LabSshRule($Rule,$Cfg,[bool]$Client,[bool]$Allow,[bool]$Reply=$false,$Actor=$null) {
     $system=[Environment]::GetFolderPath('System')
     $program=Join-Path $system $(if($Client){'OpenSSH/ssh.exe'}else{'OpenSSH/sshd.exe'})
     $app=[Environment]::ExpandEnvironmentVariables((Lab-RuleField $Rule Program)).Trim('"')
@@ -423,15 +427,19 @@ function Test-LabSshRule($Rule,$Cfg,[bool]$Client,[bool]$Allow,[bool]$Reply=$fal
         (Test-LabPorts (Lab-RuleField $Rule RemotePort) $(if($Client){22}else{1}) $(if($Client){22}else{65535}) $Allow)
     )
     # Constrained interface/security expressions are deliberately unsupported, never assumed to allow.
-    foreach($key in @('Package','InterfaceType','DynamicTransport','LocalUser','RemoteUser','RemoteMachine')) {
+    foreach($key in @('Package','InterfaceType','DynamicTransport','RemoteUser','RemoteMachine')) {
         $tests+=if((Lab-RuleField $Rule $key) -ieq 'Any'){1}else{0}
     }
+    $localUser=Lab-RuleField $Rule LocalUser
+    if($localUser -ieq 'Any'){$tests+=1}
+    elseif($Client -and $Actor -and $Actor -is [KilogramLabNative+Actor] -and $Actor.user -ceq $Cfg.sid -and !$Actor.elevated){$tests+=$Actor.LocalUser($localUser)}
+    else{$tests+=0}
     foreach($pair in @(@('Authentication','NotRequired'),@('Encryption','NotRequired'),@('OverrideBlockRules','False'))) {
         $tests+=if((Lab-RuleField $Rule $pair[0]) -ieq $pair[1]){1}else{0}
     }
     if(-1 -in $tests){return -1};if(0 -in $tests){return 0};return 1
 }
-function Assert-LabSshPath($Cfg,$Snapshot) {
+function Assert-LabSshPath($Cfg,$Snapshot,$Actor=$null) {
     $client=$Cfg.side -ceq 'A' # Actual route: A runs the controller/ssh client; B runs sshd.
     $expected=Join-Path ([Environment]::GetFolderPath('System')) 'OpenSSH/sshd.exe'
     $hasSsh=if($Snapshot -is [Collections.IDictionary]){$Snapshot.Contains('ssh')}else{[bool]$Snapshot.PSObject.Properties['ssh']}
@@ -452,14 +460,14 @@ function Assert-LabSshPath($Cfg,$Snapshot) {
             if($match -eq 1){$allowed=$true}elseif($match -eq 0){$uncertain=$true}
         }elseif($action -ieq 'Block') {
             foreach($reply in @($false,$true)) {
-                $match=Test-LabSshRule $rule $Cfg $client $false $reply
+                $match=Test-LabSshRule $rule $Cfg $client $false $reply $Actor
                 if($match -eq 1){throw 'LAB_SSH_BLOCKED'}elseif($match -eq 0){throw 'LAB_SSH_FILTER_UNCERTAIN'}
             }
         }elseif($action -ine 'Allow'){throw 'LAB_SSH_FILTER_UNCERTAIN'}
     }
     if(!$allowed){if($uncertain){throw 'LAB_SSH_FILTER_UNCERTAIN'};throw 'LAB_SSH_EFFECT_UNCONFIRMED'}
 }
-function Assert-LabNetwork($Cfg,$Snapshot) {
+function Assert-LabNetwork($Cfg,$Snapshot,$Actor=$null,[switch]$SkipSsh) {
     $private=@($Snapshot.profiles | Where-Object { $_.name -ceq 'Private' -and $_.store -ceq 'ActiveStore' })
     if ($private.Count -ne 1 -or $private[0].inbound -cne 'Block' -or $private[0].outbound -cne 'Allow' -or
         $private[0].allow_inbound -cne 'True' -or $private[0].allow_local -cne 'True' -or $Cfg.interface_alias -in $private[0].disabled) { throw 'LAB_PRIVATE_POLICY' }
@@ -472,11 +480,11 @@ function Assert-LabNetwork($Cfg,$Snapshot) {
     if (($numbers -join ',') -cne '49152,16384') { throw 'LAB_UDP_RANGE' }
     # Require one supported inbound allow covering every legal client source port, and no
     # possibly applicable inbound-server/outbound-client block. This covers reconnect too.
-    Assert-LabSshPath $Cfg $Snapshot
+    if(!$SkipSsh){Assert-LabSshPath $Cfg $Snapshot $Actor}
 }
-function Assert-LabInstalled($Cfg,$Want,$Initial) {
+function Assert-LabInstalled($Cfg,$Want,$Initial,$Actor=$null,[switch]$TeardownOnly) {
     $now=Get-LabSnapshot $Cfg $Want
-    Assert-LabNetwork $Cfg $now
+    Assert-LabNetwork $Cfg $now $Actor -SkipSsh:$TeardownOnly
     Assert-LabTask (Find-LabTask $Want.task.name) $Want.task
     foreach($rule in $Want.rules) {
         foreach($store in @('PersistentStore','ActiveStore')) {
@@ -516,15 +524,22 @@ function Assert-LabRestoreScope($Now,$Initial,$Want) {
 if($Mode -ceq 'Library') { return }
 $cfg=Get-LabConfig $Side
 $want=@{task=(Lab-TaskSpec $cfg);rules=@(Lab-Rules $cfg);config=$cfg}
-$files=@('test-terminal-t1-3e-lab-agent.ps1','test-terminal-t1-3e-lab-common.ps1','test-terminal-t1-3e-lab-job.cs','test-terminal-t1-3e-lab-install.ps1','dpapi-context.ps1','lab.json')
+$files=@('test-terminal-t1-3e-lab-agent.ps1','test-terminal-t1-3e-lab-common.ps1','test-terminal-t1-3e-lab-job.cs','test-terminal-t1-3e-lab-install.ps1',
+    'test-terminal-t1-3e-lab-native.cs','test-terminal-t1-3e-lab-readiness.ps1','test-terminal-t1-3e-lab-setup.ps1','test-terminal-t1-3e-lab-launch.ps1','dpapi-context.ps1','lab.json','ssh-probe.json')
 if($Mode -ceq 'Package') {
     if(Test-Path -LiteralPath $Output) { throw 'LAB_PACKAGE_EXISTS' }
     [void][IO.Directory]::CreateDirectory($Output); Lab-Plain $Output
-    foreach($name in $files | Where-Object { $_ -cnotin @('lab.json','dpapi-context.ps1') }) { [IO.File]::Copy((Join-Path $PSScriptRoot $name),(Join-Path $Output $name)) }
+    foreach($name in $files | Where-Object { $_ -cnotin @('lab.json','dpapi-context.ps1','ssh-probe.json') }) { [IO.File]::Copy((Join-Path $PSScriptRoot $name),(Join-Path $Output $name)) }
     [IO.File]::Copy((Join-Path $PSScriptRoot 'test-terminal-t1-dpapi.ps1'),(Join-Path $Output 'dpapi-context.ps1'))
     Lab-Write (Join-Path $Output 'lab.json') $cfg
+    # Package creation happens on A. Only paths/public host-key pin travel, never the private key bytes.
+    $ssh=@{host='192.168.0.152';source='192.168.0.140';user='test';identity='C:\Users\Paul\.ssh\kilogram-test-laptop-final-ed25519';
+        known_hosts='E:\AI-Projects\kilogram-p2p-messenger\.tmp\remote-access\known_hosts';fingerprint='SHA256:vvR2wQIJmbHD5033l5xVMbrSGyUcucNCy711PYU4oyc'}
+    $ssh.known_hosts_sha256=Lab-Hash $ssh.known_hosts
+    Lab-Write (Join-Path $Output 'ssh-probe.json') $ssh
     $pins=[ordered]@{};foreach($name in $files){$pins[$name]=Lab-Hash (Join-Path $Output $name)}
-    Lab-Write (Join-Path $Output 'package.json') @{v=1;side=$Side;files=$pins}
+    Lab-Write (Join-Path $Output 'package.json') @{v=2;side=$Side;files=$pins}
+    & (Join-Path $PSScriptRoot 'test-terminal-t1-3e-lab-launch.ps1') -LaunchAction Build -LaunchSide $Side -LaunchRoot $Output -ManifestPin (Lab-Hash (Join-Path $Output 'package.json'))
     @{package=$Output;sha256=(Lab-Hash (Join-Path $Output 'package.json'));spec=$want} | ConvertTo-Json -Depth 14
     return
 }
@@ -545,6 +560,16 @@ if($Mode -ceq 'Verify' -and $Ordinary) {
 $identity=[Security.Principal.WindowsIdentity]::GetCurrent()
 try { if(!([Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)){throw 'LAB_ADMIN_SETUP_ONLY'} }
 finally{$identity.Dispose()}
+$setupMode=$Mode -ceq 'Setup';$setupActor=$null;$held=[Collections.Generic.List[IDisposable]]::new()
+if($setupMode){
+    try {
+        $null=Get-LabSetupSession $cfg $SetupSession
+        $package=Assert-LabPackage $PackageRoot $PackageSha $Side $files $cfg $held
+        $setupActor=Open-LabSetupActor $cfg $SetupSession
+        $Mode='Provision'
+    }catch{if($setupActor){$setupActor.Dispose()};foreach($f in $held){$f.Dispose()};throw}
+}
+try {
 $stateRoot=Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) 'Kilogram-Lab'
 $stateDir=Join-Path $stateRoot "$($cfg.campaign)-$Side"
 foreach($directory in @($stateRoot,$stateDir)) {
@@ -558,32 +583,31 @@ foreach($directory in @($stateRoot,$stateDir)) {
 }
 $installLock=[IO.File]::Open((Join-Path $stateDir 'install.lock'),'OpenOrCreate','Write','None')
 $journalPath=Join-Path $stateDir 'initial-and-journal.json'
-$held=@()
 $teardownHandles=@{agent=$null;images=$null}
 try {
-    if($Mode -ceq 'Provision') {
-        Lab-Hex $PackageSha 64
-        if((Lab-Hash (Join-Path $PackageRoot 'package.json')) -cne $PackageSha){throw 'LAB_PACKAGE_PIN'}
-        $package=Lab-Read (Join-Path $PackageRoot 'package.json')
-        Lab-Keys $package @('v','side','files');Lab-Keys $package.files $files
-        if($package.v -ne 1 -or $package.side -cne $Side){throw 'LAB_PACKAGE_SCOPE'}
-        foreach($name in $files){
-            $p=Join-Path $PackageRoot $name; Lab-Plain $p;$f=[IO.File]::OpenRead($p);$held+=$f
-            if((Get-FileHash -InputStream $f).Hash -ine $package.files.$name){throw 'LAB_PACKAGE_PIN'}
-        }
-        if(!(Lab-Equal (Lab-Read (Join-Path $PackageRoot 'lab.json')) $cfg)){throw 'LAB_PACKAGE_CONFIG'}
+    if($Mode -ceq 'Provision' -and !$setupMode) {
+        $package=Assert-LabPackage $PackageRoot $PackageSha $Side $files $cfg $held
     }
     $packagePins=if($Mode -ceq 'Provision'){$package.files}else{$null}
     $backend=@{
         Read={ Lab-Read $journalPath -MaxBytes 2097152 }
-        Write={param($j) Save-LabInstallJournal $stateDir $j $packagePins}
-        Snapshot={Get-LabSnapshot $cfg $want}
+        Write={param($j)
+            if($setupMode){$j|Add-Member -NotePropertyName setup_session -NotePropertyValue (Split-Path -Leaf $SetupSession) -Force}
+            Save-LabInstallJournal $stateDir $j $packagePins
+        }
+        Snapshot={
+            if($setupMode){
+                $admitted=Get-LabSetupSnapshot $cfg $want $setupActor $installLock
+                Lab-Write (Join-Path $PackageRoot 'fresh-audit.json') $admitted -MaxBytes 2097152
+                $admitted.snapshot
+            }else{Get-LabSnapshot $cfg $want}
+        }
         Preflight={param($now)
-            Assert-LabNetwork $cfg $now
-            Lab-Hex $AuditSha 64
-            $json=ConvertTo-Json -InputObject $now -Depth 18 -Compress;$hash=[Security.Cryptography.SHA256]::Create()
-            try{$sha=[BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes($json))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}
-            if($sha -cne $AuditSha){throw 'LAB_AUDIT_CHANGED'}
+            Assert-LabNetwork $cfg $now $setupActor
+            if(!$setupMode){
+                Lab-Hex $AuditSha 64
+                if((Lab-JsonHash $now) -cne $AuditSha){throw 'LAB_AUDIT_CHANGED'}
+            }
             $agentDirectory=Join-Path $cfg.base 'ordinary-agent'
             foreach($name in $files){if(Test-Path -LiteralPath (Join-Path $agentDirectory $name)){throw 'LAB_FILE_COLLISION'}}
             if(Test-Path -LiteralPath (Join-Path $agentDirectory 'campaign-baseline.json')){throw 'LAB_FILE_COLLISION'}
@@ -611,14 +635,16 @@ try {
             }
         }
         Verify={param($w)
-            $j=Lab-Read $journalPath -MaxBytes 2097152;Assert-LabInstalled $cfg $w $j.initial
+            $j=Lab-Read $journalPath -MaxBytes 2097152;Assert-LabInstalled $cfg $w $j.initial $setupActor
             $path=Join-Path $cfg.base 'ordinary-agent/campaign-baseline.json'
             $intent=Join-Path $stateDir 'public-baseline-intent.json'
             if(!(Test-Path -LiteralPath $path)) {
                 if($j.phase -cne 'installing'){throw 'LAB_BASELINE_ABSENT'}
                 $json=ConvertTo-Json -InputObject $j.initial -Depth 18 -Compress;$hash=[Security.Cryptography.SHA256]::Create()
                 try{$initialSha=[BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes($json))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}
-                $value=[ordered]@{v=1;task=$w.task;initial_audit_sha256=$initialSha;relevant=(Get-LabRelevant $cfg $w)}
+                $relevant=Get-LabRelevant $cfg $w;$ordinaryNow=Get-LabOrdinaryState $cfg $w
+                Assert-LabOrdinaryAgainstCim $cfg $w $ordinaryNow $relevant
+                $value=[ordered]@{v=2;task=$w.task;initial_audit_sha256=$initialSha;relevant=$relevant;ordinary=$ordinaryNow}
                 $bytes=[Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $value -Depth 18 -Compress)+[char]10)
                 $hash=[Security.Cryptography.SHA256]::Create()
                 try{$pin=[BitConverter]::ToString($hash.ComputeHash($bytes)).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}
@@ -627,9 +653,11 @@ try {
             }
             $pin=(Lab-Read $intent).sha256
             $null=Assert-LabReadOnly $cfg $pin
+            $proof=Invoke-LabTaskProbe $cfg $w.task $pin
+            Lab-Write (Join-Path $stateDir ('task-proof-'+[guid]::NewGuid().ToString('N')+'.json')) $proof
         }
         CanRemove={param($w,$initial,$phase)
-            if($phase -ceq 'installed'){Assert-LabInstalled $cfg $w $initial}
+            if($phase -ceq 'installed'){Assert-LabInstalled $cfg $w $initial -TeardownOnly}
             Assert-LabRestoreScope (Get-LabSnapshot $cfg $w) $initial $w
             Add-Type -Path "$PSScriptRoot/test-terminal-t1-3e-lab-job.cs"
             Stop-LabIdleAgent $cfg.base $teardownHandles
@@ -650,7 +678,15 @@ try {
                     $actual=@(Get-NetFirewallRule -PolicyStore PersistentStore | Where-Object Name -ceq $spec.Name)
                     if($actual.Count){if($actual.Count -ne 1 -or !(Lab-Equal (Get-LabRuleView $actual[0] PersistentStore) $spec)){throw 'LAB_RULE_DRIFT'};Remove-NetFirewallRule -PolicyStore PersistentStore -Name $spec.Name}
                 }
-                'task' {$task=Find-LabTask $w.task.name;if($task){Assert-LabTask $task $w.task;$s=New-Object -ComObject Schedule.Service;$s.Connect();$s.GetFolder('\').DeleteTask($w.task.name,0)}}
+                'task' {
+                    $task=Find-LabTask $w.task.name
+                    if($task){
+                        Assert-LabTask $task $w.task
+                        if(!('KilogramLabJob' -as [type])){Add-Type -Path "$PSScriptRoot/test-terminal-t1-3e-lab-job.cs"}
+                        if(!$teardownHandles.agent){Stop-LabIdleAgent $cfg.base $teardownHandles}
+                        $s=New-Object -ComObject Schedule.Service;$s.Connect();$s.GetFolder('\').DeleteTask($w.task.name,0)
+                    }
+                }
                 'files' {
                     Undo-LabInstallFiles $cfg.base $stateDir $files
                 }
@@ -663,4 +699,5 @@ try {
         $result.baseline_sha256=Lab-Hash $baselinePath
     }
     $result | ConvertTo-Json -Depth 14
-} finally {foreach($f in $held){$f.Dispose()};foreach($f in $teardownHandles.Values){if($f){$f.Dispose()}};$installLock.Dispose()}
+} finally {foreach($f in $teardownHandles.Values){if($f){$f.Dispose()}};$installLock.Dispose()}
+} finally {foreach($f in $held){$f.Dispose()};if($setupActor){$setupActor.Dispose()}}

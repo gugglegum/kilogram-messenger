@@ -92,9 +92,9 @@ $script:taskFixture=[pscustomobject]@{Xml=$spec.xml;Sddl=$spec.sddl}
 $script:taskFixture | Add-Member -MemberType ScriptMethod -Name GetSecurityDescriptor -Value {param($flags) $this.Sddl}
 $script:relevantFixture=[pscustomobject]@{profile='PrivateOn';peer='exact';rules=@('scoped-discovery','scoped-iroh')}
 function Find-LabTask([string]$Name){$script:taskFixture}
-function Get-LabRelevant($Cfg,$Want){$script:relevantFixture}
+function Get-LabOrdinaryState($Cfg,$Want){$script:relevantFixture}
 $baseline=Join-Path $fixture 'ordinary-agent/campaign-baseline.json'
-Lab-Write $baseline @{v=1;task=$spec;initial_audit_sha256=('a'*64);relevant=$script:relevantFixture}
+Lab-Write $baseline @{v=2;task=$spec;initial_audit_sha256=('a'*64);relevant=@{authoritative='installation-only'};ordinary=$script:relevantFixture}
 $pin=Lab-Hash $baseline
 $null=Assert-LabReadOnly $cfg $pin
 Reject {Assert-LabReadOnly $cfg ('b'*64)} 'LAB_BASELINE_PIN'
