@@ -1,0 +1,11 @@
+# T1.3e: ordinary interactive Setup smoke
+
+On 2026-11-18 the physical laptop B passed fresh Setup creation with the accepted CLI/bootstrap pair running in its ordinary local interactive user session. Pinned SSH submitted a fixed one-shot request; it did not start the DPAPI-dependent process. begin/create/status/quit all succeeded, child exit was 0, filtered EOF and Job membership/empty Job were confirmed, and forced cleanup was false. Root independently checked the raw receipts, SHA values, runtime pins and nonce binding across ready, actual request and result.
+
+The four `test-terminal-t1-3e-interactive-setup` scripts implement this narrow test fixture: a double-click CMD/PowerShell launcher, a pinned SSH status/submit controller, and A-only focused checks. The launcher accepts only the fixed operation, with no caller-supplied paths or commands. Private helper output is filtered; public receipts contain success/context flags, not keys or recovery words. Existing result/claim files prevent reuse. No UAC, firewall, service or authentication changes are needed.
+
+Packaging uses a fresh closed ordinary-user folder and the exact seven-file manifest in `.tmp/terminal-t1-3e/t13e07-interactive-setup-review-01/manifest.json` (SHA `144158b463654850399e6698bf9fb5f54eda3d0ef466b65e8dffa66141938e6c`). Copy the CMD as `Run-Setup-smoke.cmd`, PS1 as `setup-smoke.ps1`, and pinned dependencies into `bin`; preserve manifest bytes rather than assuming checkout line endings. Controller requires the existing pinned local field SSH configuration. Deployed original terminal-t11f executables remain unchanged.
+
+Before launch there is no timer. After local readiness, the controller has 300 seconds to submit. Child work/whole Job limits are 90/110 seconds. Forced cleanup or incomplete receipts fail the gate. Local focused checks covered a real successful create, stale files, wrong nonce, malformed requests, wrong image hash and a hung child without private-output leakage.
+
+Live evidence: `.tmp/terminal-t1-3e/t13e07-interactive-setup-review-01/live-B-smoke-receipt.json`, SHA `ff3f2ecfdf10ea8c1ea1b74539d9938ae6af5addbedf06456ebf53cf6ec70ae9`. Failed prior t13e06 and all markers remain preserved. This confirms ordinary interactive DPAPI-backed Setup on B; it neither explains the earlier SSH Win32 5 nor passes the full two-host A-D field test.
