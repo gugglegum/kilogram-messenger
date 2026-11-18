@@ -15,6 +15,7 @@ public sealed class KilogramSetupPipe
     private const int Limit = 16384;
     private static readonly UTF8Encoding Utf8 = new UTF8Encoding(false, true);
     private static readonly Regex Hex = new Regex(@"\A[0-9a-f]{64}\z");
+    private static readonly Regex LanId = new Regex(@"\A(?!0{32}\z)[0-9a-f]{32}\z");
     private static readonly Regex Tag = new Regex(@"\A[a-zA-Z0-9_-]{1,64}\z");
     private static readonly Regex Label = new Regex(@"\A[a-z_]{1,48}\z");
     private static readonly Regex Recovery = new Regex(@"\A[a-z]{1,16}(?: [a-z]{1,16}){23}\z");
@@ -23,7 +24,7 @@ public sealed class KilogramSetupPipe
         "invite_export", "invite_inspect", "invite_join",
         "reply_export", "reply_inspect", "reply_accept",
         "consent_propose", "consent_export", "consent_inspect", "consent_accept",
-        "consent_cosign", "consent_import", "route_lan"
+        "consent_cosign", "consent_import", "route_lan", "route_lan_auto"
     };
 
     private readonly JavaScriptSerializer json = new JavaScriptSerializer {
@@ -120,6 +121,20 @@ public sealed class KilogramSetupPipe
         return items;
     }
 
+    private static Dictionary<string, object> LanDiscovery(Dictionary<string, object> discovery, string routeMode, string peer)
+    {
+        string mode = Field(discovery, "mode", Label);
+        if (mode == "manual") {
+            Require(discovery.Count == 1);
+            return Fields("mode", mode);
+        }
+        Require(mode == "auto" && discovery.Count == 4 && routeMode == "direct_lan" && peer != null);
+        object prefix = discovery["prefix"];
+        Require(prefix is int && (int)prefix >= 1 && (int)prefix <= 30);
+        return Fields("mode", mode, "adapter_id", Field(discovery, "adapter_id", LanId),
+            "network_id", Field(discovery, "network_id", LanId), "prefix", prefix);
+    }
+
     private static Dictionary<string, object> Status(Dictionary<string, object> value)
     {
         var result = Fields("state", Field(value, "state", Label));
@@ -145,8 +160,13 @@ public sealed class KilogramSetupPipe
         }
         if (value.ContainsKey("connection")) {
             var route = Object(value["connection"]);
-            result["connection"] = Fields("mode", Field(route, "mode", Label), "local_ipv4", Ip(route["local_ipv4"]),
-                "peer_ipv4", route["peer_ipv4"] == null ? null : Ip(route["peer_ipv4"]), "profile_state", Field(route, "profile_state", Label));
+            string mode = Field(route, "mode", Label);
+            string peer = route["peer_ipv4"] == null ? null : Ip(route["peer_ipv4"]);
+            var connection = Fields("mode", mode, "local_ipv4", Ip(route["local_ipv4"]),
+                "peer_ipv4", peer, "profile_state", Field(route, "profile_state", Label));
+            if (route.ContainsKey("lan_discovery"))
+                connection["lan_discovery"] = LanDiscovery(Object(route["lan_discovery"]), mode, peer);
+            result["connection"] = connection;
         }
         return result;
     }
@@ -223,6 +243,10 @@ public sealed class KilogramSetupPipe
                 args = Fields("saved", true);
             } else {
                 Require(Allowed.Contains(op));
+                if (op == "route_lan_auto") {
+                    Require(args.Count == 2);
+                    args = Fields("local_ipv4", Ip(args["local_ipv4"]), "peer_ipv4", Ip(args["peer_ipv4"]));
+                }
             }
             var reply = Call(child, receive, id, op, args);
             if (!object.Equals(reply["ok"], true)) {
