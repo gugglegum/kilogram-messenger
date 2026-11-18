@@ -56,7 +56,7 @@ class MailboxClient:
 
 
 class MailboxTerminal(Terminal):
-    def __init__(self, host, tag, mode, deadline, **args):
+    def __init__(self, host, tag, mode, deadline, interactive=None, **args):
         self.mailbox = MailboxClient(host, tag)
         self.tag, self.mode, self.deadline = tag, mode, deadline
         self.events = []
@@ -66,7 +66,8 @@ class MailboxTerminal(Terminal):
         self.queued = []
         self.closed = None
         self.stopped = False
-        self.proc = self.mailbox.owner(mode, **args)
+        self.local_owner = interactive.start(self.mailbox, mode, deadline, **args) if interactive else None
+        self.proc = None if interactive else self.mailbox.owner(mode, **args)
 
     def collect(self, end, action="read", sequence=0, payload=b""):
         response, rows = self.mailbox.request(end, action, self.cursor, sequence, payload)
@@ -89,12 +90,14 @@ class MailboxTerminal(Terminal):
         while not self.queued:
             if self.closed:
                 return None
-            require(self.proc.poll() in (None, 0), "mailbox owner exited")
+            require(self.proc is None or self.proc.poll() in (None, 0), "mailbox owner exited")
             try:
                 self.collect(end)
             except RuntimeError:
-                if self.cursor or self.proc.poll() is not None:
+                if self.cursor or (self.proc is not None and self.proc.poll() is not None):
                     raise
+                if self.local_owner is not None:
+                    self.local_owner.check_alive(end)
                 # The initial bounded owner startup can precede the exclusive marker.
                 remaining(end, 1)
                 time.sleep(0.15)
@@ -113,15 +116,33 @@ class MailboxTerminal(Terminal):
     def close(self):
         if self.quit_verified or self.stopped:
             return self.quit_verified
+        cleanup_end = time.monotonic() + 35
+        previous_deadline = self.deadline
+        self.deadline = min(cleanup_end, time.monotonic() + 25)
+        try:
+            self.quit()
+            return True
+        except (RuntimeError, OSError, subprocess.SubprocessError):
+            # A protocol failure still needs the existing bounded stop fallback.
+            pass
+        finally:
+            self.deadline = previous_deadline
         self.stopped = True
+        if self.local_owner is not None:
+            try:
+                self.collect(min(cleanup_end, time.monotonic() + 12), "stop")
+            except (RuntimeError, OSError, subprocess.SubprocessError):
+                pass  # The local watchdog remains authoritative if stop cannot be confirmed.
+            self.local_owner.wait(min(cleanup_end, time.monotonic() + 18))
+            return False
         if self.proc.poll() is None:
             try:
-                self.collect(time.monotonic() + 12, "stop")
+                self.collect(min(cleanup_end, time.monotonic() + 12), "stop")
             except (RuntimeError, OSError, subprocess.SubprocessError):
                 # The owner's independent deadline remains armed if SSH is unavailable.
                 pass
         try:
-            self.proc.wait(timeout=18)
+            self.proc.wait(timeout=remaining(cleanup_end, 18))
         except subprocess.TimeoutExpired:
             # This is only the controller's owned launcher. The host Job owns the child.
             self.proc.kill()
@@ -144,6 +165,9 @@ class MailboxTerminal(Terminal):
             # Fetch any last records beyond the last bounded page.
             while self.collect(end)["records"]:
                 pass
-        require(self.closed == "clean" and not self.queued and
-                self.proc.wait(timeout=remaining(end, 12)) == 0, "mailbox owner or streams failed")
+        require(self.closed == "clean" and not self.queued, "mailbox quit or streams failed")
+        limit = remaining(end, 12)
+        exit_code = (self.local_owner.wait(time.monotonic() + limit) if self.local_owner is not None
+                     else self.proc.wait(timeout=limit))
+        require(exit_code == 0, "mailbox owner exit differs")
         self.quit_verified = True

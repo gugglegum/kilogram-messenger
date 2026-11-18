@@ -266,6 +266,13 @@ try {
                 if ($ownedPorts.Count -gt 1) { throw 'Multiple owned LAN UDP ports' }
                 if ($ownedPorts.Count -eq 1) {
                     $socket = $ownedPorts[0]
+                    $runtime = Get-Process -Id $socket.pid
+                    try {
+                        $watchdog.VerifyChild($runtime)
+                        if ($runtime.Path -ine $exe) { throw 'Owned runtime image differs' }
+                        $socket.started = $runtime.StartTime.ToFileTimeUtc()
+                        $socket.image = $runtime.Path
+                    } finally { $runtime.Dispose() }
                     $socketPath = Join-Path (Join-Path $run 'receipts') "$($req.tag)-socket.json"
                     Write-NewJson "$socketPath.partial" $socket
                     [IO.File]::Move("$socketPath.partial", $socketPath)
