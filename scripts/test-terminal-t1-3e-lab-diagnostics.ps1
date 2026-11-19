@@ -73,7 +73,9 @@ function Get-LabSetupDiagnostics([string]$ProtectedPackage,[string]$JournalPath,
     }
     $proof=Get-LabLogSample (Join-Path $ProtectedPackage 'ssh-policy-proof.json')
     $comparison=Get-LabLogSample (Join-Path $ProtectedPackage 'com-rule-comparison.json')
-    @{logs=$logs;failures=$failures;ssh_policy_proof=$proof;com_rule_comparison=$comparison;journal=(Get-LabMinimalJournal $JournalPath $Session);
+    $retry=[ordered]@{}
+    foreach($name in @('retry-admission.json','retry-outcome.json')){$retry[$name]=Get-LabLogSample (Join-Path $ProtectedPackage $name)}
+    @{logs=$logs;failures=$failures;ssh_policy_proof=$proof;com_rule_comparison=$comparison;retry=$retry;journal=(Get-LabMinimalJournal $JournalPath $Session);
         bounds=@{per_log_export_bytes=65536;per_log_full_hash_bytes=2097152;journal_read_bytes=2097152};
         scope='fixed old/main/fallback logs, own COM rule comparison, selected SSH identity/rules and status; no initial policy, full Audit or credentials'}
 }

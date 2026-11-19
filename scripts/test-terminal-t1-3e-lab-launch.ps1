@@ -1,5 +1,5 @@
 param(
-    [Parameter(Mandatory)][ValidateSet('Build','Install','RecoverInstall','Teardown')][string]$LaunchAction,
+    [Parameter(Mandatory)][ValidateSet('Build','BuildRetryB','Install','RecoverInstall','RetryInstallB','Teardown')][string]$LaunchAction,
     [Parameter(Mandatory)][ValidateSet('A','B')][string]$LaunchSide,
     [Parameter(Mandatory)][string]$LaunchRoot,
     [Parameter(Mandatory)][string]$ManifestPin,
@@ -10,6 +10,7 @@ $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
 . "$PSScriptRoot/test-terminal-t1-3e-lab-install.ps1" -Mode Library
 . "$PSScriptRoot/test-terminal-t1-3e-lab-bootstrap.ps1"
 $launchCfg=Get-LabConfig $LaunchSide
+if($LaunchAction -cin @('BuildRetryB','RetryInstallB') -and $LaunchSide -cne 'B'){throw 'LAB_B_RETRY_SIDE'}
 $launchFiles=@('test-terminal-t1-3e-lab-agent.ps1','test-terminal-t1-3e-lab-common.ps1','test-terminal-t1-3e-lab-job.cs','test-terminal-t1-3e-lab-install.ps1',
     'test-terminal-t1-3e-lab-native.cs','test-terminal-t1-3e-lab-readiness.ps1','test-terminal-t1-3e-lab-setup.ps1','test-terminal-t1-3e-lab-launch.ps1',
     'test-terminal-t1-3e-lab-diagnostics.ps1','test-terminal-t1-3e-lab-bootstrap.ps1','test-terminal-t1-3e-lab-server.ps1','test-terminal-t1-3e-lab-recovery.ps1','dpapi-context.ps1','lab.json','ssh-probe.json')
@@ -62,7 +63,7 @@ function Invoke-LabSetupChild([string]$Operation,[int]$Seconds,$SessionJob,[stri
         try{$SessionJob.CleanupChildren(2000)}finally{if($guard){$guard.Dispose()};if($p){$p.Dispose()};if($out){$out.Dispose()};if($err){$err.Dispose()}}
     }
 }
-function Invoke-LabSetupSupervised($SessionJob,$Config,[string]$InstallSession,[string]$JournalPath,[ValidateSet('Setup','SetupRecoveredA','SetupFreshB','Teardown')][string]$Operation,
+function Invoke-LabSetupSupervised($SessionJob,$Config,[string]$InstallSession,[string]$JournalPath,[ValidateSet('Setup','SetupRecoveredA','SetupFreshB','SetupRetryB','Teardown')][string]$Operation,
     [ValidateRange(1,450)][int]$MainSeconds=450,[ValidateRange(1,180)][int]$RecoverySeconds=180) {
     try{$main=Invoke-LabSetupChild $Operation $MainSeconds $SessionJob (Join-Path $LaunchRoot 'main')}
     catch{$main=@{exit=$null;timeout=$null;capture_complete=$false;error=(Get-LabFailureSummary $_ 'supervisor-owned-cleanup')}}
@@ -75,7 +76,10 @@ function Invoke-LabSetupSupervised($SessionJob,$Config,[string]$InstallSession,[
         # Only the invocation that wrote the intent owns timeout recovery.
         if($saved -and $saved.PSObject.Properties['setup_session'] -and $saved.setup_session -ceq (Split-Path -Leaf $InstallSession)){
             if(@($SessionJob.Children()).Count){$rollback=@{exit=$null;error='LAB_SETUP_CLEANUP_UNCONFIRMED'}}
-            else{try{$rollback=Invoke-LabSetupChild 'Teardown' $RecoverySeconds $SessionJob (Join-Path $LaunchRoot 'recovery')}catch{$rollback=@{exit=$null;error=$_.Exception.Message}}}
+            else{
+                $fallback=if($Operation -ceq 'SetupRetryB'){'RetryRollbackB'}else{'Teardown'}
+                try{$rollback=Invoke-LabSetupChild $fallback $RecoverySeconds $SessionJob (Join-Path $LaunchRoot 'recovery')}catch{$rollback=@{exit=$null;error=$_.Exception.Message}}
+            }
         }
     }
     $diagnostics=Get-LabSetupDiagnostics $LaunchRoot $JournalPath (Split-Path -Leaf $InstallSession)
@@ -112,13 +116,16 @@ function Invoke-LabRecoverySetupSupervised($SessionJob,$Config,[string]$InstallS
 }
 try {
     $launchPackage=Assert-LabPackage $LaunchRoot $ManifestPin $LaunchSide $launchFiles $launchCfg $launchLocks
-    if($LaunchAction -ceq 'Build'){
-        $target=Join-Path $launchCfg.base 'deploy/autonomous-recovery-setup-review-01'
-        foreach($operation in @('RecoverInstall','Teardown')){
+    if($LaunchAction -cin @('Build','BuildRetryB')){
+        $retryBuild=$LaunchAction -ceq 'BuildRetryB'
+        $target=Join-Path $launchCfg.base $(if($retryBuild){'deploy/autonomous-B-rollback-retry-review-01'}else{'deploy/autonomous-recovery-setup-review-01'})
+        $operations=if($retryBuild){@('RetryInstallB')}else{@('RecoverInstall','Teardown')}
+        foreach($operation in $operations){
             $script=Join-Path $target 'test-terminal-t1-3e-lab-launch.ps1'
             $body='$ErrorActionPreference="Stop";$p='+(Quote-Lab $script)+';if((Get-FileHash -LiteralPath $p).Hash -ine '+(Quote-Lab $launchPackage.files.'test-terminal-t1-3e-lab-launch.ps1')+'){throw "LAB_LAUNCH_PIN"}; & $p -LaunchAction '+$operation+' -LaunchSide '+$LaunchSide+' -LaunchRoot '+(Quote-Lab $target)+' -ManifestPin '+$ManifestPin
             $cmd="@echo off`r`n"+'"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand '+(Encode-Lab $body)+"`r`nset LAB_EXIT=%ERRORLEVEL%`r`necho Kilogram lab launcher exited with code %LAB_EXIT%`r`npause`r`nexit /b %LAB_EXIT%`r`n"
-            [IO.File]::WriteAllText((Join-Path $LaunchRoot ($operation+'-'+$LaunchSide+'.cmd')),$cmd,[Text.Encoding]::ASCII)
+            $label=if($operation -ceq 'RetryInstallB'){'RetryInstall'}else{$operation}
+            [IO.File]::WriteAllText((Join-Path $LaunchRoot ($label+'-'+$LaunchSide+'.cmd')),$cmd,[Text.Encoding]::ASCII)
         }
         return
     }
@@ -132,7 +139,10 @@ try {
         try {
             $operation=if($LaunchAction -ceq 'Install'){'Setup'}else{'Teardown'}
             $journal=Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) "Kilogram-Lab/$($launchCfg.campaign)-$LaunchSide/initial-and-journal.json"
-            $result=if($LaunchAction -ceq 'RecoverInstall'){
+            $result=if($LaunchAction -ceq 'RetryInstallB'){
+                $r=Invoke-LabSetupSupervised $job $launchCfg $SessionPath $journal 'SetupRetryB'
+                $r.action='RetryInstallB';$r.bounds=@{main_seconds=450;fallback_seconds=180;wrapper_seconds=1080;attempts=1};$r
+            }elseif($LaunchAction -ceq 'RecoverInstall'){
                 Invoke-LabRecoverySetupSupervised $job $launchCfg $SessionPath $journal
             }else{Invoke-LabSetupSupervised $job $launchCfg $SessionPath $journal $operation}
             Lab-Write (Join-Path $LaunchRoot 'supervisor-result.json') $result -MaxBytes 2097152
@@ -142,7 +152,7 @@ try {
         return
     }
     $null=Lab-Config (Join-Path $LaunchRoot 'lab.json')
-    $target=Join-Path $launchCfg.base 'deploy/autonomous-recovery-setup-review-01'
+    $target=Join-Path $launchCfg.base $(if($LaunchAction -ceq 'RetryInstallB'){'deploy/autonomous-B-rollback-retry-review-01'}else{'deploy/autonomous-recovery-setup-review-01'})
     if([IO.Path]::GetFullPath($LaunchRoot) -ine $target){throw 'LAB_LAUNCH_LOCATION'}
     $SessionPath=Join-Path $launchCfg.base ('deploy/setup-'+[guid]::NewGuid().ToString('N'))
     [void][IO.Directory]::CreateDirectory($SessionPath);Lab-Plain $SessionPath

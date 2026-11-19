@@ -44,7 +44,7 @@ foreach($scenario in @('recovering','rollback_incomplete','owner','want','phase'
     $initial=@{task=$null;rules=@();policy=@(@{Name='foreign';value='unchanged'});network=@{fixed='network'};adapter=@{fixed='adapter'};dynamic_udp=@('49152','16384');
         profiles=@(@{store='PersistentStore';name='Private';enabled='False'},@{store='ActiveStore';name='Private';enabled='False'})}
     $script:os=Clone $initial;$script:task=MakeTask $captured.xml;$script:os.task=@{present=$true};$script:mutations=0
-    $journalPath=Join-Path $stateDir 'initial-and-journal.json';$packagePins=$null;$setupMode=$false;$freshB=$false;$teardownHandles=@{agent='mock-held-idle-lock'}
+    $journalPath=Join-Path $stateDir 'initial-and-journal.json';$packagePins=$null;$setupMode=$false;$freshB=$false;$bRetry=$false;$teardownHandles=@{agent='mock-held-idle-lock'}
     $j=[pscustomobject]@{phase=$(if($scenario -ceq 'rollback_incomplete'){'rollback_incomplete'}else{'recovering'});setup_session='setup-e4125cddbe3f4dba9d3017aec19af6cd';
         want=$want;initial=$initial;changes=@('files','task','rule0','rule1','private');rollback_errors=@('LAB_TASK_SCHEMA');file_pins=$oldPackage.files}
     Save-LabInstallJournal $stateDir $j $null

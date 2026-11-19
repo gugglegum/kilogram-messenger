@@ -1,5 +1,5 @@
 param(
-    [Parameter(Mandatory)][ValidateSet('Library','Package','Audit','Setup','SetupRecoveredA','SetupFreshB','RecoverOld','Provision','Verify','Teardown')][string]$Mode,
+    [Parameter(Mandatory)][ValidateSet('Library','Package','PackageRetryB','Audit','Setup','SetupRecoveredA','SetupFreshB','SetupRetryB','RetryRollbackB','RecoverOld','Provision','Verify','Teardown')][string]$Mode,
     [ValidateSet('A','B')][string]$Side,
     [string]$PackageRoot,
     [string]$PackageSha,
@@ -561,13 +561,13 @@ trap {
     # Fixed protected package only. Never write a privileged error artifact to an
     # ordinary caller-selected directory; preserve the original exception if reporting fails.
     try{
-        if($script:LabOperation -cin @('Setup','SetupRecoveredA','SetupFreshB','RecoverOld','Provision','Verify','Teardown') -and $PackageRoot -and $SetupSession){
+        if($script:LabOperation -cin @('Setup','SetupRecoveredA','SetupFreshB','SetupRetryB','RetryRollbackB','RecoverOld','Provision','Verify','Teardown') -and $PackageRoot -and $SetupSession){
             $leaf=Split-Path -Leaf $SetupSession
             $expected=Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) ('Kilogram-Lab/SetupPackages/'+$leaf)
             if($leaf -cmatch '^setup-[0-9a-f]{32}$' -and [IO.Path]::GetFullPath($PackageRoot) -ieq $expected){
                 $terminal=Get-LabFailureSummary $failure (Get-LabStage)
                 $first=if($script:LabPrimary){$script:LabPrimary}else{$terminal}
-                $name=if($script:LabOperation -ceq 'RecoverOld'){'old-recovery-error.json'}elseif($script:LabOperation -ceq 'Teardown'){'recovery-error.json'}else{'main-error.json'}
+                $name=if($script:LabOperation -ceq 'RecoverOld'){'old-recovery-error.json'}elseif($script:LabOperation -cin @('Teardown','RetryRollbackB')){'recovery-error.json'}else{'main-error.json'}
                 Lab-Write (Join-Path $PackageRoot $name) @{primary=$first;terminal=$terminal;operation=$script:LabOperation}
             }
         }
@@ -579,7 +579,9 @@ $want=@{task=(Lab-TaskSpec $cfg);rules=@(Lab-Rules $cfg);config=$cfg}
 $files=@('test-terminal-t1-3e-lab-agent.ps1','test-terminal-t1-3e-lab-common.ps1','test-terminal-t1-3e-lab-job.cs','test-terminal-t1-3e-lab-install.ps1',
     'test-terminal-t1-3e-lab-native.cs','test-terminal-t1-3e-lab-readiness.ps1','test-terminal-t1-3e-lab-setup.ps1','test-terminal-t1-3e-lab-launch.ps1',
     'test-terminal-t1-3e-lab-diagnostics.ps1','test-terminal-t1-3e-lab-bootstrap.ps1','test-terminal-t1-3e-lab-server.ps1','test-terminal-t1-3e-lab-recovery.ps1','dpapi-context.ps1','lab.json','ssh-probe.json')
-if($Mode -ceq 'Package') {
+if($Mode -cin @('Package','PackageRetryB')) {
+    $retryBuild=$Mode -ceq 'PackageRetryB'
+    if($retryBuild -and $Side -cne 'B'){throw 'LAB_B_RETRY_SIDE'}
     if(Test-Path -LiteralPath $Output) { throw 'LAB_PACKAGE_EXISTS' }
     [void][IO.Directory]::CreateDirectory($Output); Lab-Plain $Output
     foreach($name in $files | Where-Object { $_ -cnotin @('lab.json','dpapi-context.ps1','ssh-probe.json') }) { [IO.File]::Copy((Join-Path $PSScriptRoot $name),(Join-Path $Output $name)) }
@@ -592,7 +594,7 @@ if($Mode -ceq 'Package') {
     Lab-Write (Join-Path $Output 'ssh-probe.json') $ssh
     $pins=[ordered]@{};foreach($name in $files){$pins[$name]=Lab-Hash (Join-Path $Output $name)}
     Lab-Write (Join-Path $Output 'package.json') @{v=2;side=$Side;files=$pins}
-    & (Join-Path $PSScriptRoot 'test-terminal-t1-3e-lab-launch.ps1') -LaunchAction Build -LaunchSide $Side -LaunchRoot $Output -ManifestPin (Lab-Hash (Join-Path $Output 'package.json'))
+    & (Join-Path $PSScriptRoot 'test-terminal-t1-3e-lab-launch.ps1') -LaunchAction $(if($retryBuild){'BuildRetryB'}else{'Build'}) -LaunchSide $Side -LaunchRoot $Output -ManifestPin (Lab-Hash (Join-Path $Output 'package.json'))
     @{package=$Output;sha256=(Lab-Hash (Join-Path $Output 'package.json'));spec=$want} | ConvertTo-Json -Depth 14
     return
 }
@@ -613,11 +615,13 @@ if($Mode -ceq 'Verify' -and $Ordinary) {
 $identity=[Security.Principal.WindowsIdentity]::GetCurrent()
 try { if(!([Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)){throw 'LAB_ADMIN_SETUP_ONLY'} }
 finally{$identity.Dispose()}
-$setupMode=$Mode -cin @('Setup','SetupRecoveredA','SetupFreshB');$freshB=$Mode -ceq 'SetupFreshB';$recoveredA=$Mode -ceq 'SetupRecoveredA';$oldRecovery=$Mode -ceq 'RecoverOld'
+$setupMode=$Mode -cin @('Setup','SetupRecoveredA','SetupFreshB','SetupRetryB');$freshB=$Mode -ceq 'SetupFreshB';$recoveredA=$Mode -ceq 'SetupRecoveredA';$oldRecovery=$Mode -ceq 'RecoverOld'
+$bRetry=$Mode -ceq 'SetupRetryB';$bRetryRollback=$Mode -ceq 'RetryRollbackB'
+if(($bRetry -or $bRetryRollback) -and $Side -cne 'B'){throw 'LAB_B_RETRY_SIDE'}
 if($freshB -and $Side -cne 'B'){throw 'LAB_FRESH_B_SIDE'}
 if($recoveredA -and $Side -cne 'A'){throw 'LAB_RECOVERED_A_SIDE'}
 $setupActor=$null;$held=[Collections.Generic.List[IDisposable]]::new()
-if($setupMode -or $oldRecovery){
+if($setupMode -or $oldRecovery -or $bRetryRollback){
     try {
         $null=Get-LabSetupSession $cfg $SetupSession
         Set-LabStage 'package-validation';$package=Assert-LabPackage $PackageRoot $PackageSha $Side $files $cfg $held
@@ -645,6 +649,18 @@ $journalPath=Join-Path $stateDir 'initial-and-journal.json'
 $teardownHandles=@{agent=$null;images=$null}
 try {
     $oldContext=$null
+    $retryContext=$null
+    if($bRetry){
+        Set-LabStage 'B-terminal-retry-admission'
+        $retryContext=Assert-LabBRetryAdmission $cfg $want $stateDir $installLock $package $PackageSha $teardownHandles
+        Lab-Write (Join-Path $PackageRoot 'retry-admission.json') @{kind=$retryContext.kind;prior_owner=$retryContext.prior_owner;initial_sha256=$retryContext.anchor.initial_sha256;
+            origin_manifest=$retryContext.anchor.manifest;package_sha256=$PackageSha;history_files=$retryContext.history.Count}
+    }
+    if($bRetryRollback){
+        Set-LabStage 'B-owned-retry-rollback'
+        $null=Assert-LabBRetryRollbackOwner $cfg $want $stateDir $package $PackageSha (Split-Path -Leaf $SetupSession)
+        $Mode='Teardown'
+    }
     if($recoveredA){Set-LabStage 'old-recovery-recheck';$null=Assert-LabRecoveredSetup $cfg $want $stateDir $PackageRoot}
     if($oldRecovery){
         Set-LabStage 'old-recovery-admission'
@@ -663,7 +679,12 @@ try {
         }
         Write={param($j)
             if($setupMode){$j|Add-Member -NotePropertyName setup_session -NotePropertyValue (Split-Path -Leaf $SetupSession) -Force}
+            if($bRetry -and $j.phase -ceq 'installing' -and @($j.changes).Count -eq 0 -and $j.PSObject.Properties['primary_failure']){$j.PSObject.Properties.Remove('primary_failure')}
             Save-LabInstallJournal $stateDir $j $packagePins
+            if($bRetry -and $j.phase -ceq 'installing' -and @($j.changes).Count -eq 0){
+                Register-LabBRetryIntent $retryContext $want $stateDir (Split-Path -Leaf $SetupSession) $package $PackageSha
+                foreach($key in @('agent','images')){if($teardownHandles[$key]){$teardownHandles[$key].Dispose();$teardownHandles[$key]=$null}}
+            }
         }
         Snapshot={
             if($setupMode){
@@ -772,7 +793,24 @@ try {
             }
         }
     }
-    $result=Invoke-LabTransaction $backend $want $Mode
+    $transactionError=$null
+    try{$result=Invoke-LabTransaction $backend $want $Mode}
+    catch{$transactionError=$_;throw}
+    finally{
+        if($bRetry -or $bRetryRollback){
+            $terminal=Read-LabJournalStrict $journalPath
+            if($terminal.setup_session -ceq (Split-Path -Leaf $SetupSession) -and $terminal.phase -ceq 'rolled_back'){
+                try{
+                    Set-LabStage 'B-retry-terminal-proof'
+                    $proof=Complete-LabBRetry $cfg $want $stateDir $package $PackageSha (Split-Path -Leaf $SetupSession)
+                    Lab-Write (Join-Path $PackageRoot 'retry-outcome.json') @{verified=$true;retryable=$true;proof=$proof;package_sha256=$PackageSha}
+                }catch{
+                    Lab-Write (Join-Path $PackageRoot 'retry-outcome.json') @{verified=$false;retryable=$false;failure=(Get-LabFailureSummary $_ 'B-retry-terminal-proof')}
+                    if(!$transactionError){throw}
+                }
+            }
+        }
+    }
     if($oldRecovery){
         $result.old_recovery=Assert-LabOldRecoveryCompleted $cfg $want $stateDir $oldContext
         Lab-Write (Join-Path $PackageRoot 'old-recovery-proof.json') @{before=$oldContext;result=$result.old_recovery} -MaxBytes 2097152

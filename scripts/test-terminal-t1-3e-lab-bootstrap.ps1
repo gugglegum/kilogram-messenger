@@ -1,5 +1,5 @@
 # The existing reviewed byte-snapshot/protected-copy bootstrap, shared by two fixed entries.
-function New-LabAdminBootstrap([ValidateSet('Install','RecoverInstall','Teardown','Export')][string]$Action,[ValidateSet('A','B')][string]$Which,
+function New-LabAdminBootstrap([ValidateSet('Install','RecoverInstall','RetryInstallB','Teardown','Export')][string]$Action,[ValidateSet('A','B')][string]$Which,
     [string]$Source,[string]$Pin,[string]$Session,[string]$OrdinarySid,$Expected) {
     function Literal([string]$Text){"'"+$Text.Replace("'","''")+"'"}
     $expectedText='@{'+((@($Expected.Keys|ForEach-Object {(Literal $_)+'='+(Literal $Expected[$_])})) -join ';')+'}'
