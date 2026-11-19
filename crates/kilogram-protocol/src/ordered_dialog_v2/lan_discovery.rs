@@ -75,6 +75,82 @@ pub struct Candidate {
     pub announcement_interval: (u64, u64),
 }
 
+/// Exact installed context/reference binding, without a permission calendar.
+#[derive(Clone, Copy)]
+pub struct HintContext {
+    pub context: Id,
+    pub consent_ref: Id,
+}
+
+/// Inputs for authenticating a transport hint, not for authorizing its use.
+/// Deliberately has no receiver clock or consent interval. The owner must check
+/// current permission, revisions, network generation and local receipt budget.
+pub struct HintScope<'a> {
+    pub sender: &'a RootVerifiedCredential,
+    pub recipient: &'a RootVerifiedCredential,
+    pub slots: [HintContext; 2],
+    pub sender_ipv4: Ipv4Addr,
+}
+
+/// Signature-authenticated address hints only. This is neither a legacy
+/// current-window Candidate nor evidence of live possession/current permission.
+/// No implicit conversion to Candidate or admission/state-write permit exists.
+pub struct AuthenticatedHint {
+    body: VerifiedBody,
+    datagram: [u8; DATAGRAM_BYTES],
+}
+impl AuthenticatedHint {
+    /// Signed locators in local slot order; their dates are not local deadlines.
+    pub fn locators(&self) -> &[ParsedRuntimeLocator2; 2] {
+        &self.body.locators
+    }
+    pub fn socket(&self) -> SocketAddr {
+        self.body.socket
+    }
+    /// Original signed dates, without any claim about the receiver's clock.
+    pub fn signed_announcement_interval(&self) -> (u64, u64) {
+        self.body.announcement_interval
+    }
+    /// Exact encrypted wire bytes received, never rewritten or re-signed.
+    pub fn datagram(&self) -> &[u8; DATAGRAM_BYTES] {
+        &self.datagram
+    }
+}
+
+struct VerifiedBody {
+    locators: [ParsedRuntimeLocator2; 2],
+    socket: SocketAddr,
+    announcement_interval: (u64, u64),
+}
+
+#[derive(Clone, Copy)]
+enum ValidationPurpose {
+    StrictWindow {
+        now: u64,
+        consent_intervals: [(u64, u64); 2],
+    },
+    AuthenticatedHint,
+}
+impl ValidationPurpose {
+    fn strict(scope: &Scope<'_>) -> Self {
+        Self::StrictWindow {
+            now: scope.now,
+            consent_intervals: scope.slots.map(|slot| slot.consent_interval),
+        }
+    }
+}
+fn hint_scope<'a>(scope: &Scope<'a>) -> HintScope<'a> {
+    HintScope {
+        sender: scope.sender,
+        recipient: scope.recipient,
+        slots: scope.slots.map(|slot| HintContext {
+            context: slot.context,
+            consent_ref: slot.consent_ref,
+        }),
+        sender_ipv4: scope.sender_ipv4,
+    }
+}
+
 fn aad() -> Result<Vec<u8>> {
     Ok(encode(
         &a([b(AAD), u(VERSION), b(GROUP.octets()), u(u64::from(PORT))]),
@@ -82,7 +158,7 @@ fn aad() -> Result<Vec<u8>> {
     )?)
 }
 
-fn wire_order(scope: &Scope<'_>, rejection: &Cell<Rejection>) -> Result<[usize; 2]> {
+fn wire_order(scope: &HintScope<'_>, rejection: &Cell<Rejection>) -> Result<[usize; 2]> {
     rejection.set(Rejection::Context);
     require(
         scope.slots[0].context != scope.slots[1].context,
@@ -106,30 +182,44 @@ fn wire_order(scope: &Scope<'_>, rejection: &Cell<Rejection>) -> Result<[usize; 
 
 fn validate_body(
     body: &Value,
-    scope: &Scope<'_>,
+    scope: &HintScope<'_>,
+    purpose: ValidationPurpose,
     order: [usize; 2],
     rejection: &Cell<Rejection>,
-) -> Result<Candidate> {
+) -> Result<VerifiedBody> {
     rejection.set(Rejection::SignedBody);
     let fields = body.fields(4)?;
     require(fields[0].uint()? == VERSION, "discovery body version")?;
     let issued = fields[1].uint()?;
     let expires = fields[2].uint()?;
-    rejection.set(Rejection::AnnouncementFuture);
-    require(
-        issued <= scope.now
-            && {
-                rejection.set(Rejection::AnnouncementExpired);
-                scope.now < expires
-            }
-            && {
-                rejection.set(Rejection::AnnouncementDuration);
+    match purpose {
+        ValidationPurpose::StrictWindow { now, .. } => {
+            rejection.set(Rejection::AnnouncementFuture);
+            require(
+                issued <= now
+                    && {
+                        rejection.set(Rejection::AnnouncementExpired);
+                        now < expires
+                    }
+                    && {
+                        rejection.set(Rejection::AnnouncementDuration);
+                        expires
+                            .checked_sub(issued)
+                            .is_some_and(|length| (1..=MAX_ANNOUNCEMENT_SECONDS).contains(&length))
+                    },
+                "discovery announcement interval",
+            )?;
+        }
+        ValidationPurpose::AuthenticatedHint => {
+            rejection.set(Rejection::AnnouncementDuration);
+            require(
                 expires
                     .checked_sub(issued)
-                    .is_some_and(|length| (1..=MAX_ANNOUNCEMENT_SECONDS).contains(&length))
-            },
-        "discovery announcement interval",
-    )?;
+                    .is_some_and(|length| (1..=MAX_ANNOUNCEMENT_SECONDS).contains(&length)),
+                "discovery announcement interval",
+            )?;
+        }
+    }
     rejection.set(Rejection::SignedBody);
     let entries = fields[3].fields(2)?;
     let parse = |position: usize| -> Result<(ParsedRuntimeLocator2, SocketAddr)> {
@@ -139,8 +229,15 @@ fn validate_body(
         rejection.set(Rejection::Consent);
         require(
             entry[0].fixed::<32>()? == want.consent_ref
-                && want.consent_interval.0 <= issued
-                && expires <= want.consent_interval.1,
+                && match purpose {
+                    ValidationPurpose::StrictWindow {
+                        consent_intervals, ..
+                    } => {
+                        let interval = consent_intervals[order[position]];
+                        interval.0 <= issued && expires <= interval.1
+                    }
+                    ValidationPurpose::AuthenticatedHint => true,
+                },
             "discovery consent scope or interval",
         )?;
         rejection.set(Rejection::LocatorParse);
@@ -165,7 +262,7 @@ fn validate_body(
         first.fields().endpoint == second.fields().endpoint && socket == other,
         "discovery locator pair disagrees",
     )?;
-    Ok(Candidate {
+    Ok(VerifiedBody {
         locators: if order[0] == 0 {
             [first, second]
         } else {
@@ -189,7 +286,8 @@ pub fn seal(
         "discovery signer",
     )?;
     let rejection = Cell::new(Rejection::Unknown);
-    let order = wire_order(scope, &rejection)?;
+    let binding = hint_scope(scope);
+    let order = wire_order(&binding, &rejection)?;
     require(
         locators.iter().all(|raw| raw.len() <= LOCATOR_BYTES),
         "discovery locator size",
@@ -200,7 +298,13 @@ pub fn seal(
         u(expires),
         a(order.map(|slot| a([b(scope.slots[slot].consent_ref), b(locators[slot])]))),
     ]));
-    validate_body(&body, scope, order, &rejection)?;
+    validate_body(
+        &body,
+        &binding,
+        ValidationPurpose::strict(scope),
+        order,
+        &rejection,
+    )?;
     let signature = signer.sign(&Zeroizing::new(signing_bytes(SIGN, &body, BODY_BYTES)?));
     let signed = Zeroizing::new(encode(
         &Zeroizing::new(a([(*body).clone(), b(signature)])),
@@ -245,6 +349,60 @@ pub fn open_observed(
     recipient: &DeviceEncryptionIdentity,
     rejected: impl FnOnce(Rejection),
 ) -> Result<Candidate> {
+    open_verified(
+        raw,
+        &hint_scope(scope),
+        recipient,
+        ValidationPurpose::strict(scope),
+        rejected,
+    )
+    .map(|body| Candidate {
+        locators: body.locators,
+        socket: body.socket,
+        announcement_interval: body.announcement_interval,
+    })
+}
+
+/// Authenticate an address hint through the same crypto/body pipeline as open.
+/// No receiver-wall comparison or announcement-to-consent-calendar containment.
+/// Current authorization and local receipt lifetime belong to owner integration.
+pub fn open_authenticated_hint(
+    raw: &[u8],
+    scope: &HintScope<'_>,
+    recipient: &DeviceEncryptionIdentity,
+) -> Result<AuthenticatedHint> {
+    open_authenticated_hint_observed(raw, scope, recipient, |_| {})
+}
+
+/// Fixed failure-site observation only; it confers no permission on the result.
+pub fn open_authenticated_hint_observed(
+    raw: &[u8],
+    scope: &HintScope<'_>,
+    recipient: &DeviceEncryptionIdentity,
+    rejected: impl FnOnce(Rejection),
+) -> Result<AuthenticatedHint> {
+    open_verified(
+        raw,
+        scope,
+        recipient,
+        ValidationPurpose::AuthenticatedHint,
+        rejected,
+    )
+    .map(|body| {
+        // open_verified already required the exact datagram size.
+        let mut datagram = [0; DATAGRAM_BYTES];
+        datagram.copy_from_slice(raw);
+        AuthenticatedHint { body, datagram }
+    })
+}
+
+fn open_verified(
+    raw: &[u8],
+    scope: &HintScope<'_>,
+    recipient: &DeviceEncryptionIdentity,
+    purpose: ValidationPurpose,
+    rejected: impl FnOnce(Rejection),
+) -> Result<VerifiedBody> {
     let rejection = Cell::new(Rejection::Unknown);
     let result = (|| {
         rejection.set(Rejection::FrameSize);
@@ -291,7 +449,7 @@ pub fn open_observed(
             .certificate()
             .device_id()
             .verify(&signed_bytes, &signature)?;
-        validate_body(&fields[0], scope, order, &rejection)
+        validate_body(&fields[0], scope, purpose, order, &rejection)
     })();
     if result.is_err() {
         rejected(rejection.get());
@@ -299,5 +457,7 @@ pub fn open_observed(
     result
 }
 
+#[cfg(test)]
+mod authenticated_hint_tests;
 #[cfg(test)]
 mod rejection_tests;
