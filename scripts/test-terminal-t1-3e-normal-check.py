@@ -29,6 +29,44 @@ def ps(text):
     return p
 
 class Checks(unittest.TestCase):
+    def test_upload_exact_bytes_without_eof_and_bounded_failures(self):
+        identity=ps("@{host=[Environment]::MachineName;sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value}|ConvertTo-Json -Compress")
+        self.assertEqual(identity.returncode,0,identity.stderr)
+        node=json.loads(identity.stdout);base=EVIDENCE/'upload-fixture';(base/'bin').mkdir(parents=True)
+        (base/'bin/deadline.ps1').write_bytes((ROOT/'scripts/migration-s5-l1-deadline.ps1').read_bytes());node['base']=str(base)
+        data=bytes(range(256))*1025;pin=hashlib.sha256(data).hexdigest();results=[]
+        for case in ('open-stdin','wrong-pin','short','blocked'):
+            stage=hashlib.md5(case.encode()).hexdigest()
+            script=N['upload_script'](node,stage,'deadline.ps1','0'*64 if case=='wrong-pin' else pin,len(data))
+            if case=='blocked':
+                # Same production watchdog and read loop; shorten only the local fixture budget.
+                self.assertEqual(script.count('::new(80,90)'),1);script=script.replace('::new(80,90)','::new(2,4)')
+            command=[PS,'-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',N['encoded_script'](script)]
+            self.assertLess(len(command[-1]),7400)
+            started=time.monotonic();proc=subprocess.Popen(command,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+            try:
+                if case!='blocked':proc.stdin.write(data[:17] if case=='short' else data);proc.stdin.flush()
+                if case=='short':proc.stdin.close();proc.stdin=None
+                proc.wait(timeout=20) # open-stdin, wrong-pin and blocked retain a live writer here.
+                out,err=proc.communicate(timeout=5)
+            finally:
+                if proc.poll() is None:proc.kill();proc.wait(timeout=5)
+                if proc.stdin is not None:proc.stdin.close()
+            folder=base/'staging'/stage
+            (EVIDENCE/f'upload-{case}.stdout.log').write_bytes(out);(EVIDENCE/f'upload-{case}.stderr.log').write_bytes(err)
+            if case=='open-stdin':
+                self.assertEqual(proc.returncode,0,err);self.assertFalse(err)
+                receipt=json.loads(out);self.assertEqual(receipt['sha256'],pin);self.assertEqual(receipt['bytes'],len(data))
+                self.assertEqual((folder/'deadline.ps1').read_bytes(),data)
+                self.assertEqual(receipt,json.loads((folder/'deadline.ps1.upload-started.json').read_bytes()))
+            else:
+                self.assertEqual(proc.returncode,124 if case=='blocked' else 1,(case,err))
+                if case!='blocked':self.assertIn(b'Stage pin' if case=='wrong-pin' else b'Short stage input',err)
+            results.append(dict(case=case,exit=proc.returncode,elapsed=time.monotonic()-started,stdin_held_open=case!='short'))
+        for length in (0,-1,128*1024*1024+1,True):
+            with self.assertRaises(RuntimeError):N['upload_script'](node,'a'*32,'deadline.ps1',pin,length)
+        save('native-upload.json',dict(cases=results,production_budget=[80,90],blocked_fixture_budget=[2,4],live_ssh=False))
+
     def test_local_deadline_binding_and_reserve(self):
         identity=dict(attempt='one',generation='a'*32,session='b'*32,worker_pid=12,worker_started=123)
         clock=identity|dict(start_tick=1000,tick=2000,work_tick=101000,whole_tick=116000)
@@ -55,6 +93,38 @@ class Checks(unittest.TestCase):
         instance=N['Normal'].__new__(N['Normal'])
         for name in ('gate','rollback'):
             with self.assertRaisesRegex(RuntimeError,'forbidden'):getattr(instance,name)()
+
+    def test_native_preconnect_observer_without_cim(self):
+        folder=EVIDENCE/'preconnect-fixture';(folder/'bin').mkdir(parents=True)
+        (folder/'runs/one/setup').mkdir(parents=True)
+        source=(ROOT/'scripts/test-terminal-t1-3e-observe.ps1').read_text(encoding='utf-8')
+        self.assertNotIn('Get-CimInstance',source)
+        # Exercise the entire production observer; redirect only A fixture paths/address.
+        source=source.replace(r'E:\AI-Projects\kilogram-p2p-messenger\.tmp\terminal-t11f',str(folder)).replace("$ip = '192.168.0.140'","$ip = '127.0.0.1'")
+        observer=folder/'observer.ps1';observer.write_text(source,encoding='utf-8')
+        code=r'''
+function Get-CimInstance { throw 'CIM must never be invoked' }
+$base='@BASE@';$exe=Join-Path $base 'bin/kilogram-cli.exe';$observer=Join-Path $base 'observer.ps1'
+Add-Type -TypeDefinition 'public static class Fixture {public static void Main(string[] args){System.Threading.Thread.Sleep(60000);}}' -OutputAssembly $exe -OutputType ConsoleApplication
+$chat=$null;$runtime=$null
+try {
+ $chat=[Diagnostics.Process]::Start($exe,('chat "'+(Join-Path $base 'runs/one/setup')+'"'));$chat.PriorityClass='BelowNormal'
+ $request=@{side='A';host=[Environment]::MachineName;attempt='one';op='preconnect';tag='owner-a-1'}|ConvertTo-Json -Compress
+ $valid=(& $observer -Request $request)|ConvertFrom-Json
+ if(!$valid.disconnected -or $valid.chat_pid -ne $chat.Id){throw 'Preconnect did not bind fixture Chat'}
+ $runtime=[Diagnostics.Process]::Start($exe,('runtime-from-profile "'+(Join-Path $base 'runs/one/setup')+'"'));$runtime.PriorityClass='BelowNormal'
+ $refused=$false;try{$null=& $observer -Request $request}catch{$refused=$true}
+ if(!$refused){throw 'Preconnect accepted a runtime'}
+ $runtime.Kill();$runtime.WaitForExit();$runtime.Dispose();$runtime=$null
+ $chat.Kill();$chat.WaitForExit();$chat.Dispose();$chat=$null
+ $missing=$false;try{$null=& $observer -Request $request}catch{$missing=$true}
+ if(!$missing){throw 'Preconnect accepted absent Chat'}
+ @{valid=$valid;runtime_refused=$refused;absent_chat_refused=$missing;networking=$false;cim=$false}|ConvertTo-Json -Depth 5 -Compress
+} finally {foreach($child in @($runtime,$chat)){if($null -ne $child){if(!$child.HasExited){$child.Kill();$child.WaitForExit()};$child.Dispose()}}}
+'''.replace('@BASE@',str(folder))
+        result=ps(code);(EVIDENCE/'preconnect.stderr.log').write_bytes(result.stderr)
+        self.assertEqual(result.returncode,0,result.stderr.decode(errors='replace'))
+        save('native-preconnect.json',json.loads(result.stdout))
 
     def test_native_host_admission_clock_and_token(self):
         who=ps("@{host=[Environment]::MachineName}|ConvertTo-Json -Compress")
@@ -100,7 +170,11 @@ class Checks(unittest.TestCase):
 $p=Get-Process -Id $PID;$id=[T13eToken]::Read($PID,$p.StartTime.ToFileTimeUtc())
 try{$value=@{sid=$id.User.Value;admin=([Security.Principal.WindowsPrincipal]::new($id)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)}}finally{$id.Dispose()}
 $wrong=$false;try{$id=[T13eToken]::Read($PID,($p.StartTime.ToFileTimeUtc()+1));$id.Dispose()}catch{$wrong=$true}
-if(!$wrong){throw 'Wrong process incarnation accepted'};$value|ConvertTo-Json -Compress
+if(!$wrong){throw 'Wrong process incarnation accepted'}
+$command=[T13eToken]::CommandLine($PID,$p.StartTime.ToFileTimeUtc());if($command -notmatch '-EncodedCommand'){throw 'Native command query'}
+$wrongCommand=$false;try{$null=[T13eToken]::CommandLine($PID,($p.StartTime.ToFileTimeUtc()+1))}catch{$wrongCommand=$true}
+if(!$wrongCommand){throw 'Wrong command process incarnation accepted'}
+$value.native_command_line=$true;$value|ConvertTo-Json -Compress
 '''
         outcome=ps(token_code);self.assertEqual(outcome.returncode,0,outcome.stderr.decode(errors='replace'))
         self.assertFalse(json.loads(outcome.stdout)['admin'])

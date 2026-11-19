@@ -126,14 +126,68 @@ $all = @(& "$env:windir/System32/netstat.exe" -ano -p UDP | ForEach-Object {
 if ($LASTEXITCODE -ne 0) { throw 'UDP socket observation failed' }
 if ($r.op -eq 'ports') { @{sockets=$all} | ConvertTo-Json -Depth 5 -Compress; return }
 
+Add-Type -TypeDefinition @'
+using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+using System.Security.Principal;
+public static class T13eToken {
+ [DllImport("kernel32.dll",SetLastError=true)] static extern IntPtr OpenProcess(uint access,bool inherit,int pid);
+ [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetProcessTimes(IntPtr process,out long created,out long exited,out long kernel,out long user);
+ [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetExitCodeProcess(IntPtr process,out uint code);
+ [DllImport("advapi32.dll",SetLastError=true)] static extern bool OpenProcessToken(IntPtr process,uint access,out IntPtr token);
+ [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
+ [DllImport("ntdll.dll")] static extern int NtQueryInformationProcess(IntPtr p,int kind,IntPtr data,int size,out int needed);
+ public static string CommandLine(int id,long start) {
+  IntPtr p=OpenProcess(0x1000,false,id);if(p==IntPtr.Zero)throw new Win32Exception();
+  try {
+   long c,e,k,u;if(!GetProcessTimes(p,out c,out e,out k,out u))throw new Win32Exception();
+   if(c!=start)throw new InvalidOperationException("Process incarnation differs");
+   int n;NtQueryInformationProcess(p,60,IntPtr.Zero,0,out n);
+   if(n<16 || n>131072)throw new InvalidOperationException("Command line bound");
+   IntPtr b=Marshal.AllocHGlobal(n);
+   try {
+    int used,status=NtQueryInformationProcess(p,60,b,n,out used);
+    if(status<0)throw new InvalidOperationException("Command query status "+status);
+    int length=(ushort)Marshal.ReadInt16(b);IntPtr text=Marshal.ReadIntPtr(b,IntPtr.Size==8?8:4);
+    if((length&1)!=0 || text.ToInt64()<b.ToInt64() || text.ToInt64()+length>b.ToInt64()+n)throw new InvalidOperationException("Command string bound");
+    return Marshal.PtrToStringUni(text,length/2);
+   }finally{Marshal.FreeHGlobal(b);}
+  }finally{CloseHandle(p);}
+ }
+ public static WindowsIdentity Read(int pid,long start) {
+  var process = OpenProcess(0x1000,false,pid);
+  if (process == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
+  try {
+   long created,exited,kernel,user;
+   if (!GetProcessTimes(process,out created,out exited,out kernel,out user)) throw new Win32Exception(Marshal.GetLastWin32Error());
+   if (created != start) throw new InvalidOperationException("Runtime process incarnation changed");
+   const uint StillActive = 259;
+   uint code;
+   if (!GetExitCodeProcess(process,out code)) throw new Win32Exception(Marshal.GetLastWin32Error());
+   if (code != StillActive) throw new InvalidOperationException("Runtime process already exited");
+   IntPtr token;
+   if (!OpenProcessToken(process,10,out token)) throw new Win32Exception(Marshal.GetLastWin32Error()); // QUERY|DUPLICATE for WindowsPrincipal.IsInRole.
+   try { return new WindowsIdentity(token); }
+   finally { CloseHandle(token); }
+  } finally { CloseHandle(process); }
+ }
+}
+'@
+
 $exe = PlainFile (Join-Path $base 'bin/kilogram-cli.exe')
 $ipc = Join-Path $base "runs/$($r.attempt)/setup/connection/ipc.json"
 if ($r.op -eq 'preconnect') {
     if ($r.tag -cnotmatch '^owner-[abc]-1$') { throw 'Unexpected preconnect tag' }
     $setup=Join-Path $base "runs/$($r.attempt)/setup"
     $scope=[regex]::Escape($setup)
-    $processes=@(Get-CimInstance Win32_Process -Filter "Name='kilogram-cli.exe'" | Where-Object {
-        $_.ExecutablePath -ieq $exe.FullName -and $_.CommandLine.Replace('/','\') -match $scope
+    $processes=@(foreach($candidate in @(Get-Process -Name kilogram-cli -ErrorAction SilentlyContinue)) {
+        try {
+            if ($candidate.Path -ine $exe.FullName) { continue }
+            $start=$candidate.StartTime.ToFileTimeUtc()
+            $command=[T13eToken]::CommandLine($candidate.Id,$start)
+            if ($command.Replace('/','\') -match $scope) { @{ProcessId=$candidate.Id;CommandLine=$command} }
+        } finally { $candidate.Dispose() }
     })
     $chat=@($processes | Where-Object { $_.CommandLine -match '\bchat\b' })
     $runtime=@($processes | Where-Object { $_.CommandLine -match '\bruntime-from-profile\b' })
@@ -171,36 +225,6 @@ if ($started -ne $r.runtime_started) { throw 'T13E_RUNTIME_START' }
 if ($r.side -ceq 'B' -and ($r.owner_session -le 0 -or $ownerSession -ne $r.owner_session)) {
     throw 'T13E_RUNTIME_SESSION'
 }
-Add-Type -TypeDefinition @'
-using System;
-using System.ComponentModel;
-using System.Runtime.InteropServices;
-using System.Security.Principal;
-public static class T13eToken {
- [DllImport("kernel32.dll",SetLastError=true)] static extern IntPtr OpenProcess(uint access,bool inherit,int pid);
- [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetProcessTimes(IntPtr process,out long created,out long exited,out long kernel,out long user);
- [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetExitCodeProcess(IntPtr process,out uint code);
- [DllImport("advapi32.dll",SetLastError=true)] static extern bool OpenProcessToken(IntPtr process,uint access,out IntPtr token);
- [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
- public static WindowsIdentity Read(int pid,long start) {
-  var process = OpenProcess(0x1000,false,pid);
-  if (process == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
-  try {
-   long created,exited,kernel,user;
-   if (!GetProcessTimes(process,out created,out exited,out kernel,out user)) throw new Win32Exception(Marshal.GetLastWin32Error());
-   if (created != start) throw new InvalidOperationException("Runtime process incarnation changed");
-   const uint StillActive = 259;
-   uint code;
-   if (!GetExitCodeProcess(process,out code)) throw new Win32Exception(Marshal.GetLastWin32Error());
-   if (code != StillActive) throw new InvalidOperationException("Runtime process already exited");
-   IntPtr token;
-   if (!OpenProcessToken(process,10,out token)) throw new Win32Exception(Marshal.GetLastWin32Error()); // QUERY|DUPLICATE for WindowsPrincipal.IsInRole.
-   try { return new WindowsIdentity(token); }
-   finally { CloseHandle(token); }
-  } finally { CloseHandle(process); }
- }
-}
-'@
 $expectedToken = if ($r.side -ceq 'B') {
     if ($r.owner_token.user -cne $who.User.Value -or $r.owner_token.administrator -isnot [bool] -or
         $r.owner_token.administrator -or !@($r.owner_token.groups).Count) { throw 'T13E_RUNTIME_EXPECTED_TOKEN' }

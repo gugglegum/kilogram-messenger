@@ -1,6 +1,7 @@
 """Ordinary two-attempt messenger adapter. No task/firewall installation or fault gates."""
 import argparse
 import base64
+import gzip
 import hashlib
 import json
 from pathlib import Path
@@ -22,6 +23,14 @@ SOURCES={'scripts/'+name for name in ('test-terminal-t1-3e-normal.py','test-term
     'test-terminal-t1-2e-setup-pipe.cs','test-terminal-t1-2e-mailbox.cs')}
 
 def digest(path):return hashlib.sha256(path.read_bytes()).hexdigest()
+
+def encoded_script(text):
+    compressed=base64.b64encode(gzip.compress(text.encode('utf-8'),mtime=0)).decode()
+    loader=("$ErrorActionPreference='Stop';try{$m=[IO.MemoryStream]::new([Convert]::FromBase64String('"+compressed+"'));"+
+        "$z=[IO.Compression.GZipStream]::new($m,[IO.Compression.CompressionMode]::Decompress);"+
+        "$r=[IO.StreamReader]::new($z,[Text.Encoding]::UTF8);& ([scriptblock]::Create($r.ReadToEnd()))}"+
+        "catch{[Console]::Error.WriteLine($_.Exception.Message);[Environment]::Exit(1)};[Environment]::Exit(0)")
+    return base64.b64encode(loader.encode('utf-16-le')).decode()
 
 def deadline(clock,identity,work_seconds,sent,received,reserve=60):
     require(all(clock[k]==identity[k] for k in ('attempt','generation','session','worker_pid','worker_started')), 'local deadline identity')
@@ -238,11 +247,11 @@ def validate(plan,root):
         require(n['agent_token']['user']==n['sid'] and n['agent_token']['administrator'] is False and
             0<len(n['agent_token']['groups'])<=128 and len(set(n['agent_token']['groups']))==len(n['agent_token']['groups']), 'observed ordinary agent token')
 
-def upload(agents,index,stage,folder,pins,node):
-    # Fixed fresh staging files only; streams binary stdin without base64 expansion.
-    require(re.fullmatch('[0-9a-f]{32}',stage) and set(pins)==NAMES,'fixed stage scope')
-    for name,pin in pins.items():
-        text=r'''$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue';
+def upload_script(node,stage,name,pin,length):
+    require(re.fullmatch('[0-9a-f]{32}',stage) and name in NAMES and re.fullmatch('[0-9a-f]{64}',pin) and
+        type(length) is int and 0<length<=128*1024*1024,'fixed bounded stage input')
+    text=r'''$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue';
+[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false);
 [Diagnostics.Process]::GetCurrentProcess().PriorityClass='BelowNormal';
 Import-Module "$PSHOME/Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1";
 if([Environment]::MachineName -cne '@HOST@' -or [Security.Principal.WindowsIdentity]::GetCurrent().User.Value -cne '@SID@' -or
@@ -252,14 +261,40 @@ if(Test-Path -LiteralPath $parent){if((Get-Item -LiteralPath $parent).Attributes
 $dir=Join-Path $parent '@STAGE@';if(Test-Path -LiteralPath $dir){if((Get-Item -LiteralPath $dir).Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Stage reparse'}};
 [void][IO.Directory]::CreateDirectory($dir);
 $check=Get-Item -LiteralPath $dir;while($check){if($check.Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'Stage reparse'};$check=$check.Parent}
-$path=Join-Path $dir '@NAME@';$out=[IO.File]::Open($path,'CreateNew','Write','None');
-try{[Console]::OpenStandardInput().CopyTo($out);$out.Flush($true)}finally{$out.Dispose()};
-if((Get-FileHash -LiteralPath $path).Hash -ine '@PIN@'){throw 'Stage pin'}
+$deadline=Join-Path '@BASE@' 'bin/deadline.ps1';
+if((Get-FileHash -LiteralPath $deadline).Hash -ine '4cbac92301c2420ee83b64f41db66f751dc00cf80d4ec7bf98e091a76d8642b5'){throw 'Stage watchdog pin'}
+. ([scriptblock]::Create([IO.File]::ReadAllText($deadline)));$guard=[KilogramS5Deadline]::new(80,90);
+try{
+ $path=Join-Path $dir '@NAME@';$started=(Get-Process -Id $PID).StartTime.ToFileTimeUtc();
+ $record=@{pid=$PID;started=$started;name='@NAME@';bytes=@LENGTH@;sha256='@PIN@';work_seconds=80;whole_seconds=90}
+ $meta=[Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $record -Compress));
+ $proof=[IO.File]::Open(($path+'.upload-started.json'),'CreateNew','Write','None');try{$proof.Write($meta,0,$meta.Length);$proof.Flush($true)}finally{$proof.Dispose()}
+ $out=[IO.File]::Open($path,'CreateNew','Write','None');$inputStream=[Console]::OpenStandardInput();
+ try{
+  $buffer=New-Object byte[] 65536;$remaining=[long]@LENGTH@;
+  while($remaining -gt 0){$guard.CheckWork();$n=$inputStream.Read($buffer,0,[int][Math]::Min($buffer.Length,$remaining));if($n -le 0){throw 'Short stage input'};$out.Write($buffer,0,$n);$remaining-=$n}
+  $out.Flush($true)
+ }finally{$out.Dispose()}
+ if((Get-FileHash -LiteralPath $path).Hash -ine '@PIN@'){throw 'Stage pin'}
+}finally{$guard.Finish()}
+[Console]::Out.WriteLine((ConvertTo-Json -InputObject $record -Compress));[Console]::Out.Flush();
+# Do not depend on SSH/ConsoleHost propagating stdin EOF after the exact byte budget.
+[Environment]::Exit(0)
 '''
-        for key,value in dict(HOST=node['host'],SID=node['sid'],BASE=node['base'],STAGE=stage,NAME=name,PIN=pin).items():text=text.replace('@'+key+'@',value)
-        command=agents[index].prefix+['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',base64.b64encode(text.encode('utf-16-le')).decode()]
-        outcome=subprocess.run(command,input=(folder/name).read_bytes(),capture_output=True,timeout=90)
+    for key,value in dict(HOST=node['host'],SID=node['sid'],BASE=node['base'],STAGE=stage,NAME=name,PIN=pin,LENGTH=str(length)).items():text=text.replace('@'+key+'@',value)
+    return text
+
+def upload(agents,index,stage,folder,pins,node):
+    # Exact byte budget + local watchdog; no read-until-EOF or orphaned writer.
+    require(set(pins)==NAMES,'six stage inputs')
+    for name,pin in pins.items():
+        length=(folder/name).stat().st_size;text=upload_script(node,stage,name,pin,length)
+        command=agents[index].prefix+['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',encoded_script(text)]
+        require(len(command[-1])<7400,'stage command length')
+        outcome=subprocess.run(command,input=(folder/name).read_bytes(),capture_output=True,timeout=100)
         require(not outcome.returncode and not outcome.stderr,'staging copy unconfirmed; preserve stage')
+        receipt=json.loads(outcome.stdout.decode('utf-8-sig'))
+        require(receipt['name']==name and receipt['bytes']==length and receipt['sha256']==pin,'stage receipt')
 
 def inspect_installed(agent,node):
     # A passive check, not Agent.check/Task.Run or another DPAPI probe.
