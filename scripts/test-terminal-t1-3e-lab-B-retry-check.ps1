@@ -29,7 +29,7 @@ function InitFixture([string]$Directory){
     $script:stateDir=Join-Path $Directory 'state';[void][IO.Directory]::CreateDirectory($stateDir)
     [void][IO.Directory]::CreateDirectory((Join-Path $cfg.base 'ordinary-agent'))
     CopyPackage $originalPackage $originOwner
-    $script:initial=@{task=$null;rules=@();policy=@(@{Name='foreign';value='preserved'});
+    $script:initial=@{task=$null;rules=@();policy=@(@{Name='foreign';Action='Allow';value='preserved'});
         network=@(@{index=19;alias=$cfg.interface_alias;category='Private'});adapter=@{name=$cfg.interface_alias;guid=$cfg.interface_guid;status='Up';addresses=@('192.168.0.152/24')};dynamic_udp=@('49152','16384');
         profiles=@(foreach($store in @('PersistentStore','ActiveStore')){foreach($name in @('Domain','Private','Public')){@{name=$name;store=$store;enabled='False';inbound='Block';outbound='Allow';allow_local='True';allow_inbound='True';disabled=@()}}})}
     Lab-Write (Join-Path (Get-LabBRetryPackageRoot $originOwner) 'fresh-audit.json') @{snapshot=$initial;sha256=(Lab-JsonHash $initial)} -MaxBytes 2097152
@@ -84,16 +84,17 @@ foreach($scenario in @('owner','old-package','initial','initial-bytes','history'
         'agent-lock'{$dir=Join-Path $cfg.base 'ordinary-agent/control';[void][IO.Directory]::CreateDirectory($dir);$extraLock=[IO.File]::Open((Join-Path $dir 'agent.lock'),'CreateNew','Write','None');$expected='LAB_B_RETRY_AGENT_LOCK'}
         'payload'{[IO.File]::WriteAllText((Join-Path $cfg.base 'ordinary-agent/lab.json'),'intervening');$expected='LAB_OLD_RECOVERY_FILES_REMAIN'}
         'baseline'{[IO.File]::WriteAllText((Join-Path $cfg.base 'ordinary-agent/campaign-baseline.json'),'intervening');$expected='LAB_OLD_RECOVERY_FILES_REMAIN'}
-        'profile'{$script:os.profiles[1].enabled='True';$expected='LAB_OLD_RECOVERY_OWNED_REMAINS'}
-        'foreign'{$script:os.policy[0].value='changed';$expected='LAB_UNRELATED_POLICY_DRIFT'}
+        'profile'{$script:os.profiles[1].enabled='True';$expected='LAB_PROFILE_DRIFT'}
+        'foreign'{$script:os.policy[0].value='changed'}
         'no-lock'{$expected='LAB_INSTALL_LOCK_REQUIRED'}
     }
     Lab-Write $journalPath $j -MaxBytes 2097152
     $before=Lab-Hash $journalPath;$handles=@{agent=$null;images=$null};$gate=$null
     try{
         if($scenario -cne 'no-lock'){$gate=[IO.File]::Open((Join-Path $stateDir 'install.lock'),'OpenOrCreate','Write','None')}
-        Reject {Assert-LabBRetryAdmission $cfg $want $stateDir $gate $currentPackage $currentSha $handles} $expected
-        Require ((Lab-Hash $journalPath) -ceq $before -and !(Test-Path -LiteralPath (Join-Path $stateDir 'B-terminal-retry.json'))) 'refusal_before_intent_or_provenance'
+        if($expected){Reject {Assert-LabBRetryAdmission $cfg $want $stateDir $gate $currentPackage $currentSha $handles} $expected}
+        else{$null=Assert-LabBRetryAdmission $cfg $want $stateDir $gate $currentPackage $currentSha $handles}
+        Require ((Lab-Hash $journalPath) -ceq $before -and !(Test-Path -LiteralPath (Join-Path $stateDir 'B-terminal-retry.json'))) 'admission_before_intent_or_provenance'
     }finally{foreach($h in $handles.Values){if($h){$h.Dispose()}};if($gate){$gate.Dispose()};if($extraLock){$extraLock.Dispose()}}
     $cases[$scenario]=$true
 }

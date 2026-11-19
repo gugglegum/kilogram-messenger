@@ -36,7 +36,7 @@ function Assert-LabOldRecovery($Cfg,$Want,[string]$StateDirectory){
     $order=@('files','task','rule0','rule1','private');$changes=@($j.changes)
     if(!$changes.Count -or $changes.Count -gt $order.Count){throw 'LAB_OLD_CHANGE_SCOPE'}
     for($n=0;$n -lt $changes.Count;$n++){if($changes[$n] -cne $order[$n]){throw 'LAB_OLD_CHANGE_SCOPE'}}
-    $now=Get-LabSnapshot $Cfg $Want
+    $now=Get-LabSnapshot $Cfg $Want -Cleanup
     Assert-LabRestoreScope $now $j.initial $Want
     $task=Find-LabTask $Want.task.name
     if($task){Assert-LabTask $task $Want.task}
@@ -66,9 +66,16 @@ function Assert-LabOldRecoveryCompleted($Cfg,$Want,[string]$StateDirectory,$Befo
     $nowHistory=Get-LabHistoryPins $StateDirectory
     $prior=$Before.history|ConvertTo-Json -Depth 10 -Compress|ConvertFrom-Json
     foreach($entry in $prior.PSObject.Properties){if(!$nowHistory.Contains($entry.Name) -or $nowHistory[$entry.Name] -cne $entry.Value){throw 'LAB_HISTORY_CHANGED'}}
-    $now=Get-LabSnapshot $Cfg $Want
+    $now=Get-LabSnapshot $Cfg $Want -Cleanup
     Assert-LabRestoreScope $now $j.initial $Want
-    if($now.task -or @($now.rules).Count -or !(Lab-Equal $now.profiles $j.initial.profiles)){throw 'LAB_OLD_RECOVERY_OWNED_REMAINS'}
+    if($now.task -or @($now.rules).Count){throw 'LAB_OLD_RECOVERY_OWNED_REMAINS'}
+    # Other profiles/settings are not owned. The specific Private enabled write
+    # must have reached its rollback target; no full historical snapshot equality.
+    $rollbackInitial=Get-LabRollbackInitial $j
+    foreach($p in @($now.profiles|Where-Object name -ceq 'Private')){
+        $target=@($rollbackInitial.profiles|Where-Object {$_.name -ceq 'Private' -and $_.store -ceq $p.store})
+        if($target.Count -ne 1 -or $p.enabled -cne $target[0].enabled){throw 'LAB_PROFILE_DRIFT'}
+    }
     foreach($name in @($Before.names)+@('campaign-baseline.json')){
         if(Test-Path -LiteralPath (Join-Path $Cfg.base "ordinary-agent/$name")){throw 'LAB_OLD_RECOVERY_FILES_REMAIN'}
     }

@@ -2,6 +2,7 @@ param([Parameter(Mandatory)][string]$Evidence)
 . "$PSScriptRoot/test-terminal-t1-3e-lab-install.ps1" -Mode Library
 if(Test-Path -LiteralPath $Evidence){throw 'CHECK:fresh_evidence_required'}
 $Evidence=[IO.Path]::GetFullPath($Evidence);[void][IO.Directory]::CreateDirectory($Evidence)
+[Diagnostics.Process]::GetCurrentProcess().PriorityClass='BelowNormal'
 function Require([bool]$Value,[string]$Why){if(!$Value){throw "CHECK:$Why"}}
 function Reject([scriptblock]$Body,[string]$Code){try{&$Body}catch{if($_.Exception.Message.Contains($Code)){return};throw};throw "CHECK:expected_$Code"}
 # Native handle/token acquisition is the explicit synthetic boundary in this fixture.
@@ -14,6 +15,7 @@ public static class KilogramLabNative {
   public int pid; public long started=1; public string image,user;
   public bool elevated,live=true; public object[] groups=new object[0],restricting=new object[0];
   public int verdict=-1;
+  public int LocalUser(string s){return verdict;}
   public bool Alive(){return live;} public void Dispose(){Disposals++;live=false;}
  }
  public sealed class ServerActors : IDisposable {
@@ -47,6 +49,25 @@ try{
         DynamicTransport='Any';LocalUser='Any';RemoteUser='Any';RemoteMachine='Any';Authentication='NotRequired';Encryption='NotRequired';OverrideBlockRules='False'}
     $block=$allow|ConvertTo-Json|ConvertFrom-Json;$block.Name='foreign-test';$block.Action='Block';$block.Direction='Outbound';$block.Program='Any';$block.Service='Any';$block.LocalUser='O:LSD:(A;;CC;;;S-1-5-21-1-2-3-4)'
     $snapshot=@{policy=@($allow,$block);ssh=@{running=$true;service_path=$image;connection="$($cfg.peer) 55001 $($cfg.ip) 22"}}
+    $conditional=$allow|ConvertTo-Json|ConvertFrom-Json;$conditional.LocalUser='O:SYD:(A;;CC;;;'+$cfg.sid+')'
+    Require ((Test-LabSshRule $conditional $cfg $false $true) -eq 0) 'no_server_identity_no_user_allow_proof'
+    Reject {Assert-LabSshPath $cfg @{policy=@($conditional)} -PolicyOnly} 'LAB_SSH_FILTER_UNCERTAIN'
+    $cases.no_actor_user_allow_unknown=$true
+    $conditionedPath=@{policy=@($conditional);ssh=$snapshot.ssh}
+    $actor.actors[0].verdict=-1;$actor.actors[1].verdict=1
+    Reject {Assert-LabSshPath $cfg $conditionedPath $actor} 'LAB_SSH_EFFECT_UNCONFIRMED'
+    $cases.ordinary_owner_only_cannot_allow_system_listener=$true
+    $actor.actors[0].verdict=1;$actor.actors[1].verdict=0
+    Reject {Assert-LabSshPath $cfg $conditionedPath $actor} 'LAB_SSH_FILTER_UNCERTAIN'
+    $cases.server_allow_one_unknown=$true
+    $actor.actors[1].verdict=1
+    Assert-LabSshPath $cfg $conditionedPath $actor
+    $cases.server_allow_all_observed_owners=$true
+    $actor.actors[0].verdict=-1;$actor.actors[1].verdict=-1
+    Require (Test-LabCurrentPolicyRelevant $cfg $conditional) 'conditional_server_allow_retained_without_actor'
+    Require (Test-LabCurrentPolicyRelevant $cfg $block) 'conditional_server_block_retained_without_actor'
+    Reject {Assert-LabSshPath $cfg @{policy=@($allow,$block)} -PolicyOnly} 'LAB_SSH_FILTER_UNCERTAIN'
+    $cases.no_actor_server_block_retained=$true
     $before=Lab-JsonHash $snapshot
     Assert-LabSshPath $cfg $snapshot $actor;$cases.all_supported_owners_nonmatch=$true
     $actor.actors[1].verdict=1;Reject {Assert-LabSshPath $cfg $snapshot $actor} 'LAB_SSH_BLOCKED';$cases.flow_owner_match_blocks=$true

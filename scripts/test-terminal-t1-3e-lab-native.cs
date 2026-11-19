@@ -19,6 +19,7 @@ public static class KilogramLabNative
     [DllImport("advapi32.dll", SetLastError=true)] static extern bool DuplicateTokenEx(IntPtr token,uint access,IntPtr attributes,int level,int type,out IntPtr copy);
     [DllImport("advapi32.dll", SetLastError=true)] static extern bool GetTokenInformation(IntPtr token,int kind,IntPtr data,int size,out int needed);
     [DllImport("advapi32.dll", SetLastError=true)] static extern bool AccessCheck(byte[] descriptor,IntPtr token,uint access,ref Mapping mapping,IntPtr privileges,ref uint size,out uint granted,out bool allowed);
+    [DllImport("advapi32.dll", SetLastError=true,CharSet=CharSet.Unicode)] static extern bool LookupAccountSid(string system,byte[] sid,StringBuilder name,ref uint nameSize,StringBuilder domain,ref uint domainSize,out uint use);
     [DllImport("advapi32.dll", SetLastError=true)] static extern bool CreateRestrictedToken(IntPtr token,uint flags,uint disabled,IntPtr disabledSids,uint deleted,IntPtr deletedPrivileges,uint restricted,IntPtr restrictedSids,out IntPtr result);
     [StructLayout(LayoutKind.Sequential)] struct Mapping { public uint Read,Write,Execute,All; }
     [StructLayout(LayoutKind.Sequential)] struct SidAttributes { public IntPtr Sid; public uint Attributes; }
@@ -125,6 +126,23 @@ public static class KilogramLabNative
     }
     public static ServerActors BindServerActors(Actor[] actors,int servicePid,string image,string ordinarySid) {
         return new ServerActors(actors,servicePid,image,ordinarySid);
+    }
+    // A single verified local *user* SID can exclude another user's traffic without
+    // borrowing the elevated collector token or assuming anything about group SIDs.
+    // Group/conditional/multi-ACE selectors remain unknown to this narrow fallback.
+    public static int FixedLocalUser(string sddl,string ordinarySid) {
+        try {
+            var sd=new RawSecurityDescriptor(sddl);
+            if(sd.Owner==null || sd.SystemAcl!=null || sd.DiscretionaryAcl==null || sd.DiscretionaryAcl.Count!=1)return 0;
+            var ace=sd.DiscretionaryAcl[0] as CommonAce;
+            if(ace==null || ace.IsCallback || ace.AceQualifier!=AceQualifier.AccessAllowed || ace.AceFlags!=AceFlags.None || ace.AccessMask!=1)return 0;
+            var user=new SecurityIdentifier(ordinarySid);var target=ace.SecurityIdentifier;
+            if(user.AccountDomainSid==null || target.AccountDomainSid==null || !user.AccountDomainSid.Equals(target.AccountDomainSid))return 0;
+            byte[] bytes=new byte[target.BinaryLength];target.GetBinaryForm(bytes,0);
+            var name=new StringBuilder(256);var domain=new StringBuilder(256);uint ns=256,ds=256,use;
+            if(!LookupAccountSid(null,bytes,name,ref ns,domain,ref ds,out use) || use!=1 || !String.Equals(domain.ToString(),Environment.MachineName,StringComparison.OrdinalIgnoreCase))return 0;
+            return user.Equals(target)?1:-1;
+        } catch(ArgumentException){return 0;}
     }
     // Supported subset: exactly one non-inherited, non-callback allow ACE granting only
     // FWP_ACTRL_MATCH_FILTER (1). Windows AccessCheck handles enabled/deny-only/restricted SIDs.

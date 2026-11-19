@@ -59,7 +59,7 @@ foreach($scenario in @('recovering','rollback_incomplete','owner','want','phase'
         'pins'{$j.file_pins=Clone $oldPackage.files;$j.file_pins.'lab.json'='0'*64;$expected='LAB_OLD_FILE_PIN_SCOPE'}
         'initial'{Lab-Write (Join-Path $stateDir 'initial.json') @{changed=$true};$expected='LAB_INITIAL_BASELINE_CHANGED'}
         'task'{$script:task=MakeTask ($spec.xml.Replace('LeastPrivilege','HighestAvailable'));$expected='LAB_TASK_DRIFT'}
-        'policy'{$script:os.policy[0].value='changed';$expected='LAB_UNRELATED_POLICY_DRIFT'}
+        'policy'{$script:os.policy[0].value='changed'}
         'file'{[IO.File]::AppendAllText((Join-Path $agentDir 'lab.json'),'changed');$expected='LAB_FILE_DRIFT'}
         'intent-order'{$j.changes=@('task','files');$expected='LAB_OLD_CHANGE_SCOPE'}
     }

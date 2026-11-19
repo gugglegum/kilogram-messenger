@@ -70,7 +70,16 @@ try{
     Reject {&$apply 'private' $want} 'LAB_COM_SPEC_DIFFERS'
     Require ($script:profileWrites -eq 0 -and (Get-LabStage) -ceq 'pre-profile-comparison') 'reject_before_profile_change'
     $cases.production_pre_profile_rejection=$true
-    $script:observed=Clone $ordinaryFixture;$null=&$apply 'private' $want
+    $setupActor=$null;$stateDir=Join-Path $Evidence 'profile-state';[void][IO.Directory]::CreateDirectory($stateDir)
+    $journalPath=Join-Path $stateDir 'initial-and-journal.json'
+    $ssh=Clone $want.rules[1];$ssh.Program=Join-Path ([Environment]::GetFolderPath('System')) 'OpenSSH/sshd.exe'
+    $ssh.Protocol='TCP';$ssh.LocalPort='22';$ssh.RemotePort='Any'
+    $profileSnapshot=@{profiles=@(foreach($store in @('PersistentStore','ActiveStore')){foreach($p in $relevant.profiles){$copy=Clone $p;$copy.store=$store;$copy}});
+        rules=@();task=$null;policy=@($ssh);ssh=@{running=$true;service_path=$ssh.Program;connection=$null};
+        network=@(@{index=$cfg.interface_index;alias=$cfg.interface_alias;category='Private'});adapter=$relevant.adapter;dynamic_udp=@('49152','16384')}
+    function Get-LabSnapshot($Cfg,$Want){Clone $profileSnapshot}
+    Save-LabInstallJournal $stateDir (Clone @{phase='installing';initial=$profileSnapshot;changes=@('private')}) $null
+    $script:observed=Clone $ordinaryFixture;$null=&$apply 'private' $want (Lab-Read $journalPath -MaxBytes 2097152)
     Require ($script:profileWrites -eq 1) 'valid_comparison_reaches_single_setter'
     $cases.production_pre_profile_success=$true
     $diag=Get-LabSetupDiagnostics $PackageRoot (Join-Path $Evidence 'absent.json') ('setup-'+('a'*32))

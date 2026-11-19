@@ -20,7 +20,7 @@ foreach($which in $PackageSides){
             Require ((Lab-Hash (Join-Path $PSScriptRoot $name)) -ceq $p.files.$name) 'payload_matches_review_source'
         }
         Require ((Lab-Hash (Join-Path $PSScriptRoot 'test-terminal-t1-dpapi.ps1')) -ceq $p.files.'dpapi-context.ps1') 'dpapi_source_pin'
-        $target=Join-Path $cfg.base $(if($which -ceq 'A'){'deploy/autonomous-A-recovery-setup-review-02'}else{'deploy/autonomous-recovery-setup-review-01'});$sizes=[ordered]@{}
+        $target=Join-Path $cfg.base $(if($which -ceq 'A'){'deploy/autonomous-A-recovery-setup-review-03'}else{'deploy/autonomous-recovery-setup-review-01'});$sizes=[ordered]@{}
         foreach($action in @('RecoverInstall','Teardown')){
             $cmd=[IO.File]::ReadAllText((Join-Path $root "$action-$which.cmd"))
             $maxLine=(@($cmd -split "`n"|ForEach-Object Length)|Measure-Object -Maximum).Maximum
@@ -62,7 +62,7 @@ Require ($targets.Count -eq 2) 'exact_production_target_assignments'
 foreach($case in @('A','B-retry','B-combined')){
     $LaunchSide=if($case -ceq 'A'){'A'}else{'B'};$launchCfg=Get-LabConfig $LaunchSide
     $retryBuild=$case -ceq 'B-retry';$LaunchAction=if($retryBuild){'RetryInstallB'}else{'RecoverInstall'}
-    $suffix=switch($case){'A'{'deploy/autonomous-A-recovery-setup-review-02'};'B-retry'{'deploy/autonomous-B-rollback-retry-review-02'};'B-combined'{'deploy/autonomous-recovery-setup-review-01'}}
+    $suffix=switch($case){'A'{'deploy/autonomous-A-recovery-setup-review-03'};'B-retry'{'deploy/autonomous-B-rollback-retry-review-02'};'B-combined'{'deploy/autonomous-recovery-setup-review-01'}}
     foreach($assignment in $targets){Require ((& ([scriptblock]::Create($assignment.Right.Extent.Text))) -ceq (Join-Path $launchCfg.base $suffix)) 'production_build_and_runtime_targets_consistent'}
 }
 Lab-Write (Join-Path $Evidence 'checks.json') @{count=$reports.Count;packages=$reports;host_mutations=0;uac_launches=0;scope='all payload pins, fixed commands and bootstrap parse/limits; no execution or deployment'}

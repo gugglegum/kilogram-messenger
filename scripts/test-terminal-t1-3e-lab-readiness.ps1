@@ -105,7 +105,61 @@ function Get-LabOrdinaryState($Cfg,$Want,[switch]$AllowMissing) {
         if($matching.Count -ne 1 -or $null -eq $raw -or $raw -isnot [string]){throw 'LAB_COM_OWN_RULE_DRIFT'}
         [ordered]@{name=$expected.Name;view=(Convert-LabComRule $matching[0] $expected.Name);persistent_sha256=(Lab-JsonHash $raw)}
     })
-    @{backend='com-native-v1';profiles=$profiles;rules=$rules;policy_inputs=(Get-LabPolicyInputs);native_network=(Get-LabNativeNetwork $Cfg)}
+    $policy=@(foreach($rule in $all){
+        # Current effective COM rules are used only for the fixed UDP/SSH paths.
+        # Preserve unsupported selectors as unknown; do not reject an unrelated rule.
+        if($rule.Enabled -and ([int]$rule.Profiles -band 2) -and ([int]$rule.Action -ne 1 -or $Cfg.side -ceq 'B')){
+            $view=Convert-LabComPolicyRule $rule
+            if(Test-LabCurrentPolicyRelevant $Cfg $view){$view}
+        }
+    })
+    if($policy.Count -gt 4096){throw 'LAB_CURRENT_POLICY_BOUND'}
+    @{backend='com-native-v1';profiles=$profiles;rules=$rules;policy=$policy;native_network=(Get-LabNativeNetwork $Cfg)}
+}
+function Convert-LabComPolicyRule($Rule){
+    $view=[ordered]@{Name=[string]$Rule.Name;Enabled=([bool]$Rule.Enabled).ToString();Profile='Private';
+        Direction=$(switch([int]$Rule.Direction){1{'Inbound'};2{'Outbound'};default{'__unsupported__'}});
+        Action=$(switch([int]$Rule.Action){0{'Block'};1{'Allow'};default{'__unsupported__'}});
+        Program=[Environment]::ExpandEnvironmentVariables([string]$Rule.ApplicationName);
+        Protocol=$(switch([int]$Rule.Protocol){6{'TCP'};17{'UDP'};256{'Any'};default{[string]$Rule.Protocol}});
+        InterfaceType=$(if([string]$Rule.InterfaceTypes -ceq 'All'){'Any'}else{'__unsupported__'});
+        Authentication='__unsupported__';Encryption='__unsupported__';OverrideBlockRules='__unsupported__';DynamicTransport='__unsupported__'}
+    # FW_RULE3 security/dynamic selectors may be unavailable to this COM version.
+    # Unknown matters only after every supported selector could match our flow.
+    try{
+        if([int]$Rule.SecureFlags -eq 0){$view.Authentication='NotRequired';$view.Encryption='NotRequired';$view.OverrideBlockRules='False'}
+        if(!$Rule.LocalUserOwner){$view.DynamicTransport='Any'}
+    }catch{}
+    foreach($pair in @(@('LocalPort','LocalPorts'),@('RemotePort','RemotePorts'),@('LocalAddress','LocalAddresses'),@('RemoteAddress','RemoteAddresses'),
+        @('Service','ServiceName'),@('Package','LocalAppPackageId'),@('LocalUser','LocalUserAuthorizedList'),@('RemoteUser','RemoteUserAuthorizedList'),@('RemoteMachine','RemoteMachineAuthorizedList'))){
+        $value='__unsupported__'
+        try{$value=[string]$Rule.($pair[1]);if(!$value -or $value -ceq '*'){$value='Any'}}catch{}
+        $view[$pair[0]]=$value
+    }
+    if(!$view.Program){$view.Program='Any'}
+    $interfaces=@($Rule.Interfaces|Where-Object {$_}|ForEach-Object {[string]$_}|Sort-Object)
+    $view.InterfaceAlias=if($interfaces.Count){$interfaces -join ','}else{'Any'}
+    return $view
+}
+function Get-LabOrdinaryScope($Cfg,$State){
+    # Historical registry digests and foreign rule arrays are evidence, not leases
+    # on other applications' policy. Keep exact owned bytes and the lab interface.
+    @{backend=$State.backend;rules=$State.rules;
+        profiles=@($State.profiles|Where-Object name -ceq 'Private');
+        native_network=@{adapter=$State.native_network.adapter;udp=$State.native_network.udp;
+            network=@($State.native_network.network|Where-Object index -eq $Cfg.interface_index)}}
+}
+function Assert-LabOrdinaryReady($Cfg,$Want,$Before,$Current){
+    if($Current.backend -cne 'com-native-v1' -or @($Current.rules).Count -ne @($Want.rules).Count -or
+        @($Current.profiles|Where-Object name -ceq 'Private').Count -ne 1){throw 'LAB_COM_PROJECTION_SCHEMA'}
+    if(!(Lab-Equal (Get-LabOrdinaryScope $Cfg $Before) (Get-LabOrdinaryScope $Cfg $Current))){throw 'LAB_BASELINE_DRIFT'}
+    foreach($r in $Current.rules){
+        $spec=@($Want.rules|Where-Object Name -ceq $r.name)
+        if($spec.Count -ne 1 -or !(Lab-Equal $r.view $spec[0])){throw 'LAB_COM_OWN_RULE_DRIFT'}
+    }
+    # Current policy is evaluated afresh, never compared with the old policy set.
+    Assert-LabUdpPath $Cfg $Current.policy
+    Assert-LabSshPath $Cfg @{policy=$Current.policy} -PolicyOnly
 }
 function Get-LabComRuleComparison($Cfg,$Want,$Ordinary,$Relevant){
     # Own fixed rules only. Do not include unrelated policy or a full Audit.

@@ -158,19 +158,22 @@ function Invoke-LabTransaction($Backend,$Want,[string]$Operation) {
                 return @{state='already_installed';baseline_preserved=$true}
             }
             if($journal.phase -cne 'rolled_back') { throw 'LAB_INCOMPLETE_INSTALL_REQUIRES_ROLLBACK' }
-            if(!(Lab-Equal $journal.initial $now)){throw 'LAB_ROLLBACK_BASELINE_DRIFT'}
         }
         if ($now.task -or @($now.rules).Count) { throw 'LAB_NAME_COLLISION' }
         Set-LabStage 'transaction-preflight'; & $Backend.Preflight $now
         if(!$journal){$journal=[pscustomobject]@{phase='installing';want=$Want;initial=$now;changes=@();rollback_errors=@()}}
         else{$journal.phase='installing';$journal.changes=@();$journal.rollback_errors=@()}
+        if($journal.PSObject.Properties['private_write']){$journal.PSObject.Properties.Remove('private_write')}
+        # Keep the original evidence immutable. A clean retry uses today's admitted
+        # state for its own rollback, never restores historical foreign policy.
+        $journal|Add-Member NoteProperty attempt_baseline @{snapshot=$now;sha256=(Lab-JsonHash $now)} -Force
         & $Backend.Write $journal
         try {
             foreach ($change in @('files','task','rule0','rule1','private')) {
                 # Persist intent before mutation; rollback checks actual owned configuration.
                 $journal.changes+=@($change); & $Backend.Write $journal
                 Set-LabStage ('apply-'+$change)
-                & $Backend.Apply $change $Want
+                & $Backend.Apply $change $Want $journal
             }
             Set-LabStage 'verify-installed'
             & $Backend.Verify $Want
@@ -181,7 +184,7 @@ function Invoke-LabTransaction($Backend,$Want,[string]$Operation) {
             $script:LabPrimary=Get-LabFailureSummary $_ (Get-LabStage)
             $journal|Add-Member -NotePropertyName primary_failure -NotePropertyValue $script:LabPrimary -Force
             for ($i=$journal.changes.Count-1;$i -ge 0;$i--) {
-                try { Set-LabStage ('rollback-'+$journal.changes[$i]); & $Backend.Undo $journal.changes[$i] $Want $journal.initial }
+                try { Set-LabStage ('rollback-'+$journal.changes[$i]); & $Backend.Undo $journal.changes[$i] $Want (Get-LabRollbackInitial $journal) }
                 catch { $journal.rollback_errors+=@($_.Exception.Message) }
             }
             $journal.phase=if($journal.rollback_errors.Count){'rollback_incomplete'}else{'rolled_back'}
@@ -198,17 +201,33 @@ function Invoke-LabTransaction($Backend,$Want,[string]$Operation) {
     if ($Operation -cne 'Teardown') { throw 'LAB_OPERATION' }
     if ($journal.phase -ceq 'removed' -or $journal.phase -ceq 'rolled_back') { return @{state=$journal.phase} }
     # Preflight all ownership/drift before any removal. Never overwrite a changed profile.
-    Set-LabStage 'recovery-preflight'; & $Backend.CanRemove $Want $journal.initial $journal.phase
+    $rollbackInitial=Get-LabRollbackInitial $journal
+    Set-LabStage 'recovery-preflight'; & $Backend.CanRemove $Want $rollbackInitial $journal.phase
     $recovery=$journal.phase -cin @('installing','rollback_incomplete','recovering')
     if(!$recovery -and $journal.phase -cnotin @('installed','removing')){throw 'LAB_INSTALL_PHASE'}
     $journal.phase=if($recovery){'recovering'}else{'removing'}; & $Backend.Write $journal
-    for ($i=$journal.changes.Count-1;$i -ge 0;$i--) { Set-LabStage ('recovery-'+$journal.changes[$i]); & $Backend.Undo $journal.changes[$i] $Want $journal.initial }
+    $journal.rollback_errors=@()
+    for ($i=$journal.changes.Count-1;$i -ge 0;$i--) {
+        try{Set-LabStage ('recovery-'+$journal.changes[$i]); & $Backend.Undo $journal.changes[$i] $Want $rollbackInitial}
+        catch{$journal.rollback_errors+=@($_.Exception.Message)}
+    }
+    if($journal.rollback_errors.Count){
+        $journal.phase=if($recovery){'rollback_incomplete'}else{'removing'};& $Backend.Write $journal
+        throw ('LAB_CLEANUP_INCOMPLETE:'+($journal.rollback_errors -join ';'))
+    }
     $journal.phase=if($recovery){'rolled_back'}else{'removed'}
     if($recovery){$journal.rollback_errors=@()}
     & $Backend.Write $journal
     return @{state=$journal.phase;baseline_preserved=$true}
 }
-function Undo-LabInstallFiles([string]$Base,[string]$StateDirectory,[string[]]$Names) {
+function Get-LabRollbackInitial($Journal){
+    if($Journal.PSObject.Properties['attempt_baseline']){
+        if($Journal.attempt_baseline.sha256 -cne (Lab-JsonHash $Journal.attempt_baseline.snapshot)){throw 'LAB_ATTEMPT_BASELINE_DRIFT'}
+        return $Journal.attempt_baseline.snapshot
+    }
+    return $Journal.initial
+}
+function Undo-LabInstallFiles([string]$Base,[string]$StateDirectory,[string[]]$Names,[switch]$CheckOnly) {
     $j=Lab-Read (Join-Path $StateDirectory 'initial-and-journal.json') -MaxBytes 2097152
     if($j.phase -cin @('removing','removed')){return} # Final campaign teardown preserves ordinary updates/evidence.
     if($j.phase -cnotin @('installing','rollback_incomplete','recovering')){throw 'LAB_INSTALL_PHASE'}
@@ -229,7 +248,7 @@ function Undo-LabInstallFiles([string]$Base,[string]$StateDirectory,[string[]]$N
         }
     }
     # Verify the complete owned set before removing any file.
-    foreach($target in $targets){Remove-Item -LiteralPath $target}
+    if(!$CheckOnly){foreach($target in $targets){Remove-Item -LiteralPath $target}}
 }
 function Save-LabInstallJournal([string]$Directory,$Journal,$PackageFiles) {
     $initial=Join-Path $Directory 'initial.json'
@@ -286,7 +305,7 @@ function Get-LabRuleView($Rule,[string]$Store,$Index=$null) {
     if($view.Protocol -ceq '17'){$view.Protocol='UDP'}elseif($view.Protocol -ceq '6'){$view.Protocol='TCP'}elseif($view.Protocol -ceq '256'){$view.Protocol='Any'}
     return $view
 }
-function Get-LabSnapshot($Cfg,$Want) {
+function Get-LabSnapshot($Cfg,$Want,[switch]$Cleanup,[switch]$ProfileWrite) {
     $profiles=@(foreach($store in @('PersistentStore','ActiveStore')) {
         foreach($p in @(Get-NetFirewallProfile -PolicyStore $store | Sort-Object Name)) {
             [ordered]@{store=$store;name=[string]$p.Name;enabled=[string]$p.Enabled;inbound=[string]$p.DefaultInboundAction;
@@ -300,22 +319,26 @@ function Get-LabSnapshot($Cfg,$Want) {
             if ($r.Name -cin @($Want.rules | ForEach-Object Name)) { @{store=$store;view=(Get-LabRuleView $r $store)} }
         }
     })
-    $selected=@($byStore['ActiveStore'] | Where-Object { [string]$_.Enabled -eq 'True' -and
-        ([string]$_.Profile -eq 'Any' -or [string]$_.Profile -match '\bPrivate\b') })
-    $index=New-LabFilterIndex $selected ActiveStore
-    $policy=@($selected | ForEach-Object { Get-LabRuleView $_ ActiveStore $index })
-    # One native association check guards the bulk identifier mapping without repeating all queries per rule.
-    if($selected.Count -and !(Lab-Equal $policy[0] (Get-LabRuleView $selected[0] ActiveStore))){throw 'LAB_FILTER_INDEX_DIFFERS'}
+    $task=Find-LabTask $Want.task.name
+    $taskView=if($task){@{xml=$task.Xml;sddl=$task.GetSecurityDescriptor(4)}}else{$null}
+    if($Cleanup -and !$ProfileWrite){return @{profiles=$profiles;rules=$rules;task=$taskView}}
+    $policy=@()
+    if(!$Cleanup){
+        $selected=@($byStore['ActiveStore'] | Where-Object { [string]$_.Enabled -eq 'True' -and
+            ([string]$_.Profile -eq 'Any' -or [string]$_.Profile -match '\bPrivate\b') })
+        $index=New-LabFilterIndex $selected ActiveStore
+        $policy=@($selected | ForEach-Object { Get-LabRuleView $_ ActiveStore $index })
+        # One native association check guards the bulk identifier mapping.
+        if($selected.Count -and !(Lab-Equal $policy[0] (Get-LabRuleView $selected[0] ActiveStore))){throw 'LAB_FILTER_INDEX_DIFFERS'}
+    }
     $net=@(Get-NetConnectionProfile | Sort-Object InterfaceIndex | ForEach-Object { [ordered]@{index=[int]$_.InterfaceIndex;alias=$_.InterfaceAlias;category=[string]$_.NetworkCategory} })
     $adapter=Get-NetAdapter -InterfaceIndex $Cfg.interface_index
     $addr=@(Get-NetIPAddress -InterfaceIndex $Cfg.interface_index -AddressFamily IPv4 | ForEach-Object { "$($_.IPAddress)/$($_.PrefixLength)" } | Sort-Object)
-    $task=Find-LabTask $Want.task.name
-    $taskView=if($task){@{xml=$task.Xml;sddl=$task.GetSecurityDescriptor(4)}}else{$null}
     $range=@(& "$env:windir/System32/netsh.exe" int ipv4 show dynamicport udp)
     if($LASTEXITCODE -ne 0) { throw 'LAB_UDP_RANGE' }
     [ordered]@{profiles=$profiles;rules=$rules;task=$taskView;policy=$policy;network=$net;
         adapter=@{name=$adapter.Name;guid=[string]$adapter.InterfaceGuid;status=[string]$adapter.Status;addresses=$addr};dynamic_udp=$range;
-        ssh=(Get-LabSshFacts)}
+        ssh=$(if(!$Cleanup){Get-LabSshFacts}else{$null})}
 }
 function Get-LabRelevant($Cfg,$Want) {
     # Ordinary attempt checks avoid enumerating every unrelated firewall filter.
@@ -348,7 +371,8 @@ function Assert-LabReadOnly($Cfg,[string]$Pin) {
     if(!(Lab-Equal $baseline.task $want.task)){throw 'LAB_BASELINE_SCOPE'}
     Assert-LabTask (Find-LabTask $want.task.name) $want.task
     if($baseline.v -ne 2 -or !$baseline.ordinary){throw 'LAB_BASELINE_BACKEND'}
-    if(!(Lab-Equal $baseline.ordinary (Get-LabOrdinaryState $Cfg $want))){throw 'LAB_BASELINE_DRIFT'}
+    $current=Get-LabOrdinaryState $Cfg $want
+    Assert-LabOrdinaryReady $Cfg $want $baseline.ordinary $current
     @{state='verified';baseline_sha256=$Pin;initial_audit_sha256=$baseline.initial_audit_sha256;read_only=$true}
 }
 function Find-LabTask([string]$Name) {
@@ -379,6 +403,11 @@ function Test-LabSet([string]$Text,[string]$Expected) {
         if(!$token -or $token -eq '__unsupported__' -or $token -match '[*?]'){$unknown=$true}
     }
     if($unknown){return 0};return -1
+}
+function Test-LabFixedLocalUser([string]$Text,$Cfg){
+    if($Text -ieq 'Any'){return 1}
+    Initialize-LabNative
+    [KilogramLabNative]::FixedLocalUser($Text,$Cfg.sid)
 }
 function Test-LabPorts([string]$Text,[int]$First,[int]$Last,[bool]$NeedAll) {
     $ranges=@();$unknown=$false
@@ -464,19 +493,27 @@ function Test-LabSshRule($Rule,$Cfg,[bool]$Client,[bool]$Allow,[bool]$Reply=$fal
     $localUser=Lab-RuleField $Rule LocalUser
     if($localUser -ieq 'Any'){$tests+=1}
     elseif($Client -and $Actor -and $Actor -is [KilogramLabNative+Actor] -and $Actor.user -ceq $Cfg.sid -and !$Actor.elevated){$tests+=$Actor.LocalUser($localUser)}
-    elseif(!$Client -and $Cfg.side -ceq 'B' -and $Actor -and $Actor -is [KilogramLabNative+ServerActors] -and $Actor.ordinary_sid -ceq $Cfg.sid -and $Actor.Alive()){$tests+=$Actor.LocalUser($localUser)}
-    else{$tests+=0}
+    elseif(!$Client -and $Cfg.side -ceq 'B' -and $Actor -and $Actor -is [KilogramLabNative+ServerActors] -and $Actor.ordinary_sid -ceq $Cfg.sid -and $Actor.Alive()){
+        if($Allow){
+            # A server Allow must cover the listener and every observed flow owner.
+            # The any-member match used for Blocks cannot prove the whole path.
+            $users=@($Actor.Members()|ForEach-Object {$_.LocalUser($localUser)})
+            $tests+=if(-1 -in $users){-1}elseif(!$users.Count -or 0 -in $users){0}else{1}
+        }else{$tests+=$Actor.LocalUser($localUser)}
+    }
+    elseif($Client){$tests+=(Test-LabFixedLocalUser $localUser $Cfg)}
+    else{$tests+=0} # Cfg.sid is not evidence of the LocalSystem sshd identity.
     foreach($pair in @(@('Authentication','NotRequired'),@('Encryption','NotRequired'),@('OverrideBlockRules','False'))) {
         $tests+=if((Lab-RuleField $Rule $pair[0]) -ieq $pair[1]){1}else{0}
     }
     if(-1 -in $tests){return -1};if(0 -in $tests){return 0};return 1
 }
-function Assert-LabSshPath($Cfg,$Snapshot,$Actor=$null) {
+function Assert-LabSshPath($Cfg,$Snapshot,$Actor=$null,[switch]$PolicyOnly) {
     $client=$Cfg.side -ceq 'A' # Actual route: A runs the controller/ssh client; B runs sshd.
     if(!$client -and $Actor){$null=Assert-LabServerActors $Cfg $Actor}
     $expected=Join-Path ([Environment]::GetFolderPath('System')) 'OpenSSH/sshd.exe'
     $hasSsh=if($Snapshot -is [Collections.IDictionary]){$Snapshot.Contains('ssh')}else{[bool]$Snapshot.PSObject.Properties['ssh']}
-    if(!$client -and (!$hasSsh -or !$Snapshot.ssh -or !$Snapshot.ssh.running -or $Snapshot.ssh.service_path.Trim('"') -ine $expected)){throw 'LAB_SSH_SERVICE_UNCERTAIN'}
+    if(!$client -and !$PolicyOnly -and (!$hasSsh -or !$Snapshot.ssh -or !$Snapshot.ssh.running -or $Snapshot.ssh.service_path.Trim('"') -ine $expected)){throw 'LAB_SSH_SERVICE_UNCERTAIN'}
     $connection=$env:SSH_CONNECTION
     if(!$connection -and $hasSsh){$connection=$Snapshot.ssh.connection}
     if($connection) {
@@ -489,7 +526,7 @@ function Assert-LabSshPath($Cfg,$Snapshot,$Actor=$null) {
     foreach($rule in $Snapshot.policy) {
         $action=Lab-RuleField $rule Action
         if($action -ieq 'Allow' -and !$client) {
-            $match=Test-LabSshRule $rule $Cfg $false $true
+            $match=Test-LabSshRule $rule $Cfg $false $true $false $Actor
             if($match -eq 1){$allowed=$true}elseif($match -eq 0){$uncertain=$true}
         }elseif($action -ieq 'Block') {
             foreach($reply in @($false,$true)) {
@@ -515,9 +552,67 @@ function Assert-LabNetwork($Cfg,$Snapshot,$Actor=$null,[switch]$SkipSsh) {
     # possibly applicable inbound-server/outbound-client block. This covers reconnect too.
     if(!$SkipSsh){Assert-LabSshPath $Cfg $Snapshot $Actor}
 }
+function Test-LabUdpBlock($Rule,$Cfg,$Flow){
+    $protocol=Lab-RuleField $Rule Protocol
+    if($protocol -ceq '17'){$protocol='UDP'}elseif($protocol -ceq '256'){$protocol='Any'}
+    $tests=@(
+        (Test-LabSet (Lab-RuleField $Rule Enabled) 'True'),
+        (Test-LabSet (Lab-RuleField $Rule Profile) 'Private'),
+        (Test-LabSet (Lab-RuleField $Rule Direction) $Flow.Direction),
+        (Test-LabSet $protocol 'UDP'),
+        (Test-LabSet ([Environment]::ExpandEnvironmentVariables((Lab-RuleField $Rule Program)).Trim('"')) (Join-Path $Cfg.base 'bin/kilogram-cli.exe')),
+        (Test-LabSet (Lab-RuleField $Rule Service) '__no_service__'),
+        (Test-LabSet (Lab-RuleField $Rule InterfaceAlias) $Cfg.interface_alias),
+        (Test-LabAddress (Lab-RuleField $Rule LocalAddress) $Flow.LocalAddress $Cfg.ip),
+        (Test-LabAddress (Lab-RuleField $Rule RemoteAddress) $Flow.RemoteAddress $Cfg.ip),
+        (Test-LabPorts (Lab-RuleField $Rule LocalPort) $Flow.First $Flow.Last $false),
+        (Test-LabPorts (Lab-RuleField $Rule RemotePort) $Flow.First $Flow.Last $false)
+    )
+    if(-1 -in $tests){return -1} # No user lookup for a provably unrelated UDP rule.
+    $tests+=(Test-LabFixedLocalUser (Lab-RuleField $Rule LocalUser) $Cfg)
+    foreach($key in @('Package','InterfaceType','DynamicTransport','RemoteUser','RemoteMachine')){
+        $tests+=if((Lab-RuleField $Rule $key) -ieq 'Any'){1}else{0}
+    }
+    foreach($pair in @(@('Authentication','NotRequired'),@('Encryption','NotRequired'),@('OverrideBlockRules','False'))){
+        $tests+=if((Lab-RuleField $Rule $pair[0]) -ieq $pair[1]){1}else{0}
+    }
+    if(-1 -in $tests){return -1};if(0 -in $tests){return 0};return 1
+}
+function Get-LabUdpFlows($Cfg){
+    # Only the four fixed lab flows, not a general firewall policy engine.
+    @(
+        @{Direction='Inbound';LocalAddress='239.255.75.72';RemoteAddress=$Cfg.peer;First=50372;Last=50372},
+        @{Direction='Outbound';LocalAddress=$Cfg.ip;RemoteAddress='239.255.75.72';First=50372;Last=50372},
+        @{Direction='Inbound';LocalAddress=$Cfg.ip;RemoteAddress=$Cfg.peer;First=49152;Last=65535},
+        @{Direction='Outbound';LocalAddress=$Cfg.ip;RemoteAddress=$Cfg.peer;First=49152;Last=65535}
+    )
+}
+function Test-LabCurrentPolicyRelevant($Cfg,$Rule){
+    $action=Lab-RuleField $Rule Action
+    if($action -ine 'Allow'){
+        foreach($flow in @(Get-LabUdpFlows $Cfg)){if((Test-LabUdpBlock $Rule $Cfg $flow) -ge 0){return $true}}
+        foreach($reply in @($false,$true)){if((Test-LabSshRule $Rule $Cfg ($Cfg.side -ceq 'A') $false $reply) -ge 0){return $true}}
+    }elseif($action -ieq 'Allow' -and $Cfg.side -ceq 'B'){
+        return (Test-LabSshRule $Rule $Cfg $false $true) -ge 0
+    }
+    return $false
+}
+function Assert-LabUdpPath($Cfg,$Policy){
+    foreach($rule in $Policy){
+        $action=Lab-RuleField $rule Action
+        if($action -ieq 'Allow'){continue}
+        foreach($flow in @(Get-LabUdpFlows $Cfg)){
+            $match=Test-LabUdpBlock $rule $Cfg $flow
+            if($match -ge 0 -and $action -ine 'Block'){throw ('LAB_UDP_FILTER_UNCERTAIN:'+(Lab-RuleField $rule Name))}
+            if($match -eq 1){throw ('LAB_UDP_BLOCKED:'+(Lab-RuleField $rule Name))}
+            if($match -eq 0){throw ('LAB_UDP_FILTER_UNCERTAIN:'+(Lab-RuleField $rule Name))}
+        }
+    }
+}
 function Assert-LabInstalled($Cfg,$Want,$Initial,$Actor=$null,[switch]$TeardownOnly) {
     $now=Get-LabSnapshot $Cfg $Want
     Assert-LabNetwork $Cfg $now $Actor -SkipSsh:$TeardownOnly
+    Assert-LabUdpPath $Cfg $now.policy
     Assert-LabTask (Find-LabTask $Want.task.name) $Want.task
     foreach($rule in $Want.rules) {
         foreach($store in @('PersistentStore','ActiveStore')) {
@@ -525,33 +620,39 @@ function Assert-LabInstalled($Cfg,$Want,$Initial,$Actor=$null,[switch]$TeardownO
             if($rows.Count -ne 1 -or !(Lab-Equal $rows[0].view $rule)) { throw 'LAB_RULE_DRIFT' }
         }
     }
-    foreach($p in $now.profiles) {
-        $original=@($Initial.profiles | Where-Object { $_.store -ceq $p.store -and $_.name -ceq $p.name })[0]
-        $expected=$original | ConvertTo-Json -Depth 8 -Compress | ConvertFrom-Json
-        if($p.name -ceq 'Private') { $expected.enabled='True' }
-        if(!(Lab-Equal $p $expected)) { throw 'LAB_PROFILE_DRIFT' }
-    }
-    $before=@($Initial.policy | Where-Object { $_.Name -cnotin @($Want.rules | ForEach-Object Name) })
-    $after=@($now.policy | Where-Object { $_.Name -cnotin @($Want.rules | ForEach-Object Name) })
-    if(!(Lab-Equal $before $after) -or !(Lab-Equal $Initial.network $now.network)) { throw 'LAB_UNRELATED_POLICY_DRIFT' }
+    if(@($now.profiles|Where-Object {$_.name -ceq 'Private' -and $_.enabled -cne 'True'}).Count){throw 'LAB_PRIVATE_POLICY'}
 }
 function Assert-LabRestoreScope($Now,$Initial,$Want) {
-    # Also applies after an interrupted install/teardown, when owned rules/task may be partly absent.
+    # Cleanup is independent of foreign rules, current network and shared profiles.
+    # Any actual profile write has its own narrower precondition below.
+    $seen=@{}
+    foreach($row in $Now.rules){
+        $spec=@($Want.rules|Where-Object Name -ceq $row.view.Name);$key=$row.store+'/'+$row.view.Name
+        if($row.store -cnotin @('PersistentStore','ActiveStore') -or $spec.Count -ne 1 -or $seen.ContainsKey($key) -or !(Lab-Equal $row.view $spec[0])){throw 'LAB_RULE_DRIFT'}
+        $seen[$key]=$true
+    }
+}
+function Test-LabPrivateWrite($Now,$Initial,[switch]$Restore,[switch]$OwnedEnableConfirmed){
+    $original=@($Initial.profiles|Where-Object {$_.name -ceq 'Private' -and $_.store -ceq 'PersistentStore'})
+    $current=@($Now.profiles|Where-Object {$_.name -ceq 'Private' -and $_.store -ceq 'PersistentStore'})
+    if($original.Count -ne 1 -or $current.Count -ne 1){throw 'LAB_PROFILE_DRIFT'}
+    $target=if($Restore){$original[0].enabled}else{'True'}
+    # A no-op does not claim ownership of other profile settings.
+    if($current[0].enabled -ceq $target){return $false}
+    if($Restore -and $target -ceq 'False' -and !$OwnedEnableConfirmed){throw 'LAB_PROFILE_RESTORE_UNCONFIRMED'}
     foreach($key in @('network','adapter','dynamic_udp')) {
         if(!(Lab-Equal $Now.$key $Initial.$key)){throw 'LAB_RESTORE_NETWORK_DRIFT'}
     }
-    if(@($Now.profiles).Count -ne @($Initial.profiles).Count){throw 'LAB_PROFILE_DRIFT'}
-    foreach($p in $Now.profiles) {
+    $private=@($Now.profiles|Where-Object name -ceq 'Private')
+    if($private.Count -ne 2){throw 'LAB_PROFILE_DRIFT'}
+    foreach($p in $private) {
         $matches=@($Initial.profiles | Where-Object { $_.store -ceq $p.store -and $_.name -ceq $p.name })
         if($matches.Count -ne 1){throw 'LAB_PROFILE_DRIFT'}
         $expected=$matches[0] | ConvertTo-Json -Depth 8 -Compress | ConvertFrom-Json
-        if($p.name -ceq 'Private' -and $p.enabled -ceq 'True'){$expected.enabled='True'}
+        if($Restore){$expected.enabled='True'}
         if(!(Lab-Equal $p $expected)){throw 'LAB_PROFILE_DRIFT'}
     }
-    $names=@($Want.rules | ForEach-Object Name)
-    $before=@($Initial.policy | Where-Object { $_.Name -cnotin $names })
-    $after=@($Now.policy | Where-Object { $_.Name -cnotin $names })
-    if(!(Lab-Equal $before $after)){throw 'LAB_UNRELATED_POLICY_DRIFT'}
+    return $true
 }
 
 if($Mode -ceq 'Library') { return }
@@ -691,10 +792,11 @@ try {
                 $admitted=Get-LabSetupSnapshot $cfg $want $setupActor $installLock $PackageRoot
                 Lab-Write (Join-Path $PackageRoot 'fresh-audit.json') $admitted -MaxBytes 2097152
                 $admitted.snapshot
-            }else{Get-LabSnapshot $cfg $want}
+            }elseif($Mode -ceq 'Teardown'){Get-LabSnapshot $cfg $want -Cleanup}else{Get-LabSnapshot $cfg $want}
         }
         Preflight={param($now)
             Assert-LabNetwork $cfg $now $setupActor
+            Assert-LabUdpPath $cfg $now.policy
             if(!$setupMode){
                 Lab-Hex $AuditSha 64
                 if((Lab-JsonHash $now) -cne $AuditSha){throw 'LAB_AUDIT_CHANGED'}
@@ -703,7 +805,7 @@ try {
             foreach($name in $files){if(Test-Path -LiteralPath (Join-Path $agentDirectory $name)){throw 'LAB_FILE_COLLISION'}}
             if(Test-Path -LiteralPath (Join-Path $agentDirectory 'campaign-baseline.json')){throw 'LAB_FILE_COLLISION'}
         }
-        Apply={param($change,$w)
+        Apply={param($change,$w,$transactionJournal)
             switch($change){
                 'files' {
                     $agentDirectory=Join-Path $cfg.base 'ordinary-agent';[void][IO.Directory]::CreateDirectory($agentDirectory);Lab-Plain $agentDirectory
@@ -730,12 +832,23 @@ try {
                         $relevant=Get-LabRelevant $cfg $w;$ordinaryNow=Get-LabOrdinaryState $cfg $w
                         Assert-LabOrdinaryAgainstCim $cfg $w $ordinaryNow $relevant $PackageRoot
                     }
-                    Set-LabStage 'apply-private';Set-NetFirewallProfile -PolicyStore PersistentStore -Name Private -Enabled True
+                    if(!$transactionJournal){throw 'LAB_TRANSACTION_CONTEXT_REQUIRED'}
+                    $j=$transactionJournal
+                    $profileNow=Get-LabSnapshot $cfg $w
+                    Assert-LabNetwork $cfg $profileNow $setupActor
+                    Assert-LabUdpPath $cfg $profileNow.policy
+                    if(Test-LabPrivateWrite $profileNow (Get-LabRollbackInitial $j)){
+                        Set-LabStage 'apply-private';Set-NetFirewallProfile -PolicyStore PersistentStore -Name Private -Enabled True
+                        # A legacy intent alone cannot establish who enabled a shared
+                        # profile. Record a successful setter for this attempt only.
+                        $j|Add-Member NoteProperty private_write @{baseline_sha256=(Lab-JsonHash (Get-LabRollbackInitial $j));enabled='True'} -Force
+                        Save-LabInstallJournal $stateDir $j $null
+                    }
                 }
             }
         }
         Verify={param($w)
-            $j=Lab-Read $journalPath -MaxBytes 2097152;Assert-LabInstalled $cfg $w $j.initial $setupActor
+            $j=Lab-Read $journalPath -MaxBytes 2097152;Assert-LabInstalled $cfg $w (Get-LabRollbackInitial $j) $setupActor
             $path=Join-Path $cfg.base 'ordinary-agent/campaign-baseline.json'
             $intent=Join-Path $stateDir 'public-baseline-intent.json'
             if(!(Test-Path -LiteralPath $path)) {
@@ -757,8 +870,9 @@ try {
             Lab-Write (Join-Path $stateDir ('task-proof-'+[guid]::NewGuid().ToString('N')+'.json')) $proof
         }
         CanRemove={param($w,$initial,$phase)
-            if($phase -ceq 'installed'){Assert-LabInstalled $cfg $w $initial -TeardownOnly}
-            Assert-LabRestoreScope (Get-LabSnapshot $cfg $w) $initial $w
+            Assert-LabRestoreScope (Get-LabSnapshot $cfg $w -Cleanup) $initial $w
+            $task=Find-LabTask $w.task.name;if($task){Assert-LabTask $task $w.task}
+            if($phase -cin @('installing','rollback_incomplete','recovering')){Undo-LabInstallFiles $cfg.base $stateDir $files -CheckOnly}
             if(!('KilogramLabJob' -as [type])){Add-Type -Path "$PSScriptRoot/test-terminal-t1-3e-lab-job.cs"}
             Stop-LabIdleAgent $cfg.base $teardownHandles
         }
@@ -766,12 +880,13 @@ try {
             switch($change){
                 'private' {
                     $p=@($initial.profiles | Where-Object { $_.store -ceq 'PersistentStore' -and $_.name -ceq 'Private' })[0]
-                    $snapshot=Get-LabSnapshot $cfg $w
-                    Assert-LabRestoreScope $snapshot $initial $w
-                    $now=@($snapshot.profiles | Where-Object { $_.store -ceq 'PersistentStore' -and $_.name -ceq 'Private' })[0]
-                    $expected=$p | ConvertTo-Json -Depth 8 -Compress | ConvertFrom-Json;$expected.enabled='True'
-                    if(!(Lab-Equal $now $p) -and !(Lab-Equal $now $expected)){throw 'LAB_PROFILE_DRIFT'}
-                    if($now.enabled -cne $p.enabled){Set-NetFirewallProfile -PolicyStore PersistentStore -Name Private -Enabled $p.enabled}
+                    $snapshot=Get-LabSnapshot $cfg $w -Cleanup
+                    $current=@($snapshot.profiles|Where-Object {$_.name -ceq 'Private' -and $_.store -ceq 'PersistentStore'})
+                    if($current.Count -ne 1){throw 'LAB_PROFILE_DRIFT'}
+                    if($current[0].enabled -cne $p.enabled){$snapshot=Get-LabSnapshot $cfg $w -Cleanup -ProfileWrite}
+                    $j=Lab-Read $journalPath -MaxBytes 2097152
+                    $confirmed=$j.PSObject.Properties['private_write'] -and $j.private_write.enabled -ceq 'True' -and $j.private_write.baseline_sha256 -ceq (Lab-JsonHash $initial)
+                    if(Test-LabPrivateWrite $snapshot $initial -Restore -OwnedEnableConfirmed:$confirmed){Set-NetFirewallProfile -PolicyStore PersistentStore -Name Private -Enabled $p.enabled}
                 }
                 {$_ -in @('rule0','rule1')} {
                     $spec=$w.rules[[int]$change.Substring(4)]

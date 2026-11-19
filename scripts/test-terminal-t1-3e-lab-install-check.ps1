@@ -90,7 +90,9 @@ $fixture=Join-Path ([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($Evidence
 $cfg=Get-LabConfig A;$cfg.base=$fixture;$spec=Lab-TaskSpec $cfg
 $script:taskFixture=[pscustomobject]@{Xml=$spec.xml;Sddl=$spec.sddl}
 $script:taskFixture | Add-Member -MemberType ScriptMethod -Name GetSecurityDescriptor -Value {param($flags) $this.Sddl}
-$script:relevantFixture=[pscustomobject]@{profile='PrivateOn';peer='exact';rules=@('scoped-discovery','scoped-iroh')}
+$script:relevantFixture=([pscustomobject]@{backend='com-native-v1';profiles=@(@{name='Private';enabled='True'});policy=@();
+    native_network=@{adapter=@{guid=$cfg.interface_guid};udp=@(49152,65535);network=@(@{index=$cfg.interface_index;category='Private'})};
+    rules=@(foreach($r in @(Lab-Rules $cfg)){@{name=$r.Name;view=$r;persistent_sha256=('a'*64)}})}|ConvertTo-Json -Depth 18|ConvertFrom-Json)
 function Find-LabTask([string]$Name){$script:taskFixture}
 function Get-LabOrdinaryState($Cfg,$Want){$script:relevantFixture}
 $baseline=Join-Path $fixture 'ordinary-agent/campaign-baseline.json'
@@ -98,24 +100,26 @@ Lab-Write $baseline @{v=2;task=$spec;initial_audit_sha256=('a'*64);relevant=@{au
 $pin=Lab-Hash $baseline
 $null=Assert-LabReadOnly $cfg $pin
 Reject {Assert-LabReadOnly $cfg ('b'*64)} 'LAB_BASELINE_PIN'
-$script:relevantFixture.peer='drift'
+$script:relevantFixture.rules[0].view.RemoteAddress='drift'
 Reject {Assert-LabReadOnly $cfg $pin} 'LAB_BASELINE_DRIFT'
 $cases.ordinary_baseline_pin_and_relevant_drift_boundary=$true
-$initial=[pscustomobject]@{network=@('WiFiPrivate');adapter=@{guid='fixed'};dynamic_udp=@('49152','16384');
-    profiles=@(@{store='PersistentStore';name='Private';enabled='False';outbound='Allow'},@{store='PersistentStore';name='Public';enabled='True';outbound='Allow'});
+$initial=[pscustomobject]@{rules=@();network=@('WiFiPrivate');adapter=@{guid='fixed'};dynamic_udp=@('49152','16384');
+    profiles=@(@{store='PersistentStore';name='Private';enabled='False';outbound='Allow'},@{store='PersistentStore';name='Public';enabled='True';outbound='Allow'},@{store='ActiveStore';name='Private';enabled='False';outbound='Allow'});
     policy=@(@{Name='foreign-ssh';port=22})}
 $guardWant=@{rules=@(@{Name='owned0'},@{Name='owned1'})}
 $current=$initial | ConvertTo-Json -Depth 12 | ConvertFrom-Json
 $current.profiles[0].enabled='True'
+$current.profiles[2].enabled='True'
 Assert-LabRestoreScope $current $initial $guardWant
-$current.network+=@('new-private-vpn');Reject {Assert-LabRestoreScope $current $initial $guardWant} 'LAB_RESTORE_NETWORK_DRIFT'
+Require (Test-LabPrivateWrite $current $initial -Restore -OwnedEnableConfirmed) 'confirmed_private_restore'
+$current.network+=@('new-private-vpn');Reject {Test-LabPrivateWrite $current $initial -Restore -OwnedEnableConfirmed} 'LAB_RESTORE_NETWORK_DRIFT'
 $current=$initial | ConvertTo-Json -Depth 12 | ConvertFrom-Json
-$current.profiles[1].enabled='False';Reject {Assert-LabRestoreScope $current $initial $guardWant} 'LAB_PROFILE_DRIFT'
+$current.profiles[1].enabled='False';Assert-LabRestoreScope $current $initial $guardWant
 $current=$initial | ConvertTo-Json -Depth 12 | ConvertFrom-Json
-$current.policy+=@{Name='new-unrelated-rule';port=99};Reject {Assert-LabRestoreScope $current $initial $guardWant} 'LAB_UNRELATED_POLICY_DRIFT'
+$current.policy+=@{Name='new-unrelated-rule';port=99};Assert-LabRestoreScope $current $initial $guardWant
 $current=$initial | ConvertTo-Json -Depth 12 | ConvertFrom-Json
-$current.adapter.guid='different';Reject {Assert-LabRestoreScope $current $initial $guardWant} 'LAB_RESTORE_NETWORK_DRIFT'
-$cases.rollback_and_teardown_profile_wide_drift_guard=$true
+$current.adapter.guid='different';Assert-LabRestoreScope $current $initial $guardWant
+$cases.owned_cleanup_independent_of_foreign_state_profile_write_guard=$true
 $journalDir=Join-Path ([IO.Path]::GetDirectoryName([IO.Path]::GetFullPath($Evidence))) 'journal-fixture'
 if(Test-Path -LiteralPath $journalDir){throw 'CHECK:journal_fixture_exists'}
 [void][IO.Directory]::CreateDirectory($journalDir)
