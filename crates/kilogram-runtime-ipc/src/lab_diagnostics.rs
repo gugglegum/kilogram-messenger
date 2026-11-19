@@ -27,6 +27,16 @@ pub struct Sink {
 #[derive(Clone, Copy, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Kind {
+    StartupSetupOpen,
+    StartupBegin,
+    StartupImportBegin,
+    StartupImportEnd,
+    StartupProfileBegin,
+    StartupPrepared,
+    StartupSpawned,
+    StartupDescriptor,
+    StartupStatus,
+    StartupFailed,
     RuntimeStopping,
     RuntimeNetworkStopped,
     RuntimeFinal,
@@ -36,6 +46,16 @@ pub enum Kind {
 impl Kind {
     fn name(self) -> &'static str {
         match self {
+            Self::StartupSetupOpen => "startup-setup-open",
+            Self::StartupBegin => "startup-begin",
+            Self::StartupImportBegin => "startup-import-begin",
+            Self::StartupImportEnd => "startup-import-end",
+            Self::StartupProfileBegin => "startup-profile-begin",
+            Self::StartupPrepared => "startup-prepared",
+            Self::StartupSpawned => "startup-spawned",
+            Self::StartupDescriptor => "startup-descriptor",
+            Self::StartupStatus => "startup-status",
+            Self::StartupFailed => "startup-failed",
             Self::RuntimeStopping => "runtime-stopping",
             Self::RuntimeNetworkStopped => "runtime-network-stopped",
             Self::RuntimeFinal => "runtime-final",

@@ -133,6 +133,12 @@ impl Chat {
                     control.is_none_or(|op| op.provisional_owner(owner.clone())),
                     "Connection cancelled"
                 );
+                if let Some(sink) =
+                    kilogram_runtime_ipc::lab_diagnostics::Sink::open(&self.setup_dir)
+                {
+                    let _ = sink.record(kilogram_runtime_ipc::lab_diagnostics::Kind::StartupSetupOpen, None, None,
+                        &serde_json::json!({"elapsed_ms":0,"ok":null,"cancelled":control.is_some_and(OperationControl::stopped),"spawned":false}));
+                }
                 let setup = Setup::open(&self.setup_dir)?;
                 let lan = connection::lan_settings(&setup);
                 Session::Owner(Box::new(Work::start_terminal(

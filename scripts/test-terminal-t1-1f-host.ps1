@@ -135,7 +135,9 @@ if($req.op -ceq 'lab-diagnostic-read'){
     if((Get-Item -LiteralPath (Join-Path $dir 'enabled.json')).Length -gt 256){throw 'Diagnostic marker cap'}
     $marker=Get-Content -LiteralPath (Join-Path $dir 'enabled.json') -Raw|ConvertFrom-Json
     if((@($marker.PSObject.Properties.Name|Sort-Object)-join '|') -cne 'run_nonce|schema' -or $marker.schema -ne 1 -or $marker.run_nonce -cne $bound.entry.generation){throw 'Diagnostic marker binding'}
-    $allowed=@('schema','kind','run_nonce','pid','runtime_pid','runtime_instance','data','enabled','elapsed_ms','counters','last_os_error_by_stage','slots','slot','stage',
+    $startupKinds=@('startup_setup_open','startup_begin','startup_import_begin','startup_import_end','startup_profile_begin','startup_prepared','startup_spawned','startup_descriptor','startup_status','startup_failed')
+    $recordNamePattern='^(runtime-stopping|runtime-network-stopped|runtime-final|connection-final|worker-final|startup-(setup-open|begin|import-begin|import-end|profile-begin|prepared|spawned|descriptor|status|failed))-[1-9][0-9]*\.json$'
+    $allowed=@('schema','kind','run_nonce','pid','runtime_pid','runtime_instance','data','enabled','elapsed_ms','ok','cancelled','spawned','counters','last_os_error_by_stage','slots','slot','stage',
         'attempts','errors','timeouts','leases','fresh_ok','fresh_errors','network_ok','network_join_ok','ipc_ok','owner_join_ok',
         'client_present','was_running','child_query_failed','ack_attempted','ack','descriptor_read_ok','conflict','forced','exit_success','exit','eof','drain_count','drain_eof','drain_failed',
         'running_ok','saved_ok','stop_graceful','stop_forced','reaped',
@@ -149,7 +151,7 @@ if($req.op -ceq 'lab-diagnostic-read'){
         if($null -eq $Value -or $Value -is [bool]){return}
         if($Value -is [string]){
             if(($Key -ceq 'run_nonce' -and $Value -cmatch '^[0-9a-f]{32}$') -or ($Key -ceq 'runtime_instance' -and $Value -cmatch '^[0-9a-f]{64}$') -or
-               ($Key -ceq 'kind' -and $Value -cin @('runtime_stopping','runtime_network_stopped','runtime_final','connection_final','worker_final')) -or
+               ($Key -ceq 'kind' -and ($Value -cin $startupKinds -or $Value -cin @('runtime_stopping','runtime_network_stopped','runtime_final','connection_final','worker_final'))) -or
                ($Key -ceq 'stage' -and $Value -cin @('idle','role_check','not_dialer','waiting_target','peer_selection','connect','route_policy','begin_admission','hello','proof','admitted','authenticated_lease','fresh_protocol','serving','ended','unknown'))){return}
             throw 'Diagnostic string outside typed schema'
         }
@@ -163,7 +165,7 @@ if($req.op -ceq 'lab-diagnostic-read'){
     $records=@();$rejected=@()
     foreach($file in $files){
         try{
-            if($file.Name -cnotmatch '^(runtime-stopping|runtime-network-stopped|runtime-final|connection-final|worker-final)-[1-9][0-9]*\.json$' -or $file.Length -gt 16384){throw 'Diagnostic file cap/name'}
+            if($file.Name -cnotmatch $recordNamePattern -or $file.Length -gt 16384){throw 'Diagnostic file cap/name'}
             Assert-PlainPath $file.FullName
             $bytes=[IO.File]::ReadAllBytes($file.FullName);$value=[Text.Encoding]::UTF8.GetString($bytes)|ConvertFrom-Json
             Assert-DiagnosticValue $value '' 0
@@ -172,13 +174,19 @@ if($req.op -ceq 'lab-diagnostic-read'){
             $stem=$value.kind.Replace('_','-');if($file.Name -cne ($stem+'-'+$value.pid+'.json')){throw 'Diagnostic filename binding'}
             if($value.kind -clike 'runtime_*'){
                 if($value.pid -ne $req.diagnostic_runtime_pid -or $value.runtime_pid -ne $req.diagnostic_runtime_pid -or $value.runtime_instance -cne $req.diagnostic_runtime_instance){throw 'Diagnostic runtime binding'}
+            }elseif($value.kind -cin $startupKinds){
+                if($value.pid -ne $req.diagnostic_chat_pid){throw 'Diagnostic startup Chat binding'}
+                if($null -ne $value.runtime_pid -and (($value.runtime_pid -isnot [int] -and $value.runtime_pid -isnot [long]) -or $value.runtime_pid -le 0)){throw 'Diagnostic startup runtime PID type'}
+                if($null -ne $value.runtime_instance -and ($null -eq $value.runtime_pid -or $value.kind -cnotin @('startup_status','startup_failed'))){throw 'Premature startup instance'}
+                if($null -ne $value.runtime_pid -and $req.diagnostic_runtime_pid -and $value.runtime_pid -ne $req.diagnostic_runtime_pid){throw 'Startup runtime PID binding'}
+                if($null -ne $value.runtime_instance -and $req.diagnostic_runtime_instance -and $value.runtime_instance -cne $req.diagnostic_runtime_instance){throw 'Startup runtime instance binding'}
             }else{
                 if($value.pid -ne $req.diagnostic_chat_pid){throw 'Diagnostic Chat binding'}
                 if($req.diagnostic_runtime_pid -and ($value.runtime_pid -ne $req.diagnostic_runtime_pid -or $value.runtime_instance -cne $req.diagnostic_runtime_instance)){throw 'Diagnostic Chat runtime binding'}
             }
             $sha=[Security.Cryptography.SHA256]::Create();try{$hash=([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose()}
             $records+=@{name=$file.Name;bytes=$bytes.Length;sha256=$hash;data=[Convert]::ToBase64String($bytes)}
-        }catch{$rejected+=@{name=if($file.Name -cmatch '^(runtime-stopping|runtime-network-stopped|runtime-final|connection-final|worker-final)-[1-9][0-9]*\.json$'){$file.Name}else{'invalid_name'};reason='schema_or_identity_rejected'}}
+        }catch{$rejected+=@{name=if($file.Name -cmatch $recordNamePattern){$file.Name}else{'invalid_name'};reason='schema_or_identity_rejected'}}
     }
     @{schema=1;records=$records;rejected=$rejected;run_nonce=$bound.entry.generation}|ConvertTo-Json -Depth 6 -Compress
     return

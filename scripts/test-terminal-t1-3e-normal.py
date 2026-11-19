@@ -56,12 +56,12 @@ class Agent(C['Agent']):
     def __init__(self,*args,ledger,**kwargs):
         super().__init__(*args,**kwargs);self.ledger=ledger;ledger.mkdir()
 
-    def exchange(self,request):
+    def exchange(self,request,*,deadline=None):
         path=self.ledger/(request['id']+'.json')
         if not path.exists():save(path,request)
         else:require(json.loads(path.read_bytes())==request,'immutable request ledger')
         for retry in range(2):
-            try:return super().exchange(request)
+            try:return super().exchange(request) if deadline is None else super().exchange(request,deadline=deadline)
             except (OSError,subprocess.TimeoutExpired):
                 if retry:raise
             except RuntimeError as error:

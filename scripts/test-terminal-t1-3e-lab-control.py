@@ -55,9 +55,11 @@ class Agent:
             raise RuntimeError('read ready first')
         return {'v': 1, 'session': self.session, 'id': uuid.uuid4().hex, 'op': op, 'args': args}
 
-    def exchange(self, request):
+    def exchange(self, request, *, deadline=None):
         # Lost-reply retries must use this same immutable request, never create a new begin.
-        row = self.invoke('Command', request)
+        timeout=28 if deadline is None else min(28,deadline-time.monotonic())
+        if timeout<2:raise TimeoutError('no new tiny-budget agent request')
+        row = self.invoke('Command', request, timeout=timeout)
         if (row['v'], row['id'], row['session']) != (1, request['id'], request['session']):
             raise RuntimeError('lab response identity')
         if not row['ok']:
@@ -70,7 +72,7 @@ class Agent:
     def wait(self, attempt, seconds=30):
         end = time.monotonic() + seconds
         while time.monotonic() < end:
-            row = self.call('status', attempt=attempt)
+            row = self.exchange(self.request('status',attempt=attempt),deadline=end)
             if row['result'] is not None and row['active'] != attempt:
                 return row['result']
             if row['blocked']:
@@ -99,8 +101,10 @@ class Owner:
         self.attempt, self.tag, self.generation = attempt, tag, generation
         self.process = None
 
-    def sample(self):
-        row = self.attempt.agent.call('status', attempt=self.attempt.attempt)
+    def sample(self,end=None):
+        agent=self.attempt.agent
+        row = (agent.call('status',attempt=self.attempt.attempt) if end is None else
+            agent.exchange(agent.request('status',attempt=self.attempt.attempt),deadline=end))
         owner = None
         for item in row['owners']:
             if item and item['tag'] == self.tag:
@@ -114,13 +118,13 @@ class Owner:
         return row, owner
 
     def check_alive(self, end):
-        row, owner = self.sample()
+        row, owner = self.sample(end)
         if row['result'] is not None or (owner and owner['state'] != 'running'):
             raise RuntimeError('owner failed before mailbox readiness')
 
     def wait(self, end):
         while time.monotonic() < end:
-            row, owner = self.sample()
+            row, owner = self.sample(end)
             if owner and owner['state'] == 'clean' and owner['exit'] == 0:
                 return 0
             if row['result'] is not None or (owner and owner['state'] == 'failed'):

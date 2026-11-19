@@ -25,8 +25,8 @@ public sealed class KilogramTestMailbox
     readonly long workTick;
     readonly object gate = new object();
     int sequence, cursor;
-    string pending;
-    bool pendingQuit;
+    sealed class Pending { public int sequence; public string op; }
+    readonly Dictionary<string, Pending> pending = new Dictionary<string, Pending>();
     volatile bool quitAcknowledged;
 
     static JavaScriptSerializer Parser(int cap) {
@@ -129,13 +129,19 @@ public sealed class KilogramTestMailbox
             }
             Require(input.Read() == -1);
             byte[] bytes = Convert.FromBase64String(encoded.ToString());
-            Command(bytes);
+            var request = Command(bytes);
             string sha;
             using (var h = SHA256.Create()) sha = BitConverter.ToString(h.ComputeHash(bytes)).Replace("-", "").ToLowerInvariant();
             Require(sha == digest);
             string command = Numbered(root, "command", seq);
             if (!PlainFile(command)) {
-                Require((seq == 1 || PlainFile(Numbered(root, "done", seq - 1))) &&
+                bool previousDone = seq == 1 || PlainFile(Numbered(root, "done", seq - 1));
+                bool quitConnect = false;
+                if (!previousDone && seq > 1 && object.Equals(request["op"], "quit") &&
+                    PlainFile(Numbered(root,"command",seq-1)) && (seq == 2 || PlainFile(Numbered(root,"done",seq-2)))) {
+                    quitConnect = object.Equals(Command(Read(Numbered(root,"command",seq-1),MaxCommand))["op"],"connect");
+                }
+                Require((previousDone || quitConnect) &&
                         !closed && !expired && !stopped && !PlainFile(Path.Combine(root, "closing")));
                 Publish(command, bytes);
             }
@@ -166,15 +172,18 @@ public sealed class KilogramTestMailbox
     byte[] Next(Process child = null) {
         while (!Stopped && !QuitAcknowledged && (child == null || !child.HasExited)) {
             lock (gate) {
-                if (pending == null && cursor > 0 && sequence < MaxSequence) {
+                if (pending.Count < 2 && cursor > 0 && sequence < MaxSequence) {
                     string command = Numbered(path, "command", sequence + 1);
                     if (PlainFile(command)) {
                         var bytes = Read(command, MaxCommand);
                         var row = Command(bytes);
-                        pending = (string)row["id"];
-                        pendingQuit = object.Equals(row["op"], "quit");
-                        sequence++;
-                        return bytes;
+                        // Setup and all ordinary commands remain strictly serial.
+                        if (pending.Count == 0 || (child != null && pending.Count == 1 &&
+                            pending.Values.Single().op == "connect" && object.Equals(row["op"],"quit"))) {
+                            sequence++;
+                            pending.Add((string)row["id"],new Pending { sequence=sequence,op=(string)row["op"] });
+                            return bytes;
+                        }
                     }
                 }
             }
@@ -191,16 +200,17 @@ public sealed class KilogramTestMailbox
         lock (gate) {
             Require(cursor < MaxCursor);
             if (cursor == 0) Require(kind == "ready");
-            else if (kind == "result") Require(pending != null && object.Equals(row["id"], pending));
+            else if (kind == "result") Require(row.ContainsKey("id") && row["id"] is string && pending.ContainsKey((string)row["id"]));
             else Require(!setup && kind == "event" && object.Equals(row["event"], "incoming") && !row.ContainsKey("id"));
             Require(Publish(Numbered(path, "public", ++cursor), bytes));
             if (kind == "result") {
-                if (pendingQuit && object.Equals(row["ok"], true)) {
+                var completed = pending[(string)row["id"]];
+                if (completed.op == "quit" && object.Equals(row["ok"], true)) {
                     Require(Publish(Path.Combine(path, "closing"), new byte[] { 1 }));
                     quitAcknowledged = true;
                 }
-                Require(Publish(Numbered(path, "done", sequence), new byte[] { 1 }));
-                pending = null;
+                Require(Publish(Numbered(path, "done", completed.sequence), new byte[] { 1 }));
+                pending.Remove((string)row["id"]);
             }
         }
     }

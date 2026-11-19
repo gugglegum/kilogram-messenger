@@ -338,6 +338,7 @@ pub(super) fn expected_profile(record: &Record, base: &Path) -> Result<Profile2D
         physical_quota: Some(48 * 1024 * 1024 * 1024),
     })
 }
+#[cfg(test)]
 pub(super) fn prepare(
     setup: &mut Setup,
     exe: &Path,
@@ -380,12 +381,24 @@ fn check_pre_spawn_cleanup(setup: &Setup) -> Result<()> {
     Ok(())
 }
 
+#[cfg(test)]
 fn prepare_with(
     setup: &mut Setup,
     exe: &Path,
     cancel: Arc<AtomicBool>,
     fresh_profile: bool,
     helpers: PrepareHelpers,
+) -> Result<(PathBuf, Profile2Document)> {
+    prepare_observed(setup, exe, cancel, fresh_profile, helpers, None)
+}
+
+fn prepare_observed(
+    setup: &mut Setup,
+    exe: &Path,
+    cancel: Arc<AtomicBool>,
+    fresh_profile: bool,
+    helpers: PrepareHelpers,
+    diagnostics: Option<&StartupDiagnostics>,
 ) -> Result<(PathBuf, Profile2Document)> {
     check_pre_spawn_cleanup(setup)?;
     ensure!(
@@ -397,7 +410,17 @@ fn prepare_with(
     } else {
         prepared_profile(&setup.home, &setup.record)?;
     }
+    if let Some(d) = diagnostics {
+        d.record(DiagnosticKind::StartupImportBegin, None, &cancel);
+    }
     let imported = (helpers.import)(setup, exe, consent::Action::Import, cancel.clone());
+    if let Some(d) = diagnostics {
+        d.record(
+            DiagnosticKind::StartupImportEnd,
+            Some(imported.is_ok()),
+            &cancel,
+        );
+    }
     remember_helper_cleanup(setup, imported)?;
     ensure!(
         !cancel.load(Ordering::Acquire),
@@ -470,6 +493,9 @@ fn prepare_with(
             ]);
         }
         // A lost acknowledgement may leave a complete no-clobber output.
+        if let Some(d) = diagnostics {
+            d.record(DiagnosticKind::StartupProfileBegin, None, &cancel);
+        }
         let outcome = remember_helper_cleanup(setup, (helpers.profile)(exe, &args, cancel.clone()));
         if let Err(error) = outcome
             && matches!(
@@ -498,7 +524,79 @@ fn prepare_with(
         s.profile_digest = Some(hash);
         s.last_outcome = Some("prepared".into());
     })?;
+    if let Some(d) = diagnostics {
+        d.record(DiagnosticKind::StartupPrepared, Some(true), &cancel);
+    }
     Ok((path, doc))
+}
+
+/// Fixed, opt-in startup boundaries, including failures before Session exists.
+/// No helper output, error text or speculative runtime identity is retained.
+struct StartupDiagnostics {
+    sink: Option<DiagnosticSink>,
+    started: Instant,
+    runtime_pid: std::cell::Cell<Option<u32>>,
+    instance: std::cell::RefCell<Option<String>>,
+}
+
+#[cfg(test)]
+mod startup_diagnostic_tests {
+    use super::*;
+    #[test]
+    fn t13startup_cancel_before_session_preserves_chat_only_evidence() -> Result<()> {
+        let folder = tempfile::tempdir()?;
+        let mut setup = Setup::begin(&folder.path().join("setup"), None)?;
+        let directory = setup
+            .home
+            .join(kilogram_runtime_ipc::lab_diagnostics::DIRECTORY);
+        fs::create_dir(&directory)?;
+        fs::write(
+            directory.join("enabled.json"),
+            br#"{"schema":1,"run_nonce":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#,
+        )?;
+        let cancel = Arc::new(AtomicBool::new(true));
+        let cleanup = Cleanup::default();
+        assert!(
+            Session::start(
+                &mut setup,
+                Path::new("never-spawned.exe"),
+                cancel,
+                true,
+                &cleanup
+            )
+            .is_err()
+        );
+        assert!(!cleanup.spawned.load(Ordering::Acquire));
+        for kind in ["startup-begin", "startup-failed"] {
+            let bytes = fs::read(directory.join(format!("{kind}-{}.json", std::process::id())))?;
+            let value: serde_json::Value = serde_json::from_slice(&bytes)?;
+            assert_eq!(value["pid"], std::process::id());
+            assert!(value["runtime_pid"].is_null() && value["runtime_instance"].is_null());
+            assert_eq!(value["data"]["cancelled"], true);
+            assert_eq!(value["data"]["spawned"], false);
+            assert!(bytes.len() < 1024);
+        }
+        assert_eq!(fs::read_dir(directory)?.count(), 3);
+        Ok(())
+    }
+}
+impl StartupDiagnostics {
+    fn new(home: &Path) -> Self {
+        Self {
+            sink: DiagnosticSink::open(home),
+            started: Instant::now(),
+            runtime_pid: std::cell::Cell::new(None),
+            instance: std::cell::RefCell::new(None),
+        }
+    }
+    fn record(&self, kind: DiagnosticKind, ok: Option<bool>, cancel: &AtomicBool) {
+        if let Some(sink) = &self.sink {
+            let instance = self.instance.borrow();
+            let _ = sink.record(kind, self.runtime_pid.get(), instance.as_deref(),
+                &serde_json::json!({"elapsed_ms":u64::try_from(self.started.elapsed().as_millis()).unwrap_or(u64::MAX),
+                    "ok":ok,"cancelled":cancel.load(Ordering::Acquire),"spawned":self.runtime_pid.get().is_some()}));
+        }
+    }
 }
 
 struct Drain {
@@ -695,14 +793,42 @@ impl Session {
         fresh_profile: bool,
         cleanup: &Cleanup,
     ) -> Result<Self> {
+        let diagnostics = StartupDiagnostics::new(&setup.home);
+        diagnostics.record(DiagnosticKind::StartupBegin, None, &cancel);
+        let result = Self::start_observed(
+            setup,
+            exe,
+            cancel.clone(),
+            fresh_profile,
+            cleanup,
+            &diagnostics,
+        );
+        if result.is_err() {
+            diagnostics.record(DiagnosticKind::StartupFailed, Some(false), &cancel);
+        }
+        result
+    }
+
+    fn start_observed(
+        setup: &mut Setup,
+        exe: &Path,
+        cancel: Arc<AtomicBool>,
+        fresh_profile: bool,
+        cleanup: &Cleanup,
+        diagnostics: &StartupDiagnostics,
+    ) -> Result<Self> {
         #[cfg(test)]
-        let prepared = if let Some(helpers) = cleanup.prepare_helpers {
-            prepare_with(setup, exe, cancel.clone(), fresh_profile, helpers)
-        } else {
-            prepare(setup, exe, cancel.clone(), fresh_profile)
-        };
+        let helpers = cleanup.prepare_helpers.unwrap_or_default();
         #[cfg(not(test))]
-        let prepared = prepare(setup, exe, cancel.clone(), fresh_profile);
+        let helpers = PrepareHelpers::default();
+        let prepared = prepare_observed(
+            setup,
+            exe,
+            cancel.clone(),
+            fresh_profile,
+            helpers,
+            Some(diagnostics),
+        );
         let (path, doc) = prepared?;
         // Immutable bindings, not an authority cache. Runtime checks current
         // consent/authority and the live lease on every status observation.
@@ -741,6 +867,8 @@ impl Session {
         );
         let child = command.spawn()?;
         cleanup.spawned.store(true, Ordering::Release);
+        diagnostics.runtime_pid.set(Some(child.id()));
+        diagnostics.record(DiagnosticKind::StartupSpawned, Some(true), &cancel);
 
         let mut session = Self {
             diagnostics: DiagnosticSink::open(&setup.home),
@@ -774,6 +902,7 @@ impl Session {
                 if let Ok(d) = RuntimeIpcDescriptor::load(&session.doc.ipc_file)
                     && before.as_ref() != Some(&d)
                 {
+                    diagnostics.record(DiagnosticKind::StartupDescriptor, Some(true), &cancel);
                     let info = setup.record.public.as_ref().context("Account")?;
                     let candidate = Client2::new(
                         d,
@@ -791,6 +920,8 @@ impl Session {
                             .map_err(|_| anyhow::anyhow!("startup timed out"))?
                     })?;
                     session.validate_status(&status)?;
+                    *diagnostics.instance.borrow_mut() = Some(status.runtime_instance.clone());
+                    diagnostics.record(DiagnosticKind::StartupStatus, Some(true), &cancel);
                     session.instance = Some(status.runtime_instance.clone());
                     session.last_status = Some(status);
                     session.client = Some(candidate);

@@ -66,6 +66,7 @@ class MailboxTerminal(Terminal):
         self.last_readiness = self.live_readiness = None
         self.quit_verified = False
         self.seq = self.cursor = 0
+        self.requests = {}
         self.queued = []
         self.closed = None
         self.stopped = False
@@ -83,7 +84,13 @@ class MailboxTerminal(Terminal):
                 self.events.append({field: doc[field] for field in prior["INCOMING_FIELDS"]})
             else:
                 require(doc["type"] in ("ready", "result"), "mailbox terminal frame")
-                self.queued.append(doc)
+                if doc['type']=='ready':
+                    require(self.cursor==0 and not self.queued,'duplicate mailbox readiness')
+                    self.queued.append(doc)
+                else:
+                    request=self.requests.get(doc.get('id'))
+                    require(request is not None and request['reply'] is None,'unknown or duplicate mailbox reply')
+                    request['reply']=doc;request['reply_received']=time.monotonic()
         self.cursor = response["cursor"]
         self.closed = response["terminal"] if len(rows) < 8 else None
         return response
@@ -106,22 +113,85 @@ class MailboxTerminal(Terminal):
                 time.sleep(0.15)
         return self.queued.pop(0)
 
+    def wait_reply(self, identity, end):
+        request=self.requests[identity]
+        while request['reply'] is None:
+            require(not self.closed,'mailbox EOF with outstanding reply')
+            remaining(end,15)
+            self.collect(end)
+        request['wait_completed']=time.monotonic()
+        return request['reply']
+
+    def reconcile(self,end):
+        # Preserve every original result. Never manufacture a new connect ID.
+        for identity,request in self.requests.items():
+            if request['reply'] is None:
+                self.submit_known(request,end)
+                self.wait_reply(identity,end)
+
+    def submit_known(self,request,end):
+        if request['submit_finished'] is not None or request['reply'] is not None:return
+        require(len(request['submit_attempts'])<4,'bounded mailbox submission attempts exhausted')
+        attempt=dict(sent=time.monotonic(),received=None,state=None,error=None);request['submit_attempts'].append(attempt)
+        if request['submit_started'] is None:request['submit_started']=attempt['sent']
+        try:
+            response=self.collect(end,'submit',request['sequence'],request['payload'])
+            attempt['state']=response['state']
+            require(response['state'] in ('pending','done') or request['reply'] is not None,'mailbox command outcome unknown')
+            request['submit_finished']=time.monotonic()
+        except Exception as error:
+            attempt['error']=type(error).__name__
+            if len(request['errors'])<4:request['errors'].append(dict(stage='submit',type=type(error).__name__,at=time.monotonic()))
+            raise
+        finally:attempt['received']=time.monotonic()
+
     def result(self, op, args, end):
-        self.seq += 1
-        payload = frame(self.seq, op, args)
-        response = self.collect(end, "submit", self.seq, payload)
-        require(response["state"] in ("pending", "done"), "mailbox command outcome unknown")
-        row = self.line(end)
-        require(row and row["type"] == "result" and row["id"] == f"t12e-{self.seq}",
-                "mailbox result correlation or closed session")
-        return row
+        pending=[(identity,row) for identity,row in self.requests.items() if row['reply'] is None]
+        reusable=[(identity,row) for identity,row in self.requests.items() if row['op']=='connect' and row.get('wait_completed') is None]
+        if op=='connect' and reusable:
+            require(len(reusable)==1 and reusable[0][1]['payload']==frame(reusable[0][1]['sequence'],op,args),'different request while connect outcome unknown')
+            identity,request=reusable[0]
+        else:
+            if op=='quit' and len(pending)==1 and pending[0][1]['op']=='connect':
+                # Unknown delivery is reconciled by the SAME immutable command
+                # before its successor is published; no skipped predecessor.
+                self.submit_known(pending[0][1],end)
+            if pending and not (op=='quit' and len(pending)==1 and pending[0][1]['op']=='connect'):
+                self.reconcile(end)
+            require(not self.closed and self.seq<192,'closed mailbox or command cap')
+            self.seq+=1;identity=f't12e-{self.seq}'
+            request=dict(sequence=self.seq,op=op,payload=frame(self.seq,op,args),created=time.monotonic(),submit_started=None,submit_finished=None,submit_attempts=[],reply=None,errors=[])
+            self.requests[identity]=request
+        self.submit_known(request,end)
+        try:return self.wait_reply(identity,end)
+        except Exception as error:
+            if len(request['errors'])<4:request['errors'].append(dict(stage='observe',type=type(error).__name__,at=time.monotonic()))
+            raise
+
+    def command_log(self):
+        return [dict(id=identity,sequence=row['sequence'],op=row['op'],payload_sha256=hashlib.sha256(row['payload']).hexdigest(),
+            created=row['created'],submit_started=row['submit_started'],submit_finished=row['submit_finished'],
+            submit_attempts=row['submit_attempts'],
+            reply_received=row.get('reply_received'),wait_completed=row.get('wait_completed'),
+            ok=row['reply'].get('ok') if row['reply'] else None,code=row['reply'].get('code') if row['reply'] else None,
+            reply=row['reply'] if row['op'] in ('connect','quit') else None,
+            outstanding=row['reply'] is None,errors=row['errors']) for identity,row in self.requests.items()]
+
+    def status(self,end):
+        def check(limit):
+            row=self.result('status',{},limit)
+            if row.get('code')=='session_closing':return None
+            require(row['ok'] and 'monitor' in row,'mailbox status result')
+            return row['value']['status'],row['monitor']
+        return until(check,30,end,'terminal still closing')
 
     def close(self):
         if self.quit_verified or self.stopped:
             return self.quit_verified
-        cleanup_end = time.monotonic() + 35
+        cleanup_end = min(time.monotonic() + 80,self.deadline+50)
+        self.cleanup_limit=cleanup_end
         previous_deadline = self.deadline
-        self.deadline = min(cleanup_end, time.monotonic() + 25)
+        self.deadline = min(cleanup_end, time.monotonic() + 55)
         try:
             self.quit()
             return True
@@ -160,8 +230,8 @@ class MailboxTerminal(Terminal):
             expected = {"closed": True} if self.mode == "setup" else {"connected": False}
             require(result["ok"] and result["value"] == expected, "mailbox quit result")
             return True
-        until(check, 25, self.deadline, "mailbox quit")
-        end = min(self.deadline, time.monotonic() + 25)
+        until(check, 55, self.deadline, "mailbox quit")
+        end = min(self.deadline+15, time.monotonic() + 15,getattr(self,'cleanup_limit',self.deadline+15))
         while self.closed is None:
             self.collect(end)
         if not self.queued:
@@ -169,6 +239,7 @@ class MailboxTerminal(Terminal):
             while self.collect(end)["records"]:
                 pass
         require(self.closed == "clean" and not self.queued, "mailbox quit or streams failed")
+        require(all(row['reply'] is not None for row in self.requests.values()),'mailbox EOF with unresolved command')
         limit = remaining(end, 12)
         exit_code = (self.local_owner.wait(time.monotonic() + limit) if self.local_owner is not None
                      else self.proc.wait(timeout=limit))

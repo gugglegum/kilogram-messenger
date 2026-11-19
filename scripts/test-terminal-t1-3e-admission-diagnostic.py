@@ -3,6 +3,7 @@ import argparse
 import base64
 import hashlib
 import json
+import math
 import re
 from pathlib import Path
 import runpy
@@ -13,13 +14,14 @@ import uuid
 SCRIPTS=Path(__file__).resolve().parent
 N=runpy.run_path(str(SCRIPTS/'test-terminal-t1-3e-normal.py'))
 D=N['D'];require=N['require'];save=N['save'];parallel=N['parallel']
-SOURCES=N['SOURCES']|{'scripts/test-terminal-t1-3e-admission-diagnostic.py','scripts/test-terminal-t1-3e-admission-diagnostic-check.py'}
+SOURCES=N['SOURCES']|{'scripts/test-terminal-t1-3e-admission-diagnostic.py','scripts/test-terminal-t1-3e-admission-diagnostic-check.py','scripts/test-terminal-t1-3e-startup-diagnostic-check.py'}
 RUST_SOURCES={
     'crates/kilogram-runtime-ipc/src/lib.rs','crates/kilogram-runtime-ipc/src/lab_diagnostics.rs',
-    'crates/kilogram-first-dialog/src/connection.rs',
+    'crates/kilogram-first-dialog/src/connection.rs','crates/kilogram-first-dialog/src/chat.rs',
     *('apps/kilogram-cli/src/ordered_dialog/runtime2/'+name for name in ('mod.rs','owner.rs','diagnostics.rs','discovery.rs','runtime.rs','lan_runtime.rs'))}
 MIN_CALL=2.0
-PROBE_SECONDS=24.0
+PROBE_SECONDS=60.0
+CONNECT_SECONDS=85.0
 ADMISSION_SECONDS=90.0
 
 class ObservationBudgetExhausted(RuntimeError):pass
@@ -87,9 +89,36 @@ def admission_gate(probe,predicate,*,started,end,now=time.monotonic,sleep=time.s
         else:report['after_deadline']=dict(label='unavailable_cleanup_reserve',at=now())
     return report
 
+def additional_window_skip_reason(result,expected_hosts,*,end,now,capture_errors):
+    """A negative LAN observation is useful; a failed capture is not eligibility."""
+    if result['admitted']:return 'original_window_admitted'
+    if (result.get('raw_cause') or {}).get('type')!='AdmissionDeadline':return 'original_failure_not_deadline'
+    if capture_errors:return 'capture_errors_recorded'
+    snapshot=result.get('after_deadline')
+    if not isinstance(snapshot,dict):return 'snapshot_missing'
+    if snapshot.get('error') is not None:return 'snapshot_capture_error'
+    if snapshot.get('label') not in ('after_deadline_diagnostic_only','late_observation_not_admission'):return 'snapshot_unavailable'
+    times=[snapshot.get(key) for key in ('sent','received','probe_deadline')]
+    if not all(type(value) in (int,float) and math.isfinite(value) for value in times):return 'snapshot_timing_incomplete'
+    sent,received,deadline=times
+    if snapshot.get('budget_exceeded') or received>deadline:return 'snapshot_budget_overrun'
+    if not sent<=received<=now or deadline<sent:return 'snapshot_timing_invalid'
+    rows=snapshot.get('hosts')
+    if not isinstance(rows,list) or len(rows)!=len(expected_hosts) or any(not isinstance(row,dict) for row in rows):return 'snapshot_host_set_incomplete'
+    sides=[row.get('side') for row in rows]
+    if any(not isinstance(side,str) for side in sides) or len(set(sides))!=len(expected_hosts) or set(sides)!=set(expected_hosts):return 'snapshot_host_set_incomplete'
+    if any(row.get('error') is not None for row in rows):return 'snapshot_host_capture_error'
+    if any(row.get('runtime_complete') is not True or not isinstance(row.get('doc'),dict) for row in rows):return 'snapshot_runtime_incomplete'
+    if any(row.get('monitor_complete') is not True or not isinstance(row.get('chat_status'),dict) or not isinstance(row.get('monitor'),dict) for row in rows):return 'snapshot_monitor_incomplete'
+    for row in rows:
+        stamps=[row.get(key) for key in ('runtime_received','monitor_received')]
+        if row.get('budget_exceeded') or not all(type(value) in (int,float) and math.isfinite(value) for value in stamps) or not sent<=stamps[0]<=stamps[1]<=received:return 'snapshot_host_timing_invalid'
+    if end-now<ADMISSION_SECONDS+PROBE_SECONDS:return 'cleanup_reserve'
+    return None
+
 class Host(N['Host']):
     @property
-    def minimum_subprocess_seconds(self):return MIN_CALL if getattr(self,'observation_active',False) else 0
+    def minimum_subprocess_seconds(self):return MIN_CALL
 
     def call(self,op,*args,**kwargs):
         if op in ('lab-diagnostic-enable','lab-diagnostic-read'):kwargs.update(self.lab_identity)
@@ -119,7 +148,7 @@ def shutdown_records(reply,nonce,chat_pid,runtime_pid,instance):
     records={}
     for record in reply['records']:
         name=record['name']
-        require(re.fullmatch(r'(runtime-stopping|runtime-network-stopped|runtime-final|connection-final|worker-final)-[1-9][0-9]*\.json',name) and name not in records,'shutdown receipt name')
+        require(re.fullmatch(r'(runtime-stopping|runtime-network-stopped|runtime-final|connection-final|worker-final|startup-(setup-open|begin|import-begin|import-end|profile-begin|prepared|spawned|descriptor|status|failed))-[1-9][0-9]*\.json',name) and name not in records,'shutdown receipt name')
         raw=base64.b64decode(record['data'],validate=True)
         require(0<len(raw)<=16384 and len(raw)==record['bytes'] and hashlib.sha256(raw).hexdigest()==record['sha256'],'shutdown receipt content pin')
         value=json.loads(raw)
@@ -127,12 +156,19 @@ def shutdown_records(reply,nonce,chat_pid,runtime_pid,instance):
         require(name==value['kind'].replace('_','-')+'-'+str(value['pid'])+'.json','shutdown filename binding')
         if value['kind'].startswith('runtime_'):
             require(runtime_pid and value['pid']==runtime_pid and value['runtime_pid']==runtime_pid and value['runtime_instance']==instance,'shutdown runtime binding')
+        elif value['kind'].startswith('startup_'):
+            require(value['pid']==chat_pid,'startup Chat binding')
+            require(value['runtime_pid'] is None or type(value['runtime_pid']) is int and value['runtime_pid']>0,'startup runtime PID type')
+            require(value['runtime_instance'] is None or value['kind'] in {'startup_status','startup_failed'} and value['runtime_pid'] is not None,'premature startup instance')
+            require(not runtime_pid or value['runtime_pid'] in (None,runtime_pid),'startup runtime PID binding')
+            require(not instance or value['runtime_instance'] in (None,instance),'startup runtime instance binding')
         else:
             require(value['pid']==chat_pid and (not runtime_pid or value['runtime_pid']==runtime_pid and value['runtime_instance']==instance),'shutdown Chat binding')
         records[name]=raw
     kinds={json.loads(raw)['kind'] for raw in records.values()}
     expected={'runtime_stopping','runtime_network_stopped','runtime_final','connection_final','worker_final'}
-    return records,dict(complete=kinds==expected and not reply.get('rejected'),missing=sorted(expected-kinds),rejected=reply.get('rejected',[]))
+    return records,dict(complete=expected.issubset(kinds) and not reply.get('rejected'),missing=sorted(expected-kinds),
+        startup_kinds=sorted(k for k in kinds if k.startswith('startup_')),rejected=reply.get('rejected',[]))
 
 class Diagnostic(N['Normal']):
     def __init__(self,*args):
@@ -158,7 +194,15 @@ class Diagnostic(N['Normal']):
         return result
 
     def connect(self,index,warm):
-        term=self.pair[index];value=term.call('connect',end=min(self.end,time.monotonic()+25),mode='start')
+        term=self.pair[index];host=self.hosts[index];host.observation_active=True
+        try:value=term.call('connect',end=min(self.end,time.monotonic()+CONNECT_SECONDS),mode='start')
+        finally:host.observation_active=False
+        self.bind_connect(index,value)
+
+    def bind_connect(self,index,value):
+        term=self.pair[index]
+        require(value.get('mode')=='owner' and value.get('contexts')==self.contexts and D['HEX'].fullmatch(value.get('runtime_instance','')),'diagnostic connect reply binding')
+        if getattr(term,'instance',None)==value.get('runtime_instance'):return
         require(value['mode']=='owner' and value['contexts']==self.contexts and D['HEX'].fullmatch(value['runtime_instance']) and value['runtime_instance'] not in self.instances[index],'fresh diagnostic runtime/preserved contexts')
         term.contexts=self.contexts;term.instance=value['runtime_instance'];term.epoch=None
         self.instances[index].add(term.instance)
@@ -183,13 +227,25 @@ class Diagnostic(N['Normal']):
             host=self.hosts[i];host.observation_active=True
             row=dict(side=host.name,runtime_complete=False,monitor_complete=False,error=None)
             try:
-                sample=self.sample(i,self.pair[i],end)
+                term=self.pair[i]
+                if not getattr(term,'instance',None):
+                    term.reconcile(end)
+                    connected=[r['reply'] for r in term.requests.values() if r['op']=='connect' and r['reply'] is not None]
+                    if connected:
+                        reply=connected[-1];row['connect_reply']=dict(ok=reply['ok'],code=reply.get('code'))
+                        if reply['ok']:self.bind_connect(i,reply['value'])
+                sample=self.sample(i,term,end) if getattr(term,'instance',None) else None
                 if sample:
                     row.update(runtime_complete=True,runtime_received=self.latest[i]['received'],doc=sample[0],point=sample[1])
                 # Serial with this host's runtime observation and every other mailbox call.
                 budget(end)
-                status,monitor=self.pair[i].status(end)
-                require(status['mode']=='owner' and status['runtime_instance']==self.pair[i].instance and status['contexts']==self.contexts,'Chat monitor binding')
+                if getattr(term,'instance',None):
+                    status,monitor=term.status(end)
+                    require(status['mode']=='owner' and status['runtime_instance']==term.instance and status['contexts']==self.contexts,'Chat monitor binding')
+                else:
+                    reply=term.result('status',{},min(end,time.monotonic()+30))
+                    require(reply['ok'] and 'monitor' in reply,'disconnected Chat monitor')
+                    status,monitor=reply['value'],reply['monitor']
                 row.update(monitor_complete=True,monitor_received=time.monotonic(),chat_status=status,monitor=monitor)
             except Exception as error:
                 row['error']=error_record(error)
@@ -209,7 +265,8 @@ class Diagnostic(N['Normal']):
         started=time.monotonic()
         try:parallel(lambda i:self.connect(i,False),(0,1))
         except Exception as error:
-            report=dict(schema=1,stage='runtime_connect',started=started,deadline=started+ADMISSION_SECONDS,admitted=False,raw_cause=error_record(error),last_complete_runtime=self.latest)
+            report=dict(schema=2,normal_scenario_accepted=False,network_diagnostic=None,network_diagnostic_skip_reason='startup_failed',
+                original_window=dict(stage='runtime_connect',started=started,deadline=started+ADMISSION_SECONDS,admitted=False,raw_cause=error_record(error),last_complete_runtime=self.latest))
             try:
                 budget(self.end);sent=time.monotonic();limit=min(self.end,sent+PROBE_SECONDS)
                 report['after_failure']=dict(label='after_connect_failure_diagnostic_only',sent=sent,probe_deadline=limit,hosts=self.probe(limit),received=time.monotonic())
@@ -218,7 +275,14 @@ class Diagnostic(N['Normal']):
             raise
         def admitted(rows):return all(row['point'] for row in rows) and D['live_pair']([row['doc'] for row in rows],[row['point'] for row in rows])
         result=admission_gate(self.probe,admitted,started=started,end=self.end)
-        save(self.evidence/'admission-result.json',result)
+        skip=additional_window_skip_reason(result,[host.name for host in self.hosts],end=self.end,now=time.monotonic(),capture_errors=self.capture_errors)
+        report=dict(schema=2,original_window=result,normal_scenario_accepted=False,network_diagnostic=None,network_diagnostic_skip_reason=skip)
+        if skip is None:
+            origin=time.monotonic()
+            diagnostic=admission_gate(self.probe,admitted,started=origin,end=self.end)
+            report['network_diagnostic']=dict(label='post_original_window_network_diagnostic_only',origin=origin,first_connect=started,
+                total_seconds=time.monotonic()-started,result=diagnostic)
+        save(self.evidence/'admission-result.json',report)
         if not result['admitted']:raise AdmissionFailure('lan_admission: four leases not observed before90s; see admission-result.json raw_cause/last_complete_runtime')
         # Evidence goal reached; no message send, manual locator import, offline or restart.
 
@@ -245,16 +309,19 @@ class Diagnostic(N['Normal']):
         try:super().run()
         finally:
             for i,term in self.processes:self.collect_shutdown(i,term)
+            for i,term in self.processes:
+                save(self.evidence/f'{self.hosts[i].name}-{term.tag}-commands.json',term.command_log())
             result=json.loads((self.evidence/'result.json').read_bytes()) if (self.evidence/'result.json').exists() else None
-            save(self.evidence/'diagnostic-result.json',dict(schema=1,purpose='lan-admission-diagnostic-v1',application_result=result,
+            save(self.evidence/'diagnostic-result.json',dict(schema=2,purpose='lan-startup-diagnostic-v2',application_result=result,
                 capture_errors=self.capture_errors,capture_complete=not self.capture_errors,messages_sent=len(self.messages),no_second_attempt=True))
         require(not self.capture_errors,'diagnostic capture incomplete; application outcome retained separately')
 
 def validate(plan,root):
-    require(plan['purpose']=='lan-admission-diagnostic-v1' and plan['admission_seconds']==90 and plan['probe_seconds']==24 and plan['minimum_call_seconds']==2,'diagnostic purpose/budgets')
+    require(plan['purpose']=='lan-startup-diagnostic-v2' and plan['admission_seconds']==90 and plan['probe_seconds']==60 and plan['connect_seconds']==85 and plan['minimum_call_seconds']==2,'diagnostic purpose/budgets')
+    require(plan['original_window_origin']=='before_first_connect_submit' and plan['additional_network_seconds']==90 and plan['additional_network_mode']=='diagnostic_only_after_original_window','separate diagnostic origins')
     path=root/plan['build_manifest'];require(root in path.resolve().parents and N['digest'](path)==plan['build_manifest_sha256'],'diagnostic build manifest')
     manifest=json.loads(path.read_bytes())
-    require(manifest['base']=='32d54c6b114e9047992de31c943f6794bf3e917e' and manifest['unrelated_tests_excluded'] is True,'isolated diagnostic source base')
+    require(manifest['base']=='c8cb05cf568c23be755dfd1444f85e18f55b8659' and manifest['unrelated_tests_excluded'] is True,'isolated diagnostic source base')
     require(set(manifest['diagnostic_sources'])==RUST_SOURCES and set(manifest['images'])=={'kilogram-cli.exe','kilogram-bootstrap.exe'},'complete diagnostic build inputs/images')
     for rel,pin in manifest['diagnostic_sources'].items():require(N['digest'](root/rel)==pin,'diagnostic product source pin')
     N['validate'](plan,root,attempt_count=1,source_paths=SOURCES,product_pins=manifest['images'])
