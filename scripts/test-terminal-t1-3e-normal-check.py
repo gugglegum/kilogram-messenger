@@ -43,24 +43,32 @@ class Checks(unittest.TestCase):
         agents=[None,SimpleNamespace(prefix=[r'C:\Windows\System32\OpenSSH\ssh.exe','-T','-o','StrictHostKeyChecking=yes','test@192.168.0.152','powershell.exe'])]
         node=dict(host='PAUL_HP_OMEN',sid='test-fixture',base=r'C:\Users\test\KilogramLab\terminal-t11f')
         results=[]
-        for fail in (False,True):
-            evidence=EVIDENCE/('sftp-dispatch-fail' if fail else 'sftp-dispatch-success');calls=[]
+        for case,fail,stderr,reject in [('success',False,b'',False),
+            ('empty-clixml',False,b'#< CLIXML\r\n',False),
+            ('xml-record',False,b'#< CLIXML\r\n<Objs><S S="Error">client-error</S></Objs>',True),
+            ('text-record',False,b'client-warning',True),
+            ('extra-newline',False,b'#< CLIXML\r\n\r\n',True),
+            ('dual-failure',True,b'client-error',True)]:
+            evidence=EVIDENCE/('sftp-dispatch-'+case);calls=[]
             def run(command,**kwargs):
                 self.assertEqual(kwargs['stdin'],subprocess.DEVNULL);self.assertNotIn('input',kwargs);calls.append(command)
                 count=len(calls)
                 if count==2:
                     (evidence/stage/'sftp-client.json').write_text(json.dumps(dict(exit=7 if fail else 0,empty_job=True,failure='client' if fail else None)))
-                    return subprocess.CompletedProcess(command,1 if fail else 0,b'',b'client-error' if fail else b'')
+                    return subprocess.CompletedProcess(command,1 if fail else 0,b'',stderr)
                 if count==3 and fail:return subprocess.CompletedProcess(command,1,b'',b'verify-error')
                 receipt=dict(stage=stage,pins=pins,sizes=sizes,server_process_absent=True,verified=count==3)
                 return subprocess.CompletedProcess(command,0,json.dumps(receipt).encode(),b'')
             with patch.object(N['subprocess'],'run',run):
-                if fail:
+                if reject:
                     with self.assertRaisesRegex(RuntimeError,'SFTP client failed'):N['upload'](agents,1,stage,folder,pins,node,evidence=evidence,transfer=dict(exe='sftp.exe',sha256='a'*64))
                 else:N['upload'](agents,1,stage,folder,pins,node,evidence=evidence,transfer=dict(exe='sftp.exe',sha256='a'*64))
             self.assertEqual(len(calls),3)
             receipt=json.loads((evidence/stage/'upload-result.json').read_bytes());self.assertEqual(bool(receipt['verification_error']),fail)
-            self.assertEqual(receipt['client_exit'],1 if fail else 0);results.append(dict(injected_failure=fail,receipt=receipt))
+            self.assertEqual(receipt['client_exit'],1 if fail else 0)
+            self.assertEqual(receipt['client_stderr_records'],reject)
+            self.assertEqual((evidence/stage/'wrapper.stderr.bin').read_bytes(),stderr)
+            results.append(dict(case=case,injected_failure=fail,rejected=reject,receipt=receipt))
         save('sftp-dispatch.json',dict(synthetic_transport=True,cases=results,bulk_stdin=False))
 
     def test_sftp_native_client_job_receipts(self):

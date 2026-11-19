@@ -409,8 +409,12 @@ def upload(agents,index,stage,folder,pins,node,*,evidence,transfer):
         verification_error=None
         try:metadata(True)
         except Exception as error:verification_error=str(error)
-        save(logs/'upload-result.json',dict(client_exit=outcome.returncode,client_stderr=bool(outcome.stderr),verification_error=verification_error))
-        require(not outcome.returncode and not outcome.stderr and client_receipt and client_receipt['empty_job'] and
+        # Windows PowerShell can emit the CLIXML preamble with no serialized records.
+        # Accept only the exact observed empty framing; retain every raw stderr byte.
+        stderr_records=outcome.stderr not in (b'',b'#< CLIXML\r\n')
+        save(logs/'upload-result.json',dict(client_exit=outcome.returncode,client_stderr=bool(outcome.stderr),
+            client_stderr_records=stderr_records,verification_error=verification_error))
+        require(not outcome.returncode and not stderr_records and client_receipt and client_receipt['empty_job'] and
             client_receipt['exit']==0 and client_receipt['failure'] is None,'SFTP client failed; inspect upload receipts')
         require(verification_error is None,'SFTP receiver/content verification failed; inspect upload receipts')
         return
