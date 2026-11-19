@@ -1,0 +1,37 @@
+{
+  "action": {
+    "path": "C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+    "directory": "E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\terminal-t11f",
+    "arguments": "-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\terminal-t11f\\ordinary-agent\\test-terminal-t1-3e-lab-agent.ps1\" -Action Run -Config \"E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\terminal-t11f\\ordinary-agent\\lab.json\"",
+    "count": 1
+  },
+  "xml": "<?xml version=\"1.0\" encoding=\"UTF-16\"?>\r\n<Task version=\"1.2\" xmlns=\"http://schemas.microsoft.com/windows/2004/02/mit/task\">\r\n  <RegistrationInfo>\r\n    <SecurityDescriptor>D:P(A;;FA;;;SY)(A;;FA;;;BA)(A;;GRGX;;;S-1-5-21-1776862868-2140151431-2099235586-1001)</SecurityDescriptor>\r\n    <Description>Kilogram ordinary lab t13e-lab</Description>\r\n    <URI>\\Kilogram-Lab-t13e-lab-A</URI>\r\n  </RegistrationInfo>\r\n  <Principals>\r\n    <Principal id=\"AgentUser\">\r\n      <UserId>S-1-5-21-1776862868-2140151431-2099235586-1001</UserId>\r\n      <LogonType>InteractiveToken</LogonType>\r\n    </Principal>\r\n  </Principals>\r\n  <Settings>\r\n    <AllowHardTerminate>false</AllowHardTerminate>\r\n    <DisallowStartIfOnBatteries>false</DisallowStartIfOnBatteries>\r\n    <StopIfGoingOnBatteries>false</StopIfGoingOnBatteries>\r\n    <ExecutionTimeLimit>PT0S</ExecutionTimeLimit>\r\n    <Hidden>true</Hidden>\r\n    <MultipleInstancesPolicy>IgnoreNew</MultipleInstancesPolicy>\r\n    <IdleSettings>\r\n      <StopOnIdleEnd>true</StopOnIdleEnd>\r\n      <RestartOnIdle>false</RestartOnIdle>\r\n    </IdleSettings>\r\n  </Settings>\r\n  <Triggers>\r\n    <LogonTrigger>\r\n      <UserId>DESKTOP-PAUL-RY\\Paul</UserId>\r\n    </LogonTrigger>\r\n  </Triggers>\r\n  <Actions Context=\"AgentUser\">\r\n    <Exec>\r\n      <Command>C:\\WINDOWS\\System32\\WindowsPowerShell\\v1.0\\powershell.exe</Command>\r\n      <Arguments>-NoProfile -NonInteractive -ExecutionPolicy Bypass -File \"E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\terminal-t11f\\ordinary-agent\\test-terminal-t1-3e-lab-agent.ps1\" -Action Run -Config \"E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\terminal-t11f\\ordinary-agent\\lab.json\"</Arguments>\r\n      <WorkingDirectory>E:\\AI-Projects\\kilogram-p2p-messenger\\.tmp\\terminal-t11f</WorkingDirectory>\r\n    </Exec>\r\n  </Actions>\r\n</Task>",
+  "last_result": 267011,
+  "utc": "2026-11-18T23:30:08.4806463Z",
+  "trigger": {
+    "enabled": true,
+    "delay": null,
+    "type": 9,
+    "user": "DESKTOP-PAUL-RY\\Paul",
+    "count": 1,
+    "sid": "S-1-5-21-1776862868-2140151431-2099235586-1001"
+  },
+  "state": 3,
+  "sddl": "D:PAI(A;;FA;;;SY)(A;;FA;;;BA)(A;;0x1200a9;;;S-1-5-21-1776862868-2140151431-2099235586-1001)",
+  "principal": {
+    "sid": "S-1-5-21-1776862868-2140151431-2099235586-1001",
+    "user": "Paul",
+    "run_level": 0,
+    "logon_type": 3
+  },
+  "settings": {
+    "battery_disallow": false,
+    "allow_demand_start": true,
+    "hidden": true,
+    "instances": 2,
+    "execution_limit": "PT0S",
+    "enabled": true,
+    "battery_stop": false,
+    "allow_hard_terminate": false
+  }
+}

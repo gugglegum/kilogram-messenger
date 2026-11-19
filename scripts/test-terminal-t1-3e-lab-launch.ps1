@@ -8,18 +8,17 @@ param(
 )
 $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
 . "$PSScriptRoot/test-terminal-t1-3e-lab-install.ps1" -Mode Library
+. "$PSScriptRoot/test-terminal-t1-3e-lab-bootstrap.ps1"
 $launchCfg=Get-LabConfig $LaunchSide
 $launchFiles=@('test-terminal-t1-3e-lab-agent.ps1','test-terminal-t1-3e-lab-common.ps1','test-terminal-t1-3e-lab-job.cs','test-terminal-t1-3e-lab-install.ps1',
-    'test-terminal-t1-3e-lab-native.cs','test-terminal-t1-3e-lab-readiness.ps1','test-terminal-t1-3e-lab-setup.ps1','test-terminal-t1-3e-lab-launch.ps1','dpapi-context.ps1','lab.json','ssh-probe.json')
+    'test-terminal-t1-3e-lab-native.cs','test-terminal-t1-3e-lab-readiness.ps1','test-terminal-t1-3e-lab-setup.ps1','test-terminal-t1-3e-lab-launch.ps1',
+    'test-terminal-t1-3e-lab-diagnostics.ps1','test-terminal-t1-3e-lab-bootstrap.ps1','dpapi-context.ps1','lab.json','ssh-probe.json')
 $launchLocks=[Collections.Generic.List[IDisposable]]::new()
 function Quote-Lab([string]$Text){"'"+$Text.Replace("'","''")+"'"}
 function Encode-Lab([string]$Text){[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($Text))}
 function Publish-LabSetupResult([string]$Path,$Value) {
     # The containing directory is protected; grant read on this public receipt only.
-    Lab-Write $Path $Value
-    $acl=Get-Acl -LiteralPath $Path
-    $acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($launchCfg.sid),'Read','Allow'))
-    Set-Acl -LiteralPath $Path -AclObject $acl
+    Publish-LabDiagnosticResult $Path $Value $launchCfg.sid
 }
 function Start-LabPinnedSsh($Config,$PackageDirectory) {
     $s=Lab-Read (Join-Path $PackageDirectory 'ssh-probe.json')
@@ -48,24 +47,28 @@ function Invoke-LabSetupChild([string]$Operation,[int]$Seconds,$SessionJob,[stri
     $info.Arguments='-NoProfile -NonInteractive -ExecutionPolicy Bypass -File "'+(Join-Path $LaunchRoot 'test-terminal-t1-3e-lab-install.ps1')+'" -Mode '+$Operation+
         ' -Side '+$LaunchSide+' -PackageRoot "'+$LaunchRoot+'" -PackageSha '+$ManifestPin+' -SetupSession "'+$SessionPath+'"'
     $info.UseShellExecute=$false;$info.CreateNoWindow=$true;$info.RedirectStandardOutput=$true;$info.RedirectStandardError=$true
-    $out=[IO.File]::Open($LogPrefix+'.stdout.log','CreateNew','Write','Read');$err=[IO.File]::Open($LogPrefix+'.stderr.log','CreateNew','Write','Read')
-    $p=$null;$guard=$null
+    $out=$null;$err=$null;$p=$null;$guard=$null
     try {
+        $out=[IO.File]::Open($LogPrefix+'.stdout.log','CreateNew','Write','Read');$err=[IO.File]::Open($LogPrefix+'.stderr.log','CreateNew','Write','Read')
         $p=[Diagnostics.Process]::Start($info);$SessionJob.Verify($p);$p.PriorityClass='BelowNormal';$guard=$SessionJob.Bound($p,$Seconds*1000)
         $o=$p.StandardOutput.BaseStream.CopyToAsync($out);$e=$p.StandardError.BaseStream.CopyToAsync($err)
         if(!$p.WaitForExit(($Seconds+3)*1000)){throw 'LAB_SETUP_CHILD_UNRESPONSIVE'}
         if(!$o.Wait(3000) -or !$e.Wait(3000)){throw 'LAB_SETUP_CAPTURE_INCOMPLETE'}
-        return @{exit=$p.ExitCode;timeout=$guard.Expired;stdout=$LogPrefix+'.stdout.log';stderr=$LogPrefix+'.stderr.log'}
+        return @{exit=$p.ExitCode;timeout=$guard.Expired;capture_complete=$true;stdout=$LogPrefix+'.stdout.log';stderr=$LogPrefix+'.stderr.log'}
+    }catch{
+        return @{exit=$(if($p -and $p.HasExited){$p.ExitCode}else{$null});timeout=($guard -and $guard.Expired);capture_complete=$false;
+            error=(Get-LabFailureSummary $_ 'supervisor-capture');stdout=$LogPrefix+'.stdout.log';stderr=$LogPrefix+'.stderr.log'}
     }finally{
-        try{$SessionJob.CleanupChildren(2000)}finally{if($guard){$guard.Dispose()};if($p){$p.Dispose()};$out.Dispose();$err.Dispose()}
+        try{$SessionJob.CleanupChildren(2000)}finally{if($guard){$guard.Dispose()};if($p){$p.Dispose()};if($out){$out.Dispose()};if($err){$err.Dispose()}}
     }
 }
 function Invoke-LabSetupSupervised($SessionJob,$Config,[string]$InstallSession,[string]$JournalPath,[ValidateSet('Setup','Teardown')][string]$Operation,
     [ValidateRange(1,450)][int]$MainSeconds=450,[ValidateRange(1,180)][int]$RecoverySeconds=180) {
     try{$main=Invoke-LabSetupChild $Operation $MainSeconds $SessionJob (Join-Path $LaunchRoot 'main')}
-    catch{$main=@{exit=$null;timeout=$true;error=$_.Exception.Message}}
+    catch{$main=@{exit=$null;timeout=$null;capture_complete=$false;error=(Get-LabFailureSummary $_ 'supervisor-owned-cleanup')}}
     $rollback=$null
-    if($Operation -ceq 'Setup' -and ($main.timeout -or $main.exit -ne 0)){
+    $mainGood=$main.exit -eq 0 -and $main.timeout -eq $false -and $main.capture_complete -eq $true
+    if($Operation -ceq 'Setup' -and !$mainGood){
         $saved=Lab-Read $JournalPath -MaxBytes 2097152
         # Only the invocation that wrote the intent owns timeout recovery.
         if($saved -and $saved.PSObject.Properties['setup_session'] -and $saved.setup_session -ceq (Split-Path -Leaf $InstallSession)){
@@ -73,8 +76,9 @@ function Invoke-LabSetupSupervised($SessionJob,$Config,[string]$InstallSession,[
             else{try{$rollback=Invoke-LabSetupChild 'Teardown' $RecoverySeconds $SessionJob (Join-Path $LaunchRoot 'recovery')}catch{$rollback=@{exit=$null;error=$_.Exception.Message}}}
         }
     }
+    $diagnostics=Get-LabSetupDiagnostics $LaunchRoot $JournalPath (Split-Path -Leaf $InstallSession)
     return @{host=$Config.host;action=$(if($Operation -ceq 'Setup'){'Install'}else{'Teardown'});main=$main;recovery=$rollback;
-        success=(!$main.timeout -and $main.exit -eq 0);source=$LaunchRoot}
+        success=$mainGood;source=$LaunchRoot;diagnostics=$diagnostics}
 }
 try {
     $launchPackage=Assert-LabPackage $LaunchRoot $ManifestPin $LaunchSide $launchFiles $launchCfg $launchLocks
@@ -99,7 +103,7 @@ try {
             $operation=if($LaunchAction -ceq 'Install'){'Setup'}else{'Teardown'}
             $journal=Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) "Kilogram-Lab/$($launchCfg.campaign)-$LaunchSide/initial-and-journal.json"
             $result=Invoke-LabSetupSupervised $job $launchCfg $SessionPath $journal $operation
-            Lab-Write (Join-Path $LaunchRoot 'supervisor-result.json') $result
+            Lab-Write (Join-Path $LaunchRoot 'supervisor-result.json') $result -MaxBytes 2097152
             Publish-LabSetupResult $publicResult $result
             if(!$result.success){throw 'LAB_FIXED_SETUP_FAILED'}
         }finally{$job.Dispose()}
@@ -111,41 +115,10 @@ try {
     $SessionPath=Join-Path $launchCfg.base ('deploy/setup-'+[guid]::NewGuid().ToString('N'))
     [void][IO.Directory]::CreateDirectory($SessionPath);Lab-Plain $SessionPath
     $expected=[ordered]@{'package.json'=$ManifestPin};foreach($entry in $launchPackage.files.PSObject.Properties){$expected[$entry.Name]=$entry.Value}
-    $expectedText='@{'+((@($expected.Keys|ForEach-Object {(Quote-Lab $_)+'='+(Quote-Lab $expected[$_])})) -join ';')+'}'
     # This complete bootstrap is passed to RunAs, rather than loading writable helpers as admin.
     # It snapshots bytes through held handles, verifies every fixed pin, then executes only a
     # private admin/System copy. No package code runs elevated from the ordinary deploy tree.
-    $bootstrap=@'
-$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
-Import-Module "$PSHOME/Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1"
-[Diagnostics.Process]::GetCurrentProcess().PriorityClass='BelowNormal'
-$source=@SOURCE@;$expected=@EXPECTED@;$session=@SESSION@;$ordinarySid=@SID@
-function Plain($p){$i=Get-Item -LiteralPath $p -Force;while($i){if($i.Attributes -band [IO.FileAttributes]::ReparsePoint){throw 'LAB_REPARSE'};$i=if($i -is [IO.FileInfo]){$i.Directory}else{$i.Parent}}}
-$handles=@();$bytes=@{}
-try{
- $root=Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) 'Kilogram-Lab'
- foreach($p in @($root,(Join-Path $root 'SetupResults'),(Join-Path $root ('SetupResults/'+(Split-Path -Leaf $session))),(Join-Path $root 'SetupPackages'),(Join-Path $root ('SetupPackages/'+(Split-Path -Leaf $session))))){
-  $acl=[Security.AccessControl.DirectorySecurity]::new();$acl.SetAccessRuleProtection($true,$false);$acl.SetOwner([Security.Principal.SecurityIdentifier]::new('S-1-5-32-544'))
-  foreach($sid in @('S-1-5-18','S-1-5-32-544')){$acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($sid),'FullControl','ContainerInherit, ObjectInherit','None','Allow'))}
-  if(!(Test-Path -LiteralPath $p)){[void][IO.Directory]::CreateDirectory($p,$acl)};Plain $p;$a=Get-Acl -LiteralPath $p
-  if(!$a.AreAccessRulesProtected -or $a.GetOwner([Security.Principal.SecurityIdentifier]).Value -notin @('S-1-5-18','S-1-5-32-544')){throw 'LAB_STATE_ACL'}
-  foreach($ace in $a.GetAccessRules($true,$true,[Security.Principal.SecurityIdentifier])){if($ace.AccessControlType -ne 'Allow' -or $ace.IdentityReference.Value -notin @('S-1-5-18','S-1-5-32-544')){throw 'LAB_STATE_ACL'}}
- }
- $stage=$p;$publicResult=Join-Path $root ('SetupResults/'+(Split-Path -Leaf $session)+'/result.json')
- foreach($name in $expected.Keys){$p=Join-Path $source $name;Plain $p;$f=[IO.File]::OpenRead($p);$handles+=,$f;if($f.Length -gt 131072 -or (Get-FileHash -InputStream $f).Hash -ine $expected[$name]){throw 'LAB_PACKAGE_PIN'};$f.Position=0;$m=[IO.MemoryStream]::new();try{$f.CopyTo($m);$bytes[$name]=$m.ToArray()}finally{$m.Dispose()}}
- $p=$stage
- foreach($name in $expected.Keys){$f=[IO.File]::Open((Join-Path $p $name),'CreateNew','Write','None');try{$f.Write($bytes[$name],0,$bytes[$name].Length);$f.Flush($true)}finally{$f.Dispose()}}
- Add-Type -Path (Join-Path $p 'test-terminal-t1-3e-lab-job.cs')
- & (Join-Path $p 'test-terminal-t1-3e-lab-launch.ps1') -LaunchAction @ACTION@ -LaunchSide @SIDE@ -LaunchRoot $p -ManifestPin @PIN@ -Elevated -SessionPath $session
-}catch{
- if($publicResult -and !(Test-Path -LiteralPath $publicResult)){
-  $errorResult=@{success=$false;action=@ACTION@;error=$_.Exception.Message;utc=[DateTime]::UtcNow.ToString('o')}
-  [IO.File]::WriteAllText($publicResult,($errorResult|ConvertTo-Json -Compress),[Text.UTF8Encoding]::new($false))
-  $acl=Get-Acl -LiteralPath $publicResult;$acl.AddAccessRule([Security.AccessControl.FileSystemAccessRule]::new([Security.Principal.SecurityIdentifier]::new($ordinarySid),'Read','Allow'));Set-Acl -LiteralPath $publicResult -AclObject $acl
- };throw
-}finally{foreach($f in $handles){$f.Dispose()}}
-'@
-    $bootstrap=$bootstrap.Replace('@SOURCE@',(Quote-Lab $LaunchRoot)).Replace('@EXPECTED@',$expectedText).Replace('@SESSION@',(Quote-Lab $SessionPath)).Replace('@ACTION@',(Quote-Lab $LaunchAction)).Replace('@SIDE@',(Quote-Lab $LaunchSide)).Replace('@PIN@',(Quote-Lab $ManifestPin)).Replace('@SID@',(Quote-Lab $launchCfg.sid))
+    $bootstrap=New-LabAdminBootstrap $LaunchAction $LaunchSide $LaunchRoot $ManifestPin $SessionPath $launchCfg.sid $expected
     $actorProcess=$null;$adminProcess=$null
     try {
         # No actor/deadline is started before the user accepts the single UAC prompt.
@@ -156,7 +129,7 @@ try{
         }
         if(!$adminProcess.WaitForExit(690000)){throw 'LAB_SETUP_SUPERVISOR_UNCONFIRMED'}
         $resultPath=Join-Path (Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) 'Kilogram-Lab/SetupResults') ((Split-Path -Leaf $SessionPath)+'/result.json')
-        $result=Lab-Read $resultPath
+        $result=Lab-Read $resultPath -MaxBytes 2097152
         if($adminProcess.ExitCode -ne 0 -or !$result -or !$result.success){throw 'LAB_SETUP_FAILED_SEE_RECEIPTS'}
         $result|ConvertTo-Json -Depth 8
     }catch{

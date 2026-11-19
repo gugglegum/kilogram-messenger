@@ -10,6 +10,7 @@ param(
     [string]$SetupSession
 )
 . "$PSScriptRoot/test-terminal-t1-3e-lab-common.ps1"
+. "$PSScriptRoot/test-terminal-t1-3e-lab-diagnostics.ps1"
 . "$PSScriptRoot/test-terminal-t1-3e-lab-readiness.ps1"
 . "$PSScriptRoot/test-terminal-t1-3e-lab-setup.ps1"
 
@@ -45,16 +46,33 @@ function Assert-LabTask($Task,$Want) {
     if (!$Task) { throw 'LAB_TASK_ABSENT' }
     [xml]$xml=$Task.Xml
     $ns=[Xml.XmlNamespaceManager]::new($xml.NameTable);$ns.AddNamespace('t',$xml.DocumentElement.NamespaceURI)
+    $defaults=@{
+        '/t:Task/t:Principals/t:Principal/t:RunLevel'='LeastPrivilege'
+        '/t:Task/t:Triggers/t:LogonTrigger/t:Enabled'='true'
+        '/t:Task/t:Settings/t:AllowStartOnDemand'='true'
+        '/t:Task/t:Settings/t:Enabled'='true'
+    }
     function TextAt([string]$Path) {
         $nodes=$xml.SelectNodes($Path,$ns)
+        if(!$nodes.Count -and $defaults.ContainsKey($Path)){return $defaults[$Path]}
         if ($nodes.Count -ne 1) { throw 'LAB_TASK_SCHEMA' }
         $nodes[0].InnerText
+    }
+    function TaskSid([string]$Text) {
+        try {
+            if($Text -match '^S-1-'){return [Security.Principal.SecurityIdentifier]::new($Text).Value}
+            if(!$Text){throw 'Empty task user'}
+            return [Security.Principal.NTAccount]::new($Text).Translate([Security.Principal.SecurityIdentifier]).Value
+        }catch{throw 'LAB_TASK_DRIFT'}
     }
     $principal=$xml.SelectNodes('/t:Task/t:Principals/t:Principal',$ns)
     $triggers=$xml.SelectNodes('/t:Task/t:Triggers/*',$ns)
     $actions=$xml.SelectNodes('/t:Task/t:Actions/*',$ns)
     if ($principal.Count -ne 1 -or $triggers.Count -ne 1 -or $triggers[0].LocalName -cne 'LogonTrigger' -or
         $actions.Count -ne 1 -or $actions[0].LocalName -cne 'Exec') { throw 'LAB_TASK_SCHEMA' }
+    foreach($container in @('Principals','Triggers','Actions','Settings')){if($xml.SelectNodes("/t:Task/t:$container",$ns).Count -ne 1){throw 'LAB_TASK_SCHEMA'}}
+    if($principal[0].GetAttribute('id') -cne 'AgentUser' -or $xml.DocumentElement.SelectSingleNode('t:Actions',$ns).GetAttribute('Context') -cne 'AgentUser' -or
+        $principal[0].SelectNodes('t:GroupId|t:RequiredPrivileges|t:ProcessTokenSidType',$ns).Count){throw 'LAB_TASK_SCHEMA'}
     $checks=@{
         '/t:Task/t:Principals/t:Principal/t:UserId'=$Want.sid
         '/t:Task/t:Principals/t:Principal/t:LogonType'='InteractiveToken'
@@ -72,12 +90,17 @@ function Assert-LabTask($Task,$Want) {
         '/t:Task/t:Actions/t:Exec/t:Arguments'=$Want.arguments
         '/t:Task/t:Actions/t:Exec/t:WorkingDirectory'=$Want.directory
     }
-    foreach ($key in $checks.Keys) { if ((TextAt $key) -cne $checks[$key]) { throw 'LAB_TASK_DRIFT' } }
+    foreach ($key in $checks.Keys) {
+        $value=TextAt $key
+        if($key -cin @('/t:Task/t:Principals/t:Principal/t:UserId','/t:Task/t:Triggers/t:LogonTrigger/t:UserId')){$value=TaskSid $value}
+        if ($value -cne $checks[$key]) { throw 'LAB_TASK_DRIFT' }
+    }
     $acl=[Security.AccessControl.RawSecurityDescriptor]::new($Task.GetSecurityDescriptor(4))
     $seen=@{}
     foreach ($ace in $acl.DiscretionaryAcl) {
         $s=$ace.SecurityIdentifier.Value
-        if ($ace.AceQualifier -ne 'AccessAllowed' -or $seen.ContainsKey($s)) { throw 'LAB_TASK_DACL' }
+        if ($ace -isnot [Security.AccessControl.CommonAce] -or $ace.IsCallback -or $ace.AceFlags -ne [Security.AccessControl.AceFlags]::None -or
+            $ace.AceQualifier -ne 'AccessAllowed' -or $seen.ContainsKey($s)) { throw 'LAB_TASK_DACL' }
         $mask=$ace.AccessMask
         if ($s -ceq $Want.sid) {
             if ($mask -notin @(-1610612736,1179817)) { throw 'LAB_TASK_DACL' } # GR|GX or mapped ReadAndExecute.
@@ -123,10 +146,12 @@ function Invoke-LabTransaction($Backend,$Want,[string]$Operation) {
     # The test adapter implements the same finite mutations. Production uses only native fixed specs.
     $journal=& $Backend.Read
     $now=& $Backend.Snapshot
+    Set-LabStage 'transaction-admission'
     if ($Operation -ceq 'Provision') {
         if ($journal) {
             if (!(Lab-Equal $journal.want $Want)) { throw 'LAB_BASELINE_SCOPE' }
             if ($journal.phase -ceq 'installed') {
+                Set-LabStage 'verify-installed'
                 & $Backend.Verify $Want
                 return @{state='already_installed';baseline_preserved=$true}
             }
@@ -134,7 +159,7 @@ function Invoke-LabTransaction($Backend,$Want,[string]$Operation) {
             if(!(Lab-Equal $journal.initial $now)){throw 'LAB_ROLLBACK_BASELINE_DRIFT'}
         }
         if ($now.task -or @($now.rules).Count) { throw 'LAB_NAME_COLLISION' }
-        & $Backend.Preflight $now
+        Set-LabStage 'transaction-preflight'; & $Backend.Preflight $now
         if(!$journal){$journal=[pscustomobject]@{phase='installing';want=$Want;initial=$now;changes=@();rollback_errors=@()}}
         else{$journal.phase='installing';$journal.changes=@();$journal.rollback_errors=@()}
         & $Backend.Write $journal
@@ -142,15 +167,19 @@ function Invoke-LabTransaction($Backend,$Want,[string]$Operation) {
             foreach ($change in @('files','task','rule0','rule1','private')) {
                 # Persist intent before mutation; rollback checks actual owned configuration.
                 $journal.changes+=@($change); & $Backend.Write $journal
+                Set-LabStage ('apply-'+$change)
                 & $Backend.Apply $change $Want
             }
+            Set-LabStage 'verify-installed'
             & $Backend.Verify $Want
             $journal.phase='installed'; & $Backend.Write $journal
             return @{state='installed';baseline_preserved=$true}
         } catch {
             $primary=$_.Exception.Message
+            $script:LabPrimary=Get-LabFailureSummary $_ (Get-LabStage)
+            $journal|Add-Member -NotePropertyName primary_failure -NotePropertyValue $script:LabPrimary -Force
             for ($i=$journal.changes.Count-1;$i -ge 0;$i--) {
-                try { & $Backend.Undo $journal.changes[$i] $Want $journal.initial }
+                try { Set-LabStage ('rollback-'+$journal.changes[$i]); & $Backend.Undo $journal.changes[$i] $Want $journal.initial }
                 catch { $journal.rollback_errors+=@($_.Exception.Message) }
             }
             $journal.phase=if($journal.rollback_errors.Count){'rollback_incomplete'}else{'rolled_back'}
@@ -167,11 +196,11 @@ function Invoke-LabTransaction($Backend,$Want,[string]$Operation) {
     if ($Operation -cne 'Teardown') { throw 'LAB_OPERATION' }
     if ($journal.phase -ceq 'removed' -or $journal.phase -ceq 'rolled_back') { return @{state=$journal.phase} }
     # Preflight all ownership/drift before any removal. Never overwrite a changed profile.
-    & $Backend.CanRemove $Want $journal.initial $journal.phase
+    Set-LabStage 'recovery-preflight'; & $Backend.CanRemove $Want $journal.initial $journal.phase
     $recovery=$journal.phase -cin @('installing','rollback_incomplete','recovering')
     if(!$recovery -and $journal.phase -cnotin @('installed','removing')){throw 'LAB_INSTALL_PHASE'}
     $journal.phase=if($recovery){'recovering'}else{'removing'}; & $Backend.Write $journal
-    for ($i=$journal.changes.Count-1;$i -ge 0;$i--) { & $Backend.Undo $journal.changes[$i] $Want $journal.initial }
+    for ($i=$journal.changes.Count-1;$i -ge 0;$i--) { Set-LabStage ('recovery-'+$journal.changes[$i]); & $Backend.Undo $journal.changes[$i] $Want $journal.initial }
     $journal.phase=if($recovery){'rolled_back'}else{'removed'}
     if($recovery){$journal.rollback_errors=@()}
     & $Backend.Write $journal
@@ -522,10 +551,30 @@ function Assert-LabRestoreScope($Now,$Initial,$Want) {
 }
 
 if($Mode -ceq 'Library') { return }
+$script:LabPrimary=$null;$script:LabOperation=$Mode;Set-LabStage 'configuration'
+trap {
+    $failure=$_
+    # Fixed protected package only. Never write a privileged error artifact to an
+    # ordinary caller-selected directory; preserve the original exception if reporting fails.
+    try{
+        if($script:LabOperation -cin @('Setup','Provision','Verify','Teardown') -and $PackageRoot -and $SetupSession){
+            $leaf=Split-Path -Leaf $SetupSession
+            $expected=Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) ('Kilogram-Lab/SetupPackages/'+$leaf)
+            if($leaf -cmatch '^setup-[0-9a-f]{32}$' -and [IO.Path]::GetFullPath($PackageRoot) -ieq $expected){
+                $terminal=Get-LabFailureSummary $failure (Get-LabStage)
+                $first=if($script:LabPrimary){$script:LabPrimary}else{$terminal}
+                $name=if($script:LabOperation -ceq 'Teardown'){'recovery-error.json'}else{'main-error.json'}
+                Lab-Write (Join-Path $PackageRoot $name) @{primary=$first;terminal=$terminal;operation=$script:LabOperation}
+            }
+        }
+    }catch{}
+    throw $failure
+}
 $cfg=Get-LabConfig $Side
 $want=@{task=(Lab-TaskSpec $cfg);rules=@(Lab-Rules $cfg);config=$cfg}
 $files=@('test-terminal-t1-3e-lab-agent.ps1','test-terminal-t1-3e-lab-common.ps1','test-terminal-t1-3e-lab-job.cs','test-terminal-t1-3e-lab-install.ps1',
-    'test-terminal-t1-3e-lab-native.cs','test-terminal-t1-3e-lab-readiness.ps1','test-terminal-t1-3e-lab-setup.ps1','test-terminal-t1-3e-lab-launch.ps1','dpapi-context.ps1','lab.json','ssh-probe.json')
+    'test-terminal-t1-3e-lab-native.cs','test-terminal-t1-3e-lab-readiness.ps1','test-terminal-t1-3e-lab-setup.ps1','test-terminal-t1-3e-lab-launch.ps1',
+    'test-terminal-t1-3e-lab-diagnostics.ps1','test-terminal-t1-3e-lab-bootstrap.ps1','dpapi-context.ps1','lab.json','ssh-probe.json')
 if($Mode -ceq 'Package') {
     if(Test-Path -LiteralPath $Output) { throw 'LAB_PACKAGE_EXISTS' }
     [void][IO.Directory]::CreateDirectory($Output); Lab-Plain $Output
@@ -564,7 +613,8 @@ $setupMode=$Mode -ceq 'Setup';$setupActor=$null;$held=[Collections.Generic.List[
 if($setupMode){
     try {
         $null=Get-LabSetupSession $cfg $SetupSession
-        $package=Assert-LabPackage $PackageRoot $PackageSha $Side $files $cfg $held
+        Set-LabStage 'package-validation';$package=Assert-LabPackage $PackageRoot $PackageSha $Side $files $cfg $held
+        Set-LabStage 'actor-admission'
         $setupActor=Open-LabSetupActor $cfg $SetupSession
         $Mode='Provision'
     }catch{if($setupActor){$setupActor.Dispose()};foreach($f in $held){$f.Dispose()};throw}
@@ -581,6 +631,7 @@ foreach($directory in @($stateRoot,$stateDir)) {
     if(!$actualAcl.AreAccessRulesProtected -or $actualAcl.GetOwner([Security.Principal.SecurityIdentifier]).Value -notin @('S-1-5-18','S-1-5-32-544')) {throw 'LAB_STATE_ACL'}
     foreach($ace in $actualAcl.GetAccessRules($true,$true,[Security.Principal.SecurityIdentifier])) { if($ace.AccessControlType -ne 'Allow' -or $ace.IdentityReference.Value -notin @('S-1-5-18','S-1-5-32-544')){throw 'LAB_STATE_ACL'} }
 }
+Set-LabStage 'install-lock'
 $installLock=[IO.File]::Open((Join-Path $stateDir 'install.lock'),'OpenOrCreate','Write','None')
 $journalPath=Join-Path $stateDir 'initial-and-journal.json'
 $teardownHandles=@{agent=$null;images=$null}
@@ -653,7 +704,7 @@ try {
             }
             $pin=(Lab-Read $intent).sha256
             $null=Assert-LabReadOnly $cfg $pin
-            $proof=Invoke-LabTaskProbe $cfg $w.task $pin
+            Set-LabStage 'ordinary-task-probe';$proof=Invoke-LabTaskProbe $cfg $w.task $pin
             Lab-Write (Join-Path $stateDir ('task-proof-'+[guid]::NewGuid().ToString('N')+'.json')) $proof
         }
         CanRemove={param($w,$initial,$phase)

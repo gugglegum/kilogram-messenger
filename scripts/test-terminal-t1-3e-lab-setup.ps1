@@ -38,15 +38,16 @@ function Open-LabSetupActor($Cfg,[string]$SessionPath,[ValidateRange(1,45)][int]
 }
 function Get-LabSetupSnapshot($Cfg,$Want,$Actor,[IO.FileStream]$InstallLock) {
     if(!$InstallLock -or !$InstallLock.CanWrite -or $InstallLock.SafeFileHandle.IsClosed){throw 'LAB_INSTALL_LOCK_REQUIRED'}
-    $snapshot=Get-LabSnapshot $Cfg $Want
+    Set-LabStage 'policy-audit';$snapshot=Get-LabSnapshot $Cfg $Want
+    Set-LabStage 'policy-predicates'
     Assert-LabNetwork $Cfg $snapshot $Actor
     # Capability/projection validation belongs to this newly observed transaction state.
     # Owned rules are checked against both stores after creation, before install success.
-    $ordinaryBefore=Get-LabOrdinaryState $Cfg $Want -AllowMissing
+    Set-LabStage 'ordinary-capability';$ordinaryBefore=Get-LabOrdinaryState $Cfg $Want -AllowMissing
     $projection=$ordinaryBefore | ConvertTo-Json -Depth 18 -Compress | ConvertFrom-Json
     $projection.rules=@()
     $relevant=@{profiles=$snapshot.profiles;rules=@();network=$snapshot.network;adapter=$snapshot.adapter}
-    Assert-LabOrdinaryAgainstCim $Cfg @{rules=@()} $projection $relevant
+    Set-LabStage 'ordinary-cim-comparison';Assert-LabOrdinaryAgainstCim $Cfg @{rules=@()} $projection $relevant
     return @{snapshot=$snapshot;sha256=(Lab-JsonHash $snapshot);ordinary=$ordinaryBefore}
 }
 function Invoke-LabTaskProbe($Cfg,$TaskSpec,[string]$Pin) {
