@@ -1,5 +1,5 @@
 param(
-    [Parameter(Mandatory)][ValidateSet('Build','Install','Teardown')][string]$LaunchAction,
+    [Parameter(Mandatory)][ValidateSet('Build','Install','RecoverInstall','Teardown')][string]$LaunchAction,
     [Parameter(Mandatory)][ValidateSet('A','B')][string]$LaunchSide,
     [Parameter(Mandatory)][string]$LaunchRoot,
     [Parameter(Mandatory)][string]$ManifestPin,
@@ -12,7 +12,7 @@ $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
 $launchCfg=Get-LabConfig $LaunchSide
 $launchFiles=@('test-terminal-t1-3e-lab-agent.ps1','test-terminal-t1-3e-lab-common.ps1','test-terminal-t1-3e-lab-job.cs','test-terminal-t1-3e-lab-install.ps1',
     'test-terminal-t1-3e-lab-native.cs','test-terminal-t1-3e-lab-readiness.ps1','test-terminal-t1-3e-lab-setup.ps1','test-terminal-t1-3e-lab-launch.ps1',
-    'test-terminal-t1-3e-lab-diagnostics.ps1','test-terminal-t1-3e-lab-bootstrap.ps1','dpapi-context.ps1','lab.json','ssh-probe.json')
+    'test-terminal-t1-3e-lab-diagnostics.ps1','test-terminal-t1-3e-lab-bootstrap.ps1','test-terminal-t1-3e-lab-server.ps1','test-terminal-t1-3e-lab-recovery.ps1','dpapi-context.ps1','lab.json','ssh-probe.json')
 $launchLocks=[Collections.Generic.List[IDisposable]]::new()
 function Quote-Lab([string]$Text){"'"+$Text.Replace("'","''")+"'"}
 function Encode-Lab([string]$Text){[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($Text))}
@@ -31,7 +31,7 @@ function Start-LabPinnedSsh($Config,$PackageDirectory) {
     $fingerprints=@(& "$env:windir/System32/OpenSSH/ssh-keygen.exe" -lf $s.known_hosts)
     if($LASTEXITCODE -ne 0 -or !@($fingerprints|Where-Object {$_ -cmatch [regex]::Escape($s.fingerprint)}).Count){throw 'LAB_SSH_HOSTKEY'}
     Lab-Plain $s.identity
-    $remote='powershell.exe -NoProfile -NonInteractive -EncodedCommand '+(Encode-Lab 'Start-Sleep -Seconds 750')
+    $remote='powershell.exe -NoProfile -NonInteractive -EncodedCommand '+(Encode-Lab 'Start-Sleep -Seconds 1200')
     $info=[Diagnostics.ProcessStartInfo]::new("$env:windir/System32/OpenSSH/ssh.exe")
     $info.Arguments='-F NUL -T -oBatchMode=yes -oIdentitiesOnly=yes -oStrictHostKeyChecking=yes -oHostKeyAlgorithms=ssh-ed25519 -oUpdateHostKeys=no -oGlobalKnownHostsFile=NUL '+
         '-oUserKnownHostsFile="'+$s.known_hosts+'" -oBindAddress='+$s.source+' -oClearAllForwardings=yes -oConnectTimeout=5 -oConnectionAttempts=1 -oServerAliveInterval=10 -oServerAliveCountMax=2 '+
@@ -62,14 +62,16 @@ function Invoke-LabSetupChild([string]$Operation,[int]$Seconds,$SessionJob,[stri
         try{$SessionJob.CleanupChildren(2000)}finally{if($guard){$guard.Dispose()};if($p){$p.Dispose()};if($out){$out.Dispose()};if($err){$err.Dispose()}}
     }
 }
-function Invoke-LabSetupSupervised($SessionJob,$Config,[string]$InstallSession,[string]$JournalPath,[ValidateSet('Setup','Teardown')][string]$Operation,
+function Invoke-LabSetupSupervised($SessionJob,$Config,[string]$InstallSession,[string]$JournalPath,[ValidateSet('Setup','SetupRecoveredA','SetupFreshB','Teardown')][string]$Operation,
     [ValidateRange(1,450)][int]$MainSeconds=450,[ValidateRange(1,180)][int]$RecoverySeconds=180) {
     try{$main=Invoke-LabSetupChild $Operation $MainSeconds $SessionJob (Join-Path $LaunchRoot 'main')}
     catch{$main=@{exit=$null;timeout=$null;capture_complete=$false;error=(Get-LabFailureSummary $_ 'supervisor-owned-cleanup')}}
-    $rollback=$null
+    $rollback=$null;$recoveryAdmission=$null
     $mainGood=$main.exit -eq 0 -and $main.timeout -eq $false -and $main.capture_complete -eq $true
-    if($Operation -ceq 'Setup' -and !$mainGood){
-        $saved=Lab-Read $JournalPath -MaxBytes 2097152
+    $install=$Operation -cne 'Teardown'
+    if($install -and !$mainGood){
+        $saved=$null
+        try{$saved=Read-LabJournalStrict $JournalPath}catch{$recoveryAdmission=Get-LabFailureSummary $_ 'fallback-owner-read'}
         # Only the invocation that wrote the intent owns timeout recovery.
         if($saved -and $saved.PSObject.Properties['setup_session'] -and $saved.setup_session -ceq (Split-Path -Leaf $InstallSession)){
             if(@($SessionJob.Children()).Count){$rollback=@{exit=$null;error='LAB_SETUP_CLEANUP_UNCONFIRMED'}}
@@ -77,14 +79,42 @@ function Invoke-LabSetupSupervised($SessionJob,$Config,[string]$InstallSession,[
         }
     }
     $diagnostics=Get-LabSetupDiagnostics $LaunchRoot $JournalPath (Split-Path -Leaf $InstallSession)
-    return @{host=$Config.host;action=$(if($Operation -ceq 'Setup'){'Install'}else{'Teardown'});main=$main;recovery=$rollback;
+    return @{host=$Config.host;action=$(if($install){'Install'}else{'Teardown'});main=$main;recovery=$rollback;recovery_admission_failure=$recoveryAdmission;
         success=$mainGood;source=$LaunchRoot;diagnostics=$diagnostics}
+}
+function Invoke-LabRecoverySetupSupervised($SessionJob,$Config,[string]$InstallSession,[string]$JournalPath,
+    [ValidateRange(1,180)][int]$OldSeconds=180,[ValidateRange(1,450)][int]$MainSeconds=450,[ValidateRange(1,180)][int]$RecoverySeconds=180){
+    $old=$null;$proof=$null;$result=$null;$failure=$null
+    try{
+        if($Config.side -ceq 'A'){
+            $old=Invoke-LabSetupChild 'RecoverOld' $OldSeconds $SessionJob (Join-Path $LaunchRoot 'old-recovery')
+            if($old.exit -ne 0 -or $old.timeout -ne $false -or $old.capture_complete -ne $true){throw 'LAB_OLD_RECOVERY_CHILD_FAILED'}
+            $saved=Lab-Read (Join-Path $LaunchRoot 'old-recovery-proof.json') -MaxBytes 2097152
+            if(!$saved -or !$saved.result.verified -or $saved.result.phase -cne 'rolled_back' -or
+               $saved.result.owner -cne 'setup-e4125cddbe3f4dba9d3017aec19af6cd' -or !$saved.result.owned_absent -or
+               !$saved.result.history_preserved -or !$saved.result.old_file_pins_preserved){throw 'LAB_OLD_RECOVERY_PROOF_REQUIRED'}
+            $proof=$saved.result;$operation='SetupRecoveredA'
+        }elseif($Config.side -ceq 'B'){
+            if(Read-LabJournalStrict $JournalPath){throw 'LAB_B_INTENT_ALREADY_EXISTS'}
+            $operation='SetupFreshB'
+        }else{throw 'LAB_COMBINED_SIDE'}
+        if(@($SessionJob.Children()).Count){throw 'LAB_SETUP_CLEANUP_UNCONFIRMED'}
+        $result=Invoke-LabSetupSupervised $SessionJob $Config $InstallSession $JournalPath $operation $MainSeconds $RecoverySeconds
+    }catch{$failure=Get-LabFailureSummary $_ 'combined-admission-or-supervisor'}
+    if(!$result){$result=@{host=$Config.host;success=$false;main=$null;recovery=$null;source=$LaunchRoot}}
+    $result.action='RecoverInstall';$result.old_recovery=$old;$result.old_recovery_proof=$proof;$result.combined_failure=$failure
+    if($failure){$result.success=$false}
+    $result.diagnostics=Get-LabSetupDiagnostics $LaunchRoot $JournalPath (Split-Path -Leaf $InstallSession)
+    $result.bounds=@{old_recovery_seconds=$OldSeconds;main_seconds=$MainSeconds;fallback_seconds=$RecoverySeconds;
+        active_seconds=($OldSeconds+$MainSeconds+$RecoverySeconds);wrapper_seconds=1080;actor_seconds=1200;
+        overhead_seconds=(1080-$OldSeconds-$MainSeconds-$RecoverySeconds)}
+    return $result
 }
 try {
     $launchPackage=Assert-LabPackage $LaunchRoot $ManifestPin $LaunchSide $launchFiles $launchCfg $launchLocks
     if($LaunchAction -ceq 'Build'){
-        $target=Join-Path $launchCfg.base 'deploy/autonomous-combined-install-review-01'
-        foreach($operation in @('Install','Teardown')){
+        $target=Join-Path $launchCfg.base 'deploy/autonomous-recovery-setup-review-01'
+        foreach($operation in @('RecoverInstall','Teardown')){
             $script=Join-Path $target 'test-terminal-t1-3e-lab-launch.ps1'
             $body='$ErrorActionPreference="Stop";$p='+(Quote-Lab $script)+';if((Get-FileHash -LiteralPath $p).Hash -ine '+(Quote-Lab $launchPackage.files.'test-terminal-t1-3e-lab-launch.ps1')+'){throw "LAB_LAUNCH_PIN"}; & $p -LaunchAction '+$operation+' -LaunchSide '+$LaunchSide+' -LaunchRoot '+(Quote-Lab $target)+' -ManifestPin '+$ManifestPin
             $cmd="@echo off`r`n"+'"%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -NonInteractive -ExecutionPolicy Bypass -EncodedCommand '+(Encode-Lab $body)+"`r`nset LAB_EXIT=%ERRORLEVEL%`r`necho Kilogram lab launcher exited with code %LAB_EXIT%`r`npause`r`nexit /b %LAB_EXIT%`r`n"
@@ -102,7 +132,9 @@ try {
         try {
             $operation=if($LaunchAction -ceq 'Install'){'Setup'}else{'Teardown'}
             $journal=Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) "Kilogram-Lab/$($launchCfg.campaign)-$LaunchSide/initial-and-journal.json"
-            $result=Invoke-LabSetupSupervised $job $launchCfg $SessionPath $journal $operation
+            $result=if($LaunchAction -ceq 'RecoverInstall'){
+                Invoke-LabRecoverySetupSupervised $job $launchCfg $SessionPath $journal
+            }else{Invoke-LabSetupSupervised $job $launchCfg $SessionPath $journal $operation}
             Lab-Write (Join-Path $LaunchRoot 'supervisor-result.json') $result -MaxBytes 2097152
             Publish-LabSetupResult $publicResult $result
             if(!$result.success){throw 'LAB_FIXED_SETUP_FAILED'}
@@ -110,7 +142,7 @@ try {
         return
     }
     $null=Lab-Config (Join-Path $LaunchRoot 'lab.json')
-    $target=Join-Path $launchCfg.base 'deploy/autonomous-combined-install-review-01'
+    $target=Join-Path $launchCfg.base 'deploy/autonomous-recovery-setup-review-01'
     if([IO.Path]::GetFullPath($LaunchRoot) -ine $target){throw 'LAB_LAUNCH_LOCATION'}
     $SessionPath=Join-Path $launchCfg.base ('deploy/setup-'+[guid]::NewGuid().ToString('N'))
     [void][IO.Directory]::CreateDirectory($SessionPath);Lab-Plain $SessionPath
@@ -123,11 +155,14 @@ try {
     try {
         # No actor/deadline is started before the user accepts the single UAC prompt.
         $adminProcess=Start-Process -FilePath "$env:windir/System32/WindowsPowerShell/v1.0/powershell.exe" -ArgumentList @('-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',(Encode-Lab $bootstrap)) -Verb RunAs -WindowStyle Hidden -PassThru
-        if($LaunchSide -ceq 'A' -and $LaunchAction -ceq 'Install'){
+        if($LaunchSide -ceq 'A' -and $LaunchAction -cin @('Install','RecoverInstall')){
             $actorProcess=Start-LabPinnedSsh $launchCfg $LaunchRoot
             Lab-Write (Join-Path $SessionPath 'actor.json') @{pid=$actorProcess.Id;started=$actorProcess.StartTime.ToFileTimeUtc();session=(Split-Path -Leaf $SessionPath)}
         }
-        if(!$adminProcess.WaitForExit(690000)){throw 'LAB_SETUP_SUPERVISOR_UNCONFIRMED'}
+        # 180 + 450 + 180 = 810 active seconds. The 270-second margin covers
+        # bootstrap, three bounded EOF/cleanup tails, diagnostics and public receipt.
+        # The retained SSH actor outlives this 1080-second wrapper by 120 seconds.
+        if(!$adminProcess.WaitForExit(1080000)){throw 'LAB_SETUP_SUPERVISOR_UNCONFIRMED'}
         $resultPath=Join-Path (Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) 'Kilogram-Lab/SetupResults') ((Split-Path -Leaf $SessionPath)+'/result.json')
         $result=Lab-Read $resultPath -MaxBytes 2097152
         if($adminProcess.ExitCode -ne 0 -or !$result -or !$result.success){throw 'LAB_SETUP_FAILED_SEE_RECEIPTS'}

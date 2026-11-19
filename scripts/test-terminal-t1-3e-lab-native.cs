@@ -47,21 +47,22 @@ public static class KilogramLabNative
         public readonly string image,user;
         public readonly bool elevated,app_container;
         public readonly Group[] groups,restricting;
-        internal Actor(int id,long creation,string path,string sid,bool ordinary) {
+        internal Actor(int id,long creation,string path,string sid,bool ordinary,bool systemAllowed=false) {
             process=OpenProcess(0x1000,false,id);if(process==IntPtr.Zero)throw new Win32Exception();
             try {
                 long end,k,u;if(!GetProcessTimes(process,out started,out end,out k,out u))throw new Win32Exception();
                 var name=new StringBuilder(32768);int size=name.Capacity;
                 if(!QueryFullProcessImageName(process,0,name,ref size))throw new Win32Exception();
                 image=name.ToString();pid=id;
-                if(started!=creation || !String.Equals(image,path,StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("Actor incarnation/image mismatch");
+                if((creation!=-1 && started!=creation) || !String.Equals(image,path,StringComparison.OrdinalIgnoreCase))throw new InvalidOperationException("Actor incarnation/image mismatch");
                 IntPtr original;
                 if(!OpenProcessToken(process,0xA,out original))throw new Win32Exception();
                 try {
                     using(var who=new WindowsIdentity(original)){user=who.User.Value;}
                     elevated=Integer(original,20)!=0;app_container=Integer(original,29)!=0;
                     groups=Groups(original,2);restricting=Groups(original,11);
-                    if(user!=sid || (ordinary && elevated))throw new InvalidOperationException("Actor token mismatch");
+                    bool system=systemAllowed && user=="S-1-5-18";
+                    if((user!=sid && !system) || (ordinary && elevated && !system))throw new InvalidOperationException("Actor token mismatch");
                     if(!DuplicateTokenEx(original,0xE,IntPtr.Zero,2,2,out token))throw new Win32Exception();
                 } finally{CloseHandle(original);}
                 if(!Alive())throw new InvalidOperationException("Actor not alive");
@@ -88,7 +89,43 @@ public static class KilogramLabNative
         }
         public void Dispose(){if(token!=IntPtr.Zero){CloseHandle(token);token=IntPtr.Zero;}if(process!=IntPtr.Zero){CloseHandle(process);process=IntPtr.Zero;}}
     }
-    public static Actor OpenActor(int pid,long started,string image,string sid,bool ordinary) {return new Actor(pid,started,image,sid,ordinary);}
+    public static Actor OpenActor(int pid,long started,string image,string sid,bool ordinary) {
+        if(started<=0)throw new ArgumentException("Creation time required");
+        return new Actor(pid,started,image,sid,ordinary);
+    }
+    // Metadata, image and token come from the same retained native handle. No managed
+    // Process.StartTime access, PID reopen or collector-token substitution is needed.
+    public static Actor OpenServerActor(int pid,string image,string ordinarySid,bool service) {
+        return new Actor(pid,-1,image,service?"S-1-5-18":ordinarySid,!service,true);
+    }
+    public sealed class ServerActors : IDisposable {
+        readonly Actor[] actors;
+        public readonly int service_pid;
+        public readonly string image,ordinary_sid;
+        internal ServerActors(Actor[] members,int servicePid,string path,string sid) {
+            if(members==null || members.Length<1 || members.Length>16)throw new ArgumentException("Server actor bound");
+            actors=(Actor[])members.Clone();service_pid=servicePid;image=path;ordinary_sid=sid;
+            var ids=new HashSet<int>();bool service=false;
+            foreach(var a in actors) {
+                if(!ids.Add(a.pid) || !a.Alive() || !String.Equals(a.image,path,StringComparison.OrdinalIgnoreCase) || a.app_container ||
+                    (a.user!="S-1-5-18" && (a.user!=sid || a.elevated)))throw new InvalidOperationException("Server actor role mismatch");
+                if(a.pid==servicePid){if(a.user!="S-1-5-18")throw new InvalidOperationException("Service token mismatch");service=true;}
+            }
+            if(!service)throw new InvalidOperationException("Service actor missing");
+        }
+        public Actor[] Members(){return (Actor[])actors.Clone();}
+        public bool Alive(){foreach(var a in actors)if(!a.Alive())return false;return true;}
+        public bool Contains(int pid){foreach(var a in actors)if(a.pid==pid)return true;return false;}
+        public int LocalUser(string sddl) {
+            bool unknown=false;
+            foreach(var a in actors){int result=a.LocalUser(sddl);if(result==1)return 1;if(result==0)unknown=true;}
+            return unknown?0:-1;
+        }
+        public void Dispose(){foreach(var a in actors)a.Dispose();}
+    }
+    public static ServerActors BindServerActors(Actor[] actors,int servicePid,string image,string ordinarySid) {
+        return new ServerActors(actors,servicePid,image,ordinarySid);
+    }
     // Supported subset: exactly one non-inherited, non-callback allow ACE granting only
     // FWP_ACTRL_MATCH_FILTER (1). Windows AccessCheck handles enabled/deny-only/restricted SIDs.
     static int Check(IntPtr token,string sddl) {

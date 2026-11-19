@@ -61,19 +61,20 @@ function Get-LabMinimalJournal([string]$Path,[string]$ExpectedSession){
     }catch{return @{available=$false;reason='unreadable_or_unsupported';error=(Lab-BoundedText $_.Exception.Message)}}
 }
 function Get-LabSetupDiagnostics([string]$ProtectedPackage,[string]$JournalPath,[string]$Session) {
-    $logs=[ordered]@{};foreach($name in @('main.stdout.log','main.stderr.log','recovery.stdout.log','recovery.stderr.log')){
+    $logs=[ordered]@{};foreach($name in @('old-recovery.stdout.log','old-recovery.stderr.log','main.stdout.log','main.stderr.log','recovery.stdout.log','recovery.stderr.log')){
         $logs[$name]=Get-LabLogSample (Join-Path $ProtectedPackage $name)
     }
     $failures=[ordered]@{}
-    foreach($name in @('main-error.json','recovery-error.json')){
+    foreach($name in @('old-recovery-error.json','main-error.json','recovery-error.json')){
         try{
             $e=Lab-Read (Join-Path $ProtectedPackage $name)
             $failures[$name]=if($e){@{primary=(Select-LabFailure $e.primary);terminal=(Select-LabFailure $e.terminal)}}else{$null}
         }catch{$failures[$name]=@{unavailable=$true;error=(Lab-BoundedText $_.Exception.Message)}}
     }
-    @{logs=$logs;failures=$failures;journal=(Get-LabMinimalJournal $JournalPath $Session);
+    $proof=Get-LabLogSample (Join-Path $ProtectedPackage 'ssh-policy-proof.json')
+    @{logs=$logs;failures=$failures;ssh_policy_proof=$proof;journal=(Get-LabMinimalJournal $JournalPath $Session);
         bounds=@{per_log_export_bytes=65536;per_log_full_hash_bytes=2097152;journal_read_bytes=2097152};
-        scope='fixed main/recovery logs and selected status only; no initial policy, Audit or credentials'}
+        scope='fixed old/main/fallback logs, selected SSH identity/rules and status; no initial policy, full Audit or credentials'}
 }
 function Publish-LabDiagnosticResult([string]$Path,$Value,[string]$Sid){
     # Caller supplies a fixed, validated admin/System result directory. Only this new

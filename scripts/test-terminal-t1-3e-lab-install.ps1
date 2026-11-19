@@ -1,5 +1,5 @@
 param(
-    [Parameter(Mandatory)][ValidateSet('Library','Package','Audit','Setup','Provision','Verify','Teardown')][string]$Mode,
+    [Parameter(Mandatory)][ValidateSet('Library','Package','Audit','Setup','SetupRecoveredA','SetupFreshB','RecoverOld','Provision','Verify','Teardown')][string]$Mode,
     [ValidateSet('A','B')][string]$Side,
     [string]$PackageRoot,
     [string]$PackageSha,
@@ -13,6 +13,8 @@ param(
 . "$PSScriptRoot/test-terminal-t1-3e-lab-diagnostics.ps1"
 . "$PSScriptRoot/test-terminal-t1-3e-lab-readiness.ps1"
 . "$PSScriptRoot/test-terminal-t1-3e-lab-setup.ps1"
+. "$PSScriptRoot/test-terminal-t1-3e-lab-server.ps1"
+. "$PSScriptRoot/test-terminal-t1-3e-lab-recovery.ps1"
 
 function Get-LabConfig([string]$Which) {
     if ($Which -cnotin @('A','B')) { throw 'LAB_SIDE' }
@@ -462,6 +464,7 @@ function Test-LabSshRule($Rule,$Cfg,[bool]$Client,[bool]$Allow,[bool]$Reply=$fal
     $localUser=Lab-RuleField $Rule LocalUser
     if($localUser -ieq 'Any'){$tests+=1}
     elseif($Client -and $Actor -and $Actor -is [KilogramLabNative+Actor] -and $Actor.user -ceq $Cfg.sid -and !$Actor.elevated){$tests+=$Actor.LocalUser($localUser)}
+    elseif(!$Client -and $Cfg.side -ceq 'B' -and $Actor -and $Actor -is [KilogramLabNative+ServerActors] -and $Actor.ordinary_sid -ceq $Cfg.sid -and $Actor.Alive()){$tests+=$Actor.LocalUser($localUser)}
     else{$tests+=0}
     foreach($pair in @(@('Authentication','NotRequired'),@('Encryption','NotRequired'),@('OverrideBlockRules','False'))) {
         $tests+=if((Lab-RuleField $Rule $pair[0]) -ieq $pair[1]){1}else{0}
@@ -470,6 +473,7 @@ function Test-LabSshRule($Rule,$Cfg,[bool]$Client,[bool]$Allow,[bool]$Reply=$fal
 }
 function Assert-LabSshPath($Cfg,$Snapshot,$Actor=$null) {
     $client=$Cfg.side -ceq 'A' # Actual route: A runs the controller/ssh client; B runs sshd.
+    if(!$client -and $Actor){$null=Assert-LabServerActors $Cfg $Actor}
     $expected=Join-Path ([Environment]::GetFolderPath('System')) 'OpenSSH/sshd.exe'
     $hasSsh=if($Snapshot -is [Collections.IDictionary]){$Snapshot.Contains('ssh')}else{[bool]$Snapshot.PSObject.Properties['ssh']}
     if(!$client -and (!$hasSsh -or !$Snapshot.ssh -or !$Snapshot.ssh.running -or $Snapshot.ssh.service_path.Trim('"') -ine $expected)){throw 'LAB_SSH_SERVICE_UNCERTAIN'}
@@ -557,13 +561,13 @@ trap {
     # Fixed protected package only. Never write a privileged error artifact to an
     # ordinary caller-selected directory; preserve the original exception if reporting fails.
     try{
-        if($script:LabOperation -cin @('Setup','Provision','Verify','Teardown') -and $PackageRoot -and $SetupSession){
+        if($script:LabOperation -cin @('Setup','SetupRecoveredA','SetupFreshB','RecoverOld','Provision','Verify','Teardown') -and $PackageRoot -and $SetupSession){
             $leaf=Split-Path -Leaf $SetupSession
             $expected=Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) ('Kilogram-Lab/SetupPackages/'+$leaf)
             if($leaf -cmatch '^setup-[0-9a-f]{32}$' -and [IO.Path]::GetFullPath($PackageRoot) -ieq $expected){
                 $terminal=Get-LabFailureSummary $failure (Get-LabStage)
                 $first=if($script:LabPrimary){$script:LabPrimary}else{$terminal}
-                $name=if($script:LabOperation -ceq 'Teardown'){'recovery-error.json'}else{'main-error.json'}
+                $name=if($script:LabOperation -ceq 'RecoverOld'){'old-recovery-error.json'}elseif($script:LabOperation -ceq 'Teardown'){'recovery-error.json'}else{'main-error.json'}
                 Lab-Write (Join-Path $PackageRoot $name) @{primary=$first;terminal=$terminal;operation=$script:LabOperation}
             }
         }
@@ -574,7 +578,7 @@ $cfg=Get-LabConfig $Side
 $want=@{task=(Lab-TaskSpec $cfg);rules=@(Lab-Rules $cfg);config=$cfg}
 $files=@('test-terminal-t1-3e-lab-agent.ps1','test-terminal-t1-3e-lab-common.ps1','test-terminal-t1-3e-lab-job.cs','test-terminal-t1-3e-lab-install.ps1',
     'test-terminal-t1-3e-lab-native.cs','test-terminal-t1-3e-lab-readiness.ps1','test-terminal-t1-3e-lab-setup.ps1','test-terminal-t1-3e-lab-launch.ps1',
-    'test-terminal-t1-3e-lab-diagnostics.ps1','test-terminal-t1-3e-lab-bootstrap.ps1','dpapi-context.ps1','lab.json','ssh-probe.json')
+    'test-terminal-t1-3e-lab-diagnostics.ps1','test-terminal-t1-3e-lab-bootstrap.ps1','test-terminal-t1-3e-lab-server.ps1','test-terminal-t1-3e-lab-recovery.ps1','dpapi-context.ps1','lab.json','ssh-probe.json')
 if($Mode -ceq 'Package') {
     if(Test-Path -LiteralPath $Output) { throw 'LAB_PACKAGE_EXISTS' }
     [void][IO.Directory]::CreateDirectory($Output); Lab-Plain $Output
@@ -609,14 +613,18 @@ if($Mode -ceq 'Verify' -and $Ordinary) {
 $identity=[Security.Principal.WindowsIdentity]::GetCurrent()
 try { if(!([Security.Principal.WindowsPrincipal]::new($identity)).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)){throw 'LAB_ADMIN_SETUP_ONLY'} }
 finally{$identity.Dispose()}
-$setupMode=$Mode -ceq 'Setup';$setupActor=$null;$held=[Collections.Generic.List[IDisposable]]::new()
-if($setupMode){
+$setupMode=$Mode -cin @('Setup','SetupRecoveredA','SetupFreshB');$freshB=$Mode -ceq 'SetupFreshB';$recoveredA=$Mode -ceq 'SetupRecoveredA';$oldRecovery=$Mode -ceq 'RecoverOld'
+if($freshB -and $Side -cne 'B'){throw 'LAB_FRESH_B_SIDE'}
+if($recoveredA -and $Side -cne 'A'){throw 'LAB_RECOVERED_A_SIDE'}
+$setupActor=$null;$held=[Collections.Generic.List[IDisposable]]::new()
+if($setupMode -or $oldRecovery){
     try {
         $null=Get-LabSetupSession $cfg $SetupSession
         Set-LabStage 'package-validation';$package=Assert-LabPackage $PackageRoot $PackageSha $Side $files $cfg $held
-        Set-LabStage 'actor-admission'
-        $setupActor=Open-LabSetupActor $cfg $SetupSession
-        $Mode='Provision'
+        if($setupMode){
+            Set-LabStage 'actor-admission';$setupActor=Open-LabSetupActor $cfg $SetupSession
+            $Mode='Provision'
+        }
     }catch{if($setupActor){$setupActor.Dispose()};foreach($f in $held){$f.Dispose()};throw}
 }
 try {
@@ -636,19 +644,30 @@ $installLock=[IO.File]::Open((Join-Path $stateDir 'install.lock'),'OpenOrCreate'
 $journalPath=Join-Path $stateDir 'initial-and-journal.json'
 $teardownHandles=@{agent=$null;images=$null}
 try {
+    $oldContext=$null
+    if($recoveredA){Set-LabStage 'old-recovery-recheck';$null=Assert-LabRecoveredSetup $cfg $want $stateDir $PackageRoot}
+    if($oldRecovery){
+        Set-LabStage 'old-recovery-admission'
+        $oldContext=Assert-LabOldRecovery $cfg $want $stateDir
+        $files=$oldContext.names;$Mode='Teardown'
+    }
     if($Mode -ceq 'Provision' -and !$setupMode) {
         $package=Assert-LabPackage $PackageRoot $PackageSha $Side $files $cfg $held
     }
     $packagePins=if($Mode -ceq 'Provision'){$package.files}else{$null}
     $backend=@{
-        Read={ Lab-Read $journalPath -MaxBytes 2097152 }
+        Read={
+            $saved=Read-LabJournalStrict $journalPath
+            if($freshB -and $saved){throw 'LAB_B_INTENT_ALREADY_EXISTS'}
+            $saved
+        }
         Write={param($j)
             if($setupMode){$j|Add-Member -NotePropertyName setup_session -NotePropertyValue (Split-Path -Leaf $SetupSession) -Force}
             Save-LabInstallJournal $stateDir $j $packagePins
         }
         Snapshot={
             if($setupMode){
-                $admitted=Get-LabSetupSnapshot $cfg $want $setupActor $installLock
+                $admitted=Get-LabSetupSnapshot $cfg $want $setupActor $installLock $PackageRoot
                 Lab-Write (Join-Path $PackageRoot 'fresh-audit.json') $admitted -MaxBytes 2097152
                 $admitted.snapshot
             }else{Get-LabSnapshot $cfg $want}
@@ -710,7 +729,7 @@ try {
         CanRemove={param($w,$initial,$phase)
             if($phase -ceq 'installed'){Assert-LabInstalled $cfg $w $initial -TeardownOnly}
             Assert-LabRestoreScope (Get-LabSnapshot $cfg $w) $initial $w
-            Add-Type -Path "$PSScriptRoot/test-terminal-t1-3e-lab-job.cs"
+            if(!('KilogramLabJob' -as [type])){Add-Type -Path "$PSScriptRoot/test-terminal-t1-3e-lab-job.cs"}
             Stop-LabIdleAgent $cfg.base $teardownHandles
         }
         Undo={param($change,$w,$initial)
@@ -745,6 +764,10 @@ try {
         }
     }
     $result=Invoke-LabTransaction $backend $want $Mode
+    if($oldRecovery){
+        $result.old_recovery=Assert-LabOldRecoveryCompleted $cfg $want $stateDir $oldContext
+        Lab-Write (Join-Path $PackageRoot 'old-recovery-proof.json') @{before=$oldContext;result=$result.old_recovery} -MaxBytes 2097152
+    }
     if($Mode -cin @('Provision','Verify')) {
         $baselinePath=Join-Path $cfg.base 'ordinary-agent/campaign-baseline.json'
         $result.baseline_sha256=Lab-Hash $baselinePath

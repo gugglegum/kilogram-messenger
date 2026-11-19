@@ -7,7 +7,7 @@ function Get-LabSetupSession($Cfg,[string]$SessionPath) {
 }
 function Open-LabSetupActor($Cfg,[string]$SessionPath,[ValidateRange(1,45)][int]$AdmissionSeconds=45) {
     $null=Get-LabSetupSession $Cfg $SessionPath
-    if($Cfg.side -ceq 'B'){return $null}
+    if($Cfg.side -ceq 'B'){return Open-LabServerActors $Cfg}
     $wait=[Diagnostics.Stopwatch]::StartNew()
     do {
         $row=Lab-Read (Join-Path $SessionPath 'actor.json')
@@ -36,10 +36,11 @@ function Open-LabSetupActor($Cfg,[string]$SessionPath,[ValidateRange(1,45)][int]
         throw "LAB_SSH_ACTOR_TIMEOUT:phase=socket;pid=$($actor.pid);started=$($row.started);reads=$reads;elapsed_ms=$($wait.ElapsedMilliseconds)"
     }catch{$actor.Dispose();throw}
 }
-function Get-LabSetupSnapshot($Cfg,$Want,$Actor,[IO.FileStream]$InstallLock) {
+function Get-LabSetupSnapshot($Cfg,$Want,$Actor,[IO.FileStream]$InstallLock,[string]$EvidenceDirectory) {
     if(!$InstallLock -or !$InstallLock.CanWrite -or $InstallLock.SafeFileHandle.IsClosed){throw 'LAB_INSTALL_LOCK_REQUIRED'}
     Set-LabStage 'policy-audit';$snapshot=Get-LabSnapshot $Cfg $Want
     Set-LabStage 'policy-predicates'
+    if($EvidenceDirectory){Lab-Write (Join-Path $EvidenceDirectory 'ssh-policy-proof.json') (Get-LabSshEvidence $Cfg $snapshot $Actor) -MaxBytes 2097152}
     Assert-LabNetwork $Cfg $snapshot $Actor
     # Capability/projection validation belongs to this newly observed transaction state.
     # Owned rules are checked against both stores after creation, before install success.
