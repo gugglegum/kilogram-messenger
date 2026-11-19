@@ -701,7 +701,16 @@ try {
                     $params=@{};foreach($key in @('Name','DisplayName','Description','Group','Enabled','Profile','Direction','Action','EdgeTraversalPolicy','Program','Protocol','LocalAddress','RemoteAddress','LocalPort','RemotePort','InterfaceAlias')){$params[$key]=$spec[$key]}
                     $null=New-NetFirewallRule @params -PolicyStore PersistentStore
                 }
-                'private' {Set-NetFirewallProfile -PolicyStore PersistentStore -Name Private -Enabled True}
+                'private' {
+                    if($setupMode){
+                        # Own rules exist now; compare their ordinary projection before
+                        # changing the profile. A mismatch still follows the same rollback.
+                        Set-LabStage 'pre-profile-comparison'
+                        $relevant=Get-LabRelevant $cfg $w;$ordinaryNow=Get-LabOrdinaryState $cfg $w
+                        Assert-LabOrdinaryAgainstCim $cfg $w $ordinaryNow $relevant $PackageRoot
+                    }
+                    Set-LabStage 'apply-private';Set-NetFirewallProfile -PolicyStore PersistentStore -Name Private -Enabled True
+                }
             }
         }
         Verify={param($w)
@@ -713,7 +722,7 @@ try {
                 $json=ConvertTo-Json -InputObject $j.initial -Depth 18 -Compress;$hash=[Security.Cryptography.SHA256]::Create()
                 try{$initialSha=[BitConverter]::ToString($hash.ComputeHash([Text.Encoding]::UTF8.GetBytes($json))).Replace('-','').ToLowerInvariant()}finally{$hash.Dispose()}
                 $relevant=Get-LabRelevant $cfg $w;$ordinaryNow=Get-LabOrdinaryState $cfg $w
-                Assert-LabOrdinaryAgainstCim $cfg $w $ordinaryNow $relevant
+                Assert-LabOrdinaryAgainstCim $cfg $w $ordinaryNow $relevant $(if($setupMode){$PackageRoot}else{$null})
                 $value=[ordered]@{v=2;task=$w.task;initial_audit_sha256=$initialSha;relevant=$relevant;ordinary=$ordinaryNow}
                 $bytes=[Text.Encoding]::UTF8.GetBytes((ConvertTo-Json -InputObject $value -Depth 18 -Compress)+[char]10)
                 $hash=[Security.Cryptography.SHA256]::Create()

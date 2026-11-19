@@ -100,7 +100,38 @@ function Get-LabOrdinaryState($Cfg,$Want,[switch]$AllowMissing) {
     })
     @{backend='com-native-v1';profiles=$profiles;rules=$rules;policy_inputs=(Get-LabPolicyInputs);native_network=(Get-LabNativeNetwork $Cfg)}
 }
-function Assert-LabOrdinaryAgainstCim($Cfg,$Want,$Ordinary,$Relevant) {
+function Get-LabComRuleComparison($Cfg,$Want,$Ordinary,$Relevant){
+    # Own fixed rules only. Do not include unrelated policy or a full Audit.
+    if(@($Want.rules).Count -gt 2 -or @($Ordinary.rules).Count -gt 2 -or @($Relevant.rules).Count -gt 4){throw 'LAB_COM_COMPARISON_BOUND'}
+    $rows=@(foreach($r in $Ordinary.rules){
+        $expected=@($Want.rules|Where-Object Name -ceq $r.name)
+        $native=@($Relevant.rules|Where-Object {$_.view.Name -ceq $r.name})
+        $diff=@()
+        if($expected.Count -eq 1){
+            $actualObject=if($r.view -is [Collections.IDictionary]){[pscustomobject]$r.view}else{$r.view}
+            $expectedObject=if($expected[0] -is [Collections.IDictionary]){[pscustomobject]$expected[0]}else{$expected[0]}
+            $keys=@(@($actualObject.PSObject.Properties.Name)+@($expectedObject.PSObject.Properties.Name)|Sort-Object -Unique)
+            if($keys.Count -gt 40){throw 'LAB_COM_COMPARISON_BOUND'}
+            $diff=@(foreach($key in $keys){
+                $a=$actualObject.PSObject.Properties[$key];$e=$expectedObject.PSObject.Properties[$key]
+                if(!$a -or !$e -or !(Lab-Equal $a.Value $e.Value)){
+                    @{field=$key;actual_present=[bool]$a;expected_present=[bool]$e;actual=$(if($a){$a.Value}else{$null});expected=$(if($e){$e.Value}else{$null})}
+                }
+            })
+        }
+        @{name=$r.name;expected_count=$expected.Count;expected=$expected;ordinary=$r.view;native=$native;differences=$diff}
+    })
+    @{host=$Cfg.host;side=$Cfg.side;stage=(Get-LabStage);utc=[DateTime]::UtcNow.ToString('o');rules=$rows;
+        expected_rules=@($Want.rules).Count;ordinary_rules=@($Ordinary.rules).Count;scope='own rule views only; no unrelated policy or credentials'}
+}
+function Save-LabComRuleComparison($Cfg,$Want,$Ordinary,$Relevant,[string]$Directory){
+    $leaf=Split-Path -Leaf $Directory
+    $root=Join-Path ([Environment]::GetFolderPath('CommonApplicationData')) 'Kilogram-Lab/SetupPackages'
+    if($leaf -cnotmatch '^setup-[0-9a-f]{32}$' -or [IO.Path]::GetFullPath($Directory) -ine (Join-Path $root $leaf)){throw 'LAB_COM_DIAGNOSTIC_SCOPE'}
+    Lab-Plain $Directory
+    Lab-Write (Join-Path $Directory 'com-rule-comparison.json') (Get-LabComRuleComparison $Cfg $Want $Ordinary $Relevant) -MaxBytes 2097152
+}
+function Assert-LabOrdinaryAgainstCim($Cfg,$Want,$Ordinary,$Relevant,[string]$EvidenceDirectory) {
     if($Ordinary.backend -cne 'com-native-v1' -or (@($Ordinary.profiles|ForEach-Object name|Sort-Object) -join ',') -cne 'Domain,Private,Public' -or
        $Ordinary.rules.Count -ne $Want.rules.Count){throw 'LAB_COM_PROJECTION_SCHEMA'}
     foreach($p in $Ordinary.profiles){
@@ -111,7 +142,13 @@ function Assert-LabOrdinaryAgainstCim($Cfg,$Want,$Ordinary,$Relevant) {
     }
     foreach($r in $Ordinary.rules){
         $expected=@($Want.rules|Where-Object Name -ceq $r.name)
-        if($expected.Count -ne 1 -or !(Lab-Equal $r.view $expected[0])){throw 'LAB_COM_SPEC_DIFFERS'}
+        if($expected.Count -ne 1 -or !(Lab-Equal $r.view $expected[0])){
+            if($EvidenceDirectory){
+                try{Save-LabComRuleComparison $Cfg $Want $Ordinary $Relevant $EvidenceDirectory}
+                catch{[Console]::Error.WriteLine('LAB_COM_DIAGNOSTIC_UNAVAILABLE:'+ $_.Exception.Message)}
+            }
+            throw 'LAB_COM_SPEC_DIFFERS'
+        }
         foreach($store in @('PersistentStore','ActiveStore')){
             $native=@($Relevant.rules|Where-Object {$_.store -ceq $store -and $_.view.Name -ceq $r.name})
             if($native.Count -ne 1 -or !(Lab-Equal $r.view $native[0].view)){throw 'LAB_COM_CIM_RULE_DIFFERS'}

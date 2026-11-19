@@ -72,9 +72,10 @@ function Get-LabSetupDiagnostics([string]$ProtectedPackage,[string]$JournalPath,
         }catch{$failures[$name]=@{unavailable=$true;error=(Lab-BoundedText $_.Exception.Message)}}
     }
     $proof=Get-LabLogSample (Join-Path $ProtectedPackage 'ssh-policy-proof.json')
-    @{logs=$logs;failures=$failures;ssh_policy_proof=$proof;journal=(Get-LabMinimalJournal $JournalPath $Session);
+    $comparison=Get-LabLogSample (Join-Path $ProtectedPackage 'com-rule-comparison.json')
+    @{logs=$logs;failures=$failures;ssh_policy_proof=$proof;com_rule_comparison=$comparison;journal=(Get-LabMinimalJournal $JournalPath $Session);
         bounds=@{per_log_export_bytes=65536;per_log_full_hash_bytes=2097152;journal_read_bytes=2097152};
-        scope='fixed old/main/fallback logs, selected SSH identity/rules and status; no initial policy, full Audit or credentials'}
+        scope='fixed old/main/fallback logs, own COM rule comparison, selected SSH identity/rules and status; no initial policy, full Audit or credentials'}
 }
 function Publish-LabDiagnosticResult([string]$Path,$Value,[string]$Sid){
     # Caller supplies a fixed, validated admin/System result directory. Only this new
