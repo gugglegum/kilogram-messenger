@@ -2,6 +2,7 @@ param([Parameter(Mandatory)][string]$Request)
 
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
+[Diagnostics.Process]::GetCurrentProcess().PriorityClass='BelowNormal'
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 $req = ConvertFrom-Json -InputObject $Request
 $base = [IO.Path]::GetFullPath($req.base)
@@ -51,7 +52,35 @@ function Check-Image([string]$Name) {
 
 # Create a run directory only after its own exclusive marker was created.
 Assert-PlainPath $base
-if ($req.op -eq 'init') {
+function Assert-LabAttempt {
+    # Existing ordinary-agent protocol only. Never create/adopt an arbitrary run.
+    foreach($name in @('agent_session','agent_generation')){if($req.$name -cnotmatch '^[0-9a-f]{32}$'){throw 'Lab attempt identity'}}
+    if($req.worker_pid -isnot [int] -or $req.worker_pid -le 0 -or $req.worker_started -isnot [long] -or $req.worker_started -le 0){throw 'Lab worker identity'}
+    $control=Join-Path $base 'ordinary-agent/control'
+    foreach($p in @((Join-Path $run 'attempt.json'),(Join-Path $run 'started.json'),(Join-Path $control 'ready.json'),(Join-Path $control 'state.json'))){Assert-PlainPath $p}
+    $entry=Get-Content -LiteralPath (Join-Path $run 'attempt.json') -Raw|ConvertFrom-Json
+    $started=Get-Content -LiteralPath (Join-Path $run 'started.json') -Raw|ConvertFrom-Json
+    $ready=Get-Content -LiteralPath (Join-Path $control 'ready.json') -Raw|ConvertFrom-Json
+    $state=Get-Content -LiteralPath (Join-Path $control 'state.json') -Raw|ConvertFrom-Json
+    if($entry.attempt -cne $req.attempt -or $entry.generation -cne $req.agent_generation -or $entry.session -cne $req.agent_session -or
+       $ready.session -cne $entry.session -or $state.session -cne $entry.session -or $state.active -cne $req.attempt -or $state.blocked -or
+       $started.generation -cne $entry.generation -or $started.pid -ne $req.worker_pid -or $started.started -ne $req.worker_started){throw 'Lab attempt binding'}
+    $keys=@($entry.pins.PSObject.Properties.Name|Sort-Object)
+    if(($keys -join '|') -cne (@($req.pins.PSObject.Properties.Name|Sort-Object)-join '|')){throw 'Lab attempt pins'}
+    foreach($name in $keys){if($entry.pins.$name -cne $req.pins.$name){throw 'Lab attempt pins'}}
+    return @{entry=$entry;started=$started}
+}
+if($req.op -ceq 'lab-clock'){
+    $bound=Assert-LabAttempt
+    $clockSource=Check-Image 'deadline.ps1';. ([scriptblock]::Create([IO.File]::ReadAllText($clockSource)))
+    @{attempt=$req.attempt;generation=$bound.entry.generation;session=$bound.entry.session;
+      worker_pid=$bound.started.pid;worker_started=$bound.started.started;start_tick=$bound.entry.start_tick;
+      work_tick=$bound.started.work_tick;whole_tick=$bound.started.whole_tick;tick=[KilogramS5Deadline]::TickNow();utc=[DateTime]::UtcNow.ToString('o')}|ConvertTo-Json -Compress
+    return
+}
+if ($req.op -in @('init','lab-init')) {
+    $lab=$req.op -ceq 'lab-init'
+    if($lab){$null=Assert-LabAttempt}
     $requiredImages = if ($req.pins.PSObject.Properties['mailbox-fake.ps1']) {
         @('mailbox-fake.ps1','mailbox.cs','setup-pipe.cs','deadline.ps1')
     } else {
@@ -75,9 +104,11 @@ if ($req.op -eq 'init') {
     $runs = [IO.Directory]::CreateDirectory((Join-Path $base 'runs')).FullName
     Assert-PlainPath $runs
     Write-NewJson (Join-Path $runs "$($req.attempt).claim.json") @{host=$env:COMPUTERNAME; pins=$req.pins}
-    if ([IO.Directory]::Exists($run)) { throw 'Run directory already exists' }
-    [void][IO.Directory]::CreateDirectory((Join-Path $run 'in'))
-    [void][IO.Directory]::CreateDirectory((Join-Path $run 'receipts'))
+    if(!$lab){
+        if ([IO.Directory]::Exists($run)) { throw 'Run directory already exists' }
+        [void][IO.Directory]::CreateDirectory((Join-Path $run 'in'))
+        [void][IO.Directory]::CreateDirectory((Join-Path $run 'receipts'))
+    }
     @{host=$env:COMPUTERNAME; ip=$req.ip; pid=$PID} | ConvertTo-Json -Compress
     return
 }

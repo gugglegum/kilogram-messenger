@@ -117,7 +117,7 @@ public static class T13eNlm {
     return
 }
 
-if ($r.op -notin @('status','ports')) { throw 'Unknown observer operation' }
+if ($r.op -notin @('status','ports','preconnect')) { throw 'Unknown observer operation' }
 $all = @(& "$env:windir/System32/netstat.exe" -ano -p UDP | ForEach-Object {
     if ($_ -match '^\s*UDP\s+([^\s]+):(\d+)\s+\S+\s+(\d+)\s*$' -and $Matches[1] -in @($ip,'0.0.0.0','[::]')) {
         @{ip=$Matches[1];port=[int]$Matches[2];pid=[int]$Matches[3]}
@@ -128,16 +128,49 @@ if ($r.op -eq 'ports') { @{sockets=$all} | ConvertTo-Json -Depth 5 -Compress; re
 
 $exe = PlainFile (Join-Path $base 'bin/kilogram-cli.exe')
 $ipc = Join-Path $base "runs/$($r.attempt)/setup/connection/ipc.json"
+if ($r.op -eq 'preconnect') {
+    if ($r.tag -cnotmatch '^owner-[abc]-1$') { throw 'Unexpected preconnect tag' }
+    $setup=Join-Path $base "runs/$($r.attempt)/setup"
+    $scope=[regex]::Escape($setup)
+    $processes=@(Get-CimInstance Win32_Process -Filter "Name='kilogram-cli.exe'" | Where-Object {
+        $_.ExecutablePath -ieq $exe.FullName -and $_.CommandLine.Replace('/','\') -match $scope
+    })
+    $chat=@($processes | Where-Object { $_.CommandLine -match '\bchat\b' })
+    $runtime=@($processes | Where-Object { $_.CommandLine -match '\bruntime-from-profile\b' })
+    $socketReceipt=Join-Path $base "runs/$($r.attempt)/receipts/$($r.tag)-socket.json"
+    if ($chat.Count -ne 1 -or $runtime.Count -or [IO.File]::Exists($ipc) -or [IO.File]::Exists($socketReceipt)) {
+        throw 'Prestarted Chat has a runtime, descriptor or socket receipt'
+    }
+    $sockets=@($all | Where-Object { $_.pid -in @($processes.ProcessId) })
+    if ($sockets.Count) { throw 'Prestarted Chat owns a UDP socket' }
+    @{disconnected=$true;descriptor=$false;sockets=$sockets;chat_pid=[int]$chat[0].ProcessId;
+      runtime_pids=@();tag=$r.tag} | ConvertTo-Json -Compress
+    return
+}
 if (![IO.File]::Exists($ipc)) { '{"ready":false}'; return }
 $null = PlainFile $ipc
 if ($r.sha256 -cnotmatch '^[0-9a-f]{64}$' -or (Get-FileHash -LiteralPath $exe.FullName).Hash -ine $r.sha256) {
     throw 'CLI diagnostic executable SHA-256 mismatch'
 }
-$raw = & $exe.FullName ordered status2 --ipc-file $ipc
-if ($LASTEXITCODE -ne 0) { throw 'Authenticated status2 failed' }
-$v = ConvertFrom-Json ($raw -join "`n")
-$owner = Get-Process -Id $v.runtime_pid
-if ($owner.Path -ine $exe.FullName) { throw 'Runtime process image differs' }
+try {
+    $raw = & $exe.FullName ordered status2 --ipc-file $ipc 2>$null
+    if ($LASTEXITCODE -ne 0) { throw 'Nonzero status2' }
+    $v = ConvertFrom-Json ($raw -join "`n")
+} catch { throw 'T13E_STATUS2_FAILED' }
+if ($v.runtime_pid -ne $r.runtime_pid -or $r.runtime_started -le 0) { throw 'T13E_RUNTIME_JOB_PID' }
+try {
+    $owner = Get-Process -Id $v.runtime_pid
+    try {
+        $actualPath = $owner.Path
+        $started = $owner.StartTime.ToFileTimeUtc()
+        $ownerSession = $owner.SessionId
+    } finally { $owner.Dispose() }
+} catch { throw 'T13E_RUNTIME_PROCESS_READ' }
+if ($actualPath -ine $exe.FullName -or $actualPath -ine $r.runtime_image) { throw 'T13E_RUNTIME_IMAGE' }
+if ($started -ne $r.runtime_started) { throw 'T13E_RUNTIME_START' }
+if ($r.side -ceq 'B' -and ($r.owner_session -le 0 -or $ownerSession -ne $r.owner_session)) {
+    throw 'T13E_RUNTIME_SESSION'
+}
 Add-Type -TypeDefinition @'
 using System;
 using System.ComponentModel;
@@ -145,29 +178,45 @@ using System.Runtime.InteropServices;
 using System.Security.Principal;
 public static class T13eToken {
  [DllImport("kernel32.dll",SetLastError=true)] static extern IntPtr OpenProcess(uint access,bool inherit,int pid);
+ [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetProcessTimes(IntPtr process,out long created,out long exited,out long kernel,out long user);
+ [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetExitCodeProcess(IntPtr process,out uint code);
  [DllImport("advapi32.dll",SetLastError=true)] static extern bool OpenProcessToken(IntPtr process,uint access,out IntPtr token);
  [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
- public static WindowsIdentity Read(int pid) {
+ public static WindowsIdentity Read(int pid,long start) {
   var process = OpenProcess(0x1000,false,pid);
   if (process == IntPtr.Zero) throw new Win32Exception(Marshal.GetLastWin32Error());
   try {
+   long created,exited,kernel,user;
+   if (!GetProcessTimes(process,out created,out exited,out kernel,out user)) throw new Win32Exception(Marshal.GetLastWin32Error());
+   if (created != start) throw new InvalidOperationException("Runtime process incarnation changed");
+   const uint StillActive = 259;
+   uint code;
+   if (!GetExitCodeProcess(process,out code)) throw new Win32Exception(Marshal.GetLastWin32Error());
+   if (code != StillActive) throw new InvalidOperationException("Runtime process already exited");
    IntPtr token;
-   if (!OpenProcessToken(process,8,out token)) throw new Win32Exception(Marshal.GetLastWin32Error());
+   if (!OpenProcessToken(process,10,out token)) throw new Win32Exception(Marshal.GetLastWin32Error()); // QUERY|DUPLICATE for WindowsPrincipal.IsInRole.
    try { return new WindowsIdentity(token); }
    finally { CloseHandle(token); }
   } finally { CloseHandle(process); }
  }
 }
 '@
-$runtimeIdentity = [T13eToken]::Read($v.runtime_pid)
+$expectedToken = if ($r.side -ceq 'B') {
+    if ($r.owner_token.user -cne $who.User.Value -or $r.owner_token.administrator -isnot [bool] -or
+        $r.owner_token.administrator -or !@($r.owner_token.groups).Count) { throw 'T13E_RUNTIME_EXPECTED_TOKEN' }
+    $r.owner_token
+} else { Token $who }
+try { $runtimeIdentity = [T13eToken]::Read($v.runtime_pid,$started) }
+catch { throw 'T13E_RUNTIME_TOKEN_READ' }
 try {
     $runtimeToken = Token $runtimeIdentity
-    if ((ConvertTo-Json $runtimeToken -Compress) -cne (ConvertTo-Json (Token $who) -Compress)) {
-        throw 'Owned runtime token differs from ordinary launcher'
+    if ($runtimeToken.user -cne $expectedToken.user -or $runtimeToken.administrator -or
+        ($runtimeToken.groups -join '|') -cne ($expectedToken.groups -join '|')) {
+        throw 'T13E_RUNTIME_TOKEN_MISMATCH'
     }
 } finally { $runtimeIdentity.Dispose() }
 $slots = @($v.contexts | Select-Object slot,context,role,phase,active,live_admitted,lease_expires,selected_lan_peer,
     own_locator_revision,peer_locator_revision,publication_ready,blocked,policy_error)
-@{ready=$true; runtime_instance=$v.runtime_instance; runtime_pid=$v.runtime_pid; endpoint=$v.endpoint
+@{ready=$true; runtime_instance=$v.runtime_instance; runtime_pid=$v.runtime_pid; runtime_started=$started; runtime_image=$actualPath; endpoint=$v.endpoint
     discovery=$v.lan_discovery; route=$v.route; slots=$slots; token=$runtimeToken
     sockets=@($all | Where-Object pid -eq $v.runtime_pid)} | ConvertTo-Json -Depth 12 -Compress

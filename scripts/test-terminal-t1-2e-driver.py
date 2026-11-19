@@ -92,7 +92,7 @@ def signed_socket(path, context_ids):
     return result
 
 
-def onboard(hosts, start_setup, evidence, transfers):
+def onboard(hosts, start_setup, evidence, transfers, select_route=None):
     for host in hosts:
         save(evidence / f"{host.name}-init.json", host.call("init"))
     a, b = [start_setup(host) for host in hosts]
@@ -140,9 +140,12 @@ def onboard(hosts, start_setup, evidence, transfers):
                 "two local installs")
         host = hosts[index]
         address, peer = host.config["ip"], host.config["peer"]
-        route = term.call("route_lan", local_ipv4=address, peer_ipv4=peer)
-        require(route["connection"] == {"mode": "direct_lan", "local_ipv4": address,
-                                        "peer_ipv4": peer, "profile_state": "not_prepared"}, "saved LAN route")
+        if select_route:
+            route = select_route(host, term)
+        else:
+            route = term.call("route_lan", local_ipv4=address, peer_ipv4=peer)
+            require(route["connection"] == {"mode": "direct_lan", "local_ipv4": address,
+                                            "peer_ipv4": peer, "profile_state": "not_prepared"}, "saved LAN route")
         participants[index] = {"host": host.config["hostname"], "setup": route}
         term.quit()
         host.receipt("setup", descriptor=False)
