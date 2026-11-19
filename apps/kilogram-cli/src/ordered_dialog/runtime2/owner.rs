@@ -14,6 +14,40 @@ use std::{
     time::Instant,
 };
 
+/// Production uses the exact path verifier. A real loopback Endpoint in unit
+/// fixtures adapts the synthetic LAN advertisement; this is not NIC coverage.
+pub(super) fn checked_lan_path(
+    route: &FreshRoute2,
+    connection: &Connection,
+    own: &wire::ParsedRuntimeLocator2,
+    peer: &wire::ParsedRuntimeLocator2,
+    endpoint: Option<&Endpoint>,
+) -> Result<Option<SocketAddr>> {
+    #[cfg(test)]
+    if let (Some(lan), Some(endpoint)) = (route.lan(), endpoint)
+        && endpoint.addr().ip_addrs().any(|a| a.ip().is_loopback())
+    {
+        ensure!(
+            route.effective()? == RoutePolicy::DirectOnly,
+            "loopback fixture direct policy"
+        );
+        own.direct_lan_socket(lan.local())?;
+        let peer_socket = peer.direct_lan_socket(lan.peer())?;
+        ensure!(
+            endpoint.id().as_bytes() == &own.fields().endpoint
+                && connection.remote_id().as_bytes() == &peer.fields().endpoint,
+            "loopback fixture endpoint binding"
+        );
+        ensure!(
+            connection.paths().iter().any(|p| p.is_selected()
+                && matches!(p.remote_addr(), iroh::TransportAddr::Ip(a) if a.ip().is_loopback())),
+            "loopback fixture selected path"
+        );
+        return Ok(Some(peer_socket));
+    }
+    route.check_lan_path(connection, own, peer, endpoint)
+}
+
 #[derive(Clone)]
 pub(super) struct Lease2 {
     pub connection: Connection,
@@ -60,7 +94,7 @@ impl Lease2 {
             "lease locator binding"
         );
         if route.lan().is_some() {
-            return route.check_lan_path(&self.connection, &own, &peer, lan_endpoint);
+            return checked_lan_path(route, &self.connection, &own, &peer, lan_endpoint);
         }
         let paths = self.connection.paths();
         let path = paths
@@ -151,6 +185,7 @@ pub(super) enum Purpose2 {
     Local,
     Peer,
     DiscoveryLocator { expires: u64 },
+    AutoLanPeerHint { deadline: Instant },
 }
 pub struct Owner2 {
     pub(super) diagnostics: Arc<super::diagnostics::Counters>,
@@ -377,6 +412,17 @@ impl Owner2 {
         calls: (u64, u64),
     ) -> Result<db::CommitReport> {
         let _timing = timing::span(timing::Metric::ClosedCommit);
+        ensure!(
+            matches!(&op, db::RuntimeOperation::AutoLanPeerHint { .. })
+                == matches!(&purpose, Purpose2::AutoLanPeerHint { .. }),
+            "Auto LAN peer hint requires its closed source purpose"
+        );
+        if matches!(&purpose, Purpose2::AutoLanPeerHint { .. }) {
+            ensure!(
+                self.auto_discovery(),
+                "Auto LAN peer hint requires Auto mode"
+            );
+        }
         // Leases are indexed by immutable context slots, never by elected role.
         let c = s
             .profile
@@ -397,7 +443,12 @@ impl Owner2 {
             permit.check()?;
             Some(permit.network.clone())
         } else if self.auto_discovery()
-            && matches!(purpose, Purpose2::Peer | Purpose2::DiscoveryLocator { .. })
+            && matches!(
+                purpose,
+                Purpose2::Peer
+                    | Purpose2::DiscoveryLocator { .. }
+                    | Purpose2::AutoLanPeerHint { .. }
+            )
         {
             let token = self
                 .network_freshness()
@@ -425,6 +476,7 @@ impl Owner2 {
             db::RuntimeOperation::PinAuthority { .. } => "PinAuthority",
             db::RuntimeOperation::RenewConsent { .. } => "RenewConsent",
             db::RuntimeOperation::Locator { .. } => "Locator",
+            db::RuntimeOperation::AutoLanPeerHint { .. } => "AutoLanPeerHint",
             db::RuntimeOperation::PrepareOffer { .. } => "PrepareOffer",
             db::RuntimeOperation::ReserveGrant { .. } => "ReserveGrant",
             db::RuntimeOperation::HistoricalConsent { .. } => "HistoricalConsent",
@@ -484,6 +536,13 @@ impl Owner2 {
                 {
                     return Err(db::Error::PolicyRejected("LAN discovery import expired"));
                 }
+                if let Purpose2::AutoLanPeerHint { deadline } = purpose
+                    && Instant::now() >= deadline
+                {
+                    return Err(db::Error::PolicyRejected(
+                        "Auto LAN hint receipt budget expired",
+                    ));
+                }
                 if let Some(lease) = &lease {
                     if discovery_pair
                         .as_ref()
@@ -504,8 +563,10 @@ impl Owner2 {
             }
             if invalidates_publication {
                 publication.store(false, Ordering::Release);
-                if let Some(target) = &target {
-                    closed_pair |= target.send_replace(None).is_some();
+                if let Some(targets) = &target {
+                    for target in targets {
+                        closed_pair |= target.send_replace(None).is_some();
+                    }
                 }
             }
             Ok(())
@@ -1065,17 +1126,21 @@ impl Owner2 {
         wall: u64,
         purpose: Purpose2,
     ) -> Result<()> {
-        self.commit(
-            s,
+        let op = if matches!(purpose, Purpose2::AutoLanPeerHint { .. }) {
+            db::RuntimeOperation::AutoLanPeerHint {
+                context: c,
+                fence: s.fence(wall),
+                raw,
+            }
+        } else {
             db::RuntimeOperation::Locator {
                 context: c,
                 fence: s.fence(wall),
                 own: false,
                 raw,
-            },
-            purpose,
-            (0, 0),
-        )?;
+            }
+        };
+        self.commit(s, op, purpose, (0, 0))?;
         Ok(())
     }
     pub fn import_authority(&mut self, raw: Vec<u8>) -> Result<()> {
@@ -1091,6 +1156,9 @@ impl Owner2 {
             self.auto_discovery() == permit.is_some(),
             "remote authority origin does not match admission mode"
         );
+        if let Some(permit) = &permit {
+            permit.check_context(c)?;
+        }
         self.import_authority_with(raw, permit.map(|permit| (c, permit)))
     }
     fn import_authority_with(

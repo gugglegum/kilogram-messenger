@@ -3,6 +3,7 @@
 use super::*;
 use kilogram_protocol::ordered_dialog_v2 as wire;
 use zeroize::Zeroizing;
+mod clock_independent_hint_tests;
 mod discovery_rejection_tests;
 #[path = "discovery_tests.rs"]
 mod discovery_tests;
@@ -47,7 +48,7 @@ async fn t13d_auto_transport_children_stop_and_retry_is_bounded() -> Result<()> 
         &fixtures.endpoints[0],
         None,
         &[0, 1],
-        Some(target_changes),
+        Some([target_changes.clone(), target_changes]),
         stopping,
     );
     ensure!(tasks.len() == 3);

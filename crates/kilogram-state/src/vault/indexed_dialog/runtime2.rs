@@ -364,6 +364,14 @@ pub enum RuntimeOperation {
         reason: String,
         evidence: Vec<Vec<u8>>,
     },
+    /// Peer transport metadata from the closed Auto-LAN hint gate. Dates belong
+    /// to the peer, not this profile's wall clock. Permission remains separate.
+    /// Appended to preserve serialized discriminants of existing operations.
+    AutoLanPeerHint {
+        context: u8,
+        fence: RuntimeFence,
+        raw: Vec<u8>,
+    },
 }
 
 /// Owns the exclusive profile lock; never exposes a writable component vault.

@@ -1,7 +1,8 @@
 use super::diagnostics::{Counters, Event};
 use super::{
     discovery::{
-        DiscoveryObservation2, DiscoveryQuota2, NetworkFreshness2, NetworkGeneration2, Publication2,
+        DiscoveryObservation2, DiscoveryQuota2, NetworkFreshness2, NetworkGeneration2,
+        Publication2, ReceivedHint2,
     },
     lan_metadata::{self, Inspection},
     runtime::{Handle2, start_transport},
@@ -25,6 +26,7 @@ const INSPECT_INTERVAL: Duration = Duration::from_secs(2);
 const CLEANUP: Duration = Duration::from_secs(3);
 const RECEIVER_WAKE: Duration = Duration::from_millis(100);
 const QUEUE: usize = 4;
+#[cfg(test)]
 type Datagram = [u8; DATAGRAM_BYTES];
 
 struct Observation {
@@ -119,12 +121,16 @@ struct SocketWorker {
     cancel: Cancellation,
     worker: thread::JoinHandle<()>,
     done: oneshot::Receiver<Result<()>>,
-    incoming: mpsc::Receiver<Datagram>,
+    incoming: mpsc::Receiver<ReceivedHint2>,
     outgoing: mpsc::Sender<Publication2>,
 }
 
 impl SocketWorker {
-    fn open(observation: Arc<Observation>, diagnostics: Arc<Counters>) -> Result<Self> {
+    fn open(
+        observation: Arc<Observation>,
+        generation: NetworkGeneration2,
+        diagnostics: Arc<Counters>,
+    ) -> Result<Self> {
         ensure!(
             observation.freshness.is_current(),
             "LAN observation expired before bind"
@@ -155,6 +161,7 @@ impl SocketWorker {
                         }
                         let mut bytes = [0; DATAGRAM_BYTES];
                         let received = socket.receive(&mut bytes, Instant::now() + RECEIVER_WAKE);
+                        let received_at = Instant::now();
                         if let Err(error) = &received {
                             measured.error(Event::ReceiveError, error);
                         }
@@ -172,7 +179,14 @@ impl SocketWorker {
                                     measured.event(Event::PeerFilterRejected);
                                 } else if !quota.take(Instant::now()) {
                                     measured.event(Event::QuotaDrop);
-                                } else if inbox.try_send(bytes).is_ok() {
+                                } else if inbox
+                                    .try_send(ReceivedHint2::capture(
+                                        bytes,
+                                        generation,
+                                        received_at,
+                                    ))
+                                    .is_ok()
+                                {
                                     measured.event(Event::InboxQueued);
                                 } else {
                                     measured.event(Event::InboxDrop);
@@ -261,10 +275,10 @@ async fn exchange(socket: &mut SocketWorker, handle: &Handle2, generation: Netwo
                 let jitter = shared_admin::random::<2>().map(u16::from_ne_bytes).unwrap_or(0);
                 announcement_at = time::Instant::now() + advertisement_delay(connected, jitter);
             }
-            bytes = socket.incoming.recv() => {
-                let Some(bytes) = bytes else { break };
+            receipt = socket.incoming.recv() => {
+                let Some(receipt) = receipt else { break };
                 if let Some(observed) = observed.clone() {
-                    if let Err(error)=handle.call(move |owner| owner.accept_lan_discovery(&observed, &bytes)).await {handle.diagnostics.error(Event::LocatorError,&error);}
+                    if let Err(error)=handle.call(move |owner| owner.accept_received_lan_hint(&observed, &receipt)).await {handle.diagnostics.error(Event::LocatorError,&error);}
                 } else {handle.diagnostics.event(Event::CaptureWithoutObservation);}
             }
         }
@@ -280,17 +294,18 @@ async fn epoch(
     observations: &mut watch::Receiver<Option<Arc<Observation>>>,
     stop: &mut watch::Receiver<bool>,
 ) -> Result<()> {
-    let mut socket = match SocketWorker::open(observation.clone(), handle.diagnostics.clone()) {
-        Ok(socket) => {
-            handle.diagnostics.event(Event::SocketOpen);
-            socket
-        }
-        Err(error) => {
-            handle.diagnostics.error(Event::SocketOpenError, &error);
-            eprintln!("od2_discovery_waiting_socket {error:#}");
-            return Ok(());
-        }
-    };
+    let mut socket =
+        match SocketWorker::open(observation.clone(), generation, handle.diagnostics.clone()) {
+            Ok(socket) => {
+                handle.diagnostics.event(Event::SocketOpen);
+                socket
+            }
+            Err(error) => {
+                handle.diagnostics.error(Event::SocketOpenError, &error);
+                eprintln!("od2_discovery_waiting_socket {error:#}");
+                return Ok(());
+            }
+        };
     let mut transport = JoinSet::new();
     let (stop_transport, transport_stop) = watch::channel(false);
     let mut endpoint = None;

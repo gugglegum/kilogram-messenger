@@ -51,13 +51,18 @@ impl Owner2 {
                 f.c == s.head.context
                     && f.cert == s.spec.certs[usize::from(role)]
                     && f.peer_cert == s.spec.certs[usize::from(1 - role)]
-                    && f.not_before <= wall
-                    && wall < f.expires,
+                    && (expected.is_some() && role != s.head.role
+                        || f.not_before <= wall && wall < f.expires),
                 "LAN admission locator scope or interval"
             );
         }
-        self.route
-            .check_lan_path(connection, &own, &peer, self.lan_endpoint.as_ref())?;
+        owner::checked_lan_path(
+            &self.route,
+            connection,
+            &own,
+            &peer,
+            self.lan_endpoint.as_ref(),
+        )?;
         Ok(())
     }
 
@@ -121,7 +126,8 @@ impl Owner2 {
                 &current.peers[usize::from(1 - role)],
             )?;
             ensure!(
-                locator.fields().not_before <= wall && wall < locator.fields().expires,
+                expected.is_some() && role != s.head.role
+                    || locator.fields().not_before <= wall && wall < locator.fields().expires,
                 "locator interval"
             );
         }
@@ -178,7 +184,8 @@ impl Owner2 {
             request.unwrap_or(shared_admin::random()?),
             &self.device,
         )?;
-        let permit = self.admission_permit(expected, deadline, &connection)?;
+        let permit = self.admission_permit(c, expected, deadline, &connection)?;
+        let deadline = permit.as_ref().map_or(deadline, AdmissionPermit2::deadline);
         let mut hellos = [None, None];
         hellos[usize::from(s.head.role)] = Some(hello.clone());
         self.admissions[usize::from(c)] = Some(Admission2 {
@@ -275,7 +282,7 @@ impl Owner2 {
     ) -> Result<()> {
         let s = self.snapshot(c)?;
         self.check_lan_admission(&s, connection, expected)?;
-        let permit = self.admission_permit(expected, deadline, connection)?;
+        let permit = self.admission_permit(c, expected, deadline, connection)?;
         ensure!(frame.body().kind() == wire::FrameKind::Hello, "Hello first");
         let f = frame.body().value().fields(12)?;
         let credential = super::super::handshake::Credentials::decode(f[7].bytes()?)?;
@@ -438,8 +445,10 @@ impl Owner2 {
             .checked_add(hooks::load()?.lease_seconds.unwrap_or(300))
             .context("lease expiry")?
             .min(current.consent.interval().1)
-            .min(own.fields().expires)
-            .min(peer.fields().expires);
+            .min(own.fields().expires);
+        if p.discovery_pair.is_none() {
+            expires = expires.min(peer.fields().expires);
+        }
         if let Some(pair) = &p.discovery_pair {
             expires = expires.min(pair.expires());
         }

@@ -74,6 +74,7 @@ fn owner_thread(mut owner: Owner2) -> Result<(Handle2, std::thread::JoinHandle<(
             let mut last_error: [Option<String>; 2] = [None, None];
             while !stop.load(Ordering::Acquire) {
                 owner.expire_public_import();
+                owner.expire_lan_candidates(Instant::now());
                 let mut worked = false;
                 match receiver.try_recv() {
                     Ok(job) => {
@@ -225,16 +226,19 @@ async fn write_admission(
     }
     result
 }
-fn dial_peer(
-    owner: &mut Owner2,
-    c: u8,
-) -> Result<(
+type DialTarget2 = (
     iroh::EndpointAddr,
     kilogram_transport_iroh::RoutePolicy,
     Option<Arc<discovery::LocatorPair2>>,
-)> {
+    Option<Instant>,
+);
+fn dial_peer(owner: &mut Owner2, c: u8) -> Result<DialTarget2> {
     let (s, current) = owner.require(c, false)?;
     let pair = owner.pair_for(&s, now()?)?.cloned();
+    let hint_deadline = pair
+        .as_ref()
+        .map(|pair| owner.hint_attempt_deadline(c, pair, Instant::now()))
+        .transpose()?;
     let locator = wire::ParsedRuntimeLocator2::parse(
         s.spec
             .peer_locator
@@ -248,10 +252,12 @@ fn dial_peer(
             &current.peers[usize::from(s.head.role)],
         )?;
         let wall = now()?;
-        ensure!(
-            locator.fields().not_before <= wall && wall < locator.fields().expires,
-            "LAN peer locator interval"
-        );
+        if !owner.auto_discovery() {
+            ensure!(
+                locator.fields().not_before <= wall && wall < locator.fields().expires,
+                "LAN peer locator interval"
+            );
+        }
         if !owner.auto_discovery() {
             owner.route.advertisement(
                 owner
@@ -265,6 +271,7 @@ fn dial_peer(
         owner.route.remote(&locator)?,
         owner.route.connection_policy(&locator)?,
         pair,
+        hint_deadline,
     ))
 }
 async fn admit_a(
@@ -274,10 +281,12 @@ async fn admit_a(
     deadline: Instant,
 ) -> Result<(Connection, Link2)> {
     handle.diagnostics.stage(c, DialStage::PeerSelection);
-    let (remote, route, pair) = handle.call(move |owner| dial_peer(owner, c)).await?;
+    let (remote, route, pair, hint_deadline) =
+        handle.call(move |owner| dial_peer(owner, c)).await?;
+    let deadline = hint_deadline.map_or(deadline, |end| deadline.min(end));
     handle.diagnostics.stage(c, DialStage::Connect);
-    let connection = tokio::time::timeout(
-        Duration::from_secs(15),
+    let connection = tokio::time::timeout_at(
+        tokio::time::Instant::from_std(deadline.min(Instant::now() + Duration::from_secs(15))),
         endpoint.connect(remote, wire::ALPN),
     )
     .await
@@ -1061,7 +1070,7 @@ pub(super) fn start_transport(
     endpoint: &Endpoint,
     lan: Option<wire::DirectLan2>,
     enabled: &[u8],
-    target: Option<discovery::TargetChanges2>,
+    target: Option<discovery::ContextTargets2>,
     stop: tokio::sync::watch::Receiver<bool>,
 ) {
     let resources = handle.resources.clone();
@@ -1093,14 +1102,20 @@ pub(super) fn start_transport(
                                     let IncomingAddr::Ip(socket) = source else {
                                         anyhow::bail!("LAN discovery requires an IP source");
                                     };
-                                    owner.listener_pair(socket)
+                                    let pair = owner.listener_pair(socket)?;
+                                    pair.map(|pair| { let deadline = pair.candidate_deadline(Instant::now())?; Ok((pair, deadline)) }).transpose()
                                 }).await.inspect_err(|_| handle.diagnostics.event(Event::ListenerPrerequisiteRejected))?
                             } else { None };
-                            Ok::<_, anyhow::Error>((incoming.await.inspect_err(|_| handle.diagnostics.event(Event::ListenerActualTlsError))?, pair))
+                            let source_deadline = pair.as_ref().map(|(_, deadline)| *deadline);
+                            let tls_deadline = source_deadline.unwrap_or(deadline).min(Instant::now() + Duration::from_secs(15));
+                            let connection = tokio::time::timeout_at(tokio::time::Instant::from_std(tls_deadline), incoming).await.context("hint source TLS deadline")?
+                                .inspect_err(|_| handle.diagnostics.event(Event::ListenerActualTlsError))?;
+                            Ok::<_, anyhow::Error>((connection, pair.map(|(pair, _)| pair), source_deadline))
                         }).await.context("TLS admission deadline");
                         if connected.is_err() { handle.diagnostics.event(Event::ListenerDeadline); }
                         if !matches!(&connected,Ok(Ok(_))) { handle.diagnostics.event(Event::ListenerTlsError); }
-                        let (connection, pair) = connected??;
+                        let (connection, pair, source_deadline) = connected??;
+                        let deadline = source_deadline.map_or(deadline, |end| deadline.min(end));
                         let admitted=tokio::time::timeout_at(tokio::time::Instant::from_std(deadline),admit_b(&handle,&endpoint,&connection,deadline,pair)).await;
                         if !matches!(&admitted,Ok(Ok(_))) { handle.diagnostics.event(Event::InboundAdmissionError); }
                         let result=match admitted{Ok(Ok(link))=>serve_b(&handle,&connection,&link).await,Ok(Err(e))=>Err(e),Err(e)=>Err(e.into())};
@@ -1120,7 +1135,7 @@ pub(super) fn start_transport(
                 endpoint.clone(),
                 handle.clone(),
                 permits.clone(),
-                target.clone(),
+                target[usize::from(c)].clone(),
             );
             tasks.spawn(async move {
                 tokio::select! {

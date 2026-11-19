@@ -4,6 +4,13 @@ use crate::vault::indexed_dialog::history::protocol2::source::{
     runtime_credential_parts,
 };
 
+#[derive(Clone, Copy)]
+enum LocatorPurpose {
+    Own,
+    ManualPeer,
+    AutoLanPeerHint,
+}
+
 #[derive(Clone, Serialize, Deserialize)]
 pub struct RuntimePeerPin {
     pub account: Id,
@@ -77,6 +84,9 @@ impl RuntimeOperation {
                 return Err(Error::Bound("consent"));
             }
             Self::Locator { raw, .. } if raw.len() > 8192 => return Err(Error::Bound("locator")),
+            Self::AutoLanPeerHint { raw, .. } if raw.is_empty() || raw.len() > 244 => {
+                return Err(Error::Bound("Auto LAN peer hint"));
+            }
             Self::PrepareOffer {
                 selection: s,
                 private,
@@ -154,6 +164,7 @@ impl RuntimeOperation {
             Self::InstallContext { .. } | Self::PinAuthority { .. } => None,
             Self::RenewConsent { context, fence, .. }
             | Self::Locator { context, fence, .. }
+            | Self::AutoLanPeerHint { context, fence, .. }
             | Self::PrepareOffer { context, fence, .. }
             | Self::ReserveGrant { context, fence, .. }
             | Self::HistoricalConsent { context, fence, .. }
@@ -408,6 +419,12 @@ impl<
                     return Err(Error::Integrity("locator retry"));
                 }
             }
+            RuntimeOperation::AutoLanPeerHint { context, raw, .. } => {
+                let s: RuntimeContextSpec = self.rt_read(*context, b"spec", SPEC_BYTES)?;
+                if s.peer_locator.as_ref() != Some(raw) {
+                    return Err(Error::Integrity("Auto LAN peer hint retry"));
+                }
+            }
             RuntimeOperation::RenewConsent { context, raw, .. } => {
                 let s: RuntimeContextSpec = self.rt_read(*context, b"spec", SPEC_BYTES)?;
                 if s.consent != *raw {
@@ -576,6 +593,12 @@ impl<
         let fence = fence.clone();
         let mut h = self.rt_head(c)?;
         let mut spec: RuntimeContextSpec = self.rt_read(c, b"spec", SPEC_BYTES)?;
+        let locator_purpose = match &op {
+            RuntimeOperation::Locator { own: true, .. } => Some(LocatorPurpose::Own),
+            RuntimeOperation::Locator { own: false, .. } => Some(LocatorPurpose::ManualPeer),
+            RuntimeOperation::AutoLanPeerHint { .. } => Some(LocatorPurpose::AutoLanPeerHint),
+            _ => None,
+        };
         let sending = matches!(&op, RuntimeOperation::Materialize { .. });
         match op {
             RuntimeOperation::RenewConsent {
@@ -595,14 +618,22 @@ impl<
                     .checked_add(1)
                     .ok_or(Error::Bound("policy generation"))?;
             }
-            RuntimeOperation::Locator { own, raw, .. } => {
+            RuntimeOperation::Locator { raw, .. }
+            | RuntimeOperation::AutoLanPeerHint { raw, .. } => {
+                let purpose = locator_purpose.ok_or(Error::Integrity("locator purpose"))?;
+                let own = matches!(purpose, LocatorPurpose::Own);
                 let loc = read_runtime_locator(&raw)?;
                 let role = usize::from(if own { h.role } else { 1 - h.role });
                 if loc.c != h.context
                     || loc.cert != spec.certs[role]
                     || loc.peer_cert != spec.certs[1 - role]
-                    || fence.wall < loc.not_before
-                    || fence.wall >= loc.expires
+                    || loc.not_before >= loc.expires
+                    || match purpose {
+                        LocatorPurpose::Own | LocatorPurpose::ManualPeer => {
+                            fence.wall < loc.not_before || fence.wall >= loc.expires
+                        }
+                        LocatorPurpose::AutoLanPeerHint => false,
+                    }
                 {
                     return Err(Error::Conflict);
                 }

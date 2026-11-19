@@ -14,13 +14,44 @@ use std::{
     time::{Duration, Instant},
 };
 #[cfg(any(windows, test))]
-use wire::lan_discovery::{DATAGRAM_BYTES, seal};
-use wire::lan_discovery::{ExpectedContext, Scope, open_observed};
+use wire::lan_discovery::seal;
+use wire::lan_discovery::{
+    DATAGRAM_BYTES, ExpectedContext, HintContext, HintScope, Scope,
+    open_authenticated_hint_observed,
+};
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct NetworkGeneration2(pub u64);
 pub(super) type TargetChanges2 = tokio::sync::watch::Receiver<Option<Arc<LocatorPair2>>>;
+pub(super) type ContextTargets2 = [TargetChanges2; 2];
 type DiscoveryTarget2 = tokio::sync::watch::Sender<Option<Arc<LocatorPair2>>>;
+const HINT_LIFETIME: Duration = Duration::from_secs(45);
+const HINT_RETRY_COOLDOWN: Duration = Duration::from_secs(15);
+
+/// Created at the socket boundary; owner queueing consumes this same budget.
+pub(super) struct ReceivedHint2 {
+    pub(super) raw: Vec<u8>,
+    network: NetworkGeneration2,
+    received_at: Instant,
+}
+impl ReceivedHint2 {
+    pub(super) fn capture(
+        raw: [u8; DATAGRAM_BYTES],
+        network: NetworkGeneration2,
+        received_at: Instant,
+    ) -> Self {
+        Self {
+            raw: raw.to_vec(),
+            network,
+            received_at,
+        }
+    }
+    fn deadline(&self) -> Result<Instant> {
+        self.received_at
+            .checked_add(HINT_LIFETIME)
+            .context("hint receipt deadline overflow")
+    }
+}
 
 #[derive(Clone)]
 pub(super) struct AdmissionPermit2 {
@@ -30,8 +61,16 @@ pub(super) struct AdmissionPermit2 {
     floor: Arc<AtomicU64>,
     deadline: Instant,
     connection: iroh::endpoint::Connection,
+    slot: u8,
 }
 impl AdmissionPermit2 {
+    pub(super) fn deadline(&self) -> Instant {
+        self.deadline
+    }
+    pub(super) fn check_context(&self, slot: u8) -> Result<()> {
+        ensure!(slot == self.slot, "hint source context differs");
+        self.check()
+    }
     pub(super) fn check(&self) -> Result<()> {
         let wall = now()?;
         ensure!(
@@ -155,10 +194,9 @@ pub(super) struct Auto2 {
     network: NetworkGeneration2,
     freshness: Option<Arc<NetworkFreshness2>>,
     pair: Option<Arc<LocatorPair2>>,
-    target: DiscoveryTarget2,
+    target: [DiscoveryTarget2; 2],
 }
 
-#[derive(PartialEq, Eq)]
 pub(super) struct LocatorPair2 {
     observation: DiscoveryObservation2,
     contexts: [Id; 2],
@@ -168,8 +206,52 @@ pub(super) struct LocatorPair2 {
     peer_endpoint: Id,
     peer_socket: SocketAddr,
     expires: u64,
+    budget: Mutex<HintBudget2>,
 }
+struct HintBudget2 {
+    deadline: Instant,
+    retry_after: Instant,
+}
+impl PartialEq for LocatorPair2 {
+    fn eq(&self, other: &Self) -> bool {
+        self.observation == other.observation
+            && self.contexts == other.contexts
+            && self.consents == other.consents
+            && self.peer_locators == other.peer_locators
+            && self.peer_revisions == other.peer_revisions
+            && self.peer_endpoint == other.peer_endpoint
+            && self.peer_socket == other.peer_socket
+            && self.expires == other.expires
+    }
+}
+impl Eq for LocatorPair2 {}
 impl LocatorPair2 {
+    pub(super) fn candidate_deadline(&self, at: Instant) -> Result<Instant> {
+        let budget = self
+            .budget
+            .lock()
+            .map_err(|_| anyhow::anyhow!("hint budget poisoned"))?;
+        ensure!(at < budget.deadline, "hint receipt budget expired");
+        Ok(budget.deadline)
+    }
+    fn renew_untrusted_budget(&self, receipt: &ReceivedHint2, at: Instant) -> Result<bool> {
+        let mut budget = self
+            .budget
+            .lock()
+            .map_err(|_| anyhow::anyhow!("hint budget poisoned"))?;
+        if at < budget.deadline || receipt.received_at < budget.retry_after {
+            return Ok(false);
+        }
+        let deadline = receipt.deadline()?;
+        ensure!(at < deadline, "hint receipt budget expired");
+        *budget = HintBudget2 {
+            deadline,
+            retry_after: deadline
+                .checked_add(HINT_RETRY_COOLDOWN)
+                .context("hint retry deadline overflow")?,
+        };
+        Ok(true)
+    }
     pub(super) fn valid_at(&self, wall: u64) -> bool {
         wall < self.expires
     }
@@ -207,6 +289,59 @@ pub(super) fn same_pair(
 }
 
 impl Owner2 {
+    /// Candidate timing controls only unverified work, never a healthy lease.
+    pub(super) fn expire_lan_candidates(&mut self, at: Instant) {
+        let (pair, targets) = match &self.discovery {
+            Discovery2::Auto(auto) => (auto.pair.clone(), auto.target.clone()),
+            _ => return,
+        };
+        let Some(pair) = pair else { return };
+        if pair.candidate_deadline(at).is_ok() {
+            return;
+        }
+        let wall = now().ok();
+        for (slot, target) in targets.iter().enumerate() {
+            let healthy = self.leases[slot].as_ref().is_some_and(|lease| {
+                lease.valid.load(Ordering::Acquire)
+                    && lease.connection.close_reason().is_none()
+                    && at < lease.deadline
+                    && wall.is_some_and(|w| w < lease.wall_deadline)
+                    && lease.policy == pair.observation.policy
+                    && lease
+                        .discovery_pair
+                        .as_ref()
+                        .is_some_and(|p| Arc::ptr_eq(p, &pair))
+            });
+            if !healthy {
+                if target.borrow().is_some() {
+                    target.send_replace(None);
+                }
+                if let Some(pending) = self.admissions[slot].take() {
+                    pending
+                        .connection
+                        .close(0u32.into(), b"hint candidate budget expired");
+                }
+            }
+        }
+    }
+
+    pub(super) fn hint_attempt_deadline(
+        &self,
+        slot: u8,
+        pair: &Arc<LocatorPair2>,
+        at: Instant,
+    ) -> Result<Instant> {
+        let Discovery2::Auto(auto) = &self.discovery else {
+            anyhow::bail!("hint requires Auto mode")
+        };
+        let target = auto
+            .target
+            .get(usize::from(slot))
+            .context("hint context slot")?;
+        same_pair(Some(pair), target.borrow().as_ref())?;
+        pair.candidate_deadline(at)
+    }
+
     pub(super) fn auto_discovery(&self) -> bool {
         matches!(self.discovery, Discovery2::Auto(_))
     }
@@ -218,7 +353,7 @@ impl Owner2 {
             network: NetworkGeneration2(0),
             freshness: None,
             pair: None,
-            target: tokio::sync::watch::channel(None).0,
+            target: std::array::from_fn(|_| tokio::sync::watch::channel(None).0),
         });
     }
 
@@ -229,7 +364,7 @@ impl Owner2 {
         }
     }
 
-    pub(super) fn discovery_target(&self) -> Option<DiscoveryTarget2> {
+    pub(super) fn discovery_target(&self) -> Option<[DiscoveryTarget2; 2]> {
         match &self.discovery {
             Discovery2::Manual => None,
             Discovery2::Auto(auto) => Some(auto.target.clone()),
@@ -254,7 +389,7 @@ impl Owner2 {
                 Instant::now() + std::time::Duration::from_secs(120),
             ))),
             pair: None,
-            target: tokio::sync::watch::channel(None).0,
+            target: std::array::from_fn(|_| tokio::sync::watch::channel(None).0),
         });
         Ok(())
     }
@@ -266,7 +401,7 @@ impl Owner2 {
         freshness: Arc<NetworkFreshness2>,
         instance: Id,
         endpoint: iroh::Endpoint,
-    ) -> Result<TargetChanges2> {
+    ) -> Result<ContextTargets2> {
         let Discovery2::Auto(auto) = &self.discovery else {
             anyhow::bail!("LAN Auto required")
         };
@@ -280,7 +415,7 @@ impl Owner2 {
         self.endpoint = Some((instance, addr));
         self.lan_endpoint = Some(endpoint);
         self.exported = [None, None];
-        let changes = target.subscribe();
+        let changes = target.each_ref().map(|target| target.subscribe());
         self.discovery = Discovery2::Auto(Auto2 {
             network,
             freshness: Some(freshness),
@@ -314,6 +449,7 @@ impl Owner2 {
 
     pub(super) fn admission_permit(
         &self,
+        slot: u8,
         pair: Option<&Arc<LocatorPair2>>,
         deadline: Instant,
         connection: &iroh::endpoint::Connection,
@@ -321,16 +457,23 @@ impl Owner2 {
         let Discovery2::Auto(auto) = &self.discovery else {
             return Ok(None);
         };
+        let pair = pair.context("LAN admission pair missing")?;
+        let target = auto
+            .target
+            .get(usize::from(slot))
+            .context("hint context slot")?;
+        let deadline = deadline.min(self.hint_attempt_deadline(slot, pair, Instant::now())?);
         let permission = AdmissionPermit2 {
             network: self
                 .network_freshness()
                 .context("LAN network unavailable")?
                 .clone(),
-            target: auto.target.subscribe(),
-            pair: pair.context("LAN admission pair missing")?.clone(),
+            target: target.subscribe(),
+            pair: pair.clone(),
             floor: self.clock_high_water.clone(),
             deadline,
             connection: connection.clone(),
+            slot,
         };
         permission.check()?;
         Ok(Some(permission))
@@ -349,7 +492,9 @@ impl Owner2 {
     pub(super) fn close_discovery_pair(&mut self) {
         if let Discovery2::Auto(auto) = &mut self.discovery {
             if auto.pair.take().is_some() {
-                auto.target.send_replace(None);
+                for target in &auto.target {
+                    target.send_replace(None);
+                }
             }
             self.clear_discovery_admissions();
         }
@@ -542,17 +687,32 @@ impl Owner2 {
     }
 
     /// Re-open the wire datagram with current owner pins, then commit the exact pair.
+    #[cfg(test)]
     pub fn accept_lan_discovery(
         &mut self,
         observed: &DiscoveryObservation2,
         datagram: &[u8],
+    ) -> Result<()> {
+        let receipt = ReceivedHint2 {
+            raw: datagram.to_vec(),
+            network: observed.network,
+            received_at: Instant::now(),
+        };
+        self.accept_received_lan_hint(observed, &receipt)
+    }
+
+    pub(super) fn accept_received_lan_hint(
+        &mut self,
+        observed: &DiscoveryObservation2,
+        receipt: &ReceivedHint2,
     ) -> Result<()> {
         self.diagnostics
             .event(super::diagnostics::Event::LocatorAttempt);
         let mut rejection = Rejection::GenerationFreshness;
         let prerequisite = (|| {
             ensure!(
-                self.discovery_network()? == observed.network,
+                self.discovery_network()? == observed.network
+                    && receipt.network == observed.network,
                 "stale LAN discovery generation"
             );
             rejection = Rejection::ValidationQuota;
@@ -563,18 +723,52 @@ impl Owner2 {
             Ok::<_, anyhow::Error>(())
         })();
         prerequisite.inspect_err(|_| self.diagnostics.rejected(rejection))?;
-        self.commit_discovery_pair(observed, datagram, now, Self::commit_peer_locator)
+        self.commit_received_hint(
+            observed,
+            receipt,
+            now,
+            Instant::now,
+            Self::commit_peer_locator,
+        )
     }
 
+    /// Synthetic call-site adapter. Production must supply the socket receipt.
+    #[cfg(test)]
     pub(super) fn commit_discovery_pair(
         &mut self,
         observed: &DiscoveryObservation2,
         datagram: &[u8],
         wall: impl Fn() -> Result<u64>,
+        write: impl FnMut(&mut Self, &db::RuntimeSnapshot, u8, Vec<u8>, u64, Purpose2) -> Result<()>,
+    ) -> Result<()> {
+        let receipt = ReceivedHint2 {
+            raw: datagram.to_vec(),
+            network: observed.network,
+            received_at: Instant::now(),
+        };
+        self.commit_received_hint(observed, &receipt, wall, Instant::now, write)
+    }
+
+    pub(super) fn commit_received_hint(
+        &mut self,
+        observed: &DiscoveryObservation2,
+        receipt: &ReceivedHint2,
+        wall: impl Fn() -> Result<u64>,
+        monotonic: impl Fn() -> Instant,
         mut write: impl FnMut(&mut Self, &db::RuntimeSnapshot, u8, Vec<u8>, u64, Purpose2) -> Result<()>,
     ) -> Result<()> {
         let mut rejection = Rejection::LocalScope;
         let result = (|| {
+            let deadline = receipt.deadline()?;
+            let at = monotonic();
+            ensure!(
+                receipt.received_at <= at && at < deadline,
+                "hint receipt budget expired"
+            );
+            ensure!(
+                receipt.network == self.discovery_network()?,
+                "stale hint receipt generation"
+            );
             let now = wall()?;
             let local = self.discovery_scope(self.discovery_network()?, now)?;
             rejection = Rejection::Observation;
@@ -585,32 +779,45 @@ impl Owner2 {
             rejection = Rejection::Route;
             let lan = self.route.lan().context("LAN discovery route")?;
             let role = usize::from(local.snapshots[0].head.role);
-            let scope = Scope {
+            let scope = HintScope {
                 sender: &local.currents[0].peers[1 - role],
                 recipient: &local.currents[0].peers[role],
-                slots: local.slots,
+                slots: local.slots.map(|slot| HintContext {
+                    context: slot.context,
+                    consent_ref: slot.consent_ref,
+                }),
                 sender_ipv4: lan.peer(),
-                now,
             };
-            let candidate = open_observed(datagram, &scope, &self.encryption, |reason| {
-                rejection = reason.into();
-            })?;
+            let candidate = open_authenticated_hint_observed(
+                &receipt.raw,
+                &scope,
+                &self.encryption,
+                |reason| {
+                    rejection = reason.into();
+                },
+            )?;
             self.diagnostics
                 .event(super::diagnostics::Event::LocatorOpened);
-            let mut pair = LocatorPair2 {
+            let pair = LocatorPair2 {
                 observation: observed.clone(),
                 contexts: local.slots.map(|slot| slot.context),
                 consents: local.slots.map(|slot| slot.consent_ref),
-                peer_locators: candidate.locators.each_ref().map(|locator| locator.id()),
+                peer_locators: candidate.locators().each_ref().map(|locator| locator.id()),
                 peer_revisions: candidate
-                    .locators
+                    .locators()
                     .each_ref()
                     .map(|locator| locator.fields().revision),
-                peer_endpoint: candidate.locators[0].fields().endpoint,
-                peer_socket: candidate.socket,
+                peer_endpoint: candidate.locators()[0].fields().endpoint,
+                peer_socket: candidate.socket(),
                 expires: local.expires,
+                budget: Mutex::new(HintBudget2 {
+                    deadline,
+                    retry_after: deadline
+                        .checked_add(HINT_RETRY_COOLDOWN)
+                        .context("hint retry deadline overflow")?,
+                }),
             };
-            for (c, locator) in candidate.locators.iter().enumerate() {
+            for (c, locator) in candidate.locators().iter().enumerate() {
                 let s = &local.snapshots[c];
                 let role = usize::from(s.head.role);
                 rejection = Rejection::PostLocatorVerification;
@@ -623,7 +830,6 @@ impl Owner2 {
                 self.route.remote(locator)?;
                 rejection = Rejection::Revision;
                 Self::check_peer_locator_revision(s, locator)?;
-                pair.expires = pair.expires.min(locator.fields().expires);
             }
             self.diagnostics
                 .event(super::diagnostics::Event::LocatorValidated);
@@ -632,7 +838,7 @@ impl Owner2 {
             {
                 ensure!(
                     candidate
-                        .locators
+                        .locators()
                         .iter()
                         .zip(&local.snapshots)
                         .all(|(locator, s)| {
@@ -642,11 +848,29 @@ impl Owner2 {
                 );
                 self.diagnostics
                     .event(super::diagnostics::Event::LocatorDuplicate);
+                let old = match &self.discovery {
+                    Discovery2::Auto(auto) => auto.pair.clone(),
+                    _ => None,
+                }
+                .context("hint pair disappeared")?;
+                if old.renew_untrusted_budget(receipt, monotonic())?
+                    && let Discovery2::Auto(auto) = &self.discovery
+                {
+                    for target in &auto.target {
+                        if target
+                            .borrow()
+                            .as_ref()
+                            .is_none_or(|p| !Arc::ptr_eq(p, &old))
+                        {
+                            target.send_replace(Some(old.clone()));
+                        }
+                    }
+                }
                 return Ok(());
             }
             self.close_discovery_pair();
-            let import_expires = pair.expires.min(candidate.announcement_interval.1);
-            for (c, locator) in (0..2u8).zip(&candidate.locators) {
+            let import_expires = pair.expires;
+            for (c, locator) in (0..2u8).zip(candidate.locators()) {
                 // The other slot can have advanced the database generation.
                 let s = self.snapshot(c)?;
                 ensure!(
@@ -658,26 +882,27 @@ impl Owner2 {
                 );
                 if s.spec.peer_locator.as_deref() != Some(locator.raw()) {
                     let commit_wall = wall()?;
-                    ensure!(commit_wall < import_expires, "LAN discovery import expired");
+                    ensure!(
+                        commit_wall < import_expires && monotonic() < deadline,
+                        "LAN discovery import expired"
+                    );
                     write(
                         self,
                         &s,
                         c,
                         locator.raw().to_vec(),
                         commit_wall,
-                        Purpose2::DiscoveryLocator {
-                            expires: import_expires,
-                        },
+                        Purpose2::AutoLanPeerHint { deadline },
                     )?;
                 }
             }
             let now = wall()?;
             let latest = self.discovery_scope(self.discovery_network()?, now)?;
             ensure!(
-                latest.observation == *observed && now < import_expires,
+                latest.observation == *observed && now < import_expires && monotonic() < deadline,
                 "LAN discovery changed during commit"
             );
-            for (s, locator) in latest.snapshots.iter().zip(&candidate.locators) {
+            for (s, locator) in latest.snapshots.iter().zip(candidate.locators()) {
                 ensure!(
                     s.spec.peer_locator.as_deref() == Some(locator.raw())
                         && s.spec.peer_locator_revision == locator.fields().revision,
@@ -687,7 +912,9 @@ impl Owner2 {
             if let Discovery2::Auto(auto) = &mut self.discovery {
                 let pair = Arc::new(pair);
                 auto.pair = Some(pair.clone());
-                auto.target.send_replace(Some(pair));
+                for target in &auto.target {
+                    target.send_replace(Some(pair.clone()));
+                }
             }
             self.diagnostics
                 .event(super::diagnostics::Event::LocatorCommitted);
@@ -737,6 +964,10 @@ impl Owner2 {
         let pair = self
             .pair_for(&s, now()?)?
             .context("LAN discovery listener requires Auto")?;
+        ensure!(
+            pair.candidate_deadline(Instant::now()).is_ok(),
+            "listener hint receipt budget expired"
+        );
         ensure!(
             source == pair.peer_socket,
             "LAN discovery listener source differs from pair"

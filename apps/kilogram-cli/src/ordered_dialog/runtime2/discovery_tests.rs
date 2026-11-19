@@ -149,7 +149,7 @@ async fn t13d_review_admission_write_and_staged_remote_authority_require_current
             owner.accept_lan_discovery(&observed, &datagram)?;
             let pair = owner.listener_pair(socket)?.context("current pair")?;
             owner
-                .admission_permit(Some(&pair), deadline, &conn)?
+                .admission_permit(0, Some(&pair), deadline, &conn)?
                 .context("Auto admission")
         })
         .await?;
@@ -229,7 +229,7 @@ async fn t13d_review_admission_write_and_staged_remote_authority_require_current
             let pair = owner
                 .listener_pair(socket)?
                 .context("pair after reconnect")?;
-            let permit = owner.admission_permit(Some(&pair), deadline, &accepted)?;
+            let permit = owner.admission_permit(0, Some(&pair), deadline, &accepted)?;
             let before = owner.repository.generation();
             owner.test_revoke_lan_at_commit = true;
             let error = owner
@@ -269,7 +269,7 @@ async fn t13d_review_admission_write_and_staged_remote_authority_require_current
             let pair = owner
                 .listener_pair(socket)?
                 .context("current pair after new epoch")?;
-            let permit = owner.admission_permit(Some(&pair), deadline, &accepted)?;
+            let permit = owner.admission_permit(0, Some(&pair), deadline, &accepted)?;
             owner.import_observed_authority(fourth, 0, permit)?;
             ensure!(
                 owner
@@ -638,11 +638,8 @@ async fn t13c_replay_bad_candidates_and_policy_change() -> Result<()> {
                 || Ok(duplicate_wall),
                 write_never,
             )?;
-            ensure!(
-                owner
-                    .commit_discovery_pair(&observed, &original, || Ok(issued + 46), write_never)
-                    .is_err()
-            );
+            // Remote announcement dates no longer expire a locally received hint.
+            owner.commit_discovery_pair(&observed, &original, || Ok(issued + 46), write_never)?;
             let s = owner.snapshot(0)?;
             let after_expiry = owner
                 .pair_for(&s, issued + 46)?
@@ -658,7 +655,7 @@ async fn t13c_replay_bad_candidates_and_policy_change() -> Result<()> {
                     .check(&s, issued + 300, &loopback, None, Some(after_expiry))
                     .is_err()
             );
-            ensure!(owner.pair_for(&s, issued + 300).is_err());
+            ensure!(owner.pair_for(&s, issued + 300)?.is_some());
             ensure!(owner.repository.generation() == generation);
             owner.route_for_remote(endpoint, Some(&token))?;
             owner.test_lan_advertisement =
