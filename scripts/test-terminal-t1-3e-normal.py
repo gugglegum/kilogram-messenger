@@ -79,8 +79,10 @@ class Normal(D['Field']):
     def __init__(self,plan,attempt,evidence,agents):
         # Deliberately do not call the fault-suite constructor/run/phase/rollback.
         self.attempt=attempt;self.evidence=evidence;self.started=time.monotonic();self.end=self.started+1000
-        self.phase_end=self.end;self.source=(SCRIPTS/'test-terminal-t1-3e-observe.ps1').read_bytes()
-        self.source=b"[Diagnostics.Process]::GetCurrentProcess().PriorityClass='BelowNormal';\n"+self.source
+        self.phase_end=self.end
+        header,newline,body=(SCRIPTS/'test-terminal-t1-3e-observe.ps1').read_bytes().partition(b'\n')
+        require(header.startswith(b'param(') and newline,'observer parameter header')
+        self.source=header+newline+b"[Diagnostics.Process]::GetCurrentProcess().PriorityClass='BelowNormal';\n"+body
         self.agents=agents;self.plan=plan;self.processes=[];self.receipts=set();self.messages=[];self.transfers=[]
         self.instances=[set(),set()];self.pair=[None,None];self.roles=[None,None];self.rollback_started=False
         ssh=D['pinned_ssh'](plan['ssh'],D['HOSTS'][0][2],D['HOSTS'][1][2])
@@ -90,6 +92,26 @@ class Normal(D['Field']):
 
     def rollback(self):raise RuntimeError('fault-suite operation forbidden in ordinary adapter')
     def gate(self,*args,**kwargs):raise RuntimeError('fault gate forbidden in ordinary adapter')
+
+    def observe(self,index,op,end,**params):
+        require(op in ('identity','network','ports','preconnect','status'),'fault observer operation forbidden')
+        host=self.hosts[index];request=dict(op=op,side=host.name,host=host.config['hostname'],attempt=self.attempt,**params)
+        args,data=D['observer_command'](self.source,request)
+        logs=self.evidence/'observer';logs.mkdir(parents=True,exist_ok=True);label=f'{host.name}-{op}-{uuid.uuid4().hex}'
+        command=host.ps+args;seconds=D['prior']['prior']['remaining'](end,12)
+        save(logs/(label+'.intent.json'),dict(request=request,command=command,timeout_seconds=seconds,source_sha256=hashlib.sha256(self.source).hexdigest()))
+        (logs/(label+'.stdin.bin')).write_bytes(data)
+        try:result=subprocess.run(command,input=data,capture_output=True,timeout=seconds)
+        except subprocess.TimeoutExpired as error:
+            (logs/(label+'.stdout.bin')).write_bytes(error.stdout or b'');(logs/(label+'.stderr.bin')).write_bytes(error.stderr or b'')
+            save(logs/(label+'.result.json'),dict(timed_out=True,reconciliation_required=True));raise
+        (logs/(label+'.stdout.bin')).write_bytes(result.stdout);(logs/(label+'.stderr.bin')).write_bytes(result.stderr)
+        save(logs/(label+'.result.json'),dict(exit=result.returncode,timed_out=False))
+        stage=re.search(rb'\bT13E_(?:STATUS2|RUNTIME)_[A-Z_]+\b',result.stderr)
+        suffix='/'+stage.group().decode() if stage else ''
+        require(result.returncode==0 and not result.stderr and 0<len(result.stdout)<=128000,
+            f'{host.name}/{op}{suffix}: observer failed ({result.returncode}); inspect observer receipts')
+        return json.loads(result.stdout.decode('utf-8-sig'))
 
     def start(self,index,tag,mode,end=None):
         term=D['MailboxTerminal'](self.hosts[index],tag,mode,end or self.phase_end,

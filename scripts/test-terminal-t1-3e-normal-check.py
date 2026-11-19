@@ -29,6 +29,28 @@ def ps(text):
     return p
 
 class Checks(unittest.TestCase):
+    def test_actual_normal_observer_transport_and_error_receipts(self):
+        evidence=EVIDENCE/'normal-observer';evidence.mkdir()
+        who=ps("@{host=[Environment]::MachineName;sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value}|ConvertTo-Json -Compress")
+        self.assertEqual(who.returncode,0);identity=json.loads(who.stdout)
+        plan=dict(ssh={},pins={name:'a'*64 for name in N['NAMES']},nodes=[dict(side=side,host=identity['host'],ip='127.0.0.1',peer='127.0.0.1',
+            base=N['D']['BASES'][i],agent_token={}) for i,side in enumerate('AB')])
+        with patch.dict(N['D'],pinned_ssh=lambda *args:[]):field=N['Normal'](plan,'observer-probe',evidence,[None,None])
+        result=field.observe(0,'identity',time.monotonic()+15)
+        self.assertEqual(result['user'],identity['sid']);self.assertFalse(result['administrator'])
+        field.hosts[0].config['hostname']='WRONG-OBSERVER-HOST'
+        with self.assertRaisesRegex(RuntimeError,'observer failed'):field.observe(0,'identity',time.monotonic()+15)
+        field.hosts[0].config['hostname']=identity['host']
+        with patch.object(N['subprocess'],'run',side_effect=subprocess.TimeoutExpired('observer',1,output=b'partial',stderr=b'timeout-error')):
+            with self.assertRaises(subprocess.TimeoutExpired):field.observe(0,'identity',time.monotonic()+15)
+        receipts=[json.loads(path.read_bytes()) for path in (evidence/'observer').glob('*.result.json')]
+        self.assertEqual(len(receipts),3);self.assertEqual(sum(row.get('exit')==0 for row in receipts),1)
+        self.assertEqual(sum(row.get('exit')==1 for row in receipts),1);self.assertEqual(sum(row['timed_out'] for row in receipts),1)
+        errors=[path.read_bytes() for path in (evidence/'observer').glob('*.stderr.bin')]
+        self.assertIn(b'timeout-error',errors);self.assertTrue(any(b'Observer scope' in value for value in errors))
+        save('actual-normal-observer.json',dict(metadata_only=True,normal_constructor=True,actual_shared_transport=True,identity_passed=True,
+            wrong_host_rejected=True,raw_diagnostics_saved=True,timeout_bytes_saved=True,live_messenger=False))
+
     def test_sftp_options_retain_pinned_ssh_identity(self):
         prefix=[r'C:\Windows\System32\OpenSSH\ssh.exe','-F','NUL','-T','-o','StrictHostKeyChecking=yes',
             '-o','UserKnownHostsFile=fixture','-o','BindAddress=192.168.0.140','-i','fixture key','test@192.168.0.152','powershell.exe']
@@ -171,6 +193,7 @@ class Checks(unittest.TestCase):
         instance=N['Normal'].__new__(N['Normal'])
         for name in ('gate','rollback'):
             with self.assertRaisesRegex(RuntimeError,'forbidden'):getattr(instance,name)()
+        with self.assertRaisesRegex(RuntimeError,'forbidden'):instance.observe(0,'gate',time.monotonic()+1)
 
     def test_native_preconnect_observer_without_cim(self):
         folder=EVIDENCE/'preconnect-fixture';(folder/'bin').mkdir(parents=True)
