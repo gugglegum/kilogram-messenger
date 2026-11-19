@@ -4,7 +4,7 @@ import base64
 import gzip
 import hashlib
 import json
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 import re
 import runpy
 import subprocess
@@ -30,7 +30,17 @@ def encoded_script(text):
         "$z=[IO.Compression.GZipStream]::new($m,[IO.Compression.CompressionMode]::Decompress);"+
         "$r=[IO.StreamReader]::new($z,[Text.Encoding]::UTF8);& ([scriptblock]::Create($r.ReadToEnd()))}"+
         "catch{[Console]::Error.WriteLine($_.Exception.Message);[Environment]::Exit(1)};[Environment]::Exit(0)")
-    return base64.b64encode(loader.encode('utf-16-le')).decode()
+    encoded=base64.b64encode(loader.encode('utf-16-le')).decode()
+    require(len(encoded)<7400,'bounded encoded script')
+    return encoded
+
+def upload_capture(command,logs,label,timeout,**kwargs):
+    try:return subprocess.run(command,capture_output=True,timeout=timeout,**kwargs)
+    except subprocess.TimeoutExpired as error:
+        (logs/(label+'.timeout.stdout.bin')).write_bytes(error.stdout or b'')
+        (logs/(label+'.timeout.stderr.bin')).write_bytes(error.stderr or b'')
+        save(logs/(label+'.timeout.json'),dict(timed_out=True,seconds=timeout,reconciliation_required=True))
+        raise
 
 def deadline(clock,identity,work_seconds,sent,received,reserve=60):
     require(all(clock[k]==identity[k] for k in ('attempt','generation','session','worker_pid','worker_started')), 'local deadline identity')
@@ -218,6 +228,8 @@ class Normal(D['Field']):
         require(not primary and not cleanup,'normal attempt failed; inspect primary and cleanup receipts')
 
 def validate(plan,root):
+    require(plan['transfer']['exe']==str(D['prior']['prior']['SYSTEM']/'OpenSSH/sftp.exe') and
+        digest(Path(plan['transfer']['exe']))==plan['transfer']['sha256'],'pinned local SFTP client')
     require(plan['v']==1 and len(plan['attempts'])==len(set(plan['attempts']))==2 and
         all(re.fullmatch(r'[a-z0-9][a-z0-9-]{0,30}',x) for x in plan['attempts']),'two fresh attempts')
     require(type(plan['work_seconds']) is int and 120<=plan['work_seconds']<=1000,'work budget')
@@ -246,6 +258,16 @@ def validate(plan,root):
             n['payload_pins']['test-terminal-t1-3e-lab-agent.ps1']==n['script_sha'],'installed version pins')
         require(n['agent_token']['user']==n['sid'] and n['agent_token']['administrator'] is False and
             0<len(n['agent_token']['groups'])<=128 and len(set(n['agent_token']['groups']))==len(n['agent_token']['groups']), 'observed ordinary agent token')
+        observation=Path(n['token_observation'])
+        require(not observation.is_absolute() and '..' not in observation.parts and
+            root in (root/observation).resolve().parents and digest(root/observation)==n['token_observation_sha256'],'token observation pin/path')
+        proof=json.loads((root/observation).read_bytes());native=proof['native'];raw=proof['raw']
+        require(n['agent_token_view']=='WindowsIdentity.Groups' and
+            all(row['pid']==n['pid'] and row['started']==n['started'] and row['sid']==n['sid'] and row['administrator'] is False for row in (native,raw)) and
+            native['windows_session']==n['windows_session'] and raw['raw_token_groups_match'] is True and
+            n['agent_token']['groups']==native['actual_groups'] and
+            n['agent_raw_token']['user']==n['sid'] and n['agent_raw_token']['administrator'] is False and
+            set(n['agent_raw_token']['groups'])=={row['sid'] for row in raw['raw_groups']},'same-incarnation token views')
 
 def upload_script(node,stage,name,pin,length):
     require(re.fullmatch('[0-9a-f]{32}',stage) and name in NAMES and re.fullmatch('[0-9a-f]{64}',pin) and
@@ -284,14 +306,123 @@ try{
     for key,value in dict(HOST=node['host'],SID=node['sid'],BASE=node['base'],STAGE=stage,NAME=name,PIN=pin,LENGTH=str(length)).items():text=text.replace('@'+key+'@',value)
     return text
 
-def upload(agents,index,stage,folder,pins,node):
+def sftp_command(prefix,client,batch):
+    require(prefix[-1]=='powershell.exe' and Path(prefix[0]).name.lower()=='ssh.exe' and prefix.count('-T')==1,
+        'reviewed SSH prefix for SFTP')
+    # Retain every identity, known-host, BindAddress and forwarding/timeout option.
+    return [client,'-q','-b',str(batch)]+[x for x in prefix[1:-2] if x!='-T']+[prefix[-2]]
+
+def sftp_stage_script(node,stage,pins,sizes,verify=False):
+    require(set(pins)==set(sizes)==NAMES and all(type(n) is int and 0<n<=128*1024*1024 for n in sizes.values()),'stage manifest')
+    prefix=upload_script(node,stage,'host.ps1',pins['host.ps1'],sizes['host.ps1']).split('$deadline=',1)[0]
+    manifest=dict(stage=stage,pins=pins,sizes=sizes)
+    # No bulk bytes enter PowerShell stdin. Preparation and verification are metadata-only.
+    if not verify:
+        prefix=prefix.replace("[void][IO.Directory]::CreateDirectory($dir);","if(Test-Path -LiteralPath $dir){throw 'Fresh SFTP stage required'};[void][IO.Directory]::CreateDirectory($dir);")
+    code=prefix+"\n$manifest='"+json.dumps(manifest,separators=(',',':'))+"'|ConvertFrom-Json;\n"
+    code+="$deadline=Join-Path '"+node['base']+"' 'bin/deadline.ps1';if((Get-FileHash -LiteralPath $deadline).Hash -ine '4cbac92301c2420ee83b64f41db66f751dc00cf80d4ec7bf98e091a76d8642b5'){throw 'SFTP metadata watchdog pin'};. ([scriptblock]::Create([IO.File]::ReadAllText($deadline)));$guard=[KilogramS5Deadline]::new(80,90);try{\n"
+    if verify:code+="$stop=[DateTime]::UtcNow.AddSeconds(10);while(@(Get-Process -Name sftp-server -ErrorAction SilentlyContinue).Count -and [DateTime]::UtcNow -lt $stop){$guard.CheckWork();Start-Sleep -Milliseconds 100};\n"
+    code+="if(@(Get-Process -Name sftp-server -ErrorAction SilentlyContinue).Count){throw 'SFTP subsystem still present; preserve stage'};\n"
+    if not verify:
+        code+="$bytes=[Text.Encoding]::UTF8.GetBytes(($manifest|ConvertTo-Json -Depth 6 -Compress));$file=[IO.File]::Open((Join-Path $dir 'upload-intent.json'),'CreateNew','Write','None');try{$file.Write($bytes,0,$bytes.Length);$file.Flush($true)}finally{$file.Dispose()};\n"
+    else:
+        code+=r'''
+$actual=@(Get-ChildItem -LiteralPath $dir -Force);$expected=@('upload-intent.json')+@($manifest.pins.PSObject.Properties.Name)
+if($actual.Count -ne $expected.Count -or @($actual|Where-Object {$_.PSIsContainer -or $_.Name -cnotin $expected -or ($_.Attributes -band [IO.FileAttributes]::ReparsePoint)}).Count){throw 'SFTP stage file set/type'}
+$intent=Get-Content -LiteralPath (Join-Path $dir 'upload-intent.json') -Raw|ConvertFrom-Json
+if($intent.stage -cne $manifest.stage){throw 'SFTP intent stage'}
+foreach($entry in $manifest.pins.PSObject.Properties){
+ $guard.CheckWork()
+ $name=$entry.Name;$path=Join-Path $dir $name
+ if($intent.pins.$name -cne $entry.Value -or $intent.sizes.$name -ne $manifest.sizes.$name -or
+    (Get-Item -LiteralPath $path).Length -ne $manifest.sizes.$name -or
+    (Get-FileHash -LiteralPath $path).Hash -ine $entry.Value){throw 'SFTP stage content pin'}
+}
+'''
+    return code+"\n$guard.CheckWork();@{stage=$manifest.stage;pins=$manifest.pins;sizes=$manifest.sizes;server_process_absent=$true;verified="+('$true' if verify else '$false')+"}|ConvertTo-Json -Depth 6 -Compress;[Console]::Out.Flush()}finally{$guard.Finish()};[Environment]::Exit(0)"
+
+def sftp_client_script(command,client_pin,logs,work=160,whole=180):
+    require(type(work) is int and type(whole) is int and 0<work<whole<=180,'SFTP deadline')
+    literal=lambda text:"'"+str(text).replace("'","''")+"'"
+    code=r'''$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue';[Console]::OutputEncoding=[Text.UTF8Encoding]::new($false);
+[Diagnostics.Process]::GetCurrentProcess().PriorityClass='BelowNormal';
+Import-Module "$PSHOME/Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1";
+if((Get-FileHash -LiteralPath @CLIENT@).Hash -ine '@PIN@'){throw 'Local SFTP client pin'}
+$deadline=@DEADLINE@;if((Get-FileHash -LiteralPath $deadline).Hash -ine '4cbac92301c2420ee83b64f41db66f751dc00cf80d4ec7bf98e091a76d8642b5'){throw 'Local SFTP watchdog pin'}
+. ([scriptblock]::Create([IO.File]::ReadAllText($deadline)));$guard=[KilogramS5Deadline]::new(@WORK@,@WHOLE@)
+$child=$null;$primary=$null;$exit=$null;$empty=$false;$childPid=$null;$childStart=$null;$out=$null;$err=$null
+try{
+ $si=[Diagnostics.ProcessStartInfo]::new();$si.FileName=@CLIENT@;$si.Arguments=@ARGS@;$si.UseShellExecute=$false;$si.CreateNoWindow=$true
+ $si.RedirectStandardInput=$true;$si.RedirectStandardOutput=$true;$si.RedirectStandardError=$true
+ $child=[Diagnostics.Process]::Start($si);$guard.VerifyChild($child);$childPid=$child.Id;$childStart=$child.StartTime.ToFileTimeUtc();$child.PriorityClass='BelowNormal';$child.StandardInput.Close()
+ $out=$child.StandardOutput.ReadToEndAsync();$err=$child.StandardError.ReadToEndAsync()
+ while(!$child.WaitForExit(100)){$guard.CheckWork()};$guard.CheckWork();$exit=$child.ExitCode
+ [IO.File]::WriteAllText(@STDOUT@,$out.GetAwaiter().GetResult(),[Text.UTF8Encoding]::new($false))
+ [IO.File]::WriteAllText(@STDERR@,$err.GetAwaiter().GetResult(),[Text.UTF8Encoding]::new($false))
+ if($exit -ne 0){throw 'SFTP client nonzero exit'}
+}catch{$primary=$_.Exception.Message}
+finally{
+ try{$guard.CleanupChildren(5000);$empty=($guard.Children().Length -eq 0)}catch{$primary='SFTP owned cleanup: '+$_.Exception.Message}
+ if($null -ne $child){if($child.HasExited){$exit=$child.ExitCode};$child.Dispose()}
+ if($null -ne $out){[IO.File]::WriteAllText(@STDOUT@,$out.GetAwaiter().GetResult(),[Text.UTF8Encoding]::new($false))}
+ if($null -ne $err){[IO.File]::WriteAllText(@STDERR@,$err.GetAwaiter().GetResult(),[Text.UTF8Encoding]::new($false))}
+ $receipt=@{exit=$exit;failure=$primary;empty_job=$empty;child_pid=$childPid;child_started=$childStart;work_seconds=@WORK@;whole_seconds=@WHOLE@}
+ [IO.File]::WriteAllText(@RECEIPT@,($receipt|ConvertTo-Json -Compress),[Text.UTF8Encoding]::new($false));$guard.Finish()
+}
+if($primary){throw $primary};$receipt|ConvertTo-Json -Compress
+'''
+    values=dict(CLIENT=literal(command[0]),PIN=client_pin,DEADLINE=literal(SCRIPTS/'migration-s5-l1-deadline.ps1'),
+        ARGS=literal(subprocess.list2cmdline(command[1:])),STDOUT=literal(logs/'sftp.stdout.log'),
+        STDERR=literal(logs/'sftp.stderr.log'),RECEIPT=literal(logs/'sftp-client.json'),WORK=str(work),WHOLE=str(whole))
+    for key,value in values.items():code=code.replace('@'+key+'@',value)
+    return code
+
+def upload(agents,index,stage,folder,pins,node,*,evidence,transfer):
+    logs=evidence/stage;logs.mkdir(parents=True,exist_ok=False)
+    if index:
+        sizes={name:(folder/name).stat().st_size for name in pins}
+        def metadata(verify):
+            label='verify' if verify else 'prepare'
+            cmd=agents[index].prefix+['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',encoded_script(sftp_stage_script(node,stage,pins,sizes,verify))]
+            outcome=upload_capture(cmd,logs,label,100,stdin=subprocess.DEVNULL)
+            (logs/(label+'.stdout.bin')).write_bytes(outcome.stdout);(logs/(label+'.stderr.bin')).write_bytes(outcome.stderr)
+            save(logs/(label+'.json'),dict(exit=outcome.returncode))
+            require(not outcome.returncode and not outcome.stderr,'SFTP metadata unconfirmed; preserve stage')
+            receipt=json.loads(outcome.stdout.decode('utf-8-sig'))
+            require(receipt==dict(stage=stage,pins=pins,sizes=sizes,server_process_absent=True,verified=verify),'SFTP stage receipt')
+        metadata(False)
+        remote='/'+PureWindowsPath(node['base']).as_posix()+'/staging/'+stage
+        quote=lambda value:'"'+str(value).replace('\\','/')+'"'
+        require(all(not any(c in str(x) for c in ('"','\r','\n')) for x in [remote,folder,*pins]),'SFTP batch path')
+        batch=logs/'upload.batch';batch.write_text('cd '+quote(remote)+'\n'+''.join('put '+quote(folder/name)+' '+quote(name)+'\n' for name in pins)+'bye\n',encoding='utf-8',newline='\n')
+        cmd=sftp_command(agents[index].prefix,transfer['exe'],batch)
+        save(logs/'client-intent.json',dict(command=cmd,client_sha256=transfer['sha256'],local_work_seconds=160,local_whole_seconds=180,transport_seconds=200))
+        script=sftp_client_script(cmd,transfer['sha256'],logs)
+        wrapper=[str(D['prior']['prior']['SYSTEM']/'WindowsPowerShell/v1.0/powershell.exe'),'-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',encoded_script(script)]
+        outcome=upload_capture(wrapper,logs,'wrapper',200,stdin=subprocess.DEVNULL)
+        (logs/'wrapper.stdout.bin').write_bytes(outcome.stdout);(logs/'wrapper.stderr.bin').write_bytes(outcome.stderr)
+        save(logs/'wrapper.json',dict(exit=outcome.returncode))
+        try:client_receipt=json.loads((logs/'sftp-client.json').read_bytes())
+        except (OSError,ValueError) as error:
+            client_receipt=None;save(logs/'client-receipt-error.json',dict(error=str(error)))
+        # Preserve client failure as primary and receiver/content diagnostics separately.
+        verification_error=None
+        try:metadata(True)
+        except Exception as error:verification_error=str(error)
+        save(logs/'upload-result.json',dict(client_exit=outcome.returncode,client_stderr=bool(outcome.stderr),verification_error=verification_error))
+        require(not outcome.returncode and not outcome.stderr and client_receipt and client_receipt['empty_job'] and
+            client_receipt['exit']==0 and client_receipt['failure'] is None,'SFTP client failed; inspect upload receipts')
+        require(verification_error is None,'SFTP receiver/content verification failed; inspect upload receipts')
+        return
     # Exact byte budget + local watchdog; no read-until-EOF or orphaned writer.
     require(set(pins)==NAMES,'six stage inputs')
     for name,pin in pins.items():
         length=(folder/name).stat().st_size;text=upload_script(node,stage,name,pin,length)
         command=agents[index].prefix+['-NoProfile','-NonInteractive','-ExecutionPolicy','Bypass','-EncodedCommand',encoded_script(text)]
         require(len(command[-1])<7400,'stage command length')
-        outcome=subprocess.run(command,input=(folder/name).read_bytes(),capture_output=True,timeout=100)
+        with (folder/name).open('rb') as stream:outcome=upload_capture(command,logs,name,100,stdin=stream)
+        (logs/(name+'.stdout.bin')).write_bytes(outcome.stdout);(logs/(name+'.stderr.bin')).write_bytes(outcome.stderr)
+        save(logs/(name+'.json'),dict(exit=outcome.returncode,length=length,sha256=pin))
         require(not outcome.returncode and not outcome.stderr,'staging copy unconfirmed; preserve stage')
         receipt=json.loads(outcome.stdout.decode('utf-8-sig'))
         require(receipt['name']==name and receipt['bytes']==length and receipt['sha256']==pin,'stage receipt')
@@ -331,7 +462,7 @@ def execute(plan,root,evidence):
             require((ready['session'],ready['pid'],ready['started'])==(n['session'],n['pid'],n['started']),'fresh preparation required after agent restart')
             before=inspect_installed(agent,n);save(evidence/f'{n["side"]}-before-update.json',before)
             require(not before['active'] and not before['blocked'] and not before['readiness_error'] and before['bins']==plan['originals'],'reviewed originals and installed readiness before update')
-            stage=uuid.uuid4().hex;upload(agents,i,stage,root/plan['assets'],plan['pins'],n)
+            stage=uuid.uuid4().hex;upload(agents,i,stage,root/plan['assets'],plan['pins'],n,evidence=evidence/'uploads',transfer=plan['transfer'])
             changed.append(i)
             save(evidence/f'{n["side"]}-update-intent.json',dict(stage=stage,pins=plan['pins'],originals=plan['originals']))
             save(evidence/f'{n["side"]}-updated.json',agent.call('update',stage=stage,pins=plan['pins']))
@@ -347,7 +478,7 @@ def execute(plan,root,evidence):
                 require(not status['active'] and not status['blocked'],'restore requires confirmed idle')
                 before=inspect_installed(agents[i],n)
                 require(before['bins'] in (plan['pins'],plan['originals']),'restore refuses unexpected bin changes')
-                stage=uuid.uuid4().hex;upload(agents,i,stage,root/plan['original_assets'],plan['originals'],n)
+                stage=uuid.uuid4().hex;upload(agents,i,stage,root/plan['original_assets'],plan['originals'],n,evidence=evidence/'uploads',transfer=plan['transfer'])
                 result=agents[i].call('update',stage=stage,pins=plan['originals']);after=inspect_installed(agents[i],n)
                 require(after['bins']==plan['originals'],'original bin restoration unconfirmed')
                 restore.append(dict(side=n['side'],result=result,after=after))

@@ -29,6 +29,76 @@ def ps(text):
     return p
 
 class Checks(unittest.TestCase):
+    def test_sftp_options_retain_pinned_ssh_identity(self):
+        prefix=[r'C:\Windows\System32\OpenSSH\ssh.exe','-F','NUL','-T','-o','StrictHostKeyChecking=yes',
+            '-o','UserKnownHostsFile=fixture','-o','BindAddress=192.168.0.140','-i','fixture key','test@192.168.0.152','powershell.exe']
+        command=N['sftp_command'](prefix,'sftp.exe',Path('batch file'))
+        self.assertEqual(command,['sftp.exe','-q','-b','batch file']+[x for x in prefix[1:-2] if x!='-T']+[prefix[-2]])
+        with self.assertRaises(RuntimeError):N['sftp_command'](prefix[:-1]+['other.exe'],'sftp.exe',Path('batch'))
+
+    def test_sftp_upload_dispatch_and_separate_failure_receipts(self):
+        folder=EVIDENCE/'sftp-dispatch-inputs';folder.mkdir()
+        for name in N['NAMES']:(folder/name).write_bytes(b'fixture')
+        pins={name:sha(folder/name) for name in N['NAMES']};sizes={name:7 for name in pins};stage='d'*32
+        agents=[None,SimpleNamespace(prefix=[r'C:\Windows\System32\OpenSSH\ssh.exe','-T','-o','StrictHostKeyChecking=yes','test@192.168.0.152','powershell.exe'])]
+        node=dict(host='PAUL_HP_OMEN',sid='test-fixture',base=r'C:\Users\test\KilogramLab\terminal-t11f')
+        results=[]
+        for fail in (False,True):
+            evidence=EVIDENCE/('sftp-dispatch-fail' if fail else 'sftp-dispatch-success');calls=[]
+            def run(command,**kwargs):
+                self.assertEqual(kwargs['stdin'],subprocess.DEVNULL);self.assertNotIn('input',kwargs);calls.append(command)
+                count=len(calls)
+                if count==2:
+                    (evidence/stage/'sftp-client.json').write_text(json.dumps(dict(exit=7 if fail else 0,empty_job=True,failure='client' if fail else None)))
+                    return subprocess.CompletedProcess(command,1 if fail else 0,b'',b'client-error' if fail else b'')
+                if count==3 and fail:return subprocess.CompletedProcess(command,1,b'',b'verify-error')
+                receipt=dict(stage=stage,pins=pins,sizes=sizes,server_process_absent=True,verified=count==3)
+                return subprocess.CompletedProcess(command,0,json.dumps(receipt).encode(),b'')
+            with patch.object(N['subprocess'],'run',run):
+                if fail:
+                    with self.assertRaisesRegex(RuntimeError,'SFTP client failed'):N['upload'](agents,1,stage,folder,pins,node,evidence=evidence,transfer=dict(exe='sftp.exe',sha256='a'*64))
+                else:N['upload'](agents,1,stage,folder,pins,node,evidence=evidence,transfer=dict(exe='sftp.exe',sha256='a'*64))
+            self.assertEqual(len(calls),3)
+            receipt=json.loads((evidence/stage/'upload-result.json').read_bytes());self.assertEqual(bool(receipt['verification_error']),fail)
+            self.assertEqual(receipt['client_exit'],1 if fail else 0);results.append(dict(injected_failure=fail,receipt=receipt))
+        save('sftp-dispatch.json',dict(synthetic_transport=True,cases=results,bulk_stdin=False))
+
+    def test_sftp_native_client_job_receipts(self):
+        results=[]
+        for case,child in [('success',"[Console]::Out.WriteLine('client-output');[Environment]::Exit(0)"),
+            ('failure',"[Console]::Error.WriteLine('client-error');[Environment]::Exit(7)"),
+            ('blocked','Start-Sleep -Seconds 30')]:
+            logs=EVIDENCE/('sftp-client-'+case);logs.mkdir()
+            cmd=[PS,'-NoProfile','-NonInteractive','-EncodedCommand',base64.b64encode(child.encode('utf-16-le')).decode()]
+            text=N['sftp_client_script'](cmd,sha(Path(PS)),logs,2 if case=='blocked' else 8,4 if case=='blocked' else 10)
+            outcome=ps(text);(logs/'wrapper.stderr.bin').write_bytes(outcome.stderr)
+            self.assertEqual(outcome.returncode,0 if case=='success' else 1,outcome.stderr.decode(errors='replace'))
+            receipt=json.loads((logs/'sftp-client.json').read_bytes());self.assertTrue(receipt['empty_job']);self.assertGreater(receipt['child_started'],0)
+            self.assertEqual(receipt['exit'],dict(success=0,failure=7,blocked=124)[case])
+            self.assertEqual(bool(receipt['failure']),case!='success')
+            if case=='success':self.assertIn('client-output',(logs/'sftp.stdout.log').read_text())
+            if case=='failure':self.assertIn('client-error',(logs/'sftp.stderr.log').read_text())
+            results.append(dict(case=case,receipt=receipt))
+        save('native-sftp-client.json',dict(cases=results,real_local_job=True,synthetic_sftp_payload=True,live_sftp=False))
+
+    def test_sftp_stage_manifest_and_content_validation(self):
+        identity=ps("@{host=[Environment]::MachineName;sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value}|ConvertTo-Json -Compress")
+        self.assertEqual(identity.returncode,0);node=json.loads(identity.stdout)
+        folder=EVIDENCE/'sftp-stage-fixture';(folder/'bin').mkdir(parents=True);node['base']=str(folder)
+        (folder/'bin/deadline.ps1').write_bytes((ROOT/'scripts/migration-s5-l1-deadline.ps1').read_bytes())
+        data={name:(bytes(range(256))*16384 if name.endswith('.exe') else b'synthetic-content') for name in N['NAMES']}
+        pins={name:hashlib.sha256(value).hexdigest() for name,value in data.items()};sizes={name:len(value) for name,value in data.items()};stage='e'*32
+        prepare=N['sftp_stage_script'](node,stage,pins,sizes);outcome=ps(prepare)
+        self.assertEqual(outcome.returncode,0,outcome.stderr.decode(errors='replace'));self.assertFalse(json.loads(outcome.stdout)['verified'])
+        self.assertNotEqual(ps(prepare).returncode,0)
+        remote=folder/'staging'/stage
+        for name,value in data.items():(remote/name).write_bytes(value)
+        verify=N['sftp_stage_script'](node,stage,pins,sizes,True);outcome=ps(verify)
+        self.assertEqual(outcome.returncode,0,outcome.stderr.decode(errors='replace'));self.assertTrue(json.loads(outcome.stdout)['server_process_absent'])
+        (remote/'foreign').write_text('preserve');self.assertNotEqual(ps(verify).returncode,0);self.assertTrue((remote/'foreign').exists())
+        (remote/'foreign').unlink();(remote/'host.ps1').write_bytes(b'wrong-content');self.assertNotEqual(ps(verify).returncode,0)
+        save('native-sftp-stage.json',dict(content_validated=True,fresh_stage_required=True,foreign_refused_preserved=True,wrong_content_refused=True,live_sftp=False))
+
     def test_upload_exact_bytes_without_eof_and_bounded_failures(self):
         identity=ps("@{host=[Environment]::MachineName;sid=[Security.Principal.WindowsIdentity]::GetCurrent().User.Value}|ConvertTo-Json -Compress")
         self.assertEqual(identity.returncode,0,identity.stderr)
@@ -221,7 +291,7 @@ $value.native_command_line=$true;$value|ConvertTo-Json -Compress
 
     def execute_model(self,case,foreign=False,fail=False):
         original={name:'a'*64 for name in N['NAMES']};target={name:'b'*64 for name in N['NAMES']}
-        plan=dict(nodes=[dict(side=s,base='fixture-'+s,session=s*32,pid=i+1,started=100+i,script_sha='a'*64,config_sha='b'*64)
+        plan=dict(transfer={},nodes=[dict(side=s,base='fixture-'+s,session=s*32,pid=i+1,started=100+i,script_sha='a'*64,config_sha='b'*64)
             for i,s in enumerate('AB')],attempts=['fresh-one','fresh-two'],pins=target,originals=original,assets='assets',original_assets='originals',ssh={})
         instances=[];runs=[];updates=[]
         class FakeAgent:
@@ -240,7 +310,7 @@ $value.native_command_line=$true;$value|ConvertTo-Json -Compress
                 if fail:raise RuntimeError('injected functional failure')
         def inspect(agent,node):return dict(active=None,blocked=None,readiness_error=None,bins=agent.bins)
         scope=N['execute'].__globals__
-        with patch.dict(scope,Agent=FakeAgent,Normal=FakeNormal,upload=lambda *args:None,inspect_installed=inspect),patch.dict(N['D'],pinned_ssh=lambda *args:[]):
+        with patch.dict(scope,Agent=FakeAgent,Normal=FakeNormal,upload=lambda *args,**kwargs:None,inspect_installed=inspect),patch.dict(N['D'],pinned_ssh=lambda *args:[]):
             if foreign or fail:
                 with self.assertRaises(RuntimeError):N['execute'](plan,EVIDENCE,EVIDENCE/case)
             else:N['execute'](plan,EVIDENCE,EVIDENCE/case)
