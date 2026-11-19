@@ -22,6 +22,7 @@ use tokio::{
     time::timeout,
 };
 
+pub mod lab_diagnostics;
 pub mod ordered2;
 mod peer_reenrollment_contract;
 mod recipient_import_consumption_contract;

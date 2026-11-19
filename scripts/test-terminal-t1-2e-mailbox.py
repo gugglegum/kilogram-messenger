@@ -37,7 +37,10 @@ class MailboxClient:
         # A bounded retry uses the same sequence and exact bytes after a lost SSH reply.
         for attempt in range(2):
             try:
-                proc = subprocess.run(argv, input=data, capture_output=True, timeout=remaining(end, 15))
+                seconds = remaining(end, 15)
+                require(seconds >= getattr(self.host, 'minimum_subprocess_seconds', 0),
+                        'no new tiny-budget mailbox subprocess')
+                proc = subprocess.run(argv, input=data, capture_output=True, timeout=seconds)
             except subprocess.TimeoutExpired:
                 if attempt:
                     raise

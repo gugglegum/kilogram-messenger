@@ -153,6 +153,7 @@ pub(super) enum Purpose2 {
     DiscoveryLocator { expires: u64 },
 }
 pub struct Owner2 {
+    pub(super) diagnostics: Arc<super::diagnostics::Counters>,
     pub(super) repository: RepositorySlot,
     pub(super) device: DeviceIdentity,
     pub(super) encryption: DeviceEncryptionIdentity,
@@ -245,6 +246,7 @@ impl Owner2 {
             stats: Stats2::default(),
             next_connection: 1,
             admissions: [None, None],
+            diagnostics: Arc::new(super::diagnostics::Counters::new(false)),
             discovery: Discovery2::default(),
             discovery_quota: DiscoveryQuota2::default(),
             publication_valid: Arc::new(AtomicBool::new(true)),

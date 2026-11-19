@@ -9,6 +9,7 @@ use super::{
     },
 };
 use anyhow::{Context, Result, ensure};
+use kilogram_runtime_ipc::lab_diagnostics::{Kind as DiagnosticKind, Sink as DiagnosticSink};
 use kilogram_runtime_ipc::{
     RuntimeIpcDescriptor,
     ordered2::{
@@ -613,6 +614,7 @@ pub struct Stop {
     pub eof: bool,
 }
 pub(super) struct Session {
+    diagnostics: Option<DiagnosticSink>,
     child: Child,
     drains: Vec<Drain>,
     client: Option<Client2>,
@@ -741,6 +743,7 @@ impl Session {
         cleanup.spawned.store(true, Ordering::Release);
 
         let mut session = Self {
+            diagnostics: DiagnosticSink::open(&setup.home),
             child,
             drains: Vec::with_capacity(2),
             client: None,
@@ -926,13 +929,18 @@ impl Session {
         cleanup.stopping.store(true, Ordering::Release);
         let mut ack = false;
         let mut conflict = false;
-        if matches!(self.child.try_wait(), Ok(None))
-            && let Some(client) = &self.client
-        {
-            conflict = !RuntimeIpcDescriptor::load(&self.doc.ipc_file)
-                .as_ref()
-                .is_ok_and(|d| d == client.descriptor());
+        let observed = self.child.try_wait();
+        let was_running = matches!(&observed, Ok(None));
+        let child_query_failed = observed.is_err();
+        let client_present = self.client.is_some();
+        let mut ack_attempted = false;
+        let mut descriptor_read_ok = false;
+        if was_running && let Some(client) = &self.client {
+            let descriptor = RuntimeIpcDescriptor::load(&self.doc.ipc_file);
+            descriptor_read_ok = descriptor.is_ok();
+            conflict = !descriptor.as_ref().is_ok_and(|d| d == client.descriptor());
             // Never reload the replacement and never address its server.
+            ack_attempted = true;
             ack = self.rt.block_on(client.shutdown()).is_ok();
         }
         self.client = None;
@@ -962,6 +970,14 @@ impl Session {
                 .all(|d| d.eof.load(Ordering::Acquire) && !d.failed.load(Ordering::Acquire));
         for d in &mut self.drains {
             d.join();
+        }
+        if let Some(sink) = &self.diagnostics {
+            let _=sink.record(DiagnosticKind::ConnectionFinal,Some(self.child.id()),self.instance.as_deref(),
+                &serde_json::json!({"client_present":client_present,"was_running":was_running,"child_query_failed":child_query_failed,
+                    "ack_attempted":ack_attempted,"ack":ack,"descriptor_read_ok":descriptor_read_ok,"conflict":conflict,
+                    "forced":forced,"exit_success":exit.success(),"exit":exit.code(),"eof":eof,"drain_count":self.drains.len(),
+                    "drain_eof":self.drains.iter().map(|d|d.eof.load(Ordering::Acquire)).collect::<Vec<_>>(),
+                    "drain_failed":self.drains.iter().map(|d|d.failed.load(Ordering::Acquire)).collect::<Vec<_>>()}));
         }
         Stop {
             graceful: ack && !conflict && !forced && exit.success() && eof,
@@ -1243,6 +1259,11 @@ fn run_worker(
             .into(),
         )
     });
+    if let Some(sink) = &session.diagnostics {
+        let _=sink.record(DiagnosticKind::WorkerFinal,Some(session.child.id()),session.instance.as_deref(),
+            &serde_json::json!({"running_ok":running.is_ok(),"saved_ok":saved.is_ok(),"stop_graceful":stop.graceful,
+                "stop_forced":stop.forced,"reaped":stop.reaped,"exit":stop.exit,"eof":stop.eof}));
+    }
     running?;
     saved?;
     Ok(stop)

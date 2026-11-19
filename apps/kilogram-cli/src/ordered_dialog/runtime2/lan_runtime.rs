@@ -1,3 +1,4 @@
+use super::diagnostics::{Counters, Event};
 use super::{
     discovery::{
         DiscoveryObservation2, DiscoveryQuota2, NetworkFreshness2, NetworkGeneration2, Publication2,
@@ -47,6 +48,7 @@ async fn monitor(
     interval: Duration,
     watch: watch::Sender<Option<Arc<Observation>>>,
     mut stop: watch::Receiver<bool>,
+    diagnostics: Arc<Counters>,
 ) -> Result<()> {
     let mut active: Option<Arc<Observation>> = None;
     let mut pending: Option<Inspection> = None;
@@ -64,6 +66,9 @@ async fn monitor(
             _ = cancelled(&mut stop) => break,
             (started, result) = inspection => {
                 pending = None;
+                if result.is_err() { diagnostics.event(Event::MetadataError); }
+                else if started.elapsed() >= interval { diagnostics.event(Event::MetadataLate); }
+                else { diagnostics.event(Event::MetadataReady); }
                 if let Ok(binding) = result && started.elapsed() < interval {
                     let valid_until = started + interval * 2;
                     if !active.as_ref().is_some_and(|old| old.binding == binding && old.freshness.renew(valid_until)) {
@@ -81,12 +86,15 @@ async fn monitor(
             }
             _ = tick.tick() => {
                 if pending.is_some() {
+                    diagnostics.event(Event::MetadataRevoked);
                     // Keep ownership of the pending inspection. Its late result cannot
                     // re-enable the old generation or create further workers.
                     forget(&mut active, &watch);
                 } else {
+                    diagnostics.event(Event::MetadataStart);
                     pending = inspect().ok();
                     if pending.is_none() {
+                        diagnostics.event(Event::MetadataStartError);
                         forget(&mut active, &watch);
                     }
                 }
@@ -95,14 +103,19 @@ async fn monitor(
     }
     forget(&mut active, &watch);
     if let Some(mut pending) = pending {
-        let _ = time::timeout(CLEANUP, pending.result())
-            .await
-            .context("LAN metadata worker cleanup unconfirmed")?;
+        let result = time::timeout(CLEANUP, pending.result()).await;
+        if result.is_err() {
+            diagnostics.event(Event::MetadataCleanupTimeout);
+        } else if matches!(&result, Ok(Err(_))) {
+            diagnostics.event(Event::MetadataCleanupError);
+        }
+        let _ = result.context("LAN metadata worker cleanup unconfirmed")?;
     }
     Ok(())
 }
 
 struct SocketWorker {
+    diagnostics: Arc<Counters>,
     cancel: Cancellation,
     worker: thread::JoinHandle<()>,
     done: oneshot::Receiver<Result<()>>,
@@ -111,7 +124,7 @@ struct SocketWorker {
 }
 
 impl SocketWorker {
-    fn open(observation: Arc<Observation>) -> Result<Self> {
+    fn open(observation: Arc<Observation>, diagnostics: Arc<Counters>) -> Result<Self> {
         ensure!(
             observation.freshness.is_current(),
             "LAN observation expired before bind"
@@ -121,6 +134,7 @@ impl SocketWorker {
         let (inbox, incoming) = mpsc::channel(QUEUE);
         let (outgoing, mut outbox) = mpsc::channel::<Publication2>(1);
         let (complete, done) = oneshot::channel();
+        let measured = diagnostics.clone();
         let worker = thread::Builder::new()
             .name("kilogram-lan-socket".into())
             .spawn(move || {
@@ -129,21 +143,40 @@ impl SocketWorker {
                     let mut quota = DiscoveryQuota2::default();
                     while observation.freshness.is_current() {
                         if let Ok(publication) = outbox.try_recv() {
-                            publication.send_if_current(now, |raw| socket.send(raw))?;
+                            publication.send_if_current(now, |raw| {
+                                measured.event(Event::SendAttempt);
+                                let result = socket.send(raw);
+                                match &result {
+                                    Ok(_) => measured.event(Event::SendOk),
+                                    Err(error) => measured.error(Event::SendError, error),
+                                }
+                                result
+                            })?;
                         }
                         let mut bytes = [0; DATAGRAM_BYTES];
-                        match socket.receive(&mut bytes, Instant::now() + RECEIVER_WAKE)? {
+                        let received = socket.receive(&mut bytes, Instant::now() + RECEIVER_WAKE);
+                        if let Err(error) = &received {
+                            measured.error(Event::ReceiveError, error);
+                        }
+                        match received? {
                             Receive::Cancelled => break,
-                            Receive::Packet(info)
-                                if observation.freshness.is_current()
-                                    && is_peer_datagram(
-                                        info,
-                                        binding.peer(),
-                                        binding.if_index(),
-                                    )
-                                    && quota.take(Instant::now()) =>
-                            {
-                                let _ = inbox.try_send(bytes);
+                            Receive::Packet(info) => {
+                                measured.event(Event::ReceivePacket);
+                                if !observation.freshness.is_current() {
+                                    measured.event(Event::ReceiveStale);
+                                } else if !is_peer_datagram(
+                                    info,
+                                    binding.peer(),
+                                    binding.if_index(),
+                                ) {
+                                    measured.event(Event::PeerFilterRejected);
+                                } else if !quota.take(Instant::now()) {
+                                    measured.event(Event::QuotaDrop);
+                                } else if inbox.try_send(bytes).is_ok() {
+                                    measured.event(Event::InboxQueued);
+                                } else {
+                                    measured.event(Event::InboxDrop);
+                                }
                             }
                             _ => {}
                         }
@@ -154,6 +187,7 @@ impl SocketWorker {
                 let _ = complete.send(result);
             })?;
         Ok(Self {
+            diagnostics,
             cancel,
             worker,
             done,
@@ -164,15 +198,21 @@ impl SocketWorker {
 
     async fn close(self) -> Result<()> {
         let cancel = self.cancel.cancel();
+        if cancel.is_err() {
+            self.diagnostics.event(Event::SocketCancelError);
+        }
         let result = time::timeout(CLEANUP, self.done)
             .await
+            .inspect_err(|_| self.diagnostics.event(Event::SocketCleanupTimeout))
             .context("LAN socket cleanup unconfirmed")?;
         self.worker
             .join()
+            .inspect_err(|_| self.diagnostics.event(Event::SocketJoinError))
             .map_err(|_| anyhow::anyhow!("LAN socket worker panicked"))?;
         cancel?;
         // A socket operation error still has a confirmed owned close.
         if let Err(error) = result.context("LAN socket worker result lost")? {
+            self.diagnostics.error(Event::SocketWorkerError, &error);
             eprintln!("od2_discovery_socket {error:#}");
         }
         Ok(())
@@ -195,6 +235,7 @@ async fn exchange(socket: &mut SocketWorker, handle: &Handle2, generation: Netwo
         tokio::select! {
             biased;
             _ = time::sleep_until(announcement_at) => {
+                handle.diagnostics.event(Event::AnnounceAttempt);
                 let announcement = handle.call(move |owner| {
                     let (publication, observed) = owner.announce_lan(generation)?;
                     let connected = (0..2).all(|c| owner.require(c, true).is_ok_and(|(s, _)| s.head.active));
@@ -203,6 +244,7 @@ async fn exchange(socket: &mut SocketWorker, handle: &Handle2, generation: Netwo
                 let mut connected = false;
                 match announcement {
                     Ok((publication, current, live)) => {
+                        handle.diagnostics.event(Event::AnnounceOk);
                         if observed.as_ref() != Some(&current) {
                             // Frames already buffered belong to the prior observation.
                             for _ in 0..QUEUE {
@@ -211,9 +253,10 @@ async fn exchange(socket: &mut SocketWorker, handle: &Handle2, generation: Netwo
                         }
                         observed = Some(current);
                         connected = live;
-                        let _ = socket.outgoing.try_send(publication);
+                        if socket.outgoing.try_send(publication).is_ok() {handle.diagnostics.event(Event::PublicationQueued);}
+                        else {handle.diagnostics.event(Event::PublicationDrop);}
                     }
-                    Err(_) => observed = None,
+                    Err(error) => {handle.diagnostics.error(Event::AnnounceError,&error);observed = None;},
                 }
                 let jitter = shared_admin::random::<2>().map(u16::from_ne_bytes).unwrap_or(0);
                 announcement_at = time::Instant::now() + advertisement_delay(connected, jitter);
@@ -221,8 +264,8 @@ async fn exchange(socket: &mut SocketWorker, handle: &Handle2, generation: Netwo
             bytes = socket.incoming.recv() => {
                 let Some(bytes) = bytes else { break };
                 if let Some(observed) = observed.clone() {
-                    let _ = handle.call(move |owner| owner.accept_lan_discovery(&observed, &bytes)).await;
-                }
+                    if let Err(error)=handle.call(move |owner| owner.accept_lan_discovery(&observed, &bytes)).await {handle.diagnostics.error(Event::LocatorError,&error);}
+                } else {handle.diagnostics.event(Event::CaptureWithoutObservation);}
             }
         }
     }
@@ -237,9 +280,13 @@ async fn epoch(
     observations: &mut watch::Receiver<Option<Arc<Observation>>>,
     stop: &mut watch::Receiver<bool>,
 ) -> Result<()> {
-    let mut socket = match SocketWorker::open(observation.clone()) {
-        Ok(socket) => socket,
+    let mut socket = match SocketWorker::open(observation.clone(), handle.diagnostics.clone()) {
+        Ok(socket) => {
+            handle.diagnostics.event(Event::SocketOpen);
+            socket
+        }
         Err(error) => {
+            handle.diagnostics.error(Event::SocketOpenError, &error);
             eprintln!("od2_discovery_waiting_socket {error:#}");
             return Ok(());
         }
@@ -248,9 +295,12 @@ async fn epoch(
     let (stop_transport, transport_stop) = watch::channel(false);
     let mut endpoint = None;
     let network = async {
-        let bound = time::timeout(INSPECT_INTERVAL, bind_fresh(&profile.route))
-            .await
-            .context("LAN Iroh bind deadline")??;
+        let binding = time::timeout(INSPECT_INTERVAL, bind_fresh(&profile.route)).await;
+        if !matches!(&binding, Ok(Ok(_))) {
+            handle.diagnostics.event(Event::EndpointBindError);
+        }
+        let bound = binding.context("LAN Iroh bind deadline")??;
+        handle.diagnostics.event(Event::EndpointBound);
         endpoint = Some(bound.clone());
         let proof = observation.freshness.clone();
         let bound_for_owner = bound.clone();
@@ -258,7 +308,11 @@ async fn epoch(
             .call(move |owner| {
                 owner.attach_lan_generation(generation, proof, instance, bound_for_owner)
             })
-            .await?;
+            .await;
+        if let Err(error) = &targets {
+            handle.diagnostics.error(Event::EndpointAttachError, error);
+        }
+        let targets = targets?;
         start_transport(
             &mut transport,
             handle,
@@ -290,6 +344,9 @@ async fn epoch(
     })
     .await
     .context("LAN transport cleanup unconfirmed");
+    if !matches!(&transport_cleanup, Ok(Ok(()))) {
+        handle.diagnostics.event(Event::TransportCleanupError);
+    }
     if transport_cleanup.is_err() {
         transport.abort_all();
     }
@@ -298,6 +355,7 @@ async fn epoch(
         if let Some(endpoint) = endpoint {
             time::timeout(CLEANUP, endpoint.close())
                 .await
+                .inspect_err(|_| handle.diagnostics.event(Event::EndpointCleanupError))
                 .context("LAN endpoint cleanup unconfirmed")?;
         }
         Ok::<_, anyhow::Error>(())
@@ -312,6 +370,9 @@ async fn epoch(
     )
     .await
     .context("LAN owner detach unconfirmed");
+    if !matches!(&owner, Ok(Ok(()))) {
+        handle.diagnostics.event(Event::OwnerDetachError);
+    }
     socket?;
     endpoint?;
     owner??;
@@ -368,15 +429,26 @@ pub(super) async fn run(
     let scope = lan_metadata::scope(&profile.lan_discovery)?;
     let (reports, observations) = watch::channel(None);
     let (stop_monitor, monitor_stop) = watch::channel(false);
+    let diagnostics = handle.diagnostics.clone();
     let monitor = tokio::spawn(monitor(
         move || Inspection::start(route, Some(scope)),
         INSPECT_INTERVAL,
         reports,
         monitor_stop,
+        handle.diagnostics.clone(),
     ));
     let result = supervise(profile, instance, handle, observations, stop).await;
+    if let Err(error) = &result {
+        diagnostics.error(Event::SupervisorError, error);
+    }
     stop_monitor.send_replace(true);
-    let monitoring = monitor.await.context("LAN metadata monitor failed")?;
+    let monitoring = monitor
+        .await
+        .inspect_err(|_| diagnostics.event(Event::MetadataMonitorJoinError))
+        .context("LAN metadata monitor failed")?;
+    if let Err(error) = &monitoring {
+        diagnostics.error(Event::MetadataMonitorError, error);
+    }
     result.and(monitoring)
 }
 
@@ -445,6 +517,7 @@ mod tests {
             Duration::from_millis(30),
             reports,
             stop,
+            Arc::new(Counters::new(false)),
         ));
         time::timeout(Duration::from_secs(2), async {
             while launches.load(Ordering::Relaxed) == 0 {

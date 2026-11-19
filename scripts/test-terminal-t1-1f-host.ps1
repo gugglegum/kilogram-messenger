@@ -52,7 +52,7 @@ function Check-Image([string]$Name) {
 
 # Create a run directory only after its own exclusive marker was created.
 Assert-PlainPath $base
-function Assert-LabAttempt {
+function Assert-LabAttempt([switch]$ReadCompleted) {
     # Existing ordinary-agent protocol only. Never create/adopt an arbitrary run.
     foreach($name in @('agent_session','agent_generation')){if($req.$name -cnotmatch '^[0-9a-f]{32}$'){throw 'Lab attempt identity'}}
     if($req.worker_pid -isnot [int] -or $req.worker_pid -le 0 -or $req.worker_started -isnot [long] -or $req.worker_started -le 0){throw 'Lab worker identity'}
@@ -63,7 +63,8 @@ function Assert-LabAttempt {
     $ready=Get-Content -LiteralPath (Join-Path $control 'ready.json') -Raw|ConvertFrom-Json
     $state=Get-Content -LiteralPath (Join-Path $control 'state.json') -Raw|ConvertFrom-Json
     if($entry.attempt -cne $req.attempt -or $entry.generation -cne $req.agent_generation -or $entry.session -cne $req.agent_session -or
-       $ready.session -cne $entry.session -or $state.session -cne $entry.session -or $state.active -cne $req.attempt -or $state.blocked -or
+       $ready.session -cne $entry.session -or $state.session -cne $entry.session -or
+       (!$ReadCompleted -and ($state.active -cne $req.attempt -or $state.blocked)) -or
        $started.generation -cne $entry.generation -or $started.pid -ne $req.worker_pid -or $started.started -ne $req.worker_started){throw 'Lab attempt binding'}
     $keys=@($entry.pins.PSObject.Properties.Name|Sort-Object)
     if(($keys -join '|') -cne (@($req.pins.PSObject.Properties.Name|Sort-Object)-join '|')){throw 'Lab attempt pins'}
@@ -114,6 +115,74 @@ if ($req.op -in @('init','lab-init')) {
 }
 
 Assert-PlainPath $run
+if($req.op -ceq 'lab-diagnostic-enable'){
+    $bound=Assert-LabAttempt
+    # Setup begin/join rejects every pre-existing foreign entry. Enable only AFTER
+    # the real Setup has completed and its terminal owner has closed.
+    Assert-PlainPath (Join-Path $setup 'setup.json')
+    if(Test-Path -LiteralPath (Join-Path $setup 'connection/ipc.json')){throw 'Diagnostic enable requires preconnect state'}
+    $diag=Join-Path $setup 'lab-diagnostics-v1'
+    if(Test-Path -LiteralPath $diag){throw 'Fresh diagnostic directory required'}
+    [void][IO.Directory]::CreateDirectory($diag);Assert-PlainPath $diag
+    Write-NewJson (Join-Path $diag 'enabled.json') @{schema=1;run_nonce=$bound.entry.generation}
+    @{schema=1;run_nonce=$bound.entry.generation;enabled=$true}|ConvertTo-Json -Compress
+    return
+}
+if($req.op -ceq 'lab-diagnostic-read'){
+    $bound=Assert-LabAttempt -ReadCompleted
+    $dir=Join-Path $setup 'lab-diagnostics-v1';Assert-PlainPath $dir
+    Assert-PlainPath (Join-Path $dir 'enabled.json')
+    if((Get-Item -LiteralPath (Join-Path $dir 'enabled.json')).Length -gt 256){throw 'Diagnostic marker cap'}
+    $marker=Get-Content -LiteralPath (Join-Path $dir 'enabled.json') -Raw|ConvertFrom-Json
+    if((@($marker.PSObject.Properties.Name|Sort-Object)-join '|') -cne 'run_nonce|schema' -or $marker.schema -ne 1 -or $marker.run_nonce -cne $bound.entry.generation){throw 'Diagnostic marker binding'}
+    $allowed=@('schema','kind','run_nonce','pid','runtime_pid','runtime_instance','data','enabled','elapsed_ms','counters','last_os_error_by_stage','slots','slot','stage',
+        'attempts','errors','timeouts','leases','fresh_ok','fresh_errors','network_ok','network_join_ok','ipc_ok','owner_join_ok',
+        'client_present','was_running','child_query_failed','ack_attempted','ack','descriptor_read_ok','conflict','forced','exit_success','exit','eof','drain_count','drain_eof','drain_failed',
+        'running_ok','saved_ok','stop_graceful','stop_forced','reaped',
+        'MetadataStart','MetadataStartError','MetadataReady','MetadataError','MetadataLate','MetadataRevoked','MetadataCleanupTimeout','MetadataCleanupError',
+        'SocketOpen','SocketOpenError','SendAttempt','SendOk','SendError','ReceiveError','ReceivePacket','ReceiveStale','PeerFilterRejected','QuotaDrop','InboxQueued','InboxDrop',
+        'AnnounceAttempt','AnnounceOk','AnnounceError','PublicationQueued','PublicationDrop','CaptureWithoutObservation','LocatorAttempt','LocatorOpened','LocatorValidated','LocatorDuplicate','LocatorCommitted','LocatorError',
+        'ListenerIncoming','ListenerPeerRejected','ListenerTlsError','InboundAdmissionError','InboundLease','SocketCancelError','SocketCleanupTimeout','SocketJoinError','SocketWorkerError',
+        'EndpointBindError','EndpointBound','EndpointAttachError','EndpointCleanupError','TransportCleanupError','OwnerDetachError','SupervisorError','MetadataMonitorError','MetadataMonitorJoinError','OutboundAdmissionError','OutboundAdmissionTimeout')
+    function Assert-DiagnosticValue($Value,[string]$Key,[int]$Depth){
+        if($Depth -gt 8){throw 'Diagnostic nesting cap'}
+        if($null -eq $Value -or $Value -is [bool]){return}
+        if($Value -is [string]){
+            if(($Key -ceq 'run_nonce' -and $Value -cmatch '^[0-9a-f]{32}$') -or ($Key -ceq 'runtime_instance' -and $Value -cmatch '^[0-9a-f]{64}$') -or
+               ($Key -ceq 'kind' -and $Value -cin @('runtime_stopping','runtime_network_stopped','runtime_final','connection_final','worker_final')) -or
+               ($Key -ceq 'stage' -and $Value -cin @('idle','role_check','not_dialer','waiting_target','peer_selection','connect','route_policy','begin_admission','hello','proof','admitted','authenticated_lease','fresh_protocol','serving','ended','unknown'))){return}
+            throw 'Diagnostic string outside typed schema'
+        }
+        if($Value -is [ValueType]){if([double]::IsNaN([double]$Value) -or [double]::IsInfinity([double]$Value)){throw 'Diagnostic numeric cap'};return}
+        if($Value -is [array]){if($Value.Count -gt 64){throw 'Diagnostic array cap'};foreach($item in $Value){Assert-DiagnosticValue $item $Key ($Depth+1)};return}
+        if(@($Value.PSObject.Properties).Count -gt 64){throw 'Diagnostic object cap'}
+        foreach($field in $Value.PSObject.Properties){if($field.Name -cnotin $allowed){throw 'Diagnostic unknown field'};Assert-DiagnosticValue $field.Value $field.Name ($Depth+1)}
+    }
+    $files=@(Get-ChildItem -LiteralPath $dir -File -Force|Where-Object Name -cne 'enabled.json')
+    if($files.Count -gt 16){throw 'Diagnostic file count cap'}
+    $records=@();$rejected=@()
+    foreach($file in $files){
+        try{
+            if($file.Name -cnotmatch '^(runtime-stopping|runtime-network-stopped|runtime-final|connection-final|worker-final)-[1-9][0-9]*\.json$' -or $file.Length -gt 16384){throw 'Diagnostic file cap/name'}
+            Assert-PlainPath $file.FullName
+            $bytes=[IO.File]::ReadAllBytes($file.FullName);$value=[Text.Encoding]::UTF8.GetString($bytes)|ConvertFrom-Json
+            Assert-DiagnosticValue $value '' 0
+            if((@($value.PSObject.Properties.Name|Sort-Object)-join '|') -cne 'data|kind|pid|run_nonce|runtime_instance|runtime_pid|schema'){throw 'Diagnostic envelope keys'}
+            if($value.schema -ne 1 -or $value.run_nonce -cne $bound.entry.generation){throw 'Diagnostic nonce/schema binding'}
+            $stem=$value.kind.Replace('_','-');if($file.Name -cne ($stem+'-'+$value.pid+'.json')){throw 'Diagnostic filename binding'}
+            if($value.kind -clike 'runtime_*'){
+                if($value.pid -ne $req.diagnostic_runtime_pid -or $value.runtime_pid -ne $req.diagnostic_runtime_pid -or $value.runtime_instance -cne $req.diagnostic_runtime_instance){throw 'Diagnostic runtime binding'}
+            }else{
+                if($value.pid -ne $req.diagnostic_chat_pid){throw 'Diagnostic Chat binding'}
+                if($req.diagnostic_runtime_pid -and ($value.runtime_pid -ne $req.diagnostic_runtime_pid -or $value.runtime_instance -cne $req.diagnostic_runtime_instance)){throw 'Diagnostic Chat runtime binding'}
+            }
+            $sha=[Security.Cryptography.SHA256]::Create();try{$hash=([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose()}
+            $records+=@{name=$file.Name;bytes=$bytes.Length;sha256=$hash;data=[Convert]::ToBase64String($bytes)}
+        }catch{$rejected+=@{name=if($file.Name -cmatch '^(runtime-stopping|runtime-network-stopped|runtime-final|connection-final|worker-final)-[1-9][0-9]*\.json$'){$file.Name}else{'invalid_name'};reason='schema_or_identity_rejected'}}
+    }
+    @{schema=1;records=$records;rejected=$rejected;run_nonce=$bound.entry.generation}|ConvertTo-Json -Depth 6 -Compress
+    return
+}
 $mailboxMode = $req.PSObject.Properties['generation']
 if ($mailboxMode) {
     if ($req.tag -cnotmatch '^[a-z0-9-]{1,40}$' -or $req.generation -cnotmatch '^[0-9a-f]{32}$') {

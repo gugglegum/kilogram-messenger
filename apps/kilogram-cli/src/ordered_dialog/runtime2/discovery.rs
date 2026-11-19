@@ -546,6 +546,8 @@ impl Owner2 {
         observed: &DiscoveryObservation2,
         datagram: &[u8],
     ) -> Result<()> {
+        self.diagnostics
+            .event(super::diagnostics::Event::LocatorAttempt);
         ensure!(
             self.discovery_network()? == observed.network,
             "stale LAN discovery generation"
@@ -580,6 +582,8 @@ impl Owner2 {
             now,
         };
         let candidate = open(datagram, &scope, &self.encryption)?;
+        self.diagnostics
+            .event(super::diagnostics::Event::LocatorOpened);
         let mut pair = LocatorPair2 {
             observation: observed.clone(),
             contexts: local.slots.map(|slot| slot.context),
@@ -605,6 +609,8 @@ impl Owner2 {
             Self::check_peer_locator_revision(s, locator)?;
             pair.expires = pair.expires.min(locator.fields().expires);
         }
+        self.diagnostics
+            .event(super::diagnostics::Event::LocatorValidated);
         if matches!(&self.discovery, Discovery2::Auto(auto) if auto.pair.as_deref() == Some(&pair))
         {
             ensure!(
@@ -615,6 +621,8 @@ impl Owner2 {
                     .all(|(locator, s)| { s.spec.peer_locator.as_deref() == Some(locator.raw()) }),
                 "LAN discovery duplicate differs from storage"
             );
+            self.diagnostics
+                .event(super::diagnostics::Event::LocatorDuplicate);
             return Ok(());
         }
         self.close_discovery_pair();
@@ -662,6 +670,8 @@ impl Owner2 {
             auto.pair = Some(pair.clone());
             auto.target.send_replace(Some(pair));
         }
+        self.diagnostics
+            .event(super::diagnostics::Event::LocatorCommitted);
         Ok(())
     }
 

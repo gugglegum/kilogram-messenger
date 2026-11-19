@@ -13,6 +13,7 @@ param(
     [switch]$NoFailFast,
     [switch]$NoCapture,
     [switch]$SkipCacheStatus,
+    [switch]$LibOnly,
     [string[]]$SkipTest = @(),
     [string]$ExpectedArtifactsManifest,
     [string]$ExpectedArtifactsSha256,
@@ -30,6 +31,9 @@ param(
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+if ($LibOnly -and ($FrozenExecutionOnly -or $BuildEvidencePath -or $S54PreparationGuard)) {
+    throw 'LibOnly cannot change a frozen artifact inventory.'
+}
 
 # This opt-in returns before every historical compiler/resource/list/cache lane.
 if ($PSBoundParameters.ContainsKey('FrozenExecutionOnly') -or
@@ -131,6 +135,7 @@ if ($Package.Count -eq 0) {
 }
 
 Write-Host "Compiling Rust test harnesses with profile '$Profile' without executing them..."
+if ($LibOnly) { $cargoArguments += '--lib' }
 Push-Location $workspaceRoot
 try {
     $cargoOutput = @(& cargo @cargoArguments)

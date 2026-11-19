@@ -1,4 +1,5 @@
 //! Bounded two-process transport and authenticated IPC adapter for Owner2.
+use super::diagnostics::{Counters, DialStage, Event};
 use super::*;
 use admission::Link2;
 use discovery::AdmissionPermit2;
@@ -6,6 +7,7 @@ use iroh::{
     Endpoint,
     endpoint::{Connection, IncomingAddr},
 };
+use kilogram_runtime_ipc::lab_diagnostics::{Kind as DiagnosticKind, Sink as DiagnosticSink};
 use kilogram_runtime_ipc::ordered2::{
     DiscoveryStatus2, DiscoveryView2, HISTORY_ANCHOR_OPCODE, HISTORY_FOLLOW_OPCODE,
     HISTORY_POSITION_REPLY_CAP, LanDiscovery2,
@@ -31,6 +33,7 @@ pub(super) struct Handle2 {
     sender: mpsc::Sender<Job2>,
     stop: Arc<AtomicBool>,
     resources: Arc<resources::Resources2>,
+    pub(super) diagnostics: Arc<Counters>,
 }
 impl Handle2 {
     pub async fn call<T: Send + 'static, F: FnOnce(&mut Owner2) -> Result<T> + Send + 'static>(
@@ -60,6 +63,7 @@ fn owner_thread(mut owner: Owner2) -> Result<(Handle2, std::thread::JoinHandle<(
         sender,
         stop: stop.clone(),
         resources: owner.resources.clone(),
+        diagnostics: owner.diagnostics.clone(),
     };
     let join = std::thread::Builder::new()
         .name("kilogram-od2-owner".into())
@@ -269,7 +273,9 @@ async fn admit_a(
     c: u8,
     deadline: Instant,
 ) -> Result<(Connection, Link2)> {
+    handle.diagnostics.stage(c, DialStage::PeerSelection);
     let (remote, route, pair) = handle.call(move |owner| dial_peer(owner, c)).await?;
+    handle.diagnostics.stage(c, DialStage::Connect);
     let connection = tokio::time::timeout(
         Duration::from_secs(15),
         endpoint.connect(remote, wire::ALPN),
@@ -277,6 +283,7 @@ async fn admit_a(
     .await
     .context("TLS/connect deadline")??;
     let mut closing = CloseOnFailure(connection.clone(), true);
+    handle.diagnostics.stage(c, DialStage::RoutePolicy);
     kilogram_transport_iroh::await_route_policy(
         &connection,
         route,
@@ -287,13 +294,16 @@ async fn admit_a(
     .await?;
     let binding = transport::binding(&connection, *endpoint.id().as_bytes(), true)?;
     let conn = connection.clone();
+    handle.diagnostics.stage(c, DialStage::BeginAdmission);
     let (g, hello, permit) = handle
         .call(move |owner| owner.begin_admission(c, conn, binding, deadline, None, pair.as_ref()))
         .await?;
+    handle.diagnostics.stage(c, DialStage::Hello);
     let reply = admission_rpc(&connection, &hello, deadline, permit.as_ref()).await?;
     handle
         .call(move |owner| owner.accept_hello(c, g, reply))
         .await?;
+    handle.diagnostics.stage(c, DialStage::Proof);
     let proof = handle
         .call(move |owner| owner.admission_proof(c, g))
         .await?;
@@ -301,6 +311,7 @@ async fn admit_a(
     handle
         .call(move |owner| owner.accept_proof(c, g, reply))
         .await?;
+    handle.diagnostics.stage(c, DialStage::Admitted);
     let admitted = handle
         .call(move |owner| owner.admitted_frame(c, g, None))
         .await?;
@@ -309,6 +320,8 @@ async fn admit_a(
         .call(move |owner| owner.accept_admitted(c, g, reply))
         .await?;
     closing.1 = false;
+    handle.diagnostics.stage(c, DialStage::AuthenticatedLease);
+    handle.diagnostics.lease(c);
     Ok((connection, link))
 }
 struct CloseOnFailure(Connection, bool);
@@ -374,6 +387,8 @@ async fn admit_b(
         .call(move |owner| owner.accept_admitted(c, g, admitted))
         .await?;
     write_admission(&mut send, &own, permit.as_ref()).await?;
+    handle.diagnostics.event(Event::InboundLease);
+    handle.diagnostics.lease(c);
     Ok(link)
 }
 async fn verify(handle: &Handle2, link: &Link2, frame: &wire::ParsedFrame2) -> Result<()> {
@@ -1061,15 +1076,16 @@ pub(super) fn start_transport(
         loop{while connections.try_join_next().is_some(){} tokio::select!{
             _ = listener_stop.wait_for(|stop| *stop) => break,
             incoming=listener_endpoint.accept()=>{let Some(incoming)=incoming else{break};
+                listener_handle.diagnostics.event(Event::ListenerIncoming);
                 if let Some(lan)=lan
                     && !matches!(incoming.remote_addr(), IncomingAddr::Ip(socket) if socket.ip() == IpAddr::V4(lan.peer()))
-                { incoming.ignore(); continue; }
+                { listener_handle.diagnostics.event(Event::ListenerPeerRejected);incoming.ignore(); continue; }
                 let Ok(permit)=listener_permits.clone().try_acquire_owned()else{listener_resources.refused();incoming.refuse();continue};
                 let accounting=listener_resources.acquired();
                 let endpoint=listener_endpoint.clone();let handle=listener_handle.clone();let deadline=Instant::now()+Duration::from_secs(30);
                 connections.spawn(async move{let _permit=permit;let _accounting=accounting;
                     let result=async{
-                        let (connection, pair) = tokio::time::timeout(Duration::from_secs(15), async {
+                        let connected = tokio::time::timeout(Duration::from_secs(15), async {
                             let pair = if lan.is_some() {
                                 let source = incoming.remote_addr();
                                 handle.call(move |owner| {
@@ -1081,8 +1097,11 @@ pub(super) fn start_transport(
                                 }).await?
                             } else { None };
                             Ok::<_, anyhow::Error>((incoming.await?, pair))
-                        }).await.context("TLS admission deadline")??;
+                        }).await.context("TLS admission deadline");
+                        if !matches!(&connected,Ok(Ok(_))) { handle.diagnostics.event(Event::ListenerTlsError); }
+                        let (connection, pair) = connected??;
                         let admitted=tokio::time::timeout_at(tokio::time::Instant::from_std(deadline),admit_b(&handle,&endpoint,&connection,deadline,pair)).await;
+                        if !matches!(&admitted,Ok(Ok(_))) { handle.diagnostics.event(Event::InboundAdmissionError); }
                         let result=match admitted{Ok(Ok(link))=>serve_b(&handle,&connection,&link).await,Ok(Err(e))=>Err(e),Err(e)=>Err(e.into())};
                         connection.close(0u32.into(),b"bounded connection ended");result}.await;
                     if let Err(e)=result{eprintln!("od2_inbound_end {e:#}");}
@@ -1141,6 +1160,7 @@ pub(super) fn start_transport(
 }
 
 async fn outbound(c: u8, handle: &Handle2, endpoint: &Endpoint) {
+    handle.diagnostics.attempt(c);
     let _accounting = handle.resources.acquired();
     let deadline = Instant::now() + Duration::from_secs(30);
     let outcome = tokio::time::timeout_at(
@@ -1151,7 +1171,11 @@ async fn outbound(c: u8, handle: &Handle2, endpoint: &Endpoint) {
     if let Ok(Ok((connection, link))) = outcome {
         let _close = CloseOnFailure(connection.clone(), true);
         let outcome: Result<()> = async {
-            fresh_a(handle, &connection, &link).await?;
+            handle.diagnostics.stage(c, DialStage::FreshProtocol);
+            let fresh = fresh_a(handle, &connection, &link).await;
+            handle.diagnostics.fresh(c, fresh.is_ok());
+            fresh?;
+            handle.diagnostics.stage(c, DialStage::Serving);
             let mut cursor = 1;
             loop {
                 data_round_a(handle, &connection, &link, &mut cursor).await?;
@@ -1161,6 +1185,16 @@ async fn outbound(c: u8, handle: &Handle2, endpoint: &Endpoint) {
         .await;
         if let Err(error) = outcome {
             eprintln!("od2_outbound_end context={c} {error:#}");
+        }
+        handle.diagnostics.stage(c, DialStage::Ended);
+    } else {
+        handle.diagnostics.admission_error(c, outcome.is_err());
+        match outcome {
+            Ok(Err(error)) => handle
+                .diagnostics
+                .error(Event::OutboundAdmissionError, &error),
+            Err(_) => handle.diagnostics.event(Event::OutboundAdmissionTimeout),
+            _ => {}
         }
     }
 }
@@ -1181,12 +1215,15 @@ async fn auto_dial(
     permits: Arc<Semaphore>,
     mut target: discovery::TargetChanges2,
 ) {
+    handle.diagnostics.stage(slot, DialStage::RoleCheck);
     let role = handle
         .call(move |owner| Ok(owner.snapshot(slot)?.head.role))
         .await;
     if !matches!(role, Ok(0)) {
+        handle.diagnostics.stage(slot, DialStage::NotDialer);
         return;
     }
+    handle.diagnostics.stage(slot, DialStage::WaitingTarget);
     'target: loop {
         let Ok(observed) = target.wait_for(Option::is_some).await else {
             return;
@@ -1253,6 +1290,12 @@ pub async fn run(profile: config::Profile2) -> Result<()> {
         "profile Device/context pins"
     );
     let mut owner = Owner2::new(repository, profile.route.clone(), profile.enabled.clone())?;
+    let diagnostic_sink = profile
+        .ipc_file
+        .parent()
+        .and_then(Path::parent)
+        .and_then(DiagnosticSink::open);
+    owner.diagnostics = Arc::new(Counters::new(diagnostic_sink.is_some()));
     std::fs::create_dir_all(&profile.locator_directory)?;
     unpublish_previous_instance(&mut owner, &profile.locator_directory)?;
     let instance = shared_admin::random()?;
@@ -1411,6 +1454,14 @@ pub async fn run(profile: config::Profile2) -> Result<()> {
             break;
         }
     }
+    if let Some(sink) = &diagnostic_sink {
+        let _ = sink.record(
+            DiagnosticKind::RuntimeStopping,
+            Some(std::process::id()),
+            Some(&hex(&instance)),
+            &handle.diagnostics.snapshot(),
+        );
+    }
     stop_auto.send_replace(true);
     tasks.abort_all();
     while tasks.join_next().await.is_some() {}
@@ -1418,16 +1469,37 @@ pub async fn run(profile: config::Profile2) -> Result<()> {
         endpoint.close().await;
     }
     #[cfg(windows)]
+    let mut network_join_ok = true;
+    #[cfg(windows)]
     let network_shutdown = match auto_task {
-        Some(task) => task
-            .await
-            .context("LAN Auto supervisor failed")
-            .and_then(|result| result),
+        Some(task) => {
+            let result = task.await;
+            network_join_ok = result.is_ok();
+            result
+                .context("LAN Auto supervisor failed")
+                .and_then(|result| result)
+        }
         None => Ok(()),
     };
+    #[cfg(windows)]
+    if let Some(sink) = &diagnostic_sink {
+        let _ = sink.record(DiagnosticKind::RuntimeNetworkStopped, Some(std::process::id()), Some(&hex(&instance)),
+            &serde_json::json!({"network_ok":network_shutdown.is_ok(),"network_join_ok":network_join_ok,"counters":handle.diagnostics.snapshot()}));
+    }
     handle.stop.store(true, Ordering::Release);
     let ipc_shutdown = ipc.shutdown().await;
-    join.join().map_err(|_| anyhow::anyhow!("owner panicked"))?;
+    let owner_join = join.join().map_err(|_| anyhow::anyhow!("owner panicked"));
+    if let Some(sink) = &diagnostic_sink {
+        #[cfg(windows)]
+        let network_ok = network_shutdown.is_ok();
+        #[cfg(not(windows))]
+        let network_ok = true;
+        #[cfg(not(windows))]
+        let network_join_ok = true;
+        let _ = sink.record(DiagnosticKind::RuntimeFinal, Some(std::process::id()), Some(&hex(&instance)),
+            &serde_json::json!({"network_ok":network_ok,"network_join_ok":network_join_ok,"ipc_ok":ipc_shutdown.is_ok(),"owner_join_ok":owner_join.is_ok(),"counters":handle.diagnostics.snapshot()}));
+    }
+    owner_join?;
     ipc_shutdown?;
     #[cfg(windows)]
     network_shutdown?;
@@ -1550,6 +1622,9 @@ fn ipc2(
                 owner.endpoint.as_ref().map(|(_, addr)| addr)
             };
             let mut report = serde_json::json!({"version":2,"runtime_pid":std::process::id(),"runtime_instance":hex(&instance),"contexts":contexts,"stats":owner.stats,"window":owner.window.snapshot(),"resources":owner.resources.snapshot(),"endpoint":observed_endpoint.map(|addr|serde_json::json!({"id":hex(addr.id.as_bytes()),"ips":addr.ip_addrs().collect::<Vec<_>>(),"relays":addr.relay_urls().map(|u|u.as_str()).collect::<Vec<_>>()})),"route":config::profile_route(&owner.route),"root_generation":owner.repository.generation(),"backend":owner.repository.backend_stats()?});
+            if owner.diagnostics.enabled() {
+                report["stats"]["lab_diagnostics_v1"] = owner.diagnostics.snapshot();
+            }
             if let Some(discovery) = discovery {
                 report["lan_discovery"] = serde_json::to_value(discovery)?;
             }

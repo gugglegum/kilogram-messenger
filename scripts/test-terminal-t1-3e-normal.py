@@ -76,7 +76,7 @@ class Host(D['Host']):
     def clock(self):return self.call('lab-clock',**self.lab_identity)
 
 class Normal(D['Field']):
-    def __init__(self,plan,attempt,evidence,agents):
+    def __init__(self,plan,attempt,evidence,agents,*,host_class=None):
         # Deliberately do not call the fault-suite constructor/run/phase/rollback.
         self.attempt=attempt;self.evidence=evidence;self.started=time.monotonic();self.end=self.started+1000
         self.phase_end=self.end
@@ -86,7 +86,8 @@ class Normal(D['Field']):
         self.agents=agents;self.plan=plan;self.processes=[];self.receipts=set();self.messages=[];self.transfers=[]
         self.instances=[set(),set()];self.pair=[None,None];self.roles=[None,None];self.rollback_started=False
         ssh=D['pinned_ssh'](plan['ssh'],D['HOSTS'][0][2],D['HOSTS'][1][2])
-        self.hosts=[Host(n['side'],dict(hostname=n['host'],ipv4=n['ip'],base=n['base'],udp_ephemeral=[49152,65535]),
+        make_host=host_class or Host
+        self.hosts=[make_host(n['side'],dict(hostname=n['host'],ipv4=n['ip'],base=n['base'],udp_ephemeral=[49152,65535]),
             n['peer'],attempt,plan['pins'],ssh if i else [],evidence,self.end) for i,n in enumerate(plan['nodes'])]
         self.owner_tokens=[n['agent_token'] for n in plan['nodes']];self.generations=[None,None]
 
@@ -98,7 +99,7 @@ class Normal(D['Field']):
         host=self.hosts[index];request=dict(op=op,side=host.name,host=host.config['hostname'],attempt=self.attempt,**params)
         args,data=D['observer_command'](self.source,request)
         logs=self.evidence/'observer';logs.mkdir(parents=True,exist_ok=True);label=f'{host.name}-{op}-{uuid.uuid4().hex}'
-        command=host.ps+args;seconds=D['prior']['prior']['remaining'](end,12)
+        command=host.ps+args;seconds=self.observation_timeout(end)
         save(logs/(label+'.intent.json'),dict(request=request,command=command,timeout_seconds=seconds,source_sha256=hashlib.sha256(self.source).hexdigest()))
         (logs/(label+'.stdin.bin')).write_bytes(data)
         try:result=subprocess.run(command,input=data,capture_output=True,timeout=seconds)
@@ -112,6 +113,9 @@ class Normal(D['Field']):
         require(result.returncode==0 and not result.stderr and 0<len(result.stdout)<=128000,
             f'{host.name}/{op}{suffix}: observer failed ({result.returncode}); inspect observer receipts')
         return json.loads(result.stdout.decode('utf-8-sig'))
+
+    def observation_timeout(self,end):
+        return D['prior']['prior']['remaining'](end,12)
 
     def start(self,index,tag,mode,end=None):
         term=D['MailboxTerminal'](self.hosts[index],tag,mode,end or self.phase_end,
@@ -249,14 +253,14 @@ class Normal(D['Field']):
                 messages=self.messages,transfers=self.transfers,elapsed=time.monotonic()-self.started))
         require(not primary and not cleanup,'normal attempt failed; inspect primary and cleanup receipts')
 
-def validate(plan,root):
+def validate(plan,root,*,attempt_count=2,source_paths=None,product_pins=None):
     require(plan['transfer']['exe']==str(D['prior']['prior']['SYSTEM']/'OpenSSH/sftp.exe') and
         digest(Path(plan['transfer']['exe']))==plan['transfer']['sha256'],'pinned local SFTP client')
-    require(plan['v']==1 and len(plan['attempts'])==len(set(plan['attempts']))==2 and
+    require(plan['v']==1 and len(plan['attempts'])==len(set(plan['attempts']))==attempt_count and
         all(re.fullmatch(r'[a-z0-9][a-z0-9-]{0,30}',x) for x in plan['attempts']),'two fresh attempts')
     require(type(plan['work_seconds']) is int and 120<=plan['work_seconds']<=1000,'work budget')
     require(set(plan['pins'])==NAMES and set(plan['originals'])==NAMES,'six stable inputs')
-    require(set(plan['sources'])==SOURCES,'complete reviewed source set')
+    require(set(plan['sources'])==(source_paths if source_paths is not None else SOURCES),'complete reviewed source set')
     for section in ('sources','pins','originals'):
         require(all(re.fullmatch('[0-9a-f]{64}',x) for x in plan[section].values()),'exact content pins')
     for rel,pin in plan['sources'].items():
@@ -266,8 +270,9 @@ def validate(plan,root):
         require(root in folder.resolve().parents,'dedicated local assets')
         require({p.name for p in folder.iterdir()}==NAMES,'exact asset directory')
         for name,pin in pins.items():require(digest(folder/name)==pin,'asset pin')
-    require(plan['pins']['kilogram-cli.exe']==D['PINS']['kilogram-cli.exe'],'reviewed product image')
-    require(plan['pins']['kilogram-bootstrap.exe']==D['PINS']['kilogram-bootstrap.exe'],'reviewed bootstrap image')
+    images=product_pins if product_pins is not None else D['PINS']
+    require(plan['pins']['kilogram-cli.exe']==images['kilogram-cli.exe'],'reviewed product image')
+    require(plan['pins']['kilogram-bootstrap.exe']==images['kilogram-bootstrap.exe'],'reviewed bootstrap image')
     for name,source in {'host.ps1':'test-terminal-t1-1f-host.ps1','deadline.ps1':'migration-s5-l1-deadline.ps1',
             'mailbox.cs':'test-terminal-t1-2e-mailbox.cs','setup-pipe.cs':'test-terminal-t1-2e-setup-pipe.cs'}.items():
         require(plan['pins'][name]==plan['sources']['scripts/'+source],'packaged helper/source binding')
@@ -476,7 +481,7 @@ $bins=@{};foreach($name in @('host.ps1','deadline.ps1','mailbox.cs','setup-pipe.
     require(not outcome.returncode and not outcome.stderr,'passive installed inspection unconfirmed')
     return json.loads(outcome.stdout.decode('utf-8-sig'))
 
-def execute(plan,root,evidence):
+def execute(plan,root,evidence,*,normal_factory=None,result_name='two-attempt-result.json'):
     evidence.mkdir(parents=True,exist_ok=False)
     ssh=D['pinned_ssh'](plan['ssh'],D['HOSTS'][0][2],D['HOSTS'][1][2])
     agents=[Agent(([str(D['prior']['prior']['SYSTEM']/'WindowsPowerShell/v1.0/powershell.exe')] if not i else ssh+['powershell.exe']),
@@ -495,7 +500,7 @@ def execute(plan,root,evidence):
             after=inspect_installed(agent,n);save(evidence/f'{n["side"]}-after-update.json',after)
             require(after['bins']==plan['pins'] and not after['readiness_error'],'updated inputs/readiness')
         for attempt in plan['attempts']:
-            run=evidence/attempt;run.mkdir();Normal(plan,attempt,run,agents).run();attempts.append(attempt)
+            run=evidence/attempt;run.mkdir();(normal_factory or Normal)(plan,attempt,run,agents).run();attempts.append(attempt)
     except BaseException as error:primary=dict(type=type(error).__name__,message=str(error))
     finally:
         for i in changed:
@@ -509,7 +514,7 @@ def execute(plan,root,evidence):
                 require(after['bins']==plan['originals'],'original bin restoration unconfirmed')
                 restore.append(dict(side=n['side'],result=result,after=after))
             except Exception as error:restore.append(dict(side=i,error=str(error)))
-        save(evidence/'two-attempt-result.json',dict(attempts=attempts,failure=primary,restoration=restore,
+        save(evidence/result_name,dict(attempts=attempts,failure=primary,restoration=restore,
             no_task_or_profile_mutation=True))
     require(not primary and attempts==plan['attempts'] and len(restore)==2 and
         all('error' not in x and not x['after']['readiness_error'] for x in restore),'two attempts/restoration/readiness unconfirmed')

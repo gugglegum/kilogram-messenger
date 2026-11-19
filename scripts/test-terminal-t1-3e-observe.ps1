@@ -209,7 +209,10 @@ if ($r.sha256 -cnotmatch '^[0-9a-f]{64}$' -or (Get-FileHash -LiteralPath $exe.Fu
 try {
     $raw = & $exe.FullName ordered status2 --ipc-file $ipc 2>$null
     if ($LASTEXITCODE -ne 0) { throw 'Nonzero status2' }
-    $v = ConvertFrom-Json ($raw -join "`n")
+    $rawText=$raw -join "`n"
+    $rawBytes=[Text.Encoding]::UTF8.GetBytes($rawText)
+    if($rawBytes.Length -gt 49152){throw 'Status2 size cap'}
+    $v = ConvertFrom-Json $rawText
 } catch { throw 'T13E_STATUS2_FAILED' }
 if ($v.runtime_pid -ne $r.runtime_pid -or $r.runtime_started -le 0) { throw 'T13E_RUNTIME_JOB_PID' }
 try {
@@ -241,6 +244,13 @@ try {
 } finally { $runtimeIdentity.Dispose() }
 $slots = @($v.contexts | Select-Object slot,context,role,phase,active,live_admitted,lease_expires,selected_lan_peer,
     own_locator_revision,peer_locator_revision,publication_ready,blocked,policy_error)
-@{ready=$true; runtime_instance=$v.runtime_instance; runtime_pid=$v.runtime_pid; runtime_started=$started; runtime_image=$actualPath; endpoint=$v.endpoint
+$result=@{ready=$true; runtime_instance=$v.runtime_instance; runtime_pid=$v.runtime_pid; runtime_started=$started; runtime_image=$actualPath; endpoint=$v.endpoint
     discovery=$v.lan_discovery; route=$v.route; slots=$slots; token=$runtimeToken
-    sockets=@($all | Where-Object pid -eq $v.runtime_pid)} | ConvertTo-Json -Depth 12 -Compress
+    sockets=@($all | Where-Object pid -eq $v.runtime_pid)}
+if($r.PSObject.Properties['full_status']){
+    if($r.full_status -isnot [bool] -or !$r.full_status){throw 'T13E_FULL_STATUS_REQUEST'}
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try{$hash=([BitConverter]::ToString($sha.ComputeHash($rawBytes))).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose()}
+    $result.full_status=@{schema=1;bytes=$rawBytes.Length;sha256=$hash;data=[Convert]::ToBase64String($rawBytes)}
+}
+$result | ConvertTo-Json -Depth 12 -Compress
