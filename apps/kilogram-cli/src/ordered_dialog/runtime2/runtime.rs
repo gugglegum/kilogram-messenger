@@ -1094,10 +1094,11 @@ pub(super) fn start_transport(
                                         anyhow::bail!("LAN discovery requires an IP source");
                                     };
                                     owner.listener_pair(socket)
-                                }).await?
+                                }).await.inspect_err(|_| handle.diagnostics.event(Event::ListenerPrerequisiteRejected))?
                             } else { None };
-                            Ok::<_, anyhow::Error>((incoming.await?, pair))
+                            Ok::<_, anyhow::Error>((incoming.await.inspect_err(|_| handle.diagnostics.event(Event::ListenerActualTlsError))?, pair))
                         }).await.context("TLS admission deadline");
+                        if connected.is_err() { handle.diagnostics.event(Event::ListenerDeadline); }
                         if !matches!(&connected,Ok(Ok(_))) { handle.diagnostics.event(Event::ListenerTlsError); }
                         let (connection, pair) = connected??;
                         let admitted=tokio::time::timeout_at(tokio::time::Instant::from_std(deadline),admit_b(&handle,&endpoint,&connection,deadline,pair)).await;

@@ -144,7 +144,8 @@ if($req.op -ceq 'lab-diagnostic-read'){
         'MetadataStart','MetadataStartError','MetadataReady','MetadataError','MetadataLate','MetadataRevoked','MetadataCleanupTimeout','MetadataCleanupError',
         'SocketOpen','SocketOpenError','SendAttempt','SendOk','SendError','ReceiveError','ReceivePacket','ReceiveStale','PeerFilterRejected','QuotaDrop','InboxQueued','InboxDrop',
         'AnnounceAttempt','AnnounceOk','AnnounceError','PublicationQueued','PublicationDrop','CaptureWithoutObservation','LocatorAttempt','LocatorOpened','LocatorValidated','LocatorDuplicate','LocatorCommitted','LocatorError',
-        'ListenerIncoming','ListenerPeerRejected','ListenerTlsError','InboundAdmissionError','InboundLease','SocketCancelError','SocketCleanupTimeout','SocketJoinError','SocketWorkerError',
+        'ListenerIncoming','ListenerPeerRejected','ListenerTlsError','ListenerPrerequisiteRejected','ListenerActualTlsError','ListenerDeadline','InboundAdmissionError','InboundLease','SocketCancelError','SocketCleanupTimeout','SocketJoinError','SocketWorkerError',
+        'discovery_rejections','Unknown','GenerationFreshness','ValidationQuota','LocalScope','Observation','FrameSize','RecipientKey','Context','PeerScope','Envelope','Decryption','SignedBody','Signature','AnnouncementFuture','AnnouncementExpired','AnnouncementDuration','Consent','LocatorParse','LocatorVerification','LocatorInterval','Route','LocatorPair','PostLocatorVerification','PostRoute','Revision','Commit',
         'EndpointBindError','EndpointBound','EndpointAttachError','EndpointCleanupError','TransportCleanupError','OwnerDetachError','SupervisorError','MetadataMonitorError','MetadataMonitorJoinError','OutboundAdmissionError','OutboundAdmissionTimeout')
     function Assert-DiagnosticValue($Value,[string]$Key,[int]$Depth){
         if($Depth -gt 8){throw 'Diagnostic nesting cap'}

@@ -3,6 +3,7 @@
 use super::*;
 use kilogram_protocol::ordered_dialog_v2 as wire;
 use zeroize::Zeroizing;
+mod discovery_rejection_tests;
 #[path = "discovery_tests.rs"]
 mod discovery_tests;
 #[allow(dead_code)]

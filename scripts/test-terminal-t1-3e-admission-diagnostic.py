@@ -14,10 +14,11 @@ import uuid
 SCRIPTS=Path(__file__).resolve().parent
 N=runpy.run_path(str(SCRIPTS/'test-terminal-t1-3e-normal.py'))
 D=N['D'];require=N['require'];save=N['save'];parallel=N['parallel']
-SOURCES=N['SOURCES']|{'scripts/test-terminal-t1-3e-admission-diagnostic.py','scripts/test-terminal-t1-3e-admission-diagnostic-check.py','scripts/test-terminal-t1-3e-startup-diagnostic-check.py'}
+SOURCES=N['SOURCES']|{'scripts/test-terminal-t1-3e-admission-diagnostic.py','scripts/test-terminal-t1-3e-admission-diagnostic-check.py','scripts/test-terminal-t1-3e-startup-diagnostic-check.py','scripts/test-terminal-t1-3e-discovery-rejection-check.py'}
 RUST_SOURCES={
     'crates/kilogram-runtime-ipc/src/lib.rs','crates/kilogram-runtime-ipc/src/lab_diagnostics.rs',
     'crates/kilogram-first-dialog/src/connection.rs','crates/kilogram-first-dialog/src/chat.rs',
+    'crates/kilogram-protocol/src/ordered_dialog_v2/lan_discovery.rs',
     *('apps/kilogram-cli/src/ordered_dialog/runtime2/'+name for name in ('mod.rs','owner.rs','diagnostics.rs','discovery.rs','runtime.rs','lan_runtime.rs'))}
 MIN_CALL=2.0
 PROBE_SECONDS=60.0
@@ -321,7 +322,7 @@ def validate(plan,root):
     require(plan['original_window_origin']=='before_first_connect_submit' and plan['additional_network_seconds']==90 and plan['additional_network_mode']=='diagnostic_only_after_original_window','separate diagnostic origins')
     path=root/plan['build_manifest'];require(root in path.resolve().parents and N['digest'](path)==plan['build_manifest_sha256'],'diagnostic build manifest')
     manifest=json.loads(path.read_bytes())
-    require(manifest['base']=='c8cb05cf568c23be755dfd1444f85e18f55b8659' and manifest['unrelated_tests_excluded'] is True,'isolated diagnostic source base')
+    require(manifest['base']=='7a8772b0edc0c1745f902c2c5e8bdc50bdb600fc' and manifest['unrelated_tests_excluded'] is True,'isolated diagnostic source base')
     require(set(manifest['diagnostic_sources'])==RUST_SOURCES and set(manifest['images'])=={'kilogram-cli.exe','kilogram-bootstrap.exe'},'complete diagnostic build inputs/images')
     for rel,pin in manifest['diagnostic_sources'].items():require(N['digest'](root/rel)==pin,'diagnostic product source pin')
     N['validate'](plan,root,attempt_count=1,source_paths=SOURCES,product_pins=manifest['images'])

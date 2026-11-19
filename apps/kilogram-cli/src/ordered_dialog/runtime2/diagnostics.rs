@@ -47,6 +47,9 @@ events!(
     ListenerIncoming,
     ListenerPeerRejected,
     ListenerTlsError,
+    ListenerPrerequisiteRejected,
+    ListenerActualTlsError,
+    ListenerDeadline,
     InboundAdmissionError,
     InboundLease,
     SocketCancelError,
@@ -65,6 +68,69 @@ events!(
     OutboundAdmissionError,
     OutboundAdmissionTimeout
 );
+
+macro_rules! rejections {
+    ($($reason:ident),+ $(,)?) => {
+        #[derive(Clone, Copy)]
+        #[repr(usize)]
+        pub(super) enum Rejection { $($reason),+ }
+        const REJECTIONS: &[Rejection] = &[$(Rejection::$reason),+];
+        impl Rejection { fn name(self) -> &'static str { match self { $(Self::$reason => stringify!($reason)),+ } } }
+    };
+}
+rejections!(
+    Unknown,
+    GenerationFreshness,
+    ValidationQuota,
+    LocalScope,
+    Observation,
+    FrameSize,
+    RecipientKey,
+    Context,
+    PeerScope,
+    Envelope,
+    Decryption,
+    SignedBody,
+    Signature,
+    AnnouncementFuture,
+    AnnouncementExpired,
+    AnnouncementDuration,
+    Consent,
+    LocatorParse,
+    LocatorVerification,
+    LocatorInterval,
+    Route,
+    LocatorPair,
+    PostLocatorVerification,
+    PostRoute,
+    Revision,
+    Commit
+);
+impl From<kilogram_protocol::ordered_dialog_v2::lan_discovery::Rejection> for Rejection {
+    fn from(value: kilogram_protocol::ordered_dialog_v2::lan_discovery::Rejection) -> Self {
+        use kilogram_protocol::ordered_dialog_v2::lan_discovery::Rejection as Wire;
+        match value {
+            Wire::Unknown => Self::Unknown,
+            Wire::FrameSize => Self::FrameSize,
+            Wire::RecipientKey => Self::RecipientKey,
+            Wire::Context => Self::Context,
+            Wire::PeerScope => Self::PeerScope,
+            Wire::Envelope => Self::Envelope,
+            Wire::Decryption => Self::Decryption,
+            Wire::SignedBody => Self::SignedBody,
+            Wire::Signature => Self::Signature,
+            Wire::AnnouncementFuture => Self::AnnouncementFuture,
+            Wire::AnnouncementExpired => Self::AnnouncementExpired,
+            Wire::AnnouncementDuration => Self::AnnouncementDuration,
+            Wire::Consent => Self::Consent,
+            Wire::LocatorParse => Self::LocatorParse,
+            Wire::LocatorVerification => Self::LocatorVerification,
+            Wire::LocatorInterval => Self::LocatorInterval,
+            Wire::Route => Self::Route,
+            Wire::LocatorPair => Self::LocatorPair,
+        }
+    }
+}
 
 #[derive(Clone, Copy)]
 #[repr(u64)]
@@ -122,6 +188,7 @@ pub(super) struct Counters {
     started: Instant,
     counts: Vec<AtomicU64>,
     os_errors: Vec<AtomicI32>,
+    rejections: Vec<AtomicU64>,
     slots: [Slot; 2],
 }
 fn increment(value: &AtomicU64) {
@@ -134,6 +201,7 @@ impl Counters {
             started: Instant::now(),
             counts: EVENTS.iter().map(|_| AtomicU64::new(0)).collect(),
             os_errors: EVENTS.iter().map(|_| AtomicI32::new(0)).collect(),
+            rejections: REJECTIONS.iter().map(|_| AtomicU64::new(0)).collect(),
             slots: std::array::from_fn(|_| {
                 let slot = Slot::default();
                 slot.stage.store(DialStage::Idle as u64, Relaxed);
@@ -147,6 +215,11 @@ impl Counters {
     pub fn event(&self, event: Event) {
         if self.enabled {
             increment(&self.counts[event as usize]);
+        }
+    }
+    pub fn rejected(&self, reason: Rejection) {
+        if self.enabled {
+            increment(&self.rejections[reason as usize]);
         }
     }
     pub fn error(&self, event: Event, error: &anyhow::Error) {
@@ -224,7 +297,16 @@ impl Counters {
             })
             .collect();
         let slots:Vec<_>=self.slots.iter().enumerate().map(|(i,s)|serde_json::json!({"slot":i,"stage":DialStage::name(s.stage.load(Relaxed)),"attempts":s.attempts.load(Relaxed),"errors":s.errors.load(Relaxed),"timeouts":s.timeouts.load(Relaxed),"leases":s.leases.load(Relaxed),"fresh_ok":s.fresh_ok.load(Relaxed),"fresh_errors":s.fresh_errors.load(Relaxed)})).collect();
-        serde_json::json!({"schema":1,"enabled":self.enabled,"elapsed_ms":u64::try_from(self.started.elapsed().as_millis()).unwrap_or(u64::MAX),"counters":counts,"last_os_error_by_stage":errors,"slots":slots})
+        let rejections: serde_json::Map<_, _> = REJECTIONS
+            .iter()
+            .map(|reason| {
+                (
+                    reason.name().to_owned(),
+                    serde_json::json!(self.rejections[*reason as usize].load(Relaxed)),
+                )
+            })
+            .collect();
+        serde_json::json!({"schema":1,"enabled":self.enabled,"elapsed_ms":u64::try_from(self.started.elapsed().as_millis()).unwrap_or(u64::MAX),"counters":counts,"last_os_error_by_stage":errors,"discovery_rejections":rejections,"slots":slots})
     }
 }
 #[cfg(test)]
@@ -252,5 +334,32 @@ mod tests {
         let disabled = Counters::new(false);
         disabled.event(Event::SendOk);
         assert_eq!(disabled.snapshot()["counters"]["SendOk"], 0);
+    }
+    #[test]
+    fn t13reject_histogram_is_fixed_bounded_saturating_and_opt_in() {
+        let enabled = Counters::new(true);
+        enabled.rejections[Rejection::AnnouncementFuture as usize].store(u64::MAX, Relaxed);
+        enabled.rejected(Rejection::AnnouncementFuture);
+        enabled.rejected(Rejection::Unknown);
+        let snapshot = enabled.snapshot();
+        assert_eq!(
+            snapshot["discovery_rejections"]["AnnouncementFuture"],
+            u64::MAX
+        );
+        assert_eq!(snapshot["discovery_rejections"]["Unknown"], 1);
+        assert!(snapshot["counters"].as_object().unwrap().len() <= 64);
+        assert!(snapshot["discovery_rejections"].as_object().unwrap().len() <= 32);
+        assert!(serde_json::to_vec(&snapshot).unwrap().len() < 8192);
+        let disabled = Counters::new(false);
+        for &reason in REJECTIONS {
+            disabled.rejected(reason);
+        }
+        assert!(
+            disabled.snapshot()["discovery_rejections"]
+                .as_object()
+                .unwrap()
+                .values()
+                .all(|v| v == 0)
+        );
     }
 }

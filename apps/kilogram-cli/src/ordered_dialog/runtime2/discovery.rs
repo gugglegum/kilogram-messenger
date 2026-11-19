@@ -1,3 +1,4 @@
+use super::diagnostics::Rejection;
 use super::{
     owner::{Owner2, Purpose2},
     *,
@@ -14,7 +15,7 @@ use std::{
 };
 #[cfg(any(windows, test))]
 use wire::lan_discovery::{DATAGRAM_BYTES, seal};
-use wire::lan_discovery::{ExpectedContext, Scope, open};
+use wire::lan_discovery::{ExpectedContext, Scope, open_observed};
 
 #[derive(Clone, Copy, Debug, Eq, Ord, PartialEq, PartialOrd)]
 pub struct NetworkGeneration2(pub u64);
@@ -548,14 +549,20 @@ impl Owner2 {
     ) -> Result<()> {
         self.diagnostics
             .event(super::diagnostics::Event::LocatorAttempt);
-        ensure!(
-            self.discovery_network()? == observed.network,
-            "stale LAN discovery generation"
-        );
-        ensure!(
-            self.discovery_quota.take(Instant::now()),
-            "LAN discovery validation quota"
-        );
+        let mut rejection = Rejection::GenerationFreshness;
+        let prerequisite = (|| {
+            ensure!(
+                self.discovery_network()? == observed.network,
+                "stale LAN discovery generation"
+            );
+            rejection = Rejection::ValidationQuota;
+            ensure!(
+                self.discovery_quota.take(Instant::now()),
+                "LAN discovery validation quota"
+            );
+            Ok::<_, anyhow::Error>(())
+        })();
+        prerequisite.inspect_err(|_| self.diagnostics.rejected(rejection))?;
         self.commit_discovery_pair(observed, datagram, now, Self::commit_peer_locator)
     }
 
@@ -566,113 +573,127 @@ impl Owner2 {
         wall: impl Fn() -> Result<u64>,
         mut write: impl FnMut(&mut Self, &db::RuntimeSnapshot, u8, Vec<u8>, u64, Purpose2) -> Result<()>,
     ) -> Result<()> {
-        let now = wall()?;
-        let local = self.discovery_scope(self.discovery_network()?, now)?;
-        ensure!(
-            local.observation == *observed,
-            "stale LAN discovery observation"
-        );
-        let lan = self.route.lan().context("LAN discovery route")?;
-        let role = usize::from(local.snapshots[0].head.role);
-        let scope = Scope {
-            sender: &local.currents[0].peers[1 - role],
-            recipient: &local.currents[0].peers[role],
-            slots: local.slots,
-            sender_ipv4: lan.peer(),
-            now,
-        };
-        let candidate = open(datagram, &scope, &self.encryption)?;
-        self.diagnostics
-            .event(super::diagnostics::Event::LocatorOpened);
-        let mut pair = LocatorPair2 {
-            observation: observed.clone(),
-            contexts: local.slots.map(|slot| slot.context),
-            consents: local.slots.map(|slot| slot.consent_ref),
-            peer_locators: candidate.locators.each_ref().map(|locator| locator.id()),
-            peer_revisions: candidate
-                .locators
-                .each_ref()
-                .map(|locator| locator.fields().revision),
-            peer_endpoint: candidate.locators[0].fields().endpoint,
-            peer_socket: candidate.socket,
-            expires: local.expires,
-        };
-        for (c, locator) in candidate.locators.iter().enumerate() {
-            let s = &local.snapshots[c];
-            let role = usize::from(s.head.role);
-            locator.verify(
-                s.head.context,
-                &local.currents[c].peers[1 - role],
-                &local.currents[c].peers[role],
-            )?;
-            self.route.remote(locator)?;
-            Self::check_peer_locator_revision(s, locator)?;
-            pair.expires = pair.expires.min(locator.fields().expires);
-        }
-        self.diagnostics
-            .event(super::diagnostics::Event::LocatorValidated);
-        if matches!(&self.discovery, Discovery2::Auto(auto) if auto.pair.as_deref() == Some(&pair))
-        {
+        let mut rejection = Rejection::LocalScope;
+        let result = (|| {
+            let now = wall()?;
+            let local = self.discovery_scope(self.discovery_network()?, now)?;
+            rejection = Rejection::Observation;
             ensure!(
-                candidate
-                    .locators
-                    .iter()
-                    .zip(&local.snapshots)
-                    .all(|(locator, s)| { s.spec.peer_locator.as_deref() == Some(locator.raw()) }),
-                "LAN discovery duplicate differs from storage"
+                local.observation == *observed,
+                "stale LAN discovery observation"
             );
+            rejection = Rejection::Route;
+            let lan = self.route.lan().context("LAN discovery route")?;
+            let role = usize::from(local.snapshots[0].head.role);
+            let scope = Scope {
+                sender: &local.currents[0].peers[1 - role],
+                recipient: &local.currents[0].peers[role],
+                slots: local.slots,
+                sender_ipv4: lan.peer(),
+                now,
+            };
+            let candidate = open_observed(datagram, &scope, &self.encryption, |reason| {
+                rejection = reason.into();
+            })?;
             self.diagnostics
-                .event(super::diagnostics::Event::LocatorDuplicate);
-            return Ok(());
-        }
-        self.close_discovery_pair();
-        let import_expires = pair.expires.min(candidate.announcement_interval.1);
-        for (c, locator) in (0..2u8).zip(&candidate.locators) {
-            // The other slot can have advanced the database generation.
-            let s = self.snapshot(c)?;
-            ensure!(
-                self.discovery_network()? == observed.network
-                    && s.profile.policy_generation == observed.policy
-                    && self.route.lan() == Some(observed.route)
-                    && self.local_discovery_endpoint()? == &observed.endpoint,
-                "LAN discovery changed before locator commit"
-            );
-            if s.spec.peer_locator.as_deref() != Some(locator.raw()) {
-                let commit_wall = wall()?;
-                ensure!(commit_wall < import_expires, "LAN discovery import expired");
-                write(
-                    self,
-                    &s,
-                    c,
-                    locator.raw().to_vec(),
-                    commit_wall,
-                    Purpose2::DiscoveryLocator {
-                        expires: import_expires,
-                    },
+                .event(super::diagnostics::Event::LocatorOpened);
+            let mut pair = LocatorPair2 {
+                observation: observed.clone(),
+                contexts: local.slots.map(|slot| slot.context),
+                consents: local.slots.map(|slot| slot.consent_ref),
+                peer_locators: candidate.locators.each_ref().map(|locator| locator.id()),
+                peer_revisions: candidate
+                    .locators
+                    .each_ref()
+                    .map(|locator| locator.fields().revision),
+                peer_endpoint: candidate.locators[0].fields().endpoint,
+                peer_socket: candidate.socket,
+                expires: local.expires,
+            };
+            for (c, locator) in candidate.locators.iter().enumerate() {
+                let s = &local.snapshots[c];
+                let role = usize::from(s.head.role);
+                rejection = Rejection::PostLocatorVerification;
+                locator.verify(
+                    s.head.context,
+                    &local.currents[c].peers[1 - role],
+                    &local.currents[c].peers[role],
                 )?;
+                rejection = Rejection::PostRoute;
+                self.route.remote(locator)?;
+                rejection = Rejection::Revision;
+                Self::check_peer_locator_revision(s, locator)?;
+                pair.expires = pair.expires.min(locator.fields().expires);
             }
-        }
-        let now = wall()?;
-        let latest = self.discovery_scope(self.discovery_network()?, now)?;
-        ensure!(
-            latest.observation == *observed && now < import_expires,
-            "LAN discovery changed during commit"
-        );
-        for (s, locator) in latest.snapshots.iter().zip(&candidate.locators) {
+            self.diagnostics
+                .event(super::diagnostics::Event::LocatorValidated);
+            rejection = Rejection::Commit;
+            if matches!(&self.discovery, Discovery2::Auto(auto) if auto.pair.as_deref() == Some(&pair))
+            {
+                ensure!(
+                    candidate
+                        .locators
+                        .iter()
+                        .zip(&local.snapshots)
+                        .all(|(locator, s)| {
+                            s.spec.peer_locator.as_deref() == Some(locator.raw())
+                        }),
+                    "LAN discovery duplicate differs from storage"
+                );
+                self.diagnostics
+                    .event(super::diagnostics::Event::LocatorDuplicate);
+                return Ok(());
+            }
+            self.close_discovery_pair();
+            let import_expires = pair.expires.min(candidate.announcement_interval.1);
+            for (c, locator) in (0..2u8).zip(&candidate.locators) {
+                // The other slot can have advanced the database generation.
+                let s = self.snapshot(c)?;
+                ensure!(
+                    self.discovery_network()? == observed.network
+                        && s.profile.policy_generation == observed.policy
+                        && self.route.lan() == Some(observed.route)
+                        && self.local_discovery_endpoint()? == &observed.endpoint,
+                    "LAN discovery changed before locator commit"
+                );
+                if s.spec.peer_locator.as_deref() != Some(locator.raw()) {
+                    let commit_wall = wall()?;
+                    ensure!(commit_wall < import_expires, "LAN discovery import expired");
+                    write(
+                        self,
+                        &s,
+                        c,
+                        locator.raw().to_vec(),
+                        commit_wall,
+                        Purpose2::DiscoveryLocator {
+                            expires: import_expires,
+                        },
+                    )?;
+                }
+            }
+            let now = wall()?;
+            let latest = self.discovery_scope(self.discovery_network()?, now)?;
             ensure!(
-                s.spec.peer_locator.as_deref() == Some(locator.raw())
-                    && s.spec.peer_locator_revision == locator.fields().revision,
-                "LAN discovery pair was not stored"
+                latest.observation == *observed && now < import_expires,
+                "LAN discovery changed during commit"
             );
-        }
-        if let Discovery2::Auto(auto) = &mut self.discovery {
-            let pair = Arc::new(pair);
-            auto.pair = Some(pair.clone());
-            auto.target.send_replace(Some(pair));
-        }
-        self.diagnostics
-            .event(super::diagnostics::Event::LocatorCommitted);
-        Ok(())
+            for (s, locator) in latest.snapshots.iter().zip(&candidate.locators) {
+                ensure!(
+                    s.spec.peer_locator.as_deref() == Some(locator.raw())
+                        && s.spec.peer_locator_revision == locator.fields().revision,
+                    "LAN discovery pair was not stored"
+                );
+            }
+            if let Discovery2::Auto(auto) = &mut self.discovery {
+                let pair = Arc::new(pair);
+                auto.pair = Some(pair.clone());
+                auto.target.send_replace(Some(pair));
+            }
+            self.diagnostics
+                .event(super::diagnostics::Event::LocatorCommitted);
+            Ok(())
+        })();
+        result.inspect_err(|_| self.diagnostics.rejected(rejection))
     }
 
     pub(super) fn pair_for(
