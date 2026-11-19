@@ -140,16 +140,36 @@ function Assert-LabBRetryHistory([string]$StateDirectory,$Expected,[string]$Allo
     }
     return $now
 }
-function Assert-LabBRetryLedger($Store,$Anchor,[string]$PackageSha){
+function Get-LabBRetryUpgrade {
+    @{owner='setup-33ab20c7666e46e4bdacd13f1ca6a735';package_sha256='a135cfcb8e6c01d4c20d822e4dec4da9c1df3853d7b06a55a95039d591a0e9e0';
+      initial_sha256='ef680f33b876e1ca5bad20999c1ebbac16bd42494fd2d27f9683bed98c669e0f';archive='B-terminal-retry-a135-predecessor.json'}
+}
+function Assert-LabBRetryPredecessor($Store,$Anchor,[string]$PackageSha,[string]$StateDirectory){
+    $scope=Get-LabBRetryUpgrade;$m=$Store.migration
+    if($m.owner -cne $scope.owner -or $m.from_package -cne $scope.package_sha256 -or $m.to_package -cne $PackageSha -or
+       $m.initial_sha256 -cne $scope.initial_sha256 -or $Anchor.initial_sha256 -cne $scope.initial_sha256){throw 'LAB_B_RETRY_TRANSITION'}
+    $path=Join-Path $StateDirectory $scope.archive
+    if(!(Test-Path -LiteralPath $path) -or (Lab-Hash $path) -cne $m.ledger_sha256){throw 'LAB_B_RETRY_PREDECESSOR'}
+    $old=Read-LabJournalStrict $path
+    if($old.PSObject.Properties['migration'] -or @($old.attempts).Count -ne 1 -or $old.attempts[0].owner -cne $scope.owner -or
+       $old.attempts[0].status -cne 'clean_rollback' -or !(Lab-Equal $old.attempts[0] $Store.attempts[0])){throw 'LAB_B_RETRY_PREDECESSOR'}
+    Assert-LabBRetryLedger $old $Anchor $scope.package_sha256 $StateDirectory
+    $now=Get-LabHistoryPins $StateDirectory
+    foreach($entry in $old.history_pins.PSObject.Properties){if(!$now.Contains($entry.Name) -or $now[$entry.Name] -cne $entry.Value){throw 'LAB_B_RETRY_HISTORY'}}
+}
+function Assert-LabBRetryLedger($Store,$Anchor,[string]$PackageSha,[string]$StateDirectory){
     if(!$Store -or $Store.v -ne 1 -or $Store.runner -cne 'B-terminal-rollback-retry-01' -or $Store.side -cne 'B' -or
        $Store.origin -cne $Anchor.owner -or $Store.origin_manifest -cne $Anchor.manifest -or $Store.package_sha256 -cne $PackageSha -or
        $Store.initial_sha256 -cne $Anchor.initial_sha256 -or $Store.origin_audit_sha256 -cne $Anchor.audit_sha256 -or
        !(Lab-Equal $Store.want $Anchor.want) -or @($Store.attempts).Count -lt 1 -or @($Store.attempts).Count -gt 16){throw 'LAB_B_RETRY_PROVENANCE'}
-    $seen=@{}
+    $hasMigration=[bool]$Store.PSObject.Properties['migration']
+    if($hasMigration){Assert-LabBRetryPredecessor $Store $Anchor $PackageSha $StateDirectory}
+    $seen=@{};$scope=Get-LabBRetryUpgrade
     $index=0
     foreach($a in $Store.attempts){
+        $legacy=$hasMigration -and $index -eq 0 -and $a.owner -ceq $scope.owner -and $a.package_sha256 -ceq $scope.package_sha256 -and $a.status -ceq 'clean_rollback'
         if($a.owner -cnotmatch '^setup-[0-9a-f]{32}$' -or $a.owner -ceq $Anchor.owner -or $seen.ContainsKey($a.owner) -or
-           $a.status -cnotin @('intent','clean_rollback') -or $a.package_sha256 -cne $PackageSha){throw 'LAB_B_RETRY_PROVENANCE'}
+           $a.status -cnotin @('intent','clean_rollback') -or ($a.package_sha256 -cne $PackageSha -and !$legacy)){throw 'LAB_B_RETRY_PROVENANCE'}
         $seen[$a.owner]=$true
         if($index -lt @($Store.attempts).Count-1 -and $a.status -cne 'clean_rollback'){throw 'LAB_B_RETRY_PROVENANCE'}
         $index++
@@ -164,13 +184,27 @@ function Assert-LabBRetryAdmission($Cfg,$Want,[string]$StateDirectory,[IO.FileSt
     $j=Read-LabJournalStrict (Join-Path $StateDirectory 'initial-and-journal.json')
     if(!$j -or $j.phase -cne 'rolled_back' -or @($j.rollback_errors).Count -or !(Lab-Equal $j.want $Want) -or !(Lab-Equal $j.initial $anchor.initial)){throw 'LAB_B_RETRY_TERMINAL_REQUIRED'}
     $store=Read-LabJournalStrict (Join-Path $StateDirectory 'B-terminal-retry.json')
+    $upgrade=Get-LabBRetryUpgrade;$migration=$null
     if($j.setup_session -ceq $anchor.owner -and !$store){
         if(!(Lab-Equal $j.file_pins $anchor.file_pins) -or ($j.changes -join ',') -cne 'files,task,rule0,rule1,private'){throw 'LAB_B_RETRY_ORIGIN_PINS'}
         $history=Assert-LabBRetryHistory $StateDirectory ([ordered]@{}) $anchor.owner $Want $anchor.initial $anchor.file_pins
         if(!$history.Count){throw 'LAB_B_RETRY_HISTORY'}
         $kind='known_origin'
+    }elseif($j.setup_session -ceq $upgrade.owner -and $store -and $store.package_sha256 -ceq $upgrade.package_sha256 -and $PackageSha -cne $upgrade.package_sha256){
+        Assert-LabBRetryLedger $store $anchor $upgrade.package_sha256 $StateDirectory
+        $last=@($store.attempts)[-1]
+        if($anchor.initial_sha256 -cne $upgrade.initial_sha256 -or $store.PSObject.Properties['migration'] -or @($store.attempts).Count -ne 1 -or
+           $last.owner -cne $upgrade.owner -or $last.status -cne 'clean_rollback' -or $last.journal_sha256 -cne (Lab-Hash (Join-Path $StateDirectory 'initial-and-journal.json'))){throw 'LAB_B_RETRY_TRANSITION'}
+        $prior=Assert-LabBRetryPackage $upgrade.owner $upgrade.package_sha256
+        if(!(Lab-Equal $j.file_pins $prior.files)){throw 'LAB_B_RETRY_TRANSITION'}
+        $history=Assert-LabBRetryHistory $StateDirectory $store.history_pins '' $Want $anchor.initial $prior.files -Exact
+        $migration=@{owner=$upgrade.owner;from_package=$upgrade.package_sha256;to_package=$PackageSha;initial_sha256=$upgrade.initial_sha256;
+            ledger_sha256=(Lab-Hash (Join-Path $StateDirectory 'B-terminal-retry.json'))}
+        $archive=Join-Path $StateDirectory $upgrade.archive
+        if((Test-Path -LiteralPath $archive) -and (Lab-Hash $archive) -cne $migration.ledger_sha256){throw 'LAB_B_RETRY_PREDECESSOR'}
+        $kind='known_package_transition'
     }else{
-        Assert-LabBRetryLedger $store $anchor $PackageSha
+        Assert-LabBRetryLedger $store $anchor $PackageSha $StateDirectory
         $last=@($store.attempts)[-1]
         if($last.owner -cne $j.setup_session -or $last.status -cne 'clean_rollback' -or $last.journal_sha256 -cne (Lab-Hash (Join-Path $StateDirectory 'initial-and-journal.json')) -or
            !(Lab-Equal $j.file_pins $Package.files) -or @($store.attempts).Count -ge 16){throw 'LAB_B_RETRY_PROVENANCE'}
@@ -187,7 +221,7 @@ function Assert-LabBRetryAdmission($Cfg,$Want,[string]$StateDirectory,[IO.FileSt
     }catch{throw ('LAB_B_RETRY_AGENT_LOCK:'+ $_.Exception.Message)}
     $before=@{owner=$j.setup_session;file_pins=$j.file_pins;names=(Get-LabBRetryNames);initial_sha256=$anchor.initial_sha256;history=$history}
     $null=Assert-LabOldRecoveryCompleted $Cfg $Want $StateDirectory $before
-    @{kind=$kind;anchor=$anchor;history=$history;prior_owner=$j.setup_session;prior_pins=$j.file_pins;store=$store}
+    @{kind=$kind;anchor=$anchor;history=$history;prior_owner=$j.setup_session;prior_pins=$j.file_pins;store=$store;migration=$migration}
 }
 function Register-LabBRetryIntent($Context,$Want,[string]$StateDirectory,[string]$Owner,$Package,[string]$PackageSha){
     if($Owner -cnotmatch '^setup-[0-9a-f]{32}$' -or $Owner -ceq $Context.prior_owner){throw 'LAB_B_RETRY_OWNER'}
@@ -196,6 +230,21 @@ function Register-LabBRetryIntent($Context,$Want,[string]$StateDirectory,[string
        !(Lab-Equal $j.want $Want) -or (Lab-Hash (Join-Path $StateDirectory 'initial.json')) -cne $Context.anchor.initial_sha256){throw 'LAB_B_RETRY_INTENT'}
     $history=Assert-LabBRetryHistory $StateDirectory $Context.history $Context.prior_owner $Want $Context.anchor.initial $Context.prior_pins
     $store=$Context.store
+    if($Context.migration){
+        $path=Join-Path $StateDirectory 'B-terminal-retry.json';$scope=Get-LabBRetryUpgrade
+        if((Lab-Hash $path) -cne $Context.migration.ledger_sha256){throw 'LAB_B_RETRY_TRANSITION'}
+        $archive=Join-Path $StateDirectory $scope.archive
+        if(Test-Path -LiteralPath $archive){if((Lab-Hash $archive) -cne $Context.migration.ledger_sha256){throw 'LAB_B_RETRY_PREDECESSOR'}}
+        else{
+            $bytes=[IO.File]::ReadAllBytes($path)
+            if($bytes.Length -gt 2097152){throw 'LAB_JSON_SIZE'}
+            $out=[IO.File]::Open($archive,'CreateNew','Write','None')
+            try{$out.Write($bytes,0,$bytes.Length);$out.Flush($true)}finally{$out.Dispose()}
+            if((Lab-Hash $archive) -cne $Context.migration.ledger_sha256){throw 'LAB_B_RETRY_PREDECESSOR'}
+        }
+        $store.package_sha256=$PackageSha
+        $store|Add-Member -NotePropertyName migration -NotePropertyValue $Context.migration
+    }
     if(!$store){$store=[pscustomobject]@{v=1;runner='B-terminal-rollback-retry-01';side='B';origin=$Context.anchor.owner;origin_manifest=$Context.anchor.manifest;
         package_sha256=$PackageSha;initial_sha256=$Context.anchor.initial_sha256;origin_audit_sha256=$Context.anchor.audit_sha256;want=$Context.anchor.want;
         history_pins=$history;attempts=@()}}
@@ -218,7 +267,7 @@ function Complete-LabBRetry($Cfg,$Want,[string]$StateDirectory,$Package,[string]
     $j=Read-LabJournalStrict (Join-Path $StateDirectory 'initial-and-journal.json')
     if($j.phase -cne 'rolled_back' -or @($j.rollback_errors).Count){throw 'LAB_B_RETRY_TERMINAL_REQUIRED'}
     $store=Read-LabJournalStrict (Join-Path $StateDirectory 'B-terminal-retry.json')
-    Assert-LabBRetryLedger $store $anchor $PackageSha
+    Assert-LabBRetryLedger $store $anchor $PackageSha $StateDirectory
     $last=@($store.attempts)[-1]
     if($last.owner -cne $Owner){throw 'LAB_B_RETRY_PROVENANCE'}
     $history=Assert-LabBRetryHistory $StateDirectory $store.history_pins $Owner $Want $anchor.initial $Package.files

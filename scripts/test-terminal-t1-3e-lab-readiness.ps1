@@ -55,6 +55,13 @@ function Get-LabNativeNetwork($Cfg) {
     if($LASTEXITCODE -ne 0 -or ($numbers -join ',') -cne '49152,16384'){throw 'LAB_NATIVE_UDP_DRIFT'}
     @{network=$network;adapter=@{index=$Cfg.interface_index;name=$ifc.Name;guid=([guid]$ifc.Id).ToString('D');addresses=$addresses};udp=@(49152,65535)}
 }
+function Convert-LabComSingletonAddress([string]$Value){
+    # Persisted COM observations use x-x for the same one-address set CIM emits
+    # as x. Only a complete canonical IPv4 singleton range is equivalent here.
+    $m=[regex]::Match($Value,'\A((?:0|[1-9][0-9]{0,2})(?:\.(?:0|[1-9][0-9]{0,2})){3})-\1\z')
+    if($m.Success -and !@($m.Groups[1].Value.Split('.')|Where-Object {[int]$_ -gt 255}).Count){return $m.Groups[1].Value}
+    return $Value
+}
 function Convert-LabComRule($Rule,[string]$InstanceName) {
     # Only the default unauthenticated/unpackaged rule subset is supported for own rules.
     if([int]$Rule.SecureFlags -ne 0 -or $Rule.LocalUserOwner){throw 'LAB_COM_RULE_SECURITY_UNSUPPORTED'}
@@ -70,7 +77,7 @@ function Convert-LabComRule($Rule,[string]$InstanceName) {
     foreach($pair in @(@('LocalPort','LocalPorts'),@('RemotePort','RemotePorts'),@('LocalAddress','LocalAddresses'),@('RemoteAddress','RemoteAddresses'),
        @('Service','ServiceName'),@('Package','LocalAppPackageId'),@('LocalUser','LocalUserAuthorizedList'),@('RemoteUser','RemoteUserAuthorizedList'),@('RemoteMachine','RemoteMachineAuthorizedList'))){
         $value=[string]$Rule.($pair[1]);if(!$value -or $value -ceq '*'){$value='Any'}
-        if($pair[0] -cin @('LocalAddress','RemoteAddress')){$value=$value -replace '/(32|255\.255\.255\.255)$',''}
+        if($pair[0] -cin @('LocalAddress','RemoteAddress')){$value=(Convert-LabComSingletonAddress $value) -replace '/(32|255\.255\.255\.255)$',''}
         $view[$pair[0]]=$value
     }
     if(!$view.Program){$view.Program='Any'}

@@ -17,7 +17,7 @@ try{
     $cmd=[IO.File]::ReadAllText((Join-Path $ReviewPackage 'RetryInstall-B.cmd'))
     $encoded=[regex]::Match($cmd,'-EncodedCommand ([A-Za-z0-9+/=]+)').Groups[1].Value
     $body=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String($encoded))
-    $target=Join-Path $cfg.base 'deploy/autonomous-B-rollback-retry-review-01'
+    $target=Join-Path $cfg.base 'deploy/autonomous-B-rollback-retry-review-02'
     Require ($body.Contains('-LaunchAction RetryInstallB -LaunchSide B') -and $body.Contains($target) -and $body.Contains($pin) -and $body.Contains($p.files.'test-terminal-t1-3e-lab-launch.ps1')) 'fixed_B_target_action_and_pins'
     $cmdMax=(@($cmd -split "`n"|ForEach-Object Length)|Measure-Object -Maximum).Maximum
     Require ($cmdMax -lt 8191) 'CMD_limit'

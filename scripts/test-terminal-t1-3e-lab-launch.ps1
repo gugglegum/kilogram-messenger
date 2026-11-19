@@ -118,7 +118,7 @@ try {
     $launchPackage=Assert-LabPackage $LaunchRoot $ManifestPin $LaunchSide $launchFiles $launchCfg $launchLocks
     if($LaunchAction -cin @('Build','BuildRetryB')){
         $retryBuild=$LaunchAction -ceq 'BuildRetryB'
-        $target=Join-Path $launchCfg.base $(if($retryBuild){'deploy/autonomous-B-rollback-retry-review-01'}else{'deploy/autonomous-recovery-setup-review-01'})
+        $target=Join-Path $launchCfg.base $(if($retryBuild){'deploy/autonomous-B-rollback-retry-review-02'}else{'deploy/autonomous-recovery-setup-review-01'})
         $operations=if($retryBuild){@('RetryInstallB')}else{@('RecoverInstall','Teardown')}
         foreach($operation in $operations){
             $script=Join-Path $target 'test-terminal-t1-3e-lab-launch.ps1'
@@ -152,7 +152,7 @@ try {
         return
     }
     $null=Lab-Config (Join-Path $LaunchRoot 'lab.json')
-    $target=Join-Path $launchCfg.base $(if($LaunchAction -ceq 'RetryInstallB'){'deploy/autonomous-B-rollback-retry-review-01'}else{'deploy/autonomous-recovery-setup-review-01'})
+    $target=Join-Path $launchCfg.base $(if($LaunchAction -ceq 'RetryInstallB'){'deploy/autonomous-B-rollback-retry-review-02'}else{'deploy/autonomous-recovery-setup-review-01'})
     if([IO.Path]::GetFullPath($LaunchRoot) -ine $target){throw 'LAB_LAUNCH_LOCATION'}
     $SessionPath=Join-Path $launchCfg.base ('deploy/setup-'+[guid]::NewGuid().ToString('N'))
     [void][IO.Directory]::CreateDirectory($SessionPath);Lab-Plain $SessionPath
