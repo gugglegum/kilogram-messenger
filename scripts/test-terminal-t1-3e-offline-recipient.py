@@ -1,12 +1,40 @@
 """One graceful recipient stop/reconnect; four messages; existing A2 binaries and lab lifecycle."""
-import argparse,json,runpy,time
+import argparse,hashlib,json,runpy,subprocess,time
 from pathlib import Path
 SCRIPTS=Path(__file__).resolve().parent
 S=runpy.run_path(str(SCRIPTS/'test-terminal-t1-3e-hint-smoke.py'))
 M=S['M'];N=S['N'];D=S['D'];require=S['require'];save=S['save']
 PURPOSE='offline-recipient-v1'
-ATTEMPT='hint-offline-02'
-SOURCES=S['SOURCES']|{'scripts/test-terminal-t1-3e-offline-recipient.py','scripts/test-terminal-t1-3e-offline-recipient-check.py'}
+ATTEMPT='hint-offline-03'
+CANDIDATE_BASE='088fc43b95ff7e51900301fda9f1ed2a4c06eca6'
+CANDIDATE_PATCHES={'crates/kilogram-runtime-ipc/src/lab_diagnostics.rs','crates/kilogram-runtime-ipc/tests/lab_diagnostics_writer.rs'}
+SOURCES=S['SOURCES']|{'scripts/test-terminal-t1-3e-offline-recipient.py','scripts/test-terminal-t1-3e-offline-recipient-check.py','scripts/test-terminal-t1-3e-diagnostic-writer-check.py'}
+
+def validate_candidate_build(build,root):
+    require(build['schema']==2 and build['source_kind']=='isolated_unpublished_candidate' and build['base_commit']==CANDIDATE_BASE,'candidate build provenance')
+    result=subprocess.run(['git','ls-tree','-r',CANDIDATE_BASE,'--','apps','crates','Cargo.toml','Cargo.lock','.cargo','rust-toolchain.toml'],cwd=root,capture_output=True,check=True,timeout=30)
+    base={line.split('\t',1)[1]:line.split('\t',1)[0].split()[2] for line in result.stdout.decode().splitlines()}
+    rows={row['git_path']:row for row in build['inputs']}
+    require(len(rows)==len(build['inputs']) and set(rows)==set(base)|CANDIDATE_PATCHES,'candidate exact product input set')
+    require(set(build['patches'])==CANDIDATE_PATCHES,'candidate exact writer/test overlays')
+    for row in rows.values():require(root in (root/row['path']).resolve().parents,'candidate input outside workspace')
+    paths=''.join(json.dumps(row['path'])+'\n' for row in rows.values())
+    hashed=subprocess.run(['git','hash-object','--stdin-paths'],cwd=root,input=paths.encode(),capture_output=True,check=True,timeout=30).stdout.decode().splitlines()
+    require(len(hashed)==len(rows),'candidate source blob count')
+    actual_blobs=dict(zip(rows,hashed))
+    for path,row in rows.items():
+        source=root/row['path'];require(root in source.resolve().parents and N['digest'](source)==row['sha256'],'candidate immutable build input')
+        require(actual_blobs[path]==row['git_blob'],'candidate source blob mismatch')
+        if path in CANDIDATE_PATCHES:
+            require(row['sha256']==build['patches'][path]['sha256']==N['digest'](root/path),'candidate overlay differs from reviewed source')
+            actual=subprocess.run(['git','hash-object','--path',path,path],cwd=root,capture_output=True,check=True,timeout=30).stdout.decode().strip()
+            require(row['git_blob']==build['patches'][path]['git_blob']==actual,'candidate overlay Git identity')
+        else:require(row['git_blob']==base[path],'candidate contains unrelated product changes')
+    identity=hashlib.sha256(json.dumps(dict(base=CANDIDATE_BASE,inputs={p:r['git_blob'] for p,r in rows.items()}),sort_keys=True,separators=(',',':')).encode()).hexdigest()
+    require(identity==build['candidate_id'],'candidate product identity')
+    receipt=root/build['receipt']['path'];require(root in receipt.resolve().parents and N['digest'](receipt)==build['receipt']['sha256'],'candidate build receipt pin')
+    outcome=json.loads(receipt.read_bytes());require(outcome['exit']==0 and not outcome['timed_out'],'candidate build failed')
+    require(build['locked'] and build['offline'] and build['jobs']==1 and build['priority']=='Idle' and build['profile']=='verification','candidate build resource policy')
 
 def verify_initial_history(snapshots,contexts,messages,hosts):
     require(not messages,'initial history requires no prior sends')
@@ -183,10 +211,8 @@ def validate(plan,root):
     require(plan['purpose']==PURPOSE and plan['attempts']==[ATTEMPT],'single recipient-only offline attempt')
     require(plan['connect_seconds']==85 and plan['admission_seconds']==90 and plan['reconnect_seconds']==90 and plan['probe_seconds']==60 and plan['minimum_call_seconds']==2 and
         plan['additional_network_seconds']==90 and plan['additional_network_mode']=='diagnostic_only_after_original_window' and plan['original_window_origin']=='before_first_connect_submit','measured startup/reconnect budgets')
-    path=root/plan['build_manifest'];require(root in path.resolve().parents and N['digest'](path)==plan['build_manifest_sha256'],'reused A2 build pin')
-    build=json.loads(path.read_bytes());require(build['commit']=='a61385a00e12fbe0b78805fe7655afb5b3d6bcbe' and build['clean_published_worktree'],'published unchanged A2 images')
-    for row in build['inputs']:
-        source=root/row['path'];require(root in source.resolve().parents and N['digest'](source)==row['sha256'],'A2 build input pin')
+    path=root/plan['build_manifest'];require(root in path.resolve().parents and N['digest'](path)==plan['build_manifest_sha256'],'candidate build manifest pin')
+    build=json.loads(path.read_bytes());validate_candidate_build(build,root)
     N['validate'](plan,root,attempt_count=1,source_paths=SOURCES,product_pins=build['images'])
 
 def main():

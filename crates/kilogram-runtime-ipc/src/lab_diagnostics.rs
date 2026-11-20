@@ -2,14 +2,18 @@
 use serde::{Deserialize, Serialize};
 use std::{
     fs,
-    io::Write,
+    io::{Read, Write},
     path::{Path, PathBuf},
+    time::{Duration, Instant},
 };
 
 pub const DIRECTORY: &str = "lab-diagnostics-v1";
 pub const MARKER: &str = "enabled.json";
 pub const RECORD_CAP: usize = 16 * 1024;
-const FILE_CAP: usize = 16;
+// Two Chat/runtime incarnations, matching the explicit two-scope lab reader.
+// The existing marker is separate: at most 32 * RECORD_CAP + 256 bytes.
+const RECORD_FILE_CAP: usize = 32;
+const LOCK_WAIT: Duration = Duration::from_millis(250);
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -91,29 +95,71 @@ impl Sink {
     /// The harness creates the marker only in a fresh, owned Setup directory.
     /// Missing/invalid/inaccessible diagnostics never change application behavior.
     pub fn open(home: &Path) -> Option<Self> {
+        Self::checked(home).map(|(sink, _marker_lock, _records)| sink)
+    }
+
+    // Use the existing marker as an OS lock: no lock file or persistent quota.
+    // Hold it through record creation/sync so concurrent Chat/runtime writers
+    // cannot both consume the last slot. Closing the handle releases the lock.
+    fn checked(home: &Path) -> Option<(Self, fs::File, usize)> {
         let directory = home.join(DIRECTORY);
         for parent in directory.ancestors() {
             if !plain(parent) {
                 return None;
             }
         }
-        if !directory.is_dir()
-            || fs::read_dir(&directory).ok()?.take(FILE_CAP + 1).count() > FILE_CAP
-        {
+        if !directory.is_dir() {
             return None;
         }
         let marker = directory.join(MARKER);
-        if !plain(&marker) || fs::metadata(&marker).ok()?.len() > 256 {
+        if !plain(&marker) {
             return None;
         }
-        let marker: Marker = serde_json::from_slice(&fs::read(marker).ok()?).ok()?;
+        let mut marker_lock = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(marker)
+            .ok()?;
+        let deadline = Instant::now() + LOCK_WAIT;
+        loop {
+            match marker_lock.try_lock() {
+                Ok(()) => break,
+                Err(fs::TryLockError::WouldBlock) if Instant::now() < deadline => {
+                    std::thread::sleep(Duration::from_millis(2));
+                }
+                Err(_) => return None,
+            }
+        }
+        if marker_lock.metadata().ok()?.len() > 256 {
+            return None;
+        }
+        let mut bytes = Vec::new();
+        (&mut marker_lock).take(257).read_to_end(&mut bytes).ok()?;
+        let marker: Marker = serde_json::from_slice(&bytes).ok()?;
         if marker.schema != 1 || !hex(&marker.run_nonce, 32) {
             return None;
         }
-        Some(Self {
-            directory,
-            nonce: marker.run_nonce,
-        })
+        let mut records = 0;
+        for entry in fs::read_dir(&directory).ok()?.take(RECORD_FILE_CAP + 2) {
+            let entry = entry.ok()?;
+            if !plain(&entry.path()) || !entry.file_type().ok()?.is_file() {
+                return None;
+            }
+            if entry.file_name() != MARKER {
+                records += 1;
+            }
+            if records > RECORD_FILE_CAP {
+                return None;
+            }
+        }
+        Some((
+            Self {
+                directory,
+                nonce: marker.run_nonce,
+            },
+            marker_lock,
+            records,
+        ))
     }
 
     /// Callers supply fixed typed booleans/counters/enums, never errors or frame bytes.
@@ -125,10 +171,7 @@ impl Sink {
         instance: Option<&str>,
         data: &T,
     ) -> bool {
-        if instance.is_some_and(|v| !hex(v, 64))
-            || !Self::open(self.directory.parent().unwrap_or(Path::new("")))
-                .is_some_and(|v| v.nonce == self.nonce)
-        {
+        if instance.is_some_and(|v| !hex(v, 64)) {
             return false;
         }
         #[derive(Serialize)]
@@ -154,6 +197,14 @@ impl Sink {
             return false;
         };
         if bytes.len() > RECORD_CAP {
+            return false;
+        }
+        let Some((current, _marker_lock, records)) =
+            Self::checked(self.directory.parent().unwrap_or(Path::new("")))
+        else {
+            return false;
+        };
+        if current.nonce != self.nonce || records >= RECORD_FILE_CAP {
             return false;
         }
         let path = self
@@ -192,7 +243,13 @@ mod tests {
             Some(&"ab".repeat(32)),
             &true
         ));
+        let original =
+            fs::read(root.join(format!("connection-final-{}.json", std::process::id())))?;
         assert!(!sink.record(Kind::ConnectionFinal, Some(42), None, &false));
+        assert_eq!(
+            fs::read(root.join(format!("connection-final-{}.json", std::process::id())))?,
+            original
+        );
         assert!(!sink.record(
             Kind::WorkerFinal,
             None,
@@ -212,6 +269,28 @@ mod tests {
         )?;
         assert!(Sink::open(home.path()).is_none());
         assert!(!sink.record(Kind::RuntimeFinal, None, None, &true));
+        Ok(())
+    }
+
+    #[test]
+    fn t13diag_marker_lock_is_bounded() -> anyhow::Result<()> {
+        let home = tempfile::tempdir()?;
+        let directory = home.path().join(DIRECTORY);
+        fs::create_dir(&directory)?;
+        fs::write(
+            directory.join(MARKER),
+            br#"{"schema":1,"run_nonce":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#,
+        )?;
+        let marker = fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(directory.join(MARKER))?;
+        marker.try_lock()?;
+        let started = Instant::now();
+        assert!(Sink::open(home.path()).is_none());
+        assert!(started.elapsed() < Duration::from_secs(2));
+        drop(marker);
+        assert!(Sink::open(home.path()).is_some());
         Ok(())
     }
 }
