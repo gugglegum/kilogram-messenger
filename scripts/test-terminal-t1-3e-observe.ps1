@@ -196,7 +196,13 @@ if ($r.op -eq 'preconnect') {
     $stale=$null
     if($crashRestart) {
         if($r.side -cne 'A' -or $r.tag -cne 'owner-b-1'){throw 'Crash preconnect scope'}
-        . (Join-Path $base 'ordinary-agent/test-terminal-t1-3e-lab-common.ps1')
+        $common=Join-Path $base 'ordinary-agent/test-terminal-t1-3e-lab-common.ps1'
+        $null=PlainFile $common
+        $commonBytes=[IO.File]::ReadAllBytes($common)
+        $sha=[Security.Cryptography.SHA256]::Create()
+        try{$commonHash=[BitConverter]::ToString($sha.ComputeHash($commonBytes)).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose()}
+        if($commonHash -cne '02b2a53e5b9d13f52312059ab1fc8a859de43eb694be72ce0eca00b06fe6346a'){throw 'CRASH_OBSERVER_COMMON_PIN'}
+        . ([scriptblock]::Create([Text.Encoding]::UTF8.GetString($commonBytes)))
         $run=Join-Path $base "runs/$($r.attempt)";$cfg=Lab-Read (Join-Path $base 'ordinary-agent/lab.json')
         $entry=Lab-Read (Join-Path $run 'attempt.json');$control=Join-Path $base 'ordinary-agent/control'
         $ready=Lab-Read (Join-Path $control 'ready.json');$state=Lab-Read (Join-Path $control 'state.json')

@@ -92,11 +92,34 @@ class OfflineRecipient(M['Diagnostic']):
         verify_initial_history(snapshots,self.contexts,self.messages,[h.name for h in self.hosts])
 
     def start(self,index,tag,mode,end=None):
+        if mode=='chat':self.register_chat_start(index,tag)
         term=super().start(index,tag,mode,end)
         if mode=='chat':
             self.latest[index]=None
             self.incarnations[index,tag]=dict(chat_pid=self.chat_pids[index],snapshot=None,collected=False)
         return term
+
+    def register_chat_start(self,index,tag):
+        # No PID is known until the scope's own preconnect proof succeeds. In
+        # particular, never reuse self.chat_pids[index] from an older terminal.
+        self.incarnations[index,tag]=dict(chat_pid=None,snapshot=None,collected=False)
+
+    def shutdown_scope(self,index,term):
+        if term.mode!='chat':return None
+        key=(index,term.tag);incarnation=self.incarnations.get(key)
+        reason='UnregisteredChatScope' if incarnation is None else 'PartialStartUnboundChat'
+        if incarnation is None:
+            incarnation=dict(chat_pid=None,snapshot=None,collected=False);self.incarnations[key]=incarnation
+        if incarnation['collected']:return None
+        incarnation['collected']=True
+        if type(incarnation.get('chat_pid')) is int and incarnation['chat_pid']>0:return incarnation
+        coverage=dict(complete=False,missing=['verified_chat_identity'],rejected=[],reason=reason)
+        self.capture_errors.append(dict(side=self.hosts[index].name,tag=term.tag,error=dict(type=reason,coverage=coverage)))
+        try:
+            folder=self.evidence/'shutdown'/self.hosts[index].name/term.tag;folder.mkdir(parents=True,exist_ok=True)
+            save(folder/'coverage.json',coverage)
+        except Exception as error:self.capture_errors.append(dict(side=self.hosts[index].name,tag=term.tag,error=M['error_record'](error)))
+        return None
 
     def sample(self,index,term,end):
         result=super().sample(index,term,end)
@@ -105,10 +128,8 @@ class OfflineRecipient(M['Diagnostic']):
         return result
 
     def collect_shutdown(self,index,term):
-        if term.mode!='chat':return
-        incarnation=self.incarnations[index,term.tag]
-        if incarnation['collected']:return
-        incarnation['collected']=True
+        incarnation=self.shutdown_scope(index,term)
+        if incarnation is None:return
         try:
             cached=incarnation['snapshot'];runtime_pid=cached['doc']['runtime_pid'] if cached else 0
             previous=[dict(diagnostic_chat_pid=v['chat_pid'],diagnostic_runtime_pid=v['snapshot']['doc']['runtime_pid'],diagnostic_runtime_instance=v['snapshot']['doc']['runtime_instance'])
