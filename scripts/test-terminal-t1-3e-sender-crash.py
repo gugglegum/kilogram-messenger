@@ -3,7 +3,7 @@ import argparse,base64,copy,hashlib,json,runpy,time,uuid
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
 R=runpy.run_path(str(ROOT/'scripts/test-terminal-t1-3e-sender-restart.py'));O,M,N,D=R['O'],R['M'],R['N'],R['D'];C=N['C']
-require=R['require'];save=R['save'];PURPOSE='sender-runtime-crash-v1';ATTEMPT='hint-crash-04'
+require=R['require'];save=R['save'];PURPOSE='sender-runtime-crash-v1';ATTEMPT='hint-crash-05'
 SOURCES=R['SOURCES']|{'scripts/test-terminal-t1-3e-sender-crash.py','scripts/test-terminal-t1-3e-sender-crash-check.py',
     'scripts/test-terminal-t1-3e-sender-crash-native.ps1','scripts/test-terminal-t1-3e-lab-agent.ps1','scripts/test-terminal-t1-3e-lab-common.ps1'}
 SOURCES|={'scripts/test-terminal-t1-3e-sender-crash-policy.ps1'}
@@ -127,7 +127,8 @@ class SenderCrash(R['SenderRestart']):
         passed=False
         try:
             ready=self.agents[0].ready()
-            require(ready.get('crash_policy_version')=='owned-runtime-crash-v1' and ready.get('crash_policy_sha256')==self.plan['nodes'][0]['crash_policy_sha256'],
+            require(ready.get('crash_policy_version')=='owned-runtime-crash-v1' and ready.get('crash_policy_sha256')==self.plan['nodes'][0]['crash_policy_sha256'] and
+                ready.get('crash_descendants_version')=='passive-natural-drain-v1',
                 'A must have the reviewed crash policy loaded, not only changed files on disk')
             M['Diagnostic'].run(self)
             require(self.crash_classified and self.delivery_history_passed and self.sender_restarts==self.recipient_restarts==1,'crash recovery incomplete')
@@ -148,7 +149,7 @@ class SenderCrash(R['SenderRestart']):
 def validate(plan,root):
     require(plan['purpose']==PURPOSE and plan['attempts']==[ATTEMPT],'single reviewed crash attempt')
     e=plan['execution']
-    require(e['evidence']=='.tmp/terminal-t1-3e/sender-crash-live-04' and e['controller_seconds']==1800 and e['outer_seconds']==1860 and
+    require(e['evidence']=='.tmp/terminal-t1-3e/sender-crash-live-05' and e['controller_seconds']==1800 and e['outer_seconds']==1860 and
         e['priority']=='BelowNormal' and e['max_parallel_hosts']==2 and e['runtime_review_required'] is True,'crash execution bounds')
     require(plan['work_seconds']==1000 and plan['connect_seconds']==85 and plan['admission_seconds']==plan['reconnect_seconds']==90 and
         plan['probe_seconds']==60 and plan['minimum_call_seconds']==2 and plan['additional_network_seconds']==90 and

@@ -204,7 +204,8 @@ function Get-RefreshRealIo {
 function Assert-RefreshPolicy([string]$Kind,$Ready,[string]$Pin) {
     if($Kind -ceq 'new' -and (!$Ready.PSObject.Properties['crash_policy_version'] -or
        !$Ready.PSObject.Properties['crash_policy_sha256'] -or $Ready.crash_policy_version -cne 'owned-runtime-crash-v1' -or
-       $Ready.crash_policy_sha256 -cne $Pin)){throw 'REFRESH_LOADED_POLICY'}
+       $Ready.crash_policy_sha256 -cne $Pin -or !$Ready.PSObject.Properties['crash_descendants_version'] -or
+       $Ready.crash_descendants_version -cne 'passive-natural-drain-v1')){throw 'REFRESH_LOADED_POLICY'}
 }
 function Assert-RefreshIdentity($Ready,$Expected,[bool]$Fresh,$Prior) {
     if(!$Fresh -and ($Ready.session -cne $Expected.session -or $Ready.pid -ne $Expected.pid -or $Ready.started -ne $Expected.started)){throw 'REFRESH_ACTOR_CHANGED'}
@@ -235,7 +236,7 @@ function Assert-RefreshBindings($p,[string]$Root) {
     foreach($name in $sources){if((Lab-Hash (Join-Path $Root $name)) -cne $p.sources.$name){throw 'REFRESH_SOURCE_PIN'}}
     $fixed=@{
         old=@{directory='.tmp/terminal-t1-3e/sender-crash-prep-01/refresh/old-payload';manifest='.tmp/terminal-t1-3e/sender-crash-prep-01/refresh/old-manifest.json';sha256='fc3bf5b0713877c07b335f048922b2c9d52b75ba816a0509f41774c55facbead'}
-        new=@{directory='.tmp/terminal-t1-3e/sender-crash-prep-01/refresh-02/new-payload';manifest='.tmp/terminal-t1-3e/sender-crash-prep-01/refresh-02/new-manifest.json';sha256='5a2784caff98850ddffe26e1a49e837e49da634abe7f098dff8b1729c7eda764'}
+        new=@{directory='.tmp/terminal-t1-3e/descendants-prep-01/refresh/new-payload';manifest='.tmp/terminal-t1-3e/descendants-prep-01/refresh/new-manifest.json';sha256='327143aeeafc72624074b5ca91e539eaaef349eaa9780a374a7d554a6582d71d'}
     }
     foreach($kind in @('old','new')){foreach($key in @('directory','manifest','sha256')){
         if($p.payload.$kind.$key -cne $fixed[$kind][$key]){throw 'REFRESH_FIXED_PAYLOAD'}

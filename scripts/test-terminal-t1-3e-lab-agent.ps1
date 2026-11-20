@@ -38,6 +38,49 @@ function Lab-OwnerClean($Entry,$Process,[string]$Run) {
         $receipt.mailbox_eof -eq $true -and $receipt.mailbox_quit -eq $true -and
         ($Entry.mode -cne 'setup' -or $receipt.filtered_setup_eof -eq $true)
 }
+function Assert-LabCrashDescendants($Watch,[string]$Run,$Owner) {
+    # Only the opted-in, exited-owner/output-drained branch calls this boundary.
+    # Children is the native owned Job list: never infer emptiness from HasExited.
+    $begin=[KilogramS5Deadline]::TickNow()
+    $cutoff=[Math]::Min(($begin+2000),[long]$Watch.WorkTick)
+    $proof=[ordered]@{v=1;owner_pid=$Owner.Id;owner_started=$Owner.StartTime.ToFileTimeUtc();
+        clock='GetTickCount64Milliseconds';begin_tick=$begin;cutoff_tick=$cutoff;end_tick=$null;
+        first=$null;last=$null;queries=0;outcome='pending';error=$null}
+    try {
+        while($true) {
+            $Watch.CheckWork()
+            if([KilogramS5Deadline]::TickNow() -ge $cutoff){throw 'LAB_CRASH_DESCENDANTS'}
+            $before=[KilogramS5Deadline]::TickNow()
+            $pids=@($Watch.Children())
+            $snapshot=@{before_tick=$before;after_tick=[KilogramS5Deadline]::TickNow();pids=$pids}
+            if($null -eq $proof.first){$proof.first=$snapshot}
+            $proof.last=$snapshot;$proof.queries++
+            $Watch.CheckWork()
+            if($snapshot.after_tick -ge $cutoff){throw 'LAB_CRASH_DESCENDANTS'}
+            if(!$pids.Count){$proof.outcome='empty';return}
+            $remaining=$cutoff-[KilogramS5Deadline]::TickNow()
+            if($remaining -le 0){throw 'LAB_CRASH_DESCENDANTS'}
+            Start-Sleep -Milliseconds ([int][Math]::Min(20,$remaining))
+        }
+    } catch {
+        $proof.outcome='refused';$proof.error=@{type=$_.Exception.GetType().FullName;message=$_.Exception.Message}
+        throw
+    } finally {
+        $proof.end_tick=[KilogramS5Deadline]::TickNow()
+        Lab-Write (Join-Path $Run 'receipts/runtime-fault-descendants.json') $proof
+    }
+}
+function Get-LabOwnerExitVerdict($Watch,$Active,$Child,[string]$Run,$Entry,[int]$CrashCount) {
+    $clean=Lab-OwnerClean $Active $Child $Run
+    $expected=$null
+    if(!$clean -and $CrashCount -eq 0 -and $Active.PSObject.Properties['expected_runtime_crash'] -and $Active.expected_runtime_crash -eq $true) {
+        Assert-LabCrashDescendants $Watch $Run $Child
+        $Watch.CheckWork()
+        $expected=Assert-LabExpectedCrash $Run $Entry $Active $cfg (Lab-Read (Join-Path $Run 'started.json')) $Child
+        Lab-Write (Join-Path $Run 'receipts/runtime-fault-reconciled.json') $expected
+    }
+    return @{clean=$clean;expected=$expected}
+}
 function Repair-LabUpdate([string]$Stage) {
     $path=Join-Path $Stage 'update.json';$j=Lab-Read $path
     if (!$j -or $j.state -cne 'updating') { return }
@@ -153,13 +196,8 @@ if ($Action -ceq 'Worker') {
             if ($child -and $child.HasExited) {
                 if(!$outTask.Wait(1000) -or !$errTask.Wait(1000)){throw 'LAB_OWNER_DRAIN'}
                 foreach($s in $streams){$s.Dispose()};$streams=@()
-                $clean = Lab-OwnerClean $active $child $run
-                $expected=$null
-                if(!$clean -and $crashCount -eq 0 -and $active.PSObject.Properties['expected_runtime_crash'] -and $active.expected_runtime_crash -eq $true) {
-                    if(@($watch.Children()).Count){throw 'LAB_CRASH_DESCENDANTS'}
-                    $expected=Assert-LabExpectedCrash $run $entry $active $cfg (Lab-Read (Join-Path $run 'started.json')) $child
-                    Lab-Write (Join-Path $run 'receipts/runtime-fault-reconciled.json') $expected
-                }
+                $verdict=Get-LabOwnerExitVerdict $watch $active $child $run $entry $crashCount
+                $clean=$verdict.clean;$expected=$verdict.expected
                 Lab-Write (Join-Path $run "owners/$last.done.json") @{tag=$active.tag;generation=$active.generation;
                     state=if($clean){'clean'}elseif($expected){'expected_crash_reconciled'}else{'failed'};
                     worker_pid=$child.Id;worker_start=$activeStart;exit=$child.ExitCode}
@@ -278,7 +316,8 @@ try {
     Lab-Write $statePath $state
     Lab-Write (Join-Path $control 'ready.json') @{v=1;session=$session;host=$cfg.host;sid=$cfg.sid;pid=$PID;
         started=(Get-Process -Id $PID).StartTime.ToFileTimeUtc();logon_type=[int]$logon[0];windows_session=[int]$logon[1];profile_hive_loaded=$true;administrator=$false;
-        crash_policy_version='owned-runtime-crash-v1';crash_policy_sha256=$loadedPolicyHash}
+        crash_policy_version='owned-runtime-crash-v1';crash_policy_sha256=$loadedPolicyHash;
+        crash_descendants_version='passive-natural-drain-v1'}
     $stop=$false
     while (!$stop) {
         if ($child -and $child.HasExited) {

@@ -51,7 +51,7 @@ function Test-Io {
             Assert-RefreshObjects $c.directory $c.expectedObjects
             Require ($c.handles.Count -eq 0) 'release-before-wake'
             $c.wakes.Add($kind)
-            $ready=if($kind -ceq 'new'){[pscustomobject]@{crash_policy_version='owned-runtime-crash-v1';crash_policy_sha256=$c.plan.crash_policy_sha256;session='mock-new'}}else{[pscustomobject]@{session='mock-old'}}
+            $ready=if($kind -ceq 'new'){[pscustomobject]@{crash_policy_version='owned-runtime-crash-v1';crash_policy_sha256=$c.plan.crash_policy_sha256;crash_descendants_version='passive-natural-drain-v1';session='mock-new'}}else{[pscustomobject]@{session='mock-old'}}
             Assert-RefreshPolicy $kind $ready $c.plan.crash_policy_sha256
             $c.currentActor=@{ready=$ready};return $c.currentActor
         }
@@ -334,6 +334,10 @@ try {
     Require $missing 'new-policy-fields-required'
     $wrong=$false;try{Assert-RefreshPolicy 'new' ([pscustomobject]@{crash_policy_version='owned-runtime-crash-v1';crash_policy_sha256=('b'*64)}) ('a'*64)}catch{$wrong=$_.Exception.Message -ceq 'REFRESH_LOADED_POLICY'}
     Require $wrong 'new-policy-hash-required'
+    $oldLoaded=$false;try{Assert-RefreshPolicy 'new' ([pscustomobject]@{crash_policy_version='owned-runtime-crash-v1';crash_policy_sha256=('a'*64)}) ('a'*64)}catch{$oldLoaded=$_.Exception.Message -ceq 'REFRESH_LOADED_POLICY'}
+    Require $oldLoaded 'new-descendants-code-required-even-with-correct-common'
+    $wrongLoaded=$false;try{Assert-RefreshPolicy 'new' ([pscustomobject]@{crash_policy_version='owned-runtime-crash-v1';crash_policy_sha256=('a'*64);crash_descendants_version='old'}) ('a'*64)}catch{$wrongLoaded=$_.Exception.Message -ceq 'REFRESH_LOADED_POLICY'}
+    Require $wrongLoaded 'new-descendants-version-required'
     $cases.Add(@{name='policy-negative-and-old-compatibility';pass=$true})
     $ready=[pscustomobject]@{session='new';pid=2;started=2};$prior=@{ready=[pscustomobject]@{session='old';pid=1;started=1}}
     Assert-RefreshIdentity $ready $null $true @($prior)
@@ -365,6 +369,7 @@ try {
             if($Kind -ceq 'new'){
                 $ready|Add-Member crash_policy_version 'owned-runtime-crash-v1'
                 $ready|Add-Member crash_policy_sha256 $(if($Context.badPolicy){'bad'}else{$Context.plan.crash_policy_sha256})
+                $ready|Add-Member crash_descendants_version 'passive-natural-drain-v1'
             }
             return @{ready=$ready}
         }
@@ -394,17 +399,18 @@ try {
         crash_policy_sha256='b9b280677ed1cb0d612223bfab7ecad306ec976ae5b042a76b77db581aa9da65';work_seconds=180;whole_seconds=200;operation='refresh-a-01';sources=[pscustomobject]@{};
         payload=[pscustomobject]@{
             old=[pscustomobject]@{directory='.tmp/terminal-t1-3e/sender-crash-prep-01/refresh/old-payload';manifest='.tmp/terminal-t1-3e/sender-crash-prep-01/refresh/old-manifest.json';sha256='fc3bf5b0713877c07b335f048922b2c9d52b75ba816a0509f41774c55facbead'};
-            new=[pscustomobject]@{directory='.tmp/terminal-t1-3e/sender-crash-prep-01/refresh-02/new-payload';manifest='.tmp/terminal-t1-3e/sender-crash-prep-01/refresh-02/new-manifest.json';sha256='5a2784caff98850ddffe26e1a49e837e49da634abe7f098dff8b1729c7eda764'}}}
+            new=[pscustomobject]@{directory='.tmp/terminal-t1-3e/descendants-prep-01/refresh/new-payload';manifest='.tmp/terminal-t1-3e/descendants-prep-01/refresh/new-manifest.json';sha256='327143aeeafc72624074b5ca91e539eaaef349eaa9780a374a7d554a6582d71d'}}}
     foreach($file in @('scripts/test-terminal-t1-3e-refresh-a.ps1','scripts/test-terminal-t1-3e-lab-common.ps1','scripts/test-terminal-t1-3e-observe.ps1','scripts/migration-s5-l1-deadline.ps1','scripts/test-terminal-t1-3e-refresh-files.ps1')){
         $binding.sources|Add-Member -NotePropertyName $file -NotePropertyValue (Lab-Hash (Join-Path $root $file))
     }
     Assert-RefreshBindings $binding $root
-    foreach($mode in @('side','base','limits','source','payload','manifest')){
+    foreach($mode in @('side','base','limits','source','payload','manifest','old-candidate')){
         $bad=$binding|ConvertTo-Json -Depth 8|ConvertFrom-Json
         switch($mode){
             'side'{$bad.side='B'} 'base'{$bad.base+='-other'} 'limits'{$bad.work_seconds=181}
             'source'{$bad.sources.'scripts/test-terminal-t1-3e-refresh-a.ps1'='bad'}
             'payload'{$bad.payload.new.directory='../other'} 'manifest'{$bad.payload.old.sha256='bad'}
+            'old-candidate'{$bad.payload.new=[pscustomobject]@{directory='.tmp/terminal-t1-3e/sender-crash-prep-01/refresh-02/new-payload';manifest='.tmp/terminal-t1-3e/sender-crash-prep-01/refresh-02/new-manifest.json';sha256='5a2784caff98850ddffe26e1a49e837e49da634abe7f098dff8b1729c7eda764'}}
         }
         $refused=$false;try{Assert-RefreshBindings $bad $root}catch{$refused=$true};Require $refused ('fixed-binding-'+$mode)
     }

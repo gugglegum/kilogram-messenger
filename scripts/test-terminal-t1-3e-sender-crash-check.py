@@ -62,7 +62,7 @@ class Model(S['SenderCrash']):
     def __init__(self,label,fault=None):
         F['Model'].__init__(self,label,fault);self.crash=None;self.crash_classified=False;self.fault_actions=0;self.injected=None
         self.hosts=[FakeHost(self,i) for i in (0,1)];self.agents=[SimpleNamespace(session='9'*32),None];self.generations=['7'*32,'6'*32]
-        self.agents[0].ready=lambda:dict(crash_policy_version='owned-runtime-crash-v1',crash_policy_sha256='a'*64)
+        self.agents[0].ready=lambda:dict(crash_policy_version='owned-runtime-crash-v1',crash_policy_sha256='a'*64,crash_descendants_version='passive-natural-drain-v1')
         self.plan=dict(pins={'kilogram-cli.exe':'a'*64},nodes=[dict(crash_policy_sha256='a'*64)]);self.receipts=set()
         self.incarnations={(0,'owner-a-1'):dict(chat_pid=10,snapshot=dict(doc=dict(runtime_pid=11)),collected=False)}
         save(self.evidence/'A-owner-a-1-socket.json',dict(pid=11,started=222,image='synthetic.exe'))
@@ -80,9 +80,11 @@ def functional(field):
 
 class Checks(unittest.TestCase):
     def test_old_or_mixed_loaded_agent_policy_cannot_begin_scenario(self):
-        for fault in ['version','digest']:
+        for fault in ['version','digest','descendants']:
             field=Model('policy-'+fault)
-            field.agents[0].ready=lambda:dict(crash_policy_version='old' if fault=='version' else 'owned-runtime-crash-v1',crash_policy_sha256='0'*64)
+            field.agents[0].ready=lambda:dict(crash_policy_version='old' if fault=='version' else 'owned-runtime-crash-v1',
+                crash_policy_sha256='0'*64 if fault=='digest' else 'a'*64,
+                crash_descendants_version='old' if fault=='descendants' else 'passive-natural-drain-v1')
             with patch.object(M['Diagnostic'],'run',side_effect=AssertionError('scenario must not begin')):
                 with self.assertRaises(RuntimeError):field.run()
             self.assertEqual(field.fault_actions,0)
