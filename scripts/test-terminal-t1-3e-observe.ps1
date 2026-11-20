@@ -192,13 +192,28 @@ if ($r.op -eq 'preconnect') {
     $chat=@($processes | Where-Object { $_.CommandLine -match '\bchat\b' })
     $runtime=@($processes | Where-Object { $_.CommandLine -match '\bruntime-from-profile\b' })
     $socketReceipt=Join-Path $base "runs/$($r.attempt)/receipts/$($r.tag)-socket.json"
-    if ($chat.Count -ne 1 -or $runtime.Count -or [IO.File]::Exists($ipc) -or [IO.File]::Exists($socketReceipt)) {
+    $crashRestart=$null -ne $r.PSObject.Properties['crash_restart'] -and $r.crash_restart -eq $true
+    $stale=$null
+    if($crashRestart) {
+        if($r.side -cne 'A' -or $r.tag -cne 'owner-b-1'){throw 'Crash preconnect scope'}
+        . (Join-Path $base 'ordinary-agent/test-terminal-t1-3e-lab-common.ps1')
+        $run=Join-Path $base "runs/$($r.attempt)";$cfg=Lab-Read (Join-Path $base 'ordinary-agent/lab.json')
+        $entry=Lab-Read (Join-Path $run 'attempt.json');$control=Join-Path $base 'ordinary-agent/control'
+        $ready=Lab-Read (Join-Path $control 'ready.json');$state=Lab-Read (Join-Path $control 'state.json')
+        if($entry.session -cne $ready.session -or $state.session -cne $ready.session -or $state.active -cne $r.attempt -or $state.blocked){throw 'Crash preconnect session'}
+        $stale=Assert-LabCrashReconciled $run $cfg
+        $fault=Lab-Read (Join-Path $run 'receipts/runtime-fault-request.json')
+        if(($r.crash_contexts -join '|') -cne ($fault.contexts -join '|')){throw 'Crash preconnect contexts'}
+    }
+    if ($chat.Count -ne 1 -or $runtime.Count -or ([IO.File]::Exists($ipc) -and !$stale) -or [IO.File]::Exists($socketReceipt)) {
         throw 'Prestarted Chat has a runtime, descriptor or socket receipt'
     }
     $sockets=@($all | Where-Object { $_.pid -in @($processes.ProcessId) })
     if ($sockets.Count) { throw 'Prestarted Chat owns a UDP socket' }
-    @{disconnected=$true;descriptor=$false;sockets=$sockets;chat_pid=[int]$chat[0].ProcessId;
-      runtime_pids=@();tag=$r.tag} | ConvertTo-Json -Compress
+    $proof=@{disconnected=$true;descriptor=[IO.File]::Exists($ipc);sockets=$sockets;chat_pid=[int]$chat[0].ProcessId;
+      runtime_pids=@();tag=$r.tag}
+    if($stale){$proof.crash_descriptor_sha256=$stale.descriptor_sha256}
+    $proof|ConvertTo-Json -Compress
     return
 }
 if (![IO.File]::Exists($ipc)) { '{"ready":false}'; return }

@@ -128,6 +128,41 @@ if($req.op -ceq 'lab-diagnostic-enable'){
     @{schema=1;run_nonce=$bound.entry.generation;enabled=$true}|ConvertTo-Json -Compress
     return
 }
+if($req.op -cin @('lab-crash-descriptor','lab-runtime-crash')) {
+    $bound=Assert-LabAttempt -ReadCompleted
+    $common=Join-Path $base 'ordinary-agent/test-terminal-t1-3e-lab-common.ps1'
+    . $common
+    $ipc=Join-Path $setup 'connection/ipc.json'
+    if($req.op -ceq 'lab-crash-descriptor') {
+        Assert-PlainPath $ipc
+        if((Get-Item -LiteralPath $ipc).Length -gt 65536){throw 'Descriptor cap'}
+        $profiles=@(Get-ChildItem -LiteralPath (Join-Path $setup 'connection') -Filter 'profile-*.json')
+        if($profiles.Count -ne 1){throw 'LAB_CRASH_PROFILE'}
+        @{sha256=Lab-Hash $ipc;profile_name=$profiles[0].Name;profile_sha256=Lab-Hash $profiles[0].FullName}|ConvertTo-Json -Compress;return
+    }
+    $owners=@(Get-ChildItem -LiteralPath (Join-Path $run 'owners') -Filter '*.request.json'|ForEach-Object {Lab-Read $_.FullName}|Where-Object tag -CEQ 'owner-a-1')
+    if($owners.Count -ne 1){throw 'LAB_CRASH_OWNER'}
+    Assert-LabCrashIntent $req.fault $bound.entry $owners[0] (Lab-Read (Join-Path $base 'ordinary-agent/lab.json')) $bound.started
+    $requestPath=Join-Path $run 'receipts/runtime-fault-request.json'
+    $prior=Lab-Read $requestPath
+    if($prior) {
+        if(($prior|ConvertTo-Json -Depth 12 -Compress) -cne ($req.fault|ConvertTo-Json -Depth 12 -Compress)){throw 'LAB_CRASH_REPLAY'}
+    } else {
+        $null=Assert-LabAttempt
+    }
+    $null=Set-LabCrashRequest $run $req.fault
+    $limit=[Diagnostics.Stopwatch]::StartNew()
+    do {
+        $faultResult=Lab-Read (Join-Path $run 'receipts/runtime-fault-result.json')
+        if($faultResult) {
+            if($faultResult.digest -cne (Lab-Hash $requestPath)){throw 'LAB_CRASH_REPLAY'}
+            $faultResult|ConvertTo-Json -Depth 8 -Compress;return
+        }
+        if(Test-Path -LiteralPath (Join-Path $run 'receipts/runtime-fault-error.json')){throw 'LAB_CRASH_OUTCOME_UNKNOWN'}
+        Start-Sleep -Milliseconds 60
+    }while($limit.ElapsedMilliseconds -lt 9000)
+    throw 'LAB_CRASH_REPLY_UNKNOWN'
+}
 if($req.op -ceq 'lab-diagnostic-read'){
     $bound=Assert-LabAttempt -ReadCompleted
     $dir=Join-Path $setup 'lab-diagnostics-v1';Assert-PlainPath $dir
@@ -303,6 +338,12 @@ $fake = $mailboxMode -and $req.op -ceq 'mailbox-fake'
 $fakeProtected = $fake -and $req.fake_mode -cin @('valid','early','malformed','oversized','truncated','eof','timeout','wrong-id','wrong-scope','raw')
 $protectedSetup = $protectedSetup -or $fakeProtected
 $observeSocket = $req.op -eq 'chat' -and $null -ne $req.PSObject.Properties['observe_socket'] -and $req.observe_socket
+$faultEnabled=$null -ne $req.PSObject.Properties['runtime_crash'] -and $req.runtime_crash -eq $true
+$faultTarget=$null;$faultObserved=$false
+if($faultEnabled) {
+    if(!$mailboxMode -or $req.op -cne 'chat' -or $req.tag -cne 'owner-a-1'){throw 'LAB_CRASH_SCOPE'}
+    . (Join-Path $base 'ordinary-agent/test-terminal-t1-3e-lab-common.ps1')
+}
 try {
     if ($fake) {
         if (!$fakeProtected -and $req.fake_mode -cnotin @('echo','disconnect')) { throw 'Unknown fake child case' }
@@ -402,11 +443,39 @@ try {
                         if ($runtime.Path -ine $exe) { throw 'Owned runtime image differs' }
                         $socket.started = $runtime.StartTime.ToFileTimeUtc()
                         $socket.image = $runtime.Path
+                        if($faultEnabled){$faultTarget=$watchdog.RetainCrashTarget($runtime,$socket.started,$socket.image,$child.Id)}
                     } finally { $runtime.Dispose() }
                     $socketPath = Join-Path (Join-Path $run 'receipts') "$($req.tag)-socket.json"
                     Write-NewJson "$socketPath.partial" $socket
                     [IO.File]::Move("$socketPath.partial", $socketPath)
                 }
+            }
+        }
+        if($faultEnabled -and $faultTarget -and !$faultObserved -and (Test-Path -LiteralPath (Join-Path $run 'receipts/runtime-fault-request.json'))) {
+            $faultObserved=$true
+            try {
+                $entry=Lab-Read (Join-Path $run 'attempt.json');$started=Lab-Read (Join-Path $run 'started.json')
+                $ownerEntry=@(Get-ChildItem -LiteralPath (Join-Path $run 'owners') -Filter '*.request.json'|ForEach-Object {Lab-Read $_.FullName}|Where-Object tag -CEQ $req.tag)
+                if($ownerEntry.Count -ne 1){throw 'LAB_CRASH_OWNER'}
+                $b=Get-LabCrashEvidence $run $entry $ownerEntry[0] (Lab-Read (Join-Path $base 'ordinary-agent/lab.json')) $started
+                $f=$b.intent;$ipc=Join-Path $setup 'connection/ipc.json'
+                if((Lab-Hash $ipc) -cne $f.descriptor_sha256 -or $f.runtime_pid -ne $socket.pid -or $f.runtime_started -ne $socket.started){throw 'LAB_CRASH_BINDING'}
+                if((Lab-Hash (Join-Path $setup ('connection/'+$f.profile_name))) -cne $f.profile_sha256){throw 'LAB_CRASH_PROFILE'}
+                $status=(& $exe ordered status2 --ipc-file $ipc)|ConvertFrom-Json
+                if($LASTEXITCODE -ne 0 -or $status.runtime_pid -ne $f.runtime_pid -or $status.runtime_instance -cne $f.runtime_instance -or
+                    ($status.contexts.context -join '|') -cne ($f.contexts -join '|')){throw 'LAB_CRASH_STATUS'}
+                if((Lab-Hash $ipc) -cne $f.descriptor_sha256){throw 'LAB_CRASH_DESCRIPTOR'}
+                Write-NewJson (Join-Path $run 'receipts/runtime-fault-claim.json') @{digest=$b.digest;owner_pid=$PID;tick=[KilogramS5Deadline]::TickNow()}
+                $code=$faultTarget.Execute($b.digest,$f.runtime_pid,$f.runtime_started,$f.runtime_image)
+                $watchdog.CheckWork()
+                if((Lab-Hash $ipc) -cne $f.descriptor_sha256){throw 'LAB_CRASH_DESCRIPTOR'}
+                Write-NewJson (Join-Path $run 'receipts/runtime-fault-result.json') @{request=$f.request;digest=$b.digest;
+                    owner_pid=$PID;owner_started=(Get-Process -Id $PID).StartTime.ToFileTimeUtc();chat_pid=$child.Id;
+                    runtime_pid=$faultTarget.Pid;runtime_started=$faultTarget.Started;runtime_image=$faultTarget.Image;
+                    runtime_instance=$f.runtime_instance;exit=$code;observed_tick=[KilogramS5Deadline]::TickNow()}
+            }catch{
+                Write-NewJson (Join-Path $run 'receipts/runtime-fault-error.json') @{error=$_.Exception.Message;outcome_unknown=$true}
+                throw
             }
         }
     }
@@ -450,6 +519,7 @@ try {
         }
         if ($mailbox) { $mailbox.Finish($verified -and !$forced -and !$errorText -and $exitCode -eq 0 -and $mailboxEof) }
     }
+    if ($faultTarget) { $faultTarget.Dispose() }
     if ($watchdog) { $watchdog.Finish() }
 }
 if (!$verified -or $forced -or $errorText -or $exitCode -ne 0) { exit 1 }

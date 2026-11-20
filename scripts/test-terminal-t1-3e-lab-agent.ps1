@@ -133,7 +133,7 @@ if ($Action -ceq 'Worker') {
     $run = Join-Path $runs $Attempt
     $entry = Lab-Read (Join-Path $run 'attempt.json')
     $locks = @(); $watch=$null; $child=$null; $primary=$null; $cleanupError=$null; $forced=$false
-    $last=0; $active=$null; $cleanCount=0;$streams=@()
+    $last=0; $active=$null; $cleanCount=0;$streams=@();$crashCount=0
     try {
         # Same lock covers the entire attempt and idle executable replacement.
         $locks += [IO.File]::Open((Join-Path $control 'images.lock'),'OpenOrCreate','Write','None')
@@ -154,11 +154,18 @@ if ($Action -ceq 'Worker') {
                 if(!$outTask.Wait(1000) -or !$errTask.Wait(1000)){throw 'LAB_OWNER_DRAIN'}
                 foreach($s in $streams){$s.Dispose()};$streams=@()
                 $clean = Lab-OwnerClean $active $child $run
+                $expected=$null
+                if(!$clean -and $crashCount -eq 0 -and $active.PSObject.Properties['expected_runtime_crash'] -and $active.expected_runtime_crash -eq $true) {
+                    if(@($watch.Children()).Count){throw 'LAB_CRASH_DESCENDANTS'}
+                    $expected=Assert-LabExpectedCrash $run $entry $active $cfg (Lab-Read (Join-Path $run 'started.json')) $child
+                    Lab-Write (Join-Path $run 'receipts/runtime-fault-reconciled.json') $expected
+                }
                 Lab-Write (Join-Path $run "owners/$last.done.json") @{tag=$active.tag;generation=$active.generation;
-                    state=if($clean){'clean'}else{'failed'};worker_pid=$child.Id;worker_start=$activeStart;exit=$child.ExitCode}
+                    state=if($clean){'clean'}elseif($expected){'expected_crash_reconciled'}else{'failed'};
+                    worker_pid=$child.Id;worker_start=$activeStart;exit=$child.ExitCode}
                 $child.Dispose(); $child=$null
-                if (!$clean) { throw 'LAB_OWNER_FAILED' }
-                $cleanCount++
+                if (!$clean -and !$expected) { throw 'LAB_OWNER_FAILED' }
+                if($expected){$crashCount++}else{$cleanCount++}
             }
             if (!$child) {
                 $next = Lab-Read (Join-Path $run "owners/$($last+1).request.json")
@@ -168,6 +175,7 @@ if ($Action -ceq 'Worker') {
                     $req = [ordered]@{base=$cfg.base;ip=$cfg.ip;hostname=$cfg.host;peer=$cfg.peer;attempt=$Attempt;
                         pins=$entry.pins;ssh_peer=$null;op=$mode;tag=$next.tag;generation=$next.generation;observe_socket=$next.mode -ceq 'chat'}
                     if ($cfg.suite -ceq 'synthetic') { $req.fake_mode=$next.fake_mode }
+                    if($next.PSObject.Properties['expected_runtime_crash'] -and $next.expected_runtime_crash -eq $true){$req.runtime_crash=$true}
                     # Use EncodedCommand for JSON, never shell interpolation of a request.
                     $body = '$ErrorActionPreference="Stop";$ProgressPreference="SilentlyContinue";Import-Module "$PSHOME/Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1";' +
                         "& '"+(Join-Path $cfg.base 'bin/host.ps1').Replace("'","''")+"' -Request '"+
@@ -215,13 +223,19 @@ if ($Action -ceq 'Worker') {
         foreach ($file in $locks) { $file.Dispose() }
         Lab-Write (Join-Path $run 'result.json') @{attempt=$Attempt;generation=$entry.generation;session=$entry.session;
             state=if(!$primary -and !$cleanupError -and !$forced){'closed'}else{'failed'};primary_error=$primary;
-            cleanup=@{empty_job=$empty;error=$cleanupError;forced=$forced;proof='native_attempt_job'};owners_clean=$cleanCount}
+            cleanup=@{empty_job=$empty;error=$cleanupError;forced=$forced;proof='native_attempt_job'};owners_clean=$cleanCount;
+            owners_expected_crash=$crashCount}
     }
     return
 }
 
 # Agent lifetime: ordinary interactive identity, no idle deadline, no test on logon.
 if ($env:SSH_CONNECTION -or $env:SSH_TTY) { throw 'LAB_NOT_INTERACTIVE' }
+$policyNames=@('Assert-LabCrashIntent','Assert-LabCrashPending','Get-LabCrashEvidence','Set-LabCrashRequest','Assert-LabExpectedCrash','Assert-LabCrashReconciled')
+$policyText=(@($policyNames|ForEach-Object {(Get-Item -LiteralPath "Function:$_").Definition}) -join "`n")
+$policyHasher=[Security.Cryptography.SHA256]::Create()
+try{$loadedPolicyHash=([BitConverter]::ToString($policyHasher.ComputeHash([Text.Encoding]::UTF8.GetBytes($policyText)))).Replace('-','').ToLowerInvariant()}
+finally{$policyHasher.Dispose()}
 $contextPath=Join-Path $homeDir 'dpapi-context.ps1'
 $context=[IO.File]::ReadAllText($contextPath)
 $begin=$context.IndexOf('using System;'); $end=$context.IndexOf("'@",$begin)
@@ -263,7 +277,8 @@ try {
     $state=[pscustomobject]@{session=$session;active=$null;owner_count=0;blocked=$null}
     Lab-Write $statePath $state
     Lab-Write (Join-Path $control 'ready.json') @{v=1;session=$session;host=$cfg.host;sid=$cfg.sid;pid=$PID;
-        started=(Get-Process -Id $PID).StartTime.ToFileTimeUtc();logon_type=[int]$logon[0];windows_session=[int]$logon[1];profile_hive_loaded=$true;administrator=$false}
+        started=(Get-Process -Id $PID).StartTime.ToFileTimeUtc();logon_type=[int]$logon[0];windows_session=[int]$logon[1];profile_hive_loaded=$true;administrator=$false;
+        crash_policy_version='owned-runtime-crash-v1';crash_policy_sha256=$loadedPolicyHash}
     $stop=$false
     while (!$stop) {
         if ($child -and $child.HasExited) {
@@ -359,13 +374,16 @@ try {
                     }
                     { $_ -cin @('owner','end','cancel') } {
                         $extras=if($r.op -ceq 'owner'){@('tag','owner_generation','mode','fake_mode')}else{@()}
-                        Lab-Keys $r.args (@('attempt','generation')+$extras)
+                        $faultOpt=$r.op -ceq 'owner' -and $null -ne $r.args.PSObject.Properties['expected_runtime_crash']
+                        Lab-Keys $r.args (@('attempt','generation')+$extras+$(if($faultOpt){@('expected_runtime_crash')}else{@()}))
                         Lab-Id $r.args.attempt; Lab-Hex $r.args.generation
                         if ($state.active -cne $r.args.attempt) { throw 'LAB_INACTIVE' }
                         $run=Join-Path $runs $state.active; $entry=Lab-Read (Join-Path $run 'attempt.json')
                         if ($entry.generation -cne $r.args.generation) { throw 'LAB_GENERATION' }
                         if ($r.op -ceq 'owner') {
                             Lab-Id $r.args.tag; Lab-Hex $r.args.owner_generation
+                            if($faultOpt -and ($r.args.expected_runtime_crash -isnot [bool] -or $r.args.expected_runtime_crash -ne $true -or $cfg.side -cne 'A' -or $cfg.suite -cne 'field' -or
+                                $r.args.tag -cne 'owner-a-1' -or $r.args.mode -cne 'chat' -or $state.owner_count -ne 1)){throw 'LAB_CRASH_SCOPE'}
                             if ($r.args.mode -cnotin @('setup','chat') -or
                                 ($cfg.suite -ceq 'field' -and $r.args.fake_mode -cne '') -or
                                 ($cfg.suite -ceq 'synthetic' -and $r.args.fake_mode -cnotin @('echo','disconnect','valid'))) { throw 'LAB_OWNER' }
@@ -374,12 +392,17 @@ try {
                                 $prior=Lab-Read $o.FullName
                                 if ($prior.tag -ceq $r.args.tag -or $prior.generation -ceq $r.args.owner_generation) { throw 'LAB_DUPLICATE_OWNER' }
                                 $done=Lab-Read ($o.FullName.Replace('.request.json','.done.json'))
-                                if (!$done -or $done.state -cne 'clean') { throw 'LAB_OWNER_ACTIVE' }
+                                if(!$done){throw 'LAB_OWNER_ACTIVE'}
+                                if($done.state -cne 'clean') {
+                                    if($done.state -cne 'expected_crash_reconciled'){throw 'LAB_OWNER_ACTIVE'}
+                                    $null=Assert-LabCrashReconciled $run $cfg
+                                }
                             }
                             if ((Test-Path -LiteralPath (Join-Path $run 'end.json')) -or (Test-Path -LiteralPath (Join-Path $run 'cancel.json'))) { throw 'LAB_ENDING' }
                             $state.owner_count++
-                            Lab-Write (Join-Path $run "owners/$($state.owner_count).request.json") @{tag=$r.args.tag;generation=$r.args.owner_generation;
-                                mode=$r.args.mode;fake_mode=$r.args.fake_mode}
+                            $ownerRequest=@{tag=$r.args.tag;generation=$r.args.owner_generation;mode=$r.args.mode;fake_mode=$r.args.fake_mode}
+                            if($faultOpt){$ownerRequest.expected_runtime_crash=$true}
+                            Lab-Write (Join-Path $run "owners/$($state.owner_count).request.json") $ownerRequest
                             Lab-Write $statePath $state
                             $value=@{state='queued';tag=$r.args.tag;generation=$r.args.owner_generation}
                         } else {

@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 public sealed class KilogramS5Deadline {
     [StructLayout(LayoutKind.Sequential)] struct Basic {
@@ -29,6 +30,12 @@ public sealed class KilogramS5Deadline {
     [DllImport("kernel32.dll", SetLastError=true)] static extern bool QueryInformationJobObject(IntPtr j,int c,IntPtr p,uint n,out uint used);
     [DllImport("kernel32.dll", SetLastError=true)] static extern bool TerminateJobObject(IntPtr j,uint code);
     [DllImport("kernel32.dll", SetLastError=true)] static extern bool TerminateProcess(IntPtr p,uint code);
+    [DllImport("kernel32.dll")] static extern IntPtr GetCurrentProcess();
+    [DllImport("kernel32.dll", SetLastError=true)] static extern bool DuplicateHandle(IntPtr source,IntPtr handle,IntPtr target,out IntPtr copy,uint access,bool inherit,uint options);
+    [DllImport("kernel32.dll", SetLastError=true)] static extern bool GetProcessTimes(IntPtr p,out long created,out long exited,out long kernel,out long user);
+    [DllImport("kernel32.dll", SetLastError=true,CharSet=CharSet.Unicode)] static extern bool QueryFullProcessImageName(IntPtr p,uint flags,StringBuilder name,ref int size);
+    [DllImport("kernel32.dll", SetLastError=true)] static extern uint WaitForSingleObject(IntPtr p,uint milliseconds);
+    [DllImport("kernel32.dll", SetLastError=true)] static extern bool GetExitCodeProcess(IntPtr p,out uint code);
     [DllImport("kernel32.dll")] static extern bool CloseHandle(IntPtr h);
     [DllImport("kernel32.dll")] static extern ulong GetTickCount64();
     readonly IntPtr job; readonly int owner;
@@ -81,6 +88,51 @@ public sealed class KilogramS5Deadline {
         bool member;
         if(p.Id==owner || !IsProcessInJob(p.Handle,job,out member) || !member)
             throw new InvalidOperationException("spawned process escaped owned deadline job");
+    }
+    // Opt-in laboratory fault. The retained handle never follows a replacement PID.
+    public sealed class CrashTarget : IDisposable {
+        readonly KilogramS5Deadline owner; readonly IntPtr handle;
+        public readonly int Pid; public readonly long Started; public readonly string Image;
+        readonly object gate=new object(); string request; bool claimed,completed,disposed; uint exit;
+        internal CrashTarget(KilogramS5Deadline owner,Process p,long started,string image,int frontend) {
+            owner.CheckWork(); owner.VerifyChild(p);
+            if(p.Id==frontend) throw new InvalidOperationException("runtime is frontend");
+            this.owner=owner; Pid=p.Id; Started=started; Image=image;
+            if(!DuplicateHandle(GetCurrentProcess(),p.Handle,GetCurrentProcess(),out handle,0,false,2)) throw new Win32Exception();
+            try { Validate(Pid,Started,Image); }
+            catch { CloseHandle(handle); throw; }
+        }
+        void Validate(int pid,long started,string image) {
+            owner.CheckWork(); bool member; long created,ended,kernel,user;
+            var name=new StringBuilder(32768);int size=name.Capacity;
+            if(pid!=Pid || started!=Started || !String.Equals(image,Image,StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("runtime fault request identity");
+            if(!IsProcessInJob(handle,owner.job,out member) || !member) throw new InvalidOperationException("runtime fault Job membership");
+            if(!GetProcessTimes(handle,out created,out ended,out kernel,out user) || created!=Started) throw new InvalidOperationException("runtime fault creation time");
+            if(!QueryFullProcessImageName(handle,0,name,ref size) || !String.Equals(name.ToString(),Image,StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("runtime fault image: "+name.ToString()+" != "+Image);
+            if(WaitForSingleObject(handle,0)!=258) throw new InvalidOperationException("runtime fault process not live");
+        }
+        public uint Execute(string digest,int pid,long started,string image) {
+            lock(gate) {
+                if(disposed) throw new ObjectDisposedException("CrashTarget");
+                if(digest==null || digest.Length!=64 || Array.Exists(digest.ToCharArray(),c=>!((c>='0'&&c<='9')||(c>='a'&&c<='f')))) throw new ArgumentException("fault digest");
+                if(claimed) {
+                    if(request!=digest || pid!=Pid || started!=Started || !String.Equals(image,Image,StringComparison.OrdinalIgnoreCase) || !completed)
+                        throw new InvalidOperationException("fault consumed or outcome unknown");
+                    return exit;
+                }
+                Validate(pid,started,image);
+                // Claim BEFORE termination. Unknown outcomes are never retried as a new kill.
+                request=digest; claimed=true;
+                if(!TerminateProcess(handle,137)) throw new Win32Exception();
+                if(WaitForSingleObject(handle,5000)!=0 || !GetExitCodeProcess(handle,out exit) || exit!=137)
+                    throw new InvalidOperationException("runtime fault exit unconfirmed");
+                completed=true; return exit;
+            }
+        }
+        public void Dispose() { lock(gate) { if(!disposed) { disposed=true; CloseHandle(handle); } } }
+    }
+    public CrashTarget RetainCrashTarget(Process p,long started,string image,int frontend) {
+        return new CrashTarget(this,p,started,image,frontend);
     }
     public int[] Children() {
         IntPtr memory=Marshal.AllocHGlobal(65536);
