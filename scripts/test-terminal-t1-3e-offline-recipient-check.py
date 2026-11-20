@@ -5,11 +5,96 @@ from types import SimpleNamespace
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1]
 M=runpy.run_path(str(ROOT/'scripts/test-terminal-t1-3e-offline-recipient.py'))
-E=Path(sys.argv[1]).resolve();E.mkdir(parents=True,exist_ok=False);NOTIFICATION_ONLY='--notification-only' in sys.argv[2:];sys.argv=sys.argv[:1]
+E=Path(sys.argv[1]).resolve();E.mkdir(parents=True,exist_ok=False);NOTIFICATION_ONLY='--notification-only' in sys.argv[2:];INITIAL_ONLY='--initial-only' in sys.argv[2:];sys.argv=sys.argv[:1]
 PS=r'C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe'
 def save(p,v):p.parent.mkdir(parents=True,exist_ok=True);p.write_text(json.dumps(v,indent=2),encoding='utf-8')
 
 class Checks(unittest.TestCase):
+    def initial_fixture(self,label):
+        field=object.__new__(M['OfflineRecipient']);field.evidence=E/label;field.evidence.mkdir();field.contexts=['a'*64,'b'*64];field.messages=[]
+        field.hosts=[SimpleNamespace(name=s) for s in ['A','B']];field.calls=[];field.rows=[{c:[] for c in field.contexts} for _ in range(2)]
+        def call(index,op,end,**args):
+            self.assertEqual(op,'history');self.assertEqual(args['limit'],16);field.calls.append((index,args['context']))
+            return dict(context=args['context'],finished=True,items=copy.deepcopy(field.rows[index][args['context']]))
+        field.pair=[SimpleNamespace(call=lambda op,end,i=i,**kw:call(i,op,end,**kw)) for i in range(2)]
+        return field
+
+    def test_initial_actual_inherited_collection_accepts_two_empty_contexts(self):
+        field=self.initial_fixture('initial-valid')
+        self.assertIs(type(field).collect_histories,M['D']['Field'].collect_histories)
+        field.initial_histories(100)
+        snapshot=json.loads((field.evidence/'initial-history.json').read_bytes())
+        self.assertEqual(len(field.calls),4);self.assertEqual({s['host'] for s in snapshot},{'A','B'})
+        self.assertTrue(all(len(s['contexts'])==2 and all(c['rows']==[] for c in s['contexts']) for s in snapshot))
+        # The old call remains invalid: its final-delivery invariant is unchanged.
+        with self.assertRaisesRegex(RuntimeError,'final history contexts differ from deliveries'):
+            M['D']['prior']['verify_final_history'](snapshot,[])
+
+    def test_initial_validator_rejects_missing_extra_wrong_and_malformed_scope(self):
+        field=self.initial_fixture('initial-scope');snapshot=field.collect_histories(100)
+        variants=[]
+        for mutation in ['missing_host','extra_host','duplicate_host','missing_context','extra_context','wrong_context','duplicate_context','missing_rows','malformed_rows','nonempty']:
+            bad=copy.deepcopy(snapshot)
+            if mutation=='missing_host':bad.pop()
+            elif mutation=='extra_host':bad.append(copy.deepcopy(bad[0]))
+            elif mutation=='duplicate_host':bad[1]['host']='A'
+            elif mutation=='missing_context':bad[1]['contexts'].pop()
+            elif mutation=='extra_context':bad[1]['contexts'].append(dict(context='c'*64,rows=[]))
+            elif mutation=='wrong_context':bad[1]['contexts'][0]['context']='c'*64
+            elif mutation=='duplicate_context':bad[1]['contexts'][1]['context']=bad[1]['contexts'][0]['context']
+            elif mutation=='missing_rows':bad[1]['contexts'][0].pop('rows')
+            elif mutation=='malformed_rows':bad[1]['contexts'][0]['rows']={}
+            else:bad[1]['contexts'][0]['rows']=[dict(text='unexpected')]
+            with self.subTest(mutation=mutation),self.assertRaises(RuntimeError):M['verify_initial_history'](bad,field.contexts,[],['A','B'])
+            variants.append(mutation)
+        with self.assertRaisesRegex(RuntimeError,'no prior sends'):M['verify_initial_history'](snapshot,field.contexts,[dict()],['A','B'])
+        for contexts in [[],field.contexts[:1],field.contexts+['c'*64],['a'*64,'a'*64],['wrong','b'*64]]:
+            with self.assertRaises(RuntimeError):M['verify_initial_history'](snapshot,contexts,[],['A','B'])
+        save(E/'initial-validator-proof.json',dict(cases=variants,prior_sends_rejected=True,installed_contexts_validated=True))
+
+    def test_initial_actual_collection_rejects_nonempty_unfinished_wrong_or_failed_io(self):
+        for scenario in ['nonempty','prior_send','wrong_context','unfinished','missing_items','malformed_rows','call_failure','missing_installed','extra_installed','duplicate_installed']:
+            field=self.initial_fixture('initial-io-'+scenario)
+            if scenario=='nonempty':field.rows[1][field.contexts[1]]=[dict(text='unexpected')]
+            elif scenario=='prior_send':field.messages=[dict()]
+            elif scenario=='missing_installed':field.contexts=field.contexts[:1]
+            elif scenario=='extra_installed':
+                field.contexts.append('c'*64)
+                for rows in field.rows:rows['c'*64]=[]
+            elif scenario=='duplicate_installed':field.contexts[1]=field.contexts[0]
+            else:
+                original=field.pair[1].call
+                def call(op,end,original=original,scenario=scenario,**args):
+                    if scenario=='call_failure':raise OSError('history I/O sentinel')
+                    value=original(op,end,**args)
+                    if scenario=='wrong_context':value['context']='c'*64
+                    elif scenario=='unfinished':value['finished']=False
+                    elif scenario=='malformed_rows':value['items']={}
+                    else:value.pop('items')
+                    return value
+                field.pair[1].call=call
+            with self.subTest(scenario=scenario),self.assertRaises((RuntimeError,KeyError,OSError)):field.initial_histories(100)
+            # Collection succeeded in these cases: retain the invalid snapshot before rejection.
+            self.assertEqual((field.evidence/'initial-history.json').exists(),scenario in ['nonempty','prior_send','malformed_rows','missing_installed','extra_installed','duplicate_installed'])
+
+    def test_initial_refactor_keeps_actual_final_history_strict(self):
+        field=self.initial_fixture('initial-final-strict')
+        field.messages=[dict(key=dict(context=c),event_id=str(slot+1)*64,text='text-'+str(slot)) for slot,c in enumerate(field.contexts)]
+        valid={m['key']['context']:[dict(event_id=m['event_id'],text=m['text'])] for m in field.messages}
+        field.rows=[copy.deepcopy(valid),copy.deepcopy(valid)];field.histories('valid',100)
+        self.assertTrue((field.evidence/'valid-history.json').exists())
+        for mutation in ['missing','extra','duplicate','changed_event','changed_text','peer_row_difference','context_scope']:
+            field.rows=[copy.deepcopy(valid),copy.deepcopy(valid)];field.contexts=['a'*64,'b'*64]
+            c=field.contexts[0]
+            if mutation=='missing':field.rows[1][c]=[]
+            elif mutation=='extra':field.rows[1][c].append(dict(event_id='f'*64,text='extra'))
+            elif mutation=='duplicate':field.rows[1][c]*=2
+            elif mutation=='changed_event':field.rows[1][c][0]['event_id']='f'*64
+            elif mutation=='changed_text':field.rows[1][c][0]['text']='wrong'
+            elif mutation=='peer_row_difference':field.rows[1][c][0]['ordinal']=2
+            else:field.contexts=field.contexts[:1]
+            with self.subTest(mutation=mutation),self.assertRaises(RuntimeError):field.histories(mutation,100)
+
     def test_pending_requires_durable_materialized_identity(self):
         event='a'*64;row=dict(text='offline',pending_event=None)
         history=[dict(text='offline',event_id=event)]
@@ -111,36 +196,49 @@ class Checks(unittest.TestCase):
         outer=self
         class Model(M['OfflineRecipient']):
             def __init__(self):
-                self.evidence=E/label;self.evidence.mkdir();self.end=time.monotonic()+60;self.contexts=['0','1'];self.messages=[];self.offline_rows=[];self.processes=[];self.capture_errors=[];self.log=[];self.recipient_restarts=0;self.delivery_history_passed=False
+                self.evidence=E/label;self.evidence.mkdir();self.end=time.monotonic()+60;self.contexts=['a'*64,'b'*64];self.messages=[];self.offline_rows=[];self.processes=[];self.capture_errors=[];self.log=[];self.recipient_restarts=0;self.delivery_history_passed=False
+                self.hosts=[SimpleNamespace(name=s) for s in ['A','B']];self.stored=[{c:[] for c in self.contexts} for _ in range(2)]
                 self.pair=[self.term('a',True),self.term('b',True)]
             def term(self,tag,live):
-                t=SimpleNamespace(tag=tag,instance=tag,epoch=2,events=[],live=live);self.processes.append((int(tag!='a'),t));return t
+                index=int(tag!='a')
+                def call(op,end,**args):
+                    outer.assertEqual(op,'history');self.log.append(('history_io',index,args['context']))
+                    return dict(context=args['context'],finished=True,items=copy.deepcopy(self.stored[index][args['context']]))
+                t=SimpleNamespace(tag=tag,instance=tag,epoch=2,events=[],live=live,call=call);self.processes.append((index,t));return t
             def monitors(self,label,*a,**k):self.log.append(('watching',label))
-            def histories(self,label,*a):self.log.append(('history',label))
             def sample(self,*a):return dict(slots=[dict(own_locator_revision=1)]*2),dict(port=50001)
             def stop(self,i,t):
                 t.live=False;self.log.append(('stop',i));save(self.evidence/f'B-{t.tag}-job.json',dict(child_exit=0,mailbox_quit=True,mailbox_eof=True,forced=False,after=[],descriptor=False))
             def port_gone(self,*a):self.log.append(('socket_gone',))
-            def start(self,i,tag,mode):self.log.append(('restart',i));return self.term(tag,True)
+            def start(self,i,tag,mode):
+                self.log.append(('restart',i))
+                if getattr(self,'pre_anchor',False):self.stored[1]=copy.deepcopy(self.stored[0])
+                return self.term(tag,True)
             def connect(self,i,warm):self.log.append(('connect',i,warm))
             def send(self,sender,slot,label,end):
                 if sender==0:outer.assertFalse(self.pair[1].live)
-                row=dict(sender=sender,slot=slot,text=label,key=dict(context=str(slot)),pending_event=None);self.messages.append(row);self.log.append(('send',sender,slot));return row
-            def pending_persisted(self,row):row['pending_event']=str(row['slot']+1)*64;self.log.append(('persisted',row['slot']));return dict(materialized=True)
+                row=dict(sender=sender,slot=slot,text=label,key=dict(context=self.contexts[slot]),pending_event=None);self.messages.append(row);self.log.append(('send',sender,slot));return row
+            def pending_persisted(self,row):
+                row['pending_event']=str(row['slot']+1)*64;self.log.append(('persisted',row['slot']))
+                rows=self.stored[0][row['key']['context']]
+                if not rows:rows.append(dict(event_id=row['pending_event'],text=row['text']))
+                return dict(materialized=True)
             def probe(self,*a):return []
             def deliver(self,row,*a,required_notification=True):
                 receiver=self.pair[1-row['sender']];row['event_id']=row['pending_event'] or str(row['slot']+3)*64
                 row.update(receiver_instance=receiver.instance,receiver_epoch=receiver.epoch,notification=dict(status='confirmed'))
+                for side in [0,1]:
+                    rows=self.stored[side][row['key']['context']]
+                    if not any(r['event_id']==row['event_id'] for r in rows):rows.append(dict(event_id=row['event_id'],text=row['text']))
                 if not required_notification and getattr(self,'omit_optional',False):
                     row['notification']=dict(status='not_observed');self.log.append(('delivered',row['sender'],row['slot']));return
                 receiver.events.append(dict(event_id=row['event_id'],context=row['key']['context'],text=row['text'],runtime_instance=receiver.instance,epoch=receiver.epoch));self.log.append(('delivered',row['sender'],row['slot']))
         return Model()
 
     def test_notification_full_scope_delivery_can_pass_with_unproven_queued_coverage(self):
-        field=self.model('pre-anchor-scope');field.omit_optional=True
+        field=self.model('pre-anchor-scope');field.omit_optional=True;field.pre_anchor=True
         gate=dict(admitted=True,last_complete_runtime=dict(B=dict(doc=dict(slots=[dict(own_locator_revision=2)]*2))))
-        history=lambda term,context,end:[dict(event_id=str(int(context)+1)*64,text='offline-'+context)]
-        with patch.object(M['M']['Diagnostic'],'functional',lambda self:None),patch.dict(M['D'],history=history),patch.dict(M['M'],admission_gate=lambda *a,**k:gate):field.functional()
+        with patch.object(M['M']['Diagnostic'],'functional',lambda self:None),patch.dict(M['M'],admission_gate=lambda *a,**k:gate):field.functional()
         with patch.object(M['M']['Diagnostic'],'run',lambda self:None):field.run()
         saved=json.loads((field.evidence/'offline-recipient-result.json').read_bytes())
         self.assertTrue(saved['passed']);self.assertTrue(saved['delivery_history']['passed']);self.assertEqual(len(saved['messages']),4)
@@ -150,7 +248,10 @@ class Checks(unittest.TestCase):
     def test_actual_functional_order_recipient_only_and_two_pending(self):
         field=self.model('order')
         gate=dict(admitted=True,last_complete_runtime=dict(B=dict(doc=dict(slots=[dict(own_locator_revision=2)]*2))))
-        with patch.object(M['M']['Diagnostic'],'functional',lambda self:self.log.append(('initial_admitted',))),patch.dict(M['D'],history=lambda *a:[]),patch.dict(M['M'],admission_gate=lambda *a,**k:gate):field.functional()
+        with patch.object(M['M']['Diagnostic'],'functional',lambda self:self.log.append(('initial_admitted',))),patch.dict(M['M'],admission_gate=lambda *a,**k:gate):field.functional()
+        initial=json.loads((field.evidence/'initial-history.json').read_bytes())
+        self.assertEqual([len(c['rows']) for h in initial for c in h['contexts']],[0,0,0,0])
+        self.assertIs(type(field).histories,M['D']['Field'].histories)
         self.assertEqual([x for x in field.log if x[0]=='send'],[('send',0,0),('send',0,1),('send',1,0),('send',1,1)])
         self.assertEqual([x for x in field.log if x[0]=='restart'],[('restart',1)])
         self.assertLess(field.log.index(('socket_gone',)),field.log.index(('send',0,0)))
@@ -168,6 +269,17 @@ class Checks(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError,'initial gate'):field.functional()
         self.assertEqual(field.log,[])
         self.assertEqual(field.recipient_restarts,0)
+
+    def test_initial_full_functional_rejects_invalid_history_before_offline_actions(self):
+        for scenario in ['nonempty','unfinished','call_failure']:
+            field=self.model('initial-order-'+scenario)
+            if scenario=='nonempty':field.stored[1][field.contexts[0]]=[dict(event_id='f'*64,text='prior')]
+            elif scenario=='unfinished':field.pair[1].call=lambda op,end,**args:dict(context=args['context'],finished=False,items=[])
+            else:field.pair[1].call=lambda *a,**k:(_ for _ in ()).throw(OSError('history I/O sentinel'))
+            with patch.object(M['M']['Diagnostic'],'functional',lambda self:self.log.append(('initial_admitted',))):
+                with self.assertRaises((RuntimeError,OSError)):field.functional()
+            self.assertFalse(any(entry[0] in ['send','stop','restart','persisted'] for entry in field.log))
+            self.assertEqual(field.messages,[]);self.assertEqual(field.recipient_restarts,0)
 
     def test_actual_ps_reader_two_incarnations_and_fail_closed(self):
         kinds=['runtime_stopping','runtime_network_stopped','runtime_final','connection_final','worker_final',
@@ -209,7 +321,10 @@ class Checks(unittest.TestCase):
         save(E/'reader-proof.json',dict(actual_reader=True,synthetic_files=True,cases=outcomes))
 
 if __name__=='__main__':
-    if NOTIFICATION_ONLY:
-        names=[n for n in unittest.defaultTestLoader.getTestCaseNames(Checks) if n.startswith('test_notification_') or n in ['test_actual_functional_order_recipient_only_and_two_pending','test_initial_failure_never_stops_or_sends']]
+    if NOTIFICATION_ONLY or INITIAL_ONLY:
+        names=[n for n in unittest.defaultTestLoader.getTestCaseNames(Checks) if
+            (INITIAL_ONLY and n.startswith('test_initial_')) or
+            (NOTIFICATION_ONLY and n.startswith('test_notification_')) or
+            n in ['test_actual_functional_order_recipient_only_and_two_pending','test_notification_full_scope_delivery_can_pass_with_unproven_queued_coverage']]
         result=unittest.TextTestRunner(verbosity=2).run(unittest.TestSuite(Checks(n) for n in names));sys.exit(not result.wasSuccessful())
     else:unittest.main()

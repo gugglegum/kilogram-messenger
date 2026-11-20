@@ -5,7 +5,19 @@ SCRIPTS=Path(__file__).resolve().parent
 S=runpy.run_path(str(SCRIPTS/'test-terminal-t1-3e-hint-smoke.py'))
 M=S['M'];N=S['N'];D=S['D'];require=S['require'];save=S['save']
 PURPOSE='offline-recipient-v1'
+ATTEMPT='hint-offline-02'
 SOURCES=S['SOURCES']|{'scripts/test-terminal-t1-3e-offline-recipient.py','scripts/test-terminal-t1-3e-offline-recipient-check.py'}
+
+def verify_initial_history(snapshots,contexts,messages,hosts):
+    require(not messages,'initial history requires no prior sends')
+    require(len(contexts)==2 and all(D['HEX'].fullmatch(c or '') for c in contexts) and len(set(contexts))==2,'two installed initial contexts required')
+    require(len(hosts)==2 and len(set(hosts))==2 and isinstance(snapshots,list) and len(snapshots)==2,'two initial history hosts required')
+    require(all(isinstance(s,dict) and s.get('host') in hosts for s in snapshots) and {s['host'] for s in snapshots}==set(hosts),'initial history hosts differ')
+    for snapshot in snapshots:
+        entries=snapshot.get('contexts')
+        require(isinstance(entries,list) and len(entries)==2 and all(isinstance(c,dict) and c.get('context') in contexts for c in entries),'initial history contexts differ')
+        require({c['context'] for c in entries}==set(contexts),'initial history contexts differ')
+        require(all(isinstance(c.get('rows'),list) and not c['rows'] for c in entries),'initial history rows must be empty')
 
 def materialized_pending(row,status,history):
     require(status['state'] in D['PENDING'],'offline request was not pending')
@@ -45,6 +57,11 @@ class OfflineRecipient(M['Diagnostic']):
     def __init__(self,*args):
         super().__init__(*args);self.incarnations={};self.offline_rows=[];self.recipient_restarts=0
         self.anchor_present=set();self.delivery_history_passed=False;self.notification_coverage=dict(evaluated=False)
+
+    def initial_histories(self,end):
+        snapshots=self.collect_histories(end)
+        save(self.evidence/'initial-history.json',snapshots)
+        verify_initial_history(snapshots,self.contexts,self.messages,[h.name for h in self.hosts])
 
     def start(self,index,tag,mode,end=None):
         term=super().start(index,tag,mode,end)
@@ -105,7 +122,7 @@ class OfflineRecipient(M['Diagnostic']):
 
     def functional(self):
         # Inherited fresh Setup/Auto, initial original90s gate, typed diagnostics.
-        super().functional();self.monitors('A',self.end,watching=True);self.histories('initial',self.end)
+        super().functional();self.monitors('A',self.end,watching=True);self.initial_histories(self.end)
         sender_instance=self.pair[0].instance;old_receiver=self.pair[1]
         previous=self.sample(1,old_receiver,self.end);require(previous is not None,'recipient baseline unavailable')
         old_doc,old_point=previous
@@ -163,7 +180,7 @@ class OfflineRecipient(M['Diagnostic']):
                 recipient_restarts=self.recipient_restarts,expected_recipient_restarts=1,sender_restart=False,cleanup_in_application_and_diagnostic_receipts=True))
 
 def validate(plan,root):
-    require(plan['purpose']==PURPOSE and plan['attempts']==['hint-offline-01'],'single recipient-only offline attempt')
+    require(plan['purpose']==PURPOSE and plan['attempts']==[ATTEMPT],'single recipient-only offline attempt')
     require(plan['connect_seconds']==85 and plan['admission_seconds']==90 and plan['reconnect_seconds']==90 and plan['probe_seconds']==60 and plan['minimum_call_seconds']==2 and
         plan['additional_network_seconds']==90 and plan['additional_network_mode']=='diagnostic_only_after_original_window' and plan['original_window_origin']=='before_first_connect_submit','measured startup/reconnect budgets')
     path=root/plan['build_manifest'];require(root in path.resolve().parents and N['digest'](path)==plan['build_manifest_sha256'],'reused A2 build pin')
