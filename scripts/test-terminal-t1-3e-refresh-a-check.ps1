@@ -64,12 +64,94 @@ function Finish-Case($c,$r,[string]$Expected){
     Write-RefreshRecord (Join-Path (Split-Path $c.operation -Parent) 'check.json') @{pass=$true;expect=$Expected;result=$r;wakes=@($c.wakes);stops=$c.stopCount}
     $cases.Add(@{name=$c.name;pass=$true;expected=$Expected})
 }
+function Test-InitialProductionPath {
+    # Use the actual production validate callback and Get-RefreshActor prelude.
+    # Replace external file/task readers; stop precisely before native OpenActor.
+    # Neither this fixture nor its IO callbacks initialize initialActor.
+    $oldPath=Join-Path $root '.tmp/terminal-t1-3e/agent-refresh-prep-01/source/scripts/test-terminal-t1-3e-refresh-a.ps1'
+    Require ((Lab-Hash $oldPath) -ceq 'c0363f127171f74fde5653ff835d3cd5bc4b2701018b482e04dab37d829e61a9') 'original-source-pin'
+    $parseErrors=$null;$parseTokens=$null
+    $ast=[Management.Automation.Language.Parser]::ParseFile($oldPath,[ref]$parseTokens,[ref]$parseErrors)
+    Require (@($parseErrors).Count -eq 0) 'original-parse'
+    $fn=$ast.Find({param($node)$node -is [Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -ceq 'Invoke-RefreshOperation'},$true)
+    . ([scriptblock]::Create($fn.Extent.Text.Replace('function Invoke-RefreshOperation(','function Invoke-RefreshOperationBefore(')))
+    $actorBody=(Get-Item Function:Get-RefreshActor).ScriptBlock.ToString()
+    $boundary=$actorBody.IndexOf('    $actor=[KilogramLabNative]::OpenActor(')
+    Require ($boundary -gt 0) 'native-boundary'
+    $prelude=$actorBody.Substring(0,$boundary)+'return @{ready=$ready}'
+    Set-Item Function:Get-RefreshActor ([scriptblock]::Create($prelude))
+    function Assert-RefreshFiles($Directory,$Pins){}
+    function Lab-Config($Path){return [pscustomobject]@{host='fixture';sid='fixture-sid'}}
+    function Lab-TaskSpec($Cfg){return [pscustomobject]@{name='fixture-task'}}
+    function Find-LabTask($Name){return [pscustomobject]@{name=$Name}}
+    function Assert-LabTask($Task,$Want){}
+    function Assert-LabReadOnly($Cfg,$Pin){return @{read_only=$true}}
+    function Lab-Read($Path){
+        if($Path.EndsWith('ready.json')){return [pscustomobject]@{session=('1'*32);pid=42;started=123;host='fixture';sid='fixture-sid';
+            administrator=$false;logon_type=2;windows_session=1;profile_hive_loaded=$true}}
+        if($Path.EndsWith('state.json')){return [pscustomobject]@{session=('1'*32);active=$null;blocked=$null}}
+        throw 'UNEXPECTED_FIXTURE_READ'
+    }
+    $results=@{}
+    foreach($variant in @('Before','Corrected')){
+        # Same initial shape as the executable entry point: no early actor fields.
+        $c=@{plan=[pscustomobject]@{baseline_sha256=('a'*64);windows_session=1;crash_policy_sha256=('b'*64)};
+            maps=@{old=@{}};directory='synthetic';action='Validate';fromKind='old';expectedActor=[pscustomobject]@{session=('1'*32);pid=42;started=123}}
+        Require (!$c.ContainsKey('initialActor')) 'fixture-must-not-preinitialize'
+        $io=Get-RefreshRealIo
+        $io.stop={throw 'UNEXPECTED_STOP'};$io.wake={throw 'UNEXPECTED_WAKE'}
+        $operation=if($variant -ceq 'Before'){'Invoke-RefreshOperationBefore'}else{'Invoke-RefreshOperation'}
+        try{
+            $result=& $operation $c $io
+            Require ($variant -ceq 'Corrected' -and $result.validated -and $result.read_only -and $c.initialActor.ready.pid -eq 42) 'production-validate-success'
+            $results[$variant]=@{pass=$true;validated=$true}
+        }catch{
+            if($variant -cne 'Before' -or $_.FullyQualifiedErrorId -cne 'PropertyNotFoundStrict' -or $_.Exception.Message -notmatch 'initialActor'){throw}
+            $results[$variant]=@{expected_failure=$true;id=$_.FullyQualifiedErrorId;message=$_.Exception.Message;stack=$_.ScriptStackTrace}
+        }
+    }
+    Write-RefreshRecord (Join-Path $out 'initial-production-path.json') @{strict_mode='Latest';results=$results;
+        mocked='file/task readers only';real='Invoke-RefreshOperation + production validate callback + Get-RefreshActor pre-native prelude + Assert-RefreshIdentity';
+        installed_IO=$false;prelude=$prelude}
+}
+function Test-NativeImagePath {
+    Add-Type -Path "$PSScriptRoot/test-terminal-t1-3e-lab-native.cs"
+    $who=[Security.Principal.WindowsIdentity]::GetCurrent()
+    try{
+        $cfg=@{sid=$who.User.Value};$process=Get-Process -Id $PID
+        try{$ready=@{pid=$PID;started=$process.StartTime.ToFileTimeUtc()}}finally{$process.Dispose()}
+        $oldPath=Join-Path $root '.tmp/terminal-t1-3e/agent-refresh-prep-01/source/scripts/test-terminal-t1-3e-refresh-a.ps1'
+        $results=@{}
+        foreach($variant in @('Before','Corrected')){
+            $path=if($variant -ceq 'Before'){$oldPath}else{Join-Path $PSScriptRoot 'test-terminal-t1-3e-refresh-a.ps1'}
+            $errors=$null;$tokens=$null;$ast=[Management.Automation.Language.Parser]::ParseFile($path,[ref]$tokens,[ref]$errors)
+            $getter=$ast.Find({param($n)$n -is [Management.Automation.Language.FunctionDefinitionAst] -and $n.Name -ceq 'Get-RefreshActor'},$true)
+            $call=$getter.Find({param($n)$n -is [Management.Automation.Language.InvokeMemberExpressionAst] -and $n.Member.Value -ceq 'OpenActor'},$true)
+            Require ($null -ne $call) 'native-production-call'
+            $actor=$null
+            try{
+                # Evaluate the exact production call, selecting only this fixture process.
+                $actor=& ([scriptblock]::Create($call.Extent.Text))
+                Require ($variant -ceq 'Corrected' -and $actor.Alive()) 'native-normalized-path'
+                $results[$variant]=@{pass=$true;pid=$PID;image=$actor.image;call=$call.Extent.Text}
+            }catch{
+                if($variant -cne 'Before' -or $_.Exception.ToString() -notmatch 'Actor incarnation/image mismatch'){throw}
+                $results[$variant]=@{expected_failure=$true;message=$_.Exception.ToString();call=$call.Extent.Text}
+            }finally{if($actor){$actor.Dispose()}}
+        }
+        Write-RefreshRecord (Join-Path $out 'native-image-path.json') @{results=$results;installed_actor_IO=$false;self_pid=$PID}
+    }finally{$who.Dispose()}
+}
 try {
     $pins=@{};[void][IO.Directory]::CreateDirectory((Join-Path $out 'sources'))
-    foreach($name in @('test-terminal-t1-3e-refresh-a.ps1','test-terminal-t1-3e-refresh-a-check.ps1','test-terminal-t1-3e-lab-common.ps1','migration-s5-l1-deadline.ps1')){
+    foreach($name in @('test-terminal-t1-3e-refresh-a.ps1','test-terminal-t1-3e-refresh-a-check.ps1','test-terminal-t1-3e-lab-common.ps1','test-terminal-t1-3e-lab-native.cs','migration-s5-l1-deadline.ps1')){
         $source=Join-Path $PSScriptRoot $name;$pins[$name]=Lab-Hash $source;[IO.File]::Copy($source,(Join-Path $out ('sources/'+$name)))
     }
     Write-RefreshRecord (Join-Path $out 'source-pins.json') $pins
+    Test-InitialProductionPath
+    $cases.Add(@{name='initial-production-path-original-fails-corrected-passes';pass=$true})
+    Test-NativeImagePath
+    $cases.Add(@{name='native-image-path-original-fails-corrected-passes-self-only';pass=$true})
     $c=New-Case 'validate';$c.action='Validate';$r=Invoke-RefreshOperation $c (Test-Io)
     Require ($r.read_only -and !(Test-Path -LiteralPath $c.operation) -and $c.stopCount -eq 0 -and $c.wakes.Count -eq 0) 'default-read-only'
     Assert-RefreshFiles $c.directory $c.from;$cases.Add(@{name='validate';pass=$true})

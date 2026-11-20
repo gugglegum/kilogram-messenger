@@ -64,6 +64,7 @@ function Invoke-RefreshOperation($Context,$Io) {
     # tests substitute them while this transaction performs actual File.Replace/locks.
     $Context.handles=@{};$Context.attempted=@();$Context.sequence=0;$Context.cleanup=$false
     $Context.beforeProcess=$null;$Context.currentActor=$null;$Context.lastStopped=$null;$Context.stopRequested=$false
+    $Context.initialActor=$null
     $Context.primary=$null;$rollback=$null;$success=$false;$created=$false;$after=$null
     $before=& $Io.validate $Context $Context.fromKind $Context.expectedActor
     if($Context.action -ceq 'Validate'){return @{validated=$true;read_only=$true;actor=$before}}
@@ -141,7 +142,7 @@ function Get-RefreshActor($Context,[string]$Kind,$Expected,[switch]$AllowFresh) 
        $state.session -cne $ready.session -or $state.active -or $state.blocked){throw 'REFRESH_ACTOR_NOT_IDLE'}
     Lab-Hex $ready.session
     Assert-RefreshIdentity $ready $Expected $AllowFresh @($Context.initialActor,$Context.lastStopped)
-    $actor=[KilogramLabNative]::OpenActor($ready.pid,$ready.started,"$env:windir/System32/WindowsPowerShell/v1.0/powershell.exe",$cfg.sid,$true)
+    $actor=[KilogramLabNative]::OpenActor($ready.pid,$ready.started,[IO.Path]::GetFullPath("$env:windir/System32/WindowsPowerShell/v1.0/powershell.exe"),$cfg.sid,$true)
     try {
         if($actor.app_container -or $actor.elevated -or @($actor.restricting).Count){throw 'REFRESH_ACTOR_TOKEN'}
         $raw=@($actor.groups|Sort-Object sid|ForEach-Object {[ordered]@{sid=$_.sid;attributes=$_.attributes}})
