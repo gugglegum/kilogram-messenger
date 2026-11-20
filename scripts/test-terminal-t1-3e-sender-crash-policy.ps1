@@ -1,11 +1,13 @@
-param([Parameter(Mandatory)][string]$Evidence)
+param([Parameter(Mandatory)][string]$Evidence,[switch]$FixtureLibrary)
 $ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue'
 [Diagnostics.Process]::GetCurrentProcess().PriorityClass='BelowNormal'
-if(Test-Path -LiteralPath $Evidence){throw 'Fresh policy evidence required'}
-[void][IO.Directory]::CreateDirectory($Evidence)
+if(!$FixtureLibrary){
+    if(Test-Path -LiteralPath $Evidence){throw 'Fresh policy evidence required'}
+    [void][IO.Directory]::CreateDirectory($Evidence)
+}
 . "$PSScriptRoot/test-terminal-t1-3e-lab-common.ps1"
 . "$PSScriptRoot/migration-s5-l1-deadline.ps1"
-$guard=[KilogramS5Deadline]::new(100,115);$owned=@();$cases=@();$passed=$false
+$guard=if(!$FixtureLibrary){[KilogramS5Deadline]::new(100,115)}else{$null};$owned=@();$cases=@();$passed=$false
 function Write-Case($Path,$Value){[void][IO.Directory]::CreateDirectory([IO.Path]::GetDirectoryName($Path));Lab-Write $Path $Value}
 function Start-QuietFixture([string]$Exe,[string]$Arguments) {
     $info=[Diagnostics.ProcessStartInfo]::new();$info.FileName=$Exe;$info.Arguments=$Arguments
@@ -57,6 +59,7 @@ function Fixture([string]$Name) {
     }
     return @{run=$run;cfg=$cfg;entry=$entry;owner=$owner;started=$started;intent=$intent;receipt=$receipt;connection=$connection;worker=$worker}
 }
+if($FixtureLibrary){return}
 try {
     # Real disposable host-process exit1; parent diagnostic payloads below are synthetic policy fixtures, NOT product behavior.
     $si=[Diagnostics.ProcessStartInfo]::new();$si.FileName="$env:windir/System32/WindowsPowerShell/v1.0/powershell.exe"

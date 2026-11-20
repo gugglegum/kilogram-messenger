@@ -131,7 +131,12 @@ if($req.op -ceq 'lab-diagnostic-enable'){
 if($req.op -cin @('lab-crash-descriptor','lab-runtime-crash')) {
     $bound=Assert-LabAttempt -ReadCompleted
     $common=Join-Path $base 'ordinary-agent/test-terminal-t1-3e-lab-common.ps1'
-    . $common
+    Assert-PlainPath $common
+    $commonBytes=[IO.File]::ReadAllBytes($common)
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try{$commonHash=[BitConverter]::ToString($sha.ComputeHash($commonBytes)).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose()}
+    if($commonHash -cne '02b2a53e5b9d13f52312059ab1fc8a859de43eb694be72ce0eca00b06fe6346a'){throw 'LAB_CRASH_COMMON_PIN'}
+    . ([scriptblock]::Create([Text.Encoding]::UTF8.GetString($commonBytes)))
     $ipc=Join-Path $setup 'connection/ipc.json'
     if($req.op -ceq 'lab-crash-descriptor') {
         Assert-PlainPath $ipc
