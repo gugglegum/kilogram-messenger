@@ -161,9 +161,22 @@ if($req.op -ceq 'lab-diagnostic-read'){
         if(@($Value.PSObject.Properties).Count -gt 64){throw 'Diagnostic object cap'}
         foreach($field in $Value.PSObject.Properties){if($field.Name -cnotin $allowed){throw 'Diagnostic unknown field'};Assert-DiagnosticValue $field.Value $field.Name ($Depth+1)}
     }
+    # One recipient restart: keep the previous files, validate their exact scope,
+    # and return only the requested incarnation. Unknown/malformed files still fail.
+    $previous=@();if($null -ne $req.diagnostic_previous){$previous=@($req.diagnostic_previous)}
+    if(@($previous).Count -gt 1){throw 'Diagnostic previous incarnation cap'}
+    $seenPids=@($req.diagnostic_chat_pid,$req.diagnostic_runtime_pid)
+    foreach($prior in $previous){
+        if((@($prior.PSObject.Properties.Name|Sort-Object)-join '|') -cne 'diagnostic_chat_pid|diagnostic_runtime_instance|diagnostic_runtime_pid' -or
+           $prior.diagnostic_runtime_instance -cnotmatch '^[0-9a-f]{64}$'){throw 'Diagnostic previous scope'}
+        foreach($idValue in @($prior.diagnostic_chat_pid,$prior.diagnostic_runtime_pid)){
+            if(($idValue -isnot [int] -and $idValue -isnot [long]) -or $idValue -le 0 -or $idValue -in $seenPids){throw 'Diagnostic previous PID scope'}
+            $seenPids+=,$idValue
+        }
+    }
     $files=@(Get-ChildItem -LiteralPath $dir -File -Force|Where-Object Name -cne 'enabled.json')
-    if($files.Count -gt 16){throw 'Diagnostic file count cap'}
-    $records=@();$rejected=@()
+    if($files.Count -gt 16*(1+@($previous).Count)){throw 'Diagnostic file count cap'}
+    $records=@();$rejected=@();$priorValidated=0
     foreach($file in $files){
         try{
             if($file.Name -cnotmatch $recordNamePattern -or $file.Length -gt 16384){throw 'Diagnostic file cap/name'}
@@ -173,23 +186,31 @@ if($req.op -ceq 'lab-diagnostic-read'){
             if((@($value.PSObject.Properties.Name|Sort-Object)-join '|') -cne 'data|kind|pid|run_nonce|runtime_instance|runtime_pid|schema'){throw 'Diagnostic envelope keys'}
             if($value.schema -ne 1 -or $value.run_nonce -cne $bound.entry.generation){throw 'Diagnostic nonce/schema binding'}
             $stem=$value.kind.Replace('_','-');if($file.Name -cne ($stem+'-'+$value.pid+'.json')){throw 'Diagnostic filename binding'}
+            $expected=$req;$isPrevious=$false
+            foreach($prior in $previous){
+                if(($value.kind -clike 'runtime_*' -and $value.pid -eq $prior.diagnostic_runtime_pid) -or
+                   ($value.kind -cnotlike 'runtime_*' -and $value.pid -eq $prior.diagnostic_chat_pid)){$expected=$prior;$isPrevious=$true}
+            }
             if($value.kind -clike 'runtime_*'){
-                if($value.pid -ne $req.diagnostic_runtime_pid -or $value.runtime_pid -ne $req.diagnostic_runtime_pid -or $value.runtime_instance -cne $req.diagnostic_runtime_instance){throw 'Diagnostic runtime binding'}
+                if($value.pid -ne $expected.diagnostic_runtime_pid -or $value.runtime_pid -ne $expected.diagnostic_runtime_pid -or $value.runtime_instance -cne $expected.diagnostic_runtime_instance){throw 'Diagnostic runtime binding'}
             }elseif($value.kind -cin $startupKinds){
-                if($value.pid -ne $req.diagnostic_chat_pid){throw 'Diagnostic startup Chat binding'}
+                if($value.pid -ne $expected.diagnostic_chat_pid){throw 'Diagnostic startup Chat binding'}
                 if($null -ne $value.runtime_pid -and (($value.runtime_pid -isnot [int] -and $value.runtime_pid -isnot [long]) -or $value.runtime_pid -le 0)){throw 'Diagnostic startup runtime PID type'}
                 if($null -ne $value.runtime_instance -and ($null -eq $value.runtime_pid -or $value.kind -cnotin @('startup_status','startup_failed'))){throw 'Premature startup instance'}
-                if($null -ne $value.runtime_pid -and $req.diagnostic_runtime_pid -and $value.runtime_pid -ne $req.diagnostic_runtime_pid){throw 'Startup runtime PID binding'}
-                if($null -ne $value.runtime_instance -and $req.diagnostic_runtime_instance -and $value.runtime_instance -cne $req.diagnostic_runtime_instance){throw 'Startup runtime instance binding'}
+                if($null -ne $value.runtime_pid -and $expected.diagnostic_runtime_pid -and $value.runtime_pid -ne $expected.diagnostic_runtime_pid){throw 'Startup runtime PID binding'}
+                if($null -ne $value.runtime_instance -and $expected.diagnostic_runtime_instance -and $value.runtime_instance -cne $expected.diagnostic_runtime_instance){throw 'Startup runtime instance binding'}
             }else{
-                if($value.pid -ne $req.diagnostic_chat_pid){throw 'Diagnostic Chat binding'}
-                if($req.diagnostic_runtime_pid -and ($value.runtime_pid -ne $req.diagnostic_runtime_pid -or $value.runtime_instance -cne $req.diagnostic_runtime_instance)){throw 'Diagnostic Chat runtime binding'}
+                if($value.pid -ne $expected.diagnostic_chat_pid){throw 'Diagnostic Chat binding'}
+                if($expected.diagnostic_runtime_pid -and ($value.runtime_pid -ne $expected.diagnostic_runtime_pid -or $value.runtime_instance -cne $expected.diagnostic_runtime_instance)){throw 'Diagnostic Chat runtime binding'}
             }
+            if($isPrevious){$priorValidated++;continue}
             $sha=[Security.Cryptography.SHA256]::Create();try{$hash=([BitConverter]::ToString($sha.ComputeHash($bytes))).Replace('-','').ToLowerInvariant()}finally{$sha.Dispose()}
             $records+=@{name=$file.Name;bytes=$bytes.Length;sha256=$hash;data=[Convert]::ToBase64String($bytes)}
         }catch{$rejected+=@{name=if($file.Name -cmatch $recordNamePattern){$file.Name}else{'invalid_name'};reason='schema_or_identity_rejected'}}
     }
-    @{schema=1;records=$records;rejected=$rejected;run_nonce=$bound.entry.generation}|ConvertTo-Json -Depth 6 -Compress
+    $reply=@{schema=1;records=$records;rejected=$rejected;run_nonce=$bound.entry.generation}
+    if(@($previous).Count){$reply.prior_validated=$priorValidated}
+    $reply|ConvertTo-Json -Depth 6 -Compress
     return
 }
 $mailboxMode = $req.PSObject.Properties['generation']
