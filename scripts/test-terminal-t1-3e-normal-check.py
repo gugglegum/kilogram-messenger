@@ -22,6 +22,7 @@ EVIDENCE.mkdir(parents=True)
 def save(name,value):
     with (EVIDENCE/name).open('x',encoding='utf-8') as f:json.dump(value,f,indent=2);f.write('\n')
 def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
+SOURCE_WATCHDOG=sha(ROOT/'scripts/migration-s5-l1-deadline.ps1')
 def ps(text):
     text="$ErrorActionPreference='Stop';$ProgressPreference='SilentlyContinue';[Diagnostics.Process]::GetCurrentProcess().PriorityClass='BelowNormal';"+text
     text='Import-Module "$PSHOME/Modules/Microsoft.PowerShell.Utility/Microsoft.PowerShell.Utility.psd1";'+text
@@ -83,8 +84,8 @@ class Checks(unittest.TestCase):
                 return subprocess.CompletedProcess(command,0,json.dumps(receipt).encode(),b'')
             with patch.object(N['subprocess'],'run',run):
                 if reject:
-                    with self.assertRaisesRegex(RuntimeError,'SFTP client failed'):N['upload'](agents,1,stage,folder,pins,node,evidence=evidence,transfer=dict(exe='sftp.exe',sha256='a'*64))
-                else:N['upload'](agents,1,stage,folder,pins,node,evidence=evidence,transfer=dict(exe='sftp.exe',sha256='a'*64))
+                    with self.assertRaisesRegex(RuntimeError,'SFTP client failed'):N['upload'](agents,1,stage,folder,pins,node,evidence=evidence,transfer=dict(exe='sftp.exe',sha256='a'*64),receiver_deadline_pin='b'*64,source_deadline_pin=SOURCE_WATCHDOG)
+                else:N['upload'](agents,1,stage,folder,pins,node,evidence=evidence,transfer=dict(exe='sftp.exe',sha256='a'*64),receiver_deadline_pin='b'*64,source_deadline_pin=SOURCE_WATCHDOG)
             self.assertEqual(len(calls),3)
             receipt=json.loads((evidence/stage/'upload-result.json').read_bytes());self.assertEqual(bool(receipt['verification_error']),fail)
             self.assertEqual(receipt['client_exit'],1 if fail else 0)
@@ -100,7 +101,7 @@ class Checks(unittest.TestCase):
             ('blocked','Start-Sleep -Seconds 30')]:
             logs=EVIDENCE/('sftp-client-'+case);logs.mkdir()
             cmd=[PS,'-NoProfile','-NonInteractive','-EncodedCommand',base64.b64encode(child.encode('utf-16-le')).decode()]
-            text=N['sftp_client_script'](cmd,sha(Path(PS)),logs,2 if case=='blocked' else 8,4 if case=='blocked' else 10)
+            text=N['sftp_client_script'](cmd,sha(Path(PS)),logs,2 if case=='blocked' else 8,4 if case=='blocked' else 10,source_deadline_pin=SOURCE_WATCHDOG)
             outcome=ps(text);(logs/'wrapper.stderr.bin').write_bytes(outcome.stderr)
             self.assertEqual(outcome.returncode,0 if case=='success' else 1,outcome.stderr.decode(errors='replace'))
             receipt=json.loads((logs/'sftp-client.json').read_bytes());self.assertTrue(receipt['empty_job']);self.assertGreater(receipt['child_started'],0)
@@ -118,12 +119,12 @@ class Checks(unittest.TestCase):
         (folder/'bin/deadline.ps1').write_bytes((ROOT/'scripts/migration-s5-l1-deadline.ps1').read_bytes())
         data={name:(bytes(range(256))*16384 if name.endswith('.exe') else b'synthetic-content') for name in N['NAMES']}
         pins={name:hashlib.sha256(value).hexdigest() for name,value in data.items()};sizes={name:len(value) for name,value in data.items()};stage='e'*32
-        prepare=N['sftp_stage_script'](node,stage,pins,sizes);outcome=ps(prepare)
+        prepare=N['sftp_stage_script'](node,stage,pins,sizes,receiver_deadline_pin=SOURCE_WATCHDOG);outcome=ps(prepare)
         self.assertEqual(outcome.returncode,0,outcome.stderr.decode(errors='replace'));self.assertFalse(json.loads(outcome.stdout)['verified'])
         self.assertNotEqual(ps(prepare).returncode,0)
         remote=folder/'staging'/stage
         for name,value in data.items():(remote/name).write_bytes(value)
-        verify=N['sftp_stage_script'](node,stage,pins,sizes,True);outcome=ps(verify)
+        verify=N['sftp_stage_script'](node,stage,pins,sizes,True,receiver_deadline_pin=SOURCE_WATCHDOG);outcome=ps(verify)
         self.assertEqual(outcome.returncode,0,outcome.stderr.decode(errors='replace'));self.assertTrue(json.loads(outcome.stdout)['server_process_absent'])
         (remote/'foreign').write_text('preserve');self.assertNotEqual(ps(verify).returncode,0);self.assertTrue((remote/'foreign').exists())
         (remote/'foreign').unlink();(remote/'host.ps1').write_bytes(b'wrong-content');self.assertNotEqual(ps(verify).returncode,0)
@@ -137,7 +138,7 @@ class Checks(unittest.TestCase):
         data=bytes(range(256))*1025;pin=hashlib.sha256(data).hexdigest();results=[]
         for case in ('open-stdin','wrong-pin','short','blocked'):
             stage=hashlib.md5(case.encode()).hexdigest()
-            script=N['upload_script'](node,stage,'deadline.ps1','0'*64 if case=='wrong-pin' else pin,len(data))
+            script=N['upload_script'](node,stage,'deadline.ps1','0'*64 if case=='wrong-pin' else pin,len(data),receiver_deadline_pin=SOURCE_WATCHDOG)
             if case=='blocked':
                 # Same production watchdog and read loop; shorten only the local fixture budget.
                 self.assertEqual(script.count('::new(80,90)'),1);script=script.replace('::new(80,90)','::new(2,4)')
@@ -164,7 +165,7 @@ class Checks(unittest.TestCase):
                 if case!='blocked':self.assertIn(b'Stage pin' if case=='wrong-pin' else b'Short stage input',err)
             results.append(dict(case=case,exit=proc.returncode,elapsed=time.monotonic()-started,stdin_held_open=case!='short'))
         for length in (0,-1,128*1024*1024+1,True):
-            with self.assertRaises(RuntimeError):N['upload_script'](node,'a'*32,'deadline.ps1',pin,length)
+            with self.assertRaises(RuntimeError):N['upload_script'](node,'a'*32,'deadline.ps1',pin,length,receiver_deadline_pin=SOURCE_WATCHDOG)
         save('native-upload.json',dict(cases=results,production_budget=[80,90],blocked_fixture_budget=[2,4],live_ssh=False))
 
     def test_local_deadline_binding_and_reserve(self):
@@ -320,11 +321,11 @@ $value.native_command_line=$true;$value|ConvertTo-Json -Compress
         self.assertEqual([row[1] for row in sequence if row[0]=='watching'],['A','B','C'])
         self.assertFalse(any(term.live for term in model.pair));save('functional-model.json',dict(synthetic_messages=True,sequence=sequence,messages=7))
 
-    def execute_model(self,case,foreign=False,fail=False):
+    def execute_model(self,case,foreign=False,fail=False,already_original=False):
         original={name:'a'*64 for name in N['NAMES']};target={name:'b'*64 for name in N['NAMES']}
-        plan=dict(transfer={},nodes=[dict(side=s,base='fixture-'+s,session=s*32,pid=i+1,started=100+i,script_sha='a'*64,config_sha='b'*64)
+        plan=dict(transfer={},sources={'scripts/migration-s5-l1-deadline.ps1':SOURCE_WATCHDOG},nodes=[dict(side=s,base='fixture-'+s,session=s*32,pid=i+1,started=100+i,script_sha='a'*64,config_sha='b'*64)
             for i,s in enumerate('AB')],attempts=['fresh-one','fresh-two'],pins=target,originals=original,assets='assets',original_assets='originals',ssh={})
-        instances=[];runs=[];updates=[]
+        instances=[];runs=[];updates=[];uploads=[]
         class FakeAgent:
             def __init__(self,prefix,base,*args,ledger):
                 self.node=plan['nodes'][len(instances)];self.bins=dict(original);instances.append(self)
@@ -337,15 +338,33 @@ $value.native_command_line=$true;$value|ConvertTo-Json -Compress
                 self.attempt=attempt;self.agents=agents
             def run(self):
                 runs.append((self.attempt,tuple(id(a) for a in self.agents)))
+                if already_original:self.agents[0].bins=dict(original)
                 if foreign:self.agents[0].bins['host.ps1']='f'*64
                 if fail:raise RuntimeError('injected functional failure')
-        def inspect(agent,node):return dict(active=None,blocked=None,readiness_error=None,bins=agent.bins)
+        def inspect(agent,node):return dict(read_only=True,active=None,blocked=None,readiness_error=None,bins=agent.bins)
+        def upload(agents,index,stage,folder,pins,node,**kwargs):
+            self.assertEqual(kwargs['receiver_deadline_pin'],agents[index].bins['deadline.ps1'])
+            self.assertEqual(kwargs['source_deadline_pin'],SOURCE_WATCHDOG)
+            uploads.append(dict(side=node['side'],destination=pins['deadline.ps1'],receiver=kwargs['receiver_deadline_pin']))
         scope=N['execute'].__globals__
-        with patch.dict(scope,Agent=FakeAgent,Normal=FakeNormal,upload=lambda *args,**kwargs:None,inspect_installed=inspect),patch.dict(N['D'],pinned_ssh=lambda *args:[]):
+        with patch.dict(scope,Agent=FakeAgent,Normal=FakeNormal,upload=upload,inspect_installed=inspect),patch.dict(N['D'],pinned_ssh=lambda *args:[]):
             if foreign or fail:
                 with self.assertRaises(RuntimeError):N['execute'](plan,EVIDENCE,EVIDENCE/case)
             else:N['execute'](plan,EVIDENCE,EVIDENCE/case)
+        save(case+'-upload-bindings.json',uploads)
         return instances,runs,updates
+
+    def test_already_original_cleanup_and_watchdog_cohort_refusal(self):
+        self.execute_model('already-original',already_original=True)
+        rows=json.loads((EVIDENCE/'already-original-upload-bindings.json').read_bytes())
+        self.assertEqual([(r['receiver'],r['destination']) for r in rows],[('a'*64,'b'*64),('a'*64,'b'*64),('a'*64,'a'*64),('b'*64,'a'*64)])
+        original={name:'a'*64 for name in N['NAMES']};candidate={name:'b'*64 for name in N['NAMES']}
+        plan=dict(originals=original,pins=candidate,sources={'scripts/migration-s5-l1-deadline.ps1':SOURCE_WATCHDOG})
+        inspection=dict(read_only=True,active=None,blocked=None,readiness_error=None,bins=original)
+        self.assertEqual(N['watchdog_bindings'](plan,inspection),dict(receiver_deadline_pin='a'*64,source_deadline_pin=SOURCE_WATCHDOG))
+        for delta in (dict(read_only=False),dict(active='attempt'),dict(blocked='blocked'),dict(readiness_error='drift'),
+            dict(bins=original|{'host.ps1':'f'*64}),dict(bins=original|{'deadline.ps1':SOURCE_WATCHDOG})):
+            with self.subTest(delta=delta),self.assertRaises(RuntimeError):N['watchdog_bindings'](plan,inspection|delta)
 
     def test_two_attempts_same_agents_and_original_restore(self):
         agents,runs,updates=self.execute_model('two-attempts')
