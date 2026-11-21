@@ -68,8 +68,8 @@ zeroize.workspace = true
 ed25519-dalek = { workspace = true, optional = true }
 
 [target.'cfg(windows)'.dependencies]
-stellar-agent-windows-identity = "=0.1.0-alpha.6"
-win32job = "=2.0.3"
+stellar-agent-windows-identity = "=0.1.0-alpha.13"
+win32job = "=2.1.0"
 kilogram-windows-lan = { path = "../../crates/kilogram-windows-lan" }
 windows = { version = "0.62.2", features = ["Foundation_Collections", "Networking_Connectivity", "System_Power"] }
 
