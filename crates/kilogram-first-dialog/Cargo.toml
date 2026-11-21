@@ -21,7 +21,7 @@ tokio = { workspace = true, features = ["process"] }
 zeroize.workspace = true
 
 [target.'cfg(windows)'.dependencies]
-stellar-agent-windows-identity = "=0.1.0-alpha.6"
+stellar-agent-windows-identity = "=0.1.0-alpha.13"
 
 [dev-dependencies]
 kilogram-state = { path = "../kilogram-state" }
