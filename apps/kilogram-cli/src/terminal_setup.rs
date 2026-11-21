@@ -559,7 +559,7 @@ fn run_windows(home: PathBuf, jsonl: bool, allow_recovery: bool) -> io::Result<i
     Ok(code)
 }
 
-pub(crate) fn run(home: PathBuf, jsonl: bool, allow_recovery: bool) -> i32 {
+pub fn run(home: PathBuf, jsonl: bool, allow_recovery: bool) -> i32 {
     #[cfg(windows)]
     {
         run_windows(home, jsonl, allow_recovery).unwrap_or(2)

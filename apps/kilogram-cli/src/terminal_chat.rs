@@ -14,6 +14,8 @@ use zeroize::Zeroizing;
 
 mod coordinator;
 pub use coordinator::run;
+pub use coordinator::run_product_owner;
+pub use coordinator::run_product_owned;
 
 const LINE_CAP: usize = 32 * 1024;
 const OUTPUT_CAP: usize = 256 * 1024;
@@ -222,10 +224,13 @@ fn parse_wire(request: Request) -> CommandResult<Command> {
         "status" | "chats" | "disconnect" | "quit" => Err("invalid_args"),
         "locator_export" if empty => Ok(Command::Locator(LocatorCommand::Export)),
         "locator_retry" if empty => Ok(Command::Locator(LocatorCommand::Retry)),
-        "locator_import" => {
+        "locator_import" | "locator_import_latest" => {
             let args: LocatorImportArgs =
                 serde_json::from_value(request.args).map_err(|_| "invalid_args")?;
-            locator_import(&args.path)
+            let command=locator_import(&args.path)?;
+            if request.op=="locator_import_latest" {
+                Ok(Command::Locator(LocatorCommand::ImportLatest(PathBuf::from(args.path))))
+            }else {Ok(command)}
         }
         "locator_export" | "locator_retry" => Err("invalid_args"),
         _ => Err("unknown_operation"),

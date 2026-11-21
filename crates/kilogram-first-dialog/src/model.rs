@@ -9,6 +9,7 @@ use std::{
     fs::{self, File, OpenOptions},
     io::{Read, Write},
     path::{Path, PathBuf},
+    sync::Arc,
 };
 use zeroize::Zeroizing;
 
@@ -123,9 +124,18 @@ pub struct Setup {
     pub incomplete: bool,
     pub consent_confirmed: bool,
     pub(super) pre_spawn_cleanup_unconfirmed: bool,
-    _lock: File,
+    _lock: Arc<File>,
+}
+/// Retains the SAME exclusively locked file object across an in-process owner
+/// transfer/failure. This grants no open/reopen or lock-bypass capability.
+#[derive(Clone)]
+pub struct SetupOwnership {
+    _file: Arc<File>,
 }
 impl Setup {
+    pub fn retain_ownership(&self) -> SetupOwnership {
+        SetupOwnership {_file:self._lock.clone()}
+    }
     pub fn pre_spawn_cleanup_unconfirmed(&self) -> bool {
         self.pre_spawn_cleanup_unconfirmed
     }
@@ -251,7 +261,7 @@ impl Setup {
             incomplete: true,
             consent_confirmed: false,
             pre_spawn_cleanup_unconfirmed: false,
-            _lock: lock,
+            _lock: Arc::new(lock),
         })
     }
     pub fn open(home: &Path) -> Result<Self> {
@@ -268,7 +278,7 @@ impl Setup {
             incomplete: true,
             consent_confirmed: false,
             pre_spawn_cleanup_unconfirmed: false,
-            _lock: lock,
+            _lock: Arc::new(lock),
         };
         setup.inspect_ready(terminal)?;
         Ok(setup)

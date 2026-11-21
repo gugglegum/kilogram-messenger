@@ -162,6 +162,25 @@ fn position_value(context: Id, view: Id, frontiers: [u64; 2], next: [u64; 2]) ->
 }
 
 #[test]
+fn usable_peer_opaque_checkpoint_preserves_completed_and_partial_positions() -> anyhow::Result<()> {
+    let context=[1;32];let view=[2;32];let cut=[4,7];
+    let completed=history_position(&position_value(context,view,cut,cut),context,None)?.cursor;
+    let resumed=HistoryCursor2::from_checkpoint(&completed.checkpoint())?;
+    ensure!(resumed==completed && resumed.completed());
+    let delta=history_position(&position_value(context,view,[6,8],cut),context,Some(&completed))?.cursor;
+    let resumed=HistoryCursor2::from_checkpoint(&delta.checkpoint())?;
+    ensure!(resumed==delta && !resumed.completed());
+    for bad in ["".to_owned(),completed.checkpoint()+" ","a".repeat(368)] {
+        ensure!(HistoryCursor2::from_checkpoint(&bad).is_err());
+    }
+    let mut raw=completed.raw;raw[0]^=1;
+    ensure!(HistoryCursor2::from_checkpoint(&URL_SAFE_NO_PAD.encode(raw)).is_err());
+    let mut raw=completed.raw;raw[227..235].copy_from_slice(&5u64.to_be_bytes());
+    ensure!(HistoryCursor2::from_checkpoint(&URL_SAFE_NO_PAD.encode(raw)).is_err());
+    Ok(())
+}
+
+#[test]
 fn t11e1_position_replies_match_cursor_and_previous_cut() -> anyhow::Result<()> {
     let context = [1; 32];
     let view = [2; 32];

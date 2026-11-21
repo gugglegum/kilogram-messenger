@@ -14,6 +14,7 @@ param(
     [switch]$NoCapture,
     [switch]$SkipCacheStatus,
     [switch]$LibOnly,
+    [string]$Bin,
     [string[]]$SkipTest = @(),
     [string]$ExpectedArtifactsManifest,
     [string]$ExpectedArtifactsSha256,
@@ -33,6 +34,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 if ($LibOnly -and ($FrozenExecutionOnly -or $BuildEvidencePath -or $S54PreparationGuard)) {
     throw 'LibOnly cannot change a frozen artifact inventory.'
+}
+if ($Bin -and ($LibOnly -or $FrozenExecutionOnly -or $BuildEvidencePath -or $ExpectedArtifactsManifest -or $ExpectedArtifactsSha256 -or $CargoTarget -or $StableArtifactsDirectory -or $S54PreparationGuard -or @($PSBoundParameters.Keys | Where-Object { $_ -like 'S54*' }).Count)) {
+    throw 'Bin selects one ordinary binary harness; it cannot change library or frozen lanes.'
 }
 
 # This opt-in returns before every historical compiler/resource/list/cache lane.
@@ -136,6 +140,7 @@ if ($Package.Count -eq 0) {
 
 Write-Host "Compiling Rust test harnesses with profile '$Profile' without executing them..."
 if ($LibOnly) { $cargoArguments += '--lib' }
+if ($Bin) { $cargoArguments += @('--bin', $Bin) }
 Push-Location $workspaceRoot
 try {
     $cargoOutput = @(& cargo @cargoArguments)

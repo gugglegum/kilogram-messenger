@@ -41,7 +41,7 @@ pub(super) struct Service {
     setup: Option<Setup>,
     preview: Option<Preview>,
     #[cfg(windows)]
-    inspection: Option<kilogram_cli::ordered_dialog::runtime2::lan_metadata::Inspection>,
+    inspection: Option<crate::ordered_dialog::runtime2::lan_metadata::Inspection>,
 }
 
 impl Service {
@@ -195,7 +195,7 @@ impl Service {
         let setup = self.route_setup()?;
         if let Some(lan) = lan {
             let route = DirectLan2::new(lan.local, lan.peer).map_err(|_| "invalid_lan_route")?;
-            kilogram_cli::ordered_dialog::runtime2::verify_lan_interface(route)
+            crate::ordered_dialog::runtime2::verify_lan_interface(route)
                 .map_err(|_| "lan_interface_unavailable")?;
         }
         Self::record_route(setup, lan, LanDiscovery2::Manual {})
@@ -231,7 +231,7 @@ impl Service {
         generation: u64,
         session: &Shared,
     ) -> Result<(), &'static str> {
-        use kilogram_cli::ordered_dialog::runtime2::lan_metadata::{Inspection, setting};
+        use crate::ordered_dialog::runtime2::lan_metadata::{Inspection, setting};
         use std::{sync::atomic::Ordering, thread, time::Duration};
         self.route_setup()?;
         if cancel.load(Ordering::Acquire) {

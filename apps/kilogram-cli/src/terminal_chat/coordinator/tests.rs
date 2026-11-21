@@ -140,6 +140,7 @@ fn monitor_binding() -> monitor::Binding {
         runtime_instance: "c".repeat(64),
         live_admitted: false,
         lan_discovery: None,
+        selected_routes: [None;2],
         own_roles: [0, 1],
     })
 }

@@ -47,12 +47,16 @@ pub struct ChatStatus {
     pub live_admitted: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub lan_discovery: Option<kilogram_runtime_ipc::ordered2::DiscoveryStatus2>,
+    #[serde(skip_serializing_if="no_selected_routes")]
+    pub selected_routes: [Option<kilogram_runtime_ipc::ordered2::SelectedRoute2>;2],
     #[serde(skip)]
     pub own_roles: [u8; 2],
 }
+fn no_selected_routes(routes:&[Option<kilogram_runtime_ipc::ordered2::SelectedRoute2>;2])->bool {routes.iter().all(Option::is_none)}
 
 pub struct Chat {
     setup_dir: PathBuf,
+    initial_setup: Option<Setup>,
     executable: PathBuf,
     session: Option<Session>,
     cleanup_unconfirmed: bool,
@@ -94,10 +98,19 @@ impl Chat {
     pub fn new(setup_dir: PathBuf, executable: PathBuf) -> Self {
         Self {
             setup_dir,
+            initial_setup: None,
             executable,
             session: None,
             cleanup_unconfirmed: false,
         }
+    }
+
+    /// Move exclusive Setup ownership into the regular owner without an
+    /// unlock/reopen gap. No new credential or lock-bypass path is introduced.
+    pub fn from_owned_setup(setup: Setup, executable: PathBuf) -> Self {
+        let mut chat = Self::new(setup.home.clone(), executable);
+        chat.initial_setup = Some(setup);
+        chat
     }
 
     pub fn connect(&mut self, mode: Mode, instance: Option<&str>) -> Result<ChatStatus> {
@@ -139,7 +152,10 @@ impl Chat {
                     let _ = sink.record(kilogram_runtime_ipc::lab_diagnostics::Kind::StartupSetupOpen, None, None,
                         &serde_json::json!({"elapsed_ms":0,"ok":null,"cancelled":control.is_some_and(OperationControl::stopped),"spawned":false}));
                 }
-                let setup = Setup::open(&self.setup_dir)?;
+                let setup = match self.initial_setup.take() {
+                    Some(setup) => setup,
+                    None => Setup::open(&self.setup_dir)?,
+                };
                 let lan = connection::lan_settings(&setup);
                 Session::Owner(Box::new(Work::start_terminal(
                     setup,
@@ -180,6 +196,7 @@ impl Chat {
                     contexts: scope.contexts.map(|context| artifact::hex(&context)),
                     live_admitted: work.view.current(Instant::now(), consent::now()?),
                     lan_discovery: work.view.discovery,
+                    selected_routes: work.view.selected_routes,
                     own_roles: [scope.own_role; 2],
                 })
             }
@@ -391,7 +408,7 @@ fn owner_scope(
             HelperError::CleanupUnconfirmed
         );
         ensure!(!work.finished(), "Owned runtime exited");
-        if let Some(scope) = work.view.messages.scope.filter(|_| work.view.running) {
+        if let Some(scope) = work.owned_scope() {
             return Ok(scope);
         }
         ensure!(Instant::now() < end, "Owned runtime status timed out");
@@ -541,6 +558,7 @@ impl Observer {
             contexts: self.profile.contexts.clone(),
             live_admitted,
             lan_discovery: status.lan_discovery.as_ref().map(|view| view.state),
+            selected_routes: [status.installed(0)?.selected_route,status.installed(1)?.selected_route],
             own_roles: [status.installed(0)?.role, status.installed(1)?.role],
         })
     }

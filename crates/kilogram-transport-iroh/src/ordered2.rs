@@ -31,15 +31,35 @@ pub struct RouteConfig2 {
 pub struct FreshRoute2 {
     base: RouteConfig2,
     lan: Option<DirectLan2>,
+    internet: bool,
 }
 impl From<RouteConfig2> for FreshRoute2 {
     fn from(base: RouteConfig2) -> Self {
-        Self { base, lan: None }
+        Self {
+            base,
+            lan: None,
+            internet: false,
+        }
     }
 }
 impl FreshRoute2 {
     pub fn new(base: RouteConfig2, peer: Option<Ipv4Addr>) -> Result<Self> {
         let Some(peer) = peer else {
+            if base.policy == RoutePolicy::Auto
+                && base.bind == Some("0.0.0.0:0".parse()?)
+                && let Some(relay) = &base.relay
+            {
+                wire::canonical_runtime_relay(relay)?;
+                ensure!(
+                    relay.starts_with("https://"),
+                    "Internet relay requires HTTPS"
+                );
+                return Ok(Self {
+                    base,
+                    lan: None,
+                    internet: true,
+                });
+            }
             return Ok(base.into());
         };
         let Some(SocketAddr::V4(bind)) = base.bind else {
@@ -52,6 +72,7 @@ impl FreshRoute2 {
         Ok(Self {
             base,
             lan: Some(DirectLan2::new(*bind.ip(), peer)?),
+            internet: false,
         })
     }
     pub fn base(&self) -> &RouteConfig2 {
@@ -60,8 +81,11 @@ impl FreshRoute2 {
     pub fn lan(&self) -> Option<DirectLan2> {
         self.lan
     }
+    pub fn is_internet(&self) -> bool { self.internet }
     pub fn effective(&self) -> Result<RoutePolicy> {
-        if self.lan.is_some() {
+        if self.internet {
+            Ok(RoutePolicy::Auto)
+        } else if self.lan.is_some() {
             Ok(RoutePolicy::DirectOnly)
         } else {
             self.base.effective()
@@ -69,6 +93,11 @@ impl FreshRoute2 {
     }
     pub fn remote(&self, locator: &ParsedRuntimeLocator2) -> Result<EndpointAddr> {
         let Some(lan) = self.lan else {
+            if self.internet {
+                let mut base = self.base.clone();
+                base.bind = Some("127.0.0.1:0".parse()?);
+                return base.remote(locator);
+            }
             return self.base.remote(locator);
         };
         let socket = locator.direct_lan_socket(lan.peer())?;
@@ -79,6 +108,11 @@ impl FreshRoute2 {
     }
     pub fn connection_policy(&self, locator: &ParsedRuntimeLocator2) -> Result<RoutePolicy> {
         let Some(lan) = self.lan else {
+            if self.internet {
+                let mut base = self.base.clone();
+                base.bind = Some("127.0.0.1:0".parse()?);
+                return base.connection_policy(locator);
+            }
             return self.base.connection_policy(locator);
         };
         locator.direct_lan_socket(lan.peer())?;
@@ -234,6 +268,31 @@ pub async fn bind_existing(config: &RouteConfig2) -> Result<Endpoint> {
     bind_alpns(config, config.effective()?, true, false).await
 }
 pub async fn bind_fresh(config: &FreshRoute2) -> Result<Endpoint> {
+    if config.internet {
+        let endpoint = Endpoint::builder(presets::N0)
+            .clear_address_lookup()
+            .clear_ip_transports()
+            .transport_config(
+                iroh::endpoint::QuicTransportConfig::builder()
+                    .max_concurrent_bidi_streams(4_u32.into())
+                    .max_concurrent_uni_streams(0_u32.into())
+                    .receive_window((4_u32 * 1024 * 1024).into())
+                    .build(),
+            )
+            .bind_addr(config.base.bind.context("Internet bind")?)?
+            .relay_mode(RelayMode::custom([config
+                .base
+                .relay
+                .as_ref()
+                .context("Internet relay")?
+                .parse::<RelayUrl>()?]))
+            .alpns(vec![wire::ALPN.to_vec()])
+            .bind()
+            .await?;
+        // Direct IP remains usable while a relay is unavailable. Iroh keeps
+        // registering/reconnecting its explicit relay in the background.
+        return Ok(endpoint);
+    }
     let endpoint = bind_alpns(
         config.base(),
         config.effective()?,
@@ -357,6 +416,41 @@ pub async fn read(receive: &mut RecvStream) -> Result<ParsedFrame2> {
 #[cfg(test)]
 mod route_tests {
     use super::*;
+
+    #[test]
+    fn usable_peer_internet_is_fresh_explicit_and_preserves_closed_routes() -> Result<()> {
+        let base = RouteConfig2 {
+            policy: RoutePolicy::Auto,
+            bind: Some("0.0.0.0:0".parse()?),
+            relay: Some("https://relay.example/".into()),
+        };
+        ensure!(
+            base.effective().is_err(),
+            "shared/indexed route was broadened"
+        );
+        let route = FreshRoute2::new(base.clone(), None)?;
+        ensure!(route.internet && route.effective()? == RoutePolicy::Auto && route.lan().is_none());
+        for bind in ["0.0.0.0:1", "[::]:0", "192.168.1.2:0"] {
+            let changed = RouteConfig2 {
+                bind: Some(bind.parse()?),
+                ..base.clone()
+            };
+            ensure!(FreshRoute2::new(changed, None)?.effective().is_err());
+        }
+        for relay in [None, Some("http://127.0.0.1/".into())] {
+            let changed = RouteConfig2 {
+                relay,
+                ..base.clone()
+            };
+            ensure!(
+                FreshRoute2::new(changed, None)
+                    .and_then(|r| r.effective())
+                    .is_err()
+            );
+        }
+        ensure!(FreshRoute2::new(base, Some("192.168.1.3".parse()?)).is_err());
+        Ok(())
+    }
 
     #[test]
     fn a3_s4_f12_auto_explicit_relay_loopback_bind_table() -> Result<()> {

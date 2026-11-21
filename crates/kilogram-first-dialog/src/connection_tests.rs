@@ -1,6 +1,66 @@
 use super::super::consent::tests::{cli, pair_in, repository, run_isolated, selected};
 use super::*;
 
+#[test]
+fn usable_peer_owned_setup_never_releases_lock_during_transfer() -> Result<()> {
+    let temp=tempfile::tempdir()?;
+    let home=temp.path().join("profile");
+    let setup=Setup::begin_terminal(&home).map_err(|e|anyhow::anyhow!("{e:?}"))?;
+    let guard=setup.retain_ownership();
+    let chat=crate::chat::Chat::from_owned_setup(setup,cli());
+    ensure!(Setup::open_terminal(&home).is_err());
+    ensure!(Setup::open(&home).is_err(),"legacy opener entered transferred profile");
+    drop(chat);
+    ensure!(matches!(Setup::open_terminal(&home),Err(model::SetupAccessError::Locked)));
+    ensure!(Setup::open(&home).is_err(),"owner failure released frontend ownership");
+    drop(guard);
+    let _=Setup::open_terminal(&home).map_err(|e|anyhow::anyhow!("{e:?}"))?;
+    Ok(())
+}
+
+#[cfg(windows)]
+#[test]
+fn usable_peer_actual_locator_retention_valid_invalid_churn() -> Result<()> {
+    use kilogram_protocol::ordered_dialog_v2::ParsedRuntimeLocator2;
+    let root=tempfile::tempdir()?;
+    let mut nodes=ready_pair_at(root.path(),"bounded-",false)?;
+    let signal=Arc::new(AtomicBool::new(false));
+    let signer={let mut repo=repository(&nodes[1])?;kilogram_identity::DeviceIdentity::from_secret_bytes(*repo.owner_material()?.signing)};
+    let mut sessions=[Session::start(&mut nodes[0],&cli(),signal.clone(),false,&Cleanup::default())?,Session::start(&mut nodes[1],&cli(),signal.clone(),false,&Cleanup::default())?];
+    let result=(||->Result<()> {
+        let exported=sessions[1].export(&nodes[1],&signal)?;
+        let original:serde_json::Value=serde_json::from_slice(&model::read(&exported,locator_artifact::CAP)?)?;
+        for n in 1..=16u64 {
+            let mut value=original.clone();
+            for slot in 0..2 {
+                let blob=artifact::unhex(value["locators"][slot].as_str().context("locator")?,8192)?;
+                let mut fields=ParsedRuntimeLocator2::parse(&blob)?.fields().clone();
+                fields.revision+=n;
+                value["locators"][slot]=artifact::hex(ParsedRuntimeLocator2::sign(fields,&signer)?.raw()).into();
+            }
+            let mut stage=tempfile::NamedTempFile::new_in(directory(&nodes[0])?)?;
+            std::io::Write::write_all(&mut stage,&serde_json::to_vec(&value)?)?;
+            let report=sessions[0].locator(&mut nodes[0],LocatorCommand::ImportLatest(stage.path().into()),&signal,None).map_err(anyhow::Error::msg)?;
+            ensure!(report.state==LocatorState::Imported,"valid churn not imported");
+            drop(stage);
+            let accepted=nodes[0].record.connection.clone();
+            for bad in [format!("{{\"invalid\":{n}}}").into_bytes(),serde_json::to_vec(&{let mut v=value.clone();v["invitation"]="00".repeat(32).into();v})?] {
+                let mut rejected=tempfile::NamedTempFile::new_in(directory(&nodes[0])?)?;
+                std::io::Write::write_all(&mut rejected,&bad)?;
+                ensure!(sessions[0].locator(&mut nodes[0],LocatorCommand::ImportLatest(rejected.path().into()),&signal,None).is_err());
+                ensure!(nodes[0].record.connection==accepted,"invalid bundle changed accepted route");
+            }
+            let retained=fs::read_dir(directory(&nodes[0])?)?.filter_map(|e|e.ok()).filter(|e|e.file_name().to_string_lossy().starts_with("peer-")).count();
+            ensure!(retained==1,"retained files grew: {retained}");
+        }
+        println!("USABLE_PEER_LOCATOR_CHURN_PASS valid=16 invalid=32 retained=1 rejected_route_preserved=true");
+        Ok(())
+    })();
+    let stops=sessions.iter_mut().map(|s|s.finish(&Cleanup::default())).collect::<Vec<_>>();
+    for stop in stops {ensure!(stop.graceful && stop.reaped && stop.eof && !stop.forced,"native churn cleanup failed");}
+    result
+}
+
 fn ready_pair(name: &str, missing: bool) -> Result<[Setup; 2]> {
     let parent =
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../.tmp/clean-start-cs3-2b/fixtures");
@@ -582,6 +642,7 @@ fn cs32b_request_start_freshness_and_schema_negatives() -> Result<()> {
         consent_expires: 200,
         running: true,
         discovery: None,
+        selected_routes: [None;2],
         text: String::new(),
         messages: Messages::default(),
     };
@@ -624,9 +685,11 @@ fn cs32b_late_status_generation_is_discarded() -> Result<()> {
         views: view_rx,
         done,
         completion: None,
+        owned_scope: None,
         cleanup: Arc::new(Cleanup::default()),
         view: View::waiting("pending"),
     };
+    let scope=DialogScope{instance:[1;32],contexts:[[2;32],[3;32]],own_role:0};
     let observed = View {
         generation: 1,
         request_started: Instant::now(),
@@ -635,8 +698,9 @@ fn cs32b_late_status_generation_is_discarded() -> Result<()> {
         consent_expires: u64::MAX,
         running: true,
         discovery: None,
+        selected_routes: [None;2],
         text: "old response".into(),
-        messages: Messages::default(),
+        messages: Messages{scope:Some(scope),..Messages::default()},
     };
     views.send(observed.clone())?;
     let _ = work.poll();
@@ -644,6 +708,7 @@ fn cs32b_late_status_generation_is_discarded() -> Result<()> {
         !work.view.current(Instant::now(), 0),
         "old action revived badge"
     );
+    ensure!(work.owned_scope().is_none(),"late generation established an owned scope");
     let mut current = observed;
     current.generation = 2;
     views.send(current.clone())?;
@@ -652,6 +717,13 @@ fn cs32b_late_status_generation_is_discarded() -> Result<()> {
         work.view.current(Instant::now(), 0),
         "current generation rejected"
     );
+    work.action(Action::Export)?;
+    ensure!(work.owned_scope()==Some(scope),"read/send scope waited for a presentation poll");
+    ensure!(!work.view.current(Instant::now(),0),"scope cache revived a connection badge");
+    let mut changed=current.clone();changed.generation=3;
+    changed.messages.scope=Some(DialogScope{instance:[9;32],..scope});
+    views.send(changed)?;let _=work.poll();
+    ensure!(work.owned_scope().is_none() && work.cancel.load(Ordering::Acquire),"scope drift was adopted");
     work.cancel();
     views.send(current)?;
     let _ = work.poll();

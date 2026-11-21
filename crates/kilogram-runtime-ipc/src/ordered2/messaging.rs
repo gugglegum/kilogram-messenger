@@ -65,15 +65,35 @@ pub struct HistoryCursor2 {
     frontiers: [u64; 2],
 }
 impl HistoryCursor2 {
+    /// Opaque local display checkpoint. This is not authentication: storage
+    /// verifies its MAC and database/view/context binding on every page/follow.
+    pub fn checkpoint(&self) -> String {
+        URL_SAFE_NO_PAD.encode(self.raw)
+    }
+    pub fn from_checkpoint(text: &str) -> Result<Self> {
+        let bad = || MessageError2::HistoryCursorInvalid;
+        if text.len() != 367 { return Err(bad()); }
+        let mut raw = [0; CURSOR_BYTES];
+        if URL_SAFE_NO_PAD.decode_slice(text, &mut raw).map_err(|_| bad())? != CURSOR_BYTES
+            || !raw.starts_with(CURSOR_HEADER) || URL_SAFE_NO_PAD.encode(raw) != text {
+            return Err(bad());
+        }
+        let number = |offset| -> Result<u64> { Ok(u64::from_be_bytes(raw[offset..offset+8].try_into().map_err(|_| bad())?)) };
+        let frontiers = [number(211)?,number(219)?];
+        let next = [number(227)?,number(235)?];
+        if next.contains(&0) || next.into_iter().zip(frontiers).any(|(n,f)|n>f) { return Err(bad()); }
+        Ok(Self { context:raw[72..104].try_into().map_err(|_|bad())?, view:raw[40..72].try_into().map_err(|_|bad())?, frontiers, raw })
+    }
+    pub fn completed(&self) -> bool { self.matches_position(self.frontiers) }
     // Compare public metadata in the authenticated IPC reply. Only storage verifies the MAC.
     fn matches_position(&self, next: [u64; 2]) -> bool {
         self.raw.starts_with(CURSOR_HEADER)
             && self.raw[40..72] == self.view
             && self.raw[72..104] == self.context
             && self.raw[211..243]
-                .chunks_exact(8)
+                .as_chunks::<8>().0.iter()
                 .zip(self.frontiers.into_iter().chain(next))
-                .all(|(encoded, ordinal)| encoded == ordinal.to_be_bytes())
+                .all(|(encoded, ordinal)| *encoded == ordinal.to_be_bytes())
     }
 }
 

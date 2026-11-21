@@ -154,6 +154,8 @@ impl Envelope {
                     "LAN locator socket pair mismatch"
                 );
                 lan_socket = Some(socket);
+            } else if let Some(relay) = setup.record.connection.as_ref().and_then(|s| s.internet_relay.as_deref()) {
+                internet_locator_route(&f.ips, f.relay.as_deref(), relay)?;
             } else {
                 ensure!(
                     f.relay.is_none()
@@ -169,5 +171,35 @@ impl Envelope {
             endpoint = Some(f.endpoint);
         }
         Ok(raw)
+    }
+}
+
+// The explicit fresh Internet selection does not broaden the old local pilot.
+// Signature/credential/context/expiry checks above still precede route admission.
+fn internet_locator_route(ips: &[std::net::SocketAddr], relay: Option<&str>, selected: &str) -> Result<()> {
+    wire::canonical_runtime_relay(selected)?;
+    ensure!(selected.starts_with("https://") && relay.is_none_or(|r| r == selected), "Unselected Internet relay");
+    ensure!(!ips.is_empty() || relay.is_some(), "Internet locator has no route");
+    ensure!(ips.iter().all(|a| a.port() != 0 && !a.ip().is_unspecified() && !a.ip().is_multicast()), "Invalid Internet locator IP");
+    Ok(())
+}
+
+#[cfg(test)]
+mod internet_route_tests {
+    use super::*;
+    #[test]
+    fn usable_peer_locator_requires_explicit_selected_relay_or_direct() -> Result<()> {
+        let relay="https://relay.example/";
+        for ip in ["127.0.0.1:1","192.168.1.2:1","[2001:db8::2]:1"] {
+            internet_locator_route(&[ip.parse()?],None,relay)?;
+            internet_locator_route(&[ip.parse()?],Some(relay),relay)?;
+        }
+        internet_locator_route(&[],Some(relay),relay)?;
+        ensure!(internet_locator_route(&[],None,relay).is_err());
+        ensure!(internet_locator_route(&[],Some("https://other.example/"),relay).is_err());
+        for ip in ["0.0.0.0:1","224.0.0.1:1","127.0.0.1:0"] {
+            ensure!(internet_locator_route(&[ip.parse()?],Some(relay),relay).is_err());
+        }
+        Ok(())
     }
 }

@@ -5,6 +5,9 @@ use serde::Serialize;
 pub enum LocatorCommand {
     Export,
     Import(PathBuf),
+    /// Product single-peer retention. Ordinary/manual Import keeps its existing
+    /// evidence semantics; this variant retires only its superseded retained file.
+    ImportLatest(PathBuf),
     Retry,
 }
 
@@ -106,6 +109,16 @@ impl Session {
         match command {
             LocatorCommand::Export => self.export_report(setup, cancel, op),
             LocatorCommand::Import(path) => self.import_file(setup, &path, cancel, op, |_| Ok(())),
+            LocatorCommand::ImportLatest(path) => {
+                let previous=setup.record.connection.as_ref().and_then(|s|s.incoming.clone().zip(s.incoming_digest.clone()));
+                let result=self.import_file(setup,&path,cancel,op,|_|Ok(()));
+                if let Ok(report)=&result {
+                    if report.import.as_ref().is_some_and(|r|r.retained==Some(true)) {
+                        retire_superseded(setup,previous).map_err(|_|"retained_locator_cleanup_unconfirmed")?;
+                    }
+                }
+                result
+            }
             LocatorCommand::Retry => self.retry_locator(setup, cancel, op),
         }
     }
@@ -407,6 +420,23 @@ impl Session {
         );
         Ok(())
     }
+}
+
+fn retire_superseded(setup:&Setup, previous:Option<(String,String)>)->Result<()> {
+    let Some((name,hash))=previous else {return Ok(())};
+    let current=setup.record.connection.as_ref().and_then(|s|s.incoming.as_ref());
+    if current==Some(&name){return Ok(())}
+    artifact::canonical_id(&hash)?;
+    ensure!(name==format!("peer-{hash}.json"),"Retired locator binding");
+    let path=locator_directory(setup)?.join(name);
+    check_artifact_path(setup,&path)?;
+    match fs::symlink_metadata(&path) {
+        Err(e) if e.kind()==std::io::ErrorKind::NotFound=>return Ok(()),
+        other=>{other?;}
+    }
+    ensure!(digest(&model::read(&path,locator_artifact::CAP)?)==hash,"Retired locator changed");
+    fs::remove_file(path)?;
+    Ok(())
 }
 
 #[cfg(test)]

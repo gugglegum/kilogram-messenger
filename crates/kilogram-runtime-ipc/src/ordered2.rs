@@ -304,6 +304,10 @@ impl Client2 {
     }
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all="snake_case")]
+pub enum SelectedRoute2 { Direct, Relay }
+
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Endpoint2 {
@@ -360,6 +364,8 @@ pub struct Installed2 {
     pub live_admitted: bool,
     #[serde(default, deserialize_with = "present")]
     pub selected_lan_peer: Option<SocketAddr>,
+    #[serde(default, deserialize_with = "present")]
+    pub selected_route: Option<SelectedRoute2>,
     #[serde(deserialize_with = "nullable")]
     pub lease_expires: Option<u64>,
     pub details: Details2,
@@ -477,6 +483,14 @@ impl Status2 {
                         "active shape"
                     );
                     ensure!(c.live_admitted == c.lease_expires.is_some(), "lease shape");
+                    if let Some(route)=c.selected_route {
+                        ensure!(c.live_admitted && c.active && c.phase==3,"selected route without active lease");
+                        ensure!(match status.route.policy {
+                            ProfileRoutePolicy2::Auto=>true,
+                            ProfileRoutePolicy2::DirectOnly=>route==SelectedRoute2::Direct,
+                            ProfileRoutePolicy2::RelayOnly=>route==SelectedRoute2::Relay,
+                        },"selected route conflicts with policy");
+                    }
                     ensure!(
                         match (lan, c.live_admitted, c.selected_lan_peer) {
                             (Some(lan), true, Some(addr)) =>

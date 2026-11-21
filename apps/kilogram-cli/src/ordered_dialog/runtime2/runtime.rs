@@ -1582,6 +1582,16 @@ fn ipc2(
                 if let Some((_, Some(socket))) = lease {
                     row["selected_lan_peer"] = serde_json::json!(socket);
                 }
+                if live_admitted && s.head.active && s.head.phase==3 && owner.route.is_internet()
+                    && let Some(lease)=owner.leases[usize::from(c)].as_ref()
+                    && let Some(path)=lease.connection.paths().iter().find(|p|p.is_selected())
+                {
+                    match path.remote_addr() {
+                        iroh::TransportAddr::Ip(_)=>row["selected_route"]="direct".into(),
+                        iroh::TransportAddr::Relay(_)=>row["selected_route"]="relay".into(),
+                        _=>{},
+                    }
+                }
                 contexts.push(row);
             }
             owner.stats.aborted_packet_calls = owner.stats.packet_attempts.saturating_sub(
@@ -1602,6 +1612,7 @@ fn ipc2(
                             fields.insert("live_admitted".into(), false.into());
                             fields.insert("lease_expires".into(), serde_json::Value::Null);
                             fields.remove("selected_lan_peer");
+                            fields.remove("selected_route");
                             fields.insert("publication_ready".into(), false.into());
                         }
                     }

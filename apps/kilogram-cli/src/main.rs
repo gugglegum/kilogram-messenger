@@ -237,8 +237,8 @@ mod runtime_publication_resolution;
 mod runtime_queue;
 mod runtime_ticket_automation;
 mod runtime_ticket_checkpoint;
-mod terminal_chat;
-mod terminal_setup;
+use kilogram_cli::terminal_chat;
+use kilogram_cli::terminal_setup;
 
 #[cfg(test)]
 use kilogram_runtime_ipc::RuntimeIpcEndpointAnnouncementExport;
@@ -487,6 +487,18 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Command {
+    /// Open a conversation with one invitation and automatic authenticated setup/reconnection.
+    Talk {
+        #[arg(long, default_value = "kilogram-profile")]
+        profile: PathBuf,
+        #[arg(long)]
+        join: Option<String>,
+        /// Explicit HTTPS rendezvous/relay, otherwise the bundled Iroh EU relay.
+        #[arg(long)]
+        relay: Option<String>,
+        #[arg(long)]
+        jsonl: bool,
+    },
     /// Read the history of an existing first-dialog Setup.
     Chat {
         #[arg(long)]
@@ -2813,7 +2825,8 @@ impl Command {
             | Self::StateVaultKeyExport { state_dir, .. }
             | Self::StateVaultKeyImport { state_dir, .. }
             | Self::StateVaultRestore { state_dir, .. } => Some(state_dir),
-            Self::Chat { .. }
+            Self::Talk { .. }
+            | Self::Chat { .. }
             | Self::Setup { .. }
             | Self::AccountCreate { .. }
             | Self::RolloutTrustedPolicyImport { .. }
@@ -3703,6 +3716,15 @@ fn main() -> Result<()> {
 async fn async_main() -> Result<()> {
     let cli = Cli::parse();
     let command = cli.command;
+    if let Command::Talk { profile, join, relay, jsonl } = command {
+        let mut peer = tokio::process::Command::new(std::env::current_exe()?.with_file_name("kilogram-peer.exe"));
+        peer.arg("--profile").arg(profile);
+        if let Some(join)=join {peer.arg("--join").arg(join);}
+        if let Some(relay)=relay {peer.arg("--relay").arg(relay);}
+        if jsonl {peer.arg("--jsonl");}
+        ensure!(peer.status().await?.success(), "Peer chat exited with an error");
+        return Ok(());
+    }
     if let Command::Chat { setup, jsonl } = command {
         let code = tokio::task::spawn_blocking(move || terminal_chat::run(setup, jsonl)).await?;
         if code != 0 {
@@ -5178,7 +5200,7 @@ async fn run_command(command: Command) -> Result<()> {
             state_dir,
             certificate_file,
         } => enroll_device(account_dir, state_dir, certificate_file),
-        Command::Ordered { .. } | Command::Chat { .. } | Command::Setup { .. } => {
+        Command::Ordered { .. } | Command::Talk { .. } | Command::Chat { .. } | Command::Setup { .. } => {
             unreachable!("OD1 commands are dispatched before legacy repositories")
         }
         Command::DeviceAuthorityUpdate {

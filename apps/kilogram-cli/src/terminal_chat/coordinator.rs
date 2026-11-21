@@ -170,6 +170,7 @@ struct State {
     connection: Option<u64>,
     background: Option<Background>,
     monitor: monitor::Monitor,
+    monitor_enabled: bool,
     jsonl: bool,
     running: Option<Active>,
     queued: Option<Entry>,
@@ -195,6 +196,7 @@ impl State {
             connection: None,
             background: None,
             monitor: monitor::Monitor::default(),
+            monitor_enabled: true,
             jsonl: false,
             running: None,
             queued: None,
@@ -653,7 +655,7 @@ impl State {
     }
 
     fn schedule_monitor(&mut self, now: Instant, worker: &mpsc::SyncSender<Job>) {
-        if !self.ready
+        if !self.monitor_enabled || !self.ready
             || self.cleanup_unconfirmed
             || self.background.is_some()
             || !self.notification_allowed()
@@ -1213,10 +1215,20 @@ fn listen_interrupt(
 }
 
 pub fn run(setup: PathBuf, jsonl: bool) -> i32 {
+    run_with_monitor(setup,jsonl,true)
+}
+// The product owns a separate pinned read-only incremental reader. Keep the
+// administrative terminal's original monitor/output contract unchanged.
+pub fn run_product_owner(setup: PathBuf, jsonl: bool) -> i32 {
+    run_with_monitor(setup,jsonl,false)
+}
+fn run_with_monitor(setup: PathBuf, jsonl: bool, monitor_enabled:bool) -> i32 {
     let Ok(executable) = std::env::current_exe() else {
         return 2;
     };
-    let shared = Arc::new(Mutex::new(State::new()));
+    let mut state = State::new();
+    state.monitor_enabled = monitor_enabled;
+    let shared = Arc::new(Mutex::new(state));
     #[cfg(windows)]
     let signal = match listen_interrupt(jsonl, &shared) {
         Ok(signal) => signal,
@@ -1247,13 +1259,37 @@ fn run_threads(
     shared: &Shared,
     #[cfg(test)] test_barrier: Option<(PathBuf, bool)>,
 ) -> i32 {
+    run_threads_io(frontend,jsonl,shared,io::BufReader::new(io::stdin()),io::stdout(),#[cfg(test)] test_barrier)
+}
+
+/// The product keeps the same coordinator and operation gates, but transfers
+/// its already locked Setup and uses private pipes instead of process stdio.
+pub fn run_product_owned(
+    setup: kilogram_first_dialog::model::Setup,
+    jsonl: bool,
+    input: impl io::BufRead + Send + 'static,
+    output: impl Write + Send + 'static,
+) -> i32 {
+    let Ok(executable)=std::env::current_exe() else {return 2};
+    let mut state=State::new();state.monitor_enabled=false;
+    let shared=Arc::new(Mutex::new(state));
+    run_threads_io(Frontend {service:Chat::from_owned_setup(setup,executable),status:None,selected:0,continuation:[None,None]},jsonl,&shared,input,output,#[cfg(test)] None)
+}
+
+fn run_threads_io(
+    frontend: Frontend,
+    jsonl: bool,
+    shared: &Shared,
+    input: impl io::BufRead + Send + 'static,
+    mut stdout: impl Write + Send + 'static,
+    #[cfg(test)] test_barrier: Option<(PathBuf, bool)>,
+) -> i32 {
     shared.lock().unwrap().jsonl = jsonl;
     let (output, writes) = mpsc::sync_channel::<WriteJob>(1);
     let state = shared.clone();
     if thread::Builder::new()
         .name("chat-stdout".into())
         .spawn(move || {
-            let mut stdout = io::stdout().lock();
             for job in writes {
                 if !write_frame(&state, &mut stdout, job) {
                     break;
@@ -1288,7 +1324,7 @@ fn run_threads(
     if thread::Builder::new()
         .name("chat-stdin".into())
         .spawn(move || {
-            if read_commands(io::stdin().lock(), jsonl, |input| {
+            if read_commands(input, jsonl, |input| {
                 state.lock().unwrap().admit(input, Instant::now())
             }) {
                 state

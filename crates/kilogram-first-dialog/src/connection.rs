@@ -62,10 +62,21 @@ pub struct State {
     pub lan: Option<LanSettings>,
     #[serde(default, skip_serializing_if = "LanDiscovery2::is_manual")]
     pub lan_discovery: LanDiscovery2,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub internet_relay: Option<String>,
 }
 impl State {
     pub fn validate(&self) -> Result<()> {
         ensure!(self.version == 1, "Unsupported connection progress");
+        if let Some(relay) = &self.internet_relay {
+            kilogram_protocol::ordered_dialog_v2::canonical_runtime_relay(relay)?;
+            ensure!(
+                relay.starts_with("https://")
+                    && self.lan.is_none()
+                    && self.lan_discovery.is_manual(),
+                "Internet route conflicts with LAN route"
+            );
+        }
         if let Some(lan) = self.lan {
             lan.validate()?;
         }
@@ -159,14 +170,50 @@ pub fn select_lan_discovery(
             .transpose()?,
     )?;
     connection_paths(&setup.home, &setup.record).context(ConnectionPathError)?;
-    if lan_settings(setup) != lan || lan_discovery(setup) != discovery {
+    if lan_settings(setup) != lan
+        || lan_discovery(setup) != discovery
+        || setup
+            .record
+            .connection
+            .as_ref()
+            .is_some_and(|s| s.internet_relay.is_some())
+    {
         change(setup, |state| {
             state.lan = lan;
+            state.internet_relay = None;
             state.lan_discovery = discovery;
             state.profile = None;
             state.profile_digest = None;
             state.imports = [consent::Outcome::NotStarted; 2];
             state.last_outcome = None;
+        })?;
+    }
+    Ok(())
+}
+/// Explicit peer-chat Internet mode; the original closed LAN/loopback modes remain unchanged.
+pub fn select_internet(setup: &mut Setup, relay: &str) -> Result<()> {
+    kilogram_protocol::ordered_dialog_v2::canonical_runtime_relay(relay)?;
+    ensure!(
+        relay.starts_with("https://"),
+        "Internet relay requires HTTPS"
+    );
+    check_pre_spawn_cleanup(setup)?;
+    connection_paths(&setup.home, &setup.record)?;
+    if setup
+        .record
+        .connection
+        .as_ref()
+        .and_then(|s| s.internet_relay.as_deref())
+        != Some(relay)
+    {
+        change(setup, |s| {
+            s.lan = None;
+            s.lan_discovery = LanDiscovery2::Manual {};
+            s.internet_relay = Some(relay.to_owned());
+            s.profile = None;
+            s.profile_digest = None;
+            s.imports = [consent::Outcome::NotStarted; 2];
+            s.last_outcome = None;
         })?;
     }
     Ok(())
@@ -309,6 +356,10 @@ pub fn profile_state(setup: &Setup) -> ProfileState {
 pub(super) fn expected_profile(record: &Record, base: &Path) -> Result<Profile2Document> {
     let info = record.public.as_ref().context("Account")?;
     let lan = record.connection.as_ref().and_then(|state| state.lan);
+    let relay = record
+        .connection
+        .as_ref()
+        .and_then(|state| state.internet_relay.clone());
     Ok(Profile2Document {
         version: 2,
         profile_mode: "ordered-dialog-v2".into(),
@@ -321,12 +372,20 @@ pub(super) fn expected_profile(record: &Record, base: &Path) -> Result<Profile2D
         ipc_file: base.join("ipc.json"),
         locator_directory: base.join("locators"),
         route: ProfileRoute2 {
-            policy: ProfileRoutePolicy2::DirectOnly,
+            policy: if relay.is_some() {
+                ProfileRoutePolicy2::Auto
+            } else {
+                ProfileRoutePolicy2::DirectOnly
+            },
             bind: Some(SocketAddr::from((
-                lan.map_or(Ipv4Addr::LOCALHOST, |lan| lan.local),
+                if relay.is_some() {
+                    Ipv4Addr::UNSPECIFIED
+                } else {
+                    lan.map_or(Ipv4Addr::LOCALHOST, |lan| lan.local)
+                },
                 0,
             ))),
-            relay: None,
+            relay,
             lan_peer_ipv4: lan.map(|lan| lan.peer),
         },
         lan_discovery: record
@@ -475,7 +534,11 @@ fn prepare_observed(
             "--locator-directory".into(),
             doc.locator_directory.clone().into_os_string(),
             "--route-policy".into(),
-            "direct-only".into(),
+            if doc.route.relay.is_some() {
+                "auto".into()
+            } else {
+                "direct-only".into()
+            },
             "--ordered-bind".into(),
             doc.route
                 .bind
@@ -483,6 +546,9 @@ fn prepare_observed(
                 .to_string()
                 .into(),
         ];
+        if let Some(relay) = &doc.route.relay {
+            args.extend(["--relay-url".into(), relay.clone().into()]);
+        }
         if let Some(peer) = doc.route.lan_peer_ipv4 {
             args.extend(["--ordered-lan-peer-ipv4".into(), peer.to_string().into()]);
         }
@@ -679,6 +745,7 @@ pub struct View {
     pub consent_expires: u64,
     pub running: bool,
     pub discovery: Option<DiscoveryStatus2>,
+    pub selected_routes: [Option<kilogram_runtime_ipc::ordered2::SelectedRoute2>;2],
     pub messages: Messages,
 }
 impl View {
@@ -699,6 +766,7 @@ impl View {
             consent_expires: 0,
             running: false,
             discovery: None,
+            selected_routes: [None;2],
             messages: Messages::default(),
         }
     }
@@ -1036,6 +1104,7 @@ impl Session {
         let wall = consent::now()?;
         for slot in 0..2 {
             let c = status.installed(slot)?;
+            view.selected_routes[slot] = c.selected_route;
             view.messages.send_slots[slot] = self.doc.enabled.contains(&(slot as u8))
                 && c.phase == 3
                 && c.blocked.is_none()
@@ -1500,6 +1569,15 @@ fn run_connected(
             Some((generation, Action::Request(job))) => {
                 handled = generation;
                 let result = if job.scope == scope {
+                    // Reconcile the previous durable intent on demand, rather
+                    // than rejecting a fast next message until the idle poll.
+                    // It has NO new-command progress observer: an old receipt
+                    // must never be attributed to this request's identity.
+                    if matches!(&job.operation, RequestOperation::Send(_))
+                        && job.control.as_ref().is_none_or(|op| !op.stopped())
+                    {
+                        recovery.refresh(&mut SessionSend {session,cancel:signal,control:None});
+                    }
                     recovery.request(
                         &mut SessionSend {
                             session,
@@ -1613,6 +1691,10 @@ pub struct Work {
     views: mpsc::Receiver<View>,
     done: mpsc::Receiver<(Setup, Result<Stop>)>,
     completion: Option<(Setup, Result<Stop>)>,
+    // An owned Session never changes its runtime/context binding. Presentation
+    // views are invalidated by actions; that must not turn each authenticated
+    // read/send into a wait for the next one-second presentation poll.
+    owned_scope: Option<DialogScope>,
     cleanup: Arc<Cleanup>,
     pub view: View,
 }
@@ -1675,7 +1757,23 @@ impl Work {
         thread::Builder::new()
             .name("fresh-owned-runtime".into())
             .spawn(move || {
-                let result = select_route(&mut setup, lan).and_then(|()| {
+                let selected = if setup
+                    .record
+                    .connection
+                    .as_ref()
+                    .is_some_and(|s| s.internet_relay.is_some())
+                {
+                    if lan.is_none() {
+                        Ok(())
+                    } else {
+                        Err(anyhow::anyhow!(
+                            "Internet route conflicts with explicit LAN"
+                        ))
+                    }
+                } else {
+                    select_route(&mut setup, lan)
+                };
+                let result = selected.and_then(|()| {
                     run_worker(
                         &mut setup,
                         &exe,
@@ -1699,6 +1797,7 @@ impl Work {
             views: vrx,
             done: drx,
             completion: None,
+            owned_scope: None,
             cleanup,
             view: View::waiting(
                 "Checking both local permissions and starting the owned runtime...",
@@ -1736,6 +1835,15 @@ impl Work {
             if !self.cancel.load(Ordering::Acquire)
                 && v.generation == self.epoch.load(Ordering::Acquire)
             {
+                if let Some(scope) = v.messages.scope {
+                    if self.owned_scope.is_some_and(|prior| prior != scope) {
+                        self.cancel.store(true, Ordering::Release);
+                        self.owned_scope = None;
+                        self.view = View::waiting("Owned runtime scope changed; closing.");
+                        continue;
+                    }
+                    self.owned_scope = Some(scope);
+                }
                 self.view = v;
             }
         }
@@ -1751,6 +1859,10 @@ impl Work {
     }
     pub(super) fn finished(&self) -> bool {
         self.completion.is_some()
+    }
+    pub(super) fn owned_scope(&self) -> Option<DialogScope> {
+        self.owned_scope.filter(|_| !self.cancel.load(Ordering::Acquire)
+            && !self.cleanup.stopping() && !self.cleanup.blocked() && !self.finished())
     }
     pub(super) fn pre_spawn_cleanup_unconfirmed(&self) -> bool {
         self.completion

@@ -120,15 +120,27 @@ impl Drop for Report {
             return;
         }
         if let Some(counters) = COUNTERS.get() {
+            let mut summary = String::new();
             for (name, counter) in NAMES.iter().zip(counters) {
                 let count = counter.count.load(Ordering::Relaxed);
                 if count > 0 {
+                    use std::fmt::Write;
+                    let _ = writeln!(&mut summary,"metric={name} count={count} nanos={} max_nanos={}",counter.nanos.load(Ordering::Relaxed),counter.max_nanos.load(Ordering::Relaxed));
                     eprintln!(
                         "od2_diag pid={} metric={name} count={count} nanos={} max_nanos={}",
                         std::process::id(),
                         counter.nanos.load(Ordering::Relaxed),
                         counter.max_nanos.load(Ordering::Relaxed)
                     );
+                }
+            }
+            // Explicit numerical-only test evidence, since the ordinary owner
+            // correctly discards private runtime stdout/stderr. Never overwrite.
+            if let Some(directory)=std::env::var_os("KILOGRAM_TEST_OD2_TIMING_DIRECTORY") {
+                use std::io::Write;
+                let path=std::path::PathBuf::from(directory).join(format!("runtime-{}.timings",std::process::id()));
+                if let Ok(mut file)=std::fs::OpenOptions::new().write(true).create_new(true).open(path) {
+                    let _=file.write_all(summary.as_bytes());
                 }
             }
         }
